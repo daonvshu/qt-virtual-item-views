@@ -66,8 +66,8 @@ QWidget**。
 | benchmark（1M 行、表格 row vs cell、树：宽树 + 变更 + 锚点，稳态滚动零分配校验） | 已实现 |
 
 未实现（按 §43 路线图）：表头动画（§23/§24）、span 与 advanced panes
-（文档只有名字，规格待补）；accessibility 还没有 `QAccessibleTableInterface`（行列朗读）与
-文本/编辑接口；行冻结
+（规格已补：[docs/spans.md](docs/spans.md)，实现按该文档的第 6 节顺序推进）；accessibility
+还没有 `QAccessibleTableInterface`（行列朗读）与文本/编辑接口；行冻结
 （文档 §31 只写列方向）；树在"可见行数极大"时的增量行映射优化
 （现在一次 expand/collapse 需要重建可见行索引表，见 [docs/performance.md](docs/performance.md)）。
 
@@ -329,7 +329,8 @@ benchmarks/   1M 行与稳态滚动零分配校验（可选 QListView/QListWidge
 examples/     simple_list / order_cards / dynamic_height / million_rows
               table_row_widgets / table_many_columns / table_custom_header / tree_view / drag_drop
 docs/         architecture.md  lifecycle.md  model-signals.md  focus-ime.md
-              table-layout.md  drag-and-drop.md  accessibility.md  performance.md
+              table-layout.md  drag-and-drop.md  accessibility.md  spans.md
+              performance.md
 ```
 
 公共头以 `include/` 为根（例如 `#include <virtualitemviews/virtuallistview.h>`），安装后会放到
@@ -344,6 +345,7 @@ docs/         architecture.md  lifecycle.md  model-signals.md  focus-ime.md
 * [docs/table-layout.md](docs/table-layout.md)：Table 阶段约束（HeaderGeometry 单一事实来源）
 * [docs/drag-and-drop.md](docs/drag-and-drop.md)：拖放契约（视图侧交互 vs 模型侧语义、三种落点语义）
 * [docs/accessibility.md](docs/accessibility.md)：辅助功能桥接（虚拟节点、可见行、树层次与行列语义）
+* [docs/spans.md](docs/spans.md)：span 与 advanced panes 的规格（待实现项的语义与顺序）
 * [docs/performance.md](docs/performance.md)：复杂度、规模特性、基准使用与已知取舍
 
 ## 构建
