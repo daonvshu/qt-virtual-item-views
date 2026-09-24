@@ -104,6 +104,10 @@ public:
 
     QModelIndex currentIndex() const;
     void setCurrentIndex(const QModelIndex &index);
+    /// Makes \a index current and reports the same signals as a click
+    /// (clicked()/activated()). §37: a screen reader "presses" an item, and
+    /// business code reacts through the signals it already handles.
+    void activateIndex(const QModelIndex &index);
 
     /// How selection gestures are interpreted (mirrors QAbstractItemView).
     enum class SelectionMode {

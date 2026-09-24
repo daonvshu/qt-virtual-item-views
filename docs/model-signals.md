@@ -56,6 +56,19 @@ insert/remove 的实现细节（细节见 [drag-and-drop.md](drag-and-drop.md)�
 `dropMimeData()` 是模型唯一的写入口：视图从不自己调用 `insertRows()` / `moveRows()` /
 `removeRows()`。模型插入/移动后照常发自己的信号，视图按上面的矩阵重排（与其他模型变更同一条路径）。
 
+## 辅助功能也走同一条模型路径（§37）
+
+`docs/accessibility.md` 里的桥接不缓存任何数据：节点被查询时才去读 model 的角色与视图的已提交
+几何。事件侧只有两个来源，都是"跟着模型本身走"：
+
+| 来源 | 事件 | 说明 |
+| --- | --- | --- |
+| selection model 的 `currentChanged` / `selectionChanged` | `QAccessible::Focus` / `QAccessible::Selection` | 屏幕阅读器据此知道 current 与选中项 |
+| model 的 `modelReset` / `rowsInserted` / `rowsRemoved` / `dataChanged` | `QAccessibleTableModelChangeEvent` | 结构或内容变化，与视图自己的重排使用同一批信号 |
+
+两个来源都在接口被真正创建时才连接（`QAccessible` 是懒加载的），并且 `QAccessible::isActive()`
+为假时事件是空操作，所以普通运行时没有额外开销。
+
 ## Tree 的模型变更路径
 
 树对内核隐藏了"模型 row"这一概念：`isLayoutParent()` 恒为 false，因此内核不会按模型 row 直接改

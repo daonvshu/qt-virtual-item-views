@@ -155,7 +155,9 @@ ListLayout / SizeIndex    createWidget / bindWidget / unbindWidget
 * 需要在滚动中保持存活的东西，显式 `view.setItemPinned(index, true)`。
 
 库**不**负责：绘制、动画、Drop 语义（插入/移动/拒绝由模型决定，见
-[drag-and-drop.md](drag-and-drop.md)）、accessibility 虚拟节点桥接（见 README 的路线图）。
+[drag-and-drop.md](drag-and-drop.md)）。accessibility 由
+[accessibility.md](accessibility.md) 里的虚拟节点桥接提供：视图对外只暴露**当前可见**的行，
+文本与状态在每次查询时从 model 与已提交几何现取，因此它同样不持有第二份数据。
 
 拖放是这条边界的典型例子：视图负责"能不能拖、拖的是什么、落到哪里、怎么画"，库内的
 `resolveDropTarget()` / `dropIndicatorStyle()` 都是 subclass hook；`canDropMimeData()` /

@@ -45,6 +45,8 @@ QWidget**。
 | 拖放（v0.7，§38）：视图侧交互（model flags 决定拖拽源、插入指示器、边缘自动滚动、拖拽期 pin 住拖拽源控件）+ 模型侧语义（`mimeData()`/`canDropMimeData()`/`dropMimeData()` 决定插入、移动或拒绝） | 已实现 |
 | 拖放目标：列表按行二分插入、表格按行/单元格（跟随 `SelectionBehavior`，冻结列 pane-aware 命中）、树支持"插到节点之间"与"成为子节点"（`ontoItem`，框选指示器）与末尾追加 | 已实现 |
 | 拖放观测：`itemDropped(parent, row, column, action)` 信号、`dropTargetAt()`/`dropIndicatorRect()`/`dropIndicatorStyle()` 诊断接口 | 已实现 |
+| Accessibility（v0.7，§37）：`installAccessibilityFactory()` 注册 `QAccessibleInterface` 桥接，按需暴露**可见行**（列表项 / 树节点 / 表格行 + 可见列的 cell），文本与状态取自 model 与已提交几何，100 万行模型仍是十几个节点 | 已实现 |
+| Accessibility 导航：current 作为 `focusChild()`、`childAt()` 命中、树层次（parent/children 往返）、表格行列语义、`press` 等价 `activateIndex()`（发 `clicked()`/`activated()`）、`setFocus`/`scrollUp/Down/Left/Right` 动作、Focus/Selection/ModelChange 事件 | 已实现 |
 | 树：expand/collapse、`expandRecursively()`（`*` 键递归展开）、Left/Right 导航、缩进、分支指示绘制与点击、双击展开 | 已实现 |
 | 树：分支图标可按状态自定义（`BranchIndicatorRenderer`，对应 `QTreeView::branch` 的 has-children / has-siblings / adjoins-item / open / closed，不解析样式表） | 已实现 |
 | 树：结构变更（insert/remove/move/layoutChanged/reset）保持展开状态与滚动锚点 | 已实现 |
@@ -59,12 +61,13 @@ QWidget**。
 | 像素滚动：`WheelScrollMode`（Pixels 默认 / Items）、`setWheelScrollPixels()`、`scrollByPixels()`、`setVerticalOffset()`、触控板 `pixelDelta` 1:1 | 已实现 |
 | 可选生命周期日志 `setLifecycleLoggingEnabled()`（create/bind/unbind/recycle/pin） | 已实现 |
 | `TreeVisibilityIndex`（可见行压平、增量展开/折叠、深度、row 双向查询） | 已实现 |
-| 单元测试 177 个用例 + 4 个变异测试 + 10 个 GUI 交互场景（共 16 个 CTest 目标） | 已实现 |
+| 单元测试 187 个用例 + 4 个变异测试 + 10 个 GUI 交互场景（共 17 个 CTest 目标） | 已实现 |
 | 9 个示例（simple list / order cards / dynamic height / million rows / table row widgets / table many columns / table custom header / tree / drag & drop） | 已实现 |
 | benchmark（1M 行、表格 row vs cell、树：宽树 + 变更 + 锚点，稳态滚动零分配校验） | 已实现 |
 
-未实现（按 §43 路线图）：accessibility 虚拟节点桥接（§37）、
-表头动画（§23/§24）、span 与 advanced panes（文档只有名字，规格待补）；行冻结
+未实现（按 §43 路线图）：表头动画（§23/§24）、span 与 advanced panes
+（文档只有名字，规格待补）；accessibility 还没有 `QAccessibleTableInterface`（行列朗读）与
+文本/编辑接口；行冻结
 （文档 §31 只写列方向）；树在"可见行数极大"时的增量行映射优化
 （现在一次 expand/collapse 需要重建可见行索引表，见 [docs/performance.md](docs/performance.md)）。
 
@@ -305,18 +308,20 @@ include/
                              headergeometry.h  nativeheaderview.h  tablewidgetadapter.h
                              widgetadapter.h  widgetrecycler.h  sizeindex.h  scrollmapper.h
                              listlayout.h  layoutpolicy.h  materializeditem.h
-                             treevisibilityindex.h  types.h
+                             treevisibilityindex.h  types.h  accessibility.h
+                             tablepane.h  headerwidgetadapter.h  virtualheaderview.h
 src/
   core/       scrollmapper.cpp  virtualitemview.cpp
   index/      sizeindex.cpp (FixedSizeIndex / BlockSizeIndex)  treevisibilityindex.cpp
   layout/     headergeometry.cpp  listlayout.cpp
   recycler/   widgetrecycler.cpp
-  widgets/    columnhost.cpp  nativeheaderview.cpp  virtuallistview.cpp
-              virtualtableview.cpp  virtualtreeview.cpp
+  widgets/    accessibility.cpp  branchindicator.cpp  columnhost.cpp  nativeheaderview.cpp
+              virtualheaderview.cpp  virtuallistview.cpp  virtualtableview.cpp
+              virtualtreeview.cpp
 tests/
   unit/       sizeindex / scrollmapper / widgetrecycler / listlayout / headergeometry /
               treevisibilityindex / 内核 / ListView / TableView / TableCellMode / TreeView /
-              VirtualHeaderView / DragDrop
+              VirtualHeaderView / DragDrop / Accessibility
   fuzz/       随机 insert/remove/move/dataChanged/reset
   gui/        List：鼠标/键盘/焦点 pinning/滚动数据新鲜度；Table：表头排序/横向滚轮/拖动列宽
 benchmarks/   1M 行与稳态滚动零分配校验（可选 QListView/QListWidget 参考）
@@ -324,7 +329,7 @@ benchmarks/   1M 行与稳态滚动零分配校验（可选 QListView/QListWidge
 examples/     simple_list / order_cards / dynamic_height / million_rows
               table_row_widgets / table_many_columns / table_custom_header / tree_view / drag_drop
 docs/         architecture.md  lifecycle.md  model-signals.md  focus-ime.md
-              table-layout.md  drag-and-drop.md  performance.md
+              table-layout.md  drag-and-drop.md  accessibility.md  performance.md
 ```
 
 公共头以 `include/` 为根（例如 `#include <virtualitemviews/virtuallistview.h>`），安装后会放到
@@ -338,6 +343,7 @@ docs/         architecture.md  lifecycle.md  model-signals.md  focus-ime.md
 * [docs/focus-ime.md](docs/focus-ime.md)：焦点 / IME / popup pin 规则、诊断与 pin 上限
 * [docs/table-layout.md](docs/table-layout.md)：Table 阶段约束（HeaderGeometry 单一事实来源）
 * [docs/drag-and-drop.md](docs/drag-and-drop.md)：拖放契约（视图侧交互 vs 模型侧语义、三种落点语义）
+* [docs/accessibility.md](docs/accessibility.md)：辅助功能桥接（虚拟节点、可见行、树层次与行列语义）
 * [docs/performance.md](docs/performance.md)：复杂度、规模特性、基准使用与已知取舍
 
 ## 构建

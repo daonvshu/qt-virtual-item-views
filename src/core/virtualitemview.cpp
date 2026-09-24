@@ -279,6 +279,15 @@ void VirtualItemView::setCurrentIndex(const QModelIndex &index)
     }
 }
 
+void VirtualItemView::activateIndex(const QModelIndex &index)
+{
+    if (!index.isValid())
+        return;
+    setCurrentIndex(index);
+    emit clicked(index);
+    emit activated(index);
+}
+
 void VirtualItemView::pinCurrentIndex(const QModelIndex &index)
 {
     if (!m_selectionModel || !index.isValid())
