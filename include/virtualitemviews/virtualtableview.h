@@ -1,0 +1,245 @@
+#pragma once
+
+#include <virtualitemviews/headergeometry.h>
+#include <virtualitemviews/nativeheaderview.h>
+#include <virtualitemviews/tablewidgetadapter.h>
+#include <virtualitemviews/virtualitemview.h>
+
+#include <QHash>
+#include <QPersistentModelIndex>
+#include <QVector>
+
+class QAbstractItemModel;
+class QKeyEvent;
+class QResizeEvent;
+class QShowEvent;
+class QWheelEvent;
+
+namespace viv {
+
+class ListLayout;
+
+/// Table MVP (architecture document §43 v0.4) on top of the virtualization
+/// kernel.
+///
+/// Design invariants:
+///  - HeaderGeometry is the single source of truth for column geometry and
+///    state; the body, the native header and the business row widgets all query
+///    it (§14, §45.10),
+///  - rows are virtualized exactly like VirtualListView: only visible rows,
+///    overscan rows and pinned rows own a QWidget,
+///  - every materialized row is one business QWidget (Row Widget Mode) whose
+///    columns are positioned by ColumnHost or by the adapter hook, so no
+///    cell-level QWidget is created (§45.8).
+///
+/// Cell Widget Mode with 2D (row x column) virtualization arrives with v0.5.
+class VirtualTableView : public VirtualItemView
+{
+    Q_OBJECT
+
+public:
+    using ItemHeightMode = VirtualItemView::ItemHeightMode;
+    using SelectionBehavior = VirtualItemView::SelectionBehavior;
+    using SelectionMode = VirtualItemView::SelectionMode;
+    using WheelScrollMode = VirtualItemView::WheelScrollMode;
+
+    /// How an explicitly resized row height interacts with measurement (§30).
+    enum class RowSizePolicy {
+        ExplicitWins,
+        MeasuredWins,
+    };
+    Q_ENUM(RowSizePolicy)
+
+    /// How the table body is materialized (architecture document §28).
+    enum class MaterializationMode {
+        /// One QWidget per materialized row (Row Widget Mode, default).
+        RowWidgets,
+        /// One QWidget per visible cell: visibleRows x visibleColumns.
+        CellWidgets,
+    };
+    Q_ENUM(MaterializationMode)
+
+    explicit VirtualTableView(QWidget *parent = nullptr);
+    ~VirtualTableView() override;
+
+    void setModel(QAbstractItemModel *model) override;
+
+    // -- headers -------------------------------------------------------------
+    HeaderGeometry *horizontalHeaderGeometry() const { return m_columns; }
+    HeaderGeometry *verticalHeaderGeometry() const { return m_rowHeaders; }
+    /// Takes ownership of \a header; nullptr selects the default native header.
+    void setHorizontalHeader(HeaderViewInterface *header);
+    HeaderViewInterface *horizontalHeader() const { return m_horizontalHeader; }
+    void setVerticalHeader(HeaderViewInterface *header);
+    HeaderViewInterface *verticalHeader() const { return m_verticalHeader; }
+    void setHorizontalHeaderVisible(bool visible);
+    bool isHorizontalHeaderVisible() const { return m_horizontalHeaderVisible; }
+    void setVerticalHeaderVisible(bool visible);
+    bool isVerticalHeaderVisible() const { return m_verticalHeaderVisible; }
+    void setHeaderHeight(int height);
+    int headerHeight() const { return m_headerHeight; }
+    void setVerticalHeaderWidth(int width);
+    int verticalHeaderWidth() const { return m_verticalHeaderWidth; }
+
+    // -- geometry ------------------------------------------------------------
+    int columnCount() const;
+    ColumnGeometry columnGeometry(int logicalIndex) const;
+    int columnWidth(int logicalIndex) const;
+    /// Visible columns as visual indices (hidden ones included in the range).
+    VisibleRange visibleColumns() const;
+    /// Visible rows (without overscan).
+    VisibleRange visibleRows() const { return visibleItemRange(); }
+    /// Logical indices of the columns intersecting the viewport, left to right.
+    QVector<int> visibleColumnLogicalIndexes() const;
+    void setColumnOverscan(int columns);
+    int columnOverscan() const { return m_columnOverscan; }
+
+    // -- column state (all writes go to HeaderGeometry) -----------------------
+    void setColumnWidth(int logicalIndex, int width);
+    void setColumnHidden(int logicalIndex, bool hidden);
+    bool isColumnHidden(int logicalIndex) const;
+    void moveColumn(int fromLogicalIndex, int toLogicalIndex);
+    void setDefaultColumnWidth(int width);
+    int defaultColumnWidth() const;
+    void setColumnMinimumWidth(int width);
+    void setColumnMaximumWidth(int width);
+    void setStretchLastColumn(bool stretch);
+    bool stretchLastColumn() const;
+
+    // -- horizontal scrolling -------------------------------------------------
+    qint64 horizontalOffset() const;
+    void setHorizontalOffset(qint64 offset);
+    void scrollByHorizontalPixels(qint64 pixels);
+    qint64 maximumHorizontalOffset() const;
+    qint64 horizontalContentExtent() const;
+    void setHorizontalWheelPixels(int pixels);
+    int horizontalWheelPixels() const { return m_horizontalWheelPixels; }
+
+    // -- row heights ---------------------------------------------------------
+    void setRowSizePolicy(RowSizePolicy policy);
+    RowSizePolicy rowSizePolicy() const { return m_rowSizePolicy; }
+    int rowHeight(qsizetype row) const;
+    /// Explicit (user) row height; wins over measurement by default.
+    void setRowHeight(qsizetype row, int height);
+    void clearRowHeight(qsizetype row);
+    bool hasExplicitRowHeight(qsizetype row) const;
+
+    // -- sorting -------------------------------------------------------------
+    void setSortingEnabled(bool enabled);
+    bool isSortingEnabled() const { return m_sortingEnabled; }
+    void sortByColumn(int logicalIndex, Qt::SortOrder order);
+    void setSortIndicator(int logicalIndex, Qt::SortOrder order);
+
+    // -- persistence ---------------------------------------------------------
+    QByteArray saveHeaderState() const;
+    bool restoreHeaderState(const QByteArray &state);
+
+    // -- adapter -------------------------------------------------------------
+    void setTableAdapter(TableWidgetAdapter *adapter, bool takeOwnership = false);
+    TableWidgetAdapter *tableAdapter() const;
+
+    void setMaterializationMode(MaterializationMode mode);
+    MaterializationMode materializationMode() const { return m_materializationMode; }
+    /// Public query: Cell Widget Mode does not materialize row widgets.
+    bool usesItemWidgets() const override;
+    /// Public query: in Cell Widget Mode the stats report cells.
+    VirtualViewStats stats() const override;
+
+    /// Adapter of the cell widgets (Cell Widget Mode only).
+    void setCellAdapter(CellWidgetAdapter *adapter, bool takeOwnership = false);
+    CellWidgetAdapter *cellAdapter() const { return m_cellAdapter; }
+
+    /// Cell diagnostics (Cell Widget Mode).
+    qsizetype materializedCellCount() const { return m_cells.size(); }
+    QWidget *cellWidget(const QModelIndex &index) const;
+    QModelIndex cellIndexForWidget(const QWidget *widget) const;
+    QList<QModelIndex> materializedCellIndexes() const;
+
+signals:
+    void sortIndicatorRequested(int logicalIndex, Qt::SortOrder order);
+    void horizontalOffsetChanged(qint64 offset);
+    void columnGeometryChanged();
+    void rowHeightChanged(qsizetype row, int height);
+
+protected:
+    qsizetype viewItemCount() const override;
+    QModelIndex viewIndex(qsizetype item, int column = 0) const override;
+    qsizetype viewItemForIndex(const QModelIndex &index) const override;
+    bool isLayoutParent(const QModelIndex &parent) const override;
+    QModelIndex indexForNavigation(qsizetype item, const QModelIndex &current) const override;
+    void materializeItems(const VisibleRange &rows) override;
+    void rebindItemsInRange(const QModelIndex &topLeft, const QModelIndex &bottomRight) override;
+    QModelIndex indexAt(const QPoint &viewportPos) const override;
+    bool canMeasureItem(qsizetype item) const override;
+    void afterMaterialize() override;
+    bool handleItemKeyPress(QKeyEvent *event) override;
+    void resizeEvent(QResizeEvent *event) override;
+    void showEvent(QShowEvent *event) override;
+    void scrollContentsBy(int dx, int dy) override;
+    void wheelEvent(QWheelEvent *event) override;
+
+private:
+    void ensureHeaders();
+    void adoptHeader(HeaderViewInterface *&current, bool &owns, HeaderViewInterface *replacement,
+                     HeaderGeometry *geometry, Qt::Orientation orientation);
+    void layoutHeaderWidgets();
+    void connectColumnSignals(QAbstractItemModel *model);
+    void onColumnsInserted(const QModelIndex &parent, int first, int last);
+    void onColumnsRemoved(const QModelIndex &parent, int first, int last);
+    void onColumnsMoved(const QModelIndex &parent, int start, int end,
+                        const QModelIndex &destinationParent, int destinationColumn);
+    void onHeaderGeometryChanged();
+    void onVerticalSectionResized(int logicalIndex, int oldSize, int newSize);
+    /// A user drag on the row-number strip: the row height becomes explicit.
+    void onVerticalHeaderUserResized(int row, int oldSize, int newSize);
+    /// Keeps the row-number strip aligned with the body while scrolling.
+    void updateRowHeaderOffset();
+    void syncHorizontalScrollBar();
+    void updateColumnLayout();
+    void applyColumnLayout(const MaterializedItem &item);
+    TableRowLayoutContext layoutContext(const QRect &viewportRect) const;
+    void updateRowHeaderGeometry();
+    void scrollToColumn(int logicalIndex);
+    void onSortIndicatorChanged(int logicalIndex, Qt::SortOrder order);
+
+    QVector<int> columnsForCellMaterialization() const;
+    QRect cellRect(qsizetype row, int logicalColumn) const;
+    QWidget *createCellWidget(const QPersistentModelIndex &index);
+    void recycleCell(const QPersistentModelIndex &index, QWidget *widget);
+    void recycleAllCells();
+    bool isCellPinned(const QPersistentModelIndex &index, const QWidget *widget) const;
+    void updateCellGeometry();
+
+    ListLayout *m_rowLayout = nullptr;
+    HeaderGeometry *m_columns = nullptr;
+    HeaderGeometry *m_rowHeaders = nullptr;
+    HeaderViewInterface *m_horizontalHeader = nullptr;
+    HeaderViewInterface *m_verticalHeader = nullptr;
+    bool m_ownHorizontalHeader = false;
+    bool m_ownVerticalHeader = false;
+    TableWidgetAdapter *m_tableAdapter = nullptr;
+    bool m_ownTableAdapter = false;
+    CellWidgetAdapter *m_cellAdapter = nullptr;
+    bool m_ownCellAdapter = false;
+    MaterializationMode m_materializationMode = MaterializationMode::RowWidgets;
+    QHash<QPersistentModelIndex, QWidget *> m_cells;
+    QHash<QWidget *, WidgetType> m_cellTypes;
+    bool m_cellMaterializationActive = false;
+
+    int m_headerHeight = 28;
+    int m_verticalHeaderWidth = 56;
+    bool m_horizontalHeaderVisible = true;
+    bool m_verticalHeaderVisible = true;
+    int m_columnOverscan = 1;
+    int m_horizontalWheelPixels = 48;
+    RowSizePolicy m_rowSizePolicy = RowSizePolicy::ExplicitWins;
+    bool m_sortingEnabled = false;
+    bool m_sortGuard = false;
+    QHash<QPersistentModelIndex, int> m_explicitRowHeights;
+    bool m_verticalHeaderDisabled = false;
+    bool m_columnUpdateActive = false;
+    bool m_rowHeaderUpdateActive = false;
+    bool m_headersLaidOut = false;
+};
+
+} // namespace viv

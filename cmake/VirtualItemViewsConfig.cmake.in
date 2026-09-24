@@ -1,0 +1,8 @@
+@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+find_dependency(@VIRTUALITEMVIEWS_QT_PACKAGE@ @VIRTUALITEMVIEWS_QT_MINIMUM_VERSION@ COMPONENTS Core Gui Widgets)
+
+include("${CMAKE_CURRENT_LIST_DIR}/VirtualItemViewsTargets.cmake")
+
+check_required_components(VirtualItemViews)
