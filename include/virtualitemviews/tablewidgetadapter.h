@@ -2,12 +2,41 @@
 
 #include <virtualitemviews/headergeometry.h>
 #include <virtualitemviews/tablepane.h>
+#include <virtualitemviews/tablespan.h>
 #include <virtualitemviews/widgetadapter.h>
 
+#include <QHash>
 #include <QRect>
+#include <QSet>
 #include <QWidget>
 
 namespace viv {
+
+/// Span decisions the framework made for one row (§43 "spans", docs/spans.md).
+///
+/// The framework fills this while it lays a row out, business code only reads
+/// it. Without spans it stays empty and every column keeps its own rectangle, so
+/// an adapter that ignores spans behaves exactly as before.
+class TableSpanContext
+{
+public:
+    bool isEmpty() const { return m_spans.isEmpty() && m_covered.isEmpty(); }
+    /// Span of \a logicalColumn in this row: 1x1 unless the column anchors one.
+    TableSpan spanOf(int logicalColumn) const { return m_spans.value(logicalColumn, TableSpan()); }
+    /// True when another column's span covers \a logicalColumn (it has no widget
+    /// of its own, and no rectangle).
+    bool isCovered(int logicalColumn) const { return m_covered.contains(logicalColumn); }
+    /// Merged rectangle of an anchored column, in row widget coordinates,
+    /// clipped to this row. Empty for a covered or unknown column.
+    QRect rect(int logicalColumn) const { return m_rects.value(logicalColumn); }
+
+private:
+    friend class VirtualTableView;
+
+    QHash<int, TableSpan> m_spans;
+    QHash<int, QRect> m_rects;
+    QSet<int> m_covered;
+};
 
 /// Committed column geometry handed to the adapter while a row widget is laid
 /// out (architecture document §26).
@@ -56,12 +85,17 @@ public:
     /// frozen.
     QWidget *scrollablePaneHost() const { return m_scrollablePaneHost; }
 
+    // -- spans (§43) ---------------------------------------------------------
+    /// Span decisions of this row. Empty when nothing is merged.
+    const TableSpanContext &spans() const { return m_spans; }
+
 private:
     friend class VirtualTableView;
 
     const HeaderGeometry *m_geometry = nullptr;
     const TablePaneLayout *m_panes = nullptr;
     QWidget *m_scrollablePaneHost = nullptr;
+    TableSpanContext m_spans;
     int m_columnCount = 0;
     QRect m_viewportRect;
     qint64 m_horizontalOffset = 0;

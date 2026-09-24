@@ -276,8 +276,12 @@ private:
     /// Ensures the clip container of the cell mode cells (§31).
     void ensureCellPaneClipHost();
     void applyColumnLayout(const MaterializedItem &item);
+    /// Layout context of one row. \a rowIndex is the row being laid out; it is
+    /// what makes the span decisions of that row available to the adapter
+    /// (§43 "spans"). Without a row index the span context stays empty.
     TableRowLayoutContext layoutContext(const QRect &viewportRect,
-                                        QWidget *scrollablePaneHost = nullptr) const;
+                                        QWidget *scrollablePaneHost = nullptr,
+                                        const QModelIndex &rowIndex = QModelIndex()) const;
     void updateRowHeaderGeometry();
     void scrollToColumn(int logicalIndex);
     void onSortIndicatorChanged(int logicalIndex, Qt::SortOrder order);

@@ -72,6 +72,55 @@ public:
     }
 };
 
+/// Row widget with one ColumnHost per column: the framework positions the hosts
+/// (§26/§27), which is exactly what spans change in Row Widget Mode.
+class SpanRowWidget : public QWidget
+{
+public:
+    SpanRowWidget(QWidget *parent, int columnCount)
+        : QWidget(parent)
+    {
+        for (int column = 0; column < columnCount; ++column) {
+            auto *host = new ColumnHost(column, this);
+            auto *label = new QLabel(host);
+            label->setGeometry(0, 0, kColumnWidth, kRowHeight);
+            m_hosts.append(host);
+        }
+    }
+
+    ColumnHost *host(int column) const { return m_hosts.value(column); }
+
+    QSize sizeHint() const override { return QSize(kColumnWidth * 4, kRowHeight); }
+
+private:
+    QVector<ColumnHost *> m_hosts;
+};
+
+class SpanHostAdapter : public TableWidgetAdapter
+{
+public:
+    explicit SpanHostAdapter(int columnCount)
+        : m_columnCount(columnCount)
+    {
+    }
+
+    QWidget *createWidget(WidgetType, QWidget *parent) override
+    {
+        return new SpanRowWidget(parent, m_columnCount);
+    }
+
+    void bindWidget(QWidget *, const QModelIndex &) override {}
+    void unbindWidget(QWidget *, const QModelIndex &) override {}
+
+    QSize estimatedSize(const QModelIndex &) const override
+    {
+        return QSize(kColumnWidth * m_columnCount, kRowHeight);
+    }
+
+private:
+    int m_columnCount = 0;
+};
+
 QStandardItemModel *buildModel(int rows, int columns, QObject *parent)
 {
     auto *model = new QStandardItemModel(rows, columns, parent);
@@ -104,6 +153,7 @@ private slots:
     void cellWidgetModeMaterializesOnlyAnchors();
     void spansFollowTheCommittedGeometry();
     void dropTargetFoldsToTheAnchorColumn();
+    void rowWidgetModeFoldsTheColumnHosts();
 };
 
 void TestTableSpan::withoutProviderNothingIsMerged()
@@ -408,6 +458,66 @@ void TestTableSpan::dropTargetFoldsToTheAnchorColumn()
     const QRect line = view.dropIndicatorRect(inside);
     QCOMPARE(line.x(), merged.x());
     QCOMPARE(line.width(), merged.width());
+}
+
+void TestTableSpan::rowWidgetModeFoldsTheColumnHosts()
+{
+    QStandardItemModel model(6, 4);
+    SpanHostAdapter adapter(4);
+    VirtualTableView view;
+    view.setTableAdapter(&adapter);
+    view.setUniformItemHeight(kRowHeight);
+    view.setDefaultColumnWidth(kColumnWidth);
+    view.setModel(&model);
+    showView(&view, QSize(kViewWidth, kViewHeight));
+
+    // Without spans the framework places one host per column, exactly as before.
+    auto *row = static_cast<SpanRowWidget *>(view.widgetForIndex(model.index(0, 0)));
+    QVERIFY(row);
+    for (int column = 0; column < 4; ++column) {
+        QCOMPARE(row->host(column)->x(), view.columnGeometry(column).viewportX);
+        QCOMPARE(row->host(column)->width(), kColumnWidth);
+        QVERIFY(row->host(column)->isVisible());
+    }
+
+    // A span over columns 1..2: the anchor host takes the merged rectangle and
+    // the covered host disappears (it has no cell of its own).
+    view.setSpan(0, 1, 1, 2);
+    view.flushPendingRelayout();
+    row = static_cast<SpanRowWidget *>(view.widgetForIndex(model.index(0, 0)));
+    QVERIFY(row);
+    QCOMPARE(row->host(1)->x(), view.columnGeometry(1).viewportX);
+    QCOMPARE(row->host(1)->width(), 2 * kColumnWidth);
+    QVERIFY(!row->host(2)->isVisible());
+    QVERIFY(row->host(0)->isVisible());
+    QCOMPARE(row->host(3)->x(), view.columnGeometry(3).viewportX);
+    QCOMPARE(row->host(3)->width(), kColumnWidth);
+    // Another row is untouched by the span of row 0.
+    auto *otherRow = static_cast<SpanRowWidget *>(view.widgetForIndex(model.index(1, 0)));
+    QVERIFY(otherRow);
+    QVERIFY(otherRow->host(2)->isVisible());
+    QCOMPARE(otherRow->host(2)->width(), kColumnWidth);
+
+    // Row spans cannot extend a host below its own row in this mode: the merged
+    // rectangle is clipped to the row (docs/spans.md §3), the width still merges.
+    view.setSpan(0, 1, 2, 2);
+    view.flushPendingRelayout();
+    row = static_cast<SpanRowWidget *>(view.widgetForIndex(model.index(0, 0)));
+    QVERIFY(row);
+    QCOMPARE(row->host(1)->height(), kRowHeight);
+    QCOMPARE(row->host(1)->width(), 2 * kColumnWidth);
+    QVERIFY(!row->host(2)->isVisible());
+
+    // Clearing the spans brings every host back where it was.
+    view.clearSpans();
+    view.flushPendingRelayout();
+    row = static_cast<SpanRowWidget *>(view.widgetForIndex(model.index(0, 0)));
+    QVERIFY(row);
+    for (int column = 0; column < 4; ++column) {
+        QVERIFY(row->host(column)->isVisible());
+        QCOMPARE(row->host(column)->x(), view.columnGeometry(column).viewportX);
+        QCOMPARE(row->host(column)->width(), kColumnWidth);
+    }
 }
 
 QTEST_MAIN(TestTableSpan)

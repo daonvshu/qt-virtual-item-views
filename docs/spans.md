@@ -139,9 +139,16 @@ CTest 与示例（见 README 的"验证"一节）。
 | 1. span 模型 + 锚点 + `indexAt()`/`cellRect()`/`spanRect()` 折回锚点 | 已完成 |
 | 2. Cell Widget Mode 只物化锚点（锚点控件放大到合并矩形） | 已完成 |
 | 4. 拖放：命中被覆盖单元格时列折回锚点，插入指示器用合并矩形 | 已完成（选择/键盘沿用同一套 `indexAt()` 折回） |
-| 3. Row Widget Mode：`TableRowLayoutContext` 暴露 `spanOf()/spanRect()`，框架按 span 摆放 `ColumnHost` | 待做 |
+| 3. Row Widget Mode：`TableRowLayoutContext` 暴露 `spanOf()/spanRect()`，框架按 span 摆放 `ColumnHost` | 已完成 |
 | 5. Advanced panes：把固定三段重构为 pane 列表（`PaneSpec`） | 待做 |
-| 6. 示例 `examples/table_spans` | 待做 |
+| 6. 示例 `examples/table_spans` | 已完成 |
 
 顺带对齐的既有能力：accessibility 桥接（§37）也走同一套锚点语义 —— 合并区域只暴露一个
 `Cell` 节点（被覆盖的行列不再是独立节点），它的 `rect()` 就是合并矩形。
+
+第 3 步的落地方式：框架在 `layoutContext()` 里按"正在摆放的那一行"填一个
+`TableSpanContext`（`spanOf(column)` / `isCovered(column)` / `rect(column)`，最后一个是
+**行控件局部坐标**、且被裁剪到本行高度），`applyColumnLayout()` 据此隐藏被覆盖列的
+`ColumnHost`、把锚点 host 摆到合并矩形上；业务在 `layoutRowWidget()` 里读同一个对象就能给
+合并单元格换样式（`examples/table_spans` 的分组标题就是这么居中加粗的）。没有 span 时代码
+路径完全不变（`spans().isEmpty()`）。

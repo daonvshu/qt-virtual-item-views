@@ -1535,7 +1535,8 @@ VirtualViewStats VirtualTableView::stats() const
 // ---------------------------------------------------------------------------
 
 TableRowLayoutContext VirtualTableView::layoutContext(const QRect &viewportRect,
-                                                      QWidget *scrollablePaneHost) const
+                                                      QWidget *scrollablePaneHost,
+                                                      const QModelIndex &rowIndex) const
 {
     TableRowLayoutContext context;
     context.m_geometry = m_columns;
@@ -1546,6 +1547,34 @@ TableRowLayoutContext VirtualTableView::layoutContext(const QRect &viewportRect,
     context.m_horizontalOffset = m_columns->viewportOffset();
     context.m_columnOverscan = m_columnOverscan;
     context.m_visibleColumns = m_panes.visibleScrollableRange();
+
+    // §43 "spans": tell the adapter what the framework decided for this row.
+    // A merged rectangle is reported in row widget coordinates and clipped to
+    // the row: Row Widget Mode owns one widget per row, so a cross-row merge can
+    // only be honoured by the business (see docs/spans.md).
+    if (m_spanProvider && rowIndex.isValid()) {
+        const QModelIndex row = rowIndex.siblingAtColumn(0);
+        const QVector<int> columns = context.columnsToLayout();
+        for (int logical : columns) {
+            const QModelIndex cell = row.siblingAtColumn(logical);
+            if (!cell.isValid())
+                continue;
+            if (anchorIndex(cell) != cell) {
+                context.m_spans.m_covered.insert(logical);
+                continue;
+            }
+            const TableSpan span = spanAt(cell);
+            if (!span.isMerged())
+                continue;
+            QRect merged = spanRect(cell);
+            if (merged.isEmpty())
+                continue;
+            merged.translate(-viewportRect.topLeft());
+            merged.setHeight(qMin(merged.height(), viewportRect.height()));
+            context.m_spans.m_spans.insert(logical, span);
+            context.m_spans.m_rects.insert(logical, merged);
+        }
+    }
     return context;
 }
 
@@ -1601,7 +1630,8 @@ void VirtualTableView::applyColumnLayout(const MaterializedItem &item)
         return;
 
     QWidget *clipHost = ensureRowPaneClipHost(item.widget, item.geometry);
-    const TableRowLayoutContext context = layoutContext(item.geometry, clipHost);
+    const TableRowLayoutContext context
+        = layoutContext(item.geometry, clipHost, QModelIndex(item.index));
     // Everything below works in the row widget's own coordinates: the row widget
     // covers the viewport, so its origin is the row rect (see columnX()).
     const QRect localViewport(0, 0, item.geometry.width(), item.geometry.height());
@@ -1616,8 +1646,15 @@ void VirtualTableView::applyColumnLayout(const MaterializedItem &item)
     const QList<ColumnHost *> hosts = rowColumnHosts(item.widget);
     if (!hosts.isEmpty()) {
         for (ColumnHost *host : hosts) {
-            const ColumnGeometry geometry = context.column(host->logicalColumn());
+            const int logicalColumn = host->logicalColumn();
+            const ColumnGeometry geometry = context.column(logicalColumn);
             if (!geometry.isValid() || geometry.hidden) {
+                host->setVisible(false);
+                continue;
+            }
+            // §43 "spans": the columns a merged area covers have no widget of
+            // their own, the anchor host takes over their rectangle.
+            if (context.spans().isCovered(logicalColumn)) {
                 host->setVisible(false);
                 continue;
             }
@@ -1629,8 +1666,13 @@ void VirtualTableView::applyColumnLayout(const MaterializedItem &item)
             if (host->parentWidget() != parent)
                 host->setParent(parent);
 
-            const QRect hostRect(context.columnX(geometry.logicalIndex), 0, geometry.width,
-                                 context.viewportRect().height());
+            QRect hostRect(context.columnX(geometry.logicalIndex), 0, geometry.width,
+                           context.viewportRect().height());
+            if (context.spans().spanOf(logicalColumn).isMerged()) {
+                const QRect merged = context.spans().rect(logicalColumn);
+                if (!merged.isEmpty())
+                    hostRect = merged;
+            }
             // Only the scrollable columns are clipped to the scrollable pane; a
             // frozen column lives outside of it by definition.
             const QRect visible = (localScrollable.isNull() || frozen)
