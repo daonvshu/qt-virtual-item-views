@@ -251,39 +251,44 @@ void VirtualTableView::layoutHeaderWidgets()
     setViewportMargins(rowHeaderWidth, headerHeight, 0, 0);
 
     const QRect viewportRect = viewport()->geometry();
+    // Every pane has its own header renderer, positioned on the pane rectangle
+    // (§43): the primary pane's header is m_horizontalHeader, the others live in
+    // m_paneHeaders indexed by pane index.
+    const QVector<TablePane> &panes = m_panes.panes();
+    for (int paneIndex = 0;
+         paneIndex < m_paneHeaders.size() && paneIndex < panes.size(); ++paneIndex) {
+        HeaderViewInterface *header = m_paneHeaders.at(paneIndex);
+        if (!header)
+            continue;
+        const QRect paneRect = panes.at(paneIndex).viewportRect;
+        QWidget *widget = header->headerWidget();
+        widget->setGeometry(viewportRect.x() + paneRect.x(), viewportRect.y() - headerHeight,
+                            qMax(0, paneRect.width()), headerHeight);
+        widget->setVisible(headerHeight > 0 && paneRect.width() > 0);
+        widget->raise();
+    }
     if (m_horizontalHeader) {
+        // The primary (scrolling) pane: it is the one the scroll bar drives.
+        QRect primaryRect = m_panes.paneRect(TablePane::Type::Scrollable);
+        for (const TablePane &pane : panes) {
+            if (pane.type == TablePane::Type::Scrollable) {
+                primaryRect = pane.viewportRect;
+                break;
+            }
+        }
         QWidget *widget = m_horizontalHeader->headerWidget();
-        // The scrollable header sits between the frozen panes (§31).
-        const int leftWidth = headerHeight > 0 ? m_panes.frozenLeftWidth() : 0;
-        const int rightWidth = headerHeight > 0 ? m_panes.frozenRightWidth() : 0;
-        widget->setGeometry(viewportRect.x() + leftWidth, viewportRect.y() - headerHeight,
-                            qMax(0, viewportRect.width() - leftWidth - rightWidth), headerHeight);
+        widget->setGeometry(viewportRect.x() + primaryRect.x(), viewportRect.y() - headerHeight,
+                            qMax(0, primaryRect.width()), headerHeight);
         widget->setVisible(headerHeight > 0);
-    }
-    if (m_frozenLeftHeader) {
-        const int width = m_panes.frozenLeftWidth();
-        QWidget *widget = m_frozenLeftHeader->headerWidget();
-        widget->setGeometry(viewportRect.x(), viewportRect.y() - headerHeight, qMax(0, width),
-                            headerHeight);
-        widget->setVisible(headerHeight > 0 && width > 0);
-        widget->raise();
-    }
-    if (m_frozenRightHeader) {
-        const int width = m_panes.frozenRightWidth();
-        QWidget *widget = m_frozenRightHeader->headerWidget();
-        widget->setGeometry(viewportRect.x() + viewportRect.width() - width,
-                            viewportRect.y() - headerHeight, qMax(0, width), headerHeight);
-        widget->setVisible(headerHeight > 0 && width > 0);
-        widget->raise();
     }
     // A widget based header derives its own coordinates from the geometry.
     const QPoint origin = viewportRect.topLeft();
     if (m_horizontalHeader)
         m_horizontalHeader->setViewportOrigin(origin);
-    if (m_frozenLeftHeader)
-        m_frozenLeftHeader->setViewportOrigin(origin);
-    if (m_frozenRightHeader)
-        m_frozenRightHeader->setViewportOrigin(origin);
+    for (HeaderViewInterface *header : m_paneHeaders) {
+        if (header)
+            header->setViewportOrigin(origin);
+    }
     if (m_verticalHeader) {
         QWidget *widget = m_verticalHeader->headerWidget();
         widget->setGeometry(viewportRect.x() - rowHeaderWidth, viewportRect.y(), rowHeaderWidth,
@@ -613,50 +618,56 @@ void VirtualTableView::updatePaneLayout()
 
 void VirtualTableView::syncHeaderPanes()
 {
-    QVector<int> leftColumns;
-    QVector<int> rightColumns;
-    QVector<int> scrollableColumns;
-    for (const TablePane &pane : m_panes.panes()) {
-        switch (pane.type) {
-        case TablePane::Type::FrozenLeft:
-            leftColumns = pane.logicalColumns;
-            break;
-        case TablePane::Type::FrozenRight:
-            rightColumns = pane.logicalColumns;
-            break;
-        case TablePane::Type::Scrollable:
-            scrollableColumns = pane.logicalColumns;
-            break;
+    const QVector<TablePane> &panes = m_panes.panes();
+    // One header renderer per pane (§43 "advanced panes"), indexed by pane index.
+    // The primary (scrolling) pane keeps the installed horizontal header.
+    for (int index = panes.size(); index < m_paneHeaders.size(); ++index) {
+        if (HeaderViewInterface *stale = m_paneHeaders.at(index)) {
+            stale->headerWidget()->hide();
+            stale->headerWidget()->deleteLater();
         }
     }
+    m_paneHeaders.resize(panes.size());
+    int primaryIndex = -1;
+    for (int index = 0; index < panes.size(); ++index) {
+        if (panes.at(index).type != TablePane::Type::Scrollable)
+            continue;
+        primaryIndex = index;
+        break;
+    }
 
-    const auto adopt = [this](HeaderViewInterface *&header, const QVector<int> &columns) {
+    bool anyOtherPane = false;
+    for (int paneIndex = 0; paneIndex < panes.size(); ++paneIndex) {
+        if (paneIndex == primaryIndex)
+            continue;
+        const QVector<int> columns = panes.at(paneIndex).logicalColumns;
+        HeaderViewInterface *&header = m_paneHeaders[paneIndex];
         if (columns.isEmpty()) {
             if (header) {
                 header->headerWidget()->hide();
                 header->headerWidget()->deleteLater();
                 header = nullptr;
             }
-            return;
+            continue;
         }
         if (!header) {
-            // The pane header is another renderer of the same geometry (§31), and
-            // it is of the same kind as the installed horizontal header so a
-            // widget based header can render the frozen panes as well.
+            // The pane header is another renderer of the same geometry (§31),
+            // and it is of the same kind as the installed horizontal header so a
+            // widget based header can render every pane as well.
             header = createHorizontalPaneHeader();
             header->setGeometryModel(m_columns);
             header->setLabelModel(model());
             header->setSortInteractionEnabled(m_sortingEnabled);
         }
         header->setPaneFilter(columns, true);
-    };
-    adopt(m_frozenLeftHeader, leftColumns);
-    adopt(m_frozenRightHeader, rightColumns);
-
-    if (leftColumns.isEmpty() && rightColumns.isEmpty())
-        m_horizontalHeader->clearPaneFilter();
+        anyOtherPane = true;
+    }
+    if (!m_horizontalHeader)
+        return;
+    if (primaryIndex >= 0 && anyOtherPane)
+        m_horizontalHeader->setPaneFilter(panes.at(primaryIndex).logicalColumns, false);
     else
-        m_horizontalHeader->setPaneFilter(scrollableColumns, false);
+        m_horizontalHeader->clearPaneFilter();
 }
 
 HeaderViewInterface *VirtualTableView::createHorizontalPaneHeader()
@@ -672,13 +683,22 @@ HeaderViewInterface *VirtualTableView::createHorizontalPaneHeader()
 
 void VirtualTableView::syncPaneSeparatorLines()
 {
-    // One line per existing boundary (left pane | scrollable | right pane).
+    // One line per pane boundary (§43: pane count - 1).
     QVector<int> boundaries;
-    const QRect scrollable = m_panes.paneRect(TablePane::Type::Scrollable);
-    if (m_panes.frozenLeftWidth() > 0)
-        boundaries.append(scrollable.left());
-    if (m_panes.frozenRightWidth() > 0)
-        boundaries.append(scrollable.right() + 1);
+    QVector<bool> insidePrecedingPane;
+    const QVector<TablePane> &panes = m_panes.panes();
+    for (int index = 0; index + 1 < panes.size(); ++index) {
+        const TablePane &before = panes.at(index);
+        const TablePane &after = panes.at(index + 1);
+        if (before.viewportRect.width() <= 0 || after.viewportRect.width() <= 0)
+            continue;
+        boundaries.append(before.viewportRect.right() + 1);
+        // A frozen pane keeps the hair line inside itself, so the line stays
+        // continuous with the pane it belongs to (the default left boundary);
+        // every other boundary sits on the first pixel of the following pane.
+        insidePrecedingPane.append(before.type != TablePane::Type::Scrollable
+                                   && after.type == TablePane::Type::Scrollable);
+    }
 
     while (m_paneSeparatorLines.size() > boundaries.size()) {
         QWidget *line = m_paneSeparatorLines.takeLast();
@@ -709,8 +729,8 @@ void VirtualTableView::syncPaneSeparatorLines()
         // two lines are continuous. A dashed line still needs a 1 px band to
         // draw on.
         const int lineWidth = m_paneSeparatorStyle.lineStyle == Qt::SolidLine ? band : qMax(1, band);
-        const bool leftBoundary = m_panes.frozenLeftWidth() > 0 && i == 0;
-        const int x = lineOriginX + (leftBoundary ? boundaries.at(i) - lineWidth : boundaries.at(i));
+        const int x = lineOriginX + (insidePrecedingPane.at(i) ? boundaries.at(i) - lineWidth
+                                                              : boundaries.at(i));
         line->setGeometry(x, lineTop, lineWidth, lineHeight);
         line->setVisible(m_paneSeparatorStyle.isVisible() && lineHeight > 0);
     }
@@ -1115,6 +1135,55 @@ QRect VirtualTableView::cellRect(qsizetype row, int logicalColumn) const
 // Spans (§43 "spans", see docs/spans.md)
 // ---------------------------------------------------------------------------
 
+void VirtualTableView::setPanes(const QVector<TablePaneSpec> &panes)
+{
+    // Several scrolling groups need a clip container per scrolling pane; until
+    // that lands a second group would paint over its neighbours, so it is
+    // refused instead of silently misrendering (see docs/spans.md).
+    QSet<int> groups;
+    for (const TablePaneSpec &spec : panes) {
+        if (!spec.isFrozen())
+            groups.insert(spec.scrollGroup);
+    }
+    if (groups.size() > 1) {
+        qWarning("VirtualTableView::setPanes(): only one scrolling group is supported for now "
+                 "(each group needs its own pane clip container); the call was ignored.");
+        return;
+    }
+    if (m_panes.paneSpecs() == panes)
+        return;
+    m_panes.setPaneSpecs(panes);
+    updatePaneLayout();
+    markDirty();
+}
+
+void VirtualTableView::setHorizontalOffset(int scrollGroup, qint64 offset)
+{
+    if (scrollGroup == 0) {
+        // Group 0 is the primary group: it is the committed header geometry that
+        // carries the offset (header, scroll bar and every geometry query).
+        setHorizontalOffset(offset);
+        return;
+    }
+    const qint64 clamped = qBound<qint64>(qint64(0), offset, maximumHorizontalOffset(scrollGroup));
+    if (m_panes.groupOffset(scrollGroup) == clamped)
+        return;
+    m_panes.setGroupOffset(scrollGroup, clamped);
+    updatePaneLayout();
+    emit horizontalOffsetChanged(clamped);
+}
+
+QVector<QRect> VirtualTableView::paneSeparatorRects() const
+{
+    QVector<QRect> rects;
+    rects.reserve(m_paneSeparatorLines.size());
+    for (QWidget *line : m_paneSeparatorLines) {
+        if (line->isVisible())
+            rects.append(line->geometry());
+    }
+    return rects;
+}
+
 void VirtualTableView::setSpanProvider(TableSpanProvider *provider, bool takeOwnership)
 {
     if (m_spanProvider != provider) {
@@ -1208,7 +1277,9 @@ QRect VirtualTableView::spanRect(const QModelIndex &index) const
     // Columns: walk the visual order from the anchor, inside its pane only. A
     // hidden column contributes no width (no compensation), a pane boundary ends
     // the merge (§31/§43).
-    const TablePane::Type pane = m_panes.paneOfColumn(index.column());
+    const int paneIndex = m_panes.paneIndexOfColumn(index.column());
+    if (paneIndex < 0)
+        return QRect();
     const int visual = m_columns->visualIndex(index.column());
     if (visual < 0)
         return QRect();
@@ -1222,12 +1293,14 @@ QRect VirtualTableView::spanRect(const QModelIndex &index) const
         const int logical = m_columns->logicalIndex(candidate);
         if (logical < 0)
             break;
-        if (m_panes.paneOfColumn(logical) != pane)
-            break;
         ++taken;
         const ColumnGeometry geometry = columnGeometry(logical);
+        // A hidden column contributes no width and does not end the merge, so it
+        // is skipped before the pane boundary is checked.
         if (!geometry.isValid() || geometry.hidden || geometry.width <= 0)
             continue;
+        if (m_panes.paneIndexOfColumn(logical) != paneIndex)
+            break;
         // A column scrolled (partly) out of the viewport has a negative x: it
         // still contributes, the parent clips the result.
         if (!hasColumn) {

@@ -4,6 +4,8 @@
 
 #include <QSet>
 
+#include <algorithm>
+
 namespace viv {
 
 namespace {
@@ -21,6 +23,18 @@ QVector<int> normalized(const QVector<int> &logicalColumns)
     }
     return result;
 }
+
+/// One pane while the layout is being built.
+struct ResolvedPane
+{
+    TablePane pane;
+    int extent = 0;
+    int width = 0;
+    int x = 0;
+    /// Accumulated content x of the pane's own scroll space.
+    qint64 contentX = 0;
+    VisibleRange window;
+};
 } // namespace
 
 void TablePaneLayout::setFrozenColumns(const QVector<int> &logicalColumns)
@@ -37,6 +51,19 @@ void TablePaneLayout::setFrozenRightColumns(const QVector<int> &logicalColumns)
     if (normalizedColumns == m_frozenRight)
         return;
     m_frozenRight = normalizedColumns;
+}
+
+void TablePaneLayout::setPaneSpecs(const QVector<TablePaneSpec> &specs)
+{
+    if (specs == m_specs)
+        return;
+    m_specs = specs;
+    // An explicit list replaces the frozen sets: they are the shorthand for the
+    // default three panes, not a second truth.
+    if (!m_specs.isEmpty()) {
+        m_frozenLeft.clear();
+        m_frozenRight.clear();
+    }
 }
 
 int TablePaneLayout::extentOf(const QVector<int> &logicalColumns) const
@@ -80,6 +107,8 @@ bool TablePaneLayout::update(int viewportWidth, int viewportHeight)
     const int count = m_geometry ? m_geometry->sectionCount() : 0;
 
     const QVector<TablePane> previousPanes = m_panes;
+    const QHash<int, qint64> previousExtents = m_groupExtents;
+    const QHash<int, int> previousWidths = m_groupWidths;
     const int previousWidth = m_viewportWidth;
     const int previousHeight = m_viewportHeight;
     const VisibleRange previousVisibleScrollable = m_visibleScrollable;
@@ -89,108 +118,164 @@ bool TablePaneLayout::update(int viewportWidth, int viewportHeight)
     m_panes.clear();
     m_viewportXByLogical.fill(-1, count);
     m_paneByLogical.fill(int(TablePane::Type::Scrollable), count);
+    m_paneIndexByLogical.fill(-1, count);
+    m_groupByLogical.fill(-1, count);
+    m_groupExtents.clear();
+    m_groupWidths.clear();
     m_scrollableExtent = 0;
     m_visibleScrollable = VisibleRange();
+    m_paneWindows.clear();
 
     if (!m_geometry || count <= 0) {
-        return previousPanes != m_panes || previousWidth != m_viewportWidth
+        return previousPanes != m_panes || previousExtents != m_groupExtents
+            || previousWidths != m_groupWidths || previousWidth != m_viewportWidth
             || previousHeight != m_viewportHeight
             || previousVisibleScrollable.first != m_visibleScrollable.first
             || previousVisibleScrollable.last != m_visibleScrollable.last;
     }
 
-    const QVector<int> leftColumns = visualOrderOf(m_frozenLeft);
-    // A column frozen on both sides stays on the left, so it is not part of the
-    // right pane (otherwise it would be painted and counted twice).
-    QVector<int> rightColumns;
-    for (int logical : visualOrderOf(m_frozenRight)) {
-        if (!leftColumns.contains(logical))
-            rightColumns.append(logical);
-    }
-
-    // Pane membership first: the scrollable loop below skips every frozen
-    // column, and a column in both sets stays on the left.
-    for (int logical : leftColumns) {
-        m_paneByLogical[logical] = int(TablePane::Type::FrozenLeft);
-        m_viewportXByLogical[logical] = 0; // positioned below
-    }
-    for (int logical : rightColumns) {
-        if (m_paneByLogical.at(logical) != int(TablePane::Type::Scrollable))
-            continue;
-        m_paneByLogical[logical] = int(TablePane::Type::FrozenRight);
-        m_viewportXByLogical[logical] = 0; // positioned below
-    }
-
-    const int leftExtent = qMin(extentOf(leftColumns), width);
-    const int rightExtent = qMin(extentOf(rightColumns), qMax(0, width - leftExtent));
-    const int scrollableX = leftExtent;
-    const int scrollableWidth = qMax(0, width - leftExtent - rightExtent);
-
-    TablePane leftPane;
-    leftPane.type = TablePane::Type::FrozenLeft;
-    leftPane.viewportRect = QRect(0, 0, leftExtent, height);
-    leftPane.logicalColumns = leftColumns;
-
-    TablePane scrollablePane;
-    scrollablePane.type = TablePane::Type::Scrollable;
-    scrollablePane.viewportRect = QRect(scrollableX, 0, scrollableWidth, height);
-
-    TablePane rightPane;
-    rightPane.type = TablePane::Type::FrozenRight;
-    rightPane.viewportRect = QRect(width - rightExtent, 0, rightExtent, height);
-    rightPane.logicalColumns = rightColumns;
-
-    // Frozen left: laid out from the left edge, never scrolled.
-    int x = 0;
-    for (int logical : leftColumns) {
-        m_viewportXByLogical[logical] = x;
-        x += m_geometry->sectionSize(logical);
-    }
-
-    // Scrollable: content positions of the scrollable columns only, shifted by
-    // the horizontal offset and moved to the right of the frozen left pane.
-    const qint64 offset = m_geometry->viewportOffset();
-    qint64 contentX = 0;
-    for (int visual = 0; visual < count; ++visual) {
-        const int logical = m_geometry->logicalIndex(visual);
-        if (logical < 0 || m_geometry->isSectionHidden(logical))
-            continue;
-        if (m_paneByLogical.value(logical) != int(TablePane::Type::Scrollable))
-            continue;
-        const int size = m_geometry->sectionSize(logical);
-        const int viewportX = scrollableX + int(contentX - offset);
-        m_viewportXByLogical[logical] = viewportX;
-        scrollablePane.logicalColumns.append(logical);
-        // Visible part of the scrollable pane: the horizontal window is the
-        // scrollable columns only, so frozen columns never shift it (§31).
-        if (size > 0 && viewportX < scrollableX + scrollableWidth && viewportX + size > scrollableX) {
-            if (m_visibleScrollable.first < 0) {
-                m_visibleScrollable.first = visual;
-                m_visibleScrollable.last = visual;
-            } else {
-                m_visibleScrollable.last = visual;
-            }
+    // -----------------------------------------------------------------------
+    // 1. The ordered pane list: either the explicit specs or the default
+    //    "frozen left | scrollable | frozen right" (frozen sets, §31).
+    // -----------------------------------------------------------------------
+    QVector<ResolvedPane> resolved;
+    if (!m_specs.isEmpty()) {
+        resolved.reserve(m_specs.size());
+        for (const TablePaneSpec &spec : m_specs) {
+            ResolvedPane pane;
+            pane.pane.type = spec.isFrozen() ? TablePane::Type::FrozenLeft
+                                             : TablePane::Type::Scrollable;
+            pane.pane.scrollGroup = spec.isFrozen() ? -1 : spec.scrollGroup;
+            pane.pane.logicalColumns = visualOrderOf(spec.logicalColumns);
+            resolved.append(pane);
         }
-        contentX += size;
-        m_scrollableExtent = contentX;
+    } else {
+        const QVector<int> leftColumns = visualOrderOf(m_frozenLeft);
+        QVector<int> rightColumns;
+        for (int logical : visualOrderOf(m_frozenRight)) {
+            if (!leftColumns.contains(logical))
+                rightColumns.append(logical);
+        }
+
+        ResolvedPane left;
+        left.pane.type = TablePane::Type::FrozenLeft;
+        left.pane.logicalColumns = leftColumns;
+        if (!left.pane.logicalColumns.isEmpty())
+            resolved.append(left);
+
+        ResolvedPane scrollable;
+        scrollable.pane.type = TablePane::Type::Scrollable;
+        scrollable.pane.scrollGroup = 0;
+        for (int visual = 0; visual < count; ++visual) {
+            const int logical = m_geometry->logicalIndex(visual);
+            if (logical < 0 || m_geometry->isSectionHidden(logical))
+                continue;
+            if (leftColumns.contains(logical) || rightColumns.contains(logical))
+                continue;
+            scrollable.pane.logicalColumns.append(logical);
+        }
+        resolved.append(scrollable);
+
+        ResolvedPane right;
+        right.pane.type = TablePane::Type::FrozenRight;
+        right.pane.logicalColumns = rightColumns;
+        if (!right.pane.logicalColumns.isEmpty())
+            resolved.append(right);
     }
 
-    // Frozen right: laid out from the right edge, never scrolled.
-    x = width - rightExtent;
-    for (int logical : rightColumns) {
-        if (m_paneByLogical.at(logical) != int(TablePane::Type::FrozenRight))
-            continue; // a hidden column, or one that stayed on the left
-        m_viewportXByLogical[logical] = x;
-        x += m_geometry->sectionSize(logical);
+    // A frozen pane that sits after the primary scrolling pane reads as
+    // FrozenRight, so paneOfColumn()/isFrozenColumn() keep their meaning for an
+    // explicit list as well.
+    int primaryIndex = -1;
+    for (int index = 0; index < resolved.size(); ++index) {
+        if (resolved.at(index).pane.type == TablePane::Type::Scrollable) {
+            primaryIndex = index;
+            break;
+        }
+    }
+    for (int index = 0; index < resolved.size(); ++index) {
+        ResolvedPane &pane = resolved[index];
+        pane.extent = extentOf(pane.pane.logicalColumns);
+        if (pane.pane.type == TablePane::Type::Scrollable)
+            continue;
+        pane.pane.type = primaryIndex < 0 || index < primaryIndex ? TablePane::Type::FrozenLeft
+                                                                 : TablePane::Type::FrozenRight;
     }
 
-    if (!leftPane.isEmpty())
-        m_panes.append(leftPane);
-    m_panes.append(scrollablePane);
-    if (!rightPane.isEmpty())
-        m_panes.append(rightPane);
+    // -----------------------------------------------------------------------
+    // 2. Widths: every pane gets its extent, the primary scrolling pane takes
+    //    what is left (the panes before and after it keep their size, exactly
+    //    like the default three pane layout).
+    // -----------------------------------------------------------------------
+    int remaining = width;
+    for (int index = 0; index < resolved.size(); ++index) {
+        if (index == primaryIndex)
+            continue;
+        ResolvedPane &pane = resolved[index];
+        pane.width = qMin(pane.extent, remaining);
+        remaining -= pane.width;
+    }
+    if (primaryIndex >= 0) {
+        ResolvedPane &primary = resolved[primaryIndex];
+        primary.width = qMax(0, remaining);
+    }
 
-    return previousPanes != m_panes || previousWidth != m_viewportWidth
+    // Group extents and widths are known before any offset is clamped below.
+    for (const ResolvedPane &pane : resolved) {
+        if (pane.pane.type != TablePane::Type::Scrollable)
+            continue;
+        m_groupExtents[pane.pane.scrollGroup] += qint64(pane.extent);
+        m_groupWidths[pane.pane.scrollGroup]
+            = m_groupWidths.value(pane.pane.scrollGroup, 0) + pane.width;
+    }
+
+    // -----------------------------------------------------------------------
+    // 3. Positions and column x. A pane lays out its own content: frozen panes
+    //    never move, scrolling panes of one group share the group's offset.
+    // -----------------------------------------------------------------------
+    int x = 0;
+    for (ResolvedPane &pane : resolved) {
+        pane.x = x;
+        pane.pane.viewportRect = QRect(x, 0, pane.width, height);
+        x += pane.width;
+    }
+
+    for (int paneIndex = 0; paneIndex < resolved.size(); ++paneIndex) {
+        ResolvedPane &pane = resolved[paneIndex];
+        const bool frozen = pane.pane.type != TablePane::Type::Scrollable;
+        const qint64 offset = frozen ? 0 : groupOffset(pane.pane.scrollGroup);
+        qint64 contentX = 0;
+        for (int logical : pane.pane.logicalColumns) {
+            const int size = m_geometry->sectionSize(logical);
+            const int viewportX = pane.x + int(contentX - offset);
+            m_viewportXByLogical[logical] = viewportX;
+            m_paneByLogical[logical] = int(pane.pane.type);
+            m_paneIndexByLogical[logical] = paneIndex;
+            m_groupByLogical[logical] = frozen ? -1 : pane.pane.scrollGroup;
+
+            if (size > 0 && viewportX < pane.x + pane.width && viewportX + size > pane.x) {
+                if (pane.window.first < 0) {
+                    pane.window.first = m_geometry->visualIndex(logical);
+                    pane.window.last = pane.window.first;
+                } else {
+                    pane.window.last = m_geometry->visualIndex(logical);
+                }
+            }
+            contentX += size;
+        }
+        pane.contentX = contentX;
+        if (paneIndex == primaryIndex) {
+            m_scrollableExtent = contentX;
+            m_visibleScrollable = pane.window;
+        }
+        m_paneWindows.insert(paneIndex, pane.window);
+    }
+
+    for (const ResolvedPane &pane : resolved)
+        m_panes.append(pane.pane);
+
+    return previousPanes != m_panes || previousExtents != m_groupExtents
+        || previousWidths != m_groupWidths || previousWidth != m_viewportWidth
         || previousHeight != m_viewportHeight
         || previousVisibleScrollable.first != m_visibleScrollable.first
         || previousVisibleScrollable.last != m_visibleScrollable.last;
@@ -198,19 +283,34 @@ bool TablePaneLayout::update(int viewportWidth, int viewportHeight)
 
 TablePane TablePaneLayout::pane(TablePane::Type type) const
 {
-    for (const TablePane &pane : m_panes) {
-        if (pane.type == type)
-            return pane;
+    for (const TablePane &candidate : m_panes) {
+        if (candidate.type == type)
+            return candidate;
     }
     if (type == TablePane::Type::Scrollable) {
-        // The scrollable pane always exists, even when the frozen panes eat the
-        // whole viewport.
+        // The primary scrolling pane always exists, even when the other panes
+        // eat the whole viewport.
         TablePane empty;
         empty.type = type;
+        empty.scrollGroup = 0;
         empty.viewportRect = QRect(0, 0, 0, m_viewportHeight);
         return empty;
     }
     return TablePane();
+}
+
+TablePane TablePaneLayout::paneAt(int paneIndex) const
+{
+    if (paneIndex < 0 || paneIndex >= m_panes.size())
+        return TablePane();
+    return m_panes.at(paneIndex);
+}
+
+int TablePaneLayout::paneIndexOfColumn(int logicalIndex) const
+{
+    if (logicalIndex < 0 || logicalIndex >= m_paneIndexByLogical.size())
+        return -1;
+    return m_paneIndexByLogical.at(logicalIndex);
 }
 
 int TablePaneLayout::columnViewportX(int logicalIndex) const
@@ -227,6 +327,46 @@ TablePane::Type TablePaneLayout::paneOfColumn(int logicalIndex) const
     return TablePane::Type(m_paneByLogical.at(logicalIndex));
 }
 
+int TablePaneLayout::scrollGroupOfColumn(int logicalIndex) const
+{
+    if (logicalIndex < 0 || logicalIndex >= m_groupByLogical.size())
+        return -1;
+    return m_groupByLogical.at(logicalIndex);
+}
+
+QVector<int> TablePaneLayout::scrollGroups() const
+{
+    QVector<int> groups;
+    for (const TablePane &candidate : m_panes) {
+        if (candidate.type != TablePane::Type::Scrollable || candidate.scrollGroup < 0)
+            continue;
+        if (!groups.contains(candidate.scrollGroup))
+            groups.append(candidate.scrollGroup);
+    }
+    std::sort(groups.begin(), groups.end());
+    return groups;
+}
+
+qint64 TablePaneLayout::groupOffset(int scrollGroup) const
+{
+    qint64 offset = 0;
+    if (scrollGroup == 0) {
+        // The primary group follows the committed header geometry: the scroll
+        // bar and every geometry query keep working exactly as before.
+        offset = m_geometry ? m_geometry->viewportOffset() : 0;
+    } else {
+        offset = m_groupOffsets.value(scrollGroup, 0);
+    }
+    return qBound<qint64>(qint64(0), offset, maximumGroupOffset(scrollGroup));
+}
+
+void TablePaneLayout::setGroupOffset(int scrollGroup, qint64 offset)
+{
+    if (scrollGroup == 0)
+        return; // the application scrolls the primary group through the view
+    m_groupOffsets.insert(scrollGroup, qMax<qint64>(0, offset));
+}
+
 QVector<int> TablePaneLayout::columnsForLayout(int overscan) const
 {
     QVector<int> columns;
@@ -236,18 +376,30 @@ QVector<int> TablePaneLayout::columnsForLayout(int overscan) const
     if (count <= 0)
         return columns;
 
-    const VisibleRange window = VisibleRange::expanded(
-        m_visibleScrollable.first, m_visibleScrollable.last, qMax(0, overscan), qMax(0, overscan),
-        count);
-    columns.reserve(int(window.count()) + m_frozenLeft.size() + m_frozenRight.size());
+    // Every pane contributes: a frozen pane always, a scrolling pane inside its
+    // own window (widened by \a overscan sections).
+    QVector<VisibleRange> windows;
+    windows.reserve(m_panes.size());
+    for (int paneIndex = 0; paneIndex < m_panes.size(); ++paneIndex) {
+        const VisibleRange window = m_paneWindows.value(paneIndex, VisibleRange());
+        windows.append(window.isValid()
+                           ? VisibleRange::expanded(window.first, window.last, qMax(0, overscan),
+                                                    qMax(0, overscan), count)
+                           : window);
+    }
+
+    columns.reserve(count);
     for (int visual = 0; visual < count; ++visual) {
         const int logical = m_geometry->logicalIndex(visual);
         if (logical < 0 || m_geometry->isSectionHidden(logical))
             continue;
-        // Frozen columns are always laid out, the scrollable ones only inside
-        // the visible window (widened by the overscan).
-        if (paneOfColumn(logical) != TablePane::Type::Scrollable || window.contains(visual))
+        const int paneIndex = paneIndexOfColumn(logical);
+        if (paneIndex < 0)
+            continue;
+        if (m_panes.at(paneIndex).type != TablePane::Type::Scrollable
+            || windows.at(paneIndex).contains(visual)) {
             columns.append(logical);
+        }
     }
     return columns;
 }

@@ -50,6 +50,7 @@ QWidget**。
 | Span（v0.7，§43）：`TableSpanProvider` / `TableSpanMap` + `setSpan()/removeSpan()/clearSpans()`；合并矩形完全由已提交列几何与行高推出（不存第二份几何），`indexAt()/cellRect()` 折回锚点，Cell Widget Mode 只物化锚点并把锚点控件放大到合并矩形 | 已实现 |
 | Span 一致性：拖放落点与插入指示器按锚点/合并矩形、accessibility 合并区域只暴露一个 cell、span 不跨 pane（裁剪到锚点 pane）、隐藏列自动变窄、列宽/行高变化后合并矩形自动跟随 | 已实现 |
 | Span 两种模式：Cell Widget Mode 只物化锚点（跨行合并由框架渲染）；Row Widget Mode 隐藏被覆盖列的 `ColumnHost`、锚点 host 占合并矩形，并在 `TableRowLayoutContext::spans()` 里把决定交给业务（`examples/table_spans`） | 已实现 |
+| Advanced panes（v0.7，§43）：`setPanes()` 取有序 `TablePaneSpec{columns, scroll, scrollGroup}` 列表（任意数量冻结 pane + 一个滚动组），每个 pane 一个表头渲染器、一条交界线，`setFrozenColumns()` 退化为默认三段的语法糖 | 已实现（多滚动组待续） |
 | 树：expand/collapse、`expandRecursively()`（`*` 键递归展开）、Left/Right 导航、缩进、分支指示绘制与点击、双击展开 | 已实现 |
 | 树：分支图标可按状态自定义（`BranchIndicatorRenderer`，对应 `QTreeView::branch` 的 has-children / has-siblings / adjoins-item / open / closed，不解析样式表） | 已实现 |
 | 树：结构变更（insert/remove/move/layoutChanged/reset）保持展开状态与滚动锚点 | 已实现 |
@@ -64,12 +65,13 @@ QWidget**。
 | 像素滚动：`WheelScrollMode`（Pixels 默认 / Items）、`setWheelScrollPixels()`、`scrollByPixels()`、`setVerticalOffset()`、触控板 `pixelDelta` 1:1 | 已实现 |
 | 可选生命周期日志 `setLifecycleLoggingEnabled()`（create/bind/unbind/recycle/pin） | 已实现 |
 | `TreeVisibilityIndex`（可见行压平、增量展开/折叠、深度、row 双向查询） | 已实现 |
-| 单元测试 199 个用例 + 4 个变异测试 + 10 个 GUI 交互场景（共 18 个 CTest 目标） | 已实现 |
+| 单元测试 206 个用例 + 4 个变异测试 + 10 个 GUI 交互场景（共 19 个 CTest 目标） | 已实现 |
 | 10 个示例（simple list / order cards / dynamic height / million rows / table row widgets / table many columns / table custom header / tree / drag & drop / table spans） | 已实现 |
 | benchmark（1M 行、表格 row vs cell、树：宽树 + 变更 + 锚点，稳态滚动零分配校验） | 已实现 |
 
-未实现（按 §43 路线图）：表头动画（§23/§24）、advanced panes（>3 个 pane / 多滚动组，
-规格与进度见 [docs/spans.md](docs/spans.md) 第 5/7 节，span 部分已全部完成）；accessibility
+未实现（按 §43 路线图）：表头动画（§23/§24）、advanced panes 的**多滚动组**
+（>3 个 pane 与任意数量冻结 pane 已可用；多滚动组要求每个滚动 pane 一个裁剪容器，
+见 [docs/spans.md](docs/spans.md) 第 5/7 节）；accessibility
 还没有 `QAccessibleTableInterface`（行列朗读）与文本/编辑接口；行冻结
 （文档 §31 只写列方向）；树在"可见行数极大"时的增量行映射优化
 （现在一次 expand/collapse 需要重建可见行索引表，见 [docs/performance.md](docs/performance.md)）。
@@ -327,7 +329,7 @@ src/
 tests/
   unit/       sizeindex / scrollmapper / widgetrecycler / listlayout / headergeometry /
               treevisibilityindex / 内核 / ListView / TableView / TableCellMode / TreeView /
-              VirtualHeaderView / DragDrop / Accessibility / TableSpan
+              VirtualHeaderView / DragDrop / Accessibility / TableSpan / TablePanes
   fuzz/       随机 insert/remove/move/dataChanged/reset
   gui/        List：鼠标/键盘/焦点 pinning/滚动数据新鲜度；Table：表头排序/横向滚轮/拖动列宽
 benchmarks/   1M 行与稳态滚动零分配校验（可选 QListView/QListWidget 参考）

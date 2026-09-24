@@ -138,6 +138,33 @@ public:
     {
         return m_panes.paneOfColumn(logicalIndex);
     }
+    /// Explicit pane list (§43 "advanced panes"): panes in visual order, each
+    /// with its own columns and scroll group. An empty list restores the default
+    /// "frozen left | scrollable | frozen right" layout, so setFrozenColumns()
+    /// stays the shorthand for the common case.
+    ///
+    /// The current implementation supports any number of frozen panes plus one
+    /// scrolling group; a second scrolling group is refused with a warning until
+    /// every scrolling pane has its own clip container (see docs/spans.md).
+    void setPanes(const QVector<TablePaneSpec> &panes);
+    QVector<TablePaneSpec> paneSpecs() const { return m_panes.paneSpecs(); }
+    /// Index of the pane that shows \a logicalIndex (-1 when hidden/unknown).
+    int paneIndexOfColumn(int logicalIndex) const { return m_panes.paneIndexOfColumn(logicalIndex); }
+    /// Scroll groups of the current layout, ascending.
+    QVector<int> scrollGroups() const { return m_panes.scrollGroups(); }
+    /// Horizontal offset of one scroll group; group 0 is the primary group, the
+    /// one the header geometry and the scroll bar drive.
+    qint64 horizontalOffset(int scrollGroup) const { return m_panes.groupOffset(scrollGroup); }
+    /// Sets the offset of \a scrollGroup (no-op for group 0: use
+    /// setHorizontalOffset(qint64) for the primary group).
+    void setHorizontalOffset(int scrollGroup, qint64 offset);
+    qint64 maximumHorizontalOffset(int scrollGroup) const
+    {
+        return m_panes.maximumGroupOffset(scrollGroup);
+    }
+    /// Geometry of the pane boundary lines, left to right (diagnostics/tests;
+    /// there is one per visible pane boundary).
+    QVector<QRect> paneSeparatorRects() const;
     /// Look of the line that separates two panes, in the header *and* in the
     /// body. The default is a 1 px line in the colour the current style paints
     /// section separators with; setting an explicit colour, a different width
@@ -300,8 +327,10 @@ private:
     HeaderGeometry *m_rowHeaders = nullptr;
     HeaderViewInterface *m_horizontalHeader = nullptr;
     HeaderViewInterface *m_verticalHeader = nullptr;
-    HeaderViewInterface *m_frozenLeftHeader = nullptr;
-    HeaderViewInterface *m_frozenRightHeader = nullptr;
+    /// Header renderer of every non-primary pane, indexed by pane index (§43):
+    /// a pane shows its own columns at its own viewport x, so it needs its own
+    /// renderer of the same geometry. The primary pane uses m_horizontalHeader.
+    QVector<HeaderViewInterface *> m_paneHeaders;
     /// Framework container that clips the scrollable pane (see §31).
     QWidget *m_cellClipHost = nullptr;
     /// 1 px body lines at the pane boundaries (left | scrollable | right).

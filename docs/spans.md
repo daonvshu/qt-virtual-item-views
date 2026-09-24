@@ -140,7 +140,7 @@ CTest 与示例（见 README 的"验证"一节）。
 | 2. Cell Widget Mode 只物化锚点（锚点控件放大到合并矩形） | 已完成 |
 | 4. 拖放：命中被覆盖单元格时列折回锚点，插入指示器用合并矩形 | 已完成（选择/键盘沿用同一套 `indexAt()` 折回） |
 | 3. Row Widget Mode：`TableRowLayoutContext` 暴露 `spanOf()/spanRect()`，框架按 span 摆放 `ColumnHost` | 已完成 |
-| 5. Advanced panes：把固定三段重构为 pane 列表（`PaneSpec`） | 待做 |
+| 5. Advanced panes：把固定三段重构为 pane 列表（`TablePaneSpec`） | 已完成（任意冻结 pane + 一个滚动组；多滚动组见下） |
 | 6. 示例 `examples/table_spans` | 已完成 |
 
 顺带对齐的既有能力：accessibility 桥接（§37）也走同一套锚点语义 —— 合并区域只暴露一个
@@ -152,3 +152,39 @@ CTest 与示例（见 README 的"验证"一节）。
 `ColumnHost`、把锚点 host 摆到合并矩形上；业务在 `layoutRowWidget()` 里读同一个对象就能给
 合并单元格换样式（`examples/table_spans` 的分组标题就是这么居中加粗的）。没有 span 时代码
 路径完全不变（`spans().isEmpty()`）。
+
+### 第 5 步的进度与决定
+
+已完成：`TablePaneLayout` 不再假设"固定三段"。它的输入是**有序 pane 列表**
+（`TablePaneSpec{logicalColumns, scroll, scrollGroup}`，空列表 = 回落到冻结集合的默认三段），
+输出是每个 pane 的矩形、每一列的视口 x、每个滚动组的 extent/宽度/偏移与"该组当前可见的窗口"。
+几条已经定下来、并且被测试守住的规则：
+
+* **宽度分配**：除主滚动 pane 以外，每个 pane 取自己的 extent（不足时按顺序压缩到 0），
+  主滚动 pane 拿剩下的宽度 —— 这正是今天 `冻结左 | 可滚动 | 冻结右` 的算法，所以默认布局
+  的行为逐像素不变（全部既有用例原样通过）。
+* **坐标空间**：每个滚动 pane 的内容从自己的左边缘开始累计，再减去它所在组的偏移；
+  组 0（主组）的偏移仍然来自 `HeaderGeometry::viewportOffset()` —— 滚动条、表头、
+  `columnGeometry()` 完全不用改。
+* **冻结 pane 的类型**：显式列表里位于主滚动 pane 之前的冻结 pane 报 `FrozenLeft`、
+  之后的报 `FrozenRight`，`isColumnFrozen()` 语义不变；`paneIndexOfColumn()` 才是
+  "在哪个 pane" 的权威答案（`spanRect()` 的"不跨 pane"判定也改成用它）。
+* **`columnsForLayout()`** 现在覆盖**所有** pane：冻结 pane 全部列 + 每个滚动 pane 自己的可见窗口
+  （加 overscan），因此多 pane 下不会漏物化。
+
+视图侧也已经 pane 化：
+
+* `VirtualTableView::setPanes()` / `paneSpecs()` / `paneIndexOfColumn()` 把显式列表接到布局上；
+* **表头**：每个 pane 一个渲染器（`m_paneHeaders`，索引 = pane 序号），
+  `layoutHeaderWidgets()` 按各自 pane 矩形摆放，主滚动 pane 沿用原表头；
+* **交界线**：pane 数 - 1 条，冻结 pane 那一侧仍然把线画在自己里面，所以线条是连续的；
+  `paneSeparatorRects()` 可查询（诊断/测试）；
+* `setFrozenColumns()/setFrozenRightColumns()` 只是"默认三段"的语法糖，行为逐像素不变；
+* `spanRect()` 的"不跨 pane"判定改用 `paneIndexOfColumn()`，因此**每一个** pane 边界都是
+  span 的硬边界（两个同类冻结 pane 之间也一样）。
+
+还剩一件：**多滚动组**。多组要求"每个滚动 pane 一个裁剪容器"（现在只有主滚动 pane 有，
+冻结列靠 `raise()` 压住），所以 `setPanes()` 目前对第二个滚动组是**显式拒绝**的
+（`qWarning` + 忽略），不会出现"API 接受但第二组画到邻居 pane 上"的状态。
+布局引擎本身已经支持多组（每组各自的 extent/宽度/偏移、`setHorizontalOffset(group, offset)`），
+补上裁剪容器即可放开 —— 这是第 5b 步的唯一剩余项。
