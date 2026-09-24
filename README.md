@@ -34,6 +34,7 @@ QWidget**。
 | `VirtualTableView`（v0.4 Table MVP，Row Widget Mode） | 已实现 |
 | `HeaderGeometry`：列宽/顺序/隐藏/排序状态的唯一事实来源（§14/§45.10） | 已实现 |
 | `NativeHeaderView`：QHeaderView 与 HeaderGeometry 双向同步（无信号回环） | 已实现 |
+| `VirtualHeaderView` + `HeaderWidgetAdapter`（§17-§19）：每个可见 section 一个真实 QWidget，只 materialize 可见列 + 横向 overscan + pinned | 已实现 |
 | `ColumnHost` / `TableRowLayoutContext`：框架定位列，业务只管内容（§26/§27） | 已实现 |
 | 列 resize/move/hide、表头点击排序、横向像素滚动、表头状态 save/restore | 已实现 |
 | 冻结列（v0.7，§31）：`setFrozenColumns()` / `setFrozenRightColumns()`，冻结 pane 与可滚动 pane 共享同一份 `HeaderGeometry` | 已实现 |
@@ -55,12 +56,13 @@ QWidget**。
 | 像素滚动：`WheelScrollMode`（Pixels 默认 / Items）、`setWheelScrollPixels()`、`scrollByPixels()`、`setVerticalOffset()`、触控板 `pixelDelta` 1:1 | 已实现 |
 | 可选生命周期日志 `setLifecycleLoggingEnabled()`（create/bind/unbind/recycle/pin） | 已实现 |
 | `TreeVisibilityIndex`（可见行压平、增量展开/折叠、深度、row 双向查询） | 已实现 |
-| 单元测试 153 个用例 + 4 个变异测试 + 10 个 GUI 交互场景（共 14 个 CTest 目标） | 已实现 |
-| 7 个示例（simple list / order cards / dynamic height / million rows / table row widgets / table many columns / tree） | 已实现 |
+| 单元测试 160 个用例 + 4 个变异测试 + 10 个 GUI 交互场景（共 15 个 CTest 目标） | 已实现 |
+| 8 个示例（simple list / order cards / dynamic height / million rows / table row widgets / table many columns / table custom header / tree） | 已实现 |
 | benchmark（1M 行、表格 row vs cell、树：宽树 + 变更 + 锚点，稳态滚动零分配校验） | 已实现 |
 
-未实现（按 §43 路线图）：`VirtualHeaderView`（QWidget 版表头 + `HeaderWidgetAdapter`，接口已预留）、
-行冻结、高级 DnD、accessibility 虚拟节点桥接；树在"可见行数极大"时的增量行映射优化
+未实现（按 §43 路线图）：高级 DnD（§38）、accessibility 虚拟节点桥接（§37）、
+表头动画（§23/§24）、span 与 advanced panes（文档只有名字，规格待补）；行冻结
+（文档 §31 只写列方向）；树在"可见行数极大"时的增量行映射优化
 （现在一次 expand/collapse 需要重建可见行索引表，见 [docs/performance.md](docs/performance.md)）。
 
 ## 快速开始

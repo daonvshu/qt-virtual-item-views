@@ -229,6 +229,8 @@ private:
     void syncHeaderPanes();
     /// Creates/positions the 1 px body lines of the pane boundaries.
     void syncPaneSeparatorLines();
+    /// Pane header of the same kind as the installed horizontal header.
+    HeaderViewInterface *createHorizontalPaneHeader();
     /// Lifts the body lines above the (re)materialized items.
     void raisePaneSeparatorLines();
     /// Column hosts of a row widget (direct children plus the clip host's).
@@ -258,8 +260,8 @@ private:
     HeaderGeometry *m_rowHeaders = nullptr;
     HeaderViewInterface *m_horizontalHeader = nullptr;
     HeaderViewInterface *m_verticalHeader = nullptr;
-    NativeHeaderView *m_frozenLeftHeader = nullptr;
-    NativeHeaderView *m_frozenRightHeader = nullptr;
+    HeaderViewInterface *m_frozenLeftHeader = nullptr;
+    HeaderViewInterface *m_frozenRightHeader = nullptr;
     /// Framework container that clips the scrollable pane (see §31).
     QWidget *m_cellClipHost = nullptr;
     /// 1 px body lines at the pane boundaries (left | scrollable | right).

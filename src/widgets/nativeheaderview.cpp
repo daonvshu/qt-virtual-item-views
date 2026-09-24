@@ -271,17 +271,6 @@ void NativeHeaderView::setSortInteractionEnabled(bool enabled)
     m_sortInteractionEnabled = enabled;
 }
 
-void NativeHeaderView::setPaneSeparator(Qt::Edge edge, const PaneSeparatorStyle &style)
-{
-    if (m_separatorEdge == edge && m_separatorStyle.width == style.width
-        && m_separatorStyle.color == style.color && m_separatorStyle.lineStyle == style.lineStyle) {
-        return;
-    }
-    m_separatorEdge = edge;
-    m_separatorStyle = style;
-    update();
-}
-
 QColor NativeHeaderView::sectionSeparatorColor(const QWidget *context)
 {
     // Render a small section with the current style and read the pixel of its
@@ -332,21 +321,6 @@ void NativeHeaderView::drawPaneSeparator(QPainter *painter, const QRect &rect,
     const int x = rect.center().x();
     painter->drawLine(x, rect.top(), x, rect.bottom());
     painter->restore();
-}
-
-void NativeHeaderView::paintEvent(QPaintEvent *event)
-{
-    QHeaderView::paintEvent(event);
-    if (int(m_separatorEdge) == 0 || !m_separatorStyle.isVisible())
-        return;
-
-    // The band lies inside the frozen pane whose header this is, so it can never
-    // be clipped by the pane next to it.
-    const int band = qMin(m_separatorStyle.width, width());
-    const QRect rect = m_separatorEdge == Qt::LeftEdge ? QRect(0, 0, band, height())
-                                                       : QRect(width() - band, 0, band, height());
-    QPainter painter(viewport());
-    drawPaneSeparator(&painter, rect, m_separatorStyle, sectionSeparatorColor(this));
 }
 
 } // namespace viv

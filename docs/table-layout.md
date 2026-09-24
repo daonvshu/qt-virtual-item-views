@@ -116,6 +116,34 @@ Table 新增的只有：行/列两级几何、`HeaderGeometry`、二维可见区
   `color`（invalid = 用上面的样式色）与 `lineStyle`；表头线与 body 线共用同一份样式，
   所以怎么改都是连续的一条。线带总是落在**冻结 pane 内侧**（左 pane 取最右侧 width 像素、
   右 pane 取最左侧 width 像素），表头与 body 因此不会各露一半。
+
+## 8. Widget Header（VirtualHeaderView，v0.7，§15/§17-§19）
+
+复杂表头（badge、状态灯、进度、过滤按钮、搜索框、排序箭头动画）用控件实现，而不是交给
+`QStyle` 绘制：
+
+```cpp
+auto *header = new viv::VirtualHeaderView(Qt::Horizontal);
+header->setAdapter(&myHeaderAdapter);   // HeaderWidgetAdapter
+header->setLabelModel(model);
+header->setSortInteractionEnabled(true);
+table->setHorizontalHeader(header);     // 传给 nullptr 回到 native 表头
+```
+
+* **与 native 完全可替换**：`HeaderViewInterface` 是唯一的接缝（§15）。表格只通过
+  `headerWidget()`/`setGeometryModel()`/`setLabelModel()`/`setSortInteractionEnabled()`/
+  `setViewportOrigin()`/`setPaneFilter()` 与表头交互，所以机身在换表头时一行都不用改。
+* **只 materialize 窗口内的 section**（§19）：集合 = 可见列 + 横向 overscan + pinned section，
+  复用走的是框架同一个 `WidgetRecycler`（create / acquire / bind / unbind / recycle）。
+  实测：200 列、1000 px 宽的表格只创建 9 个 section 控件（`table_custom_header` 示例输出）。
+* **几何仍只来自 `HeaderGeometry`**：section 的位置/宽度/顺序/隐藏/偏移全部读 geometry，
+  表头不保存任何列状态；拖动分隔线、拖动 section 重排、点击排序都是把结果写回 geometry。
+* **交互**：离 section 边缘 ±3 px 按住拖动 = 改列宽（§21/§25）；按住 section 拖到邻居上 =
+  重排（§22）；单击 = 排序（§33）；子控件获得焦点或打开 popup 的 section 会被 pin，不回收（§36）。
+* **冻结列**：`setPaneFilter(columns, frozen)` 让同一个类也能当冻结 pane 的表头
+  （只 materialize 本 pane 的 section），表格会自动用同类渲染器创建 pane 表头（§31）。
+* 表头动画（§23/§24：committed vs visual geometry、动画分类）尚未实现；`VirtualHeaderView`
+  的 section 控件就是它的落点。
 * **滚动范围不变**：可滚动内容减少的宽度正好等于冻结宽度，`maximumHorizontalOffset()` 仍是
   `总可见宽度 - 视口宽度`。冻结不会凭空制造滚动空间，也不会让某些列永远滚不到。
 * **body 与 pane 的关系**：Row Widget Mode 下仍是一行一个业务控件，冻结列的 `ColumnHost`

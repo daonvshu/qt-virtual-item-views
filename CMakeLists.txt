@@ -59,6 +59,7 @@ message(STATUS "VirtualItemViews: building against ${VIRTUALITEMVIEWS_QT_PACKAGE
 set(VIRTUALITEMVIEWS_PUBLIC_HEADERS
     include/virtualitemviews/branchindicator.h
     include/virtualitemviews/headergeometry.h
+    include/virtualitemviews/headerwidgetadapter.h
     include/virtualitemviews/layoutpolicy.h
     include/virtualitemviews/listlayout.h
     include/virtualitemviews/materializeditem.h
@@ -72,6 +73,7 @@ set(VIRTUALITEMVIEWS_PUBLIC_HEADERS
     include/virtualitemviews/virtualitemview.h
     include/virtualitemviews/virtuallistview.h
     include/virtualitemviews/virtualtableview.h
+    include/virtualitemviews/virtualheaderview.h
     include/virtualitemviews/virtualtreeview.h
     include/virtualitemviews/widgetadapter.h
     include/virtualitemviews/widgetrecycler.h)
@@ -91,6 +93,7 @@ set(VIRTUALITEMVIEWS_SOURCES
     src/widgets/nativeheaderview.cpp
     src/widgets/virtuallistview.cpp
     src/widgets/virtualtreeview.cpp
+    src/widgets/virtualheaderview.cpp
     src/widgets/virtualtableview.cpp)
 
 if(VIRTUALITEMVIEWS_BUILD_SHARED)

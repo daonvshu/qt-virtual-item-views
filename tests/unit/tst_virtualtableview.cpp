@@ -289,6 +289,7 @@ private slots:
     void frozenPaneKeepsTheRowBackground();
     void frozenPanesDrawBodySeparatorLines();
     void paneSeparatorStyleIsCustomizable();
+    void headerStateRestoresFrozenColumns();
 
 private:
     QStandardItemModel *m_model = nullptr;
@@ -911,10 +912,9 @@ void TestVirtualTableView::frozenPanesSplitTheHeader()
     QVERIFY(scrollableHeader->isSectionHidden(0));
     QVERIFY(scrollableHeader->isSectionHidden(1));
     QVERIFY(!scrollableHeader->isSectionHidden(2));
-    // QHeaderView only separates sections inside a header, so the frozen pane
-    // header draws the line at the pane boundary itself (§31).
-    QCOMPARE(frozenPaneHeader->paneSeparatorEdge(), Qt::RightEdge);
-    QCOMPARE(int(qobject_cast<NativeHeaderView *>(scrollableHeader)->paneSeparatorEdge()), 0);
+    // QHeaderView only separates sections inside a header, so the pane boundary
+    // line is a framework overlay (see frozenPanesDrawBodySeparatorLines()).
+    QVERIFY(frozenPaneHeader != nullptr);
     // Header and body agree pixel for pixel inside every pane (§45.1): the pane
     // header's position is relative to its own widget.
     for (int column = 0; column < m_view->columnCount(); ++column) {
@@ -1029,10 +1029,11 @@ void TestVirtualTableView::frozenPanesDrawBodySeparatorLines()
     QCOMPARE(lines().size(), 1);
     const int viewportX = m_view->viewport()->geometry().x();
     const int viewportY = m_view->viewport()->geometry().y();
-    // The band lies inside the frozen pane, like the header line does.
-    QCOMPARE(lines().first()->geometry().x(), 2 * kColumnWidth - 1);
+    // The band lies inside the frozen pane and covers header + body (the line is
+    // a child of the view, so the header widgets cannot hide it).
+    QCOMPARE(lines().first()->geometry().x(), viewportX + 2 * kColumnWidth - 1);
     QCOMPARE(lines().first()->width(), 1);
-    QCOMPARE(lines().first()->height(), m_view->viewport()->height());
+    QCOMPARE(lines().first()->height(), m_view->headerHeight() + m_view->viewport()->height());
     QVERIFY(lines().first()->isVisible());
 
     // The body line uses the colour the style paints section separators with, so
@@ -1045,7 +1046,8 @@ void TestVirtualTableView::frozenPanesDrawBodySeparatorLines()
     m_view->setFrozenRightColumns(QVector<int>({5}));
     m_view->flushPendingRelayout();
     QCOMPARE(lines().size(), 2);
-    QCOMPARE(lines().at(1)->geometry().x(), m_view->viewport()->width() - kColumnWidth);
+    QCOMPARE(lines().at(1)->geometry().x(),
+             viewportX + m_view->viewport()->width() - kColumnWidth);
 
     m_view->clearFrozenColumns();
     m_view->flushPendingRelayout();
@@ -1090,6 +1092,37 @@ void TestVirtualTableView::paneSeparatorStyleIsCustomizable()
     const QImage without = m_view->grab().toImage();
     QCOMPARE(without.pixelColor(viewportX + boundary - 1, viewportY + 20), QColor(Qt::white));
     QVERIFY(without.pixelColor(viewportX + boundary - 1, 8) != QColor(200, 0, 0));
+}
+
+void TestVirtualTableView::headerStateRestoresFrozenColumns()
+{
+    m_view->setFrozenColumns(QVector<int>({0, 1}));
+    m_view->setFrozenRightColumns(QVector<int>({4}));
+    m_view->setColumnWidth(1, kColumnWidth + 20);
+    const QByteArray state = m_view->saveHeaderState();
+
+    // Change everything the state covers.
+    m_view->clearFrozenColumns();
+    m_view->moveColumn(2, 0);
+    m_view->setColumnWidth(1, kColumnWidth);
+    QVERIFY(m_view->frozenColumns().isEmpty());
+
+    QVERIFY(m_view->restoreHeaderState(state));
+    QCOMPARE(m_view->frozenColumns(), QVector<int>({0, 1}));
+    QCOMPARE(m_view->frozenRightColumns(), QVector<int>({4}));
+    QCOMPARE(m_view->panes().size(), 3);
+    QCOMPARE(m_view->columnWidth(1), kColumnWidth + 20);
+    QCOMPARE(m_view->horizontalHeaderGeometry()->logicalIndex(0), 0);
+    QCOMPARE(m_view->panes().at(0).viewportRect.width(), 2 * kColumnWidth + 20);
+
+    // A bare HeaderGeometry state (the format before the pane sets existed)
+    // still restores the columns and leaves the frozen sets alone.
+    const QByteArray legacy = m_view->horizontalHeaderGeometry()->saveState();
+    m_view->setFrozenColumns(QVector<int>({2}));
+    m_view->moveColumn(0, 3);
+    QVERIFY(m_view->restoreHeaderState(legacy));
+    QCOMPARE(m_view->frozenColumns(), QVector<int>({2}));
+    QCOMPARE(m_view->horizontalHeaderGeometry()->logicalIndex(0), 0);
 }
 
 QTEST_MAIN(TestVirtualTableView)

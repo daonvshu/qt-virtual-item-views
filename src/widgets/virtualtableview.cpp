@@ -1,5 +1,7 @@
 #include <virtualitemviews/virtualtableview.h>
 
+#include <virtualitemviews/virtualheaderview.h>
+
 #include <virtualitemviews/listlayout.h>
 #include <virtualitemviews/sizeindex.h>
 #include <virtualitemviews/widgetrecycler.h>
@@ -24,6 +26,11 @@ namespace {
 /// here), so per-row mirroring is disabled; the widget header (v0.5) removes the
 /// limit. One million rows cost about 8 MB of mirror state.
 constexpr qsizetype kRowHeaderMirrorLimit = 1000000;
+
+/// Magic/version of the table level header state (HeaderGeometry state plus the
+/// frozen pane sets, §31/§32).
+constexpr quint32 kTableStateMagic = 0x56495654; // 'VIVT'
+constexpr quint32 kTableStateVersion = 1;
 
 /// Framework owned clipping container of a pane (§31). It paints nothing, so a
 /// business row widget keeps its own background; Qt clips the children of a
@@ -253,19 +260,28 @@ void VirtualTableView::layoutHeaderWidgets()
     }
     if (m_frozenLeftHeader) {
         const int width = m_panes.frozenLeftWidth();
-        m_frozenLeftHeader->setGeometry(viewportRect.x(), viewportRect.y() - headerHeight,
-                                        qMax(0, width), headerHeight);
-        m_frozenLeftHeader->setVisible(headerHeight > 0 && width > 0);
-        m_frozenLeftHeader->raise();
+        QWidget *widget = m_frozenLeftHeader->headerWidget();
+        widget->setGeometry(viewportRect.x(), viewportRect.y() - headerHeight, qMax(0, width),
+                            headerHeight);
+        widget->setVisible(headerHeight > 0 && width > 0);
+        widget->raise();
     }
     if (m_frozenRightHeader) {
         const int width = m_panes.frozenRightWidth();
-        m_frozenRightHeader->setGeometry(viewportRect.x() + viewportRect.width() - width,
-                                         viewportRect.y() - headerHeight, qMax(0, width),
-                                         headerHeight);
-        m_frozenRightHeader->setVisible(headerHeight > 0 && width > 0);
-        m_frozenRightHeader->raise();
+        QWidget *widget = m_frozenRightHeader->headerWidget();
+        widget->setGeometry(viewportRect.x() + viewportRect.width() - width,
+                            viewportRect.y() - headerHeight, qMax(0, width), headerHeight);
+        widget->setVisible(headerHeight > 0 && width > 0);
+        widget->raise();
     }
+    // A widget based header derives its own coordinates from the geometry.
+    const QPoint origin = viewportRect.topLeft();
+    if (m_horizontalHeader)
+        m_horizontalHeader->setViewportOrigin(origin);
+    if (m_frozenLeftHeader)
+        m_frozenLeftHeader->setViewportOrigin(origin);
+    if (m_frozenRightHeader)
+        m_frozenRightHeader->setViewportOrigin(origin);
     if (m_verticalHeader) {
         QWidget *widget = m_verticalHeader->headerWidget();
         widget->setGeometry(viewportRect.x() - rowHeaderWidth, viewportRect.y(), rowHeaderWidth,
@@ -573,10 +589,6 @@ void VirtualTableView::setPaneSeparatorStyle(const PaneSeparatorStyle &style)
     m_paneSeparatorStyle = style;
     syncHeaderPanes();
     syncPaneSeparatorLines();
-    if (m_frozenLeftHeader)
-        m_frozenLeftHeader->update();
-    if (m_frozenRightHeader)
-        m_frozenRightHeader->update();
     emit columnGeometryChanged();
 }
 
@@ -616,19 +628,20 @@ void VirtualTableView::syncHeaderPanes()
         }
     }
 
-    const auto adopt = [this](NativeHeaderView *&header, const QVector<int> &columns) {
+    const auto adopt = [this](HeaderViewInterface *&header, const QVector<int> &columns) {
         if (columns.isEmpty()) {
             if (header) {
-                header->hide();
-                header->deleteLater();
+                header->headerWidget()->hide();
+                header->headerWidget()->deleteLater();
                 header = nullptr;
             }
             return;
         }
         if (!header) {
-            // The pane header is another native renderer of the same geometry, so
-            // it never keeps a width/order copy of its own (§31).
-            header = new NativeHeaderView(Qt::Horizontal, this);
+            // The pane header is another renderer of the same geometry (§31), and
+            // it is of the same kind as the installed horizontal header so a
+            // widget based header can render the frozen panes as well.
+            header = createHorizontalPaneHeader();
             header->setGeometryModel(m_columns);
             header->setLabelModel(model());
             header->setSortInteractionEnabled(m_sortingEnabled);
@@ -637,17 +650,22 @@ void VirtualTableView::syncHeaderPanes()
     };
     adopt(m_frozenLeftHeader, leftColumns);
     adopt(m_frozenRightHeader, rightColumns);
-    // Both pane headers face the scrollable pane with an edge that QHeaderView
-    // would not separate, so they draw that line themselves (§31).
-    if (m_frozenLeftHeader)
-        m_frozenLeftHeader->setPaneSeparator(Qt::RightEdge, m_paneSeparatorStyle);
-    if (m_frozenRightHeader)
-        m_frozenRightHeader->setPaneSeparator(Qt::LeftEdge, m_paneSeparatorStyle);
 
     if (leftColumns.isEmpty() && rightColumns.isEmpty())
         m_horizontalHeader->clearPaneFilter();
     else
         m_horizontalHeader->setPaneFilter(scrollableColumns, false);
+}
+
+HeaderViewInterface *VirtualTableView::createHorizontalPaneHeader()
+{
+    if (auto *widgetHeader = dynamic_cast<VirtualHeaderView *>(m_horizontalHeader)) {
+        auto *header = new VirtualHeaderView(Qt::Horizontal, this);
+        header->setAdapter(widgetHeader->adapter());
+        header->setSectionOverscan(widgetHeader->sectionOverscan());
+        return header;
+    }
+    return new NativeHeaderView(Qt::Horizontal, this);
 }
 
 void VirtualTableView::syncPaneSeparatorLines()
@@ -666,12 +684,21 @@ void VirtualTableView::syncPaneSeparatorLines()
         line->setParent(nullptr); // leave nothing behind while it is deleted
         line->deleteLater();
     }
+    // The line is a child of the view (not of the viewport): it has to cover the
+    // header strip too, and the header widgets are siblings of the viewport.
     while (m_paneSeparatorLines.size() < boundaries.size())
-        m_paneSeparatorLines.append(new PaneSeparatorLine(viewport()));
+        m_paneSeparatorLines.append(new PaneSeparatorLine(this));
 
     const QColor styleColor = boundaries.isEmpty()
         ? QColor()
         : NativeHeaderView::sectionSeparatorColor(this);
+    // The line covers the header strip *and* the body, so it works for every
+    // header renderer (native or widget based) and looks continuous.
+    const int headerTop = viewport()->geometry().y()
+        - ((m_horizontalHeaderVisible && m_horizontalHeader) ? m_headerHeight : 0);
+    const int lineTop = qMax(0, headerTop);
+    const int lineHeight = qMax(0, viewport()->geometry().y() + viewport()->height() - lineTop);
+    const int lineOriginX = viewport()->geometry().x();
     const int band = qMax(0, m_paneSeparatorStyle.width);
     for (int i = 0; i < boundaries.size(); ++i) {
         auto *line = static_cast<PaneSeparatorLine *>(m_paneSeparatorLines.at(i));
@@ -681,10 +708,13 @@ void VirtualTableView::syncPaneSeparatorLines()
         // draw on.
         const int lineWidth = m_paneSeparatorStyle.lineStyle == Qt::SolidLine ? band : qMax(1, band);
         const bool leftBoundary = m_panes.frozenLeftWidth() > 0 && i == 0;
-        const int x = leftBoundary ? boundaries.at(i) - lineWidth : boundaries.at(i);
-        line->setGeometry(x, 0, lineWidth, viewport()->height());
-        line->setVisible(m_paneSeparatorStyle.isVisible() && viewport()->height() > 0);
+        const int x = lineOriginX + (leftBoundary ? boundaries.at(i) - lineWidth : boundaries.at(i));
+        line->setGeometry(x, lineTop, lineWidth, lineHeight);
+        line->setVisible(m_paneSeparatorStyle.isVisible() && lineHeight > 0);
     }
+    // A pane header created after the line would sit above it, and the lines
+    // have to cover the header strip.
+    raisePaneSeparatorLines();
 }
 
 void VirtualTableView::raisePaneSeparatorLines()
@@ -938,12 +968,68 @@ void VirtualTableView::onSortIndicatorChanged(int logicalIndex, Qt::SortOrder or
 
 QByteArray VirtualTableView::saveHeaderState() const
 {
-    return m_columns->saveState();
+    // Table level state: the column state of HeaderGeometry (single source of
+    // truth, §32) plus the frozen pane sets, which are a table concept (§31).
+    const QByteArray columnState = m_columns->saveState();
+
+    QByteArray state;
+    QDataStream stream(&state, QIODevice::WriteOnly);
+    stream.setVersion(QDataStream::Qt_5_15);
+    stream << kTableStateMagic << kTableStateVersion;
+    stream << quint32(columnState.size());
+    stream.writeRawData(columnState.constData(), int(columnState.size()));
+    const QVector<int> panes[2] = {m_panes.frozenColumns(), m_panes.frozenRightColumns()};
+    for (const QVector<int> &columns : panes) {
+        stream << qint32(columns.size());
+        for (int logical : columns)
+            stream << qint32(logical);
+    }
+    return state;
 }
 
 bool VirtualTableView::restoreHeaderState(const QByteArray &state)
 {
-    return m_columns->restoreState(state);
+    QDataStream stream(state);
+    stream.setVersion(QDataStream::Qt_5_15);
+
+    quint32 magic = 0;
+    quint32 version = 0;
+    quint32 columnStateSize = 0;
+    stream >> magic >> version >> columnStateSize;
+    if (stream.status() != QDataStream::Ok || magic != kTableStateMagic
+        || version != kTableStateVersion || int(columnStateSize) > state.size()) {
+        // Not a table level state: accept a bare HeaderGeometry state so a state
+        // saved before the pane sets existed keeps working.
+        return m_columns->restoreState(state);
+    }
+
+    QByteArray columnState(int(columnStateSize), Qt::Uninitialized);
+    if (stream.readRawData(columnState.data(), int(columnStateSize)) != int(columnStateSize))
+        return false;
+    if (!m_columns->restoreState(columnState))
+        return false;
+
+    QVector<int> frozenLeft;
+    QVector<int> frozenRight;
+    for (QVector<int> *columns : {&frozenLeft, &frozenRight}) {
+        qint32 count = 0;
+        stream >> count;
+        if (stream.status() != QDataStream::Ok || count < 0 || count > columnCount())
+            return false;
+        for (qint32 i = 0; i < count; ++i) {
+            qint32 logical = -1;
+            stream >> logical;
+            if (stream.status() != QDataStream::Ok || logical < 0 || logical >= columnCount())
+                return false;
+            columns->append(int(logical));
+        }
+    }
+
+    m_panes.setFrozenColumns(frozenLeft);
+    m_panes.setFrozenRightColumns(frozenRight);
+    updatePaneLayout();
+    emit columnGeometryChanged();
+    return true;
 }
 
 // ---------------------------------------------------------------------------

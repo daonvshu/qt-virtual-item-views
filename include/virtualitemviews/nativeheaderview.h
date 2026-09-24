@@ -39,6 +39,11 @@ public:
     /// indicator into HeaderGeometry, and the table reacts to that change.
     virtual void setSortInteractionEnabled(bool enabled) = 0;
 
+    /// Tells the renderer where the viewport starts inside the view, so a widget
+    /// based header can derive its own coordinates from HeaderGeometry (which is
+    /// expressed in viewport coordinates). The native adapter does not need it.
+    virtual void setViewportOrigin(const QPoint &origin) { Q_UNUSED(origin); }
+
     /// Restricts the header to one pane (§31): only \a logicalColumns are shown,
     /// read from the same geometry (a pane is never a width copy). When
     /// \a frozen the header ignores the horizontal offset. Renderers that cannot
@@ -86,13 +91,6 @@ public:
     void clearPaneFilter() override;
     bool hasPaneFilter() const { return m_paneFilterActive; }
 
-    /// Draws a header separator at the pane boundary (§31). QHeaderView only
-    /// separates sections *inside* a header, so the edge shared with the next
-    /// pane would have no line; a frozen pane header draws it itself.
-    void setPaneSeparator(Qt::Edge edge, const PaneSeparatorStyle &style);
-    Qt::Edge paneSeparatorEdge() const { return m_separatorEdge; }
-    PaneSeparatorStyle paneSeparatorStyle() const { return m_separatorStyle; }
-
     /// Colour the current style paints a header section separator with (probed by
     /// rendering a section and reading its edge pixel). The pane boundary line -
     /// header edge and the body line - uses it, so it matches the separators
@@ -122,7 +120,6 @@ private:
     void onHeaderSectionMoved(int logicalIndex, int oldVisualIndex, int newVisualIndex);
     void onGeometryChanged();
     void applySection(int logicalIndex);
-    void paintEvent(QPaintEvent *event) override;
 
     HeaderGeometry *m_geometry = nullptr;
     /// True while the geometry is being applied to the header, so that the
@@ -133,8 +130,6 @@ private:
     QVector<int> m_paneFilter;
     bool m_paneFilterActive = false;
     bool m_frozenPane = false;
-    Qt::Edge m_separatorEdge = Qt::Edge(0);
-    PaneSeparatorStyle m_separatorStyle;
 };
 
 } // namespace viv
