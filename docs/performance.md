@@ -38,6 +38,7 @@
 | Tree 稳态滚动 | 与 List 相同：不 new/delete，实例化集合只随视口变化 | `tst_virtualtreeview::scrollingIsAllocationFree`、`bench_listview --tree` |
 | Tree 结构变更 | 保留展开状态、保持滚动锚点、按身份回收被删子树 | `tst_virtualtreeview::rowsInsertedKeepsExpansionAndOrder` / `rowsRemovedRecyclesTheSubtree` / `anchorKeepsTheTopItemWhileExpandingAbove` |
 | Tree 分支装饰 | 只按可见行的层级数绘制：一格 = 一次渲染器调用 + 少量 `rowCount()` 查询；失效区域只到"最深层可见行"的缩进宽度 | `tst_virtualtreeview::customRendererOwnsTheBranchDecoration` / `indicatorsFollowScrolling` |
+| Table 冻结列（v0.7） | pane 布局只缓存"列 -> x"，几何/resize/偏移变化各重算一次 O(可见 section)；Row Mode 不增加控件，Cell Mode 只多实例化冻结列 | `tst_virtualtableview::frozenColumnsStayWhileTheScrollablePaneScrolls` / `frozenPanesDoNotAddScrollSpace`、`tst_tablecellmode::frozenColumnsStayMaterializedAndOnTop` |
 
 ## 3. 手工基准
 

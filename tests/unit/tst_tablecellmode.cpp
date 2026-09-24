@@ -7,6 +7,7 @@
 #include <QApplication>
 #include <QLabel>
 #include <QLineEdit>
+#include <QPainter>
 #include <QScrollBar>
 #include <QStandardItemModel>
 
@@ -99,6 +100,58 @@ public:
     int unbound = 0;
 };
 
+/// Cell that paints one thin stripe of its column colour: everything else stays
+/// transparent, so anything painted underneath shows through unless the widget
+/// that covers it fills its background.
+class StripeCell : public QWidget
+{
+public:
+    explicit StripeCell(QWidget *parent = nullptr)
+        : QWidget(parent)
+    {
+    }
+
+    void setColumn(int column)
+    {
+        m_column = column;
+        update();
+    }
+
+    static QColor colorFor(int column)
+    {
+        // Distinct, saturated colours: easy to spot in a rendered viewport.
+        static const QColor colors[] = {
+            QColor(200, 0, 0),     QColor(0, 160, 0),   QColor(0, 0, 200),
+            QColor(200, 140, 0),   QColor(160, 0, 160), QColor(0, 150, 150),
+        };
+        return colors[column % 6];
+    }
+
+protected:
+    void paintEvent(QPaintEvent *) override
+    {
+        QPainter painter(this);
+        painter.fillRect(QRect(0, 4 + m_column * 3, width(), 2), colorFor(m_column));
+    }
+
+private:
+    int m_column = 0;
+};
+
+class StripeCellAdapter : public CellWidgetAdapter
+{
+public:
+    QWidget *createCellWidget(WidgetType, QWidget *parent) override
+    {
+        return new StripeCell(parent);
+    }
+
+    void bindCellWidget(QWidget *widget, const QModelIndex &index) override
+    {
+        static_cast<StripeCell *>(widget)->setColumn(index.column());
+    }
+};
+
 /// Lightweight huge table model (no per-cell storage).
 class HugeTableModel : public QAbstractTableModel
 {
@@ -164,6 +217,8 @@ private slots:
     void columnResizeUpdatesCellGeometry();
     void switchingModeReleasesTheOtherWidgets();
     void focusedCellIsNotRecycled();
+    void frozenColumnsStayMaterializedAndOnTop();
+    void frozenCellsCoverTheScrolledOnes();
 
 private:
     HugeTableModel *m_model = nullptr;
@@ -369,6 +424,96 @@ void TestTableCellMode::focusedCellIsNotRecycled()
     m_view->flushPendingRelayout();
     QCOMPARE(m_view->cellWidget(cell), nullptr);
     QCOMPARE(m_view->stats().pinnedWidgets, qsizetype(0));
+}
+
+void TestTableCellMode::frozenColumnsStayMaterializedAndOnTop()
+{
+    // Freeze the first two columns and scroll far into the scrollable pane.
+    m_view->setFrozenColumns(QVector<int>({0, 1}));
+    m_view->setHorizontalOffset(40 * kColumnWidth);
+    m_view->flushPendingRelayout();
+
+    QVERIFY(m_view->isColumnFrozen(0));
+    QVERIFY(m_view->isColumnFrozen(1));
+    QVERIFY(!m_view->isColumnFrozen(20));
+    QCOMPARE(m_view->panes().at(0).viewportRect.width(), 2 * kColumnWidth);
+
+    // Frozen cells keep their pane position even though the pane scrolled.
+    QWidget *frozen = nullptr;
+    QWidget *scrolled = nullptr;
+    for (int row = 0; row < 3; ++row) {
+        const QModelIndex first = m_model->index(row, 0);
+        const QModelIndex second = m_model->index(row, 1);
+        QWidget *cell0 = m_view->cellWidget(first);
+        QWidget *cell1 = m_view->cellWidget(second);
+        QVERIFY(cell0 != nullptr);
+        QVERIFY(cell1 != nullptr);
+        QVERIFY(cell0->isVisible());
+        QVERIFY(cell1->isVisible());
+        QCOMPARE(cell0->x(), 0);
+        QCOMPARE(cell1->x(), kColumnWidth);
+        if (row == 0)
+            frozen = cell0;
+    }
+    // The materialized set is unordered, so pick a cell that is provably not
+    // frozen instead of taking the last one.
+    for (const QModelIndex &index : m_view->materializedCellIndexes()) {
+        if (!m_view->isColumnFrozen(index.column())) {
+            scrolled = m_view->cellWidget(index);
+            break;
+        }
+    }
+
+    // Frozen cells are raised above the scrollable ones (they cover the
+    // columns that scroll under them, §31). Widget stacking is the child order.
+    QVERIFY(frozen != nullptr);
+    QVERIFY(scrolled != nullptr);
+    const QList<QObject *> children = m_view->viewport()->children();
+    QVERIFY(children.indexOf(frozen) > children.indexOf(scrolled));
+}
+
+void TestTableCellMode::frozenCellsCoverTheScrolledOnes()
+{
+    // A cell paints only a thin stripe, so a covering widget has to fill its own
+    // background: otherwise the scrolled columns stay visible inside the frozen
+    // pane while the pane scrolls (§31).
+    HugeTableModel model(100, 6);
+    StripeCellAdapter adapter;
+    VirtualTableView view;
+    view.setCellAdapter(&adapter);
+    view.setMaterializationMode(VirtualTableView::MaterializationMode::CellWidgets);
+    view.setUniformItemHeight(kRowHeight);
+    view.setDefaultColumnWidth(kColumnWidth);
+    view.setModel(&model);
+    showView(&view, QSize(kViewWidth, kViewHeight));
+
+    // Reproduce a translucent table background: the cover has to be opaque even
+    // then, otherwise the scrollable columns shine through (the Windows 11 style
+    // of Qt 6.8 hands out a translucent QPalette::Base).
+    QPalette translucent = view.palette();
+    translucent.setColor(QPalette::Base, QColor(255, 255, 255, 180));
+    view.setPalette(translucent);
+
+    view.setFrozenColumns(QVector<int>({0}));
+    view.setHorizontalOffset(kColumnWidth * 7 / 2); // 3.5 columns: partially scrolled cells
+    view.flushPendingRelayout();
+
+    QImage image(view.viewport()->size(), QImage::Format_ARGB32);
+    image.fill(Qt::transparent);
+    view.viewport()->render(&image);
+
+    // Inside the frozen pane only the frozen column may be visible.
+    int foreignPixels = 0;
+    for (int y = 0; y < image.height(); ++y) {
+        for (int x = 0; x < kColumnWidth; ++x) {
+            const QColor pixel(image.pixel(x, y));
+            for (int column = 1; column < 6; ++column) {
+                if (pixel == StripeCell::colorFor(column))
+                    ++foreignPixels;
+            }
+        }
+    }
+    QCOMPARE(foreignPixels, 0);
 }
 
 QTEST_MAIN(TestTableCellMode)

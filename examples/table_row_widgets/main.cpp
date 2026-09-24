@@ -16,6 +16,7 @@
 #include <QMainWindow>
 #include <QProgressBar>
 #include <QPushButton>
+#include <QPixmap>
 #include <QSpinBox>
 #include <QStandardItemModel>
 #include <QStatusBar>
@@ -176,7 +177,13 @@ int main(int argc, char **argv)
     QCommandLineOption exitOption(QStringLiteral("exit-after"),
                                   QStringLiteral("毫秒后自动退出（0 = 一直运行）"),
                                   QStringLiteral("ms"), QStringLiteral("0"));
+    QCommandLineOption snapshotOption(QStringLiteral("snapshot"),
+                                      QStringLiteral("渲染整个窗口到 PNG 后退出"), QStringLiteral("file"));
+    QCommandLineOption moveOption(QStringLiteral("move-status-first"),
+                                  QStringLiteral("启动时把状态列移到最前（列移动回归检查）"));
     parser.addOption(rowsOption);
+    parser.addOption(snapshotOption);
+    parser.addOption(moveOption);
     parser.addOption(exitOption);
     parser.process(app);
 
@@ -241,6 +248,8 @@ int main(int argc, char **argv)
     });
 
     auto *status = new QLabel(&window);
+    // 必须挂到状态栏：只给 window 当 parent 的话它会停在 (0, 0)，压住工具条。
+    window.statusBar()->addPermanentWidget(status);
     const auto updateStatus = [&]() {
         const viv::VirtualViewStats stats = view->stats();
         const viv::VisibleRange columns = view->visibleColumns();
@@ -262,8 +271,27 @@ int main(int argc, char **argv)
     QTimer::singleShot(0, &window, updateStatus);
 
     const int exitAfter = parser.value(exitOption).toInt();
-    if (exitAfter > 0)
+    const QString snapshotPath = parser.value(snapshotOption);
+    const bool moveStatusToFront = parser.isSet(moveOption);
+    if (!snapshotPath.isEmpty() || moveStatusToFront) {
+        QTimer::singleShot(qMax(1, exitAfter), &app,
+                           [&window, view, snapshotPath, moveStatusToFront]() {
+            if (moveStatusToFront)
+                view->moveColumn(ColumnStatus, 0);
+            QApplication::processEvents();
+            if (snapshotPath.isEmpty())
+                return;
+            const QPixmap shot = window.grab();
+            const bool saved = shot.save(snapshotPath);
+            std::printf("table_row_widgets: snapshot %s (%dx%d)%s firstVisualColumn=%d\n",
+                        qPrintable(snapshotPath), shot.width(), shot.height(),
+                        saved ? "" : " FAILED", view->horizontalHeaderGeometry()->logicalIndex(0));
+            std::fflush(stdout);
+            QCoreApplication::quit();
+        });
+    } else if (exitAfter > 0) {
         QTimer::singleShot(exitAfter, &app, &QCoreApplication::quit);
+    }
 
     window.show();
     return app.exec();

@@ -17,4 +17,3 @@ void ColumnHost::setLogicalColumn(int logicalColumn)
 }
 
 } // namespace viv
-

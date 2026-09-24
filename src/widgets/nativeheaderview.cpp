@@ -2,7 +2,20 @@
 
 #include <virtualitemviews/headergeometry.h>
 
+#include <QPainter>
+#include <QApplication>
+#include <QImage>
+#include <QStyleOptionHeader>
+
 namespace viv {
+
+namespace {
+/// True when \a logicalIndex is part of the pane of an active filter.
+bool filterContains(const QVector<int> &filter, bool active, int logicalIndex)
+{
+    return !active || filter.contains(logicalIndex);
+}
+} // namespace
 
 NativeHeaderView::NativeHeaderView(Qt::Orientation orientation, QWidget *parent)
     : QHeaderView(orientation, parent)
@@ -56,7 +69,7 @@ void NativeHeaderView::connectGeometry(HeaderGeometry *geometry, bool connectSig
                 [this](int logicalIndex, int, int) { applySection(logicalIndex); });
         connect(geometry, &HeaderGeometry::offsetChanged, this, [this](qint64 offset) {
             if (!m_applyingToHeader)
-                setOffset(int(qMax<qint64>(0, offset)));
+                setViewportOffset(int(offset));
         });
         connect(geometry, &HeaderGeometry::sectionMoved, this, [this](int, int, int) {
             syncHeaderFromGeometry();
@@ -90,7 +103,8 @@ void NativeHeaderView::applySection(int logicalIndex)
         return;
 
     m_applyingToHeader = true;
-    const bool hidden = m_geometry->isSectionHidden(logicalIndex);
+    const bool hidden = m_geometry->isSectionHidden(logicalIndex)
+        || !filterContains(m_paneFilter, m_paneFilterActive, logicalIndex);
     if (isSectionHidden(logicalIndex) != hidden)
         setSectionHidden(logicalIndex, hidden);
     const int size = m_geometry->storedSectionSize(logicalIndex);
@@ -134,6 +148,8 @@ void NativeHeaderView::syncGeometryFromHeaderMove(int logicalIndex, int oldVisua
 {
     if (!m_geometry)
         return;
+    if (m_paneFilterActive)
+        return; // a pane follows the committed visual order, not a local drag
     if (m_geometry->logicalIndex(newVisualIndex) == logicalIndex)
         return; // already applied
     if (m_geometry->visualIndex(logicalIndex) == newVisualIndex)
@@ -155,7 +171,8 @@ void NativeHeaderView::syncHeaderFromGeometry()
     setDefaultSectionSize(m_geometry->defaultSectionSize());
     setSortIndicatorShown(m_geometry->sortIndicatorSection() >= 0);
     setSortIndicator(m_geometry->sortIndicatorSection(), m_geometry->sortIndicatorOrder());
-    setOffset(int(qMax<qint64>(0, m_geometry->viewportOffset())));
+    if (!(m_paneFilterActive && m_frozenPane))
+        setOffset(int(qMax<qint64>(0, m_geometry->viewportOffset())));
 
     // Apply only the differences: comparing is cheap, writing invalidates
     // QHeaderView's internal caches.
@@ -166,22 +183,79 @@ void NativeHeaderView::syncHeaderFromGeometry()
     }
     const int sections = qMin(count, modelSections);
     for (int logical = 0; logical < sections; ++logical) {
-        const bool hidden = m_geometry->isSectionHidden(logical);
+        const bool hidden = m_geometry->isSectionHidden(logical)
+            || !filterContains(m_paneFilter, m_paneFilterActive, logical);
         if (isSectionHidden(logical) != hidden)
             setSectionHidden(logical, hidden);
         const int size = m_geometry->storedSectionSize(logical);
         if (!hidden && sectionSize(logical) != size)
             resizeSection(logical, size);
     }
+    applyVisualOrder();
 
     m_applyingToHeader = false;
+}
+
+void NativeHeaderView::applyVisualOrder()
+{
+    // Only the horizontal header mirrors the geometry's visual order; the
+    // vertical header always follows the model's row order. This runs inside
+    // syncHeaderFromGeometry(), which already owns m_applyingToHeader.
+    if (!m_geometry || orientation() != Qt::Horizontal)
+        return;
+
+    const int count = m_geometry->sectionCount();
+    const int modelSections = model() ? model()->columnCount() : count;
+    const int sections = qMin(count, modelSections);
+    for (int visual = 0; visual < sections; ++visual) {
+        const int logical = m_geometry->logicalIndex(visual);
+        if (logical < 0)
+            continue;
+        const int current = QHeaderView::visualIndex(logical);
+        // Comparing before writing keeps QHeaderView's caches valid and makes a
+        // user drag (which already moved the section) a no-op here.
+        if (current < 0 || current == visual)
+            continue;
+        moveSection(current, visual);
+    }
 }
 
 void NativeHeaderView::setViewportOffset(int offset)
 {
     if (m_applyingToHeader)
         return;
+    if (m_paneFilterActive && m_frozenPane)
+        return; // a frozen pane never scrolls
     setOffset(qMax(0, offset));
+}
+
+void NativeHeaderView::setPaneFilter(const QVector<int> &logicalColumns, bool frozen)
+{
+    if (m_paneFilterActive && m_paneFilter == logicalColumns && m_frozenPane == frozen)
+        return;
+
+    m_paneFilter = logicalColumns;
+    m_paneFilterActive = true;
+    m_frozenPane = frozen;
+    // A pane mirrors the committed visual order; local moves would fight it.
+    setSectionsMovable(false);
+    syncHeaderFromGeometry();
+    if (frozen && offset() != 0) {
+        m_applyingToHeader = true;
+        setOffset(0);
+        m_applyingToHeader = false;
+    }
+}
+
+void NativeHeaderView::clearPaneFilter()
+{
+    if (!m_paneFilterActive)
+        return;
+    m_paneFilterActive = false;
+    m_paneFilter.clear();
+    m_frozenPane = false;
+    setSectionsMovable(orientation() == Qt::Horizontal);
+    syncHeaderFromGeometry();
 }
 
 void NativeHeaderView::setLabelModel(QAbstractItemModel *model)
@@ -195,6 +269,84 @@ void NativeHeaderView::setLabelModel(QAbstractItemModel *model)
 void NativeHeaderView::setSortInteractionEnabled(bool enabled)
 {
     m_sortInteractionEnabled = enabled;
+}
+
+void NativeHeaderView::setPaneSeparator(Qt::Edge edge, const PaneSeparatorStyle &style)
+{
+    if (m_separatorEdge == edge && m_separatorStyle.width == style.width
+        && m_separatorStyle.color == style.color && m_separatorStyle.lineStyle == style.lineStyle) {
+        return;
+    }
+    m_separatorEdge = edge;
+    m_separatorStyle = style;
+    update();
+}
+
+QColor NativeHeaderView::sectionSeparatorColor(const QWidget *context)
+{
+    // Render a small section with the current style and read the pixel of its
+    // right edge: that is exactly the separator between two sections.
+    static constexpr int kProbeWidth = 8;
+    static constexpr int kProbeHeight = 8;
+    QImage probe(kProbeWidth, kProbeHeight, QImage::Format_ARGB32_Premultiplied);
+    probe.fill(Qt::transparent);
+    {
+        QPainter painter(&probe);
+        painter.setRenderHint(QPainter::Antialiasing, false);
+        QStyleOptionHeader option;
+        if (context)
+            option.initFrom(context);
+        option.state |= QStyle::State_Horizontal | QStyle::State_Enabled;
+        option.orientation = Qt::Horizontal;
+        option.position = QStyleOptionHeader::Middle; // draws the separator
+        option.rect = QRect(0, 0, kProbeWidth, kProbeHeight);
+        const QWidget *styleSource = context;
+        const_cast<QStyle *>(styleSource ? styleSource->style() : QApplication::style())
+            ->drawControl(QStyle::CE_HeaderSection, &option, &painter,
+                          const_cast<QWidget *>(styleSource));
+    }
+
+    const QColor separator = probe.pixelColor(kProbeWidth - 1, kProbeHeight / 2);
+    if (separator.isValid() && separator.alpha() > 0)
+        return separator;
+    // Fall back to a palette role when the style draws nothing there.
+    return context ? context->palette().color(QPalette::Mid) : QColor(160, 160, 160);
+}
+
+void NativeHeaderView::drawPaneSeparator(QPainter *painter, const QRect &rect,
+                                        const PaneSeparatorStyle &style,
+                                        const QColor &styleSeparatorColor)
+{
+    if (!painter || rect.isEmpty() || !style.isVisible())
+        return;
+    const QColor color = style.effectiveColor(styleSeparatorColor);
+    if (!color.isValid())
+        return;
+    if (style.lineStyle == Qt::SolidLine) {
+        painter->fillRect(rect, color);
+        return;
+    }
+    QPen pen(color, qMax(1, style.width), style.lineStyle);
+    painter->save();
+    painter->setPen(pen);
+    const int x = rect.center().x();
+    painter->drawLine(x, rect.top(), x, rect.bottom());
+    painter->restore();
+}
+
+void NativeHeaderView::paintEvent(QPaintEvent *event)
+{
+    QHeaderView::paintEvent(event);
+    if (int(m_separatorEdge) == 0 || !m_separatorStyle.isVisible())
+        return;
+
+    // The band lies inside the frozen pane whose header this is, so it can never
+    // be clipped by the pane next to it.
+    const int band = qMin(m_separatorStyle.width, width());
+    const QRect rect = m_separatorEdge == Qt::LeftEdge ? QRect(0, 0, band, height())
+                                                       : QRect(width() - band, 0, band, height());
+    QPainter painter(viewport());
+    drawPaneSeparator(&painter, rect, m_separatorStyle, sectionSeparatorColor(this));
 }
 
 } // namespace viv

@@ -11,6 +11,7 @@
 #include <QCommandLineParser>
 #include <QLabel>
 #include <QMainWindow>
+#include <QPixmap>
 #include <QStandardItemModel>
 #include <QStatusBar>
 #include <QTimer>
@@ -143,10 +144,32 @@ int main(int argc, char **argv)
     QCommandLineOption exitOption(QStringLiteral("exit-after"),
                                   QStringLiteral("毫秒后自动退出（0 = 一直运行）"),
                                   QStringLiteral("ms"), QStringLiteral("0"));
+    QCommandLineOption frozenOption(QStringLiteral("frozen"),
+                                    QStringLiteral("左侧冻结列数（§31）"),
+                                    QStringLiteral("count"), QStringLiteral("0"));
+    QCommandLineOption frozenRightOption(QStringLiteral("frozen-right"),
+                                         QStringLiteral("右侧冻结列数（§31）"),
+                                         QStringLiteral("count"), QStringLiteral("0"));
+    QCommandLineOption snapshotOption(QStringLiteral("snapshot"),
+                                      QStringLiteral("渲染视口到 PNG 后退出"), QStringLiteral("file"));
+    QCommandLineOption checkFrozenOption(QStringLiteral("check-frozen"),
+                                         QStringLiteral("自检：冻结 pane 不得随滚动变化"));
+    QCommandLineOption separatorWidthOption(QStringLiteral("separator-width"),
+                                            QStringLiteral("冻结分界线线宽（0 = 隐藏）"),
+                                            QStringLiteral("pixels"), QStringLiteral("1"));
+    QCommandLineOption separatorColorOption(QStringLiteral("separator-color"),
+                                            QStringLiteral("冻结分界线颜色（默认取样式分隔线颜色）"),
+                                            QStringLiteral("color"), QString());
     parser.addOption(rowsOption);
     parser.addOption(columnsOption);
     parser.addOption(wheelOption);
     parser.addOption(scrollOption);
+    parser.addOption(frozenOption);
+    parser.addOption(frozenRightOption);
+    parser.addOption(snapshotOption);
+    parser.addOption(checkFrozenOption);
+    parser.addOption(separatorWidthOption);
+    parser.addOption(separatorColorOption);
     parser.addOption(exitOption);
     parser.process(app);
 
@@ -176,6 +199,11 @@ int main(int argc, char **argv)
     auto *toolbar = window.addToolBar(QStringLiteral("控制"));
     auto *autoScroll = new QCheckBox(QStringLiteral("像素横滚"), &window);
     toolbar->addWidget(autoScroll);
+    // 冻结前两列（§31）：冻结列不参与横向滚动，也不额外制造滚动空间。
+    auto *frozen = new QCheckBox(QStringLiteral("冻结前 2 列"), &window);
+    toolbar->addWidget(frozen);
+    auto *frozenRight = new QCheckBox(QStringLiteral("冻结末尾 1 列"), &window);
+    toolbar->addWidget(frozenRight);
     auto *status = new QLabel(&window);
     window.statusBar()->addPermanentWidget(status);
 
@@ -189,18 +217,34 @@ int main(int argc, char **argv)
     QObject::connect(autoScroll, &QCheckBox::toggled, timer, [timer](bool on) {
         on ? timer->start(16) : timer->stop();
     });
+    QObject::connect(frozen, &QCheckBox::toggled, view, [view, columnCount](bool on) {
+        view->setFrozenColumns(on ? QVector<int>({0, qMin(1, columnCount - 1)}) : QVector<int>());
+    });
+    QObject::connect(frozenRight, &QCheckBox::toggled, view, [view, columnCount](bool on) {
+        view->setFrozenRightColumns(on ? QVector<int>({columnCount - 1}) : QVector<int>());
+    });
 
     const auto updateStatus = [&]() {
         const viv::VirtualViewStats stats = view->stats();
         const viv::VisibleRange columns = view->visibleColumns();
+        int frozenLeft = 0;
+        int frozenRight = 0;
+        for (const viv::TablePane &pane : view->panes()) {
+            if (pane.type == viv::TablePane::Type::FrozenLeft)
+                frozenLeft = pane.viewportRect.width();
+            else if (pane.type == viv::TablePane::Type::FrozenRight)
+                frozenRight = pane.viewportRect.width();
+        }
         status->setText(QStringLiteral("逻辑行: %1   列: %2   可见视觉列: %3-%4   实例化行: %5   池: %6   "
-                                       "横向偏移: %7 / %8 px")
+                                       "冻结左/右: %7 / %8 px   横向偏移: %9 / %10 px")
                             .arg(stats.logicalItems)
                             .arg(view->columnCount())
                             .arg(columns.first)
                             .arg(columns.last)
                             .arg(stats.materializedItems)
                             .arg(stats.pooledWidgets)
+                            .arg(frozenLeft)
+                            .arg(frozenRight)
                             .arg(view->horizontalOffset())
                             .arg(view->maximumHorizontalOffset()));
     };
@@ -209,7 +253,107 @@ int main(int argc, char **argv)
     QTimer::singleShot(0, &window, updateStatus);
 
     const int exitAfter = parser.value(exitOption).toInt();
-    if (exitAfter > 0) {
+    const int frozenCount = qBound(0, parser.value(frozenOption).toInt(), columnCount - 1);
+    if (frozenCount > 0) {
+        QVector<int> frozenColumns;
+        for (int column = 0; column < frozenCount; ++column)
+            frozenColumns.append(column);
+        view->setFrozenColumns(frozenColumns);
+        // Keep the checkbox in sync without letting its handler overwrite the
+        // column set that the command line asked for.
+        const QSignalBlocker blocker(frozen);
+        frozen->setChecked(true);
+    }
+    const int frozenRightCount = qBound(0, parser.value(frozenRightOption).toInt(), columnCount - 1);
+    if (frozenRightCount > 0) {
+        QVector<int> frozenColumns;
+        for (int column = columnCount - frozenRightCount; column < columnCount; ++column)
+            frozenColumns.append(column);
+        view->setFrozenRightColumns(frozenColumns);
+        const QSignalBlocker blocker(frozenRight);
+        frozenRight->setChecked(true);
+    }
+
+    // 冻结分界线的外观（§31）：颜色不设就用"当前样式画列分隔线用的颜色"。
+    viv::PaneSeparatorStyle separatorStyle;
+    separatorStyle.width = qMax(0, parser.value(separatorWidthOption).toInt());
+    separatorStyle.color = QColor(parser.value(separatorColorOption));
+    view->setPaneSeparatorStyle(separatorStyle);
+
+    const QString snapshotPath = parser.value(snapshotOption);
+    if (parser.isSet(checkFrozenOption)) {
+        // 自检：冻结 pane 的内容与滚动偏移无关；任何差异都说明滚动列透了进来。
+        const bool ok = [&]() {
+            const auto frozenPanes = [&](int offset) {
+                view->setHorizontalOffset(offset);
+                QApplication::processEvents();
+                const QImage full = view->viewport()->grab().toImage();
+                QVector<QPair<QRect, QImage>> crops;
+                for (const viv::TablePane &pane : view->panes()) {
+                    if (pane.type == viv::TablePane::Type::Scrollable || pane.viewportRect.isEmpty())
+                        continue;
+                    crops.append({pane.viewportRect, full.copy(pane.viewportRect)});
+                }
+                return crops;
+            };
+            const auto first = frozenPanes(300);
+            const auto second = frozenPanes(307);
+            if (first.size() != second.size() || first.isEmpty()) {
+                std::printf("table_many_columns: check-frozen no frozen pane to compare (panes=%d)\n",
+                            int(first.size()));
+                return true;
+            }
+
+            bool same = true;
+            for (int i = 0; i < first.size(); ++i) {
+                const QRect rect = first.at(i).first;
+                const QImage &a = first.at(i).second;
+                const QImage &b = second.at(i).second;
+                int different = 0;
+                int firstX = -1;
+                int firstY = -1;
+                for (int y = 0; y < a.height() && y < b.height(); ++y) {
+                    for (int x = 0; x < a.width() && x < b.width(); ++x) {
+                        if (a.pixel(x, y) == b.pixel(x, y))
+                            continue;
+                        ++different;
+                        if (firstX < 0) {
+                            firstX = x;
+                            firstY = y;
+                        }
+                    }
+                }
+                std::printf("table_many_columns: check-frozen paneRect=(%d,%d,%dx%d) differing=%d "
+                            "firstDiff=(%d,%d)\n",
+                            rect.x(), rect.y(), rect.width(), rect.height(), different, firstX, firstY);
+                if (different != 0)
+                    same = false;
+            }
+            return same;
+        }();
+        std::fflush(stdout);
+        return ok ? 0 : 1;
+    }
+
+    if (!snapshotPath.isEmpty()) {
+        // 无人值守的视觉检查：先滚到横向末尾（冻结列此时最能体现差别），再导出 PNG。
+        QTimer::singleShot(qMax(1, exitAfter), &app, [view, snapshotPath]() {
+            view->setHorizontalOffset(view->maximumHorizontalOffset());
+            QApplication::processEvents();
+            const QPixmap shot = view->grab();
+            const bool saved = shot.save(snapshotPath);
+            const int first = view->columnGeometry(0).viewportX;
+            const int last = view->columnGeometry(view->columnCount() - 1).viewportX;
+            std::printf("table_many_columns: snapshot %s (%dx%d)%s frozenLeft=%d frozenRight=%d "
+                        "firstColumnX=%d lastColumnX=%d offset=%lld\n",
+                        qPrintable(snapshotPath), shot.width(), shot.height(),
+                        saved ? "" : " FAILED", int(view->frozenColumns().size()),
+                        int(view->frozenRightColumns().size()), first, last,
+                        static_cast<long long>(view->horizontalOffset()));
+            std::fflush(stdout);
+            QCoreApplication::quit();
+        });
+    } else if (exitAfter > 0) {
         autoScroll->setChecked(true);
         QTimer::singleShot(exitAfter, &app, &QCoreApplication::quit);
     }

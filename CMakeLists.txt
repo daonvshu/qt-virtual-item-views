@@ -66,6 +66,7 @@ set(VIRTUALITEMVIEWS_PUBLIC_HEADERS
     include/virtualitemviews/scrollmapper.h
     include/virtualitemviews/sizeindex.h
     include/virtualitemviews/tablewidgetadapter.h
+    include/virtualitemviews/tablepane.h
     include/virtualitemviews/treevisibilityindex.h
     include/virtualitemviews/types.h
     include/virtualitemviews/virtualitemview.h
@@ -83,6 +84,7 @@ set(VIRTUALITEMVIEWS_SOURCES
     src/index/sizeindex.cpp
     src/index/treevisibilityindex.cpp
     src/layout/listlayout.cpp
+    src/layout/tablepane.cpp
     src/recycler/widgetrecycler.cpp
     src/widgets/branchindicator.cpp
     src/widgets/columnhost.cpp

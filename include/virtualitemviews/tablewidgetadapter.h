@@ -1,6 +1,7 @@
 #pragma once
 
 #include <virtualitemviews/headergeometry.h>
+#include <virtualitemviews/tablepane.h>
 #include <virtualitemviews/widgetadapter.h>
 
 #include <QRect>
@@ -34,15 +35,37 @@ public:
     /// Columns to lay out: visible range widened by the horizontal overscan.
     VisibleRange visibleColumns() const { return m_visibleColumns; }
     /// Logical indices to lay out, left to right (hidden columns skipped).
+    /// Frozen columns are always included (§31).
     QVector<int> columnsToLayout() const;
+
+    // -- panes (§31) ---------------------------------------------------------
+    /// Pane a column is painted in; frozen columns never scroll, so their x
+    /// does not depend on horizontalOffset().
+    TablePane::Type pane(int logicalIndex) const;
+    bool isColumnFrozen(int logicalIndex) const;
+    /// Pane rect in the viewport; the row widget covers the whole viewport, so
+    /// it is also the pane rect inside the row widget.
+    QRect paneRect(TablePane::Type type) const;
+    /// Frozen left/right pane widths (0 when the pane does not exist).
+    int frozenLeftWidth() const;
+    int frozenRightWidth() const;
+    /// Container the framework puts the scrollable columns into, so they are
+    /// clipped to the scrollable pane (§31). Custom layoutRowWidget() code that
+    /// lays out its own children (instead of ColumnHost) must parent them here,
+    /// otherwise they stay visible under a frozen pane. Null when no column is
+    /// frozen.
+    QWidget *scrollablePaneHost() const { return m_scrollablePaneHost; }
 
 private:
     friend class VirtualTableView;
 
     const HeaderGeometry *m_geometry = nullptr;
+    const TablePaneLayout *m_panes = nullptr;
+    QWidget *m_scrollablePaneHost = nullptr;
     int m_columnCount = 0;
     QRect m_viewportRect;
     qint64 m_horizontalOffset = 0;
+    int m_columnOverscan = 0;
     VisibleRange m_visibleColumns;
 };
 
@@ -50,7 +73,15 @@ inline ColumnGeometry TableRowLayoutContext::column(int logicalIndex) const
 {
     if (!m_geometry || logicalIndex < 0 || logicalIndex >= m_columnCount)
         return ColumnGeometry();
-    return m_geometry->columnGeometry(logicalIndex);
+    ColumnGeometry geometry = m_geometry->columnGeometry(logicalIndex);
+    if (m_panes) {
+        // Pane aware: a frozen column keeps its own x, the scrollable ones are
+        // shifted by the horizontal offset.
+        const int x = m_panes->columnViewportX(logicalIndex);
+        if (x >= 0)
+            geometry.viewportX = x;
+    }
+    return geometry;
 }
 
 inline int TableRowLayoutContext::columnX(int logicalIndex) const
@@ -61,6 +92,8 @@ inline int TableRowLayoutContext::columnX(int logicalIndex) const
 
 inline QVector<int> TableRowLayoutContext::columnsToLayout() const
 {
+    if (m_panes)
+        return m_panes->columnsForLayout(m_columnOverscan);
     QVector<int> columns;
     if (!m_geometry || !m_visibleColumns.isValid())
         return columns;
@@ -72,6 +105,31 @@ inline QVector<int> TableRowLayoutContext::columnsToLayout() const
         columns.append(logical);
     }
     return columns;
+}
+
+inline TablePane::Type TableRowLayoutContext::pane(int logicalIndex) const
+{
+    return m_panes ? m_panes->paneOfColumn(logicalIndex) : TablePane::Type::Scrollable;
+}
+
+inline bool TableRowLayoutContext::isColumnFrozen(int logicalIndex) const
+{
+    return pane(logicalIndex) != TablePane::Type::Scrollable;
+}
+
+inline QRect TableRowLayoutContext::paneRect(TablePane::Type type) const
+{
+    return m_panes ? m_panes->paneRect(type) : QRect();
+}
+
+inline int TableRowLayoutContext::frozenLeftWidth() const
+{
+    return m_panes ? m_panes->frozenLeftWidth() : 0;
+}
+
+inline int TableRowLayoutContext::frozenRightWidth() const
+{
+    return m_panes ? m_panes->frozenRightWidth() : 0;
 }
 
 /// Convenience container for a business cell widget (architecture document §27).

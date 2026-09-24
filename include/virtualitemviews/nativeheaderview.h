@@ -1,5 +1,7 @@
 #pragma once
 
+#include <virtualitemviews/tablepane.h>
+
 #include <QHeaderView>
 
 class QAbstractItemModel;
@@ -36,6 +38,18 @@ public:
     /// Enables sort interaction; the header reports clicks by writing the sort
     /// indicator into HeaderGeometry, and the table reacts to that change.
     virtual void setSortInteractionEnabled(bool enabled) = 0;
+
+    /// Restricts the header to one pane (§31): only \a logicalColumns are shown,
+    /// read from the same geometry (a pane is never a width copy). When
+    /// \a frozen the header ignores the horizontal offset. Renderers that cannot
+    /// split sections may ignore this and keep showing every section.
+    virtual void setPaneFilter(const QVector<int> &logicalColumns, bool frozen)
+    {
+        Q_UNUSED(logicalColumns);
+        Q_UNUSED(frozen);
+    }
+    /// Shows every section again (no pane filter).
+    virtual void clearPaneFilter() {}
 };
 
 /// QHeaderView driven by HeaderGeometry.
@@ -63,6 +77,34 @@ public:
     /// header and body never drift apart.
     void setViewportOffset(int offset);
 
+    /// Restricts the header to one pane (§31): only \a logicalColumns are shown
+    /// (sizes, visibility and order still come from HeaderGeometry, a filter is
+    /// never a width copy). When \a frozen the header ignores the geometry's
+    /// offset, because a frozen pane never scrolls; user section moves are
+    /// disabled while a filter is active.
+    void setPaneFilter(const QVector<int> &logicalColumns, bool frozen) override;
+    void clearPaneFilter() override;
+    bool hasPaneFilter() const { return m_paneFilterActive; }
+
+    /// Draws a header separator at the pane boundary (§31). QHeaderView only
+    /// separates sections *inside* a header, so the edge shared with the next
+    /// pane would have no line; a frozen pane header draws it itself.
+    void setPaneSeparator(Qt::Edge edge, const PaneSeparatorStyle &style);
+    Qt::Edge paneSeparatorEdge() const { return m_separatorEdge; }
+    PaneSeparatorStyle paneSeparatorStyle() const { return m_separatorStyle; }
+
+    /// Colour the current style paints a header section separator with (probed by
+    /// rendering a section and reading its edge pixel). The pane boundary line -
+    /// header edge and the body line - uses it, so it matches the separators
+    /// between the other columns instead of a guessed palette role.
+    static QColor sectionSeparatorColor(const QWidget *context);
+
+    /// Paints a pane boundary line into \a rect (its layout is defined by the
+    /// style; solid lines fill the rect, dashed ones are centred on it).
+    static void drawPaneSeparator(QPainter *painter, const QRect &rect,
+                                  const PaneSeparatorStyle &style,
+                                  const QColor &styleSeparatorColor);
+
     /// True while the geometry is being applied to this header (the resulting
     /// QHeaderView signals must not be written back into the geometry).
     bool isApplyingGeometry() const { return m_applyingToHeader; }
@@ -70,18 +112,29 @@ public:
 private:
     void connectGeometry(HeaderGeometry *geometry, bool connectSignals);
     void syncHeaderFromGeometry();
+    /// Applies the geometry's visual order to this header (a section move that
+    /// did not come from a user drag on this header would otherwise leave the
+    /// header and the body out of sync).
+    void applyVisualOrder();
     void syncGeometryFromHeaderSectionSize(int logicalIndex, int size);
     void syncGeometryFromHeaderMove(int logicalIndex, int oldVisualIndex, int newVisualIndex);
     void onHeaderSectionResized(int logicalIndex, int oldSize, int newSize);
     void onHeaderSectionMoved(int logicalIndex, int oldVisualIndex, int newVisualIndex);
     void onGeometryChanged();
     void applySection(int logicalIndex);
+    void paintEvent(QPaintEvent *event) override;
 
     HeaderGeometry *m_geometry = nullptr;
     /// True while the geometry is being applied to the header, so that the
     /// resulting QHeaderView signals do not write back into the geometry.
     bool m_applyingToHeader = false;
     bool m_sortInteractionEnabled = false;
+    /// Pane filter (§31): the logical sections this header shows.
+    QVector<int> m_paneFilter;
+    bool m_paneFilterActive = false;
+    bool m_frozenPane = false;
+    Qt::Edge m_separatorEdge = Qt::Edge(0);
+    PaneSeparatorStyle m_separatorStyle;
 };
 
 } // namespace viv

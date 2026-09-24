@@ -115,6 +115,31 @@ public:
     void setHorizontalWheelPixels(int pixels);
     int horizontalWheelPixels() const { return m_horizontalWheelPixels; }
 
+    // -- frozen columns (§31) ------------------------------------------------
+    /// Freezes columns at the left/right edge: they stay visible while the
+    /// scrollable pane scrolls, so the horizontal offset never applies to them.
+    /// All panes derive from the same HeaderGeometry - a frozen column has no
+    /// width, order or visibility copy of its own. A column in both sets stays
+    /// on the left.
+    void setFrozenColumns(const QVector<int> &logicalColumns);
+    void setFrozenRightColumns(const QVector<int> &logicalColumns);
+    void clearFrozenColumns();
+    QVector<int> frozenColumns() const { return m_panes.frozenColumns(); }
+    QVector<int> frozenRightColumns() const { return m_panes.frozenRightColumns(); }
+    bool isColumnFrozen(int logicalIndex) const { return m_panes.isFrozenColumn(logicalIndex); }
+    /// Current panes: frozen left / scrollable / frozen right (§31).
+    QVector<TablePane> panes() const { return m_panes.panes(); }
+    TablePane::Type paneTypeForColumn(int logicalIndex) const
+    {
+        return m_panes.paneOfColumn(logicalIndex);
+    }
+    /// Look of the line that separates two panes, in the header *and* in the
+    /// body. The default is a 1 px line in the colour the current style paints
+    /// section separators with; setting an explicit colour, a different width
+    /// (0 hides the line) or a pen style applies to both.
+    void setPaneSeparatorStyle(const PaneSeparatorStyle &style);
+    PaneSeparatorStyle paneSeparatorStyle() const { return m_paneSeparatorStyle; }
+
     // -- row heights ---------------------------------------------------------
     void setRowSizePolicy(RowSizePolicy policy);
     RowSizePolicy rowSizePolicy() const { return m_rowSizePolicy; }
@@ -175,6 +200,7 @@ protected:
     bool handleItemKeyPress(QKeyEvent *event) override;
     void resizeEvent(QResizeEvent *event) override;
     void showEvent(QShowEvent *event) override;
+    void changeEvent(QEvent *event) override;
     void scrollContentsBy(int dx, int dy) override;
     void wheelEvent(QWheelEvent *event) override;
 
@@ -196,8 +222,24 @@ private:
     void updateRowHeaderOffset();
     void syncHorizontalScrollBar();
     void updateColumnLayout();
+    /// Recomputes the pane layout (§31) and the column layout that depends on
+    /// it (frozen widths change the scrollable range and every column x).
+    void updatePaneLayout();
+    /// Creates/destroys/updates the frozen pane header renderers.
+    void syncHeaderPanes();
+    /// Creates/positions the 1 px body lines of the pane boundaries.
+    void syncPaneSeparatorLines();
+    /// Lifts the body lines above the (re)materialized items.
+    void raisePaneSeparatorLines();
+    /// Column hosts of a row widget (direct children plus the clip host's).
+    QList<ColumnHost *> rowColumnHosts(QWidget *rowWidget) const;
+    /// Ensures the scrollable pane clip container of a row widget (§31).
+    QWidget *ensureRowPaneClipHost(QWidget *rowWidget, const QRect &rowRect);
+    /// Ensures the clip container of the cell mode cells (§31).
+    void ensureCellPaneClipHost();
     void applyColumnLayout(const MaterializedItem &item);
-    TableRowLayoutContext layoutContext(const QRect &viewportRect) const;
+    TableRowLayoutContext layoutContext(const QRect &viewportRect,
+                                        QWidget *scrollablePaneHost = nullptr) const;
     void updateRowHeaderGeometry();
     void scrollToColumn(int logicalIndex);
     void onSortIndicatorChanged(int logicalIndex, Qt::SortOrder order);
@@ -212,9 +254,19 @@ private:
 
     ListLayout *m_rowLayout = nullptr;
     HeaderGeometry *m_columns = nullptr;
+    TablePaneLayout m_panes;
     HeaderGeometry *m_rowHeaders = nullptr;
     HeaderViewInterface *m_horizontalHeader = nullptr;
     HeaderViewInterface *m_verticalHeader = nullptr;
+    NativeHeaderView *m_frozenLeftHeader = nullptr;
+    NativeHeaderView *m_frozenRightHeader = nullptr;
+    /// Framework container that clips the scrollable pane (see §31).
+    QWidget *m_cellClipHost = nullptr;
+    /// 1 px body lines at the pane boundaries (left | scrollable | right).
+    QVector<QWidget *> m_paneSeparatorLines;
+    PaneSeparatorStyle m_paneSeparatorStyle;
+    /// Row widget -> its scrollable pane clip container.
+    QHash<QWidget *, QWidget *> m_rowClipHosts;
     bool m_ownHorizontalHeader = false;
     bool m_ownVerticalHeader = false;
     TableWidgetAdapter *m_tableAdapter = nullptr;

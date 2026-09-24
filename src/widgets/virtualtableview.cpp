@@ -7,7 +7,9 @@
 #include <QAbstractItemModel>
 #include <QKeyEvent>
 #include <QResizeEvent>
+#include <QPainter>
 #include <QScrollBar>
+#include <QSet>
 #include <QShowEvent>
 #include <QWheelEvent>
 #include <QDebug>
@@ -22,6 +24,60 @@ namespace {
 /// here), so per-row mirroring is disabled; the widget header (v0.5) removes the
 /// limit. One million rows cost about 8 MB of mirror state.
 constexpr qsizetype kRowHeaderMirrorLimit = 1000000;
+
+/// Framework owned clipping container of a pane (§31). It paints nothing, so a
+/// business row widget keeps its own background; Qt clips the children of a
+/// widget to its rect, which is exactly what keeps the scrollable columns from
+/// painting under a frozen pane. Masks cannot do this, because a mask does not
+/// clip child widgets.
+class PaneClipHost : public QWidget
+{
+public:
+    explicit PaneClipHost(QWidget *parent = nullptr)
+        : QWidget(parent)
+    {
+        setObjectName(QStringLiteral("vivPaneClipHost"));
+        setFocusPolicy(Qt::NoFocus);
+    }
+};
+
+/// The vertical line between two panes in the body (§31). It is a 1 px overlay:
+/// the row widgets/cells cover the viewport, so a line painted by the viewport
+/// itself would be hidden behind them. Input passes through.
+class PaneSeparatorLine : public QWidget
+{
+public:
+    explicit PaneSeparatorLine(QWidget *parent = nullptr)
+        : QWidget(parent)
+    {
+        setObjectName(QStringLiteral("vivPaneSeparatorLine"));
+        setAttribute(Qt::WA_TransparentForMouseEvents, true);
+        setFocusPolicy(Qt::NoFocus);
+    }
+
+    void setSeparator(const PaneSeparatorStyle &style, const QColor &styleSeparatorColor)
+    {
+        if (m_style.width == style.width && m_style.color == style.color
+            && m_style.lineStyle == style.lineStyle && m_resolvedColor == styleSeparatorColor) {
+            return;
+        }
+        m_style = style;
+        m_resolvedColor = styleSeparatorColor;
+        update();
+    }
+
+protected:
+    void paintEvent(QPaintEvent *) override
+    {
+        QPainter painter(this);
+        NativeHeaderView::drawPaneSeparator(&painter, rect(), m_style, m_resolvedColor);
+    }
+
+private:
+    PaneSeparatorStyle m_style;
+    QColor m_resolvedColor;
+};
+
 } // namespace
 
 VirtualTableView::VirtualTableView(QWidget *parent)
@@ -34,6 +90,8 @@ VirtualTableView::VirtualTableView(QWidget *parent)
 
     m_columns = new HeaderGeometry(Qt::Horizontal, this);
     m_rowHeaders = new HeaderGeometry(Qt::Vertical, this);
+    m_panes.setGeometry(m_columns);
+
     m_rowLayout = new ListLayout(Qt::Vertical);
     setLayoutPolicy(m_rowLayout, true);
 
@@ -49,6 +107,10 @@ VirtualTableView::VirtualTableView(QWidget *parent)
 
     connect(m_columns, &HeaderGeometry::geometryChanged, this,
             &VirtualTableView::onHeaderGeometryChanged);
+    // The pane layout caches every column x, so it follows the offset - this
+    // covers plain scroll bar drags as well as setHorizontalOffset().
+    connect(m_columns, &HeaderGeometry::offsetChanged, this,
+            [this](qint64) { updatePaneLayout(); });
     connect(m_rowHeaders, &HeaderGeometry::sectionResized, this,
             &VirtualTableView::onVerticalSectionResized);
     connect(m_columns, &HeaderGeometry::sortIndicatorChanged, this,
@@ -182,9 +244,27 @@ void VirtualTableView::layoutHeaderWidgets()
     const QRect viewportRect = viewport()->geometry();
     if (m_horizontalHeader) {
         QWidget *widget = m_horizontalHeader->headerWidget();
-        widget->setGeometry(viewportRect.x(), viewportRect.y() - headerHeight, viewportRect.width(),
-                            headerHeight);
+        // The scrollable header sits between the frozen panes (§31).
+        const int leftWidth = headerHeight > 0 ? m_panes.frozenLeftWidth() : 0;
+        const int rightWidth = headerHeight > 0 ? m_panes.frozenRightWidth() : 0;
+        widget->setGeometry(viewportRect.x() + leftWidth, viewportRect.y() - headerHeight,
+                            qMax(0, viewportRect.width() - leftWidth - rightWidth), headerHeight);
         widget->setVisible(headerHeight > 0);
+    }
+    if (m_frozenLeftHeader) {
+        const int width = m_panes.frozenLeftWidth();
+        m_frozenLeftHeader->setGeometry(viewportRect.x(), viewportRect.y() - headerHeight,
+                                        qMax(0, width), headerHeight);
+        m_frozenLeftHeader->setVisible(headerHeight > 0 && width > 0);
+        m_frozenLeftHeader->raise();
+    }
+    if (m_frozenRightHeader) {
+        const int width = m_panes.frozenRightWidth();
+        m_frozenRightHeader->setGeometry(viewportRect.x() + viewportRect.width() - width,
+                                         viewportRect.y() - headerHeight, qMax(0, width),
+                                         headerHeight);
+        m_frozenRightHeader->setVisible(headerHeight > 0 && width > 0);
+        m_frozenRightHeader->raise();
     }
     if (m_verticalHeader) {
         QWidget *widget = m_verticalHeader->headerWidget();
@@ -317,7 +397,13 @@ int VirtualTableView::columnCount() const
 
 ColumnGeometry VirtualTableView::columnGeometry(int logicalIndex) const
 {
-    return m_columns->columnGeometry(logicalIndex);
+    ColumnGeometry geometry = m_columns->columnGeometry(logicalIndex);
+    // Pane aware (§31): frozen columns keep their own x, the scrollable ones are
+    // shifted by the horizontal offset.
+    const int x = m_panes.columnViewportX(logicalIndex);
+    if (geometry.isValid() && x >= 0)
+        geometry.viewportX = x;
+    return geometry;
 }
 
 int VirtualTableView::columnWidth(int logicalIndex) const
@@ -327,7 +413,9 @@ int VirtualTableView::columnWidth(int logicalIndex) const
 
 VisibleRange VirtualTableView::visibleColumns() const
 {
-    return m_columns->visibleVisualRange(viewport()->width());
+    // The scrollable pane owns the horizontal window; frozen columns are always
+    // visible and are reported by visibleColumnLogicalIndexes().
+    return m_columns->visibleVisualRange(qMax(1, m_panes.scrollableWidth()));
 }
 
 QVector<int> VirtualTableView::visibleColumnLogicalIndexes() const
@@ -409,7 +497,9 @@ qint64 VirtualTableView::horizontalOffset() const
 
 qint64 VirtualTableView::maximumHorizontalOffset() const
 {
-    return m_columns->maximumViewportOffset(viewport()->width());
+    // Only the scrollable pane scrolls: frozen columns are never hidden by the
+    // horizontal offset (§31).
+    return m_panes.maximumOffset();
 }
 
 qint64 VirtualTableView::horizontalContentExtent() const
@@ -440,6 +530,170 @@ void VirtualTableView::scrollByHorizontalPixels(qint64 pixels)
 void VirtualTableView::setHorizontalWheelPixels(int pixels)
 {
     m_horizontalWheelPixels = qMax(1, pixels);
+}
+
+// ---------------------------------------------------------------------------
+// Frozen columns (§31)
+// ---------------------------------------------------------------------------
+
+void VirtualTableView::setFrozenColumns(const QVector<int> &logicalColumns)
+{
+    if (m_panes.frozenColumns() == logicalColumns)
+        return;
+    m_panes.setFrozenColumns(logicalColumns);
+    updatePaneLayout();
+    emit columnGeometryChanged();
+}
+
+void VirtualTableView::setFrozenRightColumns(const QVector<int> &logicalColumns)
+{
+    if (m_panes.frozenRightColumns() == logicalColumns)
+        return;
+    m_panes.setFrozenRightColumns(logicalColumns);
+    updatePaneLayout();
+    emit columnGeometryChanged();
+}
+
+void VirtualTableView::clearFrozenColumns()
+{
+    if (!m_panes.hasFrozenColumns())
+        return;
+    m_panes.setFrozenColumns(QVector<int>());
+    m_panes.setFrozenRightColumns(QVector<int>());
+    updatePaneLayout();
+    emit columnGeometryChanged();
+}
+
+void VirtualTableView::setPaneSeparatorStyle(const PaneSeparatorStyle &style)
+{
+    if (m_paneSeparatorStyle.width == style.width && m_paneSeparatorStyle.color == style.color
+        && m_paneSeparatorStyle.lineStyle == style.lineStyle) {
+        return;
+    }
+    m_paneSeparatorStyle = style;
+    syncHeaderPanes();
+    syncPaneSeparatorLines();
+    if (m_frozenLeftHeader)
+        m_frozenLeftHeader->update();
+    if (m_frozenRightHeader)
+        m_frozenRightHeader->update();
+    emit columnGeometryChanged();
+}
+
+void VirtualTableView::updatePaneLayout()
+{
+    const bool changed = m_panes.update(viewport()->width(), viewport()->height());
+    syncHeaderPanes();
+    syncPaneSeparatorLines();
+    if (changed) {
+        // Which rows/columns belong to the window changed (the scrollable pane
+        // shrank or grew) and the header panes moved.
+        layoutHeaderWidgets();
+        if (m_materializationMode == MaterializationMode::CellWidgets)
+            markDirty();
+    }
+    // Every column x may have moved: rows, cells and the scroll bar follow.
+    updateColumnLayout();
+    syncHorizontalScrollBar();
+}
+
+void VirtualTableView::syncHeaderPanes()
+{
+    QVector<int> leftColumns;
+    QVector<int> rightColumns;
+    QVector<int> scrollableColumns;
+    for (const TablePane &pane : m_panes.panes()) {
+        switch (pane.type) {
+        case TablePane::Type::FrozenLeft:
+            leftColumns = pane.logicalColumns;
+            break;
+        case TablePane::Type::FrozenRight:
+            rightColumns = pane.logicalColumns;
+            break;
+        case TablePane::Type::Scrollable:
+            scrollableColumns = pane.logicalColumns;
+            break;
+        }
+    }
+
+    const auto adopt = [this](NativeHeaderView *&header, const QVector<int> &columns) {
+        if (columns.isEmpty()) {
+            if (header) {
+                header->hide();
+                header->deleteLater();
+                header = nullptr;
+            }
+            return;
+        }
+        if (!header) {
+            // The pane header is another native renderer of the same geometry, so
+            // it never keeps a width/order copy of its own (§31).
+            header = new NativeHeaderView(Qt::Horizontal, this);
+            header->setGeometryModel(m_columns);
+            header->setLabelModel(model());
+            header->setSortInteractionEnabled(m_sortingEnabled);
+        }
+        header->setPaneFilter(columns, true);
+    };
+    adopt(m_frozenLeftHeader, leftColumns);
+    adopt(m_frozenRightHeader, rightColumns);
+    // Both pane headers face the scrollable pane with an edge that QHeaderView
+    // would not separate, so they draw that line themselves (§31).
+    if (m_frozenLeftHeader)
+        m_frozenLeftHeader->setPaneSeparator(Qt::RightEdge, m_paneSeparatorStyle);
+    if (m_frozenRightHeader)
+        m_frozenRightHeader->setPaneSeparator(Qt::LeftEdge, m_paneSeparatorStyle);
+
+    if (leftColumns.isEmpty() && rightColumns.isEmpty())
+        m_horizontalHeader->clearPaneFilter();
+    else
+        m_horizontalHeader->setPaneFilter(scrollableColumns, false);
+}
+
+void VirtualTableView::syncPaneSeparatorLines()
+{
+    // One line per existing boundary (left pane | scrollable | right pane).
+    QVector<int> boundaries;
+    const QRect scrollable = m_panes.paneRect(TablePane::Type::Scrollable);
+    if (m_panes.frozenLeftWidth() > 0)
+        boundaries.append(scrollable.left());
+    if (m_panes.frozenRightWidth() > 0)
+        boundaries.append(scrollable.right() + 1);
+
+    while (m_paneSeparatorLines.size() > boundaries.size()) {
+        QWidget *line = m_paneSeparatorLines.takeLast();
+        line->hide();
+        line->setParent(nullptr); // leave nothing behind while it is deleted
+        line->deleteLater();
+    }
+    while (m_paneSeparatorLines.size() < boundaries.size())
+        m_paneSeparatorLines.append(new PaneSeparatorLine(viewport()));
+
+    const QColor styleColor = boundaries.isEmpty()
+        ? QColor()
+        : NativeHeaderView::sectionSeparatorColor(this);
+    const int band = qMax(0, m_paneSeparatorStyle.width);
+    for (int i = 0; i < boundaries.size(); ++i) {
+        auto *line = static_cast<PaneSeparatorLine *>(m_paneSeparatorLines.at(i));
+        line->setSeparator(m_paneSeparatorStyle, styleColor);
+        // Same rule as the header: the band lies inside the frozen pane, so the
+        // two lines are continuous. A dashed line still needs a 1 px band to
+        // draw on.
+        const int lineWidth = m_paneSeparatorStyle.lineStyle == Qt::SolidLine ? band : qMax(1, band);
+        const bool leftBoundary = m_panes.frozenLeftWidth() > 0 && i == 0;
+        const int x = leftBoundary ? boundaries.at(i) - lineWidth : boundaries.at(i);
+        line->setGeometry(x, 0, lineWidth, viewport()->height());
+        line->setVisible(m_paneSeparatorStyle.isVisible() && viewport()->height() > 0);
+    }
+}
+
+void VirtualTableView::raisePaneSeparatorLines()
+{
+    // The items are (re)created by every materialization pass, so the lines have
+    // to be lifted above them again. They are 1 px wide, paint nothing else and
+    // let input through, so they can sit on top of everything.
+    for (QWidget *line : m_paneSeparatorLines)
+        line->raise();
 }
 
 void VirtualTableView::syncHorizontalScrollBar()
@@ -751,31 +1005,16 @@ bool VirtualTableView::usesItemWidgets() const
 
 QVector<int> VirtualTableView::columnsForCellMaterialization() const
 {
-    QVector<int> columns;
-    if (!m_columns)
-        return columns;
-    const int count = m_columns->sectionCount();
-    if (count <= 0)
-        return columns;
-
-    const VisibleRange visible = m_columns->visibleVisualRange(qMax(1, viewport()->width()));
-    const VisibleRange window = VisibleRange::expanded(visible.first, visible.last, m_columnOverscan,
-                                                      m_columnOverscan, count);
-    columns.reserve(int(window.count()));
-    for (qsizetype visual = window.first; visual >= 0 && visual <= window.last; ++visual) {
-        const int logical = m_columns->logicalIndex(int(visual));
-        if (logical < 0 || m_columns->isSectionHidden(logical))
-            continue;
-        columns.append(logical);
-    }
-    return columns;
+    // Frozen columns are always materialized, the scrollable ones inside the
+    // visible window widened by the overscan (§31).
+    return m_panes.columnsForLayout(m_columnOverscan);
 }
 
 QRect VirtualTableView::cellRect(qsizetype row, int logicalColumn) const
 {
     if (!m_rowLayout || !m_columns)
         return QRect();
-    const ColumnGeometry column = m_columns->columnGeometry(logicalColumn);
+    const ColumnGeometry column = columnGeometry(logicalColumn);
     if (!column.isValid() || column.hidden || column.width <= 0)
         return QRect();
     const QRect rowRect = m_rowLayout->itemRect(row, verticalOffset());
@@ -797,6 +1036,7 @@ QWidget *VirtualTableView::createCellWidget(const QPersistentModelIndex &index)
 
     if (widget->parentWidget() != viewport())
         widget->setParent(viewport());
+
     // Never show a cell before it has been bound to its new index.
     widget->hide();
     m_cellAdapter->bindCellWidget(widget, modelIndex);
@@ -881,8 +1121,39 @@ void VirtualTableView::materializeItems(const VisibleRange &rows)
     m_cellMaterializationActive = false;
 }
 
+void VirtualTableView::ensureCellPaneClipHost()
+{
+    if (!m_panes.hasFrozenColumns()) {
+        if (!m_cellClipHost)
+            return;
+        // Nothing is frozen any more: hand the cells back to the viewport and
+        // drop the container, so an unused feature changes nothing at all.
+        const QList<QWidget *> cells =
+            m_cellClipHost->findChildren<QWidget *>(QString(), Qt::FindDirectChildrenOnly);
+        for (QWidget *cell : cells)
+            cell->setParent(viewport());
+        m_cellClipHost->hide();
+        m_cellClipHost->setParent(nullptr);
+        m_cellClipHost->deleteLater();
+        m_cellClipHost = nullptr;
+        return;
+    }
+
+    if (!m_cellClipHost)
+        m_cellClipHost = new PaneClipHost(viewport());
+    const QRect rect = m_panes.paneRect(TablePane::Type::Scrollable);
+    if (m_cellClipHost->geometry() != rect)
+        m_cellClipHost->setGeometry(rect);
+    m_cellClipHost->setVisible(!rect.isEmpty());
+}
+
 void VirtualTableView::updateCellGeometry()
 {
+    ensureCellPaneClipHost();
+    const QRect scrollableRect = m_panes.hasFrozenColumns()
+        ? m_panes.paneRect(TablePane::Type::Scrollable)
+        : QRect();
+
     for (auto it = m_cells.constBegin(); it != m_cells.constEnd(); ++it) {
         QWidget *widget = it.value();
         const QModelIndex index = it.key();
@@ -891,10 +1162,25 @@ void VirtualTableView::updateCellGeometry()
             continue;
         }
         const QRect rect = cellRect(index.row(), index.column());
-        if (rect.isValid()) {
-            widget->setGeometry(rect);
+        const bool frozen = m_panes.isFrozenColumn(index.column());
+        // Scrollable cells live in the clip host: Qt clips a widget to its
+        // parent, so they can never paint under a frozen pane (§31) and no cell
+        // has to repaint or change its background.
+        QWidget *parent = (m_cellClipHost && !frozen) ? static_cast<QWidget *>(m_cellClipHost)
+                                                      : viewport();
+        if (widget->parentWidget() != parent)
+            widget->setParent(parent);
+
+        // Only the scrollable cells are clipped to the scrollable pane; frozen
+        // cells live outside of it by definition.
+        const QRect visible = (scrollableRect.isNull() || frozen) ? rect : rect.intersected(scrollableRect);
+        if (rect.isValid() && !visible.isEmpty()) {
+            const QPoint origin = parent == viewport() ? QPoint(0, 0) : scrollableRect.topLeft();
+            widget->setGeometry(rect.translated(-origin));
             if (!widget->isVisible())
                 widget->show();
+            if (frozen)
+                widget->raise();
         } else {
             widget->hide();
         }
@@ -976,17 +1262,65 @@ VirtualViewStats VirtualTableView::stats() const
 // Kernel hooks
 // ---------------------------------------------------------------------------
 
-TableRowLayoutContext VirtualTableView::layoutContext(const QRect &viewportRect) const
+TableRowLayoutContext VirtualTableView::layoutContext(const QRect &viewportRect,
+                                                      QWidget *scrollablePaneHost) const
 {
     TableRowLayoutContext context;
     context.m_geometry = m_columns;
+    context.m_panes = &m_panes;
+    context.m_scrollablePaneHost = scrollablePaneHost;
     context.m_columnCount = columnCount();
     context.m_viewportRect = viewportRect;
     context.m_horizontalOffset = m_columns->viewportOffset();
-    const VisibleRange visible = m_columns->visibleVisualRange(qMax(1, viewportRect.width()));
-    context.m_visibleColumns = VisibleRange::expanded(visible.first, visible.last, m_columnOverscan,
-                                                     m_columnOverscan, m_columns->sectionCount());
+    context.m_columnOverscan = m_columnOverscan;
+    context.m_visibleColumns = m_panes.visibleScrollableRange();
     return context;
+}
+
+/// Column hosts of \a rowWidget: they live directly in the row widget (frozen
+/// columns, or no frozen columns at all) or in the framework's pane clip host.
+QList<ColumnHost *> VirtualTableView::rowColumnHosts(QWidget *rowWidget) const
+{
+    QList<ColumnHost *> hosts =
+        rowWidget->findChildren<ColumnHost *>(QString(), Qt::FindDirectChildrenOnly);
+    if (QWidget *clipHost = m_rowClipHosts.value(rowWidget, nullptr)) {
+        const QList<ColumnHost *> clipped =
+            clipHost->findChildren<ColumnHost *>(QString(), Qt::FindDirectChildrenOnly);
+        hosts.append(clipped);
+    }
+    return hosts;
+}
+
+/// Ensures the scrollable pane clip host of \a rowWidget and returns it (null
+/// when nothing is frozen, in which case the column hosts keep their parent).
+QWidget *VirtualTableView::ensureRowPaneClipHost(QWidget *rowWidget, const QRect &rowRect)
+{
+    QWidget *clipHost = m_rowClipHosts.value(rowWidget, nullptr);
+    if (!m_panes.hasFrozenColumns()) {
+        if (!clipHost)
+            return nullptr;
+        // Frozen columns are gone: give the hosts back to the row widget and drop
+        // the container, so an unused feature changes nothing at all.
+        const QList<ColumnHost *> clipped =
+            clipHost->findChildren<ColumnHost *>(QString(), Qt::FindDirectChildrenOnly);
+        for (ColumnHost *host : clipped)
+            host->setParent(rowWidget);
+        clipHost->hide();
+        clipHost->setParent(nullptr);
+        clipHost->deleteLater();
+        m_rowClipHosts.remove(rowWidget);
+        return nullptr;
+    }
+
+    if (!clipHost) {
+        clipHost = new PaneClipHost(rowWidget);
+        m_rowClipHosts.insert(rowWidget, clipHost);
+    }
+    const QRect local = m_panes.paneRect(TablePane::Type::Scrollable).translated(-rowRect.topLeft());
+    if (clipHost->geometry() != local)
+        clipHost->setGeometry(local);
+    clipHost->setVisible(!local.isEmpty());
+    return clipHost;
 }
 
 void VirtualTableView::applyColumnLayout(const MaterializedItem &item)
@@ -994,11 +1328,20 @@ void VirtualTableView::applyColumnLayout(const MaterializedItem &item)
     if (!item.widget)
         return;
 
-    const TableRowLayoutContext context = layoutContext(item.geometry);
+    QWidget *clipHost = ensureRowPaneClipHost(item.widget, item.geometry);
+    const TableRowLayoutContext context = layoutContext(item.geometry, clipHost);
+    // Everything below works in the row widget's own coordinates: the row widget
+    // covers the viewport, so its origin is the row rect (see columnX()).
+    const QRect localViewport(0, 0, item.geometry.width(), item.geometry.height());
+    const QRect localScrollable = m_panes.hasFrozenColumns()
+        ? m_panes.paneRect(TablePane::Type::Scrollable).translated(-item.geometry.topLeft())
+        : QRect();
+    const QPoint scrollableOrigin = m_panes.hasFrozenColumns()
+        ? m_panes.paneRect(TablePane::Type::Scrollable).topLeft() - item.geometry.topLeft()
+        : QPoint();
 
     // Framework-managed column hosts (§27).
-    const QList<ColumnHost *> hosts =
-        item.widget->findChildren<ColumnHost *>(QString(), Qt::FindDirectChildrenOnly);
+    const QList<ColumnHost *> hosts = rowColumnHosts(item.widget);
     if (!hosts.isEmpty()) {
         for (ColumnHost *host : hosts) {
             const ColumnGeometry geometry = context.column(host->logicalColumn());
@@ -1006,11 +1349,30 @@ void VirtualTableView::applyColumnLayout(const MaterializedItem &item)
                 host->setVisible(false);
                 continue;
             }
-            const int x = context.columnX(geometry.logicalIndex);
-            host->setGeometry(x, 0, geometry.width, context.viewportRect().height());
-            const bool intersects = x < context.viewportRect().width()
-                && x + geometry.width > 0;
+            const bool frozen = context.isColumnFrozen(geometry.logicalIndex);
+            // Scrollable columns live in the clip host: Qt clips a widget to its
+            // parent, so they can never paint under a frozen pane (§31) and no
+            // widget has to repaint or change its background.
+            QWidget *parent = (clipHost && !frozen) ? clipHost : item.widget;
+            if (host->parentWidget() != parent)
+                host->setParent(parent);
+
+            const QRect hostRect(context.columnX(geometry.logicalIndex), 0, geometry.width,
+                                 context.viewportRect().height());
+            // Only the scrollable columns are clipped to the scrollable pane; a
+            // frozen column lives outside of it by definition.
+            const QRect visible = (localScrollable.isNull() || frozen)
+                ? hostRect
+                : hostRect.intersected(localScrollable);
+            const bool intersects = !visible.isEmpty() && hostRect.intersects(localViewport);
+            const QPoint origin = parent == item.widget ? QPoint(0, 0) : scrollableOrigin;
+            host->setGeometry(hostRect.translated(-origin));
             host->setVisible(intersects);
+            if (!intersects)
+                continue;
+
+            if (frozen)
+                host->raise();
         }
     }
 
@@ -1036,6 +1398,8 @@ void VirtualTableView::updateColumnLayout()
 
 void VirtualTableView::onHeaderGeometryChanged()
 {
+    // Frozen widths (or hidden/order) may have changed: refresh the panes first.
+    updatePaneLayout();
     if (m_horizontalHeader)
         m_horizontalHeader->headerWidget()->update();
     syncHorizontalScrollBar();
@@ -1054,12 +1418,15 @@ void VirtualTableView::afterMaterialize()
     updateRowHeaderOffset();
     updateRowHeaderGeometry();
     updateColumnLayout();
+    raisePaneSeparatorLines();
     syncHorizontalScrollBar();
 }
 
 void VirtualTableView::resizeEvent(QResizeEvent *event)
 {
     layoutHeaderWidgets();
+    // The scrollable pane width changed with the viewport.
+    updatePaneLayout();
     VirtualItemView::resizeEvent(event);
     syncHorizontalScrollBar();
 }
@@ -1068,8 +1435,26 @@ void VirtualTableView::showEvent(QShowEvent *event)
 {
     ensureHeaders();
     layoutHeaderWidgets();
+    updatePaneLayout();
     VirtualItemView::showEvent(event);
     syncHorizontalScrollBar();
+}
+
+void VirtualTableView::changeEvent(QEvent *event)
+{
+    VirtualItemView::changeEvent(event);
+    // The default separator colour is probed from the style, so a style or
+    // palette change has to refresh the body lines (the header line resolves the
+    // colour while painting).
+    switch (event->type()) {
+    case QEvent::StyleChange:
+    case QEvent::PaletteChange:
+    case QEvent::ApplicationPaletteChange:
+        syncPaneSeparatorLines();
+        break;
+    default:
+        break;
+    }
 }
 
 void VirtualTableView::scrollContentsBy(int dx, int dy)

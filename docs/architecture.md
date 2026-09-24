@@ -36,6 +36,10 @@ ListLayout / SizeIndex    createWidget / bindWidget / unbindWidget
   QWidget，二维虚拟化 `visibleRows x visibleColumns`；此时内核只负责区间/滚动/锚点
   （`usesItemWidgets() == false` + `materializeItems()` 钩子），控件由表格的
   `CellWidgetAdapter` + Recycler 池管理。
+* `VirtualTableView` 的 pane 层（v0.7，§31）：`TablePaneLayout` 把同一份 `HeaderGeometry`
+  投影成 FrozenLeft / Scrollable / FrozenRight 三个 pane（列 -> 视口 x、pane 矩形、
+  可滚动 pane 的偏移范围）。冻结 pane 不消费水平偏移，也没有独立的列宽/顺序
+  （表头同样是 `NativeHeaderView` + `setPaneFilter()` 的另一个实例）。
 * `VirtualTreeView`（v0.6）：`TreeVisibilityIndex` + 同一个 list kernel。树只替换身份映射：
 
   ```

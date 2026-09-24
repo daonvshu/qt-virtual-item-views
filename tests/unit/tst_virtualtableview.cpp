@@ -5,6 +5,7 @@
 #include <QtTest>
 
 #include <QLabel>
+#include <QPainter>
 #include <QScrollBar>
 #include <QStandardItemModel>
 
@@ -165,6 +166,93 @@ QWidget *rowWidgetFor(VirtualTableView &view, int row)
 }
 } // namespace
 
+namespace {
+
+/// Colour a scrollable column would bleed with if it were not clipped.
+QColor paneProbeColor(int column)
+{
+    static const QColor colors[] = {
+        QColor(200, 0, 0), QColor(0, 0, 200), QColor(200, 140, 0),
+        QColor(160, 0, 160), QColor(0, 150, 150),
+    };
+    return colors[column % 5];
+}
+
+/// Child of a column host: paints one thin stripe so a leak is easy to spot.
+class PaneProbe : public QWidget
+{
+public:
+    PaneProbe(int column, QWidget *parent)
+        : QWidget(parent)
+        , m_column(column)
+    {
+        setGeometry(0, 0, kColumnWidth, kRowHeight);
+    }
+
+protected:
+    void paintEvent(QPaintEvent *) override
+    {
+        QPainter painter(this);
+        painter.fillRect(QRect(0, 4 + m_column * 3, width(), 2), paneProbeColor(m_column));
+    }
+
+private:
+    int m_column = 0;
+};
+
+/// Row widget with a custom opaque background: the framework must not paint over
+/// it when the row is inside a frozen pane.
+class PaintedRowWidget : public QWidget
+{
+public:
+    PaintedRowWidget(QWidget *parent, int columnCount)
+        : QWidget(parent)
+    {
+        for (int column = 0; column < columnCount; ++column) {
+            auto *host = new ColumnHost(column, this);
+            new PaneProbe(column, host);
+        }
+    }
+
+    static QColor background()
+    {
+        return QColor(0, 128, 0);
+    }
+
+protected:
+    void paintEvent(QPaintEvent *) override
+    {
+        QPainter painter(this);
+        painter.fillRect(rect(), background());
+    }
+};
+
+class PaintedRowAdapter : public TableWidgetAdapter
+{
+public:
+    explicit PaintedRowAdapter(int columnCount)
+        : m_columnCount(columnCount)
+    {
+    }
+
+    QWidget *createWidget(WidgetType, QWidget *parent) override
+    {
+        return new PaintedRowWidget(parent, m_columnCount);
+    }
+
+    void bindWidget(QWidget *, const QModelIndex &) override {}
+
+    QSize estimatedSize(const QModelIndex &) const override
+    {
+        return QSize(kColumnWidth * 2, kRowHeight);
+    }
+
+private:
+    int m_columnCount = 0;
+};
+
+} // namespace
+
 class TestVirtualTableView : public QObject
 {
     Q_OBJECT
@@ -179,6 +267,7 @@ private slots:
     void columnResizeTouchesMaterializedRowsOnly();
     void geometryIsTheSingleAuthority();
     void columnMoveFollowsTheGeometry();
+    void columnMoveReordersTheHeader();
     void hiddenColumnHidesHost();
     void horizontalScrollKeepsHeaderAndRowsAligned();
     void headerStateRoundTrip();
@@ -191,6 +280,15 @@ private slots:
     void rowSizePolicyControlsMeasurement();
     void keyboardMovesTheCurrentColumn();
     void visibleColumnRangeFollowsOverscanAndOffset();
+    void frozenColumnsStayWhileTheScrollablePaneScrolls();
+    void frozenPanesDoNotAddScrollSpace();
+    void frozenColumnsFollowTheSingleGeometry();
+    void frozenRightPaneIsPinnedToTheRightEdge();
+    void frozenPanesSplitTheHeader();
+    void frozenPaneIsUnaffectedByScrolling();
+    void frozenPaneKeepsTheRowBackground();
+    void frozenPanesDrawBodySeparatorLines();
+    void paneSeparatorStyleIsCustomizable();
 
 private:
     QStandardItemModel *m_model = nullptr;
@@ -328,6 +426,47 @@ void TestVirtualTableView::columnMoveFollowsTheGeometry()
     QVERIFY(xOfColumnThreeAfter != xOfColumnThreeBefore);
     QVERIFY(xOfColumnZero > xOfColumnThreeAfter);
     QCOMPARE(m_view->horizontalHeaderGeometry()->logicalIndex(0), 1);
+}
+
+void TestVirtualTableView::columnMoveReordersTheHeader()
+{
+    auto *header = qobject_cast<QHeaderView *>(m_view->horizontalHeader()->headerWidget());
+    QVERIFY(header != nullptr);
+
+    const auto visualOrderOf = [this](const QHeaderView *view) {
+        QVector<int> order;
+        for (int visual = 0; visual < m_view->columnCount(); ++visual)
+            order.append(view->logicalIndex(visual));
+        return order;
+    };
+    const auto geometryOrder = [this]() {
+        QVector<int> order;
+        HeaderGeometry *geometry = m_view->horizontalHeaderGeometry();
+        for (int visual = 0; visual < m_view->columnCount(); ++visual)
+            order.append(geometry->logicalIndex(visual));
+        return order;
+    };
+    QCOMPARE(visualOrderOf(header), QVector<int>({0, 1, 2, 3, 4, 5}));
+
+    // Moving a column through the geometry has to reorder the header as well,
+    // otherwise header and body disagree (§45.1).
+    m_view->moveColumn(4, 0);
+    QCOMPARE(geometryOrder(), QVector<int>({4, 0, 1, 2, 3, 5}));
+    QCOMPARE(visualOrderOf(header), geometryOrder());
+
+    // Header and body stay pixel aligned for every column.
+    const int viewportX = m_view->viewport()->geometry().x();
+    for (int column = 0; column < m_view->columnCount(); ++column) {
+        QCOMPARE(header->geometry().x() + header->sectionViewportPosition(column),
+                 m_view->columnGeometry(column).viewportX + viewportX);
+    }
+
+    // restoreHeaderState() restores the header order through the same path.
+    const QByteArray state = m_view->saveHeaderState();
+    m_view->moveColumn(0, 4);
+    QVERIFY(m_view->restoreHeaderState(state));
+    QCOMPARE(geometryOrder(), QVector<int>({4, 0, 1, 2, 3, 5}));
+    QCOMPARE(visualOrderOf(header), geometryOrder());
 }
 
 void TestVirtualTableView::hiddenColumnHidesHost()
@@ -588,6 +727,369 @@ void TestVirtualTableView::visibleColumnRangeFollowsOverscanAndOffset()
     QVERIFY(scrolled.first() >= 1);
     const VisibleRange visual = m_view->visibleColumns();
     QVERIFY(visual.isValid());
+}
+
+void TestVirtualTableView::frozenColumnsStayWhileTheScrollablePaneScrolls()
+{
+    // 6 columns of 100 px: freeze the first two (§31).
+    m_view->setFrozenColumns(QVector<int>({0, 1}));
+    QCOMPARE(m_view->frozenColumns(), QVector<int>({0, 1}));
+    QVERIFY(m_view->isColumnFrozen(0));
+    QVERIFY(m_view->isColumnFrozen(1));
+    QVERIFY(!m_view->isColumnFrozen(2));
+
+    const QVector<TablePane> panes = m_view->panes();
+    QCOMPARE(panes.size(), 2);
+    QCOMPARE(panes.at(0).type, TablePane::Type::FrozenLeft);
+    QCOMPARE(panes.at(0).viewportRect.x(), 0);
+    QCOMPARE(panes.at(0).viewportRect.width(), 2 * kColumnWidth);
+    QCOMPARE(panes.at(0).logicalColumns, QVector<int>({0, 1}));
+    QCOMPARE(panes.at(1).type, TablePane::Type::Scrollable);
+    QCOMPARE(panes.at(1).viewportRect.x(), 2 * kColumnWidth);
+
+    // The scrollable pane starts behind the frozen columns.
+    QCOMPARE(m_view->columnGeometry(0).viewportX, 0);
+    QCOMPARE(m_view->columnGeometry(1).viewportX, kColumnWidth);
+    QCOMPARE(m_view->columnGeometry(2).viewportX, 2 * kColumnWidth);
+
+    m_view->setHorizontalOffset(150);
+    QCOMPARE(m_view->columnGeometry(0).viewportX, 0);
+    QCOMPARE(m_view->columnGeometry(1).viewportX, kColumnWidth);
+    QCOMPARE(m_view->columnGeometry(2).viewportX, 2 * kColumnWidth - 150);
+
+    // The row widget's column hosts follow the same committed geometry, so the
+    // frozen host keeps its pane position.
+    auto *row = static_cast<TableRowWidget *>(m_view->widgetForIndex(m_model->index(0, 0)));
+    QVERIFY(row != nullptr);
+    QVERIFY(row->host(0) != nullptr);
+    // The scrollable hosts live in the framework's clip container, so their own
+    // x is relative to it; the viewport position is what has to match the body.
+    const auto hostViewportX = [this, row](int column) {
+        return row->host(column)->mapTo(m_view->viewport(), QPoint(0, 0)).x();
+    };
+    QCOMPARE(hostViewportX(0), 0);
+    QCOMPARE(hostViewportX(1), kColumnWidth);
+    QCOMPARE(hostViewportX(2), 2 * kColumnWidth - 150);
+    // Frozen columns stay visible; a scrollable column that is completely under
+    // the frozen pane is hidden, a fully scrollable one is not.
+    QVERIFY(row->host(0)->isVisible());
+    QVERIFY(row->host(1)->isVisible());
+    QVERIFY(!row->host(2)->isVisible());
+    QVERIFY(row->host(4)->isVisible());
+    QVERIFY(row->host(0)->parentWidget() == row);
+    QVERIFY(row->host(2)->parentWidget() != row); // inside the clip container
+
+    // The framework clips the scrollable columns with a container instead of
+    // repainting them, so a row widget keeps its own background and nothing else
+    // has to change: no masks, no background fills.
+    QVERIFY(row->host(0)->mask().isEmpty());
+    QVERIFY(row->host(2)->mask().isEmpty());
+    QWidget *clipHost = row->host(2)->parentWidget();
+    QVERIFY(clipHost != nullptr && clipHost != row);
+    QCOMPARE(clipHost->geometry().x(), 2 * kColumnWidth);
+    QCOMPARE(clipHost->geometry().width(), m_view->viewport()->width() - 2 * kColumnWidth);
+    // Hidden/fully scrolled-out scrollable columns are hidden, not repainted.
+    QCOMPARE(row->host(3)->mapTo(m_view->viewport(), QPoint(0, 0)).x(), 3 * kColumnWidth - 150);
+}
+
+void TestVirtualTableView::frozenPanesDoNotAddScrollSpace()
+{
+    const int viewportWidth = m_view->viewport()->width();
+    const qint64 plain = m_view->maximumHorizontalOffset();
+    QCOMPARE(plain, qMax<qint64>(0, 6 * kColumnWidth - viewportWidth));
+
+    // Freezing redistributes the viewport: the scrollable content shrinks by
+    // exactly the frozen width, so the range stays the same (no phantom scroll
+    // space), only the scrollable pane gets narrower.
+    m_view->setFrozenColumns(QVector<int>({0}));
+    QCOMPARE(m_view->panes().at(1).viewportRect.width(), viewportWidth - kColumnWidth);
+    QCOMPARE(m_view->maximumHorizontalOffset(), plain);
+
+    m_view->setHorizontalOffset(plain);
+    QCOMPARE(m_view->horizontalOffset(), plain);
+    QCOMPARE(m_view->columnGeometry(0).viewportX, 0);
+    // At the end of the range the last scrollable column ends exactly at the
+    // right edge of the scrollable pane.
+    const ColumnGeometry last = m_view->columnGeometry(5);
+    QCOMPARE(last.viewportX + last.width, viewportWidth);
+
+    // A frozen right pane stops the scrollable pane before it.
+    m_view->setFrozenRightColumns(QVector<int>({5}));
+    QCOMPARE(m_view->panes().at(1).viewportRect.width(), viewportWidth - 2 * kColumnWidth);
+    QCOMPARE(m_view->maximumHorizontalOffset(), plain);
+    m_view->setHorizontalOffset(plain);
+    QCOMPARE(m_view->columnGeometry(5).viewportX, viewportWidth - kColumnWidth);
+    const ColumnGeometry previous = m_view->columnGeometry(4);
+    QCOMPARE(previous.viewportX + previous.width, viewportWidth - kColumnWidth);
+
+    m_view->clearFrozenColumns();
+    QVERIFY(m_view->frozenColumns().isEmpty());
+    QVERIFY(m_view->frozenRightColumns().isEmpty());
+    QCOMPARE(m_view->panes().size(), 1);
+    QCOMPARE(m_view->panes().at(0).type, TablePane::Type::Scrollable);
+}
+
+void TestVirtualTableView::frozenColumnsFollowTheSingleGeometry()
+{
+    m_view->setFrozenColumns(QVector<int>({0}));
+    const int scrollableBefore = m_view->columnGeometry(1).viewportX;
+    QCOMPARE(scrollableBefore, kColumnWidth);
+
+    // Resizing a frozen column grows the pane: there is no width copy, the
+    // scrollable pane simply starts further right.
+    m_view->setColumnWidth(0, kColumnWidth + 40);
+    QCOMPARE(m_view->panes().at(0).viewportRect.width(), kColumnWidth + 40);
+    QCOMPARE(m_view->columnGeometry(1).viewportX, scrollableBefore + 40);
+    QCOMPARE(m_view->columnGeometry(0).width, kColumnWidth + 40);
+
+    // A hidden frozen column leaves the pane, the others close the gap.
+    m_view->setColumnHidden(0, true);
+    QCOMPARE(m_view->panes().size(), 1);
+    QCOMPARE(m_view->panes().at(0).type, TablePane::Type::Scrollable);
+    QCOMPARE(m_view->columnGeometry(1).viewportX, 0);
+    QVERIFY(!m_view->isColumnFrozen(0));
+
+    m_view->setColumnHidden(0, false);
+    QCOMPARE(m_view->panes().size(), 2);
+    QCOMPARE(m_view->panes().at(0).viewportRect.width(), kColumnWidth + 40);
+}
+
+void TestVirtualTableView::frozenRightPaneIsPinnedToTheRightEdge()
+{
+    m_view->setFrozenRightColumns(QVector<int>({5}));
+    const int viewportWidth = m_view->viewport()->width();
+
+    const QVector<TablePane> panes = m_view->panes();
+    QCOMPARE(panes.size(), 2);
+    QCOMPARE(panes.at(0).type, TablePane::Type::Scrollable);
+    QCOMPARE(panes.at(1).type, TablePane::Type::FrozenRight);
+    QCOMPARE(panes.at(1).logicalColumns, QVector<int>({5}));
+    QCOMPARE(panes.at(1).viewportRect.x() + panes.at(1).viewportRect.width(), viewportWidth);
+    QCOMPARE(m_view->columnGeometry(5).viewportX, viewportWidth - kColumnWidth);
+
+    // Even at the end of the scroll range the frozen right column stays visible.
+    m_view->setHorizontalOffset(m_view->maximumHorizontalOffset());
+    QCOMPARE(m_view->columnGeometry(5).viewportX, viewportWidth - kColumnWidth);
+    QVERIFY(m_view->columnGeometry(4).viewportX < viewportWidth - kColumnWidth);
+}
+
+void TestVirtualTableView::frozenPanesSplitTheHeader()
+{
+    m_view->setFrozenColumns(QVector<int>({0, 1}));
+    m_view->setHorizontalOffset(150);
+    QApplication::processEvents();
+
+    // Each pane has its own native header renderer, all driven by the same
+    // HeaderGeometry (§31).
+    QHeaderView *frozenHeader = nullptr;
+    QHeaderView *scrollableHeader = nullptr;
+    NativeHeaderView *frozenPaneHeader = nullptr;
+    for (QHeaderView *header : m_view->findChildren<QHeaderView *>()) {
+        if (header->orientation() != Qt::Horizontal || !header->isVisible())
+            continue;
+        if (header->width() == 2 * kColumnWidth) {
+            frozenHeader = header;
+            frozenPaneHeader = qobject_cast<NativeHeaderView *>(header);
+        } else {
+            scrollableHeader = header;
+        }
+    }
+    QVERIFY(frozenHeader != nullptr);
+    QVERIFY(scrollableHeader != nullptr);
+    QVERIFY(frozenPaneHeader != nullptr);
+
+    const int viewportX = m_view->viewport()->geometry().x();
+    // The frozen pane header sits on the frozen pane and never scrolls.
+    QCOMPARE(frozenHeader->geometry().x(), viewportX);
+    QCOMPARE(frozenHeader->sectionViewportPosition(0), 0);
+    QCOMPARE(frozenHeader->sectionViewportPosition(1), kColumnWidth);
+    QVERIFY(frozenHeader->isSectionHidden(2));
+
+    // The scrollable pane header starts behind it, shows the scrollable columns
+    // and moves with the offset - the same offset the body uses.
+    QCOMPARE(scrollableHeader->geometry().x(), viewportX + 2 * kColumnWidth);
+    QVERIFY(scrollableHeader->isSectionHidden(0));
+    QVERIFY(scrollableHeader->isSectionHidden(1));
+    QVERIFY(!scrollableHeader->isSectionHidden(2));
+    // QHeaderView only separates sections inside a header, so the frozen pane
+    // header draws the line at the pane boundary itself (§31).
+    QCOMPARE(frozenPaneHeader->paneSeparatorEdge(), Qt::RightEdge);
+    QCOMPARE(int(qobject_cast<NativeHeaderView *>(scrollableHeader)->paneSeparatorEdge()), 0);
+    // Header and body agree pixel for pixel inside every pane (§45.1): the pane
+    // header's position is relative to its own widget.
+    for (int column = 0; column < m_view->columnCount(); ++column) {
+        const ColumnGeometry geometry = m_view->columnGeometry(column);
+        const QHeaderView *header = m_view->isColumnFrozen(column) ? frozenHeader : scrollableHeader;
+        // Body x is viewport relative, the header lives in view coordinates.
+        QCOMPARE(header->geometry().x() + header->sectionViewportPosition(column),
+                 geometry.viewportX + viewportX);
+    }
+
+    // A frozen column resize moves both panes (single source of truth).
+    m_view->setColumnWidth(1, kColumnWidth + 30);
+    QCOMPARE(frozenHeader->width(), 2 * kColumnWidth + 30);
+    QCOMPARE(scrollableHeader->geometry().x(), viewportX + 2 * kColumnWidth + 30);
+}
+
+void TestVirtualTableView::frozenPaneIsUnaffectedByScrolling()
+{
+    // The rendered frozen pane must not depend on the horizontal offset: if the
+    // scrollable columns bleed through (or the frozen columns move), the two
+    // renders differ.
+    // A translucent table background must not defeat the cover (the Windows 11
+    // style of Qt 6.8 hands out a translucent QPalette::Base).
+    QPalette translucent = m_view->palette();
+    translucent.setColor(QPalette::Base, QColor(255, 255, 255, 180));
+    m_view->setPalette(translucent);
+
+    m_view->setFrozenColumns(QVector<int>({0, 1}));
+    const auto renderPane = [this](qsizetype offset) {
+        m_view->setHorizontalOffset(offset);
+        m_view->flushPendingRelayout();
+        QApplication::processEvents();
+        const QImage full = m_view->viewport()->grab().toImage();
+        return full.copy(QRect(0, 0, 2 * kColumnWidth, full.height()));
+    };
+
+    const QImage first = renderPane(150);
+    const QImage second = renderPane(157);
+    QCOMPARE(first.size(), second.size());
+
+    int differentPixels = 0;
+    QRect diffRect;
+    for (int y = 0; y < first.height(); ++y) {
+        for (int x = 0; x < first.width(); ++x) {
+            if (first.pixel(x, y) == second.pixel(x, y))
+                continue;
+            ++differentPixels;
+            diffRect = diffRect.isNull() ? QRect(x, y, 1, 1) : diffRect.united(QRect(x, y, 1, 1));
+        }
+    }
+    QVERIFY2(differentPixels == 0,
+             qPrintable(QStringLiteral("frozen pane changed while scrolling: %1 pixels, first diff at (%2,%3)")
+                            .arg(differentPixels)
+                            .arg(diffRect.x())
+                            .arg(diffRect.y())));
+}
+
+void TestVirtualTableView::frozenPaneKeepsTheRowBackground()
+{
+    // The row widget paints its own background: the frozen pane must show it
+    // unchanged (no base coloured fill on top) while the scrollable columns stay
+    // clipped away.
+    auto *model = buildModel(20, 4, this);
+    PaintedRowAdapter adapter(4);
+    VirtualTableView view;
+    view.setTableAdapter(&adapter);
+    view.setUniformItemHeight(kRowHeight);
+    view.setDefaultColumnWidth(kColumnWidth);
+    view.setModel(model);
+    showView(&view, QSize(kViewWidth, kViewHeight));
+
+    view.setFrozenColumns(QVector<int>({0}));
+    view.setHorizontalOffset(150); // column 2 sits under the frozen pane
+    view.flushPendingRelayout();
+    QApplication::processEvents();
+
+    const QImage image = view.viewport()->grab().toImage();
+    int rowBackground = 0;
+    int leaked = 0;
+    int frozenContent = 0;
+    for (int y = 0; y < image.height(); ++y) {
+        for (int x = 0; x < kColumnWidth; ++x) {
+            const QColor pixel(image.pixel(x, y));
+            if (pixel == PaintedRowWidget::background())
+                ++rowBackground;
+            if (pixel == paneProbeColor(0))
+                ++frozenContent;
+            for (int column = 1; column < 4; ++column) {
+                if (pixel == paneProbeColor(column))
+                    ++leaked;
+            }
+        }
+    }
+    QVERIFY2(rowBackground > 0, "the row background was painted over in the frozen pane");
+    // The frozen column itself is painted: it is not clipped away.
+    QVERIFY2(frozenContent > 0, "the frozen column disappeared");
+    QCOMPARE(leaked, 0);
+}
+void TestVirtualTableView::frozenPanesDrawBodySeparatorLines()
+{
+    const auto lines = [this]() {
+        return m_view->findChildren<QWidget *>(QStringLiteral("vivPaneSeparatorLine"));
+    };
+
+    // Nothing frozen: no line at all, the body is untouched.
+    QCOMPARE(lines().size(), 0);
+
+    m_view->setFrozenColumns(QVector<int>({0, 1}));
+    m_view->flushPendingRelayout();
+    QApplication::processEvents();
+
+    QCOMPARE(lines().size(), 1);
+    const int viewportX = m_view->viewport()->geometry().x();
+    const int viewportY = m_view->viewport()->geometry().y();
+    // The band lies inside the frozen pane, like the header line does.
+    QCOMPARE(lines().first()->geometry().x(), 2 * kColumnWidth - 1);
+    QCOMPARE(lines().first()->width(), 1);
+    QCOMPARE(lines().first()->height(), m_view->viewport()->height());
+    QVERIFY(lines().first()->isVisible());
+
+    // The body line uses the colour the style paints section separators with, so
+    // it matches the lines between the other columns.
+    const QImage image = m_view->grab().toImage();
+    const QColor separator = NativeHeaderView::sectionSeparatorColor(m_view);
+    QCOMPARE(image.pixelColor(viewportX + 2 * kColumnWidth - 1, viewportY + 20), separator);
+
+    // A frozen right pane adds the line of the other boundary.
+    m_view->setFrozenRightColumns(QVector<int>({5}));
+    m_view->flushPendingRelayout();
+    QCOMPARE(lines().size(), 2);
+    QCOMPARE(lines().at(1)->geometry().x(), m_view->viewport()->width() - kColumnWidth);
+
+    m_view->clearFrozenColumns();
+    m_view->flushPendingRelayout();
+    QCOMPARE(lines().size(), 0);
+}
+
+void TestVirtualTableView::paneSeparatorStyleIsCustomizable()
+{
+    m_view->setFrozenColumns(QVector<int>({0}));
+    m_view->flushPendingRelayout();
+    QApplication::processEvents();
+    const int boundary = kColumnWidth;
+    const int viewportY = m_view->viewport()->geometry().y();
+
+    // Default: 1 px, style coloured.
+    QCOMPARE(m_view->paneSeparatorStyle().width, 1);
+    QVERIFY(!m_view->paneSeparatorStyle().color.isValid());
+
+    // A custom colour and width apply to the header line and the body line.
+    PaneSeparatorStyle custom;
+    custom.width = 3;
+    custom.color = QColor(200, 0, 0);
+    m_view->setPaneSeparatorStyle(custom);
+    m_view->flushPendingRelayout();
+    QApplication::processEvents();
+    QCOMPARE(m_view->paneSeparatorStyle().color, QColor(200, 0, 0));
+
+    const QImage image = m_view->grab().toImage();
+    const int viewportX = m_view->viewport()->geometry().x();
+    // The band sits inside the frozen pane, continuous from header to body.
+    for (int dx = 1; dx <= 3; ++dx) {
+        QCOMPARE(image.pixelColor(viewportX + boundary - dx, viewportY + 20), QColor(200, 0, 0));
+        QCOMPARE(image.pixelColor(viewportX + boundary - dx, 8), QColor(200, 0, 0));
+    }
+    QCOMPARE(image.pixelColor(viewportX + boundary, viewportY + 20), QColor(Qt::white));
+
+    // Width 0 hides the boundary line (header and body).
+    PaneSeparatorStyle hidden;
+    hidden.width = 0;
+    m_view->setPaneSeparatorStyle(hidden);
+    m_view->flushPendingRelayout();
+    const QImage without = m_view->grab().toImage();
+    QCOMPARE(without.pixelColor(viewportX + boundary - 1, viewportY + 20), QColor(Qt::white));
+    QVERIFY(without.pixelColor(viewportX + boundary - 1, 8) != QColor(200, 0, 0));
 }
 
 QTEST_MAIN(TestVirtualTableView)

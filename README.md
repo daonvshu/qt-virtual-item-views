@@ -36,6 +36,7 @@ QWidget**。
 | `NativeHeaderView`：QHeaderView 与 HeaderGeometry 双向同步（无信号回环） | 已实现 |
 | `ColumnHost` / `TableRowLayoutContext`：框架定位列，业务只管内容（§26/§27） | 已实现 |
 | 列 resize/move/hide、表头点击排序、横向像素滚动、表头状态 save/restore | 已实现 |
+| 冻结列（v0.7，§31）：`setFrozenColumns()` / `setFrozenRightColumns()`，冻结 pane 与可滚动 pane 共享同一份 `HeaderGeometry` | 已实现 |
 | 垂直行号表头：与 body 共享纵向偏移（行号始终对齐）、拖动分隔线写入显式行高（uniform 自动转 variable） | 已实现 |
 | Cell Widget Mode（v0.5）：`CellWidgetAdapter` + 二维虚拟化，只 materialize visibleRows x visibleColumns | 已实现 |
 | `visibleRows()` / `visibleColumns()` 可见区间查询 + 大列数 benchmark（100 列 x 1M 行，row vs cell 对照） | 已实现 |
@@ -54,12 +55,12 @@ QWidget**。
 | 像素滚动：`WheelScrollMode`（Pixels 默认 / Items）、`setWheelScrollPixels()`、`scrollByPixels()`、`setVerticalOffset()`、触控板 `pixelDelta` 1:1 | 已实现 |
 | 可选生命周期日志 `setLifecycleLoggingEnabled()`（create/bind/unbind/recycle/pin） | 已实现 |
 | `TreeVisibilityIndex`（可见行压平、增量展开/折叠、深度、row 双向查询） | 已实现 |
-| 单元测试 141 个用例 + 4 个变异测试 + 10 个 GUI 交互场景（共 14 个 CTest 目标） | 已实现 |
+| 单元测试 153 个用例 + 4 个变异测试 + 10 个 GUI 交互场景（共 14 个 CTest 目标） | 已实现 |
 | 7 个示例（simple list / order cards / dynamic height / million rows / table row widgets / table many columns / tree） | 已实现 |
 | benchmark（1M 行、表格 row vs cell、树：宽树 + 变更 + 锚点，稳态滚动零分配校验） | 已实现 |
 
 未实现（按 §43 路线图）：`VirtualHeaderView`（QWidget 版表头 + `HeaderWidgetAdapter`，接口已预留）、
-冻结行列、高级 DnD、accessibility 虚拟节点桥接；树在"可见行数极大"时的增量行映射优化
+行冻结、高级 DnD、accessibility 虚拟节点桥接；树在"可见行数极大"时的增量行映射优化
 （现在一次 expand/collapse 需要重建可见行索引表，见 [docs/performance.md](docs/performance.md)）。
 
 ## 快速开始
@@ -146,6 +147,31 @@ table->restoreHeaderState(state);
 table->setCellAdapter(&cellAdapter);
 table->setMaterializationMode(viv::VirtualTableView::MaterializationMode::CellWidgets);
 ```
+
+冻结列（§31）：冻结列固定在自己的 pane 里，不参与横向滚动；三个 pane 都从同一份
+`HeaderGeometry` 派生，所以没有"冻结表头自己的列宽副本"，拖动列宽会同时影响所有 pane：
+
+```cpp
+table->setFrozenColumns({0, 1});        // 左侧冻结（顺序无关，按视觉顺序排列）
+table->setFrozenRightColumns({N - 1});  // 右侧冻结，右对齐贴住视口右边
+table->isColumnFrozen(0);               // 查询
+const QVector<viv::TablePane> panes = table->panes();   // 三个 pane 的矩形与列集合
+table->clearFrozenColumns();
+```
+
+pane 交界那条线（表头 + body 连成一条）可以自定义颜色 / 线宽 / 线型：
+
+```cpp
+viv::PaneSeparatorStyle separator;      // 默认：1px，颜色取"当前样式画列分隔线用的颜色"
+separator.width = 3;                    // 像素；0 = 不画这条线
+separator.color = QColor("#e05555");    // 不设置（invalid）就自动与列分隔线同色
+separator.lineStyle = Qt::SolidLine;    // 也支持 DashLine / DotLine（虚线在以该宽度为界的带内居中）
+table->setPaneSeparatorStyle(separator);
+```
+
+Row Widget Mode 下一行仍然只有一个业务控件（冻结列的 `ColumnHost` 被框架 `raise()` 到上层，
+遮住滚到它下面的列）；Cell Widget Mode 下冻结 cell 在任何滚动位置都保持实例化。
+`examples/table_many_columns` 勾选「冻结前 2 列」即可看到效果。
 
 树（v0.6）：树是"可见行压平 + 同一个 list kernel"，业务只管提供标准的
 `QAbstractItemModel` 树，展开状态、缩进、分支指示与键盘导航都由框架处理：
