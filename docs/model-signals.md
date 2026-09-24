@@ -41,6 +41,21 @@
   重建可见行）与 `handleModelReset()`（同时清空展开状态）两个钩子；expand/collapse 本身是增量更新，
   不重走整棵树。
 
+## 拖放：视图调用模型的时机（§38）
+
+拖放不引入任何新的模型信号，视图只在拖放事件里**同步调用**模型的方法，并且完全不参与
+insert/remove 的实现细节（细节见 [drag-and-drop.md](drag-and-drop.md)）：
+
+| 时机 | 调用 | 备注 |
+| --- | --- | --- |
+| 开始拖拽 | `flags(index)` → `mimeData(indexes)` | 需要 `ItemIsDragEnabled`；拖拽期间对应控件被 pin |
+| 拖拽经过 | `canDropMimeData(data, action, row, column, parent)` | 每个 `dragMove` 一次；返回 false 时不画指示器 |
+| 松手 | `canDropMimeData()` + `dropMimeData()` | 模型返回 true 时发 `itemDropped()`，然后 `markDirty()` |
+| 拖拽结束（任意结果） | — | 释放拖拽源 pin、指示器与自动滚动状态 |
+
+`dropMimeData()` 是模型唯一的写入口：视图从不自己调用 `insertRows()` / `moveRows()` /
+`removeRows()`。模型插入/移动后照常发自己的信号，视图按上面的矩阵重排（与其他模型变更同一条路径）。
+
 ## Tree 的模型变更路径
 
 树对内核隐藏了"模型 row"这一概念：`isLayoutParent()` 恒为 false，因此内核不会按模型 row 直接改

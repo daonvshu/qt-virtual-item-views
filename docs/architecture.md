@@ -154,4 +154,9 @@ ListLayout / SizeIndex    createWidget / bindWidget / unbindWidget
 * 行内交互（按钮、编辑器、异步请求）；
 * 需要在滚动中保持存活的东西，显式 `view.setItemPinned(index, true)`。
 
-库**不**负责：绘制、动画、Drag & Drop 语义、accessibility 虚拟节点桥接（见 README 的路线图）。
+库**不**负责：绘制、动画、Drop 语义（插入/移动/拒绝由模型决定，见
+[drag-and-drop.md](drag-and-drop.md)）、accessibility 虚拟节点桥接（见 README 的路线图）。
+
+拖放是这条边界的典型例子：视图负责"能不能拖、拖的是什么、落到哪里、怎么画"，库内的
+`resolveDropTarget()` / `dropIndicatorStyle()` 都是 subclass hook；`canDropMimeData()` /
+`dropMimeData()` 属于业务模型，视图不替它做任何决定。

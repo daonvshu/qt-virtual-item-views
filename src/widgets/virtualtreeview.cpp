@@ -479,6 +479,117 @@ void VirtualTreeView::mouseDoubleClickEvent(QMouseEvent *event)
 }
 
 // ---------------------------------------------------------------------------
+// Drag & drop (§38): drop between siblings or into an item
+// ---------------------------------------------------------------------------
+
+bool VirtualTreeView::acceptsDropInto(const QModelIndex &index) const
+{
+    QAbstractItemModel *targetModel = model();
+    return targetModel && index.isValid()
+        && (targetModel->flags(index) & Qt::ItemIsDropEnabled);
+}
+
+VirtualItemView::DropTarget VirtualTreeView::resolveDropTarget(const QPoint &viewportPos) const
+{
+    DropTarget target;
+    QAbstractItemModel *treeModel = model();
+    if (!treeModel)
+        return target;
+
+    // The rows of the tree are the children of the root: the empty area below
+    // them (and an empty tree) extends that level instead of being "outside the
+    // content", which is what the flat kernel would report.
+    const qsizetype rows = viewItemCount();
+    const QRect lastRect = rows > 0 ? geometryForViewRow(rows - 1) : QRect();
+    if (rows <= 0 || viewportPos.y() > lastRect.bottom()) {
+        target.parent = m_rootIndex.isValid() ? m_rootIndex : QModelIndex();
+        target.row = treeModel->rowCount(target.parent);
+        target.trailing = true;
+        return target;
+    }
+
+    const QModelIndex index = indexAt(viewportPos);
+    if (!index.isValid())
+        return target;
+    const qsizetype row = viewItemForIndex(index);
+    if (row < 0)
+        return target;
+
+    // Three bands per row, like QTreeView: the top/bottom quarter inserts a
+    // sibling, the middle drops into the item (only if the model takes it).
+    const QRect rowRect = geometryForViewRow(row);
+    const int y = qBound(rowRect.top(), viewportPos.y(), rowRect.bottom());
+    const int band = qMax(3, rowRect.height() / 4);
+    const bool above = y < rowRect.top() + band;
+    const bool below = y > rowRect.bottom() - band;
+    if (!above && !below && acceptsDropInto(index)) {
+        target.parent = index;
+        target.row = treeModel->rowCount(index);
+        target.ontoItem = true;
+        return target;
+    }
+    const bool insertAbove = above || (!below && y < rowRect.center().y());
+    target.parent = index.parent();
+    target.row = index.row() + (insertAbove ? 0 : 1);
+    return target;
+}
+
+QRect VirtualTreeView::resolveDropIndicatorRect(const DropTarget &target) const
+{
+    if (!target.isValid() || !model())
+        return QRect();
+    if (target.ontoItem) {
+        const qsizetype row = viewItemForIndex(target.parent);
+        return row >= 0 ? geometryForViewRow(row) : QRect();
+    }
+    return insertionLineRect(target);
+}
+
+QRect VirtualTreeView::insertionLineRect(const DropTarget &target) const
+{
+    QAbstractItemModel *treeModel = model();
+    if (!treeModel)
+        return QRect();
+    const QModelIndex parent = target.parent;
+    const int row = target.row;
+    const int rows = int(viewItemCount());
+    // The empty area below the tree: the line marks the end of the content, which
+    // is the only row boundary that area can borrow.
+    if (target.trailing) {
+        if (rows <= 0)
+            return QRect(0, 0, viewport()->width(), 2);
+        const QRect last = geometryForViewRow(rows - 1);
+        return QRect(0, last.bottom(), viewport()->width(), 2);
+    }
+    // A row boundary of the visible tree: below the row that precedes the
+    // insertion point (the hovered row itself when the drop is "after" it), or
+    // above the row that follows it.
+    if (row > 0) {
+        const qsizetype before = viewItemForIndex(treeModel->index(row - 1, 0, parent));
+        if (before >= 0) {
+            const QRect rect = geometryForViewRow(before);
+            return QRect(0, rect.bottom(), viewport()->width(), 2);
+        }
+    }
+    const qsizetype after = viewItemForIndex(treeModel->index(row, 0, parent));
+    if (after >= 0) {
+        const QRect rect = geometryForViewRow(after);
+        return QRect(0, rect.top() - 1, viewport()->width(), 2);
+    }
+    // Inside a collapsed branch the insertion is drawn directly below it.
+    const qsizetype parentRow = viewItemForIndex(parent);
+    if (parentRow >= 0) {
+        const QRect rect = geometryForViewRow(parentRow);
+        return QRect(0, rect.bottom(), viewport()->width(), 2);
+    }
+    if (rows > 0) {
+        const QRect rect = geometryForViewRow(0);
+        return QRect(0, rect.top(), viewport()->width(), 2);
+    }
+    return QRect(0, 0, viewport()->width(), 2);
+}
+
+// ---------------------------------------------------------------------------
 // Keyboard navigation
 // ---------------------------------------------------------------------------
 

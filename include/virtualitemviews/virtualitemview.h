@@ -13,11 +13,16 @@
 #include <QVector>
 
 class QAbstractItemModel;
+class QDragEnterEvent;
+class QDragLeaveEvent;
+class QDragMoveEvent;
+class QDropEvent;
 class QKeyEvent;
 class QMouseEvent;
 class QPaintEvent;
 class QResizeEvent;
 class QShowEvent;
+class QTimer;
 class QWheelEvent;
 
 namespace viv {
@@ -121,6 +126,69 @@ public:
     SelectionMode selectionMode() const { return m_selectionMode; }
     void setSelectionBehavior(SelectionBehavior behavior);
     SelectionBehavior selectionBehavior() const { return m_selectionBehavior; }
+
+    // -- drag & drop (§38) ---------------------------------------------------
+    /// Where a drop lands: the insertion row inside \a parent. Dropping *onto* an
+    /// item is expressed as (item, item.rowCount()) - the same convention
+    /// QAbstractItemModel::dropMimeData() uses - and is flagged through
+    /// \a ontoItem so the view paints a frame instead of an insertion line.
+    /// \a column is -1 unless the view resolves a cell (tables).
+    struct DropTarget
+    {
+        QModelIndex parent;
+        int row = -1;
+        int column = -1;
+        /// True when the drop lands *into* \a parent instead of between its
+        /// children (a tree row in the middle of the indicator band).
+        bool ontoItem = false;
+        /// True when the drop landed in the empty area below the last visible
+        /// row: the indicator marks the end of the content, and \a row is the
+        /// insertion index after the parent's last child.
+        bool trailing = false;
+
+        bool isValid() const { return row >= 0; }
+    };
+
+    /// How the drop indicator is painted (§38). A subclass chooses by filling
+    /// DropTarget::ontoItem; an unknown target still gets the insertion line.
+    enum class DropIndicatorStyle {
+        /// 2 px line between the two rows the drop is inserted between.
+        Line,
+        /// Frame around the item the drop lands into.
+        Frame,
+    };
+    Q_ENUM(DropIndicatorStyle)
+
+    /// Enables starting a drag from an item whose flags contain
+    /// Qt::ItemIsDragEnabled. The drag carries model->mimeData() and, while it is
+    /// active, the dragged item's widget is pinned so the recycler cannot take it
+    /// away from the drag (§36/§38). The same switch makes the view a drop
+    /// target: the model stays the authority (canDropMimeData()/dropMimeData())
+    /// and the item flags decide what may be dragged or dropped onto.
+    void setDragEnabled(bool enabled);
+    bool isDragEnabled() const { return m_dragEnabled; }
+    /// True when \a index would start a drag right now.
+    bool canStartDrag(const QModelIndex &index) const;
+    /// Starts a drag for the current selection (or \a index). Returns the action
+    /// the drop target reported; Qt::IgnoreAction when nothing was dragged.
+    Qt::DropAction startDrag(const QModelIndex &index = QModelIndex());
+
+    /// Draws the drop indicator (a line between rows, or a frame around the item
+    /// a tree would drop into).
+    void setDropIndicatorShown(bool shown);
+    bool isDropIndicatorShown() const { return m_dropIndicatorShown; }
+    /// Action used for drags started by this view (CopyAction by default).
+    void setDefaultDropAction(Qt::DropAction action);
+    Qt::DropAction defaultDropAction() const { return m_defaultDropAction; }
+    /// Actions a drop from this view offers; by default the model's
+    /// supportedDragActions() (or Move|Copy).
+    void setDragDropActions(Qt::DropActions actions);
+    Qt::DropActions dragDropActions() const;
+    /// Target a drop at \a viewportPos would use (diagnostics/subclasses).
+    DropTarget dropTargetAt(const QPoint &viewportPos) const;
+    QRect dropIndicatorRect(const DropTarget &target) const;
+    /// Style used to paint the indicator of \a target.
+    DropIndicatorStyle dropIndicatorStyle(const DropTarget &target) const;
 
     // -- adapter / recycler --------------------------------------------------
     void setAdapter(WidgetAdapter *adapter, bool takeOwnership = false);
@@ -245,6 +313,9 @@ signals:
     void clicked(const QModelIndex &index);
     void doubleClicked(const QModelIndex &index);
     void activated(const QModelIndex &index);
+    /// Emitted after the model accepted a drop (§38) with the target the model
+    /// received; a refused drop emits nothing (the model said no).
+    void itemDropped(const QModelIndex &parent, int row, int column, Qt::DropAction action);
     /// Emitted after every completed materialization pass.
     void virtualizationUpdated();
 
@@ -289,6 +360,12 @@ protected:
     /// Hook for subclass specific keys (tree expand/collapse). Returning true
     /// consumes the event.
     virtual bool handleItemKeyPress(QKeyEvent *event);
+    /// Subclass hook (§38): resolve the drop target of a viewport position. The
+    /// default inserts between rows (top half = before, bottom half = after the
+    /// row); a tree also resolves a drop *into* a row and a table a cell (§38).
+    virtual DropTarget resolveDropTarget(const QPoint &viewportPos) const;
+    /// Subclass hook (§38): interaction rectangle of a drop target (indicator).
+    virtual QRect resolveDropIndicatorRect(const DropTarget &target) const;
 
     // -- kernel API for subclasses -------------------------------------------
     LayoutPolicy *layoutPolicy() const { return m_layout; }
@@ -324,10 +401,15 @@ protected:
     void showEvent(QShowEvent *event) override;
     void scrollContentsBy(int dx, int dy) override;
     void mousePressEvent(QMouseEvent *event) override;
+    void mouseMoveEvent(QMouseEvent *event) override;
     void mouseReleaseEvent(QMouseEvent *event) override;
     void mouseDoubleClickEvent(QMouseEvent *event) override;
     void keyPressEvent(QKeyEvent *event) override;
     void wheelEvent(QWheelEvent *event) override;
+    void dragEnterEvent(QDragEnterEvent *event) override;
+    void dragMoveEvent(QDragMoveEvent *event) override;
+    void dragLeaveEvent(QDragLeaveEvent *event) override;
+    void dropEvent(QDropEvent *event) override;
 
 private:
     void connectModel(QAbstractItemModel *model);
@@ -355,6 +437,18 @@ private:
     void appendLifecycleLog(const QString &entry);
     qint64 wheelStepPixels() const;
     qint64 scrollBarSingleStepPixels() const;
+    void showDropIndicator(const DropTarget &target);
+    void hideDropIndicator();
+    void updateDragAutoscroll(const QPoint &viewportPos);
+    void stopDragAutoscroll();
+    /// True when the drag started in this view and a move to \a target would
+    /// leave the dragged items where they are (or put one inside itself).
+    /// Mirrors QAbstractItemView's "dropping on itself" guard: the view then
+    /// shows no indicator and refuses the drop, so the model never sees a no-op
+    /// move. Only Qt::MoveAction is guarded; a copy onto itself is legitimate.
+    bool isDropOnItself(const DropTarget &target, Qt::DropAction action) const;
+    /// Releases the state of a finished drag (source pin, autoscroll, indicator).
+    void finishDrag();
 
     /// Qt 5 declares the roles argument of
     /// QAbstractItemModel::dataChanged() as QVector<int>, Qt 6 as QList<int>.
@@ -405,6 +499,22 @@ private:
     SelectionBehavior m_selectionBehavior = SelectionBehavior::SelectItems;
     bool m_lifecycleLogEnabled = false;
     QStringList m_lifecycleLog;
+
+    bool m_dragEnabled = false;
+    bool m_dropIndicatorShown = true;
+    Qt::DropAction m_defaultDropAction = Qt::CopyAction;
+    Qt::DropActions m_dragDropActions = Qt::IgnoreAction; // IgnoreAction = derive
+    QPoint m_dragStartPos;
+    /// Sources of the drag in flight (empty for drags started elsewhere).
+    QList<QPersistentModelIndex> m_dragSourceIndexes;
+    /// Last drag position in viewport coordinates; autoscroll re-resolves the
+    /// target from it because the rows below the cursor move while scrolling.
+    QPoint m_dragHoverPos;
+    bool m_dragHoverValid = false;
+    QWidget *m_dropIndicator = nullptr;
+    QWidget *m_dragSourceWidget = nullptr;
+    QTimer *m_dragAutoscrollTimer = nullptr;
+    int m_dragAutoscrollDelta = 0;
 
     int m_overscanBefore = 2;
     int m_overscanAfter = 2;

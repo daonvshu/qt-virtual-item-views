@@ -30,6 +30,7 @@ viv_add_test(tst_virtualtableview unit/tst_virtualtableview.cpp)
 viv_add_test(tst_tablecellmode unit/tst_tablecellmode.cpp)
 viv_add_test(tst_virtualtreeview unit/tst_virtualtreeview.cpp)
 viv_add_test(tst_virtualheaderview unit/tst_virtualheaderview.cpp)
+viv_add_test(tst_dnd unit/tst_dnd.cpp)
 viv_add_test(tst_modelmutationfuzz fuzz/tst_modelmutationfuzz.cpp)
 
 if(VIRTUALITEMVIEWS_BUILD_GUI_TESTS)

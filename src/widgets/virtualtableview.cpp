@@ -1298,10 +1298,37 @@ QModelIndex VirtualTableView::indexAt(const QPoint &viewportPos) const
     const QModelIndex rowIndex = VirtualItemView::indexAt(viewportPos);
     if (!rowIndex.isValid() || !m_columns)
         return rowIndex;
-    const int column = m_columns->sectionAtOffset(m_columns->viewportOffset() + viewportPos.x());
+    const int column = columnAtViewportX(viewportPos.x());
     if (column < 0 || m_columns->isSectionHidden(column))
         return rowIndex;
     return rowIndex.siblingAtColumn(column);
+}
+
+int VirtualTableView::columnAtViewportX(int viewportX) const
+{
+    if (!m_columns || viewportX < 0)
+        return -1;
+    const QVector<TablePane> panes = m_panes.panes();
+    if (panes.isEmpty()) {
+        // The pane layout has not run yet (no resize): fall back to the flat
+        // mapping of the committed geometry.
+        const int column = m_columns->sectionAtOffset(m_columns->viewportOffset() + viewportX);
+        return (column >= 0 && !m_columns->isSectionHidden(column)) ? column : -1;
+    }
+    // Candidates only: the frozen columns plus the scrollable window, so the hit
+    // test stays cheap for a table with thousands of columns.
+    const QVector<int> candidates = m_panes.columnsForLayout(0);
+    for (int logical : candidates) {
+        if (logical < 0 || m_columns->isSectionHidden(logical))
+            continue;
+        const int x = m_panes.columnViewportX(logical);
+        if (x < 0)
+            continue;
+        const int width = m_columns->sectionSize(logical);
+        if (width > 0 && viewportX >= x && viewportX < x + width)
+            return logical;
+    }
+    return -1;
 }
 
 QWidget *VirtualTableView::cellWidget(const QModelIndex &index) const
@@ -1615,6 +1642,40 @@ void VirtualTableView::scrollToColumn(int logicalIndex)
         setHorizontalOffset(start);
     else if (end > offset + viewportWidth)
         setHorizontalOffset(end - viewportWidth);
+}
+
+// ---------------------------------------------------------------------------
+// Drag & drop (§38): row drops and cell drops
+// ---------------------------------------------------------------------------
+
+VirtualItemView::DropTarget VirtualTableView::resolveDropTarget(const QPoint &viewportPos) const
+{
+    DropTarget target = VirtualItemView::resolveDropTarget(viewportPos);
+    if (!target.isValid() || !m_columns)
+        return target;
+    // Row semantics put the whole row on the model, so the insertion stays
+    // between rows (column -1). Item semantics resolve the cell under the
+    // cursor and the drop lands inside that column.
+    if (selectionBehavior() == SelectionBehavior::SelectRows)
+        return target;
+    const int column = columnAtViewportX(viewportPos.x());
+    if (column >= 0 && !m_columns->isSectionHidden(column))
+        target.column = column;
+    return target;
+}
+
+QRect VirtualTableView::resolveDropIndicatorRect(const DropTarget &target) const
+{
+    const QRect line = VirtualItemView::resolveDropIndicatorRect(target);
+    if (line.isEmpty() || target.column < 0)
+        return line;
+    // A cell drop marks the cell: the same insertion line, narrowed to the
+    // column the drop lands in (frozen columns included - their viewport x
+    // ignores the horizontal offset, like their geometry).
+    const ColumnGeometry column = columnGeometry(target.column);
+    if (!column.isValid() || column.hidden || column.width <= 0)
+        return line;
+    return QRect(column.viewportX, line.y(), column.width, line.height());
 }
 
 } // namespace viv

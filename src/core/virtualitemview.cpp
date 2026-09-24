@@ -6,12 +6,19 @@
 #include <virtualitemviews/widgetrecycler.h>
 
 #include <QApplication>
+#include <QDrag>
+#include <QDragEnterEvent>
+#include <QDragLeaveEvent>
+#include <QDragMoveEvent>
+#include <QDropEvent>
 #include <QKeyEvent>
+#include <QMimeData>
 #include <QMouseEvent>
 #include <QPainter>
 #include <QResizeEvent>
 #include <QScrollBar>
 #include <QShowEvent>
+#include <QTimer>
 #include <QVector>
 #include <QWheelEvent>
 
@@ -22,6 +29,53 @@
 namespace viv {
 
 namespace {
+/// Drop indicator of the kernel: a thin bar in the palette's highlight colour.
+/// It is painted by itself instead of relying on autoFillBackground(), which
+/// style sheet based styles ignore.
+class DropIndicatorWidget : public QWidget
+{
+public:
+    explicit DropIndicatorWidget(QWidget *parent = nullptr)
+        : QWidget(parent)
+    {
+        setObjectName(QStringLiteral("vivDropIndicator"));
+        setAttribute(Qt::WA_TransparentForMouseEvents, true);
+    }
+
+    /// A line fills the whole rect; a frame draws a hollow rectangle ("drop into
+    /// this item", the tree's OnItem indicator).
+    void setFrame(bool frame)
+    {
+        if (m_frame == frame)
+            return;
+        m_frame = frame;
+        update();
+    }
+
+protected:
+    void paintEvent(QPaintEvent *) override
+    {
+        QPainter painter(this);
+        const QColor color = palette().color(QPalette::Highlight);
+        if (!m_frame) {
+            painter.fillRect(rect(), color);
+            return;
+        }
+        painter.setPen(color);
+        const int thickness = qMin(2, qMin(width(), height()));
+        for (int inset = 0; inset < thickness; ++inset) {
+            const QRect outline = rect().adjusted(inset, inset, -inset - 1, -inset - 1);
+            if (outline.isValid())
+                painter.drawRect(outline);
+        }
+    }
+
+private:
+    bool m_frame = false;
+};
+} // namespace
+
+namespace {
 constexpr int kDefaultOverscan = 2;
 constexpr int kDefaultWheelScrollItems = 3;
 /// Automatic height measurement must converge: a widget whose size hint depends
@@ -30,6 +84,16 @@ constexpr int kMaxConsecutiveMeasurePasses = 8;
 
 /// QMouseEvent::position() only exists in Qt 6; Qt 5 delivers QPoint.
 inline QPoint mousePosition(const QMouseEvent *event)
+{
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    return event->position().toPoint();
+#else
+    return event->pos();
+#endif
+}
+
+/// Same for the drag/drop events (QDropEvent carries the position the same way).
+inline QPoint dropPosition(const QDropEvent *event)
 {
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
     return event->position().toPoint();
@@ -83,6 +147,8 @@ void VirtualItemView::setModel(QAbstractItemModel *model)
         return;
 
     disconnectModel(m_model);
+    // A drag or drop in flight refers to the outgoing model (§38).
+    finishDrag();
     recycleAllItems();
     m_explicitPinned.clear();
     cancelPendingAnchor();
@@ -1232,6 +1298,7 @@ void VirtualItemView::mousePressEvent(QMouseEvent *event)
     }
     setFocus(Qt::MouseFocusReason);
     const QModelIndex index = indexAt(mousePosition(event));
+    m_dragStartPos = mousePosition(event);
     m_pressedIndex = index.isValid() ? QPersistentModelIndex(index) : QPersistentModelIndex();
     updateSelectionForClick(index, event->modifiers());
     event->accept();
@@ -1243,6 +1310,7 @@ void VirtualItemView::mouseReleaseEvent(QMouseEvent *event)
         QAbstractScrollArea::mouseReleaseEvent(event);
         return;
     }
+    stopDragAutoscroll();
     const QModelIndex index = indexAt(mousePosition(event));
     const bool sameIndex = index.isValid() && m_pressedIndex.isValid()
         && QModelIndex(m_pressedIndex) == index;
@@ -1264,6 +1332,391 @@ void VirtualItemView::mouseDoubleClickEvent(QMouseEvent *event)
         return;
     emit doubleClicked(index);
     emit activated(index);
+}
+
+// ---------------------------------------------------------------------------
+// Drag & drop (§38)
+// ---------------------------------------------------------------------------
+//
+// The kernel owns the interaction only: which item may start a drag (model
+// flags), how the payload is built (model->mimeData()), where a drop lands
+// (resolveDropTarget()) and how the gesture is drawn (drop indicator,
+// autoscroll). Insertion, move and rejection remain in the model
+// (canDropMimeData()/dropMimeData()), so no DnD logic reaches the Recycler.
+
+void VirtualItemView::setDragEnabled(bool enabled)
+{
+    if (m_dragEnabled == enabled)
+        return;
+    m_dragEnabled = enabled;
+    // Qt only delivers drag & drop events to a widget that accepts drops. The
+    // widget under the cursor is the viewport, so it is the one that opts in;
+    // QAbstractScrollArea then forwards the events to the view (like mouse
+    // events), which is what the handlers below expect.
+    viewport()->setAcceptDrops(enabled);
+    if (!enabled)
+        finishDrag();
+}
+
+bool VirtualItemView::canStartDrag(const QModelIndex &index) const
+{
+    if (!m_dragEnabled || !m_model || !index.isValid())
+        return false;
+    if (!(m_model->flags(index) & Qt::ItemIsDragEnabled))
+        return false;
+    return (dragDropActions() & (Qt::CopyAction | Qt::MoveAction | Qt::LinkAction))
+        != Qt::IgnoreAction;
+}
+
+Qt::DropActions VirtualItemView::dragDropActions() const
+{
+    if (m_dragDropActions != Qt::IgnoreAction)
+        return m_dragDropActions;
+    if (m_model) {
+        const Qt::DropActions supported = m_model->supportedDragActions();
+        if (supported != Qt::IgnoreAction)
+            return supported;
+        const Qt::DropActions drop = m_model->supportedDropActions();
+        if (drop != Qt::IgnoreAction)
+            return drop;
+    }
+    return Qt::MoveAction | Qt::CopyAction;
+}
+
+void VirtualItemView::setDragDropActions(Qt::DropActions actions)
+{
+    m_dragDropActions = actions;
+}
+
+void VirtualItemView::setDropIndicatorShown(bool shown)
+{
+    m_dropIndicatorShown = shown;
+    if (!shown)
+        hideDropIndicator();
+}
+
+void VirtualItemView::setDefaultDropAction(Qt::DropAction action)
+{
+    m_defaultDropAction = action;
+}
+
+Qt::DropAction VirtualItemView::startDrag(const QModelIndex &index)
+{
+    if (!m_model)
+        return Qt::IgnoreAction;
+
+    QModelIndex dragIndex = index;
+    if (!dragIndex.isValid()) {
+        dragIndex = currentIndex();
+        if (!dragIndex.isValid() && m_pressedIndex.isValid())
+            dragIndex = QModelIndex(m_pressedIndex);
+    }
+    if (!canStartDrag(dragIndex))
+        return Qt::IgnoreAction;
+
+    // The selection is the payload when the dragged item is part of it.
+    QModelIndexList indexes;
+    if (m_selectionModel && m_selectionModel->isSelected(dragIndex)) {
+        const QModelIndexList selected = m_selectionModel->selectedIndexes();
+        for (const QModelIndex &candidate : selected) {
+            if (candidate.column() == 0 && (m_model->flags(candidate) & Qt::ItemIsDragEnabled))
+                indexes.append(candidate);
+        }
+    }
+    if (indexes.isEmpty())
+        indexes.append(dragIndex);
+
+    QMimeData *mime = m_model->mimeData(indexes);
+    if (!mime)
+        return Qt::IgnoreAction;
+
+    // §36/§38: the widget of the dragged item must survive the drag, otherwise a
+    // scroll-induced recycle would destroy the drag source mid-gesture.
+    m_dragSourceWidget = widgetForIndex(dragIndex);
+    if (m_dragSourceWidget)
+        pinWidget(m_dragSourceWidget);
+    // The sources are remembered so the drag can refuse to drop onto itself.
+    m_dragSourceIndexes.clear();
+    for (const QModelIndex &source : indexes)
+        m_dragSourceIndexes.append(QPersistentModelIndex(source));
+
+    QDrag drag(this);
+    drag.setMimeData(mime);
+    if (m_dragSourceWidget) {
+        const QPixmap pixmap = m_dragSourceWidget->grab();
+        drag.setPixmap(pixmap);
+        drag.setHotSpot(QPoint(pixmap.width() / 2, pixmap.height() / 2));
+    }
+    const Qt::DropAction action = drag.exec(dragDropActions(), m_defaultDropAction);
+
+    finishDrag();
+    return action;
+}
+
+void VirtualItemView::finishDrag()
+{
+    if (m_dragSourceWidget) {
+        unpinWidget(m_dragSourceWidget);
+        m_dragSourceWidget = nullptr;
+    }
+    stopDragAutoscroll();
+    hideDropIndicator();
+    m_dragSourceIndexes.clear();
+    m_dragHoverValid = false;
+}
+
+bool VirtualItemView::isDropOnItself(const DropTarget &target, Qt::DropAction action) const
+{
+    // QAbstractItemView only guards internal *moves*: copying an item next to
+    // itself is a legitimate gesture.
+    if (!target.isValid() || action != Qt::MoveAction || m_dragSourceIndexes.isEmpty())
+        return false;
+    for (const QPersistentModelIndex &persistent : m_dragSourceIndexes) {
+        if (!persistent.isValid())
+            continue;
+        const QModelIndex source(persistent);
+        // Into the dragged item, or into one of its descendants.
+        for (QModelIndex ancestor = target.parent; ancestor.isValid(); ancestor = ancestor.parent()) {
+            if (ancestor == source)
+                return true;
+        }
+        // Between the dragged item and itself: the item would not move.
+        if (target.parent == source.parent()
+            && (target.row == source.row() || target.row == source.row() + 1))
+            return true;
+    }
+    return false;
+}
+
+void VirtualItemView::mouseMoveEvent(QMouseEvent *event)
+{
+    if (!m_dragEnabled || !(event->buttons() & Qt::LeftButton) || !m_pressedIndex.isValid()) {
+        QAbstractScrollArea::mouseMoveEvent(event);
+        return;
+    }
+    const QPoint pos = mousePosition(event);
+    if ((pos - m_dragStartPos).manhattanLength() < QApplication::startDragDistance()) {
+        event->accept();
+        return;
+    }
+
+    // The pressed index (not the position) carries the gesture: it survives
+    // model mutations between press and move.
+    const QModelIndex index(m_pressedIndex);
+    m_pressedIndex = QPersistentModelIndex();
+    event->accept();
+    if (canStartDrag(index))
+        startDrag(index);
+}
+
+void VirtualItemView::dragEnterEvent(QDragEnterEvent *event)
+{
+    if (!m_dragEnabled || !m_model || !event->mimeData()) {
+        event->ignore();
+        return;
+    }
+    const Qt::DropActions supported = m_model->supportedDropActions();
+    if (!(supported & event->proposedAction()) && !(supported & event->possibleActions())) {
+        event->ignore();
+        return;
+    }
+    event->acceptProposedAction();
+}
+
+void VirtualItemView::dragMoveEvent(QDragMoveEvent *event)
+{
+    if (!m_model || !event->mimeData()) {
+        event->ignore();
+        return;
+    }
+    const QPoint pos = dropPosition(event);
+    m_dragHoverPos = pos;
+    m_dragHoverValid = true;
+    const DropTarget target = resolveDropTarget(pos);
+    const Qt::DropAction action = event->dropAction() != Qt::IgnoreAction
+        ? event->dropAction()
+        : event->proposedAction();
+    const bool canDrop = target.isValid() && !isDropOnItself(target, action)
+        && m_model->canDropMimeData(event->mimeData(), action, target.row, target.column,
+                                    target.parent);
+    if (!canDrop) {
+        hideDropIndicator();
+        stopDragAutoscroll();
+        event->ignore();
+        return;
+    }
+    showDropIndicator(target);
+    updateDragAutoscroll(pos);
+    event->accept();
+}
+
+void VirtualItemView::dragLeaveEvent(QDragLeaveEvent *event)
+{
+    hideDropIndicator();
+    stopDragAutoscroll();
+    m_dragHoverValid = false;
+    event->accept();
+}
+
+void VirtualItemView::dropEvent(QDropEvent *event)
+{
+    stopDragAutoscroll();
+    hideDropIndicator();
+    m_dragHoverValid = false;
+    if (!m_model || !event->mimeData()) {
+        event->ignore();
+        return;
+    }
+    const DropTarget target = resolveDropTarget(dropPosition(event));
+    const Qt::DropAction action = event->dropAction() != Qt::IgnoreAction
+        ? event->dropAction()
+        : event->proposedAction();
+    if (!target.isValid() || isDropOnItself(target, action)
+        || !m_model->canDropMimeData(event->mimeData(), action, target.row, target.column,
+                                     target.parent)) {
+        event->ignore();
+        return;
+    }
+    // The model owns the semantics: it inserts, moves or rejects (§38).
+    if (m_model->dropMimeData(event->mimeData(), action, target.row, target.column, target.parent)) {
+        event->acceptProposedAction();
+        emit itemDropped(target.parent, target.row, target.column, action);
+        markDirty();
+    } else {
+        event->ignore();
+    }
+}
+
+VirtualItemView::DropTarget VirtualItemView::resolveDropTarget(const QPoint &viewportPos) const
+{
+    DropTarget target;
+    if (!m_layout || m_layout->itemCount() <= 0)
+        return target;
+    const qint64 offset = m_scrollOffset + qMax(0, viewportPos.y());
+    if (offset < 0 || offset >= m_layout->contentExtent())
+        return target;
+    const qsizetype row = m_layout->indexAtOffset(offset);
+    if (row < 0 || row >= m_layout->itemCount())
+        return target;
+    const qint64 rowOffset = m_layout->offsetOf(row);
+    const bool after = offset - rowOffset > m_layout->itemSize(row) / 2;
+    const QModelIndex index = viewIndex(row);
+    if (!index.isValid())
+        return target;
+    target.parent = index.parent();
+    target.row = index.row() + (after ? 1 : 0);
+    target.column = -1;
+    return target;
+}
+
+QRect VirtualItemView::resolveDropIndicatorRect(const DropTarget &target) const
+{
+    if (!target.isValid() || !m_layout || m_layout->itemCount() <= 0)
+        return QRect();
+    // The line sits at the boundary the insertion would use: below the item that
+    // precedes the insertion point, or above the row that follows it.
+    const QModelIndex before = target.row > 0
+        ? m_model->index(target.row - 1, 0, target.parent)
+        : QModelIndex();
+    qint64 offset = -1;
+    if (before.isValid()) {
+        const qsizetype row = viewItemForIndex(before);
+        if (row >= 0)
+            offset = m_layout->offsetOf(row) + m_layout->itemSize(row);
+    }
+    if (offset < 0) {
+        const QModelIndex at = m_model->index(target.row, 0, target.parent);
+        const qsizetype row = at.isValid() ? viewItemForIndex(at) : -1;
+        if (row < 0)
+            return QRect();
+        offset = m_layout->offsetOf(row);
+    }
+    const int y = int(offset - m_scrollOffset);
+    return QRect(0, y - 1, viewport()->width(), 2);
+}
+
+VirtualItemView::DropTarget VirtualItemView::dropTargetAt(const QPoint &viewportPos) const
+{
+    return resolveDropTarget(viewportPos);
+}
+
+QRect VirtualItemView::dropIndicatorRect(const DropTarget &target) const
+{
+    return resolveDropIndicatorRect(target);
+}
+
+VirtualItemView::DropIndicatorStyle
+VirtualItemView::dropIndicatorStyle(const DropTarget &target) const
+{
+    return target.ontoItem ? DropIndicatorStyle::Frame : DropIndicatorStyle::Line;
+}
+
+void VirtualItemView::showDropIndicator(const DropTarget &target)
+{
+    if (!m_dropIndicatorShown)
+        return;
+    const QRect rect = resolveDropIndicatorRect(target);
+    if (rect.isEmpty()) {
+        hideDropIndicator();
+        return;
+    }
+    const bool frame = dropIndicatorStyle(target) == DropIndicatorStyle::Frame;
+    if (!m_dropIndicator) {
+        m_dropIndicator = new DropIndicatorWidget(viewport());
+        viewport()->update();
+    }
+    static_cast<DropIndicatorWidget *>(m_dropIndicator)->setFrame(frame);
+    m_dropIndicator->setGeometry(rect);
+    m_dropIndicator->show();
+    m_dropIndicator->raise();
+}
+
+void VirtualItemView::hideDropIndicator()
+{
+    if (m_dropIndicator)
+        m_dropIndicator->hide();
+}
+
+void VirtualItemView::updateDragAutoscroll(const QPoint &viewportPos)
+{
+    const int margin = qMax(8, viewport()->height() / 12);
+    int delta = 0;
+    if (viewportPos.y() < margin)
+        delta = -qMax(1, margin - viewportPos.y());
+    else if (viewportPos.y() > viewport()->height() - margin)
+        delta = qMax(1, viewportPos.y() - (viewport()->height() - margin));
+    if (delta == 0) {
+        stopDragAutoscroll();
+        return;
+    }
+    m_dragAutoscrollDelta = delta;
+    if (!m_dragAutoscrollTimer) {
+        m_dragAutoscrollTimer = new QTimer(this);
+        m_dragAutoscrollTimer->setInterval(40);
+        connect(m_dragAutoscrollTimer, &QTimer::timeout, this, [this]() {
+            const qint64 before = m_scrollOffset;
+            scrollByPixels(qBound(-40, m_dragAutoscrollDelta, 40));
+            if (m_scrollOffset == before || !m_dragHoverValid)
+                return;
+            // The rows below the cursor moved with the content: re-resolve the
+            // target so the indicator stays glued to the insertion point (and
+            // gets lifted above the widgets materialized by the scroll).
+            const DropTarget target = resolveDropTarget(m_dragHoverPos);
+            if (target.isValid())
+                showDropIndicator(target);
+            else
+                hideDropIndicator();
+        });
+    }
+    if (!m_dragAutoscrollTimer->isActive())
+        m_dragAutoscrollTimer->start();
+}
+
+void VirtualItemView::stopDragAutoscroll()
+{
+    if (m_dragAutoscrollTimer)
+        m_dragAutoscrollTimer->stop();
+    m_dragAutoscrollDelta = 0;
 }
 
 void VirtualItemView::wheelEvent(QWheelEvent *event)

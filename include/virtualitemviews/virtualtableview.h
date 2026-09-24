@@ -85,6 +85,10 @@ public:
     int columnCount() const;
     ColumnGeometry columnGeometry(int logicalIndex) const;
     int columnWidth(int logicalIndex) const;
+    /// Logical column under a viewport x, honoring the panes (§31): a frozen
+    /// column is hit by its own viewport x, a scrollable one by the horizontal
+    /// offset of the scrollable pane. -1 when no column is under \a viewportX.
+    int columnAtViewportX(int viewportX) const;
     /// Visible columns as visual indices (hidden ones included in the range).
     VisibleRange visibleColumns() const;
     /// Visible rows (without overscan).
@@ -198,6 +202,10 @@ protected:
     bool canMeasureItem(qsizetype item) const override;
     void afterMaterialize() override;
     bool handleItemKeyPress(QKeyEvent *event) override;
+    /// §38: a table drops between rows (row semantics) or into a cell. The
+    /// column of the target is -1 when the whole row is the drop unit.
+    VirtualItemView::DropTarget resolveDropTarget(const QPoint &viewportPos) const override;
+    QRect resolveDropIndicatorRect(const DropTarget &target) const override;
     void resizeEvent(QResizeEvent *event) override;
     void showEvent(QShowEvent *event) override;
     void changeEvent(QEvent *event) override;

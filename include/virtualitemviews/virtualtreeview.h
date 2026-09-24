@@ -95,6 +95,11 @@ protected:
     /// invalidated after every materialization pass (scroll, expand/collapse,
     /// indentation, resize).
     void afterMaterialize() override;
+    /// §38: a tree drops *between* siblings or *into* an item. The middle band
+    /// of a drop-enabled item expresses "become a child of this item" as
+    /// (item, item.rowCount()), the same convention QTreeView uses.
+    VirtualItemView::DropTarget resolveDropTarget(const QPoint &viewportPos) const override;
+    QRect resolveDropIndicatorRect(const DropTarget &target) const override;
 
     void mousePressEvent(QMouseEvent *event) override;
     void mouseReleaseEvent(QMouseEvent *event) override;
@@ -118,6 +123,11 @@ private:
     bool hasBranchIndicator(qsizetype row) const;
     /// True when \a viewportPos lies in the indicator zone of \a index.
     bool isIndicatorPosition(const QModelIndex &index, const QPoint &viewportPos) const;
+    /// True when the model flags of \a index accept a drop *into* it.
+    bool acceptsDropInto(const QModelIndex &index) const;
+    /// Anchors an insertion line at the boundary of the visible tree, so a target
+    /// inside a collapsed branch (or below the last row) still has a place.
+    QRect insertionLineRect(const DropTarget &target) const;
 
     TreeVisibilityIndex *m_visibility = nullptr;
     ListLayout *m_rowLayout = nullptr;
