@@ -2,6 +2,7 @@
 
 #include <virtualitemviews/headergeometry.h>
 #include <virtualitemviews/nativeheaderview.h>
+#include <virtualitemviews/tablespan.h>
 #include <virtualitemviews/tablewidgetadapter.h>
 #include <virtualitemviews/virtualitemview.h>
 
@@ -153,6 +154,33 @@ public:
     void clearRowHeight(qsizetype row);
     bool hasExplicitRowHeight(qsizetype row) const;
 
+    // -- spans (§43 "spans", see docs/spans.md) ------------------------------
+    /// Source of the merged cells. The default is "nothing is merged", so a
+    /// table without spans behaves exactly as before. Passing nullptr detaches
+    /// (and with takeOwnership = true deletes) the current provider.
+    void setSpanProvider(TableSpanProvider *provider, bool takeOwnership = false);
+    TableSpanProvider *spanProvider() const { return m_spanProvider; }
+    /// Convenience for the map provider: merges the cells starting at
+    /// (\a row, \a column). Creates the owned TableSpanMap on first use.
+    void setSpan(int row, int column, int rowSpan = 1, int columnSpan = 1);
+    /// Drops the span anchored at (\a row, \a column).
+    void removeSpan(int row, int column);
+    void clearSpans();
+    /// Span whose anchor is \a index (1x1 when the cell is not an anchor).
+    TableSpan spanAt(const QModelIndex &index) const;
+    /// Anchor of the merged area containing \a index (the index itself when the
+    /// cell is not merged, and when there is no provider at all).
+    QModelIndex anchorIndex(const QModelIndex &index) const;
+    /// True when \a index is covered by another cell's span.
+    bool isSpanCovered(const QModelIndex &index) const;
+    /// Merged rectangle (viewport coordinates) whose anchor is \a index, derived
+    /// from the committed column geometry and the row layout. Clamped to the
+    /// model and to the anchor's pane: a span never crosses a pane (§31).
+    QRect spanRect(const QModelIndex &index) const;
+    /// Rect of a single cell (viewport coordinates), span aware: the merged
+    /// rectangle for an anchor, empty for a covered cell.
+    QRect cellRect(const QModelIndex &index) const;
+
     // -- sorting -------------------------------------------------------------
     void setSortingEnabled(bool enabled);
     bool isSortingEnabled() const { return m_sortingEnabled; }
@@ -294,6 +322,10 @@ private:
     bool m_verticalHeaderVisible = true;
     int m_columnOverscan = 1;
     int m_horizontalWheelPixels = 48;
+    TableSpanProvider *m_spanProvider = nullptr;
+    bool m_ownSpanProvider = false;
+    /// Set once when a row span could not be honoured (diagnostics).
+    bool m_spanWarningShown = false;
     RowSizePolicy m_rowSizePolicy = RowSizePolicy::ExplicitWins;
     bool m_sortingEnabled = false;
     bool m_sortGuard = false;

@@ -221,9 +221,16 @@ QRect AccessibleVirtualItem::rect() const
     QRect itemRect = rowRect;
     if (m_column >= 0) {
         if (const auto *table = qobject_cast<const VirtualTableView *>(m_view)) {
-            const ColumnGeometry column = table->columnGeometry(m_column);
-            if (column.isValid() && !column.hidden && column.width > 0)
-                itemRect = QRect(column.viewportX, rowRect.y(), column.width, rowRect.height());
+            // A merged cell is one node covering its whole merged rectangle
+            // (§43 "spans"); a plain cell keeps its column rect.
+            const QRect merged = table->spanRect(m_index);
+            if (!merged.isEmpty()) {
+                itemRect = merged;
+            } else {
+                const ColumnGeometry column = table->columnGeometry(m_column);
+                if (column.isValid() && !column.hidden && column.width > 0)
+                    itemRect = QRect(column.viewportX, rowRect.y(), column.width, rowRect.height());
+            }
         }
     }
     return toGlobal(m_view, itemRect);
@@ -328,7 +335,20 @@ QAccessible::State AccessibleVirtualItem::state() const
 QList<int> AccessibleVirtualItem::visibleColumns() const
 {
     const auto *table = qobject_cast<const VirtualTableView *>(m_view);
-    return visibleColumnsOf(table, m_view ? m_view->viewport()->width() : 0);
+    const QList<int> columns = visibleColumnsOf(table, m_view ? m_view->viewport()->width() : 0);
+    if (!table || !m_index.isValid())
+        return columns;
+    // The columns a merged area covers do not have a cell of their own: the
+    // anchor is the one and only accessible cell of that area.
+    const QModelIndex row = QModelIndex(m_index).siblingAtColumn(0);
+    QList<int> anchors;
+    anchors.reserve(columns.size());
+    for (int logical : columns) {
+        if (table->isSpanCovered(row.siblingAtColumn(logical)))
+            continue;
+        anchors.append(logical);
+    }
+    return anchors;
 }
 
 int AccessibleVirtualItem::treeChildCount() const

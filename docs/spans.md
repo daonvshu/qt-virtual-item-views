@@ -31,7 +31,12 @@ public:
 ```
 
 * 视图侧 API：`setSpanProvider(TableSpanProvider *, bool takeOwnership = false)`、`spanProvider()`，
-  以及开箱即用的 `TableSpanMap`（`setSpan(row, column, rowSpan, columnSpan)` / `clearSpans()`）。
+  以及开箱即用的 `TableSpanMap`；表格上还有一层与 `QTableView` 同名的便捷入口
+  `setSpan(row, column, rowSpan, columnSpan)` / `removeSpan(row, column)` / `clearSpans()`
+  （第一次调用会自动建一个由视图持有的 map）。
+* 查询入口：`spanAt(index)`、`anchorIndex(index)`、`isSpanCovered(index)`、
+  `spanRect(anchor)`（合并矩形，viewport 坐标）、`cellRect(index)`（锚点 = 合并矩形，
+  被覆盖 cell = 空矩形）。
 * **锚点约定**：span 只在锚点登记；被覆盖的 cell 由 `anchorIndex(index)` 反查锚点。
   这避免"同一块区域有两份真相"，也让 model 不需要实现任何 span API。
 * **合法性**：`rowSpan/columnSpan < 1` 视为 1；越界的 span 裁剪到 model 边界；**重叠的 span 视为非法**，
@@ -49,8 +54,11 @@ public:
 | `visualRect(index)` | 行矩形保持不变；cell 层只多一个 `cellRect()` 的 span 版本 |
 | 拖放 `resolveDropTarget()` | 命中被覆盖的 cell 时解析到锚点（`column` = 锚点列），drop indicator 用合并矩形 |
 
-跨行 span（`rowSpan > 1`）只在**同一父项下的连续可见行**上成立：涉及的行必须都已物化，否则退化为
-`rowSpan = 1` 并 `qWarning()`（这是"可见性优先"的取舍：不为跨行 span 强行物化屏幕外的行）。
+跨行 span（`rowSpan > 1`）的几何是"锚点行起 N 行的高度之和"，与被覆盖行是否物化无关（尺寸来自
+`ListLayout` 的已提交几何）。**渲染**则是另一回事：Cell Widget Mode 下框架自己把锚点 cell 控件
+放大到合并矩形，跨行原生可用；Row Widget Mode 下每一行都有自己的行控件，被覆盖行的控件会盖住
+合并区域，所以跨行 span 要么用 Cell Widget Mode，要么由业务用 `spanOf()/spanRect()` 自己在行
+控件里留白（第 3 步的 API）。
 
 ## 3. 与列几何、冻结 pane 的关系
 
@@ -120,3 +128,20 @@ void setPanes(const QVector<PaneSpec> &specs);   // 空 = 回到默认三段
 
 每一项都按框架既有节奏收尾：先补规格/实现，再补单元测试，最后跑 Qt 5 / Qt 6 双配置构建、
 CTest 与示例（见 README 的"验证"一节）。
+
+## 7. 实现状态
+
+已完成（`include/virtualitemviews/tablespan.h`、`src/layout/tablespan.cpp`、
+`tests/unit/tst_tablespan`）：
+
+| 步骤 | 状态 |
+| --- | --- |
+| 1. span 模型 + 锚点 + `indexAt()`/`cellRect()`/`spanRect()` 折回锚点 | 已完成 |
+| 2. Cell Widget Mode 只物化锚点（锚点控件放大到合并矩形） | 已完成 |
+| 4. 拖放：命中被覆盖单元格时列折回锚点，插入指示器用合并矩形 | 已完成（选择/键盘沿用同一套 `indexAt()` 折回） |
+| 3. Row Widget Mode：`TableRowLayoutContext` 暴露 `spanOf()/spanRect()`，框架按 span 摆放 `ColumnHost` | 待做 |
+| 5. Advanced panes：把固定三段重构为 pane 列表（`PaneSpec`） | 待做 |
+| 6. 示例 `examples/table_spans` | 待做 |
+
+顺带对齐的既有能力：accessibility 桥接（§37）也走同一套锚点语义 —— 合并区域只暴露一个
+`Cell` 节点（被覆盖的行列不再是独立节点），它的 `rect()` 就是合并矩形。

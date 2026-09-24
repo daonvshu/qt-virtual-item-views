@@ -191,6 +191,7 @@ private slots:
     void childAtMapsAPointToTheItemUnderIt();
     void tableExposesRowsAndCells();
     void tableCellWidgetModeAlsoExposesRows();
+    void mergedCellsAreOneAccessibleCell();
     void treeExposesHierarchyOfVisibleNodes();
     void pressingAnItemBehavesLikeAClick();
 };
@@ -494,6 +495,56 @@ void TestAccessibility::tableCellWidgetModeAlsoExposesRows()
     QCOMPARE(row->role(), QAccessible::Row);
     QVERIFY(row->childCount() > 0);
     QCOMPARE(row->child(0)->text(QAccessible::Name), QStringLiteral("c0r0"));
+}
+
+void TestAccessibility::mergedCellsAreOneAccessibleCell()
+{
+    auto *model = new QStandardItemModel(6, 4, this);
+    for (int row = 0; row < 6; ++row) {
+        for (int column = 0; column < 4; ++column) {
+            model->setItem(row, column,
+                           new QStandardItem(QStringLiteral("r%1c%2").arg(row).arg(column)));
+        }
+    }
+    AccessibleTableAdapter adapter(4);
+    VirtualTableView view;
+    view.setTableAdapter(&adapter);
+    view.setUniformItemHeight(kRowHeight);
+    view.setDefaultColumnWidth(kColumnWidth);
+    view.setModel(model);
+    showView(&view, QSize(kViewWidth, kViewHeight));
+    view.setSpan(0, 1, 2, 2);
+    view.flushPendingRelayout();
+
+    // §43 spans: a merged area is a single accessible cell - the covered columns
+    // and rows are not separate nodes, and the node reports the merged rect.
+    QAccessibleInterface *viewInterface = QAccessible::queryAccessibleInterface(&view);
+    QVERIFY(viewInterface);
+    QAccessibleInterface *row0 = viewInterface->child(0);
+    QVERIFY(row0);
+    QCOMPARE(row0->childCount(), 3);
+    QAccessibleInterface *anchor = row0->child(1);
+    QVERIFY(anchor);
+    QCOMPARE(anchor->text(QAccessible::Name), QStringLiteral("r0c1"));
+    QCOMPARE(anchor->rect().width(), 2 * kColumnWidth);
+    QCOMPARE(anchor->rect().height(), 2 * kRowHeight);
+    QCOMPARE(row0->child(2)->text(QAccessible::Name), QStringLiteral("r0c3"));
+    // The childAt() hit test of the merged area resolves to the anchor cell (the
+    // view node itself hands out rows, its row node hands out cells).
+    const QRect merged = anchor->rect();
+    QAccessibleInterface *rowHit
+        = viewInterface->childAt(merged.center().x(), merged.center().y());
+    QVERIFY(rowHit);
+    QCOMPARE(rowHit->role(), QAccessible::Row);
+    QCOMPARE(rowHit->text(QAccessible::Name), QStringLiteral("r0c0"));
+    QCOMPARE(row0->childAt(merged.center().x(), merged.center().y())->text(QAccessible::Name),
+             QStringLiteral("r0c1"));
+
+    // Clearing the spans brings the covered cells back.
+    view.clearSpans();
+    view.flushPendingRelayout();
+    QCOMPARE(viewInterface->child(0)->childCount(), 4);
+    QCOMPARE(viewInterface->child(0)->child(2)->text(QAccessible::Name), QStringLiteral("r0c2"));
 }
 
 void TestAccessibility::treeExposesHierarchyOfVisibleNodes()

@@ -47,6 +47,8 @@ QWidget**。
 | 拖放观测：`itemDropped(parent, row, column, action)` 信号、`dropTargetAt()`/`dropIndicatorRect()`/`dropIndicatorStyle()` 诊断接口 | 已实现 |
 | Accessibility（v0.7，§37）：`installAccessibilityFactory()` 注册 `QAccessibleInterface` 桥接，按需暴露**可见行**（列表项 / 树节点 / 表格行 + 可见列的 cell），文本与状态取自 model 与已提交几何，100 万行模型仍是十几个节点 | 已实现 |
 | Accessibility 导航：current 作为 `focusChild()`、`childAt()` 命中、树层次（parent/children 往返）、表格行列语义、`press` 等价 `activateIndex()`（发 `clicked()`/`activated()`）、`setFocus`/`scrollUp/Down/Left/Right` 动作、Focus/Selection/ModelChange 事件 | 已实现 |
+| Span（v0.7，§43）：`TableSpanProvider` / `TableSpanMap` + `setSpan()/removeSpan()/clearSpans()`；合并矩形完全由已提交列几何与行高推出（不存第二份几何），`indexAt()/cellRect()` 折回锚点，Cell Widget Mode 只物化锚点并把锚点控件放大到合并矩形 | 已实现 |
+| Span 一致性：拖放落点与插入指示器按锚点/合并矩形、accessibility 合并区域只暴露一个 cell、span 不跨 pane（裁剪到锚点 pane）、隐藏列自动变窄、列宽/行高变化后合并矩形自动跟随 | 已实现 |
 | 树：expand/collapse、`expandRecursively()`（`*` 键递归展开）、Left/Right 导航、缩进、分支指示绘制与点击、双击展开 | 已实现 |
 | 树：分支图标可按状态自定义（`BranchIndicatorRenderer`，对应 `QTreeView::branch` 的 has-children / has-siblings / adjoins-item / open / closed，不解析样式表） | 已实现 |
 | 树：结构变更（insert/remove/move/layoutChanged/reset）保持展开状态与滚动锚点 | 已实现 |
@@ -61,12 +63,13 @@ QWidget**。
 | 像素滚动：`WheelScrollMode`（Pixels 默认 / Items）、`setWheelScrollPixels()`、`scrollByPixels()`、`setVerticalOffset()`、触控板 `pixelDelta` 1:1 | 已实现 |
 | 可选生命周期日志 `setLifecycleLoggingEnabled()`（create/bind/unbind/recycle/pin） | 已实现 |
 | `TreeVisibilityIndex`（可见行压平、增量展开/折叠、深度、row 双向查询） | 已实现 |
-| 单元测试 187 个用例 + 4 个变异测试 + 10 个 GUI 交互场景（共 17 个 CTest 目标） | 已实现 |
+| 单元测试 198 个用例 + 4 个变异测试 + 10 个 GUI 交互场景（共 18 个 CTest 目标） | 已实现 |
 | 9 个示例（simple list / order cards / dynamic height / million rows / table row widgets / table many columns / table custom header / tree / drag & drop） | 已实现 |
 | benchmark（1M 行、表格 row vs cell、树：宽树 + 变更 + 锚点，稳态滚动零分配校验） | 已实现 |
 
-未实现（按 §43 路线图）：表头动画（§23/§24）、span 与 advanced panes
-（规格已补：[docs/spans.md](docs/spans.md)，实现按该文档的第 6 节顺序推进）；accessibility
+未实现（按 §43 路线图）：表头动画（§23/§24）、span 在 Row Widget Mode 的 `ColumnHost`
+自动摆放与 advanced panes（规格与进度见 [docs/spans.md](docs/spans.md) 第 6/7 节，
+span 的模型/命中/几何/Cell Widget Mode 已完成）；accessibility
 还没有 `QAccessibleTableInterface`（行列朗读）与文本/编辑接口；行冻结
 （文档 §31 只写列方向）；树在"可见行数极大"时的增量行映射优化
 （现在一次 expand/collapse 需要重建可见行索引表，见 [docs/performance.md](docs/performance.md)）。
@@ -309,11 +312,12 @@ include/
                              widgetadapter.h  widgetrecycler.h  sizeindex.h  scrollmapper.h
                              listlayout.h  layoutpolicy.h  materializeditem.h
                              treevisibilityindex.h  types.h  accessibility.h
-                             tablepane.h  headerwidgetadapter.h  virtualheaderview.h
+                             tablepane.h  tablespan.h  headerwidgetadapter.h
+                             virtualheaderview.h
 src/
   core/       scrollmapper.cpp  virtualitemview.cpp
   index/      sizeindex.cpp (FixedSizeIndex / BlockSizeIndex)  treevisibilityindex.cpp
-  layout/     headergeometry.cpp  listlayout.cpp
+  layout/     headergeometry.cpp  listlayout.cpp  tablepane.cpp  tablespan.cpp
   recycler/   widgetrecycler.cpp
   widgets/    accessibility.cpp  branchindicator.cpp  columnhost.cpp  nativeheaderview.cpp
               virtualheaderview.cpp  virtuallistview.cpp  virtualtableview.cpp
@@ -321,7 +325,7 @@ src/
 tests/
   unit/       sizeindex / scrollmapper / widgetrecycler / listlayout / headergeometry /
               treevisibilityindex / 内核 / ListView / TableView / TableCellMode / TreeView /
-              VirtualHeaderView / DragDrop / Accessibility
+              VirtualHeaderView / DragDrop / Accessibility / TableSpan
   fuzz/       随机 insert/remove/move/dataChanged/reset
   gui/        List：鼠标/键盘/焦点 pinning/滚动数据新鲜度；Table：表头排序/横向滚轮/拖动列宽
 benchmarks/   1M 行与稳态滚动零分配校验（可选 QListView/QListWidget 参考）

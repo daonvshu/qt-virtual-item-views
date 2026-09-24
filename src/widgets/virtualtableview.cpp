@@ -137,6 +137,8 @@ VirtualTableView::~VirtualTableView()
         delete m_tableAdapter;
     if (m_ownCellAdapter)
         delete m_cellAdapter;
+    if (m_ownSpanProvider)
+        delete m_spanProvider;
 }
 
 // ---------------------------------------------------------------------------
@@ -1109,6 +1111,157 @@ QRect VirtualTableView::cellRect(qsizetype row, int logicalColumn) const
     return QRect(column.viewportX, rowRect.y(), column.width, rowRect.height());
 }
 
+// ---------------------------------------------------------------------------
+// Spans (§43 "spans", see docs/spans.md)
+// ---------------------------------------------------------------------------
+
+void VirtualTableView::setSpanProvider(TableSpanProvider *provider, bool takeOwnership)
+{
+    if (m_spanProvider != provider) {
+        if (m_ownSpanProvider)
+            delete m_spanProvider;
+        m_spanProvider = provider;
+        m_ownSpanProvider = provider && takeOwnership;
+    } else if (takeOwnership) {
+        m_ownSpanProvider = true;
+    }
+    m_spanWarningShown = false;
+    // Which cells exist and where they sit changed.
+    markDirty();
+    updateColumnLayout();
+}
+
+void VirtualTableView::setSpan(int row, int column, int rowSpan, int columnSpan)
+{
+    QAbstractItemModel *tableModel = model();
+    if (!tableModel)
+        return;
+    const QModelIndex anchor = tableModel->index(row, column);
+    if (!anchor.isValid())
+        return;
+    auto *map = dynamic_cast<TableSpanMap *>(m_spanProvider);
+    if (!map) {
+        map = new TableSpanMap;
+        setSpanProvider(map, true);
+    }
+    map->setSpan(anchor, rowSpan, columnSpan);
+    markDirty();
+    updateColumnLayout();
+}
+
+void VirtualTableView::removeSpan(int row, int column)
+{
+    auto *map = dynamic_cast<TableSpanMap *>(m_spanProvider);
+    QAbstractItemModel *tableModel = model();
+    if (!map || !tableModel)
+        return;
+    map->removeSpan(tableModel->index(row, column));
+    markDirty();
+    updateColumnLayout();
+}
+
+void VirtualTableView::clearSpans()
+{
+    auto *map = dynamic_cast<TableSpanMap *>(m_spanProvider);
+    if (!map)
+        return;
+    map->clearSpans();
+    markDirty();
+    updateColumnLayout();
+}
+
+TableSpan VirtualTableView::spanAt(const QModelIndex &index) const
+{
+    if (!m_spanProvider || !index.isValid())
+        return TableSpan();
+    return m_spanProvider->spanAt(index);
+}
+
+QModelIndex VirtualTableView::anchorIndex(const QModelIndex &index) const
+{
+    if (!m_spanProvider || !index.isValid())
+        return index;
+    return m_spanProvider->anchorOf(index);
+}
+
+bool VirtualTableView::isSpanCovered(const QModelIndex &index) const
+{
+    if (!index.isValid())
+        return false;
+    const QModelIndex anchor = anchorIndex(index);
+    return anchor.isValid() && anchor != index;
+}
+
+QRect VirtualTableView::spanRect(const QModelIndex &index) const
+{
+    QAbstractItemModel *tableModel = model();
+    if (!m_columns || !m_rowLayout || !tableModel || !index.isValid())
+        return QRect();
+    // Only an anchor owns pixels: a covered cell has no rectangle of its own.
+    if (anchorIndex(index) != index)
+        return QRect();
+
+    const TableSpan span = spanAt(index);
+    const int lastRow = qMin(index.row() + qMax(1, span.rowSpan) - 1,
+                             tableModel->rowCount(index.parent()) - 1);
+
+    // Columns: walk the visual order from the anchor, inside its pane only. A
+    // hidden column contributes no width (no compensation), a pane boundary ends
+    // the merge (§31/§43).
+    const TablePane::Type pane = m_panes.paneOfColumn(index.column());
+    const int visual = m_columns->visualIndex(index.column());
+    if (visual < 0)
+        return QRect();
+    int taken = 0;
+    bool hasColumn = false;
+    int left = -1;
+    int right = -1;
+    for (int candidate = visual;
+         candidate < m_columns->sectionCount() && taken < qMax(1, span.columnSpan);
+         ++candidate) {
+        const int logical = m_columns->logicalIndex(candidate);
+        if (logical < 0)
+            break;
+        if (m_panes.paneOfColumn(logical) != pane)
+            break;
+        ++taken;
+        const ColumnGeometry geometry = columnGeometry(logical);
+        if (!geometry.isValid() || geometry.hidden || geometry.width <= 0)
+            continue;
+        // A column scrolled (partly) out of the viewport has a negative x: it
+        // still contributes, the parent clips the result.
+        if (!hasColumn) {
+            hasColumn = true;
+            left = geometry.viewportX;
+            right = geometry.viewportX + geometry.width;
+        } else {
+            left = qMin(left, geometry.viewportX);
+            right = qMax(right, geometry.viewportX + geometry.width);
+        }
+    }
+    if (!hasColumn || right <= left)
+        return QRect();
+
+    const QRect first = m_rowLayout->itemRect(index.row(), verticalOffset());
+    if (first.height() <= 0)
+        return QRect();
+    const QRect last = lastRow >= index.row()
+        ? m_rowLayout->itemRect(lastRow, verticalOffset())
+        : QRect();
+    const int bottom = last.height() > 0 ? last.bottom() : first.bottom();
+    return QRect(left, first.top(), right - left, bottom - first.top() + 1);
+}
+
+QRect VirtualTableView::cellRect(const QModelIndex &index) const
+{
+    if (!index.isValid())
+        return QRect();
+    // A covered cell has no rect: hit testing and layout always use the anchor.
+    if (anchorIndex(index) != index)
+        return QRect();
+    return spanRect(index);
+}
+
 QWidget *VirtualTableView::createCellWidget(const QPersistentModelIndex &index)
 {
     if (!m_cellAdapter)
@@ -1179,6 +1332,10 @@ void VirtualTableView::materializeItems(const VisibleRange &rows)
             const QModelIndex index = model()->index(int(row), column);
             if (!index.isValid())
                 continue;
+            // Merged cells are one target: only the anchor owns a widget, the
+            // cells it covers are never materialized (§43 "spans").
+            if (isSpanCovered(index))
+                continue;
             const QPersistentModelIndex persistent(index);
             QWidget *widget = m_cells.value(persistent, nullptr);
             if (!widget) {
@@ -1247,7 +1404,8 @@ void VirtualTableView::updateCellGeometry()
             widget->hide();
             continue;
         }
-        const QRect rect = cellRect(index.row(), index.column());
+        // Span aware: an anchor cell widget covers its whole merged area.
+        const QRect rect = cellRect(index);
         const bool frozen = m_panes.isFrozenColumn(index.column());
         // Scrollable cells live in the clip host: Qt clips a widget to its
         // parent, so they can never paint under a frozen pane (§31) and no cell
@@ -1301,7 +1459,8 @@ QModelIndex VirtualTableView::indexAt(const QPoint &viewportPos) const
     const int column = columnAtViewportX(viewportPos.x());
     if (column < 0 || m_columns->isSectionHidden(column))
         return rowIndex;
-    return rowIndex.siblingAtColumn(column);
+    // A merged area is one hit target: the anchor owns it (§43 "spans").
+    return anchorIndex(rowIndex.siblingAtColumn(column));
 }
 
 int VirtualTableView::columnAtViewportX(int viewportX) const
@@ -1661,6 +1820,14 @@ VirtualItemView::DropTarget VirtualTableView::resolveDropTarget(const QPoint &vi
     const int column = columnAtViewportX(viewportPos.x());
     if (column >= 0 && !m_columns->isSectionHidden(column))
         target.column = column;
+    // A merged area is one drop target: the column of a covered cell folds back
+    // to its anchor (§43 "spans").
+    if (target.column >= 0 && target.row >= 0 && model() && m_spanProvider) {
+        const QModelIndex anchor
+            = anchorIndex(model()->index(target.row, target.column, target.parent));
+        if (anchor.isValid())
+            target.column = anchor.column();
+    }
     return target;
 }
 
@@ -1675,6 +1842,14 @@ QRect VirtualTableView::resolveDropIndicatorRect(const DropTarget &target) const
     const ColumnGeometry column = columnGeometry(target.column);
     if (!column.isValid() || column.hidden || column.width <= 0)
         return line;
+    // An anchored merge marks the whole merged rectangle (which is clipped to
+    // the pane by spanRect()), not just its first column.
+    if (model() && m_spanProvider) {
+        const QModelIndex anchor = anchorIndex(model()->index(target.row, target.column, target.parent));
+        const QRect merged = anchor.isValid() ? spanRect(anchor) : QRect();
+        if (!merged.isEmpty())
+            return QRect(merged.x(), line.y(), merged.width(), line.height());
+    }
     return QRect(column.viewportX, line.y(), column.width, line.height());
 }
 
