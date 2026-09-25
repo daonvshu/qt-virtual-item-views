@@ -329,6 +329,16 @@ public:
     /// Look of the line that separates the row panes.
     void setItemPaneSeparatorStyle(const PaneSeparatorStyle &style);
     PaneSeparatorStyle itemPaneSeparatorStyle() const { return m_itemPaneSeparatorStyle; }
+    /// How far the row pane boundary lines reach to the *left* of the viewport, in
+    /// pixels. A table whose row-number strip lives outside the viewport returns its
+    /// width here, so the line crosses the strip exactly like the column boundary lines
+    /// cross the header strip (see docs/row-freezing.md).
+    virtual int itemPaneSeparatorLeftExtension() const { return 0; }
+    /// Colour the row pane boundary is painted with when the separator style does not
+    /// name one. A subclass that can probe what the current style paints separators with
+    /// (the table does, through the header renderer) overrides this, so its row boundary
+    /// and its column boundary look identical; the default is the palette's mid colour.
+    virtual QColor itemPaneSeparatorColor() const;
     /// Geometry of the row pane boundary lines, top to bottom (diagnostics/tests).
     QVector<QRect> itemPaneSeparatorRects() const;
     /// Container the scrolling rows are clipped into (null while no row is frozen,

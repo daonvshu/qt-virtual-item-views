@@ -911,6 +911,14 @@ void VirtualItemView::setItemPaneSeparatorStyle(const PaneSeparatorStyle &style)
     syncItemPanes();
 }
 
+QColor VirtualItemView::itemPaneSeparatorColor() const
+{
+    // No style specific separator to probe in the kernel: the palette's mid colour is the
+    // honest default for a plain list. A table overrides this with the colour its style
+    // paints section separators with, which is what its column boundary uses as well.
+    return palette().color(QPalette::Mid);
+}
+
 QVector<QRect> VirtualItemView::itemPaneSeparatorRects() const
 {
     QVector<QRect> rects;
@@ -965,16 +973,22 @@ void VirtualItemView::syncItemPanes()
         line->deleteLater();
     }
     while (m_itemPaneSeparatorLines.size() < boundaries.size())
-        m_itemPaneSeparatorLines.append(new ItemPaneSeparatorLine(viewport()));
+        // A child of the view, not of the viewport: the line also crosses whatever the
+        // subclass keeps outside the viewport on the left (the row-number strip), exactly
+        // like the column boundary lines cross the header strip.
+        m_itemPaneSeparatorLines.append(new ItemPaneSeparatorLine(this));
 
-    const QColor styleColor = palette().color(QPalette::Mid);
+    const QColor styleColor = itemPaneSeparatorColor();
+    const QRect viewportRect = viewport()->geometry();
+    const int leftExtension = qMax(0, itemPaneSeparatorLeftExtension());
     const int band = qMax(0, m_itemPaneSeparatorStyle.width);
     const int lineWidth = m_itemPaneSeparatorStyle.lineStyle == Qt::SolidLine ? band
                                                                              : qMax(1, band);
     for (int i = 0; i < boundaries.size(); ++i) {
         auto *line = static_cast<ItemPaneSeparatorLine *>(m_itemPaneSeparatorLines.at(i));
         line->setSeparator(m_itemPaneSeparatorStyle, styleColor);
-        line->setGeometry(0, boundaries.at(i) - lineWidth, viewport()->width(), lineWidth);
+        line->setGeometry(viewportRect.x() - leftExtension, viewportRect.y() + boundaries.at(i) - lineWidth,
+                          viewportRect.width() + leftExtension, lineWidth);
         line->setVisible(m_itemPaneSeparatorStyle.isVisible() && lineWidth > 0);
     }
     raiseItemPaneSeparatorLines();

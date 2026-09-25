@@ -39,7 +39,7 @@ QWidget**。
 | `ColumnHost` / `TableRowLayoutContext`：框架定位列，业务只管内容（§26/§27） | 已实现 |
 | 列 resize/move/hide、表头点击排序、横向像素滚动、表头状态 save/restore | 已实现 |
 | 冻结列（v0.7，§31）：`setFrozenColumns()` / `setFrozenRightColumns()`，冻结 pane 与可滚动 pane 共享同一份 `HeaderGeometry` | 已实现 |
-| 行冻结（v0.8，§31 行方向，[docs/row-freezing.md](docs/row-freezing.md)）：`setFrozenRows()` / `setFrozenBottomRows()`，冻结行钉在上下边缘、`itemPanes()` / `isRowFrozen()` / `itemPaneSeparatorRects()` 查询、每个可滚动行 pane 一个裁剪容器、命中与键盘/滚动按 pane 折回、**行号条按 pane 切分**（每条带子贴着自己的行）、冻结行数随表状态持久化（v2，旧格式仍可恢复）；冻结不产生额外滚动空间 | 已实现 |
+| 行冻结（v0.8，§31 行方向，[docs/row-freezing.md](docs/row-freezing.md)）：`setFrozenRows()` / `setFrozenBottomRows()`，冻结行钉在上下边缘、`itemPanes()` / `isRowFrozen()` / `itemPaneSeparatorRects()` 查询、每个可滚动行 pane 一个裁剪容器、命中与键盘/滚动按 pane 折回、**行号条按 pane 切分**（每条带子贴着自己的行）、**交界线与列冻结同款**（同一颜色/宽度/线型，横向线也跨过行号条）、冻结行数随表状态持久化（v2，旧格式仍可恢复）；冻结不产生额外滚动空间 | 已实现 |
 | 垂直行号表头：与 body 共享纵向偏移（行号始终对齐）、拖动分隔线写入显式行高（uniform 自动转 variable） | 已实现 |
 | Cell Widget Mode（v0.5）：`CellWidgetAdapter` + 二维虚拟化，只 materialize visibleRows x visibleColumns | 已实现 |
 | `visibleRows()` / `visibleColumns()` 可见区间查询 + 大列数 benchmark（100 列 x 1M 行，row vs cell 对照） | 已实现 |
@@ -67,7 +67,7 @@ QWidget**。
 | 像素滚动：`WheelScrollMode`（Pixels 默认 / Items）、`setWheelScrollPixels()`、`scrollByPixels()`、`setVerticalOffset()`、触控板 `pixelDelta` 1:1 | 已实现 |
 | 可选生命周期日志 `setLifecycleLoggingEnabled()`（create/bind/unbind/recycle/pin） | 已实现 |
 | `TreeVisibilityIndex`（可见行压平、增量展开/折叠、深度、row 双向查询） | 已实现 |
-| 单元测试 236 个用例 + 4 个变异测试 + 10 个 GUI 交互场景（共 20 个 CTest 目标） | 已实现 |
+| 单元测试 237 个用例 + 4 个变异测试 + 10 个 GUI 交互场景（共 20 个 CTest 目标） | 已实现 |
 | 12 个示例（simple list / order cards / dynamic height / million rows / table row widgets / table many columns / table custom header / tree / drag & drop / table spans / table panes / table frozen rows） | 已实现 |
 | benchmark（1M 行、表格 row vs cell、树：宽树 + 变更 + 锚点，稳态滚动零分配校验） | 已实现 |
 

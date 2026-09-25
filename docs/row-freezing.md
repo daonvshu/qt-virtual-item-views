@@ -102,6 +102,13 @@ struct ItemPane
   一个裁剪容器"对称 —— 可滚动行的行控件放进容器，冻结行的行控件直接挂在视口上（`raise()`）。
   一个行控件仍然横跨整个视口宽度，所以纵向裁剪与横向的列 pane 裁剪是正交的，两者各自负责一维。
 * **Cell Widget Mode**：同样的规则，只是裁剪到 cell。
+* **交界线与列冻结同款**：行 pane 的交界线用**和列 pane 完全一样**的样式与颜色——默认颜色就是
+  "当前样式画 section 分隔线用的那个颜色"（列方向通过渲染一个 section 探到，行方向通过
+  `itemPaneSeparatorColor()` 这个虚函数复用同一个探测结果），不是另猜一个调色板角色；宽度/线型/
+  显式颜色也是同一个旋钮：`VirtualTableView::setPaneSeparatorStyle()` 会同时下发给列与行。
+  **横向线还会跨过行号条**（`itemPaneSeparatorLeftExtension()`），就像竖向线会跨过横向表头条
+  一样，两条边界在视觉上是对称的。list/tree 没有列方向，`itemPaneSeparatorColor()` 的默认实现
+  回落到调色板中灰。
 * **命中测试**：`indexAt()` 先把 y 折到"pane 局部坐标"，再按该 pane 的行区间解析行号；
   落在交界线上的点归属前一个 pane（与列方向一致）。
 * **键盘/选择**：`Down` 从最后一个冻结行进入可滚动区第一行；`Up` 反向同理；

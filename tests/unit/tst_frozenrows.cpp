@@ -1,4 +1,5 @@
 #include <virtualitemviews/itempane.h>
+#include <virtualitemviews/nativeheaderview.h>
 #include <virtualitemviews/tablewidgetadapter.h>
 #include <virtualitemviews/virtuallistview.h>
 #include <virtualitemviews/virtualtableview.h>
@@ -141,6 +142,7 @@ private slots:
     void cellsAreClippedByBothPaneDirections();
     void verticalHeaderIsSplitPerRowPane();
     void frozenRowsSurviveTheStateRoundTrip();
+    void rowBoundaryLooksLikeTheColumnBoundary();
     void frozenRowsAreClampedToWhatFits();
 };
 
@@ -599,6 +601,51 @@ void TestFrozenRows::frozenRowsSurviveTheStateRoundTrip()
     QCOMPARE(legacyView.frozenBottomRows(), 0);
     QCOMPARE(legacyView.panes().size(), 2);      // frozen column pane + scrolling pane
     QCOMPARE(legacyView.itemPanes().size(), 1);  // no frozen rows in a v1 state
+}
+
+void TestFrozenRows::rowBoundaryLooksLikeTheColumnBoundary()
+{
+    auto *model = tableModel(this);
+    FrozenTableAdapter adapter;
+    VirtualTableView view;
+    view.setTableAdapter(&adapter);
+    view.setUniformItemHeight(kRowHeight);
+    view.setDefaultColumnWidth(kColumnWidth);
+    view.setModel(model);
+    showView(&view, QSize(kViewWidth, kViewHeight));
+
+    view.setFrozenColumns({0});
+    view.setFrozenRows(2);
+    view.flushPendingRelayout();
+    QApplication::processEvents();
+
+    // Same colour as the column boundary: what the current style paints a section separator
+    // with (the table probes it once and both directions use it).
+    QCOMPARE(view.itemPaneSeparatorColor(), NativeHeaderView::sectionSeparatorColor(&view));
+
+    // The row boundary line crosses the row-number strip, exactly like the column boundary
+    // line crosses the header strip.
+    const QList<QHeaderView *> strips = verticalStrips(view);
+    QVERIFY(!strips.isEmpty());
+    const QVector<QRect> rowLines = view.itemPaneSeparatorRects();
+    QCOMPARE(rowLines.size(), view.itemPanes().size() - 1);
+    for (const QRect &line : rowLines) {
+        QVERIFY(line.left() <= strips.first()->geometry().left());
+        QCOMPARE(line.right() + 1, view.viewport()->geometry().right() + 1);
+    }
+
+    // One knob for both directions: the table's separator style reaches the row boundary as
+    // well (width, pen style and an optional explicit colour).
+    PaneSeparatorStyle custom;
+    custom.width = 3;
+    custom.lineStyle = Qt::DashLine;
+    custom.color = QColor(200, 30, 30);
+    view.setPaneSeparatorStyle(custom);
+    view.flushPendingRelayout();
+    QApplication::processEvents();
+    QCOMPARE(view.itemPaneSeparatorStyle(), custom);
+    for (const QRect &line : view.itemPaneSeparatorRects())
+        QCOMPARE(line.height(), custom.width);
 }
 
 void TestFrozenRows::frozenRowsAreClampedToWhatFits()

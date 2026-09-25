@@ -675,6 +675,9 @@ void VirtualTableView::setPaneSeparatorStyle(const PaneSeparatorStyle &style)
         return;
     }
     m_paneSeparatorStyle = style;
+    // One look for both directions: the row pane boundary gets the same width, pen style and
+    // (optional) explicit colour, so a table never shows two different kinds of boundary line.
+    setItemPaneSeparatorStyle(style);
     syncHeaderPanes();
     syncPaneSeparatorLines();
     emit columnGeometryChanged();
@@ -1364,6 +1367,21 @@ QRect VirtualTableView::cellRect(qsizetype row, int logicalColumn) const
 // ---------------------------------------------------------------------------
 // Spans (§43 "spans", see docs/spans.md)
 // ---------------------------------------------------------------------------
+
+int VirtualTableView::itemPaneSeparatorLeftExtension() const
+{
+    // The row-number strip is outside the viewport: the row pane boundary lines cross it
+    // just like the column boundary lines cross the header strip.
+    return (m_verticalHeaderVisible && m_verticalHeader) ? qMax(0, m_verticalHeaderWidth) : 0;
+}
+
+QColor VirtualTableView::itemPaneSeparatorColor() const
+{
+    // Exactly what the column boundary uses: the colour the current style paints a section
+    // separator with (probed by rendering one). A custom style therefore keeps both
+    // directions in step, and an explicit colour in the separator style still wins.
+    return NativeHeaderView::sectionSeparatorColor(this);
+}
 
 void VirtualTableView::setPanes(const QVector<TablePaneSpec> &panes)
 {

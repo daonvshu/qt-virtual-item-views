@@ -157,6 +157,12 @@ public:
     {
         return m_panes.paneOfColumn(logicalIndex);
     }
+    /// The row pane boundary lines reach across the row-number strip as well, so the
+    /// horizontal and the vertical boundaries look the same (§31, docs/row-freezing.md).
+    int itemPaneSeparatorLeftExtension() const override;
+    /// Same colour the column boundary uses - the one the current style paints section
+    /// separators with - so both directions look identical.
+    QColor itemPaneSeparatorColor() const override;
     /// Explicit pane list (§43 "advanced panes"): panes in visual order, each
     /// with its own columns and scroll group. An empty list restores the default
     /// "frozen left | scrollable | frozen right" layout, so setFrozenColumns()
