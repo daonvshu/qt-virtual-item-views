@@ -2104,7 +2104,11 @@ VirtualItemView::DropTarget VirtualItemView::resolveDropTarget(const QPoint &vie
     DropTarget target;
     if (!m_layout || m_layout->itemCount() <= 0)
         return target;
-    const qint64 offset = m_scrollOffset + qMax(0, viewportPos.y());
+    // Same pane mapping as indexAt(): a frozen top row does not scroll and the
+    // bottom band is pinned to the bottom edge, so the content offset under the
+    // cursor is not "scrollOffset + y" once rows are frozen (§31 row direction).
+    const ItemPane::Type pane = itemPaneAtY(viewportPos.y());
+    const qint64 offset = itemPaneScrollOffset(pane) + qMax(0, viewportPos.y());
     if (offset < 0 || offset >= m_layout->contentExtent())
         return target;
     const qsizetype row = m_layout->indexAtOffset(offset);
@@ -2131,10 +2135,15 @@ QRect VirtualItemView::resolveDropIndicatorRect(const DropTarget &target) const
         ? m_model->index(target.row - 1, 0, target.parent)
         : QModelIndex();
     qint64 offset = -1;
+    // The line belongs to the band of the row it refers to: a frozen row keeps the
+    // frozen band's mapping instead of the scrolling offset.
+    ItemPane::Type pane = ItemPane::Type::Scrollable;
     if (before.isValid()) {
         const qsizetype row = viewItemForIndex(before);
-        if (row >= 0)
+        if (row >= 0) {
             offset = m_layout->offsetOf(row) + m_layout->itemSize(row);
+            pane = itemPaneForRow(row);
+        }
     }
     if (offset < 0) {
         const QModelIndex at = m_model->index(target.row, 0, target.parent);
@@ -2142,8 +2151,9 @@ QRect VirtualItemView::resolveDropIndicatorRect(const DropTarget &target) const
         if (row < 0)
             return QRect();
         offset = m_layout->offsetOf(row);
+        pane = itemPaneForRow(row);
     }
-    const int y = int(offset - m_scrollOffset);
+    const int y = int(offset - itemPaneScrollOffset(pane));
     return QRect(0, y - 1, viewport()->width(), 2);
 }
 

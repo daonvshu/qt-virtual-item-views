@@ -46,6 +46,7 @@ viv_add_test(tst_celllifecycle unit/tst_celllifecycle.cpp)
 viv_add_test(tst_headerstructure unit/tst_headerstructure.cpp)
 viv_add_test(tst_dynamicanchor unit/tst_dynamicanchor.cpp)
 viv_add_test(tst_selection unit/tst_selection.cpp)
+viv_add_test(tst_dndfrozen unit/tst_dndfrozen.cpp)
 viv_add_test(tst_modelmutationfuzz fuzz/tst_modelmutationfuzz.cpp)
 
 if(VIRTUALITEMVIEWS_BUILD_GUI_TESTS)

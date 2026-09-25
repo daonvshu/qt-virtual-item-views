@@ -113,3 +113,10 @@
   Ctrl 点击与 MultiSelection 的点击切换的是**整行**而不是单个单元格（此前只切一格）。
   回归测试：`tst_selection`（4 例：NoSelection 的点击与 Space、Space 切换当前项、
   SelectRows 的 Ctrl 点击切换整行、MultiSelection 每次点击切换整行）。
+* **冻结行下的拖放坐标**：`resolveDropTarget()` 与 `resolveDropIndicatorRect()` 以前用
+  `scrollOffset + viewportPos.y()` 直接换算内容偏移，而 `indexAt()` 早已按 pane 折回；冻结行
+  存在时鼠标指向的行与实际算出的落点会不一致（落点跑偏、插入线跑到视口外）。现在两者共用
+  与命中测试相同的 pane 映射（`itemPaneAtY()` + `itemPaneScrollOffset()`），插入线也画在
+  它所属那个 pane 的坐标系里。
+  回归测试：`tst_dndfrozen`（2 例：冻结带与滚动带各自的落点、三条边界线的位置；
+  已确认还原旧映射时用例会失败 —— 落点从第 0 行变成第 50 行、指示线跑到 y=-1500）。
