@@ -139,7 +139,7 @@ void setPanes(const QVector<PaneSpec> &specs);   // 空 = 回到默认三段
 4. 拖放与选择：命中合并区域解析到锚点，插入指示器用合并矩形。
 5. Advanced panes：把固定三段重构为 pane 列表（`PaneSpec`），`setFrozenColumns()` 变成糖。
 6. 示例与文档：`examples/table_spans`（跨行标题 + 跨列小计 + 冻结 pane 组合），
-   README 能力表与路线图同步。
+   [features.md](features.md) 能力表与路线图同步。
 
 每一项都按框架既有节奏收尾：先补规格/实现，再补单元测试，最后跑 Qt 5 / Qt 6 双配置构建、
 CTest 与示例（见 README 的"验证"一节）。

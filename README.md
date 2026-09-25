@@ -1,12 +1,69 @@
 # VirtualItemViews
 
-Qt Widgets 的**虚拟化 Item View 框架**：用 `QAbstractItemModel` 做数据源，只实例化可见区、
-overscan 和 pinned 范围内的真实 QWidget，并在滚动时复用它们。
+> **Qt Widgets 的虚拟化 Item View 框架**：用 `QAbstractItemModel` 做数据源，只实例化可见区、overscan 与 pinned 范围内的**真实 QWidget**，滚动时复用它们。
+
+Virtualized QWidget item views for Qt Widgets — real widgets, but only where you can see them. C++17 · Qt 5.15 / Qt 6.2+ · static or shared.
+
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Qt](https://img.shields.io/badge/Qt-5.15%20%7C%206.2%2B-41cd52.svg)](docs/abi.md)
+[![C++17](https://img.shields.io/badge/C%2B%2B-17-blue.svg)](CMakeLists.txt)
+[![Version](https://img.shields.io/badge/version-1.0.0-brightgreen.svg)](CHANGELOG.md)
 
 它**不是** `QListView` 的替代品。它解决的是另一个工程折中：复杂业务行用 Delegate 绘制会带来大量
 `paint`、`geometry`、`hit-test`、`editorEvent` 样板代码，而 `QListWidget + setItemWidget` 又会为
 每一行创建真实控件。VirtualItemViews 提供第三条路：**只创建看得见的行，且这些行是真正的
 QWidget**。
+
+## 亮点
+
+* **只创建看得见的行，而且它们是真控件** —— 行内的按钮、开关、进度条、编辑器、异步图片照常工作，
+  不用写 `paint()` / `sizeHint()` / `hitTest()` / `editorEvent()` 那一套 Delegate 样板。
+* **千万级逻辑行不虚**：1,000,000 行列表打开 15.8 ms、稳态滚动 0.89 ms/步、滚动期间 0 次
+  new/delete；1,000,000 个同时可见行的树打开 4.2 s、展开一条 4 层深路径 174.9 ms 且只查模型 48 次。
+  数字与命令见 [performance.md](docs/performance.md)。
+* **动态高度**：估计值 + 测量反馈 + `ScrollAnchor`，异步改变行高不让视口跳动。
+* **表格能干的活都干了**：冻结列（左/右）、冻结行（上/下）、span 合并、多滚动组（任意 pane 与
+  滚动组）、表头动画与拖动换序、Row Widget / Cell Widget 两种物化模式；列几何只有一个事实来源
+  （`HeaderGeometry`），没有第二份副本。
+* **树**：可见行压平 + 同一个 list kernel；expand/collapse 是增量的（每个已展开父节点一棵
+  Fenwick 前缀和），结构变更保留展开状态与滚动锚点。
+* **交互**：拖放（视图管交互、模型管语义，树支持「成为子节点」）、像素滚动、触控板 `pixelDelta`
+  1:1、焦点 / IME / popup pinning、`QSortFilterProxyModel` 直连。
+* **可访问性**：`QAccessibleInterface` 桥接只暴露可见行（百万行模型仍是十几个节点），表格另有
+  `QAccessibleTableInterface` / `QAccessibleTableCellInterface`。
+* **工程化**：静态库与动态库都支持，装完就是标准 CMake 包（消费端一行 `find_package`）；公开 API
+  按「应用 / 扩展 / 诊断 / 私有」四级冻结；`pwsh -File scripts/validate.ps1` 一条命令跑完四种组合
+  共 28 步验证。
+
+## 能力概览
+
+| 区域 | 内容 |
+| --- | --- |
+| 内核 | `VirtualItemView`（基于 `QAbstractScrollArea`）、`WidgetAdapter` / `WidgetRecycler` 分池、`ScrollMapper`（64 位逻辑滚动空间）、`SizeIndex`（固定 / 动态，动态侧只存「与估计值不同」的行）、`LayoutPolicy` / `ListLayout` |
+| 列表 | `VirtualListView`：固定高度 + 动态高度 + 异步测量 + 滚动锚点 |
+| 表格 | `VirtualTableView`：`HeaderGeometry` 单一事实来源、Row Widget / Cell Widget 两种模式、列 resize / move / hide / 排序 / 状态持久化 |
+| 冻结 | 冻结列（左/右）、冻结行（上/下）、显式 pane 列表与多滚动组、交界线样式 |
+| 合并 | span（`TableSpanProvider` / `TableSpanMap`）：矩形完全由已提交几何推出，两种物化模式都支持 |
+| 表头 | `NativeHeaderView`（QHeaderView 适配）、`VirtualHeaderView` + `HeaderWidgetAdapter`（每个可见 section 一个真控件）、换序动画 |
+| 树 | `VirtualTreeView`：增量展开/折叠、缩进、分支指示与自定义渲染器、结构变更保状态 |
+| 交互 | 拖放（含树「成为子节点」与边缘自动滚动）、选择模式、像素滚动、键盘导航、pin / IME / popup |
+| 数据 | 任意 `QAbstractItemModel`（含 `QSortFilterProxyModel`）、完整模型信号矩阵 |
+| 可访问性 | `installAccessibilityFactory()`、表格与单元格接口、焦点与动作 |
+| 工程化 | 静态 + 动态库、安装包与消费端冒烟测试、API / ABI 文档、12 个示例、基准与一键验证 |
+| 规模 | 十万到千万级逻辑行；实测基线见 [performance.md](docs/performance.md) |
+
+逐项状态（60 余条，含落点语义、边界与对应示例）见 **[docs/features.md](docs/features.md)**。
+
+## 界面预览
+
+下面几张图是仓库里的示例程序自己导出的（`--snapshot`，无人值守可复现），不是手绘示意图；
+重跑一遍就能得到同样的图：
+
+| 冻结行 + 冻结列 + 行号条（`table_frozen_rows --snapshot`） | 合并单元格（`table_spans --snapshot`） |
+| --- | --- |
+| ![冻结行与冻结列](docs/images/frozen.png) | ![合并单元格](docs/images/spans.png) |
+| 树 + 自定义分支图标（`tree_view --custom-icons --snapshot`） | 拖放：三种落点语义（`drag_drop --hover tree:120 --snapshot`） |
+| ![树](docs/images/tree.png) | ![拖放指示器](docs/images/dragdrop.png) |
 
 ## 定位与适用场景
 
@@ -19,71 +76,9 @@ QWidget**。
 不适合：
 
 * 只需要纯绘制、追求极限吞吐的表格（请用 `QTableView` + `QStyledItemDelegate`）；
-* 需要行冻结、span、GPU/scenegraph 渲染的场景（未实现，见路线图）。
-
-## 当前状态（v1.0.0）
-
-首个发布版本的公开 API 已按"应用 / 扩展 / 诊断 / 私有"四级冻结（[docs/api-stability.md](docs/api-stability.md)），
-静态库与动态库都能构建（[docs/abi.md](docs/abi.md)），一条命令验证全部组合：
-`pwsh -File scripts/validate.ps1`。下表按能力逐项列出（括号里是该项落地的版本）。
-
-| 能力 | 状态 |
-| --- | --- |
-| `VirtualItemView`（基于 QAbstractScrollArea 的虚拟化内核） | 已实现 |
-| `WidgetAdapter` / `WidgetRecycler`（按 WidgetType 分池） | 已实现 |
-| `ScrollMapper`（64 位逻辑滚动空间 + 带锚点压缩映射） | 已实现 |
-| `SizeIndex`：`FixedSizeIndex` + `BlockSizeIndex`（分块，每块一个基值 + 只记"与估计值不同"的稀疏例外） | 已实现 |
-| `LayoutPolicy` / `ListLayout`（几何策略，含 margins、横向布局预留） | 已实现 |
-| `VirtualListView`：固定高度 + 动态高度（估计值 + 测量反馈） | 已实现 |
-| `VirtualTableView`（v0.4 Table MVP，Row Widget Mode） | 已实现 |
-| `HeaderGeometry`：列宽/顺序/隐藏/排序状态的唯一事实来源（§14/§45.10） | 已实现 |
-| `NativeHeaderView`：QHeaderView 与 HeaderGeometry 双向同步（无信号回环） | 已实现 |
-| `VirtualHeaderView` + `HeaderWidgetAdapter`（§17-§19）：每个可见 section 一个真实 QWidget，只 materialize 可见列 + 横向 overscan + pinned | 已实现 |
-| 表头动画（§23/§24）：committed geometry 与 visual geometry 分离 —— 拖动列（`VirtualHeaderView`：拖动距离阈值、被拖列跟随指针、**邻居同曲线平滑让位**、松手一次提交）、或显式请求的换序（`moveColumn(..., MoveAnimation::Animate)`）由渲染器滑到新位置（默认 300 ms、OutCubic，`setHeaderAnimationDuration()` 可调、0 关闭），body 只在 commit 时重排一次；程序化换序默认**即时**，resize / 滚动 / pane 变化保持逐帧同步，native 表头渲染器忽略该设置 | 已实现 |
-| `ColumnHost` / `TableRowLayoutContext`：框架定位列，业务只管内容（§26/§27） | 已实现 |
-| 列 resize/move/hide、表头点击排序、横向像素滚动、表头状态 save/restore | 已实现 |
-| 冻结列（v0.7，§31）：`setFrozenColumns()` / `setFrozenRightColumns()`，冻结 pane 与可滚动 pane 共享同一份 `HeaderGeometry` | 已实现 |
-| 行冻结（v0.8，§31 行方向，[docs/row-freezing.md](docs/row-freezing.md)）：`setFrozenRows()` / `setFrozenBottomRows()`，冻结行钉在上下边缘、`itemPanes()` / `isRowFrozen()` / `itemPaneSeparatorRects()` 查询、每个可滚动行 pane 一个裁剪容器、命中与键盘/滚动按 pane 折回、**行号条按 pane 切分**（每条带子贴着自己的行）、**交界线与列冻结同款**（同一颜色/宽度/线型，横向线也跨过行号条）、冻结行数随表状态持久化（v2，旧格式仍可恢复）；冻结不产生额外滚动空间 | 已实现 |
-| 垂直行号表头：与 body 共享纵向偏移（行号始终对齐）、拖动分隔线写入显式行高（uniform 自动转 variable） | 已实现 |
-| Cell Widget Mode（v0.5）：`CellWidgetAdapter` + 二维虚拟化，只 materialize visibleRows x visibleColumns | 已实现 |
-| `visibleRows()` / `visibleColumns()` 可见区间查询 + 大列数 benchmark（100 列 x 1M 行，row vs cell 对照） | 已实现 |
-| `VirtualTreeView`（v0.6 Tree MVP）：`TreeVisibilityIndex` 压平可见行 + 同一个 list kernel | 已实现 |
-| 拖放（v0.7，§38）：视图侧交互（model flags 决定拖拽源、插入指示器、边缘自动滚动、拖拽期 pin 住拖拽源控件）+ 模型侧语义（`mimeData()`/`canDropMimeData()`/`dropMimeData()` 决定插入、移动或拒绝） | 已实现 |
-| 拖放目标：列表按行二分插入、表格按行/单元格（跟随 `SelectionBehavior`，冻结列 pane-aware 命中）、树支持"插到节点之间"与"成为子节点"（`ontoItem`，框选指示器）与末尾追加 | 已实现 |
-| 拖放观测：`itemDropped(parent, row, column, action)` 信号、`dropTargetAt()`/`dropIndicatorRect()`/`dropIndicatorStyle()` 诊断接口 | 已实现 |
-| Accessibility（v0.7，§37）：`installAccessibilityFactory()` 注册 `QAccessibleInterface` 桥接，按需暴露**可见行**（列表项 / 树节点 / 表格行 + 可见列的 cell），文本与状态取自 model 与已提交几何，100 万行模型仍是十几个节点 | 已实现 |
-| Accessibility 导航：current 作为 `focusChild()`、`childAt()` 命中、树层次（parent/children 往返）、表格行列语义、`press` 等价 `activateIndex()`（发 `clicked()`/`activated()`）、`setFocus`/`scrollUp/Down/Left/Right` 动作、Focus/Selection/ModelChange 事件 | 已实现 |
-| Accessibility 表格接口（v0.9，§37 / roadmap 2b）：表格视图节点实现 `QAccessibleTableInterface`（按**模型坐标**读：`rowCount()`/`columnCount()`/`cellAt()`、`columnDescription()`/`rowDescription()` 给表头文字、选择查询与整行整列选择），单元格节点实现 `QAccessibleTableCellInterface`（坐标、`table()`、`isSelected()`、合并单元格的 `rowExtent()`/`columnExtent()`）；`selectedCells()` 仍然只给窗口内的节点，百万行"全选"不会物化一百万个接口 | 已实现 |
-| `BlockSizeIndex` 内存（v0.9，roadmap 2c，[docs/performance.md](docs/performance.md) §4）：只记录"实测过且与估计值不同"的行，没测量过的行不占存储，一千万元素均匀内容从约 40 MB 降到约 0.6 MB；`setSize()` 恰好写回基值时就释放例外，公开接口不变 | 已实现 |
-| Span（v0.7，§43）：`TableSpanProvider` / `TableSpanMap` + `setSpan()/removeSpan()/clearSpans()`；合并矩形完全由已提交列几何与行高推出（不存第二份几何），`indexAt()/cellRect()` 折回锚点，Cell Widget Mode 只物化锚点并把锚点控件放大到合并矩形 | 已实现 |
-| Span 一致性：拖放落点与插入指示器按锚点/合并矩形、accessibility 合并区域只暴露一个 cell、span 不跨 pane（裁剪到锚点 pane）、隐藏列自动变窄、列宽/行高变化后合并矩形自动跟随 | 已实现 |
-| Span 两种模式：Cell Widget Mode 只物化锚点（跨行合并由框架渲染）；Row Widget Mode 隐藏被覆盖列的 `ColumnHost`、锚点 host 占合并矩形，并在 `TableRowLayoutContext::spans()` 里把决定交给业务（`examples/table_spans`） | 已实现 |
-| Advanced panes（v0.7，§43）：`setPanes()` 取有序 `TablePaneSpec{columns, scroll, scrollGroup}` 列表（任意数量冻结 pane + 任意滚动组），每个 pane 一个表头渲染器、一条交界线，每个滚动 pane 一个裁剪容器，`setFrozenColumns()` 退化为默认三段的语法糖；主组跟随 `HeaderGeometry`/滚动条，其余组由 `setHorizontalOffset(group, offset)` 驱动 | 已实现 |
-| 树：expand/collapse、`expandRecursively()`（`*` 键递归展开）、Left/Right 导航、缩进、分支指示绘制与点击、双击展开 | 已实现 |
-| 树：分支图标可按状态自定义（`BranchIndicatorRenderer`，对应 `QTreeView::branch` 的 has-children / has-siblings / adjoins-item / open / closed，不解析样式表） | 已实现 |
-| 树：结构变更（insert/remove/move/layoutChanged/reset）保持展开状态与滚动锚点 | 已实现 |
-| overscan、`scrollTo`、ensureVisible、resize、滚轮、方向键/PageUp/PageDown/Home/End | 已实现 |
-| `QItemSelectionModel` current/selection、click/doubleClick/activated | 已实现 |
-| `dataChanged`/`rowsInserted`/`rowsRemoved`/`rowsMoved`/`layoutChanged`/`modelReset` | 已实现 |
-| `QSortFilterProxyModel` 直接作为 model | 已实现 |
-| ScrollAnchor（异步高度变化不跳动） | 已实现 |
-| focus / IME / popup pinning：`setItemPinned()`、`pinWidget()/unpinWidget()`、`setMaxPinnedItems()` | 已实现 |
-| `VirtualViewStats stats()` 诊断（logical/materialized/pooled/pinned + create/bind/recycle） | 已实现 |
-| 选择模式：`SelectionMode`（No/Single/Multi/Extended）+ `SelectionBehavior`（Items/Rows） | 已实现 |
-| 像素滚动：`WheelScrollMode`（Pixels 默认 / Items）、`setWheelScrollPixels()`、`scrollByPixels()`、`setVerticalOffset()`、触控板 `pixelDelta` 1:1 | 已实现 |
-| 可选生命周期日志 `setLifecycleLoggingEnabled()`（create/bind/unbind/recycle/pin） | 已实现 |
-| `TreeVisibilityIndex`（可见行压平、**增量**展开/折叠、深度、row 双向查询）：每个已展开父节点一棵 Fenwick 前缀和，索引 → 可见行 O(depth × log siblings)，展开/折叠只沿路径更新（百万可见行下 4 层展开 969 ms → 116 ms、折叠 230 ms → 4 ms、工作集 114 → 76 MB） | 已实现 |
-| 单元测试 248 个用例 + 4 个变异测试 + 10 个 GUI 交互场景（共 20 个 CTest 目标） | 已实现 |
-| 12 个示例（simple list / order cards / dynamic height / million rows / table row widgets / table many columns / table custom header / tree / drag & drop / table spans / table panes / table frozen rows） | 已实现 |
-| benchmark（1M 行、表格 row vs cell、树：宽树 + 变更 + 锚点，稳态滚动零分配校验）；v1.0 实测基线见 [docs/performance.md](docs/performance.md) §3 | 已实现 |
-| API 稳定性（v1.0，[docs/api-stability.md](docs/api-stability.md)）：23 个公开头文件按"应用 / 扩展 / 诊断 / 私有"四级冻结，只加不删、不改默认值语义、不新增"接受但忽略"的入口；变更记进 [CHANGELOG.md](CHANGELOG.md) | 已实现 |
-| 静态库与动态库（v1.0，[docs/abi.md](docs/abi.md)）：`VIRTUALITEMVIEWS_EXPORT` 统一符号可见性、宏由 CMake 目标自动传播；共享构建产出 `bin/VirtualItemViews.dll` + 导入库；Qt 5.15.2 / Qt 6.11.2 × 静态 / 动态四种组合都已构建并跑通全部测试 | 已实现 |
-| 安装与消费（v1.0）：`cmake --install` 导出标准 CMake 包（头文件 + 库 + `VirtualItemViewsConfig.cmake`，内含 `find_dependency(Qt…)`），消费端只写 `find_package(VirtualItemViews)` + `target_link_libraries(app PRIVATE VirtualItemViews::VirtualItemViews)`；[tests/install/consumer](tests/install/consumer) 是只认安装包的冒烟测试（28 项自检），四种组合都已实跑通过 | 已实现 |
-
-未实现（按 §43 路线图）：accessibility 还没有文本/编辑接口
-（`TextInterface`/`EditableTextInterface`，行内编辑器自己是真实控件会自己暴露）；
-树的**结构变更**（insert/remove/move/reset）仍然整体重建可见行列表（O(可见行)，见
-[docs/performance.md](docs/performance.md) §4）。推进顺序见 [docs/roadmap.md](docs/roadmap.md)。
+* 需要 GPU / scenegraph 渲染的场景（本库的绘制走 QPainter，与 `QWidget` 行同源）；
+* 每行都是重型浏览器/视频控件、且要求十万级**同时可见**的场景（真控件始终有成本，
+  虚拟化的收益来自"只看得到的那几十个"）。
 
 ## 快速开始
 
@@ -327,6 +322,122 @@ cmake-build-debug/bin/bench_listview --tree
 可执行文件统一在 `<build>/bin`、库在 `<build>/lib`（静态与动态都一样），所以示例/测试/基准
 不需要任何 PATH 技巧就能找到共享库 —— 原因与细节见 [docs/abi.md](docs/abi.md)。
 
+## 安装与消费
+
+装出来的包是标准的 CMake 包：消费端只需要 `find_package(VirtualItemViews)`，不需要知道源码树
+或构建树，也不用自己 `find_package(Qt6)`（Config 会用 `find_dependency()` 找回同一个 Qt）。
+
+```bash
+# 1) 构建并安装（静态或动态都行，默认静态）
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release \
+      -DCMAKE_PREFIX_PATH=D:/devlib/Qt/6.11.2/msvc2022_64
+cmake --build build
+cmake --install build --prefix D:/viv        # 头文件 + 库 + CMake package
+
+# 2) 消费端 CMakeLists（完整可跑的版本在 tests/install/consumer/）
+#    find_package(VirtualItemViews REQUIRED)
+#    target_link_libraries(app PRIVATE VirtualItemViews::VirtualItemViews)
+cmake -S tests/install/consumer -B consumer-build -G Ninja \
+      -DCMAKE_PREFIX_PATH="D:/viv;D:/devlib/Qt/6.11.2/msvc2022_64"
+cmake --build consumer-build
+consumer-build/viv_consumer                   # 自检：list/table/tree/span/冻结列/accessibility
+```
+
+* `CMAKE_PREFIX_PATH` 要把**安装前缀**和 **Qt kit** 两个都写上：安装前缀里是本库，Qt 由 Config 的
+  `find_dependency()` 去找。
+* 消费的是**动态**安装（`-DVIRTUALITEMVIEWS_BUILD_SHARED=ON`）时，`VirtualItemViews.dll` 在
+  `<prefix>/bin`：Windows 上把它放到 exe 同目录或加进 `PATH` 即可（上面自检脚本就是这么跑的）。
+  静态安装没有这一步。
+* 安装前缀是**按 Qt 大版本**区分的（Config 里写死了 `find_dependency(Qt6 …)` 或 Qt5），
+  Qt 5 与 Qt 6 各装各的前缀。
+* `tests/install/consumer` 是我们的冒烟测试：它只认 `find_package`，跑完 28 项自检（列表虚拟化、
+  表格几何/状态/span/冻结列与显式 pane、树展开折叠、accessibility 工厂），退出码 0 才算通过。
+  Qt 5.15.2 / Qt 6.11.2 × 静态 / 动态四种组合都已实跑通过。
+
+## 构建
+
+* C++17，CMake 3.16+，**Qt 6.2+ 或 Qt 5.15+**（Core/Gui/Widgets；测试需要对应版本的 Qt::Test）。
+  配置时给出 Qt kit 即可，无需改动工程：
+
+```bash
+# Qt 6
+cmake -S . -B cmake-build-debug-qt6  -G Ninja -DCMAKE_BUILD_TYPE=Debug \
+      -DCMAKE_PREFIX_PATH=D:/devlib/Qt/6.11.2/msvc2022_64
+# Qt 5
+cmake -S . -B cmake-build-debug-qt5  -G Ninja -DCMAKE_BUILD_TYPE=Debug \
+      -DCMAKE_PREFIX_PATH=D:/devlib/Qt/5.15.2/msvc2019_64
+```
+
+* 选项：`VIRTUALITEMVIEWS_BUILD_SHARED`、`VIRTUALITEMVIEWS_BUILD_TESTS`、
+  `VIRTUALITEMVIEWS_BUILD_EXAMPLES`、`VIRTUALITEMVIEWS_BUILD_BENCHMARKS`、
+  `VIRTUALITEMVIEWS_BUILD_GUI_TESTS`。
+* **静态库（默认）与动态库都支持**：`-DVIRTUALITEMVIEWS_BUILD_SHARED=ON` 即构建
+  `VirtualItemViews.dll` + 导入库；符号可见性由 `include/virtualitemviews/global.h` 的
+  `VIRTUALITEMVIEWS_EXPORT` 决定，宏由 CMake 目标自动传播，业务代码不需要手工 define。
+  版本号/SOVERSION 规则、什么改动算 ABI 破坏、Qt 与编译器支持矩阵见 [docs/abi.md](docs/abi.md)。
+* 安装：`cmake --install` 会导出 `VirtualItemViews::VirtualItemViews` 目标与头文件
+  （`include/virtualitemviews/**`）。
+
+## Qt 5 / Qt 6 兼容约定
+
+CMake 用 `find_package(QT NAMES Qt6 Qt5 …)` 选择版本（Qt5Config 不定义 `QT_VERSION_MAJOR`，
+因此从 `Qt6::Core` / `Qt5::Core` target 推断），之后统一链接 `Qt${QT_VERSION_MAJOR}::*`。
+代码层面的差异只有三处，都集中在头文件注释里说明：
+
+| 差异 | 处理方式 |
+| --- | --- |
+| Qt 5 的 `QList` 没有 `QVector` 的 API（`resize/fill/remove(n)/insert(n)`、按长度构造） | 需要这些操作的可变长数组统一使用 `QVector<T>`（Qt 6 中 `QVector` 就是 `QList`），例如 `BlockSizeIndex` 的例外表和块列表、`TreeVisibilityIndex` 的可见行列表 |
+| `QAbstractItemModel::dataChanged()` 的 roles 参数在 Qt 5 是 `QVector<int>`、Qt 6 是 `QList<int>` | 槽函数统一声明为 `QVector<int>`（Qt 6 中两者同一类型） |
+| `QMouseEvent::position()` 只存在于 Qt 6 | 内部用 `QT_VERSION_CHECK(6,0,0)` 分支到 `QMouseEvent::pos()` |
+
+同一份代码已在 Qt 6.11.2 / msvc2022_64 与 Qt 5.15.2 / msvc2019_64 两套配置下编译并跑通全部测试。
+
+## 验证
+
+* **一条命令跑完全部验证**（项目自带脚本，不是只在本机可用的临时命令）：
+
+```bash
+pwsh -File scripts/validate.ps1                       # Qt6 + Qt5 x 静态 + 动态
+pwsh -File scripts/validate.ps1 -Library Static       # 只跑静态
+pwsh -File scripts/validate.ps1 -SkipBenchmarks -SkipExamples
+```
+
+  脚本对每个组合依次做：configure → `all` 构建 → CTest → 12 个示例（`--exit-after`，退出码必须 0）
+  → benchmark 不变量自检 → `cmake --install` + [tests/install/consumer](tests/install/consumer)
+  消费端冒烟测试。Qt 路径默认取方案文档记录的本机 kit，可用 `-QtBin`/`-Vcvars`/`-CMake` 覆盖；
+  最后按失败步数返回退出码（0 = 全绿）。
+* 单元测试 / 变异测试 / GUI 交互测试都注册进 CTest（固定 `QT_QPA_PLATFORM=offscreen`）：
+  `ctest --test-dir <build> -C Debug --output-on-failure`。
+* **跑测试/示例/基准前必须把 Qt 的 `bin` 放进 `PATH`**（或用导入 MSVC + Qt 环境的验证脚本）：
+  否则测试会以"找不到 Qt6Core.dll/Qt5Core.dll"之类的缺 DLL 错误失败，看起来像大面积用例失败。
+  例如 `set PATH=D:\devlib\Qt\6.11.2\msvc2022_64\bin;%PATH%` 后再运行；
+  `cmake --build` 自身不需要（构建系统用的是导入库）。
+  本库自己的共享库**不需要** PATH：它和可执行文件一起放在 `<build>/bin`（见 [docs/abi.md](docs/abi.md)）。
+* 示例与基准程序都可无人值守运行：示例传 `--exit-after <ms>` 时会在退出前打印一行统计
+  （可见行 / 实例化 / 累计创建），退出码 0 表示正常结束；基准程序在违反虚拟化不变量时返回非 0。
+* Debug 构建里 Qt 的 `Q_ASSERT` 失败在 MSVC 上会弹出模态对话框，headless 运行时表现为
+  "程序不动、CPU 为 0"。排查疑似卡住时先按"断言失败"看（最常见来源是模型不满足
+  `QAbstractItemModel` 契约，例如 `rowCount()` 对无效 parent 返回了 0），不要先怀疑滚动/回收路径。
+
+## 文档
+
+* [docs/architecture.md](docs/architecture.md)：分层、核心不变量、一次 materialization pass 的细节
+* [docs/lifecycle.md](docs/lifecycle.md)：控件生命周期状态机、适配器契约、pin 规则
+* [docs/model-signals.md](docs/model-signals.md)：模型信号处理矩阵与设计要点
+* [docs/focus-ime.md](docs/focus-ime.md)：焦点 / IME / popup pin 规则、诊断与 pin 上限
+* [docs/table-layout.md](docs/table-layout.md)：Table 阶段约束（HeaderGeometry 单一事实来源）
+* [docs/drag-and-drop.md](docs/drag-and-drop.md)：拖放契约（视图侧交互 vs 模型侧语义、三种落点语义）
+* [docs/accessibility.md](docs/accessibility.md)：辅助功能桥接（虚拟节点、可见行、树层次与行列语义）
+* [docs/spans.md](docs/spans.md)：span 与 advanced panes 的规格（语义、实现状态、多滚动组细节）
+* [docs/performance.md](docs/performance.md)：复杂度、规模特性、基准使用与已知取舍
+* [docs/header-animation.md](docs/header-animation.md)：表头动画契约（committed/visual 两层几何、同步矩阵、渲染器支持）
+* [docs/row-freezing.md](docs/row-freezing.md)：行冻结规格（§31 行方向类比：不变量、API、布局与滚动、实现顺序）
+* [docs/api-stability.md](docs/api-stability.md)：公开 API 的四级分类（应用/扩展/诊断/私有）、冻结规则与 v1.0 复核清单
+* [docs/abi.md](docs/abi.md)：版本号与 SOVERSION 规则、静态/动态构建、什么算 ABI 破坏、Qt 与编译器支持矩阵
+* [docs/features.md](docs/features.md)：完整能力清单与状态（README 首页只放概览）
+* [CHANGELOG.md](CHANGELOG.md)：版本变更（破坏性变更单独列出）
+* [docs/roadmap.md](docs/roadmap.md)：进度与路线图（已完成 / 待做 / 每步完成定义 / 决策记录）
+
 ## 目录结构
 
 ```
@@ -363,126 +474,22 @@ examples/     simple_list / order_cards / dynamic_height / million_rows
 docs/         architecture.md  lifecycle.md  model-signals.md  focus-ime.md
               table-layout.md  drag-and-drop.md  accessibility.md  spans.md
               performance.md  header-animation.md  row-freezing.md  api-stability.md
-              abi.md  roadmap.md
+              abi.md  features.md  roadmap.md
+              images/     README 里的示例截图（由 examples 的 --snapshot 导出）
 ```
 
 公共头以 `include/` 为根（例如 `#include <virtualitemviews/virtuallistview.h>`），安装后会放到
 `include/virtualitemviews/`。
 
-## 文档
+## 已知限制
 
-* [docs/architecture.md](docs/architecture.md)：分层、核心不变量、一次 materialization pass 的细节
-* [docs/lifecycle.md](docs/lifecycle.md)：控件生命周期状态机、适配器契约、pin 规则
-* [docs/model-signals.md](docs/model-signals.md)：模型信号处理矩阵与设计要点
-* [docs/focus-ime.md](docs/focus-ime.md)：焦点 / IME / popup pin 规则、诊断与 pin 上限
-* [docs/table-layout.md](docs/table-layout.md)：Table 阶段约束（HeaderGeometry 单一事实来源）
-* [docs/drag-and-drop.md](docs/drag-and-drop.md)：拖放契约（视图侧交互 vs 模型侧语义、三种落点语义）
-* [docs/accessibility.md](docs/accessibility.md)：辅助功能桥接（虚拟节点、可见行、树层次与行列语义）
-* [docs/spans.md](docs/spans.md)：span 与 advanced panes 的规格（语义、实现状态、多滚动组细节）
-* [docs/performance.md](docs/performance.md)：复杂度、规模特性、基准使用与已知取舍
-* [docs/header-animation.md](docs/header-animation.md)：表头动画契约（committed/visual 两层几何、同步矩阵、渲染器支持）
-* [docs/row-freezing.md](docs/row-freezing.md)：行冻结规格（§31 行方向类比：不变量、API、布局与滚动、实现顺序）
-* [docs/api-stability.md](docs/api-stability.md)：公开 API 的四级分类（应用/扩展/诊断/私有）、冻结规则与 v1.0 复核清单
-* [docs/abi.md](docs/abi.md)：版本号与 SOVERSION 规则、静态/动态构建、什么算 ABI 破坏、Qt 与编译器支持矩阵
-* [CHANGELOG.md](CHANGELOG.md)：版本变更（破坏性变更单独列出）
-* [docs/roadmap.md](docs/roadmap.md)：进度与路线图（已完成 / 待做 / 每步完成定义 / 决策记录）
-
-## 构建
-
-* C++17，CMake 3.16+，**Qt 6.2+ 或 Qt 5.15+**（Core/Gui/Widgets；测试需要对应版本的 Qt::Test）。
-  配置时给出 Qt kit 即可，无需改动工程：
-
-```bash
-# Qt 6
-cmake -S . -B cmake-build-debug-qt6  -G Ninja -DCMAKE_BUILD_TYPE=Debug \
-      -DCMAKE_PREFIX_PATH=D:/devlib/Qt/6.11.2/msvc2022_64
-# Qt 5
-cmake -S . -B cmake-build-debug-qt5  -G Ninja -DCMAKE_BUILD_TYPE=Debug \
-      -DCMAKE_PREFIX_PATH=D:/devlib/Qt/5.15.2/msvc2019_64
-```
-
-* 选项：`VIRTUALITEMVIEWS_BUILD_SHARED`、`VIRTUALITEMVIEWS_BUILD_TESTS`、
-  `VIRTUALITEMVIEWS_BUILD_EXAMPLES`、`VIRTUALITEMVIEWS_BUILD_BENCHMARKS`、
-  `VIRTUALITEMVIEWS_BUILD_GUI_TESTS`。
-* **静态库（默认）与动态库都支持**：`-DVIRTUALITEMVIEWS_BUILD_SHARED=ON` 即构建
-  `VirtualItemViews.dll` + 导入库；符号可见性由 `include/virtualitemviews/global.h` 的
-  `VIRTUALITEMVIEWS_EXPORT` 决定，宏由 CMake 目标自动传播，业务代码不需要手工 define。
-  版本号/SOVERSION 规则、什么改动算 ABI 破坏、Qt 与编译器支持矩阵见 [docs/abi.md](docs/abi.md)。
-* 安装：`cmake --install` 会导出 `VirtualItemViews::VirtualItemViews` 目标与头文件
-  （`include/virtualitemviews/**`）。
-
-## 安装与消费
-
-装出来的包是标准的 CMake 包：消费端只需要 `find_package(VirtualItemViews)`，不需要知道源码树
-或构建树，也不用自己 `find_package(Qt6)`（Config 会用 `find_dependency()` 找回同一个 Qt）。
-
-```bash
-# 1) 构建并安装（静态或动态都行，默认静态）
-cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release \
-      -DCMAKE_PREFIX_PATH=D:/devlib/Qt/6.11.2/msvc2022_64
-cmake --build build
-cmake --install build --prefix D:/viv        # 头文件 + 库 + CMake package
-
-# 2) 消费端 CMakeLists（完整可跑的版本在 tests/install/consumer/）
-#    find_package(VirtualItemViews REQUIRED)
-#    target_link_libraries(app PRIVATE VirtualItemViews::VirtualItemViews)
-cmake -S tests/install/consumer -B consumer-build -G Ninja \
-      -DCMAKE_PREFIX_PATH="D:/viv;D:/devlib/Qt/6.11.2/msvc2022_64"
-cmake --build consumer-build
-consumer-build/viv_consumer                   # 自检：list/table/tree/span/冻结列/accessibility
-```
-
-* `CMAKE_PREFIX_PATH` 要把**安装前缀**和 **Qt kit** 两个都写上：安装前缀里是本库，Qt 由 Config 的
-  `find_dependency()` 去找。
-* 消费的是**动态**安装（`-DVIRTUALITEMVIEWS_BUILD_SHARED=ON`）时，`VirtualItemViews.dll` 在
-  `<prefix>/bin`：Windows 上把它放到 exe 同目录或加进 `PATH` 即可（上面自检脚本就是这么跑的）。
-  静态安装没有这一步。
-* 安装前缀是**按 Qt 大版本**区分的（Config 里写死了 `find_dependency(Qt6 …)` 或 Qt5），
-  Qt 5 与 Qt 6 各装各的前缀。
-* `tests/install/consumer` 是我们的冒烟测试：它只认 `find_package`，跑完 28 项自检（列表虚拟化、
-  表格几何/状态/span/冻结列与显式 pane、树展开折叠、accessibility 工厂），退出码 0 才算通过。
-  Qt 5.15.2 / Qt 6.11.2 × 静态 / 动态四种组合都已实跑通过。
-
-### Qt 5 / Qt 6 兼容约定
-
-CMake 用 `find_package(QT NAMES Qt6 Qt5 …)` 选择版本（Qt5Config 不定义 `QT_VERSION_MAJOR`，
-因此从 `Qt6::Core` / `Qt5::Core` target 推断），之后统一链接 `Qt${QT_VERSION_MAJOR}::*`。
-代码层面的差异只有三处，都集中在头文件注释里说明：
-
-| 差异 | 处理方式 |
-| --- | --- |
-| Qt 5 的 `QList` 没有 `QVector` 的 API（`resize/fill/remove(n)/insert(n)`、按长度构造） | 需要这些操作的可变长数组统一使用 `QVector<T>`（Qt 6 中 `QVector` 就是 `QList`），例如 `BlockSizeIndex` 的例外表和块列表、`TreeVisibilityIndex` 的可见行列表 |
-| `QAbstractItemModel::dataChanged()` 的 roles 参数在 Qt 5 是 `QVector<int>`、Qt 6 是 `QList<int>` | 槽函数统一声明为 `QVector<int>`（Qt 6 中两者同一类型） |
-| `QMouseEvent::position()` 只存在于 Qt 6 | 内部用 `QT_VERSION_CHECK(6,0,0)` 分支到 `QMouseEvent::pos()` |
-
-同一份代码已在 Qt 6.11.2 / msvc2022_64 与 Qt 5.15.2 / msvc2019_64 两套配置下编译并跑通全部测试。
-
-### 验证
-
-* **一条命令跑完全部验证**（项目自带脚本，不是只在本机可用的临时命令）：
-
-```bash
-pwsh -File scripts/validate.ps1                       # Qt6 + Qt5 x 静态 + 动态
-pwsh -File scripts/validate.ps1 -Library Static       # 只跑静态
-pwsh -File scripts/validate.ps1 -SkipBenchmarks -SkipExamples
-```
-
-  脚本对每个组合依次做：configure → `all` 构建 → CTest → 12 个示例（`--exit-after`，退出码必须 0）
-  → benchmark 不变量自检 → `cmake --install` + [tests/install/consumer](tests/install/consumer)
-  消费端冒烟测试。Qt 路径默认取方案文档记录的本机 kit，可用 `-QtBin`/`-Vcvars`/`-CMake` 覆盖；
-  最后按失败步数返回退出码（0 = 全绿）。
-* 单元测试 / 变异测试 / GUI 交互测试都注册进 CTest（固定 `QT_QPA_PLATFORM=offscreen`）：
-  `ctest --test-dir <build> -C Debug --output-on-failure`。
-* **跑测试/示例/基准前必须把 Qt 的 `bin` 放进 `PATH`**（或用导入 MSVC + Qt 环境的验证脚本）：
-  否则测试会以"找不到 Qt6Core.dll/Qt5Core.dll"之类的缺 DLL 错误失败，看起来像大面积用例失败。
-  例如 `set PATH=D:\devlib\Qt\6.11.2\msvc2022_64\bin;%PATH%` 后再运行；
-  `cmake --build` 自身不需要（构建系统用的是导入库）。
-  本库自己的共享库**不需要** PATH：它和可执行文件一起放在 `<build>/bin`（见 [docs/abi.md](docs/abi.md)）。
-* 示例与基准程序都可无人值守运行：示例传 `--exit-after <ms>` 时会在退出前打印一行统计
-  （可见行 / 实例化 / 累计创建），退出码 0 表示正常结束；基准程序在违反虚拟化不变量时返回非 0。
-* Debug 构建里 Qt 的 `Q_ASSERT` 失败在 MSVC 上会弹出模态对话框，headless 运行时表现为
-  "程序不动、CPU 为 0"。排查疑似卡住时先按"断言失败"看（最常见来源是模型不满足
-  `QAbstractItemModel` 契约，例如 `rowCount()` 对无效 parent 返回了 0），不要先怀疑滚动/回收路径。
+* accessibility 还没有文本/编辑接口（`TextInterface` / `EditableTextInterface`；行内编辑器是真实
+  控件，会自己暴露）。
+* 树的**结构变更**（insert/remove/move/reset）仍然整体重建可见行列表（O(可见行)），见
+  [performance.md](docs/performance.md) §4。
+* 未实测的组合：GCC / Clang / Linux、Qt 6.2–6.10 的中间版本、`/MT` 运行库；Release 构建的性能
+  基线也未采集（[abi.md](docs/abi.md) §5 列出了已实测与未实测）。
+* 完整清单（含设计取舍）见 [docs/features.md](docs/features.md) 与 [docs/roadmap.md](docs/roadmap.md)。
 
 ## 命名与许可证
 

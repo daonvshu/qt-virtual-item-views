@@ -1,9 +1,9 @@
 # 路线图与进度
 
 > 这份文档是"已经做到哪、接下来做什么"的唯一事实来源。条款号（§N）对应方案文档
-> `VirtualItemViews_Architecture_v0.3.md`（§43 是路线图原文）；每项能力的详细说明见
-> README 的"当前状态"表。每收尾一步就更新这里，别让状态散落在 README、`docs/*.md`
-> 和提交信息三处。
+> `VirtualItemViews_Architecture_v0.3.md`（§43 是路线图原文）；每项能力的逐条状态见
+> [features.md](features.md)（README 首页只放概览）。每收尾一步就更新这里，别让状态散落在
+> README、`docs/*.md` 和提交信息三处。
 
 ## 1. 已完成
 
@@ -159,7 +159,7 @@ Wave 3（v1.0 工程化交付）。**
 2. 实现。
 3. 单元测试（必要时补 GUI 场景 / fuzz）。
 4. Qt 6 与 Qt 5 双配置 `all` 构建 + CTest + 示例退出码。
-5. 同步 README 能力表与本文件。
+5. 同步 [features.md](features.md) 能力表、README 概览与本文件。
 6. 一个独立提交。
 
 ## 4. 决策记录

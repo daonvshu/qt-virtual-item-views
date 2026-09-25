@@ -152,7 +152,7 @@ struct ItemPane
    拖动行号条改行高只在可滚动行上生效。
 6. **表状态持久化**（§32）：把冻结行数写进表格级状态（版本号 +1，旧格式仍可恢复）。
 7. **示例与文档** ✓：`examples/table_frozen_rows`（顶部/底部冻结行 + 冻结列组合、可切换、
-   `--check` 自检、`--snapshot` 截图）、README 能力表与 roadmap 同步。
+   `--check` 自检、`--snapshot` 截图）、[features.md](features.md) 能力表与 roadmap 同步。
 
 每一步按既有节奏收尾：规格/决策进文档 → 实现 → 单元测试（必要时 GUI 场景）→ Qt 6 与 Qt 5
 双配置 `all` 构建 + CTest + 示例退出码 → 同步 README / roadmap → 一个独立提交。
