@@ -155,6 +155,7 @@ view->scrollByPixels(24);
 view->scrollTo(model.index(500, 0), viv::VirtualItemView::ScrollHint::PositionAtCenter);
 
 // 让某一行离开可见区后仍然存在（异步操作、行内编辑器、正在播的动画……）
+// 从来没上过屏的行也会被立刻物化：pin 的语义是"这个控件归我用到 unpin 为止"
 view->setItemPinned(model.index(3, 0), true);
 view->pinWidget(widget);               // 等价于按控件反查 index 再 pin
 view->setMaxPinnedItems(50);           // 超过阈值只 qWarning 一次，方便定位"pin 得太多"

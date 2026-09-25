@@ -194,6 +194,14 @@
   改回均匀行高时条子**自己回来**，应用的请求也不会被后台改写。回归测试：
   `tst_virtualtableview::theRowHeaderComesBackWhenTheModelShrinks`（已确认把状态改回粘滞后该用例
   会失败）。
+* **pin 一个离屏项会真的把它物化出来（P2-2）**：`setItemPinned()` 的注释写的是"离开 overscan 窗口
+  也保持物化"，但物化范围只来自"可见 + overscan + 冻结"，显式 pin 仅能阻止**已经存在**的控件被
+  回收 —— pin 一个从未上屏的行等于什么都没发生（业务按注释写"pin 住它，等我异步结果回来"就会拿到
+  空指针）。现在显式 pin 的行会作为独立的单行范围进入物化集合（与既有范围去重，所以不会物化两份，
+  Cell Widget Mode 下同样生效），几何仍取该行自己的（离屏很远时按既有规则夹到 int 范围内）。
+  代价是"每个 pin 一个真实控件"成为事实，这也是 `setMaxPinnedItems()` 那条诊断的意义所在。
+  回归测试：`tst_virtualitemview::pinningAnOffscreenItemMaterializesIt`（已确认还原旧实现时该用例
+  会失败）。
 
 ### Fixed（全量代码审查 Wave 3：虚拟化热路径）
 

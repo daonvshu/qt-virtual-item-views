@@ -1442,6 +1442,33 @@ void VirtualItemView::relayout()
     if (frozenBottomRows() > 0)
         ranges.append(VisibleRange{count - qsizetype(frozenBottomRows()), count - 1});
 
+    // Explicit pins are materialized even when they are nowhere near the window: the
+    // point of a pin is to let business code hold on to a widget while it does
+    // something asynchronous, and that widget may be one that was never on screen
+    // (P2-2). Every consumer expects disjoint ranges, so a pinned row is only added
+    // when the ranges above do not already cover it.
+    if (!m_explicitPinned.isEmpty()) {
+        QList<qsizetype> pinnedRows;
+        pinnedRows.reserve(m_explicitPinned.size());
+        for (const QPersistentModelIndex &persistent : m_explicitPinned) {
+            const qsizetype row = viewItemForIndex(persistent);
+            if (row >= 0 && row < count)
+                pinnedRows.append(row);
+        }
+        std::sort(pinnedRows.begin(), pinnedRows.end());
+        qsizetype previous = -1;
+        for (qsizetype row : pinnedRows) {
+            if (row == previous)
+                continue;
+            previous = row;
+            const auto covers = [row](const VisibleRange &range) {
+                return row >= range.first && row <= range.last;
+            };
+            if (std::none_of(ranges.cbegin(), ranges.cend(), covers))
+                ranges.append(VisibleRange{row, row});
+        }
+    }
+
     // ---- decide what to reuse, then recycle what is obsolete --------------
     if (!usesItemWidgets()) {
         // The view materializes its own widgets (table cell mode): it only needs

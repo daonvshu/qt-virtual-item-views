@@ -44,6 +44,7 @@ private slots:
     void proxyModelCanBeUsedAsModel();
     void selectionModelDrivesCurrentIndex();
     void pinnedItemSurvivesScrolling();
+    void pinningAnOffscreenItemMaterializesIt();
     void pinWidgetKeepsTheOwningItemAlive();
     void statsReportVirtualizationState();
     void selectionModeControlsSelection();
@@ -420,6 +421,57 @@ void TestVirtualItemView::resizeUpdatesVisibleRange()
     QCOMPARE(view.viewport()->height(), 600);
     QVERIFY(view.materializedItemCount() > smallCount);
     QCOMPARE(view.visualRect(model.index(0, 0)), firstRect);
+}
+
+void TestVirtualItemView::pinningAnOffscreenItemMaterializesIt()
+{
+    // The documented contract of a pin is "this widget stays alive while I do
+    // something asynchronous with it" (P2-2). Row 300 was never on screen, so it used
+    // to have no widget at all: the pin only stopped a widget that already existed
+    // from being recycled. Now the pin materializes the item as well.
+    StringListModel model(numberedRows(500));
+    TestAdapter adapter(kRowHeight);
+    VirtualListView view;
+    view.setAdapter(&adapter);
+    view.setUniformItemHeight(kRowHeight);
+    view.setModel(&model);
+    showView(&view, QSize(kViewWidth, kViewHeight));
+
+    const qsizetype baseline = view.materializedItemCount();
+    const QModelIndex offscreen = model.index(300, 0);
+    QCOMPARE(view.widgetForIndex(offscreen), nullptr);
+    view.setItemPinned(offscreen, true);
+    view.flushPendingRelayout();
+
+    QWidget *pinned = view.widgetForIndex(offscreen);
+    QVERIFY(pinned != nullptr);
+    QCOMPARE(view.pinnedItemCount(), qsizetype(1));
+    // Exactly one extra row: the pinned one, not a shifted window.
+    QCOMPARE(view.materializedItemCount(), baseline + 1);
+    // It really is the item's own geometry (far below the viewport), not a widget
+    // parked at 0.
+    QVERIFY(view.visualRect(offscreen).top() > view.viewport()->height());
+
+    // Scrolling onto it keeps the very same widget instead of creating a second one.
+    view.scrollTo(offscreen, VirtualItemView::PositionAtTop);
+    view.flushPendingRelayout();
+    QCOMPARE(view.widgetForIndex(offscreen), pinned);
+    // Inside the window now, so the set is exactly the window again (both overscan
+    // sides fit here, unlike at the top of the model).
+    QCOMPARE(view.materializedItemCount(),
+             view.visibleItemRange().count() + view.overscanBefore() + view.overscanAfter());
+
+    // Scrolling away again keeps it (that is the pin), for one extra widget ...
+    view.scrollTo(model.index(0, 0), VirtualItemView::PositionAtTop);
+    view.flushPendingRelayout();
+    QCOMPARE(view.widgetForIndex(offscreen), pinned);
+    QCOMPARE(view.materializedItemCount(), baseline + 1);
+    // ... until it is unpinned, which hands the widget back to the pool.
+    view.setItemPinned(offscreen, false);
+    view.flushPendingRelayout();
+    QCOMPARE(view.widgetForIndex(offscreen), nullptr);
+    QCOMPARE(view.materializedItemCount(), baseline);
+    QCOMPARE(view.pinnedItemCount(), qsizetype(0));
 }
 
 void TestVirtualItemView::pinWidgetKeepsTheOwningItemAlive()

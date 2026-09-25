@@ -215,7 +215,9 @@ public:
     void scrollTo(const QModelIndex &index, ScrollHint hint = EnsureVisible);
 
     /// Keeps the widget of \a index materialized even when it leaves the
-    /// overscan window (business code can request a pin for async operations).
+    /// overscan window, and materializes it right away when it is not on screen
+    /// at all (business code can request a pin for async operations). Each pin
+    /// costs one widget until it is unpinned - see setMaxPinnedItems().
     void setItemPinned(const QModelIndex &index, bool pinned = true);
     bool isItemPinned(const QModelIndex &index) const;
     /// Pin/unpin the item that currently owns \a widget. Equivalent to
