@@ -278,6 +278,7 @@ private slots:
     void verticalHeaderFollowsVerticalScroll();
     void verticalHeaderDragChangesRowHeight();
     void rowSizePolicyControlsMeasurement();
+    void rowHeaderMirrorsTheCommittedSizeUnderMeasuredWins();
     void keyboardMovesTheCurrentColumn();
     void visibleColumnRangeFollowsOverscanAndOffset();
     void frozenColumnsStayWhileTheScrollablePaneScrolls();
@@ -688,6 +689,55 @@ void TestVirtualTableView::rowSizePolicyControlsMeasurement()
 
     view.clearRowHeight(2);
     QVERIFY(!view.hasExplicitRowHeight(2));
+}
+
+void TestVirtualTableView::rowHeaderMirrorsTheCommittedSizeUnderMeasuredWins()
+{
+    auto *model = buildModel(20, 4, this);
+    TableTestAdapter adapter(4);
+    VirtualTableView view;
+    view.setTableAdapter(&adapter);
+    view.setItemHeightMode(VirtualItemView::ItemHeightMode::Variable);
+    view.setEstimatedItemHeight(kRowHeight);
+    view.setModel(model);
+    showView(&view, QSize(kViewWidth, kViewHeight));
+    view.flushPendingRelayout();
+
+    // The user resizes row 2: body and row-number strip agree.
+    view.setRowHeight(2, 70);
+    view.flushPendingRelayout();
+    QCOMPARE(view.rowHeight(2), 70);
+    QCOMPARE(view.verticalHeaderGeometry()->storedSectionSize(2), 70);
+
+    // Under MeasuredWins the measured height (30) wins over the explicit one: the
+    // strip has to follow the body, not keep the stale explicit value.
+    view.setRowSizePolicy(VirtualTableView::RowSizePolicy::MeasuredWins);
+    view.flushPendingRelayout();
+    QCOMPARE(view.rowHeight(2), kRowHeight);
+    QCOMPARE(view.verticalHeaderGeometry()->storedSectionSize(2), kRowHeight);
+
+    // Back to ExplicitWins for the clearing part: there the explicit height is the
+    // one the body uses, so it is the one that has to be given back.
+    view.setRowSizePolicy(VirtualTableView::RowSizePolicy::ExplicitWins);
+    view.setRowHeight(3, 90);
+    view.flushPendingRelayout();
+    QCOMPARE(view.rowHeight(3), 90);
+    QCOMPARE(view.verticalHeaderGeometry()->storedSectionSize(3), 90);
+    view.clearRowHeight(3);
+    view.flushPendingRelayout();
+    QVERIFY(!view.hasExplicitRowHeight(3));
+    QCOMPARE(view.rowHeight(3), kRowHeight);      // the measured size, right away
+    QCOMPARE(view.verticalHeaderGeometry()->storedSectionSize(3), kRowHeight);
+
+    // The same for a row that is not materialized: the estimate comes back.
+    const qsizetype offscreen = 18;               // below the materialized window
+    view.setRowHeight(offscreen, 55);
+    view.flushPendingRelayout();
+    QVERIFY(view.widgetForIndex(model->index(int(offscreen), 0)) == nullptr);
+    QCOMPARE(view.rowHeight(offscreen), 55);
+    view.clearRowHeight(offscreen);
+    view.flushPendingRelayout();
+    QCOMPARE(view.rowHeight(offscreen), kRowHeight);
 }
 
 void TestVirtualTableView::keyboardMovesTheCurrentColumn()

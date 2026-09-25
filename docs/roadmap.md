@@ -160,15 +160,16 @@ Wave 3（v1.0 工程化交付）。**
 | 批次 | 内容 | 状态 |
 | --- | --- | --- |
 | **Wave 1 崩溃 / 悬空指针** | Adapter 切换 UAF、Recycler 池的 adapter 身份、Model/SelectionModel 生命周期（`QPointer` + 不变量）、表头 pane 渲染器析构顺序、视图析构解绑、Cell 模式在行/列移除与 reset 前解绑 | 已完成 |
-| **Wave 2 数据 / 状态正确性** | ✅ P1-1 列的 insert/remove/move remap（`tst_headerstructure`）<br>✅ P1-2 动态高度锚点（`tst_dynamicanchor`）<br>✅ P1-8 rootIndex 持久化 + 校验（`tst_virtuallistview`）<br>✅ P1-9 选择语义统一（`tst_selection`）<br>✅ P1-10 `scrollToColumn()` 的 pane 感知（`tst_tablepanes`）<br>✅ P1-11 span 重叠校验与 `maximumSpan()` 重算（`tst_tablespan`）<br>✅ P1-13 冻结行下的拖放坐标（`tst_dndfrozen`）<br>待做：P1-7 `RowSizePolicy` 与行号条一致 | 进行中 |
+| **Wave 2 数据 / 状态正确性** | **已完成**：P1-1 列结构 remap（`tst_headerstructure`）、P1-2 动态高度锚点（`tst_dynamicanchor`）、P1-7 `RowSizePolicy` 与行号条一致（`tst_virtualtableview`）、P1-8 rootIndex 持久化 + 校验（`tst_virtuallistview`）、P1-9 选择语义统一（`tst_selection`）、P1-10 `scrollToColumn()` 的 pane 感知（`tst_tablepanes`）、P1-11 span 重叠校验与 `maximumSpan()` 重算（`tst_tablespan`）、P1-13 冻结行下的拖放坐标（`tst_dndfrozen`） | ✅ |
 | **Wave 3 虚拟化性能** | HeaderGeometry 批量信号、pane 布局滚动快路径、表头可见区间快路径、横向 `ScrollMapper` + qint64 extent、`BlockSizeIndex` 分块上界、纯横向滚动不触发纵向 relayout | 待做 |
 | **Wave 4 API / 发布** | Vertical widget header（实现或明确拒绝）、`TablePaneSpec` 结构校验、事务化 `restoreHeaderState`、vertical header 状态不粘滞、relayout 队列合并、Linux CI + ASan/UBSan | 待做 |
 
 Wave 1 新增的回归测试：`tst_adapterreplacement`（8 例）、`tst_modellifetime`（6 例）、
 `tst_celllifecycle`（5 例）；四种组合（Qt 5.15.2 / 6.11.2 × 静态 / 动态）28 步验证全绿。
 
-**v1.0 tag 暂缓**：`PROJECT_VERSION` 保持 `1.0.0`（尚未打 tag），但按审查结论，tag 要等
-Wave 1 + Wave 2 完成之后再打。
+**v1.0 tag 暂缓**：`PROJECT_VERSION` 保持 `1.0.0`（尚未打 tag）。Wave 1（P0）与 Wave 2
+（数据 / 状态正确性）已完成，但审查把 P1-3/P1-4/P1-5（列 min/max 语义与 O(N²)、横向虚拟化热路径
+O(总列数)、横向 64 位偏移被 QScrollBar 截断）放在 Wave 3 —— 它们同样是 P1，tag 要等这些收口。
 
 ## 4. 每一步的完成定义
 

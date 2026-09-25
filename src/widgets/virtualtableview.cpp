@@ -1038,6 +1038,26 @@ void VirtualTableView::clearRowHeight(qsizetype row)
     if (!m_explicitRowHeights.contains(persistent))
         return;
     m_explicitRowHeights.remove(persistent);
+    // Dropping the marker has to give the row its measured / estimated size back
+    // *now*: waiting for the next materialization would leave the row at the
+    // height the user just cleared. The visual position stays stable.
+    if (m_rowLayout) {
+        int restored = 0;
+        for (const MaterializedItem &item : materializedItems()) {
+            if (item.index == persistent) {
+                restored = measuredHeightOf(item);
+                break;
+            }
+        }
+        if (restored <= 0)
+            restored = qMax(1, estimateItemSize(row));
+        if (m_rowLayout->itemSize(row) != restored) {
+            const ScrollAnchor anchor = captureAnchor();
+            m_rowLayout->setItemSize(row, restored);
+            setPendingAnchor(anchor);
+        }
+    }
+    updateRowHeaderGeometry();
     markDirty();
 }
 
@@ -1179,13 +1199,10 @@ void VirtualTableView::updateRowHeaderGeometry()
         if (size > 0 && m_rowHeaders->storedSectionSize(int(row)) != size)
             pending.append({row, size});
     }
-    for (auto it = m_explicitRowHeights.constBegin(); it != m_explicitRowHeights.constEnd(); ++it) {
-        const qsizetype row = viewItemForIndex(it.key());
-        if (row < 0)
-            continue;
-        if (m_rowHeaders->storedSectionSize(int(row)) != it.value())
-            pending.append({row, it.value()});
-    }
+    // m_explicitRowHeights is a *policy* marker, never a second truth: under
+    // RowSizePolicy::MeasuredWins a measurement may legally diverge from the
+    // height the user set, and the strip has to follow the committed layout (the
+    // body) rather than write the stale explicit value back.
     for (const QPair<qsizetype, int> &entry : pending) {
         if (m_rowHeaders->storedSectionSize(int(entry.first)) != entry.second)
             m_rowHeaders->resizeSection(int(entry.first), entry.second);

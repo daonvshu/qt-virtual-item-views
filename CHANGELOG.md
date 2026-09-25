@@ -136,3 +136,11 @@
   回归测试：`tst_tablespan::overlappingSpansAreIgnoredWithOneWarning`（用消息处理器断言"只警告
   一次"）、`removingASpanShrinksTheMaximum`；两个既有用例原先依赖"后者覆盖前者"的旧行为，已按
   规格改成把两个合并放在不同行。
+* **`RowSizePolicy::MeasuredWins` 下 body 与行号条不再漂移**：`updateRowHeaderGeometry()`
+  除了镜像 layout 的当前行高，还会把 `m_explicitRowHeights` 里的旧值再写一次 —— 而 MeasuredWins
+  下测量值会合法地覆盖用户设的高度，于是 body 显示测量值、行号条显示旧显式值。现在行号条只镜像
+  已提交的 layout 尺寸（显式高度表退回成纯策略标记）。`clearRowHeight()` 也改成立刻把该行恢复成
+  测量值 / 估计值（带滚动锚点补偿），而不是等它再次被物化才更新。
+  回归测试：`tst_virtualtableview::rowHeaderMirrorsTheCommittedSizeUnderMeasuredWins`
+  （ExplicitWins 下 70 两边一致；切换 MeasuredWins 后 body 与行号条都变成测量值 30；清除显式
+  高度后立刻回到测量值；未物化的行立刻回到估计值）。
