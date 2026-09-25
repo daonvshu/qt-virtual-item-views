@@ -468,8 +468,6 @@ private:
     int m_horizontalWheelPixels = 48;
     TableSpanProvider *m_spanProvider = nullptr;
     bool m_ownSpanProvider = false;
-    /// Set once when a row span could not be honoured (diagnostics).
-    bool m_spanWarningShown = false;
     RowSizePolicy m_rowSizePolicy = RowSizePolicy::ExplicitWins;
     bool m_sortingEnabled = false;
     bool m_sortGuard = false;

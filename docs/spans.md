@@ -40,7 +40,9 @@ public:
 * **锚点约定**：span 只在锚点登记；被覆盖的 cell 由 `anchorIndex(index)` 反查锚点。
   这避免"同一块区域有两份真相"，也让 model 不需要实现任何 span API。
 * **合法性**：`rowSpan/columnSpan < 1` 视为 1；越界的 span 裁剪到 model 边界；**重叠的 span 视为非法**，
-  后者被忽略并 `qWarning()` 一次（与 `setMaxPinnedItems` 的诊断风格一致）。
+  后者被忽略并 `qWarning()` 一次（与 `setMaxPinnedItems` 的诊断风格一致）；同一个锚点重复设置
+  是**替换**，不算重叠。`TableSpanMap` 里 `maximumSpan()` 是 `anchorOf()` 反查的上界，`removeSpan()`
+  之后会重新计算，删掉一个大 span 不会让反查继续按旧范围扫描。
 * **改动通知**：provider 变化后业务调用 `view.rebuildSpans()`（或直接 `setSpanProvider()` 重新安装），
   内部走 `markDirty()`；行/列结构变化时 span 表按"锚点身份 + 跨度"保留并重新裁剪。
 

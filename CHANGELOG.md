@@ -127,3 +127,12 @@
   其它组走 `setHorizontalOffset(group, …)`。
   回归测试：`tst_tablepanes::keyboardNavigationScrollsTheGroupOfTheColumn`
   （已确认还原旧实现时用例会失败：第二组的偏移一直是 0）。
+* **span 重叠校验与上界维护**：`docs/spans.md` 一直写着"重叠的 span 视为非法，后者被忽略并
+  `qWarning()` 一次"，但 `TableSpanMap::setSpan()` 是无条件 insert，视图里那个"只警告一次"的
+  成员也从没被用过。现在 `setSpan()` 会检查与其它 span 的矩形是否相交（同一锚点重复设置算
+  **替换**，不算重叠），重叠则忽略并只警告一次；`removeSpan()` 之后重新计算 `maximumSpan()`
+  （它是 `anchorOf()` 反查的上界，删掉大 span 后不该继续按旧范围扫描）；顺手删掉视图里那个
+  没用的 `m_spanWarningShown`。
+  回归测试：`tst_tablespan::overlappingSpansAreIgnoredWithOneWarning`（用消息处理器断言"只警告
+  一次"）、`removingASpanShrinksTheMaximum`；两个既有用例原先依赖"后者覆盖前者"的旧行为，已按
+  规格改成把两个合并放在不同行。

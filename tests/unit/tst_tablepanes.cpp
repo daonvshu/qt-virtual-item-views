@@ -521,10 +521,11 @@ void TestTablePanes::spansAreClippedAtEveryPaneBoundary()
     view.flushPendingRelayout();
     QCOMPARE(view.spanRect(model->index(0, 0)).width(), kColumnWidth);
     QCOMPARE(view.spanRect(model->index(0, 0)).x(), 0);
-    // Inside the scrolling pane the merge spans its own columns.
-    view.setSpan(0, 2, 1, 2);
+    // Inside the scrolling pane the merge spans its own columns. It sits in
+    // another row: overlapping spans are illegal, so one row holds one merge.
+    view.setSpan(1, 2, 1, 2);
     view.flushPendingRelayout();
-    QCOMPARE(view.spanRect(model->index(0, 2)).width(), 2 * kColumnWidth);
+    QCOMPARE(view.spanRect(model->index(1, 2)).width(), 2 * kColumnWidth);
 }
 
 void TestTablePanes::resettingThePanesRestoresTheDefault()

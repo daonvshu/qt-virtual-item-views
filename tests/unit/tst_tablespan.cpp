@@ -154,6 +154,8 @@ private slots:
     void spansFollowTheCommittedGeometry();
     void dropTargetFoldsToTheAnchorColumn();
     void rowWidgetModeFoldsTheColumnHosts();
+    void overlappingSpansAreIgnoredWithOneWarning();
+    void removingASpanShrinksTheMaximum();
 };
 
 void TestTableSpan::withoutProviderNothingIsMerged()
@@ -270,10 +272,11 @@ void TestTableSpan::mergedRectClampsToTheModelAndThePane()
     const QRect clipped = view.spanRect(model.index(0, 1));
     QCOMPARE(clipped.width(), kColumnWidth); // the frozen pane holds columns 0..1
     QCOMPARE(clipped.x(), view.columnGeometry(1).viewportX);
-    // The very same span anchored in the scrollable pane uses both columns.
-    view.setSpan(0, 2, 1, 2);
+    // A span that stays inside the scrollable pane uses both of its columns. It
+    // lives in another row: two spans of one row would overlap, which is illegal.
+    view.setSpan(1, 2, 1, 2);
     view.flushPendingRelayout();
-    QCOMPARE(view.spanRect(model.index(0, 2)).width(), 2 * kColumnWidth);
+    QCOMPARE(view.spanRect(model.index(1, 2)).width(), 2 * kColumnWidth);
 }
 
 void TestTableSpan::hiddenColumnInsideASpanDoesNotCompensate()
@@ -518,6 +521,88 @@ void TestTableSpan::rowWidgetModeFoldsTheColumnHosts()
         QCOMPARE(row->host(column)->x(), view.columnGeometry(column).viewportX);
         QCOMPARE(row->host(column)->width(), kColumnWidth);
     }
+}
+
+namespace {
+int g_overlapWarnings = 0;
+
+void countOverlapWarnings(QtMsgType type, const QMessageLogContext &, const QString &message)
+{
+    if (type == QtWarningMsg && message.contains(QStringLiteral("overlaps")))
+        ++g_overlapWarnings;
+}
+} // namespace
+
+void TestTableSpan::overlappingSpansAreIgnoredWithOneWarning()
+{
+    QStandardItemModel model(10, 4);
+    SpanTableAdapter adapter(4);
+    VirtualTableView view;
+    view.setTableAdapter(&adapter);
+    view.setUniformItemHeight(kRowHeight);
+    view.setDefaultColumnWidth(kColumnWidth);
+    view.setModel(&model);
+    showView(&view, QSize(kViewWidth, kViewHeight));
+
+    view.setSpan(0, 0, 2, 2);                    // covers (0,0) .. (1,1)
+    QVERIFY(view.spanAt(model.index(0, 0)).isMerged());
+    QVERIFY(view.isSpanCovered(model.index(1, 1)));
+
+    // Overlapping spans are illegal (docs/spans.md §1): the later one is ignored,
+    // and the diagnostic is emitted once instead of per call.
+    g_overlapWarnings = 0;
+    const QtMessageHandler previousHandler = qInstallMessageHandler(countOverlapWarnings);
+    view.setSpan(1, 1, 1, 1);                    // fully inside the existing span
+    view.setSpan(0, 1, 1, 3);                    // partial overlap
+    view.setSpan(2, 0, 1, 2);                    // disjoint: allowed (see below)
+    qInstallMessageHandler(previousHandler);
+    QCOMPARE(g_overlapWarnings, 1);
+    QCOMPARE(view.spanAt(model.index(1, 1)), TableSpan());
+    QCOMPARE(view.anchorIndex(model.index(1, 1)), model.index(0, 0));
+    QCOMPARE(view.spanAt(model.index(0, 3)), TableSpan());
+    QVERIFY(view.spanAt(model.index(2, 0)).isMerged());
+
+    // A disjoint span is fine, and replacing one's *own* span is allowed.
+    view.setSpan(0, 2, 1, 2);
+    QVERIFY(view.spanAt(model.index(0, 2)).isMerged());
+    QCOMPARE(view.anchorIndex(model.index(0, 3)), model.index(0, 2));
+    view.setSpan(0, 0, 1, 2);
+    QCOMPARE(view.spanAt(model.index(0, 0)).rowSpan, 1);
+    QCOMPARE(view.spanAt(model.index(0, 0)).columnSpan, 2);
+    QCOMPARE(view.anchorIndex(model.index(0, 1)), model.index(0, 0));
+    QVERIFY(!view.isSpanCovered(model.index(1, 1)));   // the 2x2 became 1x2
+}
+
+void TestTableSpan::removingASpanShrinksTheMaximum()
+{
+    QStandardItemModel model(20, 8);
+    SpanTableAdapter adapter(8);
+    VirtualTableView view;
+    view.setTableAdapter(&adapter);
+    view.setUniformItemHeight(kRowHeight);
+    view.setDefaultColumnWidth(kColumnWidth);
+    view.setModel(&model);
+    showView(&view, QSize(kViewWidth, kViewHeight));
+
+    view.setSpan(0, 0, 5, 4);
+    auto *map = dynamic_cast<TableSpanMap *>(view.spanProvider());
+    QVERIFY(map != nullptr);
+    QCOMPARE(map->maximumSpan().rowSpan, 5);
+    QCOMPARE(map->maximumSpan().columnSpan, 4);
+
+    view.setSpan(10, 0, 2, 3);
+    QCOMPARE(map->maximumSpan().rowSpan, 5);
+    QCOMPARE(map->maximumSpan().columnSpan, 4);
+
+    // Dropping the large span shrinks the bound anchorOf() walks with, so the
+    // reverse lookup does not keep scanning the old range.
+    view.removeSpan(0, 0);
+    QCOMPARE(map->maximumSpan().rowSpan, 2);
+    QCOMPARE(map->maximumSpan().columnSpan, 3);
+
+    view.clearSpans();
+    QVERIFY(!map->maximumSpan().isMerged());
+    QCOMPARE(map->count(), 0);
 }
 
 QTEST_MAIN(TestTableSpan)

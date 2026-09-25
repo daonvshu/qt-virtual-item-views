@@ -1492,7 +1492,6 @@ void VirtualTableView::setSpanProvider(TableSpanProvider *provider, bool takeOwn
     } else if (takeOwnership) {
         m_ownSpanProvider = true;
     }
-    m_spanWarningShown = false;
     // Which cells exist and where they sit changed.
     markDirty();
     updateColumnLayout();

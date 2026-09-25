@@ -74,8 +74,15 @@ public:
     TableSpan maximumSpan() const override { return m_maximum; }
 
 private:
+    /// True when \a anchor's span would intersect any other registered span; the
+    /// spec (docs/spans.md §1) calls overlapping spans illegal.
+    bool overlapsExisting(const QModelIndex &anchor, const TableSpan &span) const;
+    void recomputeMaximum();
+
     QHash<QPersistentModelIndex, TableSpan> m_spans;
     TableSpan m_maximum;
+    /// The overlap warning is a diagnostic, not a per-call log: warn once.
+    bool m_overlapWarningShown = false;
 };
 
 } // namespace viv
