@@ -978,14 +978,23 @@ void VirtualTableView::syncHorizontalScrollBar()
     const int viewportWidth = viewport()->width();
     const qint64 maximum = maximumHorizontalOffset();
 
+    // QScrollBar only offers an int range while the logical offset is 64-bit: the
+    // mapper compresses the logical space into the bar (and keeps the precision
+    // window on the current position), exactly like the vertical scroll bar.
+    m_horizontalMapper.setExtents(maximum + viewportWidth, viewportWidth);
+
     const QSignalBlocker blocker(bar);
-    bar->setRange(0, int(qMin<qint64>(maximum, qint64(std::numeric_limits<int>::max()))));
+    bar->setRange(0, m_horizontalMapper.scrollRange());
     bar->setPageStep(qMax(1, viewportWidth));
     bar->setSingleStep(qMax(1, viewportWidth / 20));
-    const int value = int(qBound<qint64>(qint64(0), m_columns->viewportOffset(), maximum));
+    const int value = m_horizontalMapper.toScrollBarValue(m_columns->viewportOffset());
+    m_horizontalMapper.setAnchor(m_columns->viewportOffset(), value);
     bar->setValue(value);
-    if (m_columns->viewportOffset() != value)
-        m_columns->setViewportOffset(value);
+    // The raw offset is never written back: only the mapped value is, and only
+    // when the round trip cannot represent the offset exactly.
+    const qint64 mapped = m_horizontalMapper.toLogicalOffset(value);
+    if (m_columns->viewportOffset() != mapped)
+        m_columns->setViewportOffset(mapped);
 }
 
 // ---------------------------------------------------------------------------
@@ -2321,8 +2330,10 @@ void VirtualTableView::changeEvent(QEvent *event)
 void VirtualTableView::scrollContentsBy(int dx, int dy)
 {
     if (dx != 0 && !m_columnUpdateActive) {
-        // Header and body consume the same offset: they cannot drift (§45.5).
-        m_columns->setViewportOffset(horizontalScrollBar()->value());
+        // Header and body consume the same offset: they cannot drift (§45.5). The
+        // bar holds a compressed value, so it goes through the same mapper the
+        // sync uses.
+        m_columns->setViewportOffset(m_horizontalMapper.toLogicalOffset(horizontalScrollBar()->value()));
         emit horizontalOffsetChanged(m_columns->viewportOffset());
     }
     // A purely horizontal scroll does not need the kernel's vertical pass (it only

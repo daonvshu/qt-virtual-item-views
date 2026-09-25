@@ -8,6 +8,13 @@
 
 namespace viv {
 
+namespace {
+/// How far outside the viewport a section x is still reported exactly. Anything
+/// further away is off screen anyway, and keeping the value bounded keeps the
+/// 32-bit QRect/QWidget arithmetic from overflowing on very wide tables.
+constexpr qint64 kMaxOffscreenX = qint64(1) << 20;
+} // namespace
+
 HeaderGeometry::HeaderGeometry(Qt::Orientation orientation, QObject *parent)
     : QObject(parent)
     , m_orientation(orientation)
@@ -525,10 +532,11 @@ ColumnGeometry HeaderGeometry::columnGeometry(int logicalIndex) const
     geometry.hidden = section->hidden;
     geometry.width = section->hidden ? 0 : section->size;
     geometry.contentX = sectionPosition(logicalIndex);
+    // Only the neighbourhood of the window is reported exactly: a section may sit
+    // far outside it (a very wide table), and QRect/QWidget arithmetic is 32-bit -
+    // Qt even asserts on overflow - so far-away sections collapse to a sentinel.
     const qint64 viewportX = geometry.contentX - m_viewportOffset;
-    geometry.viewportX = int(qBound<qint64>(qint64(std::numeric_limits<int>::min()),
-                                            viewportX,
-                                            qint64(std::numeric_limits<int>::max())));
+    geometry.viewportX = int(qBound<qint64>(-kMaxOffscreenX, viewportX, kMaxOffscreenX));
     return geometry;
 }
 

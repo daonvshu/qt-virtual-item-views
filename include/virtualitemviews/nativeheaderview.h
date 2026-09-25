@@ -178,6 +178,9 @@ private:
     bool m_paneFilterActive = false;
     bool m_frozenPane = false;
     qint64 m_paneOffset = kFollowGeometryOffset;
+    /// Set once when the geometry's extent does not fit into QHeaderView's int
+    /// range (diagnostics; see syncHeaderFromGeometry()).
+    bool m_extentOverflowWarned = false;
 };
 
 } // namespace viv

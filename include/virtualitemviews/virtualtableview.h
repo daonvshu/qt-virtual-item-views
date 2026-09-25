@@ -3,6 +3,7 @@
 #include <virtualitemviews/global.h>
 #include <virtualitemviews/headergeometry.h>
 #include <virtualitemviews/nativeheaderview.h>
+#include <virtualitemviews/scrollmapper.h>
 #include <virtualitemviews/tablespan.h>
 #include <virtualitemviews/tablewidgetadapter.h>
 #include <virtualitemviews/virtualitemview.h>
@@ -424,6 +425,9 @@ private:
 
     ListLayout *m_rowLayout = nullptr;
     HeaderGeometry *m_columns = nullptr;
+    /// Compresses the 64-bit horizontal offset into the int-only scroll bar (the
+    /// vertical axis has the same mapper in the kernel).
+    ScrollMapper m_horizontalMapper;
     TablePaneLayout m_panes;
     HeaderGeometry *m_rowHeaders = nullptr;
     HeaderViewInterface *m_horizontalHeader = nullptr;

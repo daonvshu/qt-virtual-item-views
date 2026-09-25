@@ -6,6 +6,7 @@
 
 #include <QHeaderView>
 #include <QLabel>
+#include <QScrollBar>
 #include <QStandardItemModel>
 
 using namespace viv;
@@ -122,6 +123,7 @@ private slots:
     void spansAreClippedAtEveryPaneBoundary();
     void resettingThePanesRestoresTheDefault();
     void keyboardNavigationScrollsTheGroupOfTheColumn();
+    void horizontalOffsetSurvivesBeyondTheIntRange();
 };
 
 void TestTablePanes::defaultLayoutIsStillTheThreePanes()
@@ -599,6 +601,47 @@ void TestTablePanes::keyboardNavigationScrollsTheGroupOfTheColumn()
     const ColumnGeometry geometry = view.columnGeometry(9);
     QVERIFY(geometry.viewportX >= paneRect.x());
     QVERIFY(geometry.viewportX + geometry.width <= paneRect.right() + 1);
+}
+
+void TestTablePanes::horizontalOffsetSurvivesBeyondTheIntRange()
+{
+    // 30,000 columns x 100,000 px = 3e9 px: the logical extent does not fit into
+    // the int-based scroll bar, so the bar has to be compressed (ScrollMapper)
+    // instead of truncating the offset back into the int range.
+    auto *model = new QStandardItemModel(1, 30000, this);
+    PaneTableAdapter adapter;
+    VirtualTableView view;
+    view.setTableAdapter(&adapter);
+    view.setUniformItemHeight(kRowHeight);
+    view.setDefaultColumnWidth(100000);
+    view.setModel(model);
+    // No widget layout here: QHeaderView and the scroll bar themselves work in
+    // checked int arithmetic, so this test covers *our* 64-bit layer (geometry,
+    // pane layout, offset clamping) which is what the review's finding is about.
+    view.resize(kViewWidth, kViewHeight);
+
+    QVERIFY(view.horizontalContentExtent() > qint64(std::numeric_limits<int>::max()));
+    const qint64 maximum = view.maximumHorizontalOffset();
+    QVERIFY(maximum > qint64(std::numeric_limits<int>::max()));
+
+    // Scrolling to the very end reaches the logical maximum, even though the bar
+    // only carries an int.
+    view.setHorizontalOffset(maximum);
+    QCOMPARE(view.horizontalOffset(), maximum);
+
+    // ... the middle is exact as well (the mapper's window is re-centred).
+    const qint64 middle = maximum / 2;
+    view.setHorizontalOffset(middle);
+    QCOMPARE(view.horizontalOffset(), middle);
+
+    // The far end still resolves to the last column, whose right edge is at the
+    // right edge of the viewport (the column is wider than the window, so its left
+    // edge is off screen - the reported x stays bounded).
+    view.setHorizontalOffset(maximum);
+    const ColumnGeometry geometry = view.columnGeometry(29999);
+    QVERIFY(geometry.isValid());
+    QVERIFY(geometry.viewportX <= 0);
+    QVERIFY(geometry.viewportX + geometry.width >= view.viewport()->width());
 }
 
 QTEST_MAIN(TestTablePanes)

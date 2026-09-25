@@ -170,3 +170,15 @@
   因为横向窗口本身决定要物化哪些单元格。
   回归测试：`tst_relayoutqueue`（4 例：100 次失效只投递 1 个 queued 调用且只跑 1 趟；
   纯横向滚动 0 趟纵向 pass 且列位置确实移动；纵向滚动仍然跑；Cell 模式横向滚动照样物化）。
+* **横向偏移走 64 位（P1-5）**：纵向早有 `ScrollMapper`，横向没有 —— `syncHorizontalScrollBar()`
+  把区间夹到 `INT_MAX` 后还把 `QScrollBar` 的 int 值写回 `HeaderGeometry::viewportOffset()`，
+  于是超过 INT_MAX 的横向偏移会被静默截断；`TablePaneLayout::extentOf()` / `ResolvedPane::extent`
+  也是 int，超宽表格会溢出。现在：
+  - 表格持有一个横向 `ScrollMapper`，滚动条只承载压缩值，逻辑偏移始终是 qint64；
+  - pane 的 extent 全部 qint64（`groupExtent`/`maximumGroupOffset` 本来就是）；
+  - 离屏列的视口 x 夹到"窗口附近的哨兵范围"（±2^20）而不是 INT_MIN/INT_MAX —— 之前那种夹法
+    会让后面的 QRect/QWidget 运算溢出（Qt 6.11 用 checked int，直接断言崩溃）；
+  - 原生 `QHeaderView` 自身无法表示 > INT_MAX 的内容范围（它内部就是 checked int），
+    所以 `NativeHeaderView` 在这种情况下跳过镜像并 `qWarning()` 一次，而不是让 Qt 断言。
+  回归测试：`tst_tablepanes::horizontalOffsetSurvivesBeyondTheIntRange`（30,000 列 x 100,000 px
+  = 3e9 px：逻辑偏移能到最大、中点到中点精确、最后一列的右边缘落在视口右边缘）。

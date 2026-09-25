@@ -164,6 +164,22 @@ void NativeHeaderView::syncHeaderFromGeometry()
     if (!m_geometry || m_applyingToHeader)
         return;
 
+    // QHeaderView keeps its section positions in (checked) int arithmetic, so a
+    // content extent beyond the int range cannot be mirrored into it at all: touch
+    // nothing and say so once instead of letting Qt abort on the overflow (it would
+    // also trip on setDefaultSectionSize() alone). The geometry, the pane layout and
+    // the compressed scroll bar stay 64-bit, which is what the rest of the view uses.
+    if (m_geometry->totalExtent() > qint64(std::numeric_limits<int>::max())) {
+        if (!m_extentOverflowWarned) {
+            m_extentOverflowWarned = true;
+            qWarning("NativeHeaderView: the content extent (%lld px) does not fit into QHeaderView's "
+                     "int range; the header keeps its own default sizes",
+                     qint64(m_geometry->totalExtent()));
+        }
+        return;
+    }
+    m_extentOverflowWarned = false;
+
     m_applyingToHeader = true;
 
     const int count = m_geometry->sectionCount();

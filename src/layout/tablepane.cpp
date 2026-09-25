@@ -28,13 +28,20 @@ QVector<int> normalized(const QVector<int> &logicalColumns)
 struct ResolvedPane
 {
     TablePane pane;
-    int extent = 0;
+    /// 64-bit: a pane may hold very many columns, and the group extent feeds the
+    /// (64-bit) scroll offset.
+    qint64 extent = 0;
     int width = 0;
     int x = 0;
     /// Accumulated content x of the pane's own scroll space.
     qint64 contentX = 0;
     VisibleRange window;
 };
+
+/// How far outside the viewport a column x is still reported exactly. Anything
+/// further away is "off screen" anyway, and keeping the value bounded keeps the
+/// 32-bit QRect/QWidget arithmetic from overflowing on very wide tables.
+constexpr qint64 kMaxOffscreenX = qint64(1) << 20;
 } // namespace
 
 void TablePaneLayout::setFrozenColumns(const QVector<int> &logicalColumns)
@@ -129,11 +136,11 @@ void TablePaneLayout::moveLogicalColumns(int start, int count, int destination)
     });
 }
 
-int TablePaneLayout::extentOf(const QVector<int> &logicalColumns) const
+qint64 TablePaneLayout::extentOf(const QVector<int> &logicalColumns) const
 {
     if (!m_geometry)
         return 0;
-    int extent = 0;
+    qint64 extent = 0;
     for (int logical : logicalColumns)
         extent += m_geometry->sectionSize(logical);
     return extent;
@@ -340,7 +347,14 @@ bool TablePaneLayout::update(int viewportWidth, int viewportHeight)
         qint64 contentX = 0;
         for (int logical : pane.pane.logicalColumns) {
             const int size = m_geometry->sectionSize(logical);
-            const int viewportX = pane.x + int(contentX - offset);
+            // Clamp into a sane neighbourhood of the window: a pane may hold a
+            // 64-bit extent (very wide tables), but a column x is only meaningful
+            // near the viewport, and QRect/QWidget arithmetic is 32-bit (Qt even
+            // asserts on overflow). Columns further away collapse to the sentinel.
+            const qint64 localX = contentX - offset;
+            const qint64 wanted = qint64(pane.x) + localX;
+            const qint64 limit = qint64(width) + kMaxOffscreenX;
+            const int viewportX = int(qBound(-kMaxOffscreenX, wanted, limit));
             m_viewportXByLogical[logical] = viewportX;
             m_paneByLogical[logical] = int(pane.pane.type);
             m_paneIndexByLogical[logical] = paneIndex;

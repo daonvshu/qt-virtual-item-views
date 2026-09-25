@@ -200,7 +200,7 @@ public:
     QVector<int> columnsForLayout(int overscan) const;
 
 private:
-    int extentOf(const QVector<int> &logicalColumns) const;
+    qint64 extentOf(const QVector<int> &logicalColumns) const;
     QVector<int> visualOrderOf(const QVector<int> &logicalColumns) const;
     /// Applies \a remap (which may yield -1 for a dropped column) to the frozen
     /// sets and to every explicit pane spec, dropping what is gone.
