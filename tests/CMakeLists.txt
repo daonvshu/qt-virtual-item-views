@@ -44,6 +44,7 @@ viv_add_test(tst_adapterreplacement unit/tst_adapterreplacement.cpp)
 viv_add_test(tst_modellifetime unit/tst_modellifetime.cpp)
 viv_add_test(tst_celllifecycle unit/tst_celllifecycle.cpp)
 viv_add_test(tst_headerstructure unit/tst_headerstructure.cpp)
+viv_add_test(tst_dynamicanchor unit/tst_dynamicanchor.cpp)
 viv_add_test(tst_modelmutationfuzz fuzz/tst_modelmutationfuzz.cpp)
 
 if(VIRTUALITEMVIEWS_BUILD_GUI_TESTS)

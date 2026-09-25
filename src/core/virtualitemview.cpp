@@ -551,11 +551,20 @@ void VirtualItemView::afterMaterialize()
         const int measured = measuredHeightOf(materializedItems().first());
         if (measured <= 0)
             return;
+        // Captured before the size changes: afterwards the same pixel offset can
+        // belong to a different item.
+        const ScrollAnchor anchor = captureAnchor();
         m_uniformItemHeight = measured;
         m_layout->setItemSize(0, measured);
+        setPendingAnchor(anchor);
         markDirty();
         return;
     }
+
+    // The anchor has to describe what the user is looking at *now*: measuring
+    // changes the offsets, so taking it after the loop would anchor whatever item
+    // ends up at the old pixel offset (P1-2).
+    const ScrollAnchor anchor = captureAnchor();
 
     bool changed = false;
     for (const MaterializedItem &item : materializedItems()) {
@@ -579,7 +588,7 @@ void VirtualItemView::afterMaterialize()
         return;
     }
     // Heights above the viewport changed: keep the top item in place.
-    setPendingAnchor(captureAnchor());
+    setPendingAnchor(anchor);
     markDirty();
 }
 
@@ -1674,7 +1683,10 @@ ScrollAnchor VirtualItemView::captureAnchor() const
     if (!m_layout || m_layout->itemCount() == 0)
         return anchor;
 
-    const qsizetype row = m_layout->indexAtOffset(m_scrollOffset);
+    // The anchor is the first item of the *scrolling* pane, whose top edge sits
+    // frozenTopExtent() pixels below the viewport top (§31 row direction).
+    const qint64 contentOffset = m_scrollOffset + frozenTopExtent();
+    const qsizetype row = m_layout->indexAtOffset(contentOffset);
     if (row < 0 || row >= m_layout->itemCount())
         return anchor;
 
@@ -1683,7 +1695,7 @@ ScrollAnchor VirtualItemView::captureAnchor() const
         return anchor;
 
     anchor.index = QPersistentModelIndex(index);
-    anchor.offsetInsideItem = int(m_scrollOffset - m_layout->offsetOf(row));
+    anchor.offsetInsideItem = int(contentOffset - m_layout->offsetOf(row));
     return anchor;
 }
 
@@ -1711,7 +1723,9 @@ void VirtualItemView::applyPendingAnchor()
     if (row < 0)
         return; // the anchored item disappeared: keep the numeric offset
 
-    m_scrollOffset = qMax<qint64>(0, m_layout->offsetOf(row) + m_pendingAnchor.offsetInsideItem);
+    // Inverse of captureAnchor(): the scrolling pane starts below the frozen band.
+    const qint64 contentOffset = m_layout->offsetOf(row) + m_pendingAnchor.offsetInsideItem;
+    m_scrollOffset = qMax<qint64>(0, contentOffset - frozenTopExtent());
 }
 
 // ---------------------------------------------------------------------------
