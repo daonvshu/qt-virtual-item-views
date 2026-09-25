@@ -295,7 +295,9 @@ bool TablePaneLayout::update(int viewportWidth, int viewportHeight)
         ResolvedPane &pane = resolved[index];
         if (pane.pane.type == TablePane::Type::Scrollable)
             continue;
-        pane.width = qMin(pane.extent, remaining);
+        // extent is qint64 (§P1-5), the pane can never be wider than the viewport,
+        // so the min is an int: spell the comparison out (Qt 5 has no mixed overload).
+        pane.width = int(qMin<qint64>(pane.extent, remaining));
         remaining -= pane.width;
     }
     remaining = qMax(0, remaining);
