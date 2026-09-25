@@ -73,6 +73,7 @@ QWidget**。
 | 12 个示例（simple list / order cards / dynamic height / million rows / table row widgets / table many columns / table custom header / tree / drag & drop / table spans / table panes / table frozen rows） | 已实现 |
 | benchmark（1M 行、表格 row vs cell、树：宽树 + 变更 + 锚点，稳态滚动零分配校验） | 已实现 |
 | API 稳定性（v1.0，[docs/api-stability.md](docs/api-stability.md)）：23 个公开头文件按"应用 / 扩展 / 诊断 / 私有"四级冻结，只加不删、不改默认值语义、不新增"接受但忽略"的入口；变更记进 [CHANGELOG.md](CHANGELOG.md) | 已实现 |
+| 静态库与动态库（v1.0，[docs/abi.md](docs/abi.md)）：`VIRTUALITEMVIEWS_EXPORT` 统一符号可见性、宏由 CMake 目标自动传播；共享构建产出 `bin/VirtualItemViews.dll` + 导入库；Qt 5.15.2 / Qt 6.11.2 × 静态 / 动态四种组合都已构建并跑通全部测试 | 已实现 |
 
 未实现（按 §43 路线图）：accessibility 还没有文本/编辑接口
 （`TextInterface`/`EditableTextInterface`，行内编辑器自己是真实控件会自己暴露）；
@@ -293,29 +294,32 @@ connect(view, &viv::VirtualItemView::itemDropped,
 cmake -S . -B cmake-build-debug -DCMAKE_PREFIX_PATH=<Qt6 路径>
 cmake --build cmake-build-debug --config Debug
 ctest --test-dir cmake-build-debug -C Debug --output-on-failure
-cmake-build-debug/examples/simple_list        # 10 万行
-cmake-build-debug/examples/order_cards        # 复杂业务卡片（动态高度）
-cmake-build-debug/examples/dynamic_height     # 异步高度变化 + anchor
-cmake-build-debug/examples/million_rows       # 100 万行，观察控件数是否稳定
-cmake-build-debug/examples/table_row_widgets  # 表格 Row Widget Mode
-cmake-build-debug/examples/table_many_columns # 表格 Cell Widget Mode + 百列横向虚拟化
-cmake-build-debug/examples/tree_view          # 树：展开/折叠/缩进/分支指示
-cmake-build-debug/examples/drag_drop          # 拖放：列表 / 树 / 表格（冻结列）三种落点语义
-cmake-build-debug/examples/drag_drop --hover tree:120 --snapshot drop.png   # 合成悬停 + 截图
-cmake-build-debug/examples/table_spans        # 合并单元格：跨列分组标题 + 跨行合并 + 冻结列对照
-cmake-build-debug/examples/table_spans --cell-mode --snapshot spans.png     # 跨行合并由框架渲染
-cmake-build-debug/examples/table_panes        # 多个 pane + 两个独立滚动组（工具栏是组 1 的滚动条）
-cmake-build-debug/examples/table_panes --check                             # 自检：组 1 滚动不影响其它 pane
-cmake-build-debug/examples/table_many_columns --frozen 2 --frozen-rows 2 --snapshot frozen.png  # 冻结列 + 冻结行（行号条按 pane 切分）
-cmake-build-debug/examples/table_frozen_rows   # 行冻结：顶部 3 行 + 底部 2 行 + 左侧 1 列（可调）
-cmake-build-debug/examples/table_frozen_rows --check                          # 自检：冻结行不动、滚动范围不变、行号贴合
-cmake-build-debug/examples/table_custom_header --widget-header --sections 200   # Widget 表头：每可见列一个控件
-cmake-build-debug/examples/table_custom_header --move-demo header.png         # 表头换序动画（途中截图，显式请求过渡）
-cmake-build-debug/examples/table_custom_header --drag-demo drag.png           # 拖动列：预览途中截图（committed 几何未动）
-cmake-build-debug/benchmarks/bench_listview --rows 1000000 --steps 2000
-cmake-build-debug/benchmarks/bench_listview --table --table-columns 100
-cmake-build-debug/benchmarks/bench_listview --tree
+cmake-build-debug/bin/simple_list        # 10 万行
+cmake-build-debug/bin/order_cards        # 复杂业务卡片（动态高度）
+cmake-build-debug/bin/dynamic_height     # 异步高度变化 + anchor
+cmake-build-debug/bin/million_rows       # 100 万行，观察控件数是否稳定
+cmake-build-debug/bin/table_row_widgets  # 表格 Row Widget Mode
+cmake-build-debug/bin/table_many_columns # 表格 Cell Widget Mode + 百列横向虚拟化
+cmake-build-debug/bin/tree_view          # 树：展开/折叠/缩进/分支指示
+cmake-build-debug/bin/drag_drop          # 拖放：列表 / 树 / 表格（冻结列）三种落点语义
+cmake-build-debug/bin/drag_drop --hover tree:120 --snapshot drop.png   # 合成悬停 + 截图
+cmake-build-debug/bin/table_spans        # 合并单元格：跨列分组标题 + 跨行合并 + 冻结列对照
+cmake-build-debug/bin/table_spans --cell-mode --snapshot spans.png     # 跨行合并由框架渲染
+cmake-build-debug/bin/table_panes        # 多个 pane + 两个独立滚动组（工具栏是组 1 的滚动条）
+cmake-build-debug/bin/table_panes --check                             # 自检：组 1 滚动不影响其它 pane
+cmake-build-debug/bin/table_many_columns --frozen 2 --frozen-rows 2 --snapshot frozen.png  # 冻结列 + 冻结行（行号条按 pane 切分）
+cmake-build-debug/bin/table_frozen_rows   # 行冻结：顶部 3 行 + 底部 2 行 + 左侧 1 列（可调）
+cmake-build-debug/bin/table_frozen_rows --check                          # 自检：冻结行不动、滚动范围不变、行号贴合
+cmake-build-debug/bin/table_custom_header --widget-header --sections 200   # Widget 表头：每可见列一个控件
+cmake-build-debug/bin/table_custom_header --move-demo header.png         # 表头换序动画（途中截图，显式请求过渡）
+cmake-build-debug/bin/table_custom_header --drag-demo drag.png           # 拖动列：预览途中截图（committed 几何未动）
+cmake-build-debug/bin/bench_listview --rows 1000000 --steps 2000
+cmake-build-debug/bin/bench_listview --table --table-columns 100
+cmake-build-debug/bin/bench_listview --tree
 ```
+
+可执行文件统一在 `<build>/bin`、库在 `<build>/lib`（静态与动态都一样），所以示例/测试/基准
+不需要任何 PATH 技巧就能找到共享库 —— 原因与细节见 [docs/abi.md](docs/abi.md)。
 
 ## 目录结构
 
@@ -351,7 +355,7 @@ examples/     simple_list / order_cards / dynamic_height / million_rows
 docs/         architecture.md  lifecycle.md  model-signals.md  focus-ime.md
               table-layout.md  drag-and-drop.md  accessibility.md  spans.md
               performance.md  header-animation.md  row-freezing.md  api-stability.md
-              roadmap.md
+              abi.md  roadmap.md
 ```
 
 公共头以 `include/` 为根（例如 `#include <virtualitemviews/virtuallistview.h>`），安装后会放到
@@ -371,6 +375,7 @@ docs/         architecture.md  lifecycle.md  model-signals.md  focus-ime.md
 * [docs/header-animation.md](docs/header-animation.md)：表头动画契约（committed/visual 两层几何、同步矩阵、渲染器支持）
 * [docs/row-freezing.md](docs/row-freezing.md)：行冻结规格（§31 行方向类比：不变量、API、布局与滚动、实现顺序）
 * [docs/api-stability.md](docs/api-stability.md)：公开 API 的四级分类（应用/扩展/诊断/私有）、冻结规则与 v1.0 复核清单
+* [docs/abi.md](docs/abi.md)：版本号与 SOVERSION 规则、静态/动态构建、什么算 ABI 破坏、Qt 与编译器支持矩阵
 * [CHANGELOG.md](CHANGELOG.md)：版本变更（破坏性变更单独列出）
 * [docs/roadmap.md](docs/roadmap.md)：进度与路线图（已完成 / 待做 / 每步完成定义 / 决策记录）
 
@@ -391,6 +396,10 @@ cmake -S . -B cmake-build-debug-qt5  -G Ninja -DCMAKE_BUILD_TYPE=Debug \
 * 选项：`VIRTUALITEMVIEWS_BUILD_SHARED`、`VIRTUALITEMVIEWS_BUILD_TESTS`、
   `VIRTUALITEMVIEWS_BUILD_EXAMPLES`、`VIRTUALITEMVIEWS_BUILD_BENCHMARKS`、
   `VIRTUALITEMVIEWS_BUILD_GUI_TESTS`。
+* **静态库（默认）与动态库都支持**：`-DVIRTUALITEMVIEWS_BUILD_SHARED=ON` 即构建
+  `VirtualItemViews.dll` + 导入库；符号可见性由 `include/virtualitemviews/global.h` 的
+  `VIRTUALITEMVIEWS_EXPORT` 决定，宏由 CMake 目标自动传播，业务代码不需要手工 define。
+  版本号/SOVERSION 规则、什么改动算 ABI 破坏、Qt 与编译器支持矩阵见 [docs/abi.md](docs/abi.md)。
 * 安装：`cmake --install` 会导出 `VirtualItemViews::VirtualItemViews` 目标与头文件
   （`include/virtualitemviews/**`）。
 
@@ -416,6 +425,7 @@ CMake 用 `find_package(QT NAMES Qt6 Qt5 …)` 选择版本（Qt5Config 不定�
   否则测试会以"找不到 Qt6Core.dll/Qt5Core.dll"之类的缺 DLL 错误失败，看起来像大面积用例失败。
   例如 `set PATH=D:\devlib\Qt\6.11.2\msvc2022_64\bin;%PATH%` 后再运行；
   `cmake --build` 自身不需要（构建系统用的是导入库）。
+  本库自己的共享库**不需要** PATH：它和可执行文件一起放在 `<build>/bin`（见 [docs/abi.md](docs/abi.md)）。
 * 示例与基准程序都可无人值守运行：示例传 `--exit-after <ms>` 时会在退出前打印一行统计
   （可见行 / 实例化 / 累计创建），退出码 0 表示正常结束；基准程序在违反虚拟化不变量时返回非 0。
 * Debug 构建里 Qt 的 `Q_ASSERT` 失败在 MSVC 上会弹出模态对话框，headless 运行时表现为

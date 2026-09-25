@@ -1,5 +1,6 @@
 #pragma once
 
+#include <virtualitemviews/global.h>
 #include <virtualitemviews/headergeometry.h>
 #include <virtualitemviews/nativeheaderview.h>
 #include <virtualitemviews/tablespan.h>
@@ -35,7 +36,7 @@ class ListLayout;
 ///    cell-level QWidget is created (§45.8).
 ///
 /// Cell Widget Mode with 2D (row x column) virtualization arrives with v0.5.
-class VirtualTableView : public VirtualItemView
+class VIRTUALITEMVIEWS_EXPORT VirtualTableView : public VirtualItemView
 {
     Q_OBJECT
 

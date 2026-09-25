@@ -1,5 +1,6 @@
 #pragma once
 
+#include <virtualitemviews/global.h>
 #include <virtualitemviews/headergeometry.h>
 #include <virtualitemviews/tablepane.h>
 #include <virtualitemviews/tablespan.h>
@@ -198,7 +199,7 @@ inline int TableRowLayoutContext::frozenRightWidth() const
 ///
 /// The framework keeps the host aligned with its column (position and
 /// visibility); business code only fills the host's content.
-class ColumnHost : public QWidget
+class VIRTUALITEMVIEWS_EXPORT ColumnHost : public QWidget
 {
     Q_OBJECT
 
@@ -217,7 +218,7 @@ private:
 ///
 /// Adapters that use ColumnHost children do not have to implement the hook at
 /// all: the framework positions the hosts itself.
-class TableWidgetAdapter : public WidgetAdapter
+class VIRTUALITEMVIEWS_EXPORT TableWidgetAdapter : public WidgetAdapter
 {
 public:
     /// Called after bindWidget() and whenever the column geometry or the
@@ -235,7 +236,7 @@ public:
 ///
 /// Only `visibleRows x visibleColumns` cells own a QWidget; a pooled cell widget
 /// is unbound and must not keep the state of its previous index.
-class CellWidgetAdapter
+class VIRTUALITEMVIEWS_EXPORT CellWidgetAdapter
 {
 public:
     virtual ~CellWidgetAdapter() = default;

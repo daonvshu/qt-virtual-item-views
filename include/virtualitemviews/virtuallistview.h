@@ -1,5 +1,6 @@
 #pragma once
 
+#include <virtualitemviews/global.h>
 #include <virtualitemviews/virtualitemview.h>
 
 class QAbstractItemModel;
@@ -15,7 +16,7 @@ class ListLayout;
 /// recycles their widgets while scrolling. Row heights are managed by the
 /// kernel (ItemHeightMode, estimates and measurement) and the list only adds the
 /// row <-> QModelIndex mapping below rootIndex().
-class VirtualListView : public VirtualItemView
+class VIRTUALITEMVIEWS_EXPORT VirtualListView : public VirtualItemView
 {
     Q_OBJECT
 

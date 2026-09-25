@@ -1,5 +1,6 @@
 #pragma once
 
+#include <virtualitemviews/global.h>
 #include <virtualitemviews/types.h>
 
 #include <QtGlobal>
@@ -12,7 +13,7 @@ namespace viv {
 /// §18). Same contract as WidgetAdapter: the recycler creates/destroys widgets,
 /// a pooled widget keeps no identity, and bindSection() has to be able to run
 /// repeatedly on the same widget.
-class HeaderWidgetAdapter
+class VIRTUALITEMVIEWS_EXPORT HeaderWidgetAdapter
 {
 public:
     virtual ~HeaderWidgetAdapter() = default;

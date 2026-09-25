@@ -1,5 +1,6 @@
 #pragma once
 
+#include <virtualitemviews/global.h>
 #include <virtualitemviews/tablepane.h>
 
 #include <QHeaderView>
@@ -21,7 +22,7 @@ class HeaderGeometry;
 /// Both consume the same HeaderGeometry, so the table body never depends on how
 /// the header is rendered. The interface is intentionally not a QWidget: the
 /// native implementation is already a QHeaderView (a QWidget).
-class HeaderViewInterface
+class VIRTUALITEMVIEWS_EXPORT HeaderViewInterface
 {
 public:
     virtual ~HeaderViewInterface() = default;
@@ -96,7 +97,7 @@ public:
 /// sort click) are written into it and every geometry change is reflected back
 /// into the header. Syncing compares before writing, so it neither invalidates
 /// QHeaderView's caches needlessly nor recurses.
-class NativeHeaderView : public QHeaderView, public HeaderViewInterface
+class VIRTUALITEMVIEWS_EXPORT NativeHeaderView : public QHeaderView, public HeaderViewInterface
 {
     Q_OBJECT
 

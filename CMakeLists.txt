@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 
 project(VirtualItemViews
-    VERSION 0.1.0
+    VERSION 0.9.0
     DESCRIPTION "Virtualized QWidget item views for Qt Widgets"
     LANGUAGES CXX)
 
@@ -13,6 +13,15 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
+
+# Executables land in <build>/bin and libraries in <build>/lib, for the static
+# and the shared build alike: a shared library is then found next to the
+# executables (Windows does not look into a sibling directory), so CTest and a
+# plain `bin/table_spans` run need no PATH juggling. Multi-config generators add
+# their own per-config subdirectory below these.
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
 
 option(VIRTUALITEMVIEWS_BUILD_SHARED "Build VirtualItemViews as a shared library" OFF)
 option(VIRTUALITEMVIEWS_BUILD_EXAMPLES "Build VirtualItemViews examples" ON)
@@ -59,6 +68,7 @@ message(STATUS "VirtualItemViews: building against ${VIRTUALITEMVIEWS_QT_PACKAGE
 set(VIRTUALITEMVIEWS_PUBLIC_HEADERS
     include/virtualitemviews/accessibility.h
     include/virtualitemviews/branchindicator.h
+    include/virtualitemviews/global.h
     include/virtualitemviews/headergeometry.h
     include/virtualitemviews/headerwidgetadapter.h
     include/virtualitemviews/itempane.h
@@ -121,7 +131,14 @@ if(VIRTUALITEMVIEWS_BUILD_SHARED)
     set_target_properties(VirtualItemViews PROPERTIES
         VERSION ${PROJECT_VERSION}
         SOVERSION ${PROJECT_VERSION_MAJOR})
+    # The library itself exports its symbols; consumers of the shared build need
+    # no extra define (they get the matching import decoration from global.h).
     target_compile_definitions(VirtualItemViews PRIVATE VIRTUALITEMVIEWS_LIBRARY)
+else()
+    # A static library must not be consumed with __declspec(dllimport): the
+    # define travels with the exported target, so find_package() consumers and
+    # in-tree targets (tests, examples, benchmarks) agree with the library.
+    target_compile_definitions(VirtualItemViews PUBLIC VIRTUALITEMVIEWS_STATIC)
 endif()
 
 if(MSVC)
@@ -148,6 +165,15 @@ endif()
 # ---------------------------------------------------------------------------
 set(VIRTUALITEMVIEWS_INSTALL_CMAKEDIR "${CMAKE_INSTALL_LIBDIR}/cmake/VirtualItemViews")
 
+# Pre-1.0 nothing is ABI stable yet, so a consumer asking for 0.9 must not be
+# handed 0.10. From 1.0 on the major version is the compatibility unit, which is
+# also what SOVERSION follows (docs/abi.md).
+if(PROJECT_VERSION_MAJOR EQUAL 0)
+    set(VIRTUALITEMVIEWS_PACKAGE_COMPATIBILITY SameMinorVersion)
+else()
+    set(VIRTUALITEMVIEWS_PACKAGE_COMPATIBILITY SameMajorVersion)
+endif()
+
 install(TARGETS VirtualItemViews
     EXPORT VirtualItemViewsTargets
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
@@ -165,7 +191,7 @@ install(EXPORT VirtualItemViewsTargets
 write_basic_package_version_file(
     "${CMAKE_CURRENT_BINARY_DIR}/VirtualItemViewsConfigVersion.cmake"
     VERSION ${PROJECT_VERSION}
-    COMPATIBILITY SameMajorVersion)
+    COMPATIBILITY ${VIRTUALITEMVIEWS_PACKAGE_COMPATIBILITY})
 
 configure_package_config_file(
     "${CMAKE_CURRENT_SOURCE_DIR}/cmake/VirtualItemViewsConfig.cmake.in"

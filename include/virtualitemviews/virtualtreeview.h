@@ -1,5 +1,6 @@
 #pragma once
 
+#include <virtualitemviews/global.h>
 #include <virtualitemviews/branchindicator.h>
 #include <virtualitemviews/treevisibilityindex.h>
 #include <virtualitemviews/virtualitemview.h>
@@ -26,7 +27,7 @@ class ListLayout;
 /// Model mutations (insert/remove/move/sort/filter/reset) rebuild the visible
 /// row mapping while keeping the expansion state; expand/collapse are
 /// incremental inside TreeVisibilityIndex.
-class VirtualTreeView : public VirtualItemView
+class VIRTUALITEMVIEWS_EXPORT VirtualTreeView : public VirtualItemView
 {
     Q_OBJECT
 

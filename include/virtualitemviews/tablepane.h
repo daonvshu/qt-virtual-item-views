@@ -6,6 +6,7 @@
 #include <QVector>
 #include <QtGlobal>
 
+#include <virtualitemviews/global.h>
 #include <virtualitemviews/types.h>
 
 namespace viv {
@@ -88,7 +89,7 @@ struct TablePane
 /// The layout is cached: update() has to be called after a geometry change, a
 /// resize or a change of the frozen sets, exactly like the other derived
 /// caches of the table.
-class TablePaneLayout
+class VIRTUALITEMVIEWS_EXPORT TablePaneLayout
 {
 public:
     void setGeometry(const HeaderGeometry *geometry) { m_geometry = geometry; }

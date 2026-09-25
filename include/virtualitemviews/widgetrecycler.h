@@ -1,5 +1,6 @@
 #pragma once
 
+#include <virtualitemviews/global.h>
 #include <virtualitemviews/types.h>
 
 #include <QHash>
@@ -18,7 +19,7 @@ namespace viv {
 /// The recycler is the only place where item widgets are created or destroyed.
 /// Scrolling must therefore only bind/recycle widgets: steady-state scrolling
 /// performs no allocation at all.
-class WidgetRecycler : public QObject
+class VIRTUALITEMVIEWS_EXPORT WidgetRecycler : public QObject
 {
     Q_OBJECT
 

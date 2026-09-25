@@ -1,5 +1,6 @@
 #pragma once
 
+#include <virtualitemviews/global.h>
 #include <virtualitemviews/sizeindex.h>
 #include <virtualitemviews/layoutpolicy.h>
 
@@ -12,7 +13,7 @@ namespace viv {
 /// The layout owns a SizeIndex, which decouples the layout from the actual
 /// size model: FixedSizeIndex for fixed-height content, BlockSizeIndex for
 /// dynamic heights.
-class ListLayout : public LayoutPolicy
+class VIRTUALITEMVIEWS_EXPORT ListLayout : public LayoutPolicy
 {
 public:
     explicit ListLayout(Qt::Orientation orientation = Qt::Vertical);

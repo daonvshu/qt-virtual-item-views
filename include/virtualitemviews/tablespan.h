@@ -1,5 +1,7 @@
 #pragma once
 
+#include <virtualitemviews/global.h>
+
 #include <QHash>
 #include <QModelIndex>
 #include <QPersistentModelIndex>
@@ -33,7 +35,7 @@ struct TableSpan
 /// Contract: `spanAt()` reports the span of the cell *only when that cell is the
 /// anchor* of the merge; every cell covered by it reports 1x1. That way a merge
 /// has exactly one owner and the model needs no span API at all.
-class TableSpanProvider
+class VIRTUALITEMVIEWS_EXPORT TableSpanProvider
 {
 public:
     virtual ~TableSpanProvider() = default;
@@ -57,7 +59,7 @@ public:
 /// registered on through inserts, removals, moves and sorting - exactly like the
 /// pinned items of the view (§36). The span extent itself stays "N model rows /
 /// M model columns from the anchor", which is what the merged geometry means.
-class TableSpanMap : public TableSpanProvider
+class VIRTUALITEMVIEWS_EXPORT TableSpanMap : public TableSpanProvider
 {
 public:
     /// Merges the cells starting at \a anchor. Values below 1 are treated as 1.

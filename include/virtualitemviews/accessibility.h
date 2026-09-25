@@ -1,5 +1,6 @@
 #pragma once
 
+#include <virtualitemviews/global.h>
 #include <virtualitemviews/types.h>
 
 #include <QAccessible>
@@ -35,9 +36,9 @@ class AccessibleVirtualItemView;
 /// (DisplayRole/ToolTipRole/StatusTipRole), the geometry from the view's
 /// committed layout, the state from the item flags, the selection model and the
 /// current index.
-class AccessibleVirtualItem : public QAccessibleInterface,
-                              public QAccessibleActionInterface,
-                              public QAccessibleTableCellInterface
+class VIRTUALITEMVIEWS_EXPORT AccessibleVirtualItem : public QAccessibleInterface,
+                                                     public QAccessibleActionInterface,
+                                                     public QAccessibleTableCellInterface
 {
 public:
     /// Row/item node: \a index is the model index of the row (column 0).
@@ -119,9 +120,9 @@ private:
 /// Children are the visible rows of the current window; the interface is created
 /// by the factory installed with installAccessibilityFactory(), so
 /// QAccessible::queryAccessibleInterface(view) returns it.
-class AccessibleVirtualItemView : public QAccessibleInterface,
-                                  public QAccessibleActionInterface,
-                                  public QAccessibleTableInterface
+class VIRTUALITEMVIEWS_EXPORT AccessibleVirtualItemView : public QAccessibleInterface,
+                                                         public QAccessibleActionInterface,
+                                                         public QAccessibleTableInterface
 {
 public:
     explicit AccessibleVirtualItemView(VirtualItemView *view);
@@ -210,13 +211,14 @@ private:
 /// Interface of \a object when it is a VirtualItemView, otherwise nullptr.
 /// This is the QAccessible::InterfaceFactory signature, so it can be installed
 /// directly (§37).
-QAccessibleInterface *createAccessibleItemViewInterface(const QString &className, QObject *object);
+VIRTUALITEMVIEWS_EXPORT QAccessibleInterface *createAccessibleItemViewInterface(const QString &className,
+                                                                               QObject *object);
 
 /// Installs (or removes) the factory above. Idempotent; call it once after
 /// QApplication was created. Without it the view still works, it just reports
 /// the generic widget interface of QWidget.
-void installAccessibilityFactory();
-void removeAccessibilityFactory();
+VIRTUALITEMVIEWS_EXPORT void installAccessibilityFactory();
+VIRTUALITEMVIEWS_EXPORT void removeAccessibilityFactory();
 
 } // namespace viv
 

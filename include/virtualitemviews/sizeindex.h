@@ -1,5 +1,7 @@
 #pragma once
 
+#include <virtualitemviews/global.h>
+
 #include <QList>
 #include <QVector>
 #include <QtGlobal>
@@ -14,7 +16,7 @@ namespace viv {
 ///
 /// All operations accept indices in [0, count()]; \c count() is a valid index
 /// for \c offsetOf() (it returns totalSize()) and for insert() (appending).
-class SizeIndex
+class VIRTUALITEMVIEWS_EXPORT SizeIndex
 {
 public:
     virtual ~SizeIndex() = default;
@@ -50,7 +52,7 @@ protected:
 };
 
 /// Size index for fixed-height content. All queries are O(1).
-class FixedSizeIndex : public SizeIndex
+class VIRTUALITEMVIEWS_EXPORT FixedSizeIndex : public SizeIndex
 {
 public:
     FixedSizeIndex() = default;
@@ -102,7 +104,7 @@ private:
 /// be simpler than O(log N)" guidance of the architecture document; the public
 /// API is ready to be backed by a Fenwick tree or an implicit balanced tree
 /// later on.
-class BlockSizeIndex : public SizeIndex
+class VIRTUALITEMVIEWS_EXPORT BlockSizeIndex : public SizeIndex
 {
 public:
     /// Capacity of the blocks used to split the item sizes.

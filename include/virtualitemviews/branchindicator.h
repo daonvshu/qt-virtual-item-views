@@ -1,5 +1,7 @@
 #pragma once
 
+#include <virtualitemviews/global.h>
+
 #include <QIcon>
 #include <QModelIndex>
 #include <QRect>
@@ -59,7 +61,7 @@ struct BranchIndicatorState
 /// Override either hook: branchIcon() for the simple "one icon per state" case
 /// (the default paintBranch() centres it in the cell), or paintBranch() when the
 /// decoration is not a plain icon.
-class BranchIndicatorRenderer
+class VIRTUALITEMVIEWS_EXPORT BranchIndicatorRenderer
 {
 public:
     virtual ~BranchIndicatorRenderer();

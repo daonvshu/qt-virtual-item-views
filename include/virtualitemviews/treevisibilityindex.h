@@ -1,5 +1,7 @@
 #pragma once
 
+#include <virtualitemviews/global.h>
+
 #include <QAbstractItemModel>
 #include <QHash>
 #include <QList>
@@ -36,7 +38,7 @@ namespace viv {
 ///    the path - the model is never walked for a collapsed sub-tree,
 ///  - model mutations (insert/remove/move/layoutChanged) rebuild the visible
 ///    list while keeping the expansion state; modelReset clears it too.
-class TreeVisibilityIndex
+class VIRTUALITEMVIEWS_EXPORT TreeVisibilityIndex
 {
 public:
     explicit TreeVisibilityIndex(QAbstractItemModel *model = nullptr);

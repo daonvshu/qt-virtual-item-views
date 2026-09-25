@@ -6,6 +6,7 @@
 #include <Qt>
 #include <QtGlobal>
 
+#include <virtualitemviews/global.h>
 #include <virtualitemviews/types.h>
 
 namespace viv {
@@ -34,7 +35,7 @@ struct ColumnGeometry
 /// The table body, the native header adapter and (later) a QWidget based header
 /// all consume this object; none of them keeps an authoritative width, order or
 /// visibility copy of its own (§45.10).
-class HeaderGeometry : public QObject
+class VIRTUALITEMVIEWS_EXPORT HeaderGeometry : public QObject
 {
     Q_OBJECT
 

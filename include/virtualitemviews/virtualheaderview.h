@@ -1,5 +1,6 @@
 #pragma once
 
+#include <virtualitemviews/global.h>
 #include <virtualitemviews/headerwidgetadapter.h>
 #include <virtualitemviews/nativeheaderview.h>
 
@@ -36,7 +37,7 @@ class WidgetRecycler;
 ///    source of truth for sizes, order, visibility and the horizontal offset,
 ///  - a section whose child has focus or an open popup is pinned, not recycled
 ///    (§36).
-class VirtualHeaderView : public QWidget, public HeaderViewInterface
+class VIRTUALITEMVIEWS_EXPORT VirtualHeaderView : public QWidget, public HeaderViewInterface
 {
     Q_OBJECT
 

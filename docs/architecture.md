@@ -75,6 +75,9 @@ ListLayout / SizeIndex    createWidget / bindWidget / unbindWidget
 
 公开头文件位于 `include/virtualitemviews/`，实现位于 `src/<module>/`；消费者只使用
 `#include <virtualitemviews/...>`。诊断快照见 `VirtualViewStats`（`docs/focus-ime.md`）。
+每个公开头文件都包含 `global.h`，符号可见性由那里的 `VIRTUALITEMVIEWS_EXPORT` 统一决定：
+同一份代码可以构建成静态库或动态库（`-DVIRTUALITEMVIEWS_BUILD_SHARED=ON`），宏由 CMake 目标
+自动传播，业务代码不需要手工 define（[abi.md](abi.md)）。
 
 ## 7. 选择与诊断
 

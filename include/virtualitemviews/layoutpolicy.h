@@ -1,5 +1,7 @@
 #pragma once
 
+#include <virtualitemviews/global.h>
+
 #include <QPoint>
 #include <QRect>
 #include <Qt>
@@ -14,7 +16,7 @@ class SizeIndex;
 /// The kernel only talks to this interface: it never assumes that items are
 /// rows or that the scrolling axis is vertical. List/Table/Tree therefore share
 /// one virtualization kernel and differ in their layout/visibility strategy.
-class LayoutPolicy
+class VIRTUALITEMVIEWS_EXPORT LayoutPolicy
 {
 public:
     virtual ~LayoutPolicy() = default;

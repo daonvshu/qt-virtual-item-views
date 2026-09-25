@@ -21,6 +21,10 @@
 ### Added
 
 * `docs/api-stability.md`：公开 API 的四级分类（应用/扩展/诊断/私有）、冻结规则与复核清单。
+* `include/virtualitemviews/global.h` + `VIRTUALITEMVIEWS_EXPORT`：**静态库与动态库都支持**。
+  `-DVIRTUALITEMVIEWS_BUILD_SHARED=ON` 产出 `bin/VirtualItemViews.dll` + `lib/VirtualItemViews.lib`；
+  `VIRTUALITEMVIEWS_LIBRARY` / `VIRTUALITEMVIEWS_STATIC` 由 CMake 目标自动传播，业务代码不必手工
+  define。ABI 规则、SOVERSION 与支持矩阵见 [docs/abi.md](docs/abi.md)。
 * `BlockSizeIndex::explicitSizeCount()`（诊断）：当前"实测过且不等于基值"的行数。
 * `VirtualItemView::visibleItemRanges()` / 行 pane 查询族（v0.8 行冻结，见
   [docs/row-freezing.md](docs/row-freezing.md)）。
@@ -35,3 +39,8 @@
   expand/collapse 不再重建整表（公开接口不变）。
 * 表头动画的缓动与时长统一为 OutCubic + 300 ms（`setHeaderAnimationDuration()` 可调）。
 * `CMakeLists.txt` 的 `VIRTUALITEMVIEWS_PUBLIC_HEADERS` 补上 `itempane.h`。
+* 项目版本 `0.1.0 -> 0.9.0`（与 roadmap 的 v0.9 对齐；v1.0 收尾时 bump 到 `1.0.0`，SOVERSION 跟
+  主版本）。
+* **产物布局变化**：可执行文件从 `<build>/examples/…`、`<build>/tests/…`、
+  `<build>/benchmarks/…` 统一到 `<build>/bin`，库统一到 `<build>/lib`。旧路径下的二进制不再更新，
+  请按新路径调用（`<build>/bin/table_spans`）；`find_package` 的消费端不受影响。

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <virtualitemviews/global.h>
+
 #include <QtGlobal>
 
 namespace viv {
@@ -20,7 +22,7 @@ namespace viv {
 ///
 /// (The architecture document calls the two directions toScrollbar()/
 /// toLogical(); the API names are toScrollBarValue()/toLogicalOffset().)
-class ScrollMapper
+class VIRTUALITEMVIEWS_EXPORT ScrollMapper
 {
 public:
     /// Largest scrollbar value span used when the content does not fit into an

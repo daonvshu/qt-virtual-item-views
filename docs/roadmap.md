@@ -27,8 +27,8 @@ v0.7 的逐项细节与实现决定记在 [spans.md](spans.md)、[accessibility.
 | Qt 6 | `D:\devlib\Qt\6.11.2\msvc2022_64` |
 | Qt 5 | `D:\devlib\Qt\5.15.2\msvc2019_64` |
 | 工具链 | MSVC 18 (14.50.35717) x64 + Ninja + CMake 4.3（CLion 自带） |
-| 构建树 | `cmake-build-debug-qt6` / `cmake-build-debug-qt5` |
-| 验证 | 两种配置 `all` 构建通过；20 个 CTest 目标全绿（248 单元 + 4 变异 + 10 GUI 用例）；12 个示例全部退出码 0；`bench_listview`（1M 行 / 表格 100 列 / 树）自检不变量通过 |
+| 构建树 | `cmake-build-debug-qt6` / `cmake-build-debug-qt5`（静态）与 `cmake-build-debug-qt6-shared` / `cmake-build-debug-qt5-shared`（动态） |
+| 验证 | 四种组合（Qt 6.11.2 / Qt 5.15.2 × 静态 / 动态）`all` 构建通过；20 个 CTest 目标全绿（248 单元 + 4 变异 + 10 GUI 用例）；12 个示例全部退出码 0；`bench_listview`（1M 行 / 表格 100 列 / 树）自检不变量通过 |
 
 注意：构建与测试必须在沙箱外运行。沙箱内 ninja 无法派生编译器子进程，构建会永久挂起
 （已用最小 ninja 工程复现）。
@@ -105,7 +105,17 @@ Wave 3（v1.0 工程化交付）。**
       补上 `CMakeLists.txt` 漏列的公开头 `itempane.h`；建 `CHANGELOG.md`（从 v1.0 起记录
       破坏性变更，本轮的三个改动已在里面）。顺带把 1a 已清掉的 `setPanes()` 忽略分支从
       "待办示例"降级为已完成（复核时确认无残余）。
-- [ ] ABI 策略文档 + Qt 版本支持矩阵（5.15 / 6.x 各自实测的组合）。
+- [x] **3b ABI 策略 + Qt 版本矩阵**（[abi.md](abi.md)，用户拍板"加导出宏，静态与动态都要"）：
+      新增 `include/virtualitemviews/global.h` 定义 `VIRTUALITEMVIEWS_EXPORT`，套到 30 个公开类与
+      3 个自由函数上；`VIRTUALITEMVIEWS_LIBRARY`（库自己，`PRIVATE`）与 `VIRTUALITEMVIEWS_STATIC`
+      （静态消费者，`PUBLIC` 随导出目标传播）由 CMake 管理，业务代码不需要手工 define。
+      产物布局统一成 `<build>/bin` + `<build>/lib`（Windows 只在自己所在目录找 DLL，同目录后
+      CTest / 示例 / 基准都不需要 PATH 技巧）。版本号 `0.1.0 -> 0.9.0`，`find_package` 兼容性在
+      0.x 期间用 `SameMinorVersion`、1.0 起切 `SameMajorVersion`，SOVERSION 跟主版本。
+      文档写清"什么改动算 ABI 破坏"（7 条）、跨边界 Qt 容器的约束（同一套 Qt + 运行库设置）、
+      以及实测矩阵（Qt 5.15.2 / 6.11.2 × 静态 / 动态，MSVC 19.50 x64）与未实测组合。
+      实测证据：共享构建产出 `VirtualItemViews.dll`（约 1000 个导出符号）+ 导入库，
+      四种组合各自跑通 20 个 CTest 目标与 12 个示例。
 - [ ] 文档齐全度：公开类文档、README 快速开始、安装消费端示例（`find_package(VirtualItemViews)` 实跑）。
 - [ ] 性能基线固化：把 bench 数字写进 [performance.md](performance.md)，保留稳态滚动零分配断言。
 - [ ] 一键验证脚本 / CI：双 Qt 构建 + CTest + 示例退出码。
@@ -135,6 +145,9 @@ Wave 3（v1.0 工程化交付）。**
 | 2026-09-25 | `BlockSizeIndex` 用"块基值 + 稀疏例外表"，块 > 2 x capacity 对半切、与同基值邻块合并到 capacity | 逐行存 int 让一千万元素白付 40 MB；基值化后未测量的行零开销，而"切/合并"把每块的例外数夹在 2 x capacity 内，最坏复杂度与旧实现同阶，常见情况退化成 O(log B) |
 | 2026-09-25 | 公开 API 分四级冻结，而不是"全部一起冻" | 业务入口（A）和内核扩展点（B）的兼容成本完全不同：A 层要能挡住一切变化，B 层的 protected 契约需要留出次版本内的调整空间，诊断接口（C）跟着实现走才诚实 |
 | 2026-09-25 | 公开入口不许"接受但忽略"：要么完整实现，要么明确拒绝；`LayoutPolicy::setSizeIndex()` 的默认实现改为"没有索引模型也履行 takeOwnership" | 一个声称接管所有权却把对象丢掉的入口是静默泄漏；把它写进冻结规则后，后续评审有可执行的判据 |
+| 2026-09-25 | 静态库与动态库都支持（加 `VIRTUALITEMVIEWS_EXPORT`），不做"只支持静态" | 用户拍板；导出宏是 30 个类的一次性机械改动，而"共享构建产出空 DLL"是实质缺陷，留着迟早要还 |
+| 2026-09-25 | 产物统一到 `<build>/bin` 与 `<build>/lib` | Windows 不会去隔壁目录找 DLL；可执行文件与库同目录后，CTest、示例、基准都不需要 PATH 技巧，静态/动态行为一致；代价只是示例路径从 `examples/xxx` 变成 `bin/xxx` |
+| 2026-09-25 | `PROJECT_VERSION` 先落到 `0.9.0`（与已完成的 Wave 2 对齐），1.0 收尾再 bump 到 `1.0.0`；0.x 期间 `find_package` 用 `SameMinorVersion` | 版本号要如实反映进度：Wave 3 还没做完就不是 1.0；0.x 没有 ABI 承诺，不该让"要 0.9"的消费端匹配到 0.10 |
 | 2026-09-25 | 视图会 reparent 应用传入的表头控件 | 顶层窗口的位置是屏幕坐标（带窗口边框偏移），表头会与 body 差几像素；reparent 后统一用视图坐标 |
 | 2026-09-25 | 行冻结里 `verticalOffset()` 的语义与范围保持不变（最大偏移仍 = 内容高 - 视口高） | 这正是"冻结不产生额外滚动空间"的算式：可滚动区少掉的像素数恰好等于冻结带高度；滚动到末尾时最后几行由底部冻结带绘制，内容仍然连续 |
 | 2026-09-25 | Cell Widget Mode 的裁剪容器改成"行 pane × 列 pane"交集，Row Widget Mode 不变（内核裁纵向、行内的列容器裁横向） | 两个方向的边界互相独立；Row 模式的行控件本身被内核容器裁一次，天然正交，不需要第二层容器 |

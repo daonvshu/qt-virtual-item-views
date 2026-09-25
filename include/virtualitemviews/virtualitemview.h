@@ -1,5 +1,6 @@
 #pragma once
 
+#include <virtualitemviews/global.h>
 #include <virtualitemviews/itempane.h>
 #include <virtualitemviews/materializeditem.h>
 #include <virtualitemviews/scrollmapper.h>
@@ -79,7 +80,7 @@ struct ScrollAnchor
 ///  - pooled widgets are unbound,
 ///  - one QModelIndex owns at most one widget at any time,
 ///  - model mutations never require a manual reload() from business code.
-class VirtualItemView : public QAbstractScrollArea
+class VIRTUALITEMVIEWS_EXPORT VirtualItemView : public QAbstractScrollArea
 {
     Q_OBJECT
 
