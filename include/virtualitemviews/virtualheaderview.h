@@ -115,6 +115,7 @@ protected:
     void mouseReleaseEvent(QMouseEvent *event) override;
     void keyPressEvent(QKeyEvent *event) override;
     void leaveEvent(QEvent *event) override;
+    bool eventFilter(QObject *watched, QEvent *event) override;
 
 private:
     void connectGeometry(HeaderGeometry *geometry, bool connectSignals);
@@ -147,6 +148,15 @@ private:
     /// The index the dragged section would land on, in final-order terms - that is the
     /// `to` argument of moveSection().
     int dragTargetIndex() const;
+    /// Cursor for a position in header coordinates (§25): the resize cursor at a section
+    /// edge, the ordinary arrow anywhere else. A gesture in progress (drag, resize) owns
+    /// the cursor, so a hover never overwrites it.
+    void updateCursor(const QPoint &pos);
+    /// Makes \a root and everything inside it report their mouse position back to this
+    /// header. The section widgets cover the header, so without this the header itself
+    /// sees almost no mouse moves and the cursor sticks to whatever it was set to last -
+    /// for the whole header, because children inherit the parent cursor.
+    void watchMouse(QWidget *root);
     /// Logical columns in visual order, ignoring hidden and filtered ones.
     QVector<int> visualOrder() const;
     /// True when this widget shows \a logicalIndex at all.

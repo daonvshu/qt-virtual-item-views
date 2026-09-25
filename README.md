@@ -67,7 +67,7 @@ QWidget**。
 | 像素滚动：`WheelScrollMode`（Pixels 默认 / Items）、`setWheelScrollPixels()`、`scrollByPixels()`、`setVerticalOffset()`、触控板 `pixelDelta` 1:1 | 已实现 |
 | 可选生命周期日志 `setLifecycleLoggingEnabled()`（create/bind/unbind/recycle/pin） | 已实现 |
 | `TreeVisibilityIndex`（可见行压平、增量展开/折叠、深度、row 双向查询） | 已实现 |
-| 单元测试 231 个用例 + 4 个变异测试 + 10 个 GUI 交互场景（共 20 个 CTest 目标） | 已实现 |
+| 单元测试 232 个用例 + 4 个变异测试 + 10 个 GUI 交互场景（共 20 个 CTest 目标） | 已实现 |
 | 11 个示例（simple list / order cards / dynamic height / million rows / table row widgets / table many columns / table custom header / tree / drag & drop / table spans / table panes） | 已实现 |
 | benchmark（1M 行、表格 row vs cell、树：宽树 + 变更 + 锚点，稳态滚动零分配校验） | 已实现 |
 

@@ -106,6 +106,7 @@ private slots:
     void dragPreviewsAndCommitsOnce();
     void dragReordersInsideItsPaneOnly();
     void escapeCancelsTheDrag();
+    void hoverOverASectionWidgetUpdatesTheCursor();
     void tableForwardsTheAnimationSettings();
 
 private:
@@ -524,6 +525,41 @@ void TestVirtualHeaderView::escapeCancelsTheDrag()
     QCOMPARE(dragged->width(), widthBefore);
     QCOMPARE(m_geometry->logicalIndex(0), 0);
     QCOMPARE(m_geometry->logicalIndex(1), 1);
+}
+
+void TestVirtualHeaderView::hoverOverASectionWidgetUpdatesTheCursor()
+{
+    // §25: the section widgets cover the header, so the cursor has to follow *their*
+    // mouse events. Otherwise the resize cursor sticks to the whole header (children
+    // inherit the parent's cursor) and an ordinary hover looks like a resize zone.
+    QWidget *section = m_header->sectionWidget(1);
+    QVERIFY(section != nullptr);
+    QCOMPARE(m_header->cursor().shape(), Qt::ArrowCursor);
+
+    const auto moveInside = [](QWidget *widget, const QPoint &local) {
+        QMouseEvent event(QEvent::MouseMove, local, widget->mapToGlobal(local), Qt::NoButton,
+                          Qt::NoButton, Qt::NoModifier);
+        QApplication::sendEvent(widget, &event);
+    };
+
+    // Middle of the section: nothing to resize.
+    moveInside(section, QPoint(kSectionWidth / 2, 5));
+    QCOMPARE(m_header->cursor().shape(), Qt::ArrowCursor);
+    // Its trailing edge: the width cursor appears even though the header itself saw no
+    // mouse move at all.
+    moveInside(section, QPoint(kSectionWidth - 1, 5));
+    QCOMPARE(m_header->cursor().shape(), Qt::SplitHCursor);
+    // Back into the middle: the cursor must not stick.
+    moveInside(section, QPoint(kSectionWidth / 2, 5));
+    QCOMPARE(m_header->cursor().shape(), Qt::ArrowCursor);
+
+    // A widget the business put inside the section reports as well.
+    auto *label = section->findChild<QLabel *>(QStringLiteral("sectionLabel"));
+    QVERIFY(label != nullptr);
+    moveInside(label, QPoint(label->width() / 2, 5));
+    QCOMPARE(m_header->cursor().shape(), Qt::ArrowCursor);
+    moveInside(label, QPoint(label->width() - 1, 5));
+    QCOMPARE(m_header->cursor().shape(), Qt::SplitHCursor);
 }
 
 void TestVirtualHeaderView::tableForwardsTheAnimationSettings()

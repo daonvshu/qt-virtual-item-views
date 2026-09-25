@@ -5,6 +5,7 @@
 
 #include <QAbstractItemModel>
 #include <QApplication>
+#include <QCursor>
 #include <QEasingCurve>
 #include <QKeyEvent>
 #include <QMouseEvent>
@@ -338,6 +339,9 @@ void VirtualHeaderView::relayout()
             widget->hide();
             m_sectionWidgets.insert(logical, widget);
             m_adapter->bindSection(widget, logical);
+            // Bound widgets are watched once: their children only change when the
+            // business rebinds them (§25 cursor).
+            watchMouse(widget);
         }
     }
 
@@ -530,7 +534,7 @@ void VirtualHeaderView::finishSectionDrag(bool commit)
 
     m_dragSection = -1;
     m_dragging = false;
-    unsetCursor();
+    updateCursor(mapFromGlobal(QCursor::pos()));
 
     if (commit && fromVisual >= 0 && toVisual >= 0) {
         // §23: one commit, then the transition settles from where the preview left the
@@ -683,6 +687,7 @@ void VirtualHeaderView::mousePressEvent(QMouseEvent *event)
         m_resizeStartSize = m_geometry->storedSectionSize(m_resizeSection);
         m_resizeStartX = pos.x();
         m_pressedSection = -1;
+        setCursor(Qt::SplitHCursor); // the gesture owns the cursor until the release
         event->accept();
         return;
     }
@@ -720,7 +725,7 @@ void VirtualHeaderView::mouseMoveEvent(QMouseEvent *event)
         event->accept();
         return;
     }
-    setCursor(resizeEdgeAt(pos) >= 0 ? Qt::SplitHCursor : Qt::ArrowCursor);
+    updateCursor(pos);
     QWidget::mouseMoveEvent(event);
 }
 
@@ -744,7 +749,7 @@ void VirtualHeaderView::mouseReleaseEvent(QMouseEvent *event)
     }
     m_resizeSection = -1;
     m_pressedSection = -1;
-    unsetCursor();
+    updateCursor(pos);
 
     // A plain click on a section sets the sort indicator (§33).
     if (!wasResize && !m_moved && pressed >= 0 && sectionAt(pos) == pressed
@@ -757,6 +762,59 @@ void VirtualHeaderView::mouseReleaseEvent(QMouseEvent *event)
     }
     m_moved = false;
     event->accept();
+}
+
+void VirtualHeaderView::updateCursor(const QPoint &pos)
+{
+    if (m_dragging || m_resizeSection >= 0)
+        return; // the gesture owns the cursor
+    if (!rect().contains(pos)) {
+        setCursor(Qt::ArrowCursor);
+        return;
+    }
+    setCursor(resizeEdgeAt(pos) >= 0 ? Qt::SplitHCursor : Qt::ArrowCursor);
+}
+
+void VirtualHeaderView::watchMouse(QWidget *root)
+{
+    // The section widgets cover the header, so the header itself sees almost no mouse
+    // moves: every section widget - and everything the business put inside it - has to
+    // report its position back (§25). Without this the resize cursor would stick to
+    // whatever it was set to last, for the whole header, because children inherit the
+    // parent's cursor.
+    if (!root)
+        return;
+    root->setMouseTracking(true);
+    root->installEventFilter(this);
+    const QList<QWidget *> children = root->findChildren<QWidget *>();
+    for (QWidget *child : children) {
+        child->setMouseTracking(true);
+        child->installEventFilter(this);
+    }
+}
+
+bool VirtualHeaderView::eventFilter(QObject *watched, QEvent *event)
+{
+    auto *widget = qobject_cast<QWidget *>(watched);
+    if (!widget || !m_geometry)
+        return QWidget::eventFilter(watched, event);
+
+    switch (event->type()) {
+    case QEvent::MouseMove: {
+        const auto *mouse = static_cast<QMouseEvent *>(event);
+        updateCursor(widget->mapTo(this, eventPosition(mouse)));
+        break;
+    }
+    case QEvent::Enter:
+    case QEvent::Leave:
+        // Enter/Leave carry no usable position, and the pointer may move from one child
+        // to another without the header seeing a move: ask the pointer itself.
+        updateCursor(mapFromGlobal(QCursor::pos()));
+        break;
+    default:
+        break;
+    }
+    return false; // never consume: the business widget keeps its own events
 }
 
 void VirtualHeaderView::leaveEvent(QEvent *event)

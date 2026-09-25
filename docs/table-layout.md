@@ -3,8 +3,9 @@
 > 状态：**v0.4 Table MVP 已实现**（`HeaderGeometry` + `NativeHeaderView` + Row Widget Mode +
 > 列 resize/move/hide + 横向像素滚动 + 表头状态持久化 + 排序 + 垂直行号表头）；
 > **v0.5 Cell Widget Mode / 二维虚拟化已实现**（`CellWidgetAdapter`，只 materialize
-> `visibleRows x visibleColumns`）。仍待实现：`VirtualHeaderView`（QWidget 版表头 +
-> `HeaderWidgetAdapter`，接口已按 §15/§17/§18 预留）。
+> `visibleRows x visibleColumns`）；**v0.7 起 `VirtualHeaderView` + `HeaderWidgetAdapter` 已实现**
+> （§15/§17–§19），换序的 committed/visual 两层几何与按需过渡见
+> [header-animation.md](header-animation.md)。
 
 本文记录 `VirtualTableView` 尚未实现、但必须从第一天遵守的边界。方案文档把它列为项目级
 architecture invariant：**Header owns geometry; VirtualTableView owns virtualization;
@@ -138,12 +139,18 @@ table->setHorizontalHeader(header);     // 传给 nullptr 回到 native 表头
   实测：200 列、1000 px 宽的表格只创建 9 个 section 控件（`table_custom_header` 示例输出）。
 * **几何仍只来自 `HeaderGeometry`**：section 的位置/宽度/顺序/隐藏/偏移全部读 geometry，
   表头不保存任何列状态；拖动分隔线、拖动 section 重排、点击排序都是把结果写回 geometry。
-* **交互**：离 section 边缘 ±3 px 按住拖动 = 改列宽（§21/§25）；按住 section 拖到邻居上 =
-  重排（§22）；单击 = 排序（§33）；子控件获得焦点或打开 popup 的 section 会被 pin，不回收（§36）。
+* **交互**：离 section 边缘 ±3 px 按住拖动 = 改列宽（§21/§25）；按住 section 拖过拖动距离阈值 =
+  重排（§22，拖动期间只有视觉预览，松手才提交一次，详见 [header-animation.md](header-animation.md)）；
+  单击 = 排序（§33）；子控件获得焦点或打开 popup 的 section 会被 pin，不回收（§36）。
+* **命中与光标（§25）**：section 是真控件、铺满整个表头，所以鼠标事件大多落在它们（以及业务塞进去
+  的子控件）身上，而不是表头本身。渲染器在绑定 section 时对整棵子树打开鼠标跟踪并安装事件过滤器，
+  把指针位置换算回表头坐标后再算"是否在某个 section 边缘 ±3 px"——否则"调整宽度"光标一旦设上就
+  永远不重置，而且因为子控件继承父控件光标，整片表头都会变成那个图标。过滤器**从不消费**事件，
+  业务控件的 hover / 点击 / 拖拽全都照旧。
 * **冻结列**：`setPaneFilter(columns, frozen)` 让同一个类也能当冻结 pane 的表头
   （只 materialize 本 pane 的 section），表格会自动用同类渲染器创建 pane 表头（§31）。
-* 表头动画（§23/§24：committed vs visual geometry、动画分类）尚未实现；`VirtualHeaderView`
-  的 section 控件就是它的落点。
+* 表头动画（§23/§24）：已按"committed vs visual 两层几何 + 按需过渡"实现，见
+  [header-animation.md](header-animation.md)。
 * **滚动范围不变**：可滚动内容减少的宽度正好等于冻结宽度，`maximumHorizontalOffset()` 仍是
   `总可见宽度 - 视口宽度`。冻结不会凭空制造滚动空间，也不会让某些列永远滚不到。
 * **body 与 pane 的关系**：Row Widget Mode 下仍是一行一个业务控件，冻结列的 `ColumnHost`
