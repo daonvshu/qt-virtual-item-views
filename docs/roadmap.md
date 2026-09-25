@@ -76,8 +76,14 @@ v0.7 的逐项细节与实现决定记在 [spans.md](spans.md)、[accessibility.
       4 层展开 969.5 → **115.9 ms**、折叠 229.8 → **4.3 ms**、工作集 114.5 → **76.0 MB**
       （[performance.md](performance.md) §4 有对照表）；新增两条用例守住"不遍历整棵树"与
       "每一行都能映射回自己的可见行位置"（在很宽的树上反复展开/折叠/再展开）。
-- [ ] **2b Accessibility 补 `QAccessibleTableInterface`**（屏幕阅读器按行列朗读），
-      按需再考虑 `TextInterface`/`EditableTextInterface`（[accessibility.md](accessibility.md) §4）。
+- [x] **2b Accessibility 补 `QAccessibleTableInterface`**：表格视图节点在 `TableInterface` 上返回
+      自己，按**模型坐标**读出 `rowCount()`/`columnCount()`/`cellAt()`（合并区域折回锚点）、
+      `columnDescription()`/`rowDescription()` 提供表头文字（UIA/AT-SPI 的"第几列/第几行"来源）、
+      选择查询与整行整列的选择/取消（`NoSelection` 时返回 false）；单元格节点一并补上
+      `QAccessibleTableCellInterface`（坐标、`table()`、`isSelected()`、合并单元格的 span extent）。
+      `selectedCells()` 只给窗口内的节点（计数精确、列表有界）。顺带把节点的
+      `rowIndex()`（返回 QModelIndex）改名为 `rowModelIndex()`，避免与 Qt 的 int 版重名。
+      仍未实现：`TextInterface`/`EditableTextInterface`（[accessibility.md](accessibility.md) §4）。
 - [ ] **2c `BlockSizeIndex` 内存优化**：只记录"与估计值不同"的行，公开接口不变
       （[performance.md](performance.md) §4 第一条）。
 
@@ -121,6 +127,8 @@ v0.7 的逐项细节与实现决定记在 [spans.md](spans.md)、[accessibility.
 | 2026-09-25 | 行冻结的"底部冻结支持、默认 0""冻结行参与选择""排序后前 N 行"三个开放问题按最小意外默认落地，不加开关 | 顶/底在实现里本来就对称；冻结行就是普通行；排序语义跟随模型（与冻结列一致），加开关只会增加需要维护和解释的状态 |
 | 2026-09-25 | 行 pane 交界线与列 pane 交界线共用一套样式与颜色（探到的样式分隔线颜色），横向线也跨过行号条 | 同一个视图里出现两种边界线（一个是探到的样式色、一个是调色板中灰；一条跨表头条、一条不跨行号条）看起来像两个特性各做一半；所以用 `setPaneSeparatorStyle()` 一个旋钮管两个方向，list/tree 的默认实现才回落到调色板中灰 |
 | 2026-09-25 | 树的可见行映射用"每个已展开父节点一棵 Fenwick 树"而不是整表反向哈希 | 反向哈希必须整表重建（O(可见行)）才能在 expand/collapse 后保持正确；分块前缀和让每层只更新自己那一格、行号自底向上累加，热路径变成 O(depth × log k)，内存也少一个数量级的常数 |
+| 2026-09-25 | 可访问性的表格接口用**模型坐标**（不是可见坐标），并且 `selectedCells()` 只返回窗口内的节点 | 屏幕阅读器问的是"第 3 行第 2 列"，而不是"当前窗口第几个"；同时必须守住"节点数不随逻辑行数增长"这条不变量，否则"全选"会瞬间物化一百万个接口 |
+| 2026-09-25 | 节点的 `rowIndex()` 改名 `rowModelIndex()` | 实现 `QAccessibleTableCellInterface` 后 `rowIndex()` 必须是"第几行"（int），原来那个返回 QModelIndex 的同名方法在语义上本来也更容易误会 |
 | 2026-09-25 | 表头过渡改成**按需触发**：程序化换序默认即时，只有显式 `MoveAnimation::Animate`（或渲染器自己的手势）才播 | 用户反馈"手动设置列顺序也被当成了拖动"；程序化/模型换序/状态恢复不该变出没人要求的动画。现有 `moveColumn()` 调用语义不变（默认即时），过渡从"任何顺序变化都播"收敛为"被请求才播" |
 | 2026-09-25 | 拖动重排重做成"拖动距离阈值 + 视觉预览 + 松手一次提交"，并把单次过渡接回松手 | 旧实现每越过一个邻居就提交一次：既不能连续拖（只能一格一格挪），又会把点击/抖动误判成拖动，且逐格动画让 section 跟不上光标。现在 committed 几何只在松手时变一次，拖动期间只动渲染器的视觉几何 |
 | 2026-09-25 | 拖动期间"邻居让位"也走缓动，并且与换序过渡**同一套曲线与时长**（OutCubic，默认 300 ms；关闭动画时即刻） | 瞬移的让位看起来像跳帧：拖动是被拖列跟随光标、其他列让出插入位的一次连续运动。让位与过渡用同一个旋钮，手感才会一致（要更快就整体调小时长） |

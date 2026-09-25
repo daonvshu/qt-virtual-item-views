@@ -49,6 +49,7 @@ QWidget**。
 | 拖放观测：`itemDropped(parent, row, column, action)` 信号、`dropTargetAt()`/`dropIndicatorRect()`/`dropIndicatorStyle()` 诊断接口 | 已实现 |
 | Accessibility（v0.7，§37）：`installAccessibilityFactory()` 注册 `QAccessibleInterface` 桥接，按需暴露**可见行**（列表项 / 树节点 / 表格行 + 可见列的 cell），文本与状态取自 model 与已提交几何，100 万行模型仍是十几个节点 | 已实现 |
 | Accessibility 导航：current 作为 `focusChild()`、`childAt()` 命中、树层次（parent/children 往返）、表格行列语义、`press` 等价 `activateIndex()`（发 `clicked()`/`activated()`）、`setFocus`/`scrollUp/Down/Left/Right` 动作、Focus/Selection/ModelChange 事件 | 已实现 |
+| Accessibility 表格接口（v0.8，§37 / roadmap 2b）：表格视图节点实现 `QAccessibleTableInterface`（按**模型坐标**读：`rowCount()`/`columnCount()`/`cellAt()`、`columnDescription()`/`rowDescription()` 给表头文字、选择查询与整行整列选择），单元格节点实现 `QAccessibleTableCellInterface`（坐标、`table()`、`isSelected()`、合并单元格的 `rowExtent()`/`columnExtent()`）；`selectedCells()` 仍然只给窗口内的节点，百万行"全选"不会物化一百万个接口 | 已实现 |
 | Span（v0.7，§43）：`TableSpanProvider` / `TableSpanMap` + `setSpan()/removeSpan()/clearSpans()`；合并矩形完全由已提交列几何与行高推出（不存第二份几何），`indexAt()/cellRect()` 折回锚点，Cell Widget Mode 只物化锚点并把锚点控件放大到合并矩形 | 已实现 |
 | Span 一致性：拖放落点与插入指示器按锚点/合并矩形、accessibility 合并区域只暴露一个 cell、span 不跨 pane（裁剪到锚点 pane）、隐藏列自动变窄、列宽/行高变化后合并矩形自动跟随 | 已实现 |
 | Span 两种模式：Cell Widget Mode 只物化锚点（跨行合并由框架渲染）；Row Widget Mode 隐藏被覆盖列的 `ColumnHost`、锚点 host 占合并矩形，并在 `TableRowLayoutContext::spans()` 里把决定交给业务（`examples/table_spans`） | 已实现 |
@@ -67,12 +68,12 @@ QWidget**。
 | 像素滚动：`WheelScrollMode`（Pixels 默认 / Items）、`setWheelScrollPixels()`、`scrollByPixels()`、`setVerticalOffset()`、触控板 `pixelDelta` 1:1 | 已实现 |
 | 可选生命周期日志 `setLifecycleLoggingEnabled()`（create/bind/unbind/recycle/pin） | 已实现 |
 | `TreeVisibilityIndex`（可见行压平、**增量**展开/折叠、深度、row 双向查询）：每个已展开父节点一棵 Fenwick 前缀和，索引 → 可见行 O(depth × log siblings)，展开/折叠只沿路径更新（百万可见行下 4 层展开 969 ms → 116 ms、折叠 230 ms → 4 ms、工作集 114 → 76 MB） | 已实现 |
-| 单元测试 239 个用例 + 4 个变异测试 + 10 个 GUI 交互场景（共 20 个 CTest 目标） | 已实现 |
+| 单元测试 243 个用例 + 4 个变异测试 + 10 个 GUI 交互场景（共 20 个 CTest 目标） | 已实现 |
 | 12 个示例（simple list / order cards / dynamic height / million rows / table row widgets / table many columns / table custom header / tree / drag & drop / table spans / table panes / table frozen rows） | 已实现 |
 | benchmark（1M 行、表格 row vs cell、树：宽树 + 变更 + 锚点，稳态滚动零分配校验） | 已实现 |
 
 未实现（按 §43 路线图）：accessibility
-还没有 `QAccessibleTableInterface`（行列朗读）与文本/编辑接口；
+还没有文本/编辑接口（`TextInterface`/`EditableTextInterface`，行内编辑器自己是真实控件会自己暴露）；
 树在"可见行数极大"时的增量行映射优化
 （现在一次 expand/collapse 需要重建可见行索引表，见 [docs/performance.md](docs/performance.md)）。
 推进顺序见 [docs/roadmap.md](docs/roadmap.md)。

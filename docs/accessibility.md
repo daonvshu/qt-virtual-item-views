@@ -81,9 +81,25 @@ current 变化发 `QAccessible::Focus`，选择变化发 `QAccessible::Selection
   与框架其他部分同一条不变量。
 * **节点的生命周期**：节点由视图接口持有，`QPersistentModelIndex` 作为身份。行被删掉之后，
   已经交出去的节点会返回 `isValid() == false` / `invalid` 状态，而不是变成悬垂指针。
-* **没有 `QAccessibleTableInterface`**：行列语义用 `Row` + `Cell` 角色表达（`childCount` 即
-  "可见列数"），没有实现 IAccessible2 的表格接口；如果将来需要屏幕阅读器的"按行列朗读"，
-  那是 v1.x 的扩展点。
+* **`QAccessibleTableInterface`（v0.8 / roadmap 2b）已实现**：表格视图的节点在
+  `interface_cast(QAccessible::TableInterface)` 上返回它，于是屏幕阅读器可以按**模型坐标**读写表格，
+  而不是只能走"当前窗口里那几个节点"：
+  * `rowCount()` / `columnCount()` 是**模型**的行列数（不是可见行数）；`cellAt(row, column)` 按需
+    创建那一格的节点（没有物化的行也能读），合并区域的任意坐标都折回锚点；
+  * `columnDescription()` / `rowDescription()` 给出表头文字（`headerData()` 的 DisplayRole，
+    空则回落到序号），这是平台桥接（UIA / AT-SPI）朗读"第几列、第几行"的来源；行列的表头控件是
+    真实控件，所以 `columnHeaderCells()` / `rowHeaderCells()` 返回空（由表头控件自己暴露）；
+  * 选择：`selectedRows()` / `selectedColumns()` / `isRowSelected()` / `isColumnSelected()` 读
+    `QItemSelectionModel`，`selectRow()` / `selectColumn()` / `unselectRow()` / `unselectColumn()`
+    整行整列地选中或取消；视图处于 `NoSelection` 时这些调用返回 false（而不是假装成功）；
+  * `selectedCellCount()` 是精确计数，`selectedCells()` 只给出**当前窗口内**的选中单元格节点 ——
+    沿用同一条不变量：框架不会为逻辑行生成节点，所以一张百万行的表"全选"也不会物化一百万个接口。
+  * 单元格节点自身实现 `QAccessibleTableCellInterface`（v0.8 一并补上）：`rowIndex()` /
+    `columnIndex()` 是它的坐标，`table()` 是表格节点，`isSelected()` 来自选择模型，
+    `rowExtent()` / `columnExtent()` 对合并单元格给出 span 的行列数（§43 "spans"）。
+  * 顺带改名：节点上原来那个返回 `QModelIndex` 的 `rowIndex()` 与 Qt 的
+    `QAccessibleTableCellInterface::rowIndex()`（返回 int）重名，现在叫 **`rowModelIndex()`**；
+    `rowIndex()` 从此是"第几行"。
 * **没有文本/编辑接口**：`TextInterface`/`EditableTextInterface` 未实现（行内编辑器自己会
   暴露接口，因为它们是真实 QWidget）。
 * **平台相关**：Windows 的 UIA / macOS 的 VoiceOver 通过各自的平台插件走同一条

@@ -204,7 +204,7 @@ QObject *AccessibleVirtualItem::object() const
     return m_view;
 }
 
-QModelIndex AccessibleVirtualItem::rowIndex() const
+QModelIndex AccessibleVirtualItem::rowModelIndex() const
 {
     if (!m_index.isValid())
         return QModelIndex();
@@ -464,7 +464,65 @@ void *AccessibleVirtualItem::interface_cast(QAccessible::InterfaceType type)
 {
     if (type == QAccessible::ActionInterface)
         return static_cast<QAccessibleActionInterface *>(this);
+    // Only a cell node is a table cell; the row node above it is the table's child.
+    if (type == QAccessible::TableCellInterface && m_column >= 0)
+        return static_cast<QAccessibleTableCellInterface *>(this);
     return nullptr;
+}
+
+// -- QAccessibleTableCellInterface (cell nodes) ------------------------------
+
+bool AccessibleVirtualItem::isSelected() const
+{
+    const QItemSelectionModel *selection = m_view ? m_view->selectionModel() : nullptr;
+    const QModelIndex cell = index();
+    return selection && cell.isValid() && m_column >= 0 && selection->isSelected(cell);
+}
+
+QList<QAccessibleInterface *> AccessibleVirtualItem::columnHeaderCells() const
+{
+    return {};
+}
+
+QList<QAccessibleInterface *> AccessibleVirtualItem::rowHeaderCells() const
+{
+    return {};
+}
+
+int AccessibleVirtualItem::columnIndex() const
+{
+    return m_column;
+}
+
+int AccessibleVirtualItem::rowIndex() const
+{
+    return index().row();
+}
+
+int AccessibleVirtualItem::columnExtent() const
+{
+    // A merged area is one cell: report how many columns it covers (§43 "spans").
+    const auto *table = qobject_cast<const VirtualTableView *>(m_view);
+    const QModelIndex cell = index();
+    if (!table || !cell.isValid())
+        return 1;
+    const TableSpan span = table->spanAt(cell);
+    return span.isMerged() ? qMax(1, span.columnSpan) : 1;
+}
+
+int AccessibleVirtualItem::rowExtent() const
+{
+    const auto *table = qobject_cast<const VirtualTableView *>(m_view);
+    const QModelIndex cell = index();
+    if (!table || !cell.isValid())
+        return 1;
+    const TableSpan span = table->spanAt(cell);
+    return span.isMerged() ? qMax(1, span.rowSpan) : 1;
+}
+
+QAccessibleInterface *AccessibleVirtualItem::table() const
+{
+    return m_viewNode;
 }
 
 QStringList AccessibleVirtualItem::actionNames() const
@@ -802,7 +860,206 @@ void *AccessibleVirtualItemView::interface_cast(QAccessible::InterfaceType type)
 {
     if (type == QAccessible::ActionInterface)
         return static_cast<QAccessibleActionInterface *>(this);
+    // A table gives a screen reader row/column coordinates; a list or a tree has no
+    // such interface (their children are simply ordered).
+    if (type == QAccessible::TableInterface && isTable(m_view))
+        return static_cast<QAccessibleTableInterface *>(this);
     return nullptr;
+}
+
+// -- QAccessibleTableInterface (table views) --------------------------------
+
+namespace {
+/// Header text of one section, with the same fallback the header widgets use.
+QString headerTextFor(QAbstractItemModel *model, int section, Qt::Orientation orientation)
+{
+    if (!model || section < 0)
+        return QString();
+    const QString text = model->headerData(section, orientation, Qt::DisplayRole).toString();
+    return text.isEmpty() ? QString::number(section + 1) : text;
+}
+} // namespace
+
+QAccessibleInterface *AccessibleVirtualItemView::caption() const
+{
+    return nullptr; // the view has no caption widget
+}
+
+QAccessibleInterface *AccessibleVirtualItemView::summary() const
+{
+    return nullptr; // ... and no summary widget
+}
+
+QAccessibleInterface *AccessibleVirtualItemView::cellAt(int row, int column) const
+{
+    auto *table = qobject_cast<VirtualTableView *>(m_view);
+    QAbstractItemModel *model = table ? table->model() : nullptr;
+    if (!model)
+        return nullptr;
+    const QModelIndex index = model->index(row, column);
+    if (!index.isValid())
+        return nullptr;
+    // A merged area is one cell: a covered index belongs to its anchor.
+    const QModelIndex anchor = table->anchorIndex(index);
+    return const_cast<AccessibleVirtualItemView *>(this)
+        ->itemFor(anchor, anchor.column());
+}
+
+QString AccessibleVirtualItemView::columnDescription(int column) const
+{
+    auto *table = qobject_cast<VirtualTableView *>(m_view);
+    QAbstractItemModel *model = table ? table->model() : nullptr;
+    if (!model || column < 0 || column >= model->columnCount())
+        return QString();
+    return headerTextFor(model, column, Qt::Horizontal);
+}
+
+QString AccessibleVirtualItemView::rowDescription(int row) const
+{
+    auto *table = qobject_cast<VirtualTableView *>(m_view);
+    QAbstractItemModel *model = table ? table->model() : nullptr;
+    if (!model || row < 0 || row >= model->rowCount())
+        return QString();
+    return headerTextFor(model, row, Qt::Vertical);
+}
+
+int AccessibleVirtualItemView::rowCount() const
+{
+    auto *table = qobject_cast<VirtualTableView *>(m_view);
+    QAbstractItemModel *model = table ? table->model() : nullptr;
+    return model ? model->rowCount() : 0;
+}
+
+int AccessibleVirtualItemView::columnCount() const
+{
+    auto *table = qobject_cast<VirtualTableView *>(m_view);
+    QAbstractItemModel *model = table ? table->model() : nullptr;
+    return model ? model->columnCount() : 0;
+}
+
+QList<int> AccessibleVirtualItemView::selectedRows() const
+{
+    QList<int> rows;
+    const QItemSelectionModel *selection = m_view ? m_view->selectionModel() : nullptr;
+    if (!selection)
+        return rows;
+    // selectedRows(0) reports the rows whose *every* column is selected, which is the
+    // same "the row is selected" a screen reader expects from isRowSelected().
+    for (const QModelIndex &index : selection->selectedRows(0)) {
+        if (!rows.contains(index.row()))
+            rows.append(index.row());
+    }
+    std::sort(rows.begin(), rows.end());
+    return rows;
+}
+
+QList<int> AccessibleVirtualItemView::selectedColumns() const
+{
+    QList<int> columns;
+    const QItemSelectionModel *selection = m_view ? m_view->selectionModel() : nullptr;
+    if (!selection)
+        return columns;
+    for (const QModelIndex &index : selection->selectedColumns(0)) {
+        if (!columns.contains(index.column()))
+            columns.append(index.column());
+    }
+    std::sort(columns.begin(), columns.end());
+    return columns;
+}
+
+bool AccessibleVirtualItemView::isRowSelected(int row) const
+{
+    const QItemSelectionModel *selection = m_view ? m_view->selectionModel() : nullptr;
+    return selection && selection->isRowSelected(row, QModelIndex());
+}
+
+bool AccessibleVirtualItemView::isColumnSelected(int column) const
+{
+    const QItemSelectionModel *selection = m_view ? m_view->selectionModel() : nullptr;
+    return selection && selection->isColumnSelected(column, QModelIndex());
+}
+
+int AccessibleVirtualItemView::selectedRowCount() const
+{
+    return int(selectedRows().size());
+}
+
+int AccessibleVirtualItemView::selectedColumnCount() const
+{
+    return int(selectedColumns().size());
+}
+
+int AccessibleVirtualItemView::selectedCellCount() const
+{
+    const QItemSelectionModel *selection = m_view ? m_view->selectionModel() : nullptr;
+    return selection ? int(selection->selectedIndexes().size()) : 0;
+}
+
+QList<QAccessibleInterface *> AccessibleVirtualItemView::selectedCells() const
+{
+    QList<QAccessibleInterface *> cells;
+    const QItemSelectionModel *selection = m_view ? m_view->selectionModel() : nullptr;
+    if (!selection)
+        return cells;
+    auto *self = const_cast<AccessibleVirtualItemView *>(this);
+    for (const QModelIndex &cell : selection->selectedIndexes()) {
+        // Only the cells of the current window are handed out as nodes; the count
+        // above is exact, this list stays bounded (docs/accessibility.md).
+        if (visiblePosition(cell.siblingAtColumn(0)) < 0)
+            continue;
+        cells.append(self->itemFor(cell, cell.column()));
+    }
+    return cells;
+}
+
+bool AccessibleVirtualItemView::selectRow(int row)
+{
+    return applySelection(row, -1, true);
+}
+
+bool AccessibleVirtualItemView::unselectRow(int row)
+{
+    return applySelection(row, -1, false);
+}
+
+bool AccessibleVirtualItemView::selectColumn(int column)
+{
+    return applySelection(-1, column, true);
+}
+
+bool AccessibleVirtualItemView::unselectColumn(int column)
+{
+    return applySelection(-1, column, false);
+}
+
+bool AccessibleVirtualItemView::applySelection(int row, int column, bool selected)
+{
+    auto *table = qobject_cast<VirtualTableView *>(m_view);
+    QAbstractItemModel *model = table ? table->model() : nullptr;
+    QItemSelectionModel *selection = m_view ? m_view->selectionModel() : nullptr;
+    if (!model || !selection || m_view->selectionMode() == VirtualItemView::SelectionMode::NoSelection)
+        return false;
+    if (row >= 0 && (row >= model->rowCount() || model->columnCount() <= 0))
+        return false;
+    if (column >= 0 && (column >= model->columnCount() || model->rowCount() <= 0))
+        return false;
+
+    const QModelIndex first = row >= 0 ? model->index(row, 0) : model->index(0, column);
+    const QModelIndex last = row >= 0 ? model->index(row, model->columnCount() - 1)
+                                      : model->index(model->rowCount() - 1, column);
+    const QItemSelectionModel::SelectionFlags direction =
+        row >= 0 ? QItemSelectionModel::Rows : QItemSelectionModel::Columns;
+    selection->select(QItemSelection(first, last),
+                      (selected ? QItemSelectionModel::Select : QItemSelectionModel::Deselect)
+                          | direction);
+    return true;
+}
+
+void AccessibleVirtualItemView::modelChange(QAccessibleTableModelChangeEvent *event)
+{
+    // Nothing to do: the nodes are created on demand and read the model live, and the
+    // framework's own notifier already sends the table model change events (§37).
+    Q_UNUSED(event);
 }
 
 QStringList AccessibleVirtualItemView::actionNames() const

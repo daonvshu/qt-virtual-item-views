@@ -192,6 +192,10 @@ private slots:
     void tableExposesRowsAndCells();
     void tableCellWidgetModeAlsoExposesRows();
     void mergedCellsAreOneAccessibleCell();
+    void tableInterfaceIsExposedOnTablesOnly();
+    void tableInterfaceReadsCellsByRowAndColumn();
+    void tableInterfaceSelectionRoundTrip();
+    void cellInterfaceReportsItsCoordinates();
     void treeExposesHierarchyOfVisibleNodes();
     void pressingAnItemBehavesLikeAClick();
 };
@@ -545,6 +549,182 @@ void TestAccessibility::mergedCellsAreOneAccessibleCell()
     view.flushPendingRelayout();
     QCOMPARE(viewInterface->child(0)->childCount(), 4);
     QCOMPARE(viewInterface->child(0)->child(2)->text(QAccessible::Name), QStringLiteral("r0c2"));
+}
+
+void TestAccessibility::tableInterfaceIsExposedOnTablesOnly()
+{
+    auto *model = new QStandardItemModel(6, 3, this);
+    AccessibleTableAdapter adapter(3);
+    VirtualTableView table;
+    table.setTableAdapter(&adapter);
+    table.setUniformItemHeight(kRowHeight);
+    table.setDefaultColumnWidth(kColumnWidth);
+    table.setModel(model);
+    showView(&table, QSize(kViewWidth, kViewHeight));
+
+    QAccessibleInterface *tableNode = QAccessible::queryAccessibleInterface(&table);
+    QVERIFY(tableNode);
+    // A table answers row/column coordinates; a list has no such interface, because its
+    // children are simply ordered.
+    QVERIFY(tableNode->interface_cast(QAccessible::TableInterface) != nullptr);
+
+    NumericListModel listModel(20);
+    TestAdapter listAdapter(kRowHeight);
+    VirtualListView list;
+    list.setAdapter(&listAdapter);
+    list.setUniformItemHeight(kRowHeight);
+    list.setModel(&listModel);
+    showView(&list, QSize(kViewWidth, kViewHeight));
+    QAccessibleInterface *listNode = QAccessible::queryAccessibleInterface(&list);
+    QVERIFY(listNode);
+    QVERIFY(listNode->interface_cast(QAccessible::TableInterface) == nullptr);
+}
+
+void TestAccessibility::tableInterfaceReadsCellsByRowAndColumn()
+{
+    auto *model = new QStandardItemModel(6, 3, this);
+    for (int row = 0; row < 6; ++row) {
+        for (int column = 0; column < 3; ++column) {
+            model->setItem(row, column,
+                           new QStandardItem(QStringLiteral("r%1c%2").arg(row).arg(column)));
+        }
+    }
+    AccessibleTableAdapter adapter(3);
+    VirtualTableView view;
+    view.setTableAdapter(&adapter);
+    view.setUniformItemHeight(kRowHeight);
+    view.setDefaultColumnWidth(kColumnWidth);
+    view.setModel(model);
+    showView(&view, QSize(kViewWidth, kViewHeight));
+
+    QAccessibleInterface *viewNode = QAccessible::queryAccessibleInterface(&view);
+    QVERIFY(viewNode);
+    auto *tableInterface =
+        static_cast<QAccessibleTableInterface *>(viewNode->interface_cast(QAccessible::TableInterface));
+    QVERIFY(tableInterface);
+
+    // The table spans the whole model, not just the window: a screen reader can ask for
+    // the cell of a row that was never materialized.
+    QCOMPARE(tableInterface->rowCount(), 6);
+    QCOMPARE(tableInterface->columnCount(), 3);
+    QCOMPARE(tableInterface->columnDescription(1), QStringLiteral("2"));
+    QCOMPARE(tableInterface->rowDescription(4), QStringLiteral("5"));
+    QVERIFY(tableInterface->caption() == nullptr);
+    QVERIFY(tableInterface->summary() == nullptr);
+
+    QAccessibleInterface *cell = tableInterface->cellAt(4, 1);
+    QVERIFY(cell != nullptr);
+    QCOMPARE(cell->role(), QAccessible::Cell);
+    QCOMPARE(cell->text(QAccessible::Name), QStringLiteral("r4c1"));
+    // Out of range: no cell.
+    QVERIFY(tableInterface->cellAt(99, 0) == nullptr);
+    QVERIFY(tableInterface->cellAt(0, 99) == nullptr);
+}
+
+void TestAccessibility::tableInterfaceSelectionRoundTrip()
+{
+    auto *model = new QStandardItemModel(6, 3, this);
+    for (int row = 0; row < 6; ++row) {
+        for (int column = 0; column < 3; ++column)
+            model->setItem(row, column, new QStandardItem(QStringLiteral("r%1").arg(row)));
+    }
+    AccessibleTableAdapter adapter(3);
+    VirtualTableView view;
+    view.setTableAdapter(&adapter);
+    view.setUniformItemHeight(kRowHeight);
+    view.setDefaultColumnWidth(kColumnWidth);
+    view.setModel(model);
+    view.setSelectionMode(VirtualItemView::SelectionMode::ExtendedSelection);
+    showView(&view, QSize(kViewWidth, kViewHeight));
+
+    QAccessibleInterface *viewNode = QAccessible::queryAccessibleInterface(&view);
+    QVERIFY(viewNode);
+    auto *tableInterface =
+        static_cast<QAccessibleTableInterface *>(viewNode->interface_cast(QAccessible::TableInterface));
+    QVERIFY(tableInterface);
+
+    QVERIFY(!tableInterface->isRowSelected(2));
+    QVERIFY(tableInterface->selectRow(2));
+    QCOMPARE(tableInterface->selectedRows(), QList<int>({2}));
+    QCOMPARE(tableInterface->selectedRowCount(), 1);
+    QCOMPARE(tableInterface->selectedCellCount(), 3); // the whole row
+    QVERIFY(tableInterface->isRowSelected(2));
+    QVERIFY(!tableInterface->isRowSelected(3));
+    QVERIFY(tableInterface->unselectRow(2));
+    QVERIFY(!tableInterface->isRowSelected(2));
+    QCOMPARE(tableInterface->selectedRowCount(), 0);
+
+    QVERIFY(tableInterface->selectColumn(1));
+    QCOMPARE(tableInterface->selectedColumns(), QList<int>({1}));
+    QCOMPARE(tableInterface->selectedColumnCount(), 1);
+    QVERIFY(tableInterface->isColumnSelected(1));
+    QVERIFY(tableInterface->unselectColumn(1));
+    QVERIFY(!tableInterface->isColumnSelected(1));
+
+    // The list of selected cells is bounded by the window; the count stays exact.
+    const int visibleRows = int(view.visibleRows().count());
+    for (int row = 0; row < 6; ++row)
+        tableInterface->selectRow(row);
+    QCOMPARE(tableInterface->selectedCellCount(), 6 * 3);
+    QVERIFY(int(tableInterface->selectedCells().size()) <= visibleRows * 3);
+
+    // A view that does not allow a selection answers "no" instead of pretending.
+    view.setSelectionMode(VirtualItemView::SelectionMode::NoSelection);
+    QVERIFY(!tableInterface->selectRow(0));
+    QVERIFY(!tableInterface->selectColumn(0));
+}
+
+void TestAccessibility::cellInterfaceReportsItsCoordinates()
+{
+    auto *model = new QStandardItemModel(8, 4, this);
+    for (int row = 0; row < 8; ++row) {
+        for (int column = 0; column < 4; ++column)
+            model->setItem(row, column, new QStandardItem(QStringLiteral("r%1c%2").arg(row).arg(column)));
+    }
+    AccessibleTableAdapter adapter(4);
+    VirtualTableView view;
+    view.setTableAdapter(&adapter);
+    view.setUniformItemHeight(kRowHeight);
+    view.setDefaultColumnWidth(kColumnWidth);
+    view.setModel(model);
+    view.setSelectionMode(VirtualItemView::SelectionMode::ExtendedSelection);
+    showView(&view, QSize(kViewWidth, kViewHeight));
+
+    QAccessibleInterface *viewNode = QAccessible::queryAccessibleInterface(&view);
+    QVERIFY(viewNode);
+    auto *tableInterface =
+        static_cast<QAccessibleTableInterface *>(viewNode->interface_cast(QAccessible::TableInterface));
+    QVERIFY(tableInterface);
+
+    QAccessibleInterface *cell = tableInterface->cellAt(2, 3);
+    QVERIFY(cell != nullptr);
+    auto *cellInterface =
+        static_cast<QAccessibleTableCellInterface *>(cell->interface_cast(QAccessible::TableCellInterface));
+    QVERIFY(cellInterface);
+    QCOMPARE(cellInterface->rowIndex(), 2);
+    QCOMPARE(cellInterface->columnIndex(), 3);
+    QCOMPARE(cellInterface->rowExtent(), 1);
+    QCOMPARE(cellInterface->columnExtent(), 1);
+    QCOMPARE(cellInterface->table(), viewNode);
+    QVERIFY(!cellInterface->isSelected());
+
+    tableInterface->selectRow(2);
+    QVERIFY(cellInterface->isSelected());
+    tableInterface->unselectRow(2);
+    QVERIFY(!cellInterface->isSelected());
+
+    // A merged area is one cell: the anchor reports the span as its extent and a covered
+    // index resolves to the same node.
+    view.setSpan(1, 1, 2, 2);
+    view.flushPendingRelayout();
+    QAccessibleInterface *anchor = tableInterface->cellAt(1, 1);
+    QVERIFY(anchor != nullptr);
+    auto *anchorInterface = static_cast<QAccessibleTableCellInterface *>(
+        anchor->interface_cast(QAccessible::TableCellInterface));
+    QVERIFY(anchorInterface);
+    QCOMPARE(anchorInterface->rowExtent(), 2);
+    QCOMPARE(anchorInterface->columnExtent(), 2);
+    QCOMPARE(tableInterface->cellAt(2, 2), anchor);
 }
 
 void TestAccessibility::treeExposesHierarchyOfVisibleNodes()
