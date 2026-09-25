@@ -116,7 +116,15 @@ Wave 3（v1.0 工程化交付）。**
       以及实测矩阵（Qt 5.15.2 / 6.11.2 × 静态 / 动态，MSVC 19.50 x64）与未实测组合。
       实测证据：共享构建产出 `VirtualItemViews.dll`（约 1000 个导出符号）+ 导入库，
       四种组合各自跑通 20 个 CTest 目标与 12 个示例。
-- [ ] 文档齐全度：公开类文档、README 快速开始、安装消费端示例（`find_package(VirtualItemViews)` 实跑）。
+- [x] **3c 文档齐全度 + 安装消费端实跑**：公开类/结构体的文档注释做了一次机械核查（23 个头文件里
+      每个 `class`/`struct` 都有 `///` 说明）；README 新增「安装与消费」一节（构建 → `cmake --install`
+      → 消费端 `find_package` 的完整命令、Qt 大版本各装一个前缀、动态安装的 DLL 查找注意事项）；
+      `docs/abi.md` 补上装出来的目录布局与消费端约定。新增
+      `tests/install/consumer/`（**独立** CMake 工程，只认 `find_package(VirtualItemViews)`，不碰源码树
+      或构建树），内含 28 项运行期自检：列表虚拟化与滚动、表格列几何/命中/隐藏列/表头状态往返、
+      span 锚点与合并矩形、冻结列与显式 pane 列表（含两个滚动组）、树展开折叠、单元格模式、
+      accessibility 工厂。四种组合（Qt 5.15.2 / 6.11.2 × 静态 / 动态）都做了
+      install → configure → build → run，全部 28/28 通过、退出码 0。
 - [ ] 性能基线固化：把 bench 数字写进 [performance.md](performance.md)，保留稳态滚动零分配断言。
 - [ ] 一键验证脚本 / CI：双 Qt 构建 + CTest + 示例退出码。
 
@@ -148,6 +156,8 @@ Wave 3（v1.0 工程化交付）。**
 | 2026-09-25 | 静态库与动态库都支持（加 `VIRTUALITEMVIEWS_EXPORT`），不做"只支持静态" | 用户拍板；导出宏是 30 个类的一次性机械改动，而"共享构建产出空 DLL"是实质缺陷，留着迟早要还 |
 | 2026-09-25 | 产物统一到 `<build>/bin` 与 `<build>/lib` | Windows 不会去隔壁目录找 DLL；可执行文件与库同目录后，CTest、示例、基准都不需要 PATH 技巧，静态/动态行为一致；代价只是示例路径从 `examples/xxx` 变成 `bin/xxx` |
 | 2026-09-25 | `PROJECT_VERSION` 先落到 `0.9.0`（与已完成的 Wave 2 对齐），1.0 收尾再 bump 到 `1.0.0`；0.x 期间 `find_package` 用 `SameMinorVersion` | 版本号要如实反映进度：Wave 3 还没做完就不是 1.0；0.x 没有 ABI 承诺，不该让"要 0.9"的消费端匹配到 0.10 |
+| 2026-09-25 | 安装冒烟测试是一个**独立工程**（`tests/install/consumer`），不进主构建树 | 只有独立 configure/build 才能真正证明"装出来的包能被人消费"；放在主构建里就只能证明"源码树里的头文件能被自己的 target 用到"，而那从来不是问题所在 |
+| 2026-09-25 | 安装前缀按 Qt 大版本区分（`VirtualItemViewsConfig.cmake` 里写死 `find_dependency(Qt6 …)`） | 一个前缀里混两个 Qt 大版本需要包名/目标名去版本化，代价远大于收益；Qt 5 与 Qt 6 各装各的前缀更简单也更好理解 |
 | 2026-09-25 | 视图会 reparent 应用传入的表头控件 | 顶层窗口的位置是屏幕坐标（带窗口边框偏移），表头会与 body 差几像素；reparent 后统一用视图坐标 |
 | 2026-09-25 | 行冻结里 `verticalOffset()` 的语义与范围保持不变（最大偏移仍 = 内容高 - 视口高） | 这正是"冻结不产生额外滚动空间"的算式：可滚动区少掉的像素数恰好等于冻结带高度；滚动到末尾时最后几行由底部冻结带绘制，内容仍然连续 |
 | 2026-09-25 | Cell Widget Mode 的裁剪容器改成"行 pane × 列 pane"交集，Row Widget Mode 不变（内核裁纵向、行内的列容器裁横向） | 两个方向的边界互相独立；Row 模式的行控件本身被内核容器裁一次，天然正交，不需要第二层容器 |

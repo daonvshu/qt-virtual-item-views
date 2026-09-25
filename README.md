@@ -74,6 +74,7 @@ QWidget**。
 | benchmark（1M 行、表格 row vs cell、树：宽树 + 变更 + 锚点，稳态滚动零分配校验） | 已实现 |
 | API 稳定性（v1.0，[docs/api-stability.md](docs/api-stability.md)）：23 个公开头文件按"应用 / 扩展 / 诊断 / 私有"四级冻结，只加不删、不改默认值语义、不新增"接受但忽略"的入口；变更记进 [CHANGELOG.md](CHANGELOG.md) | 已实现 |
 | 静态库与动态库（v1.0，[docs/abi.md](docs/abi.md)）：`VIRTUALITEMVIEWS_EXPORT` 统一符号可见性、宏由 CMake 目标自动传播；共享构建产出 `bin/VirtualItemViews.dll` + 导入库；Qt 5.15.2 / Qt 6.11.2 × 静态 / 动态四种组合都已构建并跑通全部测试 | 已实现 |
+| 安装与消费（v1.0）：`cmake --install` 导出标准 CMake 包（头文件 + 库 + `VirtualItemViewsConfig.cmake`，内含 `find_dependency(Qt…)`），消费端只写 `find_package(VirtualItemViews)` + `target_link_libraries(app PRIVATE VirtualItemViews::VirtualItemViews)`；[tests/install/consumer](tests/install/consumer) 是只认安装包的冒烟测试（28 项自检），四种组合都已实跑通过 | 已实现 |
 
 未实现（按 §43 路线图）：accessibility 还没有文本/编辑接口
 （`TextInterface`/`EditableTextInterface`，行内编辑器自己是真实控件会自己暴露）；
@@ -131,7 +132,8 @@ const viv::VirtualViewStats stats = view->stats();  // 诊断/debug overlay
 
 完整的可运行示例在 `examples/`（全部为像素滚动；都支持 `--exit-after <ms>`，另有各自的规模与
 滚动参数，如列表的 `--rows`、树的 `--devices`、统一的 `--wheel-pixels`，便于无人值守运行；
-退出码 0 表示正常结束）：
+退出码 0 表示正常结束）；[tests/install/consumer](tests/install/consumer) 是最小的**完整工程**
+（`CMakeLists.txt` + `main.cpp`），演示怎么从零把库用起来，见下文「安装与消费」：
 
 表格（Row Widget Mode）：一行一个业务 QWidget，列由 `ColumnHost` 承载，
 列几何全部来自 `HeaderGeometry`（表头与行共享同一份 committed geometry）：
@@ -347,6 +349,7 @@ tests/
               VirtualHeaderView / DragDrop / Accessibility / TableSpan / TablePanes / FrozenRows
   fuzz/       随机 insert/remove/move/dataChanged/reset
   gui/        List：鼠标/键盘/焦点 pinning/滚动数据新鲜度；Table：表头排序/横向滚轮/拖动列宽
+  install/    消费端冒烟测试（独立工程：只 find_package 安装好的包）
 benchmarks/   1M 行与稳态滚动零分配校验（可选 QListView/QListWidget 参考）
               --table：row/cell 模式对照   --tree：宽树 + 结构变更 + 锚点
 examples/     simple_list / order_cards / dynamic_height / million_rows
@@ -402,6 +405,38 @@ cmake -S . -B cmake-build-debug-qt5  -G Ninja -DCMAKE_BUILD_TYPE=Debug \
   版本号/SOVERSION 规则、什么改动算 ABI 破坏、Qt 与编译器支持矩阵见 [docs/abi.md](docs/abi.md)。
 * 安装：`cmake --install` 会导出 `VirtualItemViews::VirtualItemViews` 目标与头文件
   （`include/virtualitemviews/**`）。
+
+## 安装与消费
+
+装出来的包是标准的 CMake 包：消费端只需要 `find_package(VirtualItemViews)`，不需要知道源码树
+或构建树，也不用自己 `find_package(Qt6)`（Config 会用 `find_dependency()` 找回同一个 Qt）。
+
+```bash
+# 1) 构建并安装（静态或动态都行，默认静态）
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release \
+      -DCMAKE_PREFIX_PATH=D:/devlib/Qt/6.11.2/msvc2022_64
+cmake --build build
+cmake --install build --prefix D:/viv        # 头文件 + 库 + CMake package
+
+# 2) 消费端 CMakeLists（完整可跑的版本在 tests/install/consumer/）
+#    find_package(VirtualItemViews REQUIRED)
+#    target_link_libraries(app PRIVATE VirtualItemViews::VirtualItemViews)
+cmake -S tests/install/consumer -B consumer-build -G Ninja \
+      -DCMAKE_PREFIX_PATH="D:/viv;D:/devlib/Qt/6.11.2/msvc2022_64"
+cmake --build consumer-build
+consumer-build/viv_consumer                   # 自检：list/table/tree/span/冻结列/accessibility
+```
+
+* `CMAKE_PREFIX_PATH` 要把**安装前缀**和 **Qt kit** 两个都写上：安装前缀里是本库，Qt 由 Config 的
+  `find_dependency()` 去找。
+* 消费的是**动态**安装（`-DVIRTUALITEMVIEWS_BUILD_SHARED=ON`）时，`VirtualItemViews.dll` 在
+  `<prefix>/bin`：Windows 上把它放到 exe 同目录或加进 `PATH` 即可（上面自检脚本就是这么跑的）。
+  静态安装没有这一步。
+* 安装前缀是**按 Qt 大版本**区分的（Config 里写死了 `find_dependency(Qt6 …)` 或 Qt5），
+  Qt 5 与 Qt 6 各装各的前缀。
+* `tests/install/consumer` 是我们的冒烟测试：它只认 `find_package`，跑完 28 项自检（列表虚拟化、
+  表格几何/状态/span/冻结列与显式 pane、树展开折叠、accessibility 工厂），退出码 0 才算通过。
+  Qt 5.15.2 / Qt 6.11.2 × 静态 / 动态四种组合都已实跑通过。
 
 ### Qt 5 / Qt 6 兼容约定
 

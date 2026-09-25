@@ -56,6 +56,35 @@ build/bin/VirtualItemViews.dll           # 共享构建时（Windows）
 可执行文件与库同处 `bin/` 之后，CTest、示例、基准都不需要任何 PATH 技巧；多配置生成器
 （VS/Xcode）会在下面再套一层配置名目录。
 
+### 装出来的布局与消费方式
+
+`cmake --install <build> --prefix <dir>` 之后（[README 安装与消费](../README.md) 有完整命令）：
+
+```
+<prefix>/include/virtualitemviews/*.h     # 24 个公开头文件（含 global.h）
+<prefix>/lib/VirtualItemViews.lib         # 静态库；共享构建是导入库
+<prefix>/lib/VirtualItemViews.so.<ver>    # 共享构建（Windows: <prefix>/bin/VirtualItemViews.dll）
+<prefix>/lib/cmake/VirtualItemViews/
+        VirtualItemViewsConfig.cmake      # find_dependency(Qt<6|5> …) + 导入 targets
+        VirtualItemViewsConfigVersion.cmake
+        VirtualItemViewsTargets.cmake
+```
+
+消费端只写两行：
+
+```cmake
+find_package(VirtualItemViews REQUIRED)
+target_link_libraries(app PRIVATE VirtualItemViews::VirtualItemViews)
+```
+
+Qt 由 Config 里的 `find_dependency()` 找回，**但安装前缀按 Qt 大版本区分**：Config 里写死了
+`find_dependency(Qt6 …)`（或 Qt5），所以 Qt 5 与 Qt 6 要各装一个前缀。静态安装会把
+`VIRTUALITEMVIEWS_STATIC` 作为 `INTERFACE_COMPILE_DEFINITIONS` 带给消费端；动态安装则什么都不用带。
+动态安装在 Windows 上需要 `<prefix>/bin` 里的 DLL 能被找到（exe 同目录或 `PATH`）。
+
+`tests/install/consumer` 就是这个流程的常规检查：一个**独立**的 CMake 工程（独立 configure、
+独立 build），只用 `find_package()` + 公开头文件，跑 28 项运行期自检后按退出码报告结果。
+
 ## 4. 什么算 ABI 破坏
 
 以下改动都要升 `SOVERSION`（v1.0 之后 = 升主版本），并写进 CHANGELOG 的 `Breaking`：
