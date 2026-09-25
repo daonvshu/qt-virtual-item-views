@@ -71,7 +71,7 @@ QWidget**。
 | `TreeVisibilityIndex`（可见行压平、**增量**展开/折叠、深度、row 双向查询）：每个已展开父节点一棵 Fenwick 前缀和，索引 → 可见行 O(depth × log siblings)，展开/折叠只沿路径更新（百万可见行下 4 层展开 969 ms → 116 ms、折叠 230 ms → 4 ms、工作集 114 → 76 MB） | 已实现 |
 | 单元测试 248 个用例 + 4 个变异测试 + 10 个 GUI 交互场景（共 20 个 CTest 目标） | 已实现 |
 | 12 个示例（simple list / order cards / dynamic height / million rows / table row widgets / table many columns / table custom header / tree / drag & drop / table spans / table panes / table frozen rows） | 已实现 |
-| benchmark（1M 行、表格 row vs cell、树：宽树 + 变更 + 锚点，稳态滚动零分配校验） | 已实现 |
+| benchmark（1M 行、表格 row vs cell、树：宽树 + 变更 + 锚点，稳态滚动零分配校验）；v1.0 实测基线见 [docs/performance.md](docs/performance.md) §3 | 已实现 |
 | API 稳定性（v1.0，[docs/api-stability.md](docs/api-stability.md)）：23 个公开头文件按"应用 / 扩展 / 诊断 / 私有"四级冻结，只加不删、不改默认值语义、不新增"接受但忽略"的入口；变更记进 [CHANGELOG.md](CHANGELOG.md) | 已实现 |
 | 静态库与动态库（v1.0，[docs/abi.md](docs/abi.md)）：`VIRTUALITEMVIEWS_EXPORT` 统一符号可见性、宏由 CMake 目标自动传播；共享构建产出 `bin/VirtualItemViews.dll` + 导入库；Qt 5.15.2 / Qt 6.11.2 × 静态 / 动态四种组合都已构建并跑通全部测试 | 已实现 |
 | 安装与消费（v1.0）：`cmake --install` 导出标准 CMake 包（头文件 + 库 + `VirtualItemViewsConfig.cmake`，内含 `find_dependency(Qt…)`），消费端只写 `find_package(VirtualItemViews)` + `target_link_libraries(app PRIVATE VirtualItemViews::VirtualItemViews)`；[tests/install/consumer](tests/install/consumer) 是只认安装包的冒烟测试（28 项自检），四种组合都已实跑通过 | 已实现 |

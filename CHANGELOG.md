@@ -29,6 +29,8 @@
   之后跑 28 项运行期自检）。README 新增「安装与消费」一节，`docs/abi.md` 补上装出来的目录布局。
 * `scripts/validate.ps1`：一键验证。对每个 Qt kit × 库形态组合做 configure → `all` 构建 → CTest →
   12 个示例退出码 → benchmark 不变量 → 安装 + 消费端冒烟测试，退出码 = 失败步数。
+* [docs/performance.md](docs/performance.md) §3 的 v1.0 基线：列表 1M 行、表格 20 万行 x 100 列
+  （Row/Cell 两种模式）、树 1M 顶层节点的实测数字与确切命令，供后续回归对比。
 * `BlockSizeIndex::explicitSizeCount()`（诊断）：当前"实测过且不等于基值"的行数。
 * `VirtualItemView::visibleItemRanges()` / 行 pane 查询族（v0.8 行冻结，见
   [docs/row-freezing.md](docs/row-freezing.md)）。

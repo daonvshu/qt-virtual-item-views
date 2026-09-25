@@ -41,6 +41,9 @@
 | Tree 分支装饰 | 只按可见行的层级数绘制：一格 = 一次渲染器调用 + 少量 `rowCount()` 查询；失效区域只到"最深层可见行"的缩进宽度 | `tst_virtualtreeview::customRendererOwnsTheBranchDecoration` / `indicatorsFollowScrolling` |
 | Table 冻结列（v0.7） | pane 布局只缓存"列 -> x"，几何/resize/偏移变化各重算一次 O(可见 section)；Row Mode 不增加控件，Cell Mode 只多实例化冻结列 | `tst_virtualtableview::frozenColumnsStayWhileTheScrollablePaneScrolls` / `frozenPanesDoNotAddScrollSpace`、`tst_tablecellmode::frozenColumnsStayMaterializedAndOnTop` |
 
+最后一列是守住该性质的用例，它们都在 `scripts/validate.ps1` 的 CTest 一步里每次验证都会重跑；
+基准里的"零分配滚动 / 实例化集合有界"断言在同脚本的第 4 步（见 §3）。
+
 ## 3. 手工基准
 
 `benchmarks/bench_listview.cpp` 是独立程序（不注册进 CTest，因为数字与机器相关）：
@@ -81,19 +84,56 @@ bench_listview --tree
 * **展开与变更**：堆树（`--tree-roots`/`--tree-branching` 之外的小树）全量展开，再在视口上方
   insert/remove 行，验证展开状态、可见行映射与锚点。
 
-Debug 构建（Qt 6.11.2 / msvc2022_64，本机参考值，用于观察趋势而非横向比较）：
+### v1.0 基线（2026-09-25 实测）
 
-| 指标 | 1M 顶层节点宽树 | 4200 节点堆树（全展开） |
+下面三张表是 v1.0 收口时的基准数字（roadmap 3d）。环境：**Debug**、Qt 6.11.2 / msvc2022_64、
+MSVC 19.50 x64、Windows 11、静态构建、`QT_QPA_PLATFORM=offscreen`。Debug 的绝对值偏悲观，
+只用来看趋势与"有没有数量级退化"；Release 基线尚未采集（见本文 §4 末条）。
+
+**列表 1,000,000 行**（`bench_listview --rows 1000000 --steps 200`）
+
+| 指标 | 值 |
+| --- | --- |
+| 打开（setModel + show + layout） | 15.77 ms，初始控件 27 个 |
+| 稳态滚动 | 0.89 ms/步（200 步共 177.72 ms），新建/销毁 0/0 |
+| 随机跳转 | 新建/销毁 0/0，实例化 30 项 |
+| `2000 x dataChanged` | 11.57 ms |
+| `20 x insert 500` / `20 x remove 500` | 3.18 ms / 3.24 ms |
+| `60 x resize relayout` | 24.56 ms |
+| 进程 working set | 打开后 +9.6 MB，变更后 +10.8 MB |
+
+**表格 200,000 行 x 100 列**（`bench_listview --table --table-columns 100 --rows 200000 --steps 100`）
+
+| 指标 | Row Widget Mode | Cell Widget Mode |
 | --- | --- | --- |
-| 打开（setModel + show + layout） | 约 1.2 s（1,000,000 可见行） | - |
-| 展开一条 4 层路径 | 约 0.88 s（4 次 expand），模型查询 84 次 | 全部展开 0.12 s，模型查询 8200 次（≈ 2 x 节点数） |
-| 折叠根节点 | 约 0.24 s | - |
-| 稳态滚动每步 | 0.54 ms，新建/销毁 0 个 | 100 步 0.05 s，新建 0 个 |
-| 视口上方 insert/remove 各 200 行 | 锚点行不动（偏移 24000 -> 28800 -> 24000 px） | 锚点行不动，新建 0 个 |
-| 进程 working set 增量 | +80 MB（1,000,000 可见行） | - |
+| 打开 | 42.27 ms，实例化 26 行 x 11 可见列 | 119.51 ms，实例化 312 个单元格 |
+| 垂直滚动 | 0.85 ms/步，新建/销毁 0/0 | 8.04 ms/步，新建/销毁 0/0 |
+| 横向滚动（100 步） | 19.34 ms | 1012.59 ms（新建 264：新列进入视口的单元格） |
+| 列宽调整（60 次） | 21.89 ms | 1043.22 ms |
+| 进程 working set | +2.6 MB | +3.6 MB |
 
-可见行数极大的时候，一次 expand/collapse 的成本由"可见行查询表重建"主导（O(可见行)），而不是
-由树遍历主导（84 次模型查询）；上面这组数字里 4 次 expand 的 0.88 s 中绝大部分是这张表。
+两种模式的不变量都是"垂直滚动零分配 + 实例化集合有界"；Cell Widget Mode 的横向滚动与列宽变化
+要重排 312 个单元格控件，那一栏的数字是**实例化代价**，不是泄漏（交互结束后控件回到池里）。
+
+**树 1,000,000 顶层节点 x 10 子节点（深度 4，逻辑节点 1.1e10）**（`bench_listview --tree`）
+
+| 指标 | 值 |
+| --- | --- |
+| 打开 | 4225.24 ms（1,000,000 个可见行），实例化 27 项 |
+| 展开一条 4 层深路径 | 174.90 ms，模型查询 48 次 |
+| 折叠根节点 | 10.83 ms |
+| 稳态滚动 | 2.07 ms/步（2000 步共 1032.85 ms），新建/销毁 0/0 |
+| 堆树（4200 节点）全量展开 | 127.82 ms，模型查询 4400 次（≈ 2 x 节点数） |
+| 视口上方 insert/remove 各 200 行 | 459.00 ms / 502.01 ms，锚点行不动（偏移 24000 -> 28800 -> 24000 px） |
+| 进程 working set | +41.9 MB（1,000,000 可见行） |
+
+树的打开成本由"1,000,000 个可见行"决定（可见行列表本身是 O(可见行)），不是由树遍历决定；
+展开/折叠已经是增量的（48 次模型查询、174.90 ms），**旧的"每次 expand 重建可见行索引表"（当时
+0.88 s、84 次查询）在 2a 之后就没了**；结构性变更（insert/remove/move/reset）仍然重建可见行列表，
+那是冷路径（上面 insert/remove 各 200 行约 0.5 s，含锚点校正）。
+
+这些场景的**不变量**（零分配滚动、实例化集合有界、增量展开/折叠、锚点稳定）不是"看完就丢"的
+一次性结论：`scripts/validate.ps1` 的第 4 步每次都会重跑这三档基准，并要求退出码为 0。
 
 ## 4. 已知取舍
 
@@ -119,7 +159,8 @@ Debug 构建（Qt 6.11.2 / msvc2022_64，本机参考值，用于观察趋势而
   （每层 O(log k)），既不重建任何表，也不扫描兄弟；`indexAtVisibleRow()` 仍是 O(1)（可见行列表
   本身就是唯一事实来源）。分块只在"已展开的父节点"上分配，所以一棵宽树（一百万同时可见行）的
   额外内存约 8 字节/行，而不是原来那一整张索引哈希表。
-  同一基准（`bench_listview --tree --rows 1000000`，100 万同时可见行）：
+  同一基准（`bench_listview --tree --rows 1000000`，100 万同时可见行；**这组对照是 2a 当时在
+  Qt 6.8.3 上测的**，Qt 6.11.2 下的新实现数字见 §3 的 v1.0 基线表）：
 
   | 指标 | 旧（整表反向哈希） | 新（分块前缀和） |
   | --- | --- | --- |
@@ -129,6 +170,9 @@ Debug 构建（Qt 6.11.2 / msvc2022_64，本机参考值，用于观察趋势而
 
   结构变更（insert/remove/move/layoutChanged/reset）仍然整体重建可见行列表 —— 那是 O(可见行) 的
   冷路径，也是文档里"先正确后优化"的边界：热路径（展开/折叠 + 滚动 + 锚点）不再依赖它。
+* **Release 基线尚未采集（roadmap 3d 的遗留项）**：§3 的数字全部来自 Debug 构建，够用来看趋势与
+  回归，但不能当"发布版性能"引用。采集 Release 基线需要另一棵 `-DCMAKE_BUILD_TYPE=Release` 的树
+  （`scripts/validate.ps1` 目前固定 Debug），留到有实际性能诉求时再做。
   不变量由 `tests/unit/tst_treevisibilityindex` 与 `tst_virtualtreeview` 守住：展开/折叠不遍历
   整棵树（模型查询次数）、以及"每一行都能映射回它自己在可见行列表里的位置"（在很宽的树上反复
   展开/折叠/再展开后逐一校验）。
