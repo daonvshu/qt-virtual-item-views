@@ -1,7 +1,7 @@
 # API 稳定性与冻结清单（v1.0）
 
 > 本文回答"哪些 API 能依赖、改动要怎么记"。它是 v1.0 的公开边界声明；版本号与
-> SOVERSION 的收口在 roadmap 的 3b（ABI 策略）里做，本文只冻结**源码层面的** API 语义。
+> SOVERSION 的规则在 [abi.md](abi.md)，本文只冻结**源码层面的** API 语义。
 
 ## 1. 稳定性分级
 
@@ -85,9 +85,13 @@
 
 ## 6. 已知欠账（交接给后续步骤）
 
-| 项 | 归属 |
-| --- | --- |
-| `VIRTUALITEMVIEWS_BUILD_SHARED=ON` 在 Windows 上没有导出宏（DLL 不会导出任何符号），目前实际只支持静态库 | 3b：ABI 策略里定"加 `VIRTUALITEMVIEWS_EXPORT` 还是写明只支持静态" |
-| `PROJECT_VERSION` 还是 `0.1.0`、`SOVERSION = PROJECT_VERSION_MAJOR` | 3b：与 v1.0 一起收口 |
-| `find_package(VirtualItemViews)` 的消费端实跑（安装 + 最小工程编译） | 3c |
-| CHANGELOG 的维护节奏（每次破坏性变更必须写） | 已建 `CHANGELOG.md`，从 v1.0 起按本文第 2 条维护 |
+* [x] 共享构建导出宏（`VIRTUALITEMVIEWS_EXPORT`）—— 3b，四种组合实测通过；
+* [x] `PROJECT_VERSION`/`SOVERSION` 收口 —— `1.0.0` / `1`，`find_package` 兼容性
+  `SameMajorVersion`；
+* [x] `find_package(VirtualItemViews)` 消费端实跑 —— 3c，`tests/install/consumer`；
+* [x] CHANGELOG 的维护节奏 —— 已建 `CHANGELOG.md`，从 v1.0 起按本文第 2 条维护。
+
+仍然已知、但按计划留到以后的两项（都不影响 1.x 的兼容承诺）：
+
+* Release 构建的性能基线未采集（[performance.md](performance.md) §4 末条）；
+* CI 未接入，`scripts/validate.ps1` 就是 CI 入口（[roadmap](roadmap.md) 的 3e 条目）。

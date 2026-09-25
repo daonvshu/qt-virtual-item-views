@@ -3,12 +3,16 @@
 格式：每个版本一节，破坏性变更单独列在 `Breaking`。稳定性分级与冻结规则见
 [docs/api-stability.md](docs/api-stability.md)。
 
-## 未发布（v1.0 开发中）
+## 1.0.0 — 2026-09-25
 
-这一节记录 v1.0 定稿前**还没有对外发布**的 API 收口。库此前没有打 tag、也没有下游使用者，
-所以这些改动直接生效，不提供兼容层。
+首个发布版本：List / Table（Row 与 Cell 两种模式）/ Tree，冻结列、行冻结、span、多滚动组、
+表头动画、拖放、accessibility、静态与动态库、安装包与一键验证。公开 API 的分级与冻结规则见
+[docs/api-stability.md](docs/api-stability.md)，ABI 与工具链矩阵见 [docs/abi.md](docs/abi.md)。
 
-### Breaking
+### Breaking（1.0 定稿前的内部收口）
+
+仓库在 1.0 之前没有打过 tag、也没有下游使用者，所以下面这些收口直接生效、不提供兼容层；
+列出来只是为了让"1.0.0 与之前从源码仓库拉到的快照"之间的差异有据可查。
 
 * `LayoutPolicy::setSizeIndex()` 的默认实现改为履行所有权：没有索引模型的策略在
   `takeOwnership = true` 时会删除传入的 `SizeIndex`（此前会静默忽略并泄漏）。自定义策略如果

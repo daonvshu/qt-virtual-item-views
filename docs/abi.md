@@ -5,16 +5,19 @@
 
 ## 1. 版本号与 SOVERSION
 
-| 项 | 现在（v0.9） | v1.0 收尾时 |
-| --- | --- | --- |
-| `project(VERSION)` | `0.9.0` | `1.0.0` |
-| `SOVERSION` | `0`（= `PROJECT_VERSION_MAJOR`） | `1` |
-| 共享库文件名 | Windows `VirtualItemViews.dll`；Linux `libVirtualItemViews.so.0.9.0`（`SONAME` 指向 `.so.0`） | `.so.1` / `SOVERSION 1` |
-| `find_package` 版本匹配 | `SameMinorVersion`（0.x 期间没有 ABI 承诺，要 0.9 就别给 0.10） | `SameMajorVersion`（1.x 内部保证兼容） |
-| 规则 | 任何 v1.0 之前的改动直接生效、不提供兼容层（没有发布过、没有下游） | 破坏 ABI 就动 `SOVERSION`，破坏源码 API 就动主版本 |
+| 项 | 值（v1.0.0） |
+| --- | --- |
+| `project(VERSION)` | `1.0.0` |
+| `SOVERSION` | `1`（= `PROJECT_VERSION_MAJOR`） |
+| 共享库文件名 | Windows `VirtualItemViews.dll`；Linux/macOS `libVirtualItemViews.so.1.0.0`（`SONAME` 指向 `.so.1`） |
+| `find_package` 版本匹配 | `SameMajorVersion`（1.x 之间保证兼容） |
+| 规则 | 破坏 ABI 就动 `SOVERSION`（= 主版本），破坏源码 API 就动主版本；1.0 之前的内部收口不提供兼容层（那时没有打过 tag、没有下游），清单见 [CHANGELOG](../CHANGELOG.md) |
 
 `SOVERSION` 只在共享库上有意义（`VIRTUALITEMVIEWS_BUILD_SHARED=ON`），静态库没有这回事：
 静态链接把 ABI 的账推给了使用者，所以静态用户必须用**同一套**编译器/Qt/运行库重编。
+
+（v0.9 期间用的是 `SameMinorVersion` + `SOVERSION 0`：那时还没有 ABI 承诺，"要 0.9"的消费端
+不应该被匹配到 0.10。这条规则写进 CMake 的条件分支里，1.0 之后自然走到 `SameMajorVersion`。）
 
 ## 2. 两种构建形态
 
@@ -137,9 +140,11 @@ Qt 由 Config 里的 `find_dependency()` 找回，**但安装前缀按 Qt 大版
 
 ## 6. 发布前检查清单（v1.0）
 
-1. `project(VERSION 1.0.0)`，`SOVERSION` 随主版本变成 1，`find_package` 兼容性切到
-   `SameMajorVersion`；
-2. `pwsh -File scripts/validate.ps1` 全绿（四种组合 × 构建 / CTest / 12 个示例 / benchmark /
-   安装 + 消费端是 28 个步骤，退出码 0）；
-3. 性能基线数字固化进 [performance.md](performance.md)（roadmap 3d）；
-4. CHANGELOG 的 `Breaking` 段与 `docs/api-stability.md` §6 的欠账都清空。
+1. [x] `project(VERSION 1.0.0)`，`SOVERSION` = 1，`find_package` 兼容性 `SameMajorVersion`；
+2. [x] `pwsh -File scripts/validate.ps1` 全绿（四种组合 × 构建 / CTest / 12 个示例 / benchmark /
+   安装 + 消费端共 28 个步骤，退出码 0）；
+3. [x] 性能基线数字固化进 [performance.md](performance.md)（roadmap 3d）；
+4. [x] CHANGELOG 的破坏性变更段与 [api-stability.md](api-stability.md) §6 的欠账都清空。
+
+下一步是**打 tag**（由仓库主人手动执行）。打完之后再改动的第一件事应当是更新本文 §1 的表格与
+CHANGELOG —— 1.x 之间的兼容承诺从这一版开始生效。

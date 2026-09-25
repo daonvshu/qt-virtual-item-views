@@ -21,7 +21,11 @@ QWidget**。
 * 只需要纯绘制、追求极限吞吐的表格（请用 `QTableView` + `QStyledItemDelegate`）；
 * 需要行冻结、span、GPU/scenegraph 渲染的场景（未实现，见路线图）。
 
-## 当前状态（v0.7）
+## 当前状态（v1.0.0）
+
+首个发布版本的公开 API 已按"应用 / 扩展 / 诊断 / 私有"四级冻结（[docs/api-stability.md](docs/api-stability.md)），
+静态库与动态库都能构建（[docs/abi.md](docs/abi.md)），一条命令验证全部组合：
+`pwsh -File scripts/validate.ps1`。下表按能力逐项列出（括号里是该项落地的版本）。
 
 | 能力 | 状态 |
 | --- | --- |

@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 
 project(VirtualItemViews
-    VERSION 0.9.0
+    VERSION 1.0.0
     DESCRIPTION "Virtualized QWidget item views for Qt Widgets"
     LANGUAGES CXX)
 
@@ -165,9 +165,9 @@ endif()
 # ---------------------------------------------------------------------------
 set(VIRTUALITEMVIEWS_INSTALL_CMAKEDIR "${CMAKE_INSTALL_LIBDIR}/cmake/VirtualItemViews")
 
-# Pre-1.0 nothing is ABI stable yet, so a consumer asking for 0.9 must not be
-# handed 0.10. From 1.0 on the major version is the compatibility unit, which is
-# also what SOVERSION follows (docs/abi.md).
+# Pre-1.0 nothing was ABI stable, so a consumer asking for 0.9 must not be handed
+# 0.10. From 1.0 on the major version is the compatibility unit, which is also
+# what SOVERSION follows (docs/abi.md).
 if(PROJECT_VERSION_MAJOR EQUAL 0)
     set(VIRTUALITEMVIEWS_PACKAGE_COMPATIBILITY SameMinorVersion)
 else()

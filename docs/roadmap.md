@@ -16,14 +16,20 @@
 | v0.5 | Cell Widget Mode 二维虚拟化（§28）、`visibleRows()/visibleColumns()`、大列数基准 | `5523d56` |
 | v0.6 | Tree MVP：`TreeVisibilityIndex` + 缩进 / 分支指示 / 键盘导航（§35） | `5523d56` |
 | v0.7 | 冻结列（§31）、表头状态持久化（§32）、`VirtualHeaderView`+`HeaderWidgetAdapter`（§17–§19）、拖放（§38）、Accessibility（§37）、span + advanced panes（§43） | `d85d814` `edfb74e` `dfa9046` `f4bca16` `2ee729e` `257a086` `fbd6be3` `66e5509` |
+| v0.8 | 表格收口（Wave 1）：多滚动组、表头动画（committed/visual 两层几何 + 拖动重排）、行冻结（内核 + 行号条按 pane 切分 + 状态持久化 v2 + 独立示例） | `6c09cd9` `2de4c2a` `5dff417` `b6fbd99` `e7e3769` `c5a86aa` `e73cc29` `f52649f` `659f456` `052a520` `4c1c74c` |
+| v0.9 | 规模化与可访问性（Wave 2）：树的增量可见行映射（Fenwick 分块）、`QAccessibleTableInterface`/`QAccessibleTableCellInterface`、`BlockSizeIndex` 稀疏例外表 | `f9c7744` `0ba3ef0` `ab32e94` |
+| v1.0 | 工程化交付（Wave 3）：API 四级冻结与实验性入口清理、导出宏（静态/动态）、安装消费端实跑、性能基线、一键验证脚本；细节见 §2 Wave 3 与 [CHANGELOG](../CHANGELOG.md) | `ca61c92` `9ce0055` `43d9dcd` `958a47a` `58b5696` |
 
 v0.7 的逐项细节与实现决定记在 [spans.md](spans.md)、[accessibility.md](accessibility.md)、
-[drag-and-drop.md](drag-and-drop.md)。
+[drag-and-drop.md](drag-and-drop.md)；v0.8 起逐项细节见本文 §2 的 Wave 段落与对应的
+[header-animation.md](header-animation.md)、[row-freezing.md](row-freezing.md)、
+[performance.md](performance.md)、[api-stability.md](api-stability.md)、[abi.md](abi.md)。
 
 ### 当前基线（2026-09-25 复验）
 
 | 项 | 值 |
 | --- | --- |
+| 版本 | `1.0.0`（`SOVERSION 1`、`find_package` 兼容性 `SameMajorVersion`；tag 由仓库主人手动打） |
 | Qt 6 | `D:\devlib\Qt\6.11.2\msvc2022_64` |
 | Qt 5 | `D:\devlib\Qt\5.15.2\msvc2019_64` |
 | 工具链 | MSVC 18 (14.50.35717) x64 + Ninja + CMake 4.3（CLion 自带） |
@@ -95,6 +101,10 @@ Wave 3（v1.0 工程化交付）。**
       后实测值仍在、逐行追加不会把索引碎成 N 个块）。
 
 ### Wave 3（v1.0）：工程化交付
+
+**Wave 3 已全部完成（2026-09-25），`PROJECT_VERSION` 收口到 `1.0.0`（`SOVERSION 1`、
+`find_package` 兼容性 `SameMajorVersion`）。** 剩下的动作只有仓库主人手动打 tag；打完之后的
+第一件事是更新 [abi.md](abi.md) §1 与 CHANGELOG，因为 1.x 之间的兼容承诺从这一版开始生效。
 
 - [x] **3a API 稳定性审查**（[api-stability.md](api-stability.md)）：23 个公开头文件逐个复核并按
       "应用 / 扩展 / 诊断 / 私有"四级冻结，规则写进文档（只加不删、不改默认值语义、不新增
