@@ -79,7 +79,14 @@ public:
     void setHorizontalHeaderVisible(bool visible);
     bool isHorizontalHeaderVisible() const { return m_horizontalHeaderVisible; }
     void setVerticalHeaderVisible(bool visible);
+    /// The request of the application. The strip is only on screen while the current
+    /// row heights can be mirrored - see isVerticalHeaderShown().
     bool isVerticalHeaderVisible() const { return m_verticalHeaderVisible; }
+    /// Whether the row-number strip is actually shown: the request above *and* the
+    /// current model being mirrorable. A variable-height model above the mirror limit
+    /// hides the strip (with one qWarning()) while the request stays untouched, so it
+    /// comes back by itself when the model shrinks or the heights become uniform.
+    bool isVerticalHeaderShown() const { return m_verticalHeaderVisible && m_verticalHeaderSupported; }
     void setHeaderHeight(int height);
     int headerHeight() const { return m_headerHeight; }
     void setVerticalHeaderWidth(int width);
@@ -485,7 +492,10 @@ private:
     bool m_sortingEnabled = false;
     bool m_sortGuard = false;
     QHash<QPersistentModelIndex, int> m_explicitRowHeights;
-    bool m_verticalHeaderDisabled = false;
+    /// Effective support of the row-number strip: false while the model needs per-row
+    /// heights above the mirror limit. Kept apart from m_verticalHeaderVisible (the
+    /// request), so the strip comes back when the reason is gone (P2-9).
+    bool m_verticalHeaderSupported = true;
     bool m_columnUpdateActive = false;
     bool m_rowHeaderUpdateActive = false;
     bool m_headersLaidOut = false;

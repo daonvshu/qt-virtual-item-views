@@ -25,6 +25,10 @@
 ### Added
 
 * `docs/api-stability.md`：公开 API 的四级分类（应用/扩展/诊断/私有）、冻结规则与复核清单。
+* `VirtualTableView::isVerticalHeaderShown()`：行号条**实际**是否上屏。`isVerticalHeaderVisible()`
+  仍然只表示应用的请求，于是"变高模型超过镜像上限而临时隐藏"不再把请求本身改掉
+  （见 [docs/row-freezing.md](docs/row-freezing.md) §8；旧行为是内部调用
+  `setVerticalHeaderVisible(false)`，请求被吃掉且模型变小后不会恢复）。
 * `include/virtualitemviews/global.h` + `VIRTUALITEMVIEWS_EXPORT`：**静态库与动态库都支持**。
   `-DVIRTUALITEMVIEWS_BUILD_SHARED=ON` 产出 `bin/VirtualItemViews.dll` + `lib/VirtualItemViews.lib`；
   `VIRTUALITEMVIEWS_LIBRARY` / `VIRTUALITEMVIEWS_STATIC` 由 CMake 目标自动传播，业务代码不必手工
@@ -182,6 +186,14 @@
   上一次的形状上，正是 §25 想避免的那个现象。现在渲染器自己处理 `QEvent::ChildAdded` 并**递归**
   补装过滤器与鼠标跟踪，绑定之后新建的子树和绑定时就存在的一样。回归测试：
   `tst_virtualheaderview::childrenAddedAfterBindingAreWatchedToo`（已确认还原旧实现时该用例会失败）。
+* **行号条的"禁用"不再是粘滞状态（P2-9）**：变高模型超过 100 万行时行号条会被隐藏，但那个标志
+  是**粘的** —— 模型变小或切回均匀行高后不会自己回来，而应用手工 `setVerticalHeaderVisible(true)`
+  之后标志仍是"已禁用"，下一个大模型也不会再隐藏。现在拆成两个概念：`m_verticalHeaderVisible`
+  是**应用的请求**，`m_verticalHeaderSupported` 是当前模型能否镜像（变高且超限时 false），上屏与否
+  是两者的与（`isVerticalHeaderShown()`）。于是隐藏只在"状态切换"时发生并只警告一次，模型变小 /
+  改回均匀行高时条子**自己回来**，应用的请求也不会被后台改写。回归测试：
+  `tst_virtualtableview::theRowHeaderComesBackWhenTheModelShrinks`（已确认把状态改回粘滞后该用例
+  会失败）。
 
 ### Fixed（全量代码审查 Wave 3：虚拟化热路径）
 

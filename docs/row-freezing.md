@@ -140,6 +140,12 @@ struct ItemPane
      几何里没有的 section 取几何的 default size。
   2. **行几何的最小 section 尺寸是 24**（列几何的默认值），于是 `resizeSection(20)` 被夹到 24 ✗。
      现在行几何的最小值跟随内核的限制（1 px，`setRowHeight()` 也是这么夹的）。
+* **超限的变高模型会让行号条"临时让步"**：native 表头要在 100 万行以上逐行镜像行高，代价是
+  O(行数) 的结构，所以变高模型超过上限时行号条会被隐藏（`qWarning()` 一次，只在状态切换时发，
+  不是每次 relayout）。这是**模型的属性**，不是用户设置：`setVerticalHeaderVisible()` 记录的是
+  "应用的请求"（`isVerticalHeaderVisible()`），实际是否上屏看 `isVerticalHeaderShown()`。
+  模型变小、或切回均匀行高时条子自己回来，不需要应用再调一次；反过来，"请求为 true 但当前模型
+  不支持"时也不会偷偷把请求改成 false。
 
 1. **内核**：行区间视图（`firstScrollableRow` / `scrollableRowCount` / `prefixHeight`）+
    纵向偏移换算；`SizeIndex` / `ListLayout` 不改接口；单元测试钉住"冻结不产生额外滚动空间"。

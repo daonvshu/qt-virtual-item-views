@@ -325,7 +325,8 @@ void VirtualTableView::setVerticalHeaderWidth(int width)
 void VirtualTableView::layoutHeaderWidgets()
 {
     const int headerHeight = (m_horizontalHeaderVisible && m_horizontalHeader) ? m_headerHeight : 0;
-    const int rowHeaderWidth = (m_verticalHeaderVisible && m_verticalHeader) ? m_verticalHeaderWidth : 0;
+    const int rowHeaderWidth
+        = (isVerticalHeaderShown() && m_verticalHeader) ? m_verticalHeaderWidth : 0;
 
     setViewportMargins(rowHeaderWidth, headerHeight, 0, 0);
 
@@ -381,9 +382,8 @@ void VirtualTableView::layoutVerticalHeaderStrips()
     // The row-number strip mirrors the row panes: every band is its own renderer, placed
     // on its pane rectangle, so the numbers stay glued to their rows even when some rows
     // are frozen (§31 row direction).
-    const int rowHeaderWidth = (m_verticalHeaderVisible && m_verticalHeader)
-        ? m_verticalHeaderWidth
-        : 0;
+    const int rowHeaderWidth
+        = (isVerticalHeaderShown() && m_verticalHeader) ? m_verticalHeaderWidth : 0;
     const QRect viewportRect = viewport()->geometry();
     const QVector<ItemPane> panes = itemPanes();
     for (const ItemPane &pane : panes) {
@@ -1180,17 +1180,23 @@ void VirtualTableView::updateRowHeaderGeometry()
 
     const qsizetype count = viewItemCount();
     const bool variable = itemHeightMode() == ItemHeightMode::Variable;
-    if (variable && count > kRowHeaderMirrorLimit) {
-        // Per-row heights cannot be mirrored into a native header at this scale
-        // without an O(rows) structure; the row-number strip is disabled and the
-        // widget header (v0.5) will lift this limitation.
-        if (!m_verticalHeaderDisabled) {
-            m_verticalHeaderDisabled = true;
-            qWarning("VirtualItemViews: vertical header disabled for %lld variable-height rows; "
+    const bool supported = !(variable && count > kRowHeaderMirrorLimit);
+    if (supported != m_verticalHeaderSupported) {
+        m_verticalHeaderSupported = supported;
+        if (!supported) {
+            // Per-row heights cannot be mirrored into a native header at this scale
+            // without an O(rows) structure. Only the *effective* support changes: the
+            // request stays as the application left it, so the strip comes back on its
+            // own when the model shrinks or the heights become uniform again (P2-9).
+            qWarning("VirtualItemViews: vertical header hidden for %lld variable-height rows; "
                      "use uniform row heights or a widget header (v0.5).",
                      qint64(count));
-            setVerticalHeaderVisible(false);
         }
+        // Hiding/showing the strip is a layout change like setVerticalHeaderVisible().
+        layoutHeaderWidgets();
+        relayout();
+    }
+    if (!supported) {
         m_rowHeaderUpdateActive = false;
         return;
     }
@@ -1488,7 +1494,7 @@ int VirtualTableView::itemPaneSeparatorLeftExtension() const
 {
     // The row-number strip is outside the viewport: the row pane boundary lines cross it
     // just like the column boundary lines cross the header strip.
-    return (m_verticalHeaderVisible && m_verticalHeader) ? qMax(0, m_verticalHeaderWidth) : 0;
+    return (isVerticalHeaderShown() && m_verticalHeader) ? qMax(0, m_verticalHeaderWidth) : 0;
 }
 
 QColor VirtualTableView::itemPaneSeparatorColor() const

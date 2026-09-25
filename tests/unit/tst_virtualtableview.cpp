@@ -151,6 +151,14 @@ public:
                                              : QString::number(section + 1);
     }
 
+    /// The row-header tests need a model that gets small again.
+    void setDataRowCount(int rows)
+    {
+        beginResetModel();
+        m_rows = rows;
+        endResetModel();
+    }
+
 private:
     int m_rows = 0;
     int m_columns = 0;
@@ -163,6 +171,16 @@ QWidget *rowWidgetFor(VirtualTableView &view, int row)
             return item.widget;
     }
     return nullptr;
+}
+
+/// Counts the "the row-number strip is hidden" diagnostic: it belongs to the
+/// transition, not to every relayout (P2-9).
+int g_rowHeaderWarnings = 0;
+
+void countRowHeaderWarnings(QtMsgType type, const QMessageLogContext &, const QString &message)
+{
+    if (type == QtWarningMsg && message.contains(QStringLiteral("vertical header hidden")))
+        ++g_rowHeaderWarnings;
 }
 } // namespace
 
@@ -279,6 +297,7 @@ private slots:
     void verticalHeaderDragChangesRowHeight();
     void rowSizePolicyControlsMeasurement();
     void rowHeaderMirrorsTheCommittedSizeUnderMeasuredWins();
+    void theRowHeaderComesBackWhenTheModelShrinks();
     void keyboardMovesTheCurrentColumn();
     void visibleColumnRangeFollowsOverscanAndOffset();
     void frozenColumnsStayWhileTheScrollablePaneScrolls();
@@ -739,6 +758,62 @@ void TestVirtualTableView::rowHeaderMirrorsTheCommittedSizeUnderMeasuredWins()
     view.clearRowHeight(offscreen);
     view.flushPendingRelayout();
     QCOMPARE(view.rowHeight(offscreen), kRowHeight);
+}
+
+void TestVirtualTableView::theRowHeaderComesBackWhenTheModelShrinks()
+{
+    // Above the mirror limit a native strip cannot follow per-row heights, so the view
+    // hides it. That is a property of the *model*, not a sticky switch (P2-9): the
+    // request is untouched and the strip returns as soon as the reason is gone.
+    BigTableModel model(1000001, 3, this);
+    TableTestAdapter adapter(3);
+    VirtualTableView view;
+    view.setTableAdapter(&adapter);
+    view.setItemHeightMode(VirtualItemView::ItemHeightMode::Variable);
+    view.setEstimatedItemHeight(kRowHeight);
+    view.setDefaultColumnWidth(kColumnWidth);
+
+    g_rowHeaderWarnings = 0;
+    QtMessageHandler defaultHandler = qInstallMessageHandler(countRowHeaderWarnings);
+    view.setModel(&model);
+    showView(&view, QSize(kViewWidth, kViewHeight));
+    // More relayouts of the same unsupported model must not repeat the message: it
+    // follows the transition, not the number of passes.
+    view.setEstimatedItemHeight(kRowHeight + 4);
+    view.flushPendingRelayout();
+    qInstallMessageHandler(defaultHandler);
+
+    QVERIFY(!view.isVerticalHeaderShown());
+    QVERIFY(view.isVerticalHeaderVisible()); // the application's request is untouched
+    QVERIFY(view.verticalHeader()->headerWidget()->isHidden());
+    QCOMPARE(g_rowHeaderWarnings, 1);
+
+    // The model gets small again: the strip comes back by itself.
+    g_rowHeaderWarnings = 0;
+    defaultHandler = qInstallMessageHandler(countRowHeaderWarnings);
+    model.setDataRowCount(5);
+    view.flushPendingRelayout();
+    qInstallMessageHandler(defaultHandler);
+    QVERIFY(view.isVerticalHeaderShown());
+    QVERIFY(!view.verticalHeader()->headerWidget()->isHidden());
+    QCOMPARE(view.verticalHeader()->headerWidget()->width(), view.verticalHeaderWidth());
+    QCOMPARE(g_rowHeaderWarnings, 0);
+
+    // The explicit request keeps working on its own terms ...
+    view.setVerticalHeaderVisible(false);
+    QVERIFY(!view.isVerticalHeaderShown());
+    QVERIFY(view.verticalHeader()->headerWidget()->isHidden());
+    view.setVerticalHeaderVisible(true);
+    QVERIFY(view.isVerticalHeaderShown());
+    QVERIFY(!view.verticalHeader()->headerWidget()->isHidden());
+
+    // ... and a big model is fine when the heights are uniform: the limit only exists
+    // for per-row heights.
+    model.setDataRowCount(1000001);
+    view.setUniformItemHeight(kRowHeight);
+    view.flushPendingRelayout();
+    QVERIFY(view.isVerticalHeaderShown());
+    QVERIFY(!view.verticalHeader()->headerWidget()->isHidden());
 }
 
 void TestVirtualTableView::keyboardMovesTheCurrentColumn()
