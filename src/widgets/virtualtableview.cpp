@@ -2325,7 +2325,13 @@ void VirtualTableView::scrollContentsBy(int dx, int dy)
         m_columns->setViewportOffset(horizontalScrollBar()->value());
         emit horizontalOffsetChanged(m_columns->viewportOffset());
     }
-    VirtualItemView::scrollContentsBy(dx, dy);
+    // A purely horizontal scroll does not need the kernel's vertical pass (it only
+    // reads the vertical scroll bar and relayouts): dx has already updated the
+    // header and the pane layout, which repositions the row widgets. Cell Widget
+    // Mode is the exception - there the horizontal window, and therefore the set
+    // of cells to materialize, changes with dx.
+    if (dy != 0 || m_materializationMode == MaterializationMode::CellWidgets)
+        VirtualItemView::scrollContentsBy(dx, dy);
 }
 
 void VirtualTableView::wheelEvent(QWheelEvent *event)

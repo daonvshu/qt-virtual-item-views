@@ -1356,6 +1356,11 @@ void VirtualItemView::markDirty()
 
 void VirtualItemView::scheduleRelayout()
 {
+    // One queued pass is enough for any number of invalidations: without this
+    // guard 100 markDirty() calls post 100 queued events (all but the first are
+    // no-ops, but they are 100 event-loop round trips).
+    if (m_relayoutScheduled)
+        return;
     m_relayoutScheduled = true;
     QMetaObject::invokeMethod(this, [this]() {
         if (!m_relayoutScheduled)

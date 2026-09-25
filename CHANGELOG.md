@@ -161,3 +161,12 @@
   整个批量只发至多一次 `geometryChanged()`（单 section 的 `sectionResized` 照旧逐个发）。
   回归测试：`tst_headergeometry` 新增 3 例（隐式尺寸仍然跟随默认值、默认值被夹取、
   500 个 section 的批量修改只有 1 次 `geometryChanged` 且重复设置是纯 no-op）。
+* **relayout 队列真正合并（P2-1）**：`scheduleRelayout()` 以前每次 `markDirty()` 都投递一个
+  queued 调用（第一个跑完把标志清掉，其余都是空转），一次 100 次失效就是 100 次事件循环往返。
+  现在有 queued 调用在飞就直接返回。
+* **纯横向滚动不再跑纵向物化（P2-8）**：`VirtualTableView::scrollContentsBy()` 处理完 dx 后仍
+  调用基类，而基类只读纵向滚动条并 relayout —— 一次横向滚动白跑一趟纵向 pass。现在 dx 已经
+  更新表头与 pane 布局（行控件随之重新定位），只有 `dy != 0` 才走基类；Cell Widget Mode 例外，
+  因为横向窗口本身决定要物化哪些单元格。
+  回归测试：`tst_relayoutqueue`（4 例：100 次失效只投递 1 个 queued 调用且只跑 1 趟；
+  纯横向滚动 0 趟纵向 pass 且列位置确实移动；纵向滚动仍然跑；Cell 模式横向滚动照样物化）。
