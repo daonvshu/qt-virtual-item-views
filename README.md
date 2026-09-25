@@ -39,7 +39,7 @@ QWidget**。
 | `ColumnHost` / `TableRowLayoutContext`：框架定位列，业务只管内容（§26/§27） | 已实现 |
 | 列 resize/move/hide、表头点击排序、横向像素滚动、表头状态 save/restore | 已实现 |
 | 冻结列（v0.7，§31）：`setFrozenColumns()` / `setFrozenRightColumns()`，冻结 pane 与可滚动 pane 共享同一份 `HeaderGeometry` | 已实现 |
-| 行冻结（v0.8，§31 行方向，[docs/row-freezing.md](docs/row-freezing.md)）：`setFrozenRows()` / `setFrozenBottomRows()`，冻结行钉在上下边缘、`itemPanes()` / `isRowFrozen()` / `itemPaneSeparatorRects()` 查询、每个可滚动行 pane 一个裁剪容器、命中与键盘/滚动按 pane 折回、**行号条按 pane 切分**（每条带子贴着自己的行）；冻结不产生额外滚动空间 | 已实现（表状态持久化、独立示例待续） |
+| 行冻结（v0.8，§31 行方向，[docs/row-freezing.md](docs/row-freezing.md)）：`setFrozenRows()` / `setFrozenBottomRows()`，冻结行钉在上下边缘、`itemPanes()` / `isRowFrozen()` / `itemPaneSeparatorRects()` 查询、每个可滚动行 pane 一个裁剪容器、命中与键盘/滚动按 pane 折回、**行号条按 pane 切分**（每条带子贴着自己的行）、冻结行数随表状态持久化（v2，旧格式仍可恢复）；冻结不产生额外滚动空间 | 已实现 |
 | 垂直行号表头：与 body 共享纵向偏移（行号始终对齐）、拖动分隔线写入显式行高（uniform 自动转 variable） | 已实现 |
 | Cell Widget Mode（v0.5）：`CellWidgetAdapter` + 二维虚拟化，只 materialize visibleRows x visibleColumns | 已实现 |
 | `visibleRows()` / `visibleColumns()` 可见区间查询 + 大列数 benchmark（100 列 x 1M 行，row vs cell 对照） | 已实现 |
@@ -67,14 +67,12 @@ QWidget**。
 | 像素滚动：`WheelScrollMode`（Pixels 默认 / Items）、`setWheelScrollPixels()`、`scrollByPixels()`、`setVerticalOffset()`、触控板 `pixelDelta` 1:1 | 已实现 |
 | 可选生命周期日志 `setLifecycleLoggingEnabled()`（create/bind/unbind/recycle/pin） | 已实现 |
 | `TreeVisibilityIndex`（可见行压平、增量展开/折叠、深度、row 双向查询） | 已实现 |
-| 单元测试 235 个用例 + 4 个变异测试 + 10 个 GUI 交互场景（共 20 个 CTest 目标） | 已实现 |
-| 11 个示例（simple list / order cards / dynamic height / million rows / table row widgets / table many columns / table custom header / tree / drag & drop / table spans / table panes） | 已实现 |
+| 单元测试 236 个用例 + 4 个变异测试 + 10 个 GUI 交互场景（共 20 个 CTest 目标） | 已实现 |
+| 12 个示例（simple list / order cards / dynamic height / million rows / table row widgets / table many columns / table custom header / tree / drag & drop / table spans / table panes / table frozen rows） | 已实现 |
 | benchmark（1M 行、表格 row vs cell、树：宽树 + 变更 + 锚点，稳态滚动零分配校验） | 已实现 |
 
 未实现（按 §43 路线图）：accessibility
-还没有 `QAccessibleTableInterface`（行列朗读）与文本/编辑接口；行冻结
-（文档 §31 只写列方向，内核与两种物化模式已实现，纵向表头切分/状态持久化/示例见
-[docs/row-freezing.md](docs/row-freezing.md) 第 6 节）；
+还没有 `QAccessibleTableInterface`（行列朗读）与文本/编辑接口；
 树在"可见行数极大"时的增量行映射优化
 （现在一次 expand/collapse 需要重建可见行索引表，见 [docs/performance.md](docs/performance.md)）。
 推进顺序见 [docs/roadmap.md](docs/roadmap.md)。
@@ -307,6 +305,8 @@ cmake-build-debug/examples/table_spans --cell-mode --snapshot spans.png     # �
 cmake-build-debug/examples/table_panes        # 多个 pane + 两个独立滚动组（工具栏是组 1 的滚动条）
 cmake-build-debug/examples/table_panes --check                             # 自检：组 1 滚动不影响其它 pane
 cmake-build-debug/examples/table_many_columns --frozen 2 --frozen-rows 2 --snapshot frozen.png  # 冻结列 + 冻结行（行号条按 pane 切分）
+cmake-build-debug/examples/table_frozen_rows   # 行冻结：顶部 3 行 + 底部 2 行 + 左侧 1 列（可调）
+cmake-build-debug/examples/table_frozen_rows --check                          # 自检：冻结行不动、滚动范围不变、行号贴合
 cmake-build-debug/examples/table_custom_header --widget-header --sections 200   # Widget 表头：每可见列一个控件
 cmake-build-debug/examples/table_custom_header --move-demo header.png         # 表头换序动画（途中截图，显式请求过渡）
 cmake-build-debug/examples/table_custom_header --drag-demo drag.png           # 拖动列：预览途中截图（committed 几何未动）
@@ -345,7 +345,7 @@ benchmarks/   1M 行与稳态滚动零分配校验（可选 QListView/QListWidge
               --table：row/cell 模式对照   --tree：宽树 + 结构变更 + 锚点
 examples/     simple_list / order_cards / dynamic_height / million_rows
               table_row_widgets / table_many_columns / table_custom_header / tree_view / drag_drop
-              table_spans / table_panes
+              table_spans / table_panes / table_frozen_rows
 docs/         architecture.md  lifecycle.md  model-signals.md  focus-ime.md
               table-layout.md  drag-and-drop.md  accessibility.md  spans.md
               performance.md  header-animation.md  roadmap.md

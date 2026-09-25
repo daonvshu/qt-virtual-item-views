@@ -47,7 +47,10 @@ constexpr qsizetype kRowHeaderMirrorLimit = 1000000;
 /// Magic/version of the table level header state (HeaderGeometry state plus the
 /// frozen pane sets, §31/§32).
 constexpr quint32 kTableStateMagic = 0x56495654; // 'VIVT'
-constexpr quint32 kTableStateVersion = 1;
+/// 1: column state + frozen column sets. 2: adds the frozen row counts (§31 row
+/// direction); a version 1 state still restores (its rows then default to 0).
+constexpr quint32 kTableStateVersion = 2;
+constexpr quint32 kTableStateVersionWithFrozenRows = 2;
 
 /// Framework owned clipping container of a pane (§31). It paints nothing, so a
 /// business row widget keeps its own background; Qt clips the children of a
@@ -1215,6 +1218,9 @@ QByteArray VirtualTableView::saveHeaderState() const
         for (int logical : columns)
             stream << qint32(logical);
     }
+    // v2: which rows are pinned is user state as well (§31 row direction), so it travels
+    // with the column state.
+    stream << qint32(frozenRows()) << qint32(frozenBottomRows());
     return state;
 }
 
@@ -1228,7 +1234,8 @@ bool VirtualTableView::restoreHeaderState(const QByteArray &state)
     quint32 columnStateSize = 0;
     stream >> magic >> version >> columnStateSize;
     if (stream.status() != QDataStream::Ok || magic != kTableStateMagic
-        || version != kTableStateVersion || int(columnStateSize) > state.size()) {
+        || version < 1 || version > kTableStateVersionWithFrozenRows
+        || int(columnStateSize) > state.size()) {
         // Not a table level state: accept a bare HeaderGeometry state so a state
         // saved before the pane sets existed keeps working.
         return m_columns->restoreState(state);
@@ -1256,9 +1263,21 @@ bool VirtualTableView::restoreHeaderState(const QByteArray &state)
         }
     }
 
+    // Version 1 has no frozen row counts: those rows simply stay unfrozen.
+    qint32 frozenTopRows = 0;
+    qint32 frozenBottomRows = 0;
+    if (version >= kTableStateVersionWithFrozenRows) {
+        stream >> frozenTopRows >> frozenBottomRows;
+        if (stream.status() != QDataStream::Ok || frozenTopRows < 0 || frozenBottomRows < 0)
+            return false;
+    }
+
     m_panes.setFrozenColumns(frozenLeft);
     m_panes.setFrozenRightColumns(frozenRight);
+    setFrozenRows(int(frozenTopRows));
+    setFrozenBottomRows(int(frozenBottomRows));
     updatePaneLayout();
+    flushPendingRelayout();
     emit columnGeometryChanged();
     return true;
 }

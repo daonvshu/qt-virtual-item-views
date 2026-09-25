@@ -3,10 +3,10 @@
 方案文档 §31 只定义了列方向（`setFrozenColumns()` / `setFrozenRightColumns()`）。这份文档把
 行方向的语义先定下来，实现按第 6 节的顺序推进。
 
-**状态（roadmap 1c）**：第 1-5 步已实现并验证（内核行区间视图、行 pane 布局、两种物化模式的
-裁剪、命中/键盘/滚动 API、纵向表头按 pane 切分 + `tests/unit/tst_frozenrows` 14 个用例）；
-第 6 步（表状态持久化）、第 7 步（独立示例与 README 收尾）待做。行号条已经与行对齐，冻结行旁边
-不会再出现错位的行号。
+**状态（roadmap 1c）**：**7 步全部完成**。内核行区间视图、行 pane 布局、两种物化模式的裁剪、
+命中/键盘/滚动 API、纵向表头按 pane 切分、表级状态持久化（版本 2）、独立示例
+`examples/table_frozen_rows`（带 `--check` 自检与 `--snapshot`）；`tests/unit/tst_frozenrows`
+15 个用例覆盖以上各项。
 
 ## 1. 目标与非目标
 
@@ -144,8 +144,8 @@ struct ItemPane
 5. **纵向表头**：行号条按同样的 pane 切分（冻结部分不动、可滚动部分跟着偏移）；
    拖动行号条改行高只在可滚动行上生效。
 6. **表状态持久化**（§32）：把冻结行数写进表格级状态（版本号 +1，旧格式仍可恢复）。
-7. **示例与文档**：`examples/table_frozen_rows`（冻结前 2 行 + 冻结列组合、可切换）、
-   README 能力表与 roadmap 同步。
+7. **示例与文档** ✓：`examples/table_frozen_rows`（顶部/底部冻结行 + 冻结列组合、可切换、
+   `--check` 自检、`--snapshot` 截图）、README 能力表与 roadmap 同步。
 
 每一步按既有节奏收尾：规格/决策进文档 → 实现 → 单元测试（必要时 GUI 场景）→ Qt 6 与 Qt 5
 双配置 `all` 构建 + CTest + 示例退出码 → 同步 README / roadmap → 一个独立提交。
@@ -157,3 +157,29 @@ struct ItemPane
 2. **冻结行是否参与选择**？规格按"参与"写 —— 它们就是普通行，只是不动。
 3. **冻结行与 `QSortFilterProxyModel` 的排序**：排序后"前 N 行"指排序后的前 N 行，不跟随原始
    行号 —— 与 `QHeaderView` 冻结列的语义保持一致。
+
+### 7.1 实现后的结论
+
+三个开放问题都按"最不意外的默认"落地，没有额外开关：
+
+1. **底部冻结支持、默认 0** ✓ 实现里顶/底是对称的（`frozenRows()` / `frozenBottomRows()`），
+   一个行出现在两边时只算顶部。
+2. **冻结行参与选择** ✓ 它们就是普通行（`QItemSelectionModel` 的 current/selection 与键盘导航都
+   按行号工作），只是不随滚动移动。
+3. **排序语义跟随模型** ✓ 冻结的是"当前模型顺序下的前 N 行"，不绑定原始行号。
+
+## 8. 持久化格式（§32）
+
+表格级状态（`saveHeaderState()` / `restoreHeaderState()`）版本升到 **2**：
+
+```text
+magic('VIVT') | version=2 | columnStateSize | columnState
+              | frozenLeftSet | frozenRightSet
+              | frozenTopRows | frozenBottomRows      ← v2 新增
+```
+
+版本 1（没有最后两个字段）仍然可以恢复：它的列状态与冻结列照常生效，冻结行数视为 0。
+不是表格级状态时仍然按"裸的 `HeaderGeometry` 状态"处理，所以更早保存的状态也继续可用。
+
+**已知边界**：状态里保存的是冻结集合，而不是显式 pane 列表（`setPanes()`）——应用自己组合的
+pane 布局属于应用组成，不属于用户状态；恢复之后会回到默认三段。（这一点与冻结列现有行为一致。）

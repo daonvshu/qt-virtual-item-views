@@ -8,6 +8,8 @@
 #include <QtTest>
 
 #include <QAbstractItemView>
+#include <QBuffer>
+#include <QDataStream>
 #include <QLabel>
 #include <QStandardItemModel>
 
@@ -138,6 +140,7 @@ private slots:
     void rowWidgetsAreClippedAtTheRowPanes();
     void cellsAreClippedByBothPaneDirections();
     void verticalHeaderIsSplitPerRowPane();
+    void frozenRowsSurviveTheStateRoundTrip();
     void frozenRowsAreClampedToWhatFits();
 };
 
@@ -532,6 +535,70 @@ void TestFrozenRows::verticalHeaderIsSplitPerRowPane()
     QApplication::processEvents();
     QCOMPARE(verticalStrips(view).size(), 1);
     QCOMPARE(view.itemPanes().size(), 1);
+}
+void TestFrozenRows::frozenRowsSurviveTheStateRoundTrip()
+{
+    auto *model = tableModel(this);
+    FrozenTableAdapter adapter;
+    VirtualTableView view;
+    view.setTableAdapter(&adapter);
+    view.setUniformItemHeight(kRowHeight);
+    view.setDefaultColumnWidth(kColumnWidth);
+    view.setModel(model);
+    showView(&view, QSize(kViewWidth, kViewHeight));
+
+    view.setFrozenColumns({0});
+    view.setFrozenRows(3);
+    view.setFrozenBottomRows(2);
+    view.setColumnWidth(1, kColumnWidth + 40);
+    view.flushPendingRelayout();
+    const QByteArray state = view.saveHeaderState();
+    QVERIFY(!state.isEmpty());
+
+    // A second view restores the same state: frozen rows, frozen columns and the column
+    // width all come back, and the row-number strips are split accordingly.
+    auto *otherModel = tableModel(this);
+    FrozenTableAdapter otherAdapter;
+    VirtualTableView other;
+    other.setTableAdapter(&otherAdapter);
+    other.setUniformItemHeight(kRowHeight);
+    other.setDefaultColumnWidth(kColumnWidth);
+    other.setModel(otherModel);
+    showView(&other, QSize(kViewWidth, kViewHeight));
+
+    QVERIFY(other.restoreHeaderState(state));
+    QCOMPARE(other.frozenRows(), 3);
+    QCOMPARE(other.frozenBottomRows(), 2);
+    QCOMPARE(other.frozenColumns(), QVector<int>({0}));
+    QCOMPARE(other.columnWidth(1), kColumnWidth + 40);
+    QCOMPARE(other.itemPanes().size(), 3);
+    verifyRowStripsAreGlued(other, otherModel);
+
+    // A version 1 state (no frozen row counts) still restores: its columns come back and
+    // the rows simply stay unfrozen.
+    QByteArray legacy = state.left(state.size() - 8);
+    QBuffer buffer(&legacy);
+    QVERIFY(buffer.open(QIODevice::ReadWrite));
+    QDataStream patch(&buffer);
+    patch.setVersion(QDataStream::Qt_5_15);
+    patch.skipRawData(4); // magic
+    patch << quint32(1);  // version
+    buffer.close();
+
+    auto *legacyModel = tableModel(this);
+    FrozenTableAdapter legacyAdapter;
+    VirtualTableView legacyView;
+    legacyView.setTableAdapter(&legacyAdapter);
+    legacyView.setUniformItemHeight(kRowHeight);
+    legacyView.setDefaultColumnWidth(kColumnWidth);
+    legacyView.setModel(legacyModel);
+    showView(&legacyView, QSize(kViewWidth, kViewHeight));
+    QVERIFY(legacyView.restoreHeaderState(legacy));
+    QCOMPARE(legacyView.frozenColumns(), QVector<int>({0}));
+    QCOMPARE(legacyView.frozenRows(), 0);
+    QCOMPARE(legacyView.frozenBottomRows(), 0);
+    QCOMPARE(legacyView.panes().size(), 2);      // frozen column pane + scrolling pane
+    QCOMPARE(legacyView.itemPanes().size(), 1);  // no frozen rows in a v1 state
 }
 
 void TestFrozenRows::frozenRowsAreClampedToWhatFits()
