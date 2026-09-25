@@ -42,11 +42,16 @@ class VIRTUALITEMVIEWS_EXPORT VirtualHeaderView : public QWidget, public HeaderV
     Q_OBJECT
 
 public:
+    /// \a orientation must be Qt::Horizontal: the renderer packs its sections along x
+    /// from a horizontal HeaderGeometry. A vertical instance warns and stays empty;
+    /// use NativeHeaderView(Qt::Vertical) for the row-number strip.
     explicit VirtualHeaderView(Qt::Orientation orientation = Qt::Horizontal,
                                QWidget *parent = nullptr);
     ~VirtualHeaderView() override;
 
     // -- HeaderViewInterface -------------------------------------------------
+    /// Binding a geometry of the other axis is refused (the renderer packs its sections
+    /// along x, see the constructor).
     void setGeometryModel(HeaderGeometry *geometry) override;
     HeaderGeometry *geometryModel() const override { return m_geometry; }
     QWidget *headerWidget() override { return this; }

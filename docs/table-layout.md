@@ -139,6 +139,11 @@ table->setHorizontalHeader(header);     // 传给 nullptr 回到 native 表头
   实测：200 列、1000 px 宽的表格只创建 9 个 section 控件（`table_custom_header` 示例输出）。
 * **几何仍只来自 `HeaderGeometry`**：section 的位置/宽度/顺序/隐藏/偏移全部读 geometry，
   表头不保存任何列状态；拖动分隔线、拖动 section 重排、点击排序都是把结果写回 geometry。
+* **只支持横向**：渲染器把每个 section 的 x 都从表头几何推出来、沿 x 排布，所以竖着构造
+  （`VirtualHeaderView(Qt::Vertical)`）只会得到一个永远空的条子 —— 构造函数对这种用法
+  `qWarning()`，`setGeometryModel()` 也拒绝另一个方向的几何。行号条用
+  `NativeHeaderView(Qt::Vertical)` 或自己实现 `HeaderViewInterface`。表格侧同样会拒绝方向不匹配的
+  渲染器（`setHorizontalHeader()` / `setVerticalHeader()` 警告并保持原渲染器不变）。
 * **交互**：离 section 边缘 ±3 px 按住拖动 = 改列宽（§21/§25）；按住 section 拖过拖动距离阈值 =
   重排（§22，拖动期间只有视觉预览，松手才提交一次，详见 [header-animation.md](header-animation.md)）；
   单击 = 排序（§33）；子控件获得焦点或打开 popup 的 section 会被 pin，不回收（§36）。

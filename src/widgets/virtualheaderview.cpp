@@ -35,6 +35,14 @@ VirtualHeaderView::VirtualHeaderView(Qt::Orientation orientation, QWidget *paren
     : QWidget(parent)
     , m_orientation(orientation)
 {
+    // The renderer packs its sections along the x axis: it derives every section's x
+    // from the (horizontal) HeaderGeometry. A vertical instance would silently stay
+    // empty, so it is refused loudly instead (P1-14). The row-number strip is either
+    // a native QHeaderView (NativeHeaderView) or a custom HeaderViewInterface.
+    if (orientation != Qt::Horizontal) {
+        qWarning("VirtualHeaderView: only Qt::Horizontal is supported; a vertical section "
+                 "renderer stays empty - use NativeHeaderView for the row-number strip");
+    }
     m_recycler = new WidgetRecycler(this);
     m_recycler->setParentWidget(this);
     m_recycler->setFactory([this](WidgetType type, QWidget *parent) -> QWidget * {
@@ -84,6 +92,11 @@ void VirtualHeaderView::setGeometryModel(HeaderGeometry *geometry)
 {
     if (m_geometry == geometry)
         return;
+    if (geometry && geometry->orientation() != m_orientation) {
+        qWarning("VirtualHeaderView::setGeometryModel(): the geometry belongs to the other "
+                 "orientation; ignored");
+        return;
+    }
     connectGeometry(m_geometry, false);
     m_geometry = geometry;
     connectGeometry(m_geometry, true);

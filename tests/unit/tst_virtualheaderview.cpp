@@ -101,6 +101,8 @@ private slots:
     void sectionMoveAnimatesWhileTheCommittedGeometryStaysAuthoritative();
     void resizeAndDisabledAnimationStayImmediate();
     void programmaticReorderIsImmediateUnlessRequested();
+    void verticalWidgetHeaderIsRefusedLoudly();
+    void mismatchedHeaderOrientationsAreRefused();
     void tableAnimationIsOptInPerMove();
     void smallJitterIsStillAClick();
     void dragPreviewsAndCommitsOnce();
@@ -372,6 +374,75 @@ void TestVirtualHeaderView::programmaticReorderIsImmediateUnlessRequested()
     m_geometry->moveSection(0, 1);
     QApplication::processEvents();
     QCOMPARE(moved->x(), kSectionWidth);
+}
+
+void TestVirtualHeaderView::verticalWidgetHeaderIsRefusedLoudly()
+{
+    // P1-14: the renderer derives every x from a horizontal HeaderGeometry and packs its
+    // sections along x, so a vertical instance can only ever show an empty strip. The
+    // constructor is public, so it now says so instead of producing a silent blank.
+    QTest::ignoreMessage(QtWarningMsg, QRegularExpression(QStringLiteral("only Qt::Horizontal")));
+    VirtualHeaderView vertical(Qt::Vertical);
+    vertical.resize(120, 400);
+
+    HeaderGeometry rows(Qt::Vertical, this);
+    rows.setSectionCount(6);
+    rows.setDefaultSectionSize(24);
+    SectionAdapter adapter;
+    vertical.setAdapter(&adapter);
+    vertical.setGeometryModel(&rows);
+    vertical.show();
+    QApplication::processEvents();
+
+    QVERIFY(vertical.materializedSections().isEmpty());
+    QCOMPARE(adapter.created, 0);
+
+    // Binding a geometry of the other axis is refused too: the header keeps the geometry
+    // it was laid out against instead of dropping it and going blank.
+    QTest::ignoreMessage(QtWarningMsg, QRegularExpression(QStringLiteral("other orientation")));
+    m_header->setGeometryModel(&rows);
+    QApplication::processEvents();
+    QVERIFY(m_header->geometryModel() == m_geometry);
+    QVERIFY(!m_header->materializedSections().isEmpty());
+}
+
+void TestVirtualHeaderView::mismatchedHeaderOrientationsAreRefused()
+{
+    // P2-4: a renderer of the wrong axis used to be laid out against the geometry of the
+    // axis it does not belong to - a broken horizontal header built from a vertical
+    // renderer, for instance. The view refuses the renderer and keeps the one in place.
+    QStandardItemModel model(20, 8);
+    QVERIFY(m_header->orientation() == Qt::Horizontal);
+    PlainRowAdapter rowAdapter;
+    VirtualTableView view;
+    view.setTableAdapter(&rowAdapter);
+    view.setModel(&model);
+    view.setUniformItemHeight(24);
+    view.setDefaultColumnWidth(kSectionWidth);
+    vivtest::showView(&view, QSize(400, 200));
+
+    HeaderViewInterface *const horizontalInPlace = view.horizontalHeader();
+    HeaderViewInterface *const verticalInPlace = view.verticalHeader();
+    QVERIFY(horizontalInPlace != nullptr);
+    QVERIFY(verticalInPlace != nullptr);
+    QVERIFY(horizontalInPlace->headerWidget()->width() > 0);
+
+    QTest::ignoreMessage(QtWarningMsg, QRegularExpression(QStringLiteral("only Qt::Horizontal")));
+    auto *verticalRenderer = new VirtualHeaderView(Qt::Vertical);
+    QTest::ignoreMessage(QtWarningMsg, QRegularExpression(QStringLiteral("not horizontal")));
+    view.setHorizontalHeader(verticalRenderer);
+    QCOMPARE(view.horizontalHeader(), horizontalInPlace);
+    QVERIFY(horizontalInPlace->headerWidget()->width() > 0);
+    delete verticalRenderer; // refused, so the view never took ownership
+
+    QTest::ignoreMessage(QtWarningMsg, QRegularExpression(QStringLiteral("not vertical")));
+    view.setVerticalHeader(m_header);
+    QCOMPARE(view.verticalHeader(), verticalInPlace);
+    QVERIFY(verticalInPlace->headerWidget()->width() > 0);
+    // The fixture header is untouched by the refused call, so it is still a stand-alone
+    // horizontal renderer.
+    QVERIFY(m_header->parentWidget() == nullptr);
+    QCOMPARE(m_header->geometryModel(), m_geometry);
 }
 
 void TestVirtualHeaderView::tableAnimationIsOptInPerMove()

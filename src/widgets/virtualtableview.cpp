@@ -227,6 +227,11 @@ void VirtualTableView::setHorizontalHeader(HeaderViewInterface *header)
         native->setGeometryModel(m_columns);
         native->setLabelModel(model());
         header = native;
+    } else if (header->orientation() != Qt::Horizontal) {
+        // A renderer of the wrong orientation would be laid out against the other
+        // axis' geometry (P2-4): refuse it instead of showing a broken header.
+        qWarning("VirtualTableView::setHorizontalHeader(): the renderer is not horizontal; ignored");
+        return;
     }
     if (m_horizontalHeader == header)
         return;
@@ -260,6 +265,9 @@ void VirtualTableView::setVerticalHeader(HeaderViewInterface *header)
         native->setGeometryModel(m_rowHeaders);
         native->setLabelModel(model());
         header = native;
+    } else if (header->orientation() != Qt::Vertical) {
+        qWarning("VirtualTableView::setVerticalHeader(): the renderer is not vertical; ignored");
+        return;
     }
     if (m_verticalHeader == header)
         return;

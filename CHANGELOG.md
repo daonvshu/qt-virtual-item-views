@@ -145,6 +145,19 @@
   （ExplicitWins 下 70 两边一致；切换 MeasuredWins 后 body 与行号条都变成测量值 30；清除显式
   高度后立刻回到测量值；未物化的行立刻回到估计值）。
 
+### Fixed（全量代码审查 Wave 4：公开 API 的"接受但忽略"）
+
+* **`VirtualHeaderView(Qt::Vertical)` 明确拒绝（P1-14）**：这个公开构造函数一直存在，但渲染器把
+  每个 section 的 x 都从横向的 `HeaderGeometry` 推出来 —— 竖着构造只会得到一个永远空的条子，
+  既不报错也没有任何提示（行号条的正确做法是 `NativeHeaderView(Qt::Vertical)` 或自己实现
+  `HeaderViewInterface`）。现在构造函数在 orientation 不是 `Qt::Horizontal` 时 `qWarning()`；
+  `setGeometryModel()` 也拒绝另一个方向的几何（此前写进去会让表头直接空掉）。
+* **表头方向校验（P2-4）**：`setHorizontalHeader()` / `setVerticalHeader()` 收到方向不匹配的
+  渲染器时 `qWarning()` 并保持原渲染器不变（`VirtualHeaderView` 与 `NativeHeaderView` 的
+  `setGeometryModel()` 同样拒绝）—— 此前会被照单收下，然后拿另一个轴的表头几何去排布。
+  回归测试：`tst_virtualheaderview::verticalWidgetHeaderIsRefusedLoudly`、
+  `mismatchedHeaderOrientationsAreRefused`（已确认还原旧实现时两例都会失败）。
+
 ### Fixed（全量代码审查 Wave 3：虚拟化热路径）
 
 * **`BlockSizeIndex` 的分裂真正保证块上界**：`splitBlockIfNeeded()` 以前只反复切同一个块，

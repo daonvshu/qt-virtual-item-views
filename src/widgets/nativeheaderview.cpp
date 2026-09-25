@@ -53,6 +53,11 @@ void NativeHeaderView::setGeometryModel(HeaderGeometry *geometry)
 {
     if (m_geometry == geometry)
         return;
+    if (geometry && geometry->orientation() != orientation()) {
+        qWarning("NativeHeaderView::setGeometryModel(): the geometry belongs to the other "
+                 "orientation; ignored");
+        return;
+    }
     connectGeometry(m_geometry, false);
     m_geometry = geometry;
     connectGeometry(m_geometry, true);
