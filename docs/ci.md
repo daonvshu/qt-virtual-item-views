@@ -1,0 +1,104 @@
+# CI 接入（未提交 workflow，配置留在这里）
+
+仓库里**没有** `.github/workflows/`：本项目的所有验证（四种 Qt kit × 库形态组合的
+configure → 构建 → CTest → 示例 → 基准不变量 → 安装 + 消费端冒烟）都在
+`scripts/validate.ps1` 里跑过一遍，而"提交一个没在任何 runner 上跑过的 workflow"比不提交更糟
+—— 一个绿的 CI 徽章只有在它真的跑过之后才有意义。所以这里留下**可以直接复制**的配置与踩过的
+环境坑，拿到 runner（或 GitHub 账号）时把 YAML 存成 `.github/workflows/ci.yml` 即可。
+
+> 本地已实测的是 Windows + MSVC 19.50 + Qt 5.15.2 / 6.11.2 × 静态 / 动态四种组合，
+> 28 个 CTest 目标 + 12 个示例 + 消费端冒烟全绿；Linux / GCC / Clang / ASan 未实测
+> （见 [abi.md](abi.md) §5 的支持矩阵）。
+
+## 1. 该跑的 job
+
+| job | 目的 | 备注 |
+| --- | --- | --- |
+| `windows-msvc-qt6` | 主平台回归 | `scripts/validate.ps1` 一把梭（含库形态 × 安装消费端） |
+| `ubuntu-gcc-qt6` | 开源常见组合 | Qt 6 走 apt（`qt6-base-dev`），只有 Core/Gui/Widgets/Test |
+| `ubuntu-gcc-qt6-asan` | ASan + UBSan | `-fsanitize=address,undefined`，Debug |
+| `ubuntu-gcc-qt5` | 老版本回归 | 只在 runner 能稳定拿到 Qt 5.15 时加；拿不到就先不写 |
+
+## 2. 可直接复制的 workflow
+
+```yaml
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  windows-msvc:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.11.2'
+          arch: win64_msvc2022_64
+      - name: 一键验证（4 种组合：Qt6/Qt5 x 静态/动态）
+        shell: pwsh
+        run: pwsh -NoProfile -File scripts/validate.ps1 -QtBin "$env:QT_ROOT_DIR/bin"
+
+  ubuntu-qt6:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y qt6-base-dev qt6-base-dev-tools
+      - run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug
+      - run: cmake --build build
+      # 无显示器：测试与示例都用 offscreen 平台插件（CTest 已经在测试属性里设好了）
+      - run: ctest --test-dir build --output-on-failure --no-tests=error
+      - name: 示例自检（必须退出 0，且不允许任何 qWarning）
+        env:
+          QT_QPA_PLATFORM: offscreen
+          QT_FATAL_WARNINGS: '1'
+        run: |
+          for exe in build/bin/*; do
+            case "$exe" in
+              *tst_*|*bench_*) continue ;;
+            esac
+            "$exe" --exit-after 800
+          done
+
+  ubuntu-asan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y qt6-base-dev qt6-base-dev-tools
+      - run: >
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug
+          -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer"
+          -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address,undefined"
+      - run: cmake --build build
+      - run: ctest --test-dir build --output-on-failure --no-tests=error
+        env:
+          # Qt 自己会在退出时留下进程级分配，泄漏检测按失败处理会把每个用例都变成红：
+          # 这一组盯的是 use-after-free / 越界 / 未定义行为。
+          ASAN_OPTIONS: detect_leaks=0
+```
+
+## 3. 环境坑（本地验证时踩到的，写进 workflow 之前先看一眼）
+
+* **测试与示例都需要一个平台插件**：CI 上没有显示器，必须
+  `QT_QPA_PLATFORM=offscreen`。CTest 里已经通过测试属性设好；示例要用 `env:` 给。
+* **`QT_FATAL_WARNINGS=1` 只给示例/基准**：库里有若干**故意**发 `qWarning()` 的路径
+  （span 重叠、pin 超过上限、表头方向不匹配、pane 列表被规范化、行号条超过镜像上限……），
+  对应的单元测试正是靠这些警告来断言行为的，把它们变成致命错误会让这些用例直接中止。
+  示例则相反：它们不该产生任何警告，这一条正好守住"正常用法不打印任何东西"。
+* **offscreen 下没有字体**：Qt 6 起不再随包提供字体，缺字体时 `QFontDatabase` 会发
+  `qWarning("Cannot find font directory ...")`。这会让上面那条 `QT_FATAL_WARNINGS=1`
+  在"示例自检"里误报，Linux 侧装上 `fonts-dejavu-core`（或任何字体包）即可。
+* **ASan 要关掉泄漏检测**：`detect_leaks=0`，否则 Qt 的进程级残留会让全绿变全红；
+  UBSan 保留默认行为（`-fno-sanitize-recover` 可选，便于把 UB 直接变成失败）。
+* **Windows 侧不要自己拼 vcvars**：`scripts/validate.ps1` 已经处理 Qt 路径、vcvars 与
+  构建树选择，直接给它 `-QtBin`（可给多个 kit）；它跑的是这些 kit × 静态/动态的所有组合，
+  runner 上没有 Qt 5 时用 `-QtBin <单个 kit>` + `-Library Both` 即可，也可以用
+  `-SkipExamples` / `-SkipBenchmarks` / `-SkipConsumer` 裁剪步骤。
+
+## 4. 接进来之后要改的文档
+
+* [abi.md](abi.md) §5 的支持矩阵：把"未实测"的行改成实测。
+* [roadmap.md](roadmap.md) §3e 与 Wave 4 行：`CI 未接入` → 已接入，并把 job 名写进去。
+* README 顶部徽章区：加 CI 徽章（只有 CI 真的绿过一次之后才加）。

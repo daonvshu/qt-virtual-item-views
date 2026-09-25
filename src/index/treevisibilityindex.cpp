@@ -1,5 +1,7 @@
 #include <virtualitemviews/treevisibilityindex.h>
 
+#include <algorithm>
+
 namespace viv {
 
 TreeVisibilityIndex::TreeVisibilityIndex(QAbstractItemModel *model)
@@ -195,12 +197,20 @@ void TreeVisibilityIndex::expand(const QModelIndex &index)
         return; // no children: only the expansion state changed
     m_branches.insert(index, block);
 
-    QVector<QModelIndex> spliced;
-    spliced.reserve(m_visibleRows.size() + subtreeRows.size());
-    spliced.append(m_visibleRows.mid(0, int(row) + 1));
-    spliced.append(subtreeRows);
-    spliced.append(m_visibleRows.mid(int(row) + 1));
-    m_visibleRows = spliced;
+    // Splice in place: the rows below the anchor are moved once and only the new
+    // sub-tree is written. (A rebuild of the whole vector - two mid() copies plus an
+    // allocation, what this used to do - is what makes expanding a small branch under
+    // a huge visible set expensive; the remaining tail move is inherent to a flat
+    // vector, docs/roadmap.md §3 决策表 has the rope/block variant as 1.x work.)
+    const int insertAt = int(row) + 1;
+    const qsizetype added = subtreeRows.size();
+    m_visibleRows.resize(m_visibleRows.size() + added);
+    if (insertAt < m_visibleRows.size() - added) {
+        std::move_backward(m_visibleRows.begin() + insertAt,
+                           m_visibleRows.begin() + (m_visibleRows.size() - added),
+                           m_visibleRows.end());
+    }
+    std::copy(subtreeRows.cbegin(), subtreeRows.cend(), m_visibleRows.begin() + insertAt);
     // Everything below the anchor shifted down: tell the ancestors, not the whole tree.
     addToAncestors(index, subtreeRows.size());
 }

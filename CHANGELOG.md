@@ -202,6 +202,12 @@
   代价是"每个 pin 一个真实控件"成为事实，这也是 `setMaxPinnedItems()` 那条诊断的意义所在。
   回归测试：`tst_virtualitemview::pinningAnOffscreenItemMaterializesIt`（已确认还原旧实现时该用例
   会失败）。
+* **树的 expand() 不再整体重建可见行表（P2-10）**：`TreeVisibilityIndex::expand()` 以前是
+  `mid(0, row+1) + 子树 + mid(row+1)` —— 分配一个 `可见行 + 子树` 的新向量，再把旧表**整份**拷贝
+  两次。现在原地 splice：一次 `resize` + 一次尾部 `memmove` + 只写入新的子树，因此"1M 可见行时
+  在顶部展开一个小分支"不再有两趟整表拷贝与一次分配。**尾部的搬移仍然存在**（这是扁平向量的
+  固有代价）—— 彻底去掉需要把可见行表换成 rope / 分块 / 隐式树，审查原文也把这一步列为
+  "建议后续"、非正确性问题，因此记在 roadmap 的决策表里留到 1.x。
 
 ### Fixed（全量代码审查 Wave 3：虚拟化热路径）
 
