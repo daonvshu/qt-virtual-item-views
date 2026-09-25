@@ -35,7 +35,6 @@ struct ResolvedPane
     int x = 0;
     /// Accumulated content x of the pane's own scroll space.
     qint64 contentX = 0;
-    VisibleRange window;
 };
 
 /// How far outside the viewport a column x is still reported exactly. Anything
@@ -186,13 +185,16 @@ bool TablePaneLayout::update(int viewportWidth, int viewportHeight)
     m_viewportWidth = width;
     m_viewportHeight = height;
     m_panes.clear();
-    m_viewportXByLogical.fill(-1, count);
+    m_panePrefixX.clear();
+    m_paneSlotByLogical.fill(-1, count);
+    m_paneSlotWindows.clear();
     m_paneByLogical.fill(int(TablePane::Type::Scrollable), count);
     m_paneIndexByLogical.fill(-1, count);
     m_groupByLogical.fill(-1, count);
     m_groupExtents.clear();
     m_groupWidths.clear();
     m_visibleScrollable = VisibleRange();
+    m_columnVisits = 0;
     m_primaryScrollGroup = -1;
     m_paneWindows.clear();
 
@@ -340,51 +342,34 @@ bool TablePaneLayout::update(int viewportWidth, int viewportHeight)
         x += pane.width;
     }
 
+    // Pane-local prefix sums per pane: the column x and the visible window both
+    // come from these, so a scroll never has to walk the columns again.
+    m_panePrefixX.resize(resolved.size());
+    m_paneSlotWindows.resize(resolved.size());
     for (int paneIndex = 0; paneIndex < resolved.size(); ++paneIndex) {
         ResolvedPane &pane = resolved[paneIndex];
         const bool frozen = pane.pane.type != TablePane::Type::Scrollable;
-        const qint64 offset = frozen ? 0 : groupOffset(pane.pane.scrollGroup);
+        QVector<qint64> &prefix = m_panePrefixX[paneIndex];
+        prefix.clear();
+        prefix.reserve(pane.pane.logicalColumns.size() + 1);
         qint64 contentX = 0;
-        for (int logical : pane.pane.logicalColumns) {
-            const int size = m_geometry->sectionSize(logical);
-            // Clamp into a sane neighbourhood of the window: a pane may hold a
-            // 64-bit extent (very wide tables), but a column x is only meaningful
-            // near the viewport, and QRect/QWidget arithmetic is 32-bit (Qt even
-            // asserts on overflow). Columns further away collapse to the sentinel.
-            const qint64 localX = contentX - offset;
-            const qint64 wanted = qint64(pane.x) + localX;
-            const qint64 limit = qint64(width) + kMaxOffscreenX;
-            const int viewportX = int(qBound(-kMaxOffscreenX, wanted, limit));
-            m_viewportXByLogical[logical] = viewportX;
+        prefix.append(0);
+        for (int slot = 0; slot < pane.pane.logicalColumns.size(); ++slot) {
+            const int logical = pane.pane.logicalColumns.at(slot);
             m_paneByLogical[logical] = int(pane.pane.type);
             m_paneIndexByLogical[logical] = paneIndex;
             m_groupByLogical[logical] = frozen ? -1 : pane.pane.scrollGroup;
-
-            if (size > 0 && viewportX < pane.x + pane.width && viewportX + size > pane.x) {
-                if (pane.window.first < 0) {
-                    pane.window.first = m_geometry->visualIndex(logical);
-                    pane.window.last = pane.window.first;
-                } else {
-                    pane.window.last = m_geometry->visualIndex(logical);
-                }
-            }
-            contentX += size;
+            m_paneSlotByLogical[logical] = slot;
+            contentX += m_geometry->sectionSize(logical);
+            prefix.append(contentX);
+            ++m_columnVisits;
         }
         pane.contentX = contentX;
-        m_paneWindows.insert(paneIndex, pane.window);
-        if (pane.pane.type == TablePane::Type::Scrollable && pane.window.isValid()) {
-            // Every scrolling pane contributes (§43 "advanced panes"): with several
-            // scroll groups the scrollable columns on screen are the union of their
-            // windows, and one group may hold more than one pane.
-            m_visibleScrollable = m_visibleScrollable.isValid()
-                ? VisibleRange{qMin(m_visibleScrollable.first, pane.window.first),
-                               qMax(m_visibleScrollable.last, pane.window.last)}
-                : pane.window;
-        }
     }
 
     for (const ResolvedPane &pane : resolved)
         m_panes.append(pane.pane);
+    refreshScrollWindowsImpl();
 
     return previousPanes != m_panes || previousExtents != m_groupExtents
         || previousWidths != m_groupWidths || previousWidth != m_viewportWidth
@@ -427,9 +412,103 @@ int TablePaneLayout::paneIndexOfColumn(int logicalIndex) const
 
 int TablePaneLayout::columnViewportX(int logicalIndex) const
 {
-    if (logicalIndex < 0 || logicalIndex >= m_viewportXByLogical.size())
+    if (logicalIndex < 0 || logicalIndex >= m_paneSlotByLogical.size())
         return -1;
-    return m_viewportXByLogical.at(logicalIndex);
+    const int paneIndex = m_paneIndexByLogical.at(logicalIndex);
+    const int slot = m_paneSlotByLogical.at(logicalIndex);
+    if (paneIndex < 0 || slot < 0 || paneIndex >= m_panes.size())
+        return -1;
+    const TablePane &pane = m_panes.at(paneIndex);
+    if (slot + 1 >= m_panePrefixX.value(paneIndex).size())
+        return -1;
+
+    const bool frozen = pane.type != TablePane::Type::Scrollable;
+    const qint64 offset = frozen ? 0 : groupOffset(pane.scrollGroup);
+    // Clamp into a sane neighbourhood of the window: a pane may hold a 64-bit
+    // extent (very wide tables), but a column x is only meaningful near the
+    // viewport, and QRect/QWidget arithmetic is 32-bit (Qt even asserts on
+    // overflow). Columns further away collapse to the sentinel.
+    const qint64 wanted = qint64(pane.viewportRect.x())
+        + m_panePrefixX.at(paneIndex).at(slot) - offset;
+    const int limit = pane.viewportRect.width() + int(kMaxOffscreenX);
+    return int(qBound(-kMaxOffscreenX, wanted, qint64(limit)));
+}
+
+bool TablePaneLayout::refreshScrollWindows()
+{
+    m_columnVisits = 0;
+    return refreshScrollWindowsImpl();
+}
+
+bool TablePaneLayout::refreshScrollWindowsImpl()
+{
+    const VisibleRange previousScrollable = m_visibleScrollable;
+    m_paneWindows.clear();
+    m_visibleScrollable = VisibleRange();
+    m_paneSlotWindows.resize(m_panes.size());
+
+    for (int paneIndex = 0; paneIndex < m_panes.size(); ++paneIndex) {
+        const TablePane &pane = m_panes.at(paneIndex);
+        m_paneSlotWindows[paneIndex] = {-1, -1};
+        const int slotCount = pane.logicalColumns.size();
+        const int paneWidth = pane.viewportRect.width();
+        if (slotCount <= 0 || paneWidth <= 0 || paneIndex >= m_panePrefixX.size())
+            continue;
+
+        const bool frozen = pane.type != TablePane::Type::Scrollable;
+        const qint64 offset = frozen ? 0 : groupOffset(pane.scrollGroup);
+        const QVector<qint64> &prefix = m_panePrefixX.at(paneIndex);
+        if (prefix.size() != slotCount + 1)
+            continue;                       // stale cache: the next update() rebuilds
+
+        // Binary search instead of walking the pane's columns: the first column
+        // that ends after the pane's left edge, and the last one that starts before
+        // its right edge.
+        const qint64 left = offset;
+        const qint64 right = offset + paneWidth;
+        int low = 0;
+        int high = slotCount;
+        while (low < high) {
+            const int mid = (low + high) / 2;
+            if (prefix.at(mid + 1) > left)
+                high = mid;
+            else
+                low = mid + 1;
+        }
+        const int firstSlot = low;
+        low = firstSlot;
+        high = slotCount;
+        while (low < high) {
+            const int mid = (low + high) / 2;
+            if (prefix.at(mid) < right)
+                low = mid + 1;
+            else
+                high = mid;
+        }
+        const int lastSlot = low - 1;
+        if (firstSlot >= slotCount || lastSlot < firstSlot) {
+            ++m_columnVisits;               // the (log) search itself
+            continue;
+        }
+        m_paneSlotWindows[paneIndex] = {firstSlot, lastSlot};
+        m_columnVisits += 2;                // two binary searches, not `slotCount` visits
+
+        const VisibleRange window{m_geometry->visualIndex(pane.logicalColumns.at(firstSlot)),
+                                  m_geometry->visualIndex(pane.logicalColumns.at(lastSlot))};
+        m_paneWindows.insert(paneIndex, window);
+        if (pane.type != TablePane::Type::Scrollable)
+            continue;
+        // Every scrolling pane contributes (§43 "advanced panes"): with several
+        // scroll groups the scrollable columns on screen are the union of their
+        // windows, and one group may hold more than one pane.
+        m_visibleScrollable = m_visibleScrollable.isValid()
+            ? VisibleRange{qMin(m_visibleScrollable.first, window.first),
+                           qMax(m_visibleScrollable.last, window.last)}
+            : window;
+    }
+
+    return previousScrollable.first != m_visibleScrollable.first
+        || previousScrollable.last != m_visibleScrollable.last;
 }
 
 TablePane::Type TablePaneLayout::paneOfColumn(int logicalIndex) const
@@ -493,34 +572,30 @@ QVector<int> TablePaneLayout::columnsForLayout(int overscan) const
     QVector<int> columns;
     if (!m_geometry)
         return columns;
-    const int count = m_geometry->sectionCount();
-    if (count <= 0)
+    if (m_geometry->sectionCount() <= 0)
         return columns;
 
-    // Every pane contributes: a frozen pane always, a scrolling pane inside its
-    // own window (widened by \a overscan sections).
-    QVector<VisibleRange> windows;
-    windows.reserve(m_panes.size());
+    // Every pane contributes, and only its own window: a frozen pane always, a
+    // scrolling pane inside its window widened by \a overscan columns. Walking the
+    // panes keeps this proportional to the window instead of the column count.
+    const int extra = qMax(0, overscan);
     for (int paneIndex = 0; paneIndex < m_panes.size(); ++paneIndex) {
-        const VisibleRange window = m_paneWindows.value(paneIndex, VisibleRange());
-        windows.append(window.isValid()
-                           ? VisibleRange::expanded(window.first, window.last, qMax(0, overscan),
-                                                    qMax(0, overscan), count)
-                           : window);
-    }
-
-    columns.reserve(count);
-    for (int visual = 0; visual < count; ++visual) {
-        const int logical = m_geometry->logicalIndex(visual);
-        if (logical < 0 || m_geometry->isSectionHidden(logical))
+        const TablePane &pane = m_panes.at(paneIndex);
+        const int slotCount = pane.logicalColumns.size();
+        if (slotCount <= 0)
             continue;
-        const int paneIndex = paneIndexOfColumn(logical);
-        if (paneIndex < 0)
+        if (pane.type != TablePane::Type::Scrollable) {
+            for (int slot = 0; slot < slotCount; ++slot)
+                columns.append(pane.logicalColumns.at(slot));
             continue;
-        if (m_panes.at(paneIndex).type != TablePane::Type::Scrollable
-            || windows.at(paneIndex).contains(visual)) {
-            columns.append(logical);
         }
+        const QPair<int, int> window = m_paneSlotWindows.value(paneIndex, {-1, -1});
+        if (window.first < 0)
+            continue;
+        const int first = qMax(0, window.first - extra);
+        const int last = qMin(slotCount - 1, window.second + extra);
+        for (int slot = first; slot <= last; ++slot)
+            columns.append(pane.logicalColumns.at(slot));
     }
     return columns;
 }

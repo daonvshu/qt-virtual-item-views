@@ -126,7 +126,20 @@ public:
 
     /// Recomputes the cached pane rects and column positions. The panes span the
     /// full viewport height. Returns true when the layout changed.
+    ///
+    /// This is the *structural* pass: it walks every column, so it is called when
+    /// the section set, the order, the visibility, the frozen sets, the pane specs
+    /// or the viewport size changed. A pure scroll only moves the offsets, which is
+    /// what refreshScrollWindows() handles (binary search per pane).
     bool update(int viewportWidth, int viewportHeight);
+    /// Scroll fast path: recomputes each pane's visible window (and the union of
+    /// the scrolling panes) from the cached pane-local prefix sums. Cost is
+    /// O(panes x log(columns in pane)), independent of the total column count.
+    /// Returns true when the window moved.
+    bool refreshScrollWindows();
+    /// Columns the last update()/refreshScrollWindows() looked at (diagnostics:
+    /// proves the scroll path is window-bounded and the structure path is O(N)).
+    qsizetype columnVisitsInLastUpdate() const { return m_columnVisits; }
     /// Size of the last update().
     int viewportWidth() const { return m_viewportWidth; }
 
@@ -200,6 +213,9 @@ public:
     QVector<int> columnsForLayout(int overscan) const;
 
 private:
+    /// Window refresh without resetting the visit counter (update() counts the
+    /// structural pass and this part together).
+    bool refreshScrollWindowsImpl();
     qint64 extentOf(const QVector<int> &logicalColumns) const;
     QVector<int> visualOrderOf(const QVector<int> &logicalColumns) const;
     /// Applies \a remap (which may yield -1 for a dropped column) to the frozen
@@ -210,8 +226,18 @@ private:
     QVector<int> m_frozenLeft;
     QVector<int> m_frozenRight;
     QVector<TablePane> m_panes;
-    /// Viewport x per logical column (-1 = hidden/unknown).
-    QVector<int> m_viewportXByLogical;
+    /// Pane-local content x of every column of a pane, in the pane's own order
+    /// (one prefix entry per column plus a trailing total), indexed by pane. This
+    /// is what makes columnViewportX() O(log) instead of a per-column cache that
+    /// has to be rewritten on every scroll.
+    QVector<QVector<qint64>> m_panePrefixX;
+    /// Slot of a logical column inside its pane's column list (-1 = no pane).
+    QVector<int> m_paneSlotByLogical;
+    /// Visible window of a pane as slots into its column list (-1 = nothing
+    /// visible); the visual-index range is derived from it for the public API.
+    QVector<QPair<int, int>> m_paneSlotWindows;
+    /// Columns examined by the last update()/refreshScrollWindows().
+    mutable qsizetype m_columnVisits = 0;
     /// Pane type per logical column.
     QVector<int> m_paneByLogical;
     /// Pane index per logical column (-1 = hidden/unknown).

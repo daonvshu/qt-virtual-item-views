@@ -197,6 +197,9 @@ private:
     /// Visual order of the last pass, to tell a section move (animate) from a
     /// resize or an offset change (immediate).
     QVector<int> m_lastVisualOrder;
+    /// HeaderGeometry::orderRevision() of the last pass: the order above is only
+    /// re-derived when the geometry says it may have changed.
+    quint32 m_lastOrderRevision = 0;
     /// True once a table told this renderer where its viewport starts; without that
     /// (a standalone header) its own client origin is the reference.
     bool m_viewportOriginSet = false;

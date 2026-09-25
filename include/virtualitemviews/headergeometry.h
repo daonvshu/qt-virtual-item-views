@@ -117,6 +117,11 @@ public:
     VisibleRange visibleVisualRange(int viewportExtent) const;
     /// Logical indices of the visible sections, in visual order.
     QVector<int> visibleSectionsInVisualOrder() const;
+    /// Bumped whenever the visual order of the visible sections may have changed
+    /// (move, insert, remove, hide/unhide). A renderer can cache derived state -
+    /// e.g. the order it last laid out - and only rebuild it when this number
+    /// moved, instead of re-deriving the whole order on every relayout.
+    quint32 orderRevision() const { return m_orderRevision; }
 
     // -- sort state (§33) ----------------------------------------------------
     int sortIndicatorSection() const { return m_sortIndicatorSection; }
@@ -183,6 +188,8 @@ private:
     int m_sortIndicatorSection = -1;
     Qt::SortOrder m_sortIndicatorOrder = Qt::AscendingOrder;
     bool m_stretchLastSection = false;
+    /// See orderRevision().
+    quint32 m_orderRevision = 1;
 
     // Lazily rebuilt caches.
     mutable bool m_cacheDirty = true;

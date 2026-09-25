@@ -204,6 +204,9 @@ public:
     /// (0 hides the line) or a pen style applies to both.
     void setPaneSeparatorStyle(const PaneSeparatorStyle &style);
     PaneSeparatorStyle paneSeparatorStyle() const { return m_paneSeparatorStyle; }
+    /// Columns the last horizontal layout pass looked at (diagnostics/tests): the
+    /// structural pass is O(total columns), a pure scroll is O(panes x log columns).
+    qsizetype horizontalLayoutColumnVisits() const { return m_panes.columnVisitsInLastUpdate(); }
 
     // -- header animation (§23/§24) ------------------------------------------
     /// Visual geometry animation of the installed header renderers: a section move
@@ -350,6 +353,9 @@ private:
     /// Recomputes the pane layout (§31) and the column layout that depends on
     /// it (frozen widths change the scrollable range and every column x).
     void updatePaneLayout();
+    /// Scroll-only refresh: recompute the pane windows from their cached prefix
+    /// sums (O(panes x log columns)) instead of the whole pane layout.
+    void updatePaneLayoutForScroll();
     /// Creates/destroys/updates the frozen pane header renderers.
     void syncHeaderPanes();
     /// Creates/positions the 1 px body lines of the pane boundaries.

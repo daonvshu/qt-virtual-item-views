@@ -24,6 +24,7 @@ private slots:
     void changingLimitsKeepsImplicitSizesImplicit();
     void changingLimitsClampsTheDefaultSize();
     void changingLimitsEmitsOneBulkGeometryChange();
+    void orderRevisionOnlyMovesWhenTheOrderCanChange();
 };
 
 void TestHeaderGeometry::defaultSectionGeometry()
@@ -401,6 +402,32 @@ void TestHeaderGeometry::changingLimitsEmitsOneBulkGeometryChange()
     geometry.setMinimumSectionSize(150);              // no-op: nothing changes at all
     QCOMPARE(geometrySpy.count(), 0);
     QCOMPARE(resizeSpy.count(), 0);
+}
+
+void TestHeaderGeometry::orderRevisionOnlyMovesWhenTheOrderCanChange()
+{
+    HeaderGeometry geometry;
+    geometry.setDefaultSectionSize(100);
+    geometry.setSectionCount(4);
+    const quint32 initial = geometry.orderRevision();
+
+    // Scrolling, resizing, hiding a *sort* indicator: none of them can change the
+    // order a renderer laid out, so a renderer may skip re-deriving it.
+    geometry.setViewportOffset(300);
+    geometry.resizeSection(1, 150);
+    geometry.setSortIndicator(2, Qt::AscendingOrder);
+    geometry.setStretchLastSection(true);
+    QCOMPARE(geometry.orderRevision(), initial);
+
+    // These can, and they bump the revision.
+    geometry.setSectionHidden(0, true);
+    const quint32 afterHide = geometry.orderRevision();
+    QVERIFY(afterHide != initial);
+    geometry.moveSection(3, 0);
+    QVERIFY(geometry.orderRevision() != afterHide);
+    const quint32 afterMove = geometry.orderRevision();
+    geometry.setSectionCount(6);              // appended sections join the order
+    QVERIFY(geometry.orderRevision() != afterMove);
 }
 
 QTEST_APPLESS_MAIN(TestHeaderGeometry)

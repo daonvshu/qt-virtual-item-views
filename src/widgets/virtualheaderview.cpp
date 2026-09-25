@@ -299,34 +299,57 @@ void VirtualHeaderView::relayout()
     // reorder therefore never animates unless the application requests it, and
     // resizing, hiding and scrolling - where the body follows every frame - stay
     // frame-synchronous as well.
-    const QVector<int> order = visualOrder();
+    // The order of the visible sections is only re-derived when the geometry says
+    // it may have changed (orderRevision) or when a transition was requested:
+    // relayout() also runs on every scroll, and rebuilding the full order there
+    // made a 20,000 column header walk 20,000 columns per wheel step.
+    const quint32 orderRevision = m_geometry->orderRevision();
     bool sectionsReordered = false;
-    if (!m_lastVisualOrder.isEmpty() && m_lastVisualOrder.size() == order.size()) {
-        QVector<int> before = m_lastVisualOrder;
-        QVector<int> after = order;
-        std::sort(before.begin(), before.end());
-        std::sort(after.begin(), after.end());
-        sectionsReordered = before == after && m_lastVisualOrder != order;
+    if (m_animateOrderChange || m_lastVisualOrder.isEmpty()
+        || orderRevision != m_lastOrderRevision) {
+        const QVector<int> order = visualOrder();
+        if (!m_lastVisualOrder.isEmpty() && m_lastVisualOrder.size() == order.size()) {
+            QVector<int> before = m_lastVisualOrder;
+            QVector<int> after = order;
+            std::sort(before.begin(), before.end());
+            std::sort(after.begin(), after.end());
+            sectionsReordered = before == after && m_lastVisualOrder != order;
+        }
+        m_lastVisualOrder = order;
     }
-    m_lastVisualOrder = order;
+    m_lastOrderRevision = orderRevision;
     const bool animateMove = sectionsReordered && m_animateOrderChange;
     m_animateOrderChange = false; // the request is consumed by this pass
 
     // 1) Visual range of the sections that intersect this widget.
     int firstVisual = -1;
     int lastVisual = -1;
-    for (int visual = 0; visual < count; ++visual) {
-        const int logical = m_geometry->logicalIndex(visual);
-        if (logical < 0 || m_geometry->isSectionHidden(logical) || isFiltered(logical))
-            continue;
-        const int left = sectionX(logical);
-        const int width = m_geometry->sectionSize(logical);
-        if (left == kSectionNotShown || width <= 0)
-            continue;
-        if (left < this->width() && left + width > 0) {
-            if (firstVisual < 0)
-                firstVisual = visual;
-            lastVisual = visual;
+    if (!m_paneFilterActive) {
+        // A whole-table header shares the geometry's viewport offset, so the
+        // geometry can answer this with a binary search over its prefix sums
+        // instead of a scan over every column.
+        const VisibleRange candidates = m_geometry->visibleVisualRange(this->width());
+        if (candidates.isValid()) {
+            firstVisual = candidates.first;
+            lastVisual = candidates.last;
+        }
+    } else {
+        // A pane header packs its own columns from its own origin, so the range has
+        // to be derived from this widget's coordinates (bounded by the pane's
+        // columns, not by the whole table).
+        for (int visual = 0; visual < count; ++visual) {
+            const int logical = m_geometry->logicalIndex(visual);
+            if (logical < 0 || m_geometry->isSectionHidden(logical) || isFiltered(logical))
+                continue;
+            const int left = sectionX(logical);
+            const int width = m_geometry->sectionSize(logical);
+            if (left == kSectionNotShown || width <= 0)
+                continue;
+            if (left < this->width() && left + width > 0) {
+                if (firstVisual < 0)
+                    firstVisual = visual;
+                lastVisual = visual;
+            }
         }
     }
 

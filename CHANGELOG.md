@@ -182,3 +182,20 @@
     所以 `NativeHeaderView` 在这种情况下跳过镜像并 `qWarning()` 一次，而不是让 Qt 断言。
   回归测试：`tst_tablepanes::horizontalOffsetSurvivesBeyondTheIntRange`（30,000 列 x 100,000 px
   = 3e9 px：逻辑偏移能到最大、中点到中点精确、最后一列的右边缘落在视口右边缘）。
+* **横向热路径不再是 O(总列数)（P1-4）**：横向滚动的每一步都会走
+  `offsetChanged -> updatePaneLayout -> TablePaneLayout::update`，而 `update()` 会重建
+  "每个列一份"的缓存（列 x、pane 归属、每个 pane 再扫一遍自己的列），`columnsForLayout()` 又从
+  visual 0 扫到 count-1 —— 100,000 列的表每个滚轮刻度都要处理 100,000 列。现在：
+  - `TablePaneLayout` 为每个 pane 保存**列宽的局部前缀和** + 每个列在其 pane 里的槽位；
+    `columnViewportX()` 改成按需 O(log) 计算（不再有"滚动时逐列重写"的缓存）；
+  - 新增 `refreshScrollWindows()`：只对每个 pane 做两次二分（窗口起止），O(pane 数 x log 列数)；
+    `columnsForLayout()` 也改成只走窗口 + overscan（+ 冻结列），不再扫描整个 visual 顺序；
+  - 表格的 `offsetChanged` 改走 `updatePaneLayoutForScroll()`（快路径），结构/尺寸变化仍然走
+    完整的 `updatePaneLayout()`；
+  - `VirtualHeaderView::relayout()` 不再每次重建完整 visual order：只有
+    `HeaderGeometry::orderRevision()` 变化（或显式请求过渡）时才重新推导顺序，整表表头的可见
+    区间交给 `geometry->visibleVisualRange()`（二分）。
+  回归测试：`tst_tablepanes::scrollingDoesNotWalkEveryColumn`（20,000 列：结构 pass 访问
+  >= 20,000 列，一次滚动的访问数 < 100，且窗口确实移动了；诊断接口
+  `horizontalLayoutColumnVisits()`）、`tst_headergeometry::orderRevisionOnlyMovesWhenTheOrderCanChange`
+  （滚动/改宽/排序指示器不变，隐藏、移动、改列数会变）。

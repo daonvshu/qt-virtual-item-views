@@ -50,6 +50,7 @@ void HeaderGeometry::setSectionCount(int count)
         }
     }
 
+    ++m_orderRevision;                  // the visible order changed either way
     rebuildIndexMaps();
 
     invalidateCaches();
@@ -93,6 +94,7 @@ void HeaderGeometry::insertLogicalSections(int first, int count)
     }
     for (int index = 0; index < count; ++index)
         m_visualToLogical.append(at + index);
+    ++m_orderRevision;
     rebuildIndexMaps();
 
     if (m_sortIndicatorSection >= at)
@@ -130,6 +132,7 @@ void HeaderGeometry::removeLogicalSections(int first, int count)
         visualOrder.append(logical >= at + removed ? logical - removed : logical);
     }
     m_visualToLogical = visualOrder;
+    ++m_orderRevision;
     rebuildIndexMaps();
 
     if (m_sortIndicatorSection >= at) {
@@ -414,6 +417,7 @@ void HeaderGeometry::moveSection(int fromVisualIndex, int toVisualIndex)
     m_visualToLogical.move(fromVisualIndex, toVisualIndex);
     for (int visual = 0; visual < m_visualToLogical.size(); ++visual)
         m_logicalToVisual[m_visualToLogical.at(visual)] = visual;
+    ++m_orderRevision;
 
     invalidateCaches();
     emit sectionMoved(logical, fromVisualIndex, toVisualIndex);
@@ -474,6 +478,7 @@ void HeaderGeometry::setSectionHidden(int logicalIndex, bool hidden)
     if (section.hidden == hidden)
         return;
     section.hidden = hidden;
+    ++m_orderRevision;
     invalidateCaches();
     emit sectionVisibilityChanged(logicalIndex, !hidden);
     emitGeometryChanged();
@@ -492,6 +497,7 @@ void HeaderGeometry::setAllSectionsHidden(bool hidden)
     }
     if (!changed)
         return;
+    ++m_orderRevision;
     invalidateCaches();
     emitGeometryChanged();
 }

@@ -124,6 +124,7 @@ private slots:
     void resettingThePanesRestoresTheDefault();
     void keyboardNavigationScrollsTheGroupOfTheColumn();
     void horizontalOffsetSurvivesBeyondTheIntRange();
+    void scrollingDoesNotWalkEveryColumn();
 };
 
 void TestTablePanes::defaultLayoutIsStillTheThreePanes()
@@ -642,6 +643,38 @@ void TestTablePanes::horizontalOffsetSurvivesBeyondTheIntRange()
     QVERIFY(geometry.isValid());
     QVERIFY(geometry.viewportX <= 0);
     QVERIFY(geometry.viewportX + geometry.width >= view.viewport()->width());
+}
+
+void TestTablePanes::scrollingDoesNotWalkEveryColumn()
+{
+    constexpr int kColumns = 20000;
+    auto *model = new QStandardItemModel(20, kColumns, this);
+    PaneTableAdapter adapter;
+    VirtualTableView view;
+    view.setTableAdapter(&adapter);
+    view.setUniformItemHeight(kRowHeight);
+    view.setDefaultColumnWidth(kColumnWidth);
+    view.setModel(model);
+    showView(&view, QSize(kViewWidth, kViewHeight));
+    view.flushPendingRelayout();
+
+    // The structural pass may walk every column...
+    const qsizetype structuralVisits = view.horizontalLayoutColumnVisits();
+    QVERIFY(structuralVisits >= qsizetype(kColumns));
+
+    // ... but a scroll must not: it binary searches each pane's prefix sums and
+    // only then touches the window. Without that, 20,000 columns would be walked
+    // on every single wheel step.
+    view.setHorizontalOffset(500 * kColumnWidth);
+    const qsizetype scrollVisits = view.horizontalLayoutColumnVisits();
+    QVERIFY(scrollVisits < 100);
+    QVERIFY(scrollVisits * 100 < structuralVisits);
+
+    // The visible window really moved, so the cheap path was not just skipped.
+    const QVector<int> visible = view.visibleColumnLogicalIndexes();
+    QVERIFY(!visible.isEmpty());
+    QVERIFY(visible.first() > 0);
+    QVERIFY(visible.last() < kColumns);
 }
 
 QTEST_MAIN(TestTablePanes)

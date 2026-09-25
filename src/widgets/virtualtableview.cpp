@@ -148,7 +148,7 @@ VirtualTableView::VirtualTableView(QWidget *parent)
     // The pane layout caches every column x, so it follows the offset - this
     // covers plain scroll bar drags as well as setHorizontalOffset().
     connect(m_columns, &HeaderGeometry::offsetChanged, this,
-            [this](qint64) { updatePaneLayout(); });
+            [this](qint64) { updatePaneLayoutForScroll(); });
     connect(m_rowHeaders, &HeaderGeometry::sectionResized, this,
             &VirtualTableView::onVerticalSectionResized);
     connect(m_columns, &HeaderGeometry::sortIndicatorChanged, this,
@@ -790,6 +790,23 @@ void VirtualTableView::updatePaneLayout()
     // Every column x may have moved: rows, cells and the scroll bar follow.
     updateColumnLayout();
     syncHorizontalScrollBar();
+}
+
+void VirtualTableView::updatePaneLayoutForScroll()
+{
+    // Only the offsets changed: refresh each pane's window with a binary search
+    // instead of rebuilding the whole pane/column cache (which is O(total
+    // columns)). The structural pass stays in updatePaneLayout().
+    const bool windowMoved = m_panes.refreshScrollWindows();
+    // The pane headers follow the offset of their own scroll group.
+    syncHeaderPanes();
+    // Every column x may have moved: the row widgets (or the cells) follow.
+    updateColumnLayout();
+    // Row widgets cover the viewport and only re-position their columns, so a
+    // horizontal scroll does not need a materialization pass there. A cell window
+    // does: which cells exist changed.
+    if (windowMoved && m_materializationMode == MaterializationMode::CellWidgets)
+        markDirty();
 }
 
 void VirtualTableView::syncHeaderPanes()
