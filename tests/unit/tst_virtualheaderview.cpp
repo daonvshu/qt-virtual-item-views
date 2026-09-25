@@ -104,6 +104,7 @@ private slots:
     void tableAnimationIsOptInPerMove();
     void smallJitterIsStillAClick();
     void dragPreviewsAndCommitsOnce();
+    void animationDefaultsToOutCubicWith300ms();
     void dragRoomEasesAndCanBeTurnedOff();
     void dragReordersInsideItsPaneOnly();
     void escapeCancelsTheDrag();
@@ -472,6 +473,34 @@ void TestVirtualHeaderView::dragPreviewsAndCommitsOnce()
     QCOMPARE(neighbour->x(), 0);
     QCOMPARE(third->x(), kSectionWidth);
 }
+void TestVirtualHeaderView::animationDefaultsToOutCubicWith300ms()
+{
+    QCOMPARE(m_header->sectionAnimationDuration(), 300);
+    QVERIFY(m_header->sectionAnimationEnabled());
+
+    // The "make room" tween uses the same curve: at half of the duration an OutCubic
+    // easing is already 87.5% of the way, far past what a linear one would show (50%).
+    QWidget *dragged = m_header->sectionWidget(0);
+    QWidget *neighbour = m_header->sectionWidget(1);
+    QVERIFY(dragged != nullptr);
+    QVERIFY(neighbour != nullptr);
+    sendMouse(m_header, QEvent::MouseButtonPress, QPoint(kSectionWidth / 2, 5), Qt::LeftButton,
+              Qt::LeftButton);
+    sendMouse(m_header, QEvent::MouseMove, QPoint(2 * kSectionWidth + 60, 5), Qt::NoButton,
+              Qt::LeftButton);
+    QApplication::processEvents();
+    QVERIFY(neighbour->x() > 0); // not teleported
+    QTest::qWait(150);           // half of the default duration
+    QVERIFY(neighbour->x() < kSectionWidth / 4);
+    QTest::qWait(300);
+    QCOMPARE(neighbour->x(), 0);
+
+    // Cancel and leave the header in a clean state for the other tests.
+    QKeyEvent escape(QEvent::KeyPress, Qt::Key_Escape, Qt::NoModifier);
+    QApplication::sendEvent(m_header, &escape);
+    QApplication::processEvents();
+    QCOMPARE(dragged->x(), 0);
+}
 
 void TestVirtualHeaderView::dragRoomEasesAndCanBeTurnedOff()
 {
@@ -504,6 +533,7 @@ void TestVirtualHeaderView::dragReordersInsideItsPaneOnly()
 {
     // A pane header shows only its own columns: a drag reorders inside that pane and
     // leaves every other column alone.
+    m_header->setSectionAnimationDuration(160);
     m_header->setPaneFilter(QVector<int>({1, 3}), true);
     m_header->setPaneOffset(0); // the pane packs its own columns (§31/§43)
     QApplication::processEvents();

@@ -203,7 +203,7 @@ public:
     /// the body keeps reading the committed HeaderGeometry (it jumps once, at the
     /// commit). Resizing, scrolling and pane changes stay immediate, because there
     /// the body follows every frame. Renderers without their own section placement
-    /// (a native QHeaderView) ignore the setting. Default: enabled, 160 ms.
+    /// (a native QHeaderView) ignore the setting. Default: enabled, 300 ms, OutCubic.
     void setHeaderAnimationEnabled(bool enabled);
     bool headerAnimationEnabled() const { return m_headerAnimationEnabled; }
     /// Duration of the visual transition in milliseconds; 0 turns it off.
@@ -410,7 +410,7 @@ private:
     QVector<QWidget *> m_paneSeparatorLines;
     PaneSeparatorStyle m_paneSeparatorStyle;
     bool m_headerAnimationEnabled = true;
-    int m_headerAnimationDuration = 160;
+    int m_headerAnimationDuration = 300;
     // The clip containers of a row widget are its children, tagged with their pane
     // index (see PaneClipHost): a recycled row widget can never leave a stale
     // pointer behind.

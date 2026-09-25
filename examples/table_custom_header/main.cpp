@@ -238,7 +238,7 @@ int main(int argc, char **argv)
                                       QStringLiteral("path"));
     QCommandLineOption animationOption(QStringLiteral("animation"),
                                        QStringLiteral("section 移动动画时长（ms，0 = 关闭）"),
-                                       QStringLiteral("ms"), QStringLiteral("160"));
+                                       QStringLiteral("ms"), QStringLiteral("300"));
     parser.addOption(rowsOption);
     parser.addOption(sectionsOption);
     parser.addOption(widgetOption);

@@ -11,11 +11,9 @@
 #include <QMouseEvent>
 #include <QResizeEvent>
 #include <QSet>
-#include <QTimer>
 #include <QVariantAnimation>
 
 #include <algorithm>
-#include <QtMath>
 
 namespace viv {
 
@@ -47,14 +45,26 @@ VirtualHeaderView::VirtualHeaderView(Qt::Orientation orientation, QWidget *paren
     setFocusPolicy(Qt::NoFocus);
     setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
 
-    // A drag is driven by mouse moves, but the sections that make room for the dragged
-    // one have to keep easing when the pointer stands still - hence a short timer that
-    // only runs while a drag is active (§22/§23).
-    m_previewTimer = new QTimer(this);
-    m_previewTimer->setInterval(16);
-    connect(m_previewTimer, &QTimer::timeout, this, [this]() {
+    // "Making room" for the dragged section is a tween of its own: driven by mouse moves
+    // plus this animation, so it also finishes while the pointer stands still, and it
+    // uses the same curve and duration as every other header animation (§22/§23).
+    m_previewAnimation = new QVariantAnimation(this);
+    m_previewAnimation->setStartValue(0.0);
+    m_previewAnimation->setEndValue(1.0);
+    m_previewAnimation->setEasingCurve(QEasingCurve::OutCubic);
+    connect(m_previewAnimation, &QVariantAnimation::valueChanged, this,
+            [this](const QVariant &value) {
+                m_previewProgress = value.toReal();
+                if (m_dragging)
+                    positionSections();
+            });
+    connect(m_previewAnimation, &QVariantAnimation::finished, this, [this]() {
+        if (m_previewProgress < 1.0)
+            return; // stopped before the end, not finished
+        m_previewProgress = 1.0;
+        m_previewFrom.clear();
         if (m_dragging)
-            advanceDragPreview();
+            positionSections();
     });
 }
 
@@ -455,6 +465,8 @@ void VirtualHeaderView::positionDraggedSections()
         return;
     const int to = dragTargetIndex();
     const int draggedWidth = m_geometry->sectionSize(m_dragSection);
+    if (to != m_previewSlot)
+        restartDragPreviewTween(to);
 
     for (auto it = m_sectionWidgets.constBegin(); it != m_sectionWidgets.constEnd(); ++it) {
         const int logical = it.key();
@@ -478,13 +490,14 @@ void VirtualHeaderView::positionDraggedSections()
                     target = committed + draggedWidth; // the gap opens in front of it
             }
         }
-        // The dragged section tracks the pointer exactly; the others ease towards their
+        // The dragged section tracks the pointer exactly; the others tween towards their
         // slot, so making room reads as a movement instead of a jump (§23).
         int visual = target;
-        if (logical != m_dragSection && m_previewFollow < 1.0 && widget->isVisible()) {
-            const int delta = target - widget->x();
-            if (qAbs(delta) > 1)
-                visual = widget->x() + int(qRound(qreal(delta) * m_previewFollow));
+        if (logical != m_dragSection && m_previewProgress < 1.0) {
+            const auto start = m_previewFrom.constFind(logical);
+            if (start != m_previewFrom.constEnd())
+                visual = start.value()
+                    + int(qRound(qreal(target - start.value()) * m_previewProgress));
         }
         const bool visible = width > 0 && visual < this->width() && visual + width > 0;
         if (!visible && !isSectionPinned(logical)) {
@@ -496,13 +509,23 @@ void VirtualHeaderView::positionDraggedSections()
     }
 }
 
-void VirtualHeaderView::advanceDragPreview()
+void VirtualHeaderView::restartDragPreviewTween(int packedSlot)
 {
-    if (!m_dragging)
+    m_previewSlot = packedSlot;
+    m_previewFrom.clear();
+    for (auto it = m_sectionWidgets.constBegin(); it != m_sectionWidgets.constEnd(); ++it) {
+        if (it.value()->isVisible())
+            m_previewFrom.insert(it.key(), it.value()->x());
+    }
+    if (!m_previewAnimation || !m_animationEnabled || m_animationDuration <= 0) {
+        m_previewProgress = 1.0;
+        m_previewFrom.clear();
         return;
-    // Re-runs the preview pass: sections still on their way move another step, sections
-    // that arrived keep their place, and the dragged section keeps following the pointer.
-    positionSections();
+    }
+    m_previewAnimation->stop();
+    m_previewAnimation->setDuration(m_animationDuration);
+    m_previewProgress = 0.0;
+    m_previewAnimation->start();
 }
 
 void VirtualHeaderView::beginSectionDrag(int logicalIndex, int x)
@@ -518,14 +541,12 @@ void VirtualHeaderView::beginSectionDrag(int logicalIndex, int x)
     m_dragCurrentX = x;
     m_dragging = true;
     m_moved = true; // a drag is never a sort click
-    // Ease towards the slot so that making room takes about one animation duration;
-    // with the animation off it is an immediate jump, like everything else.
-    m_previewFollow = (m_animationEnabled && m_animationDuration > 0)
-        ? 1.0 - qPow(0.02, 16.0 / double(m_animationDuration))
-        : 1.0;
+    // Nothing to tween yet: the sections still sit on their committed positions, and the
+    // tween starts as soon as the pointer asks for a different insertion slot.
+    m_previewSlot = visualOrder().indexOf(logicalIndex);
+    m_previewFrom.clear();
+    m_previewProgress = 1.0;
     setCursor(Qt::ClosedHandCursor);
-    if (m_previewTimer && m_previewFollow < 1.0)
-        m_previewTimer->start();
     positionSections();
 }
 
@@ -570,8 +591,11 @@ void VirtualHeaderView::finishSectionDrag(bool commit)
 
     m_dragSection = -1;
     m_dragging = false;
-    if (m_previewTimer)
-        m_previewTimer->stop();
+    if (m_previewAnimation)
+        m_previewAnimation->stop();
+    m_previewFrom.clear();
+    m_previewProgress = 1.0;
+    m_previewSlot = -1;
     updateCursor(mapFromGlobal(QCursor::pos()));
 
     if (commit && fromVisual >= 0 && toVisual >= 0) {

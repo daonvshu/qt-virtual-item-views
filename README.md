@@ -35,7 +35,7 @@ QWidget**。
 | `HeaderGeometry`：列宽/顺序/隐藏/排序状态的唯一事实来源（§14/§45.10） | 已实现 |
 | `NativeHeaderView`：QHeaderView 与 HeaderGeometry 双向同步（无信号回环） | 已实现 |
 | `VirtualHeaderView` + `HeaderWidgetAdapter`（§17-§19）：每个可见 section 一个真实 QWidget，只 materialize 可见列 + 横向 overscan + pinned | 已实现 |
-| 表头动画（§23/§24）：committed geometry 与 visual geometry 分离 —— 拖动列（`VirtualHeaderView`：拖动距离阈值、被拖列跟随指针、**邻居平滑让位**、松手一次提交）、或显式请求的换序（`moveColumn(..., MoveAnimation::Animate)`）由渲染器滑到新位置（默认 160 ms，`setHeaderAnimationDuration()` 可调、0 关闭），body 只在 commit 时重排一次；程序化换序默认**即时**，resize / 滚动 / pane 变化保持逐帧同步，native 表头渲染器忽略该设置 | 已实现 |
+| 表头动画（§23/§24）：committed geometry 与 visual geometry 分离 —— 拖动列（`VirtualHeaderView`：拖动距离阈值、被拖列跟随指针、**邻居同曲线平滑让位**、松手一次提交）、或显式请求的换序（`moveColumn(..., MoveAnimation::Animate)`）由渲染器滑到新位置（默认 300 ms、OutCubic，`setHeaderAnimationDuration()` 可调、0 关闭），body 只在 commit 时重排一次；程序化换序默认**即时**，resize / 滚动 / pane 变化保持逐帧同步，native 表头渲染器忽略该设置 | 已实现 |
 | `ColumnHost` / `TableRowLayoutContext`：框架定位列，业务只管内容（§26/§27） | 已实现 |
 | 列 resize/move/hide、表头点击排序、横向像素滚动、表头状态 save/restore | 已实现 |
 | 冻结列（v0.7，§31）：`setFrozenColumns()` / `setFrozenRightColumns()`，冻结 pane 与可滚动 pane 共享同一份 `HeaderGeometry` | 已实现 |
@@ -67,7 +67,7 @@ QWidget**。
 | 像素滚动：`WheelScrollMode`（Pixels 默认 / Items）、`setWheelScrollPixels()`、`scrollByPixels()`、`setVerticalOffset()`、触控板 `pixelDelta` 1:1 | 已实现 |
 | 可选生命周期日志 `setLifecycleLoggingEnabled()`（create/bind/unbind/recycle/pin） | 已实现 |
 | `TreeVisibilityIndex`（可见行压平、增量展开/折叠、深度、row 双向查询） | 已实现 |
-| 单元测试 233 个用例 + 4 个变异测试 + 10 个 GUI 交互场景（共 20 个 CTest 目标） | 已实现 |
+| 单元测试 234 个用例 + 4 个变异测试 + 10 个 GUI 交互场景（共 20 个 CTest 目标） | 已实现 |
 | 11 个示例（simple list / order cards / dynamic height / million rows / table row widgets / table many columns / table custom header / tree / drag & drop / table spans / table panes） | 已实现 |
 | benchmark（1M 行、表格 row vs cell、树：宽树 + 变更 + 锚点，稳态滚动零分配校验） | 已实现 |
 

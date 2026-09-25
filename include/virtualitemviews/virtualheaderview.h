@@ -13,7 +13,6 @@
 
 class QAbstractItemModel;
 class QKeyEvent;
-class QTimer;
 class QVariantAnimation;
 
 namespace viv {
@@ -137,11 +136,10 @@ private:
     /// follows the pointer, the others open / close the gap - all of it visual
     /// geometry, the committed order is not touched before the release (§22/§23).
     void positionDraggedSections();
-    /// One step of the preview easing: the sections that make room for the dragged one
-    /// move towards their new slot instead of jumping there. Driven by a short timer
-    /// while the drag is active, so the arrangement also finishes when the pointer is
-    /// standing still.
-    void advanceDragPreview();
+    /// (Re)starts the "make room" tween when the insertion slot changes: every section
+    /// keeps the position it has right now as its start and eases to its new slot with
+    /// the same curve and duration as every other header animation (§23).
+    void restartDragPreviewTween(int packedSlot);
     /// Starts the visual transition from the positions the materialized sections
     /// currently have to the committed ones.
     void animateSectionMove();
@@ -191,7 +189,7 @@ private:
     qreal m_slideProgress = 1.0;
     QVariantAnimation *m_slideAnimation = nullptr;
     bool m_animationEnabled = true;
-    int m_animationDuration = 160;
+    int m_animationDuration = 300;
     /// One-shot gate (§24): only an order change the caller asked for is shown as a
     /// transition. A plain geometry change is applied immediately.
     bool m_animateOrderChange = false;
@@ -208,11 +206,15 @@ private:
     int m_dragStartX = 0;
     int m_dragCurrentX = 0;
     bool m_dragging = false;
-    /// Preview easing (§22/§23): the sections that make room slide towards their slot
-    /// instead of teleporting. The timer keeps stepping while a drag is active, the
-    /// factor comes from the animation duration (1 = jump, as with the animation off).
-    QTimer *m_previewTimer = nullptr;
-    qreal m_previewFollow = 1.0;
+    /// Preview easing (§22/§23): the sections that make room tween to their slot instead
+    /// of teleporting. Same curve (OutCubic) and duration as the other header
+    /// animations; the animation also runs while the pointer stands still, so the
+    /// arrangement always finishes.
+    QHash<int, int> m_previewFrom;
+    qreal m_previewProgress = 1.0;
+    QVariantAnimation *m_previewAnimation = nullptr;
+    /// Insertion slot the running tween belongs to (-1 = none).
+    int m_previewSlot = -1;
     int m_overscan = 1;
     bool m_sortInteractionEnabled = false;
 

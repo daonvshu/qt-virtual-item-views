@@ -45,7 +45,7 @@ v0.7 的逐项细节与实现决定记在 [spans.md](spans.md)、[accessibility.
       `setHorizontalOffset(group, offset)` 驱动；表头新增 `setPaneOffset()`；命中测试按 pane
       裁剪。示例 `examples/table_panes`（`--check` 自检 / `--snapshot` 截图）。
 - [x] **1b 表头动画**（§23/§24）：committed 与 visual 两层几何分离（[header-animation.md](header-animation.md)）。
-      `VirtualHeaderView` 在换序时把 section 滑到新位置（默认 160 ms，可关、可调），body 只在 commit
+      `VirtualHeaderView` 在换序时把 section 滑到新位置（默认 300 ms、OutCubic，可关、可调），body 只在 commit
       时重排一次；resize / 滚动 / pane 变化逐帧同步；native 表头渲染器忽略该设置（支持矩阵见文档）。
       顺带修掉"应用自己创建的表头控件从未 reparent、按屏幕坐标摆放"导致的表头/body 几像素错位。
       测试：`tst_virtualheaderview` 3 个新用例；示例：`table_custom_header --move-demo`。
@@ -109,4 +109,4 @@ v0.7 的逐项细节与实现决定记在 [spans.md](spans.md)、[accessibility.
 | 2026-09-25 | 测试目标统一加 `/utf-8`（MSVC） | Qt5 配置下测试源文件的 UTF-8 中文注释按 936 代码页解析会吞掉行尾，导致整文件语法错误（C4819 → C2447） |
 | 2026-09-25 | 表头过渡改成**按需触发**：程序化换序默认即时，只有显式 `MoveAnimation::Animate`（或渲染器自己的手势）才播 | 用户反馈"手动设置列顺序也被当成了拖动"；程序化/模型换序/状态恢复不该变出没人要求的动画。现有 `moveColumn()` 调用语义不变（默认即时），过渡从"任何顺序变化都播"收敛为"被请求才播" |
 | 2026-09-25 | 拖动重排重做成"拖动距离阈值 + 视觉预览 + 松手一次提交"，并把单次过渡接回松手 | 旧实现每越过一个邻居就提交一次：既不能连续拖（只能一格一格挪），又会把点击/抖动误判成拖动，且逐格动画让 section 跟不上光标。现在 committed 几何只在松手时变一次，拖动期间只动渲染器的视觉几何 |
-| 2026-09-25 | 拖动期间"邻居让位"也走缓动（指数逼近，系数由 `setHeaderAnimationDuration()` 换算；关闭动画时即刻） | 瞬移的让位看起来像跳帧：拖动是被拖列跟随光标、其他列让出插入位的一次连续运动，让位瞬移会让整段交互读起来是"闪一下"而不是"让开" |
+| 2026-09-25 | 拖动期间"邻居让位"也走缓动，并且与换序过渡**同一套曲线与时长**（OutCubic，默认 300 ms；关闭动画时即刻） | 瞬移的让位看起来像跳帧：拖动是被拖列跟随光标、其他列让出插入位的一次连续运动。让位与过渡用同一个旋钮，手感才会一致（要更快就整体调小时长） |
