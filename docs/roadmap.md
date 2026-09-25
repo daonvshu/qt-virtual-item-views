@@ -34,7 +34,7 @@ v0.7 的逐项细节与实现决定记在 [spans.md](spans.md)、[accessibility.
 | Qt 5 | `D:\devlib\Qt\5.15.2\msvc2019_64` |
 | 工具链 | MSVC 18 (14.50.35717) x64 + Ninja + CMake 4.3（CLion 自带） |
 | 构建树 | `cmake-build-debug-qt6` / `cmake-build-debug-qt5`（静态）与 `cmake-build-debug-qt6-shared` / `cmake-build-debug-qt5-shared`（动态） |
-| 验证 | 一条命令：`pwsh -File scripts/validate.ps1` —— 四种组合（Qt 6.11.2 / Qt 5.15.2 × 静态 / 动态）共 28 个步骤全绿：`all` 构建、20 个 CTest 目标（248 单元 + 4 变异 + 10 GUI 用例）、12 个示例退出码 0、`bench_listview` 不变量自检、`cmake --install` + 消费端冒烟测试 |
+| 验证 | 一条命令：`pwsh -File scripts/validate.ps1` —— 四种组合（Qt 6.11.2 / Qt 5.15.2 × 静态 / 动态）共 28 个步骤全绿：`all` 构建、28 个 CTest 目标（单元 + 变异 + GUI 交互 + 两个 memmove/splice 场景所在的基准用例）、12 个示例退出码 0、`bench_listview` 不变量自检、`cmake --install` + 消费端冒烟测试；`-Asan` 再加一个 MSVC AddressSanitizer 组合（见 [ci.md](ci.md) §5） |
 
 注意：构建与测试必须在沙箱外运行。沙箱内 ninja 无法派生编译器子进程，构建会永久挂起
 （已用最小 ninja 工程复现）。
@@ -153,6 +153,9 @@ Wave 3（v1.0 工程化交付）。**
       workflow（Windows + MSVC、Ubuntu + GCC、Ubuntu + ASan/UBSan）与本地踩到的环境坑
       （`QT_QPA_PLATFORM=offscreen`、`QT_FATAL_WARNINGS` 只给示例、ASan 关泄漏检测）记在
       [ci.md](ci.md)。
+      **sanitizer 的一半已经实跑**（2026-09-26）：脚本新增 `-Asan`，对 Qt 6.11.2 与 5.15.2 各建一个
+      `/fsanitize=address` 的静态构建树，`all` 构建 + 28 个 CTest 目标 + 12 个示例全绿、没有任何
+      ASan 报告（命令与结论见 [ci.md](ci.md) §5）。UBSan 与 GCC/Clang 组合仍等 runner。
 
 ## 3. 代码审查与修复（2026-09-25）
 
@@ -165,7 +168,7 @@ Wave 3（v1.0 工程化交付）。**
 | **Wave 1 崩溃 / 悬空指针** | Adapter 切换 UAF、Recycler 池的 adapter 身份、Model/SelectionModel 生命周期（`QPointer` + 不变量）、表头 pane 渲染器析构顺序、视图析构解绑、Cell 模式在行/列移除与 reset 前解绑 | 已完成 |
 | **Wave 2 数据 / 状态正确性** | **已完成**：P1-1 列结构 remap（`tst_headerstructure`）、P1-2 动态高度锚点（`tst_dynamicanchor`）、P1-7 `RowSizePolicy` 与行号条一致（`tst_virtualtableview`）、P1-8 rootIndex 持久化 + 校验（`tst_virtuallistview`）、P1-9 选择语义统一（`tst_selection`）、P1-10 `scrollToColumn()` 的 pane 感知（`tst_tablepanes`）、P1-11 span 重叠校验与 `maximumSpan()` 重算（`tst_tablespan`）、P1-13 冻结行下的拖放坐标（`tst_dndfrozen`） | ✅ |
 | **Wave 3 虚拟化性能** | **已完成**：P1-3 列宽上下限语义 + 批量信号（`tst_headergeometry`）、P1-4 pane 局部前缀和 + 滚动只刷新窗口 + 表头 orderRevision 快路径（`tst_tablepanes::scrollingDoesNotWalkEveryColumn`）、P1-5 横向 64 位偏移与 extent（`tst_tablepanes`）、P1-12 `BlockSizeIndex` 分块上界（`tst_sizeindex`）、P2-1 relayout 队列合并、P2-7 多滚动组宽度按 extent 等比（`tst_tablepanes::scrollingPanesShareTheWidthProportionally`）、P2-8 纯横向滚动不跑纵向 pass（`tst_relayoutqueue`） | ✅ |
-| **Wave 4 API / 发布** | **已完成（除两项外部约束）**：P1-14 vertical widget header 明确拒绝 + P2-4 表头 orientation 校验 + P2-5 动态子控件的事件过滤（`tst_virtualheaderview`）、P2-6 `TablePaneSpec` 规范化与校验（`tst_tablepanes`）、P2-3 事务化 `restoreHeaderState` + P2-9 行号条状态拆成"请求 / 实际支持"（`tst_virtualtableview`）、P2-2 pin 离屏项即物化（`tst_virtualitemview`）、P2-10 树的 expand 原地 splice + memmove（`tst_treevisibilityindex`、`bench_listview --tree` 新场景）。**留下两项**：P2-10 的彻底解法（rope/分块会改公开类的成员布局 = ABI 破坏，只能进**主版本**，见决策表）、CI 接入（配置与踩坑见 [ci.md](ci.md)，等一个 runner 再落地） | ✅ / ⏳ |
+| **Wave 4 API / 发布** | **已完成（除两项外部约束）**：P1-14 vertical widget header 明确拒绝 + P2-4 表头 orientation 校验 + P2-5 动态子控件的事件过滤（`tst_virtualheaderview`）、P2-6 `TablePaneSpec` 规范化与校验（`tst_tablepanes`）、P2-3 事务化 `restoreHeaderState` + P2-9 行号条状态拆成"请求 / 实际支持"（`tst_virtualtableview`）、P2-2 pin 离屏项即物化（`tst_virtualitemview`）、P2-10 树的 expand 原地 splice + memmove（`tst_treevisibilityindex`、`bench_listview --tree` 新场景）、sanitizer 的 MSVC ASan 一半（两个 kit 各 28 个 CTest + 12 个示例全绿，`scripts/validate.ps1 -Asan`）。**留下两项**：P2-10 的彻底解法（rope/分块会改公开类的成员布局 = ABI 破坏，只能进**主版本**，见决策表）、CI 接入 + Linux/GCC + UBSan（配置与踩坑见 [ci.md](ci.md)，等一个 runner 再落地） | ✅ / ⏳ |
 
 Wave 1 新增的回归测试：`tst_adapterreplacement`（8 例）、`tst_modellifetime`（6 例）、
 `tst_celllifecycle`（5 例）；四种组合（Qt 5.15.2 / 6.11.2 × 静态 / 动态）28 步验证全绿。

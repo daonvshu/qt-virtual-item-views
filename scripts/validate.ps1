@@ -18,10 +18,15 @@
     Every step is reported; a failing step is not fatal, so one run shows all
     problems. The exit code is the number of failed steps.
 
+    With -Asan the same kit gets a second combination built with MSVC's
+    AddressSanitizer (tests + examples; benchmarks and the installed consumer are
+    skipped there - see the parameter help).
+
 .EXAMPLE
     pwsh -File scripts/validate.ps1
     pwsh -File scripts/validate.ps1 -Library Static -SkipBenchmarks
     pwsh -File scripts/validate.ps1 -QtBin D:/Qt/6.8.3/msvc2022_64/bin
+    pwsh -File scripts/validate.ps1 -Asan -QtBin D:/Qt/6.11.2/msvc2022_64/bin
 #>
 [CmdletBinding()]
 param(
@@ -35,8 +40,19 @@ param(
     [int]$ExampleMs = 400,
     [switch]$SkipExamples,
     [switch]$SkipBenchmarks,
-    [switch]$SkipConsumer
+    [switch]$SkipConsumer,
+    # Adds a fifth step combination per Qt kit: the library + tests + examples built with
+    # MSVC's AddressSanitizer (-DCMAKE_CXX_FLAGS=/fsanitize=address, tree <...>-asan).
+    # The benchmarks would take minutes under ASan and the installed consumer is a
+    # separate CMake project that would have to be given the sanitizer flags as well, so
+    # both are skipped in this mode.
+    [switch]$Asan
 )
+
+if ($Asan) {
+    $SkipBenchmarks = $true
+    $SkipConsumer = $true
+}
 
 $ErrorActionPreference = 'Stop'
 $PSNativeCommandUseErrorActionPreference = $false
@@ -132,16 +148,22 @@ foreach ($qt in $QtBin) {
 
     foreach ($flavour in $flavours) {
         $isShared = ($flavour -eq 'shared')
-        $tree = Join-Path $repo ("cmake-build-debug-qt{0}{1}" -f $major, $(if ($isShared) { '-shared' } else { '' }))
-        $combo = "Qt$major/$flavour"
+        $sanitizerSuffix = if ($Asan) { '-asan' } else { '' }
+        $tree = Join-Path $repo ("cmake-build-debug-qt{0}{1}{2}" -f $major, $(if ($isShared) { '-shared' } else { '' }), $sanitizerSuffix)
+        $combo = "Qt$major/$flavour" + $(if ($Asan) { ' asan' } else { '' })
         Write-Host ""
         Write-Host "$combo  ($tree)"
 
         # 1) configure + build
-        $configure = Invoke-Native $CMake @('-S', $repo, '-B', $tree, '-G', 'Ninja',
-                                            '-DCMAKE_BUILD_TYPE=Debug',
-                                            "-DCMAKE_PREFIX_PATH=$qtRoot",
-                                            ("-DVIRTUALITEMVIEWS_BUILD_SHARED=" + $(if ($isShared) { 'ON' } else { 'OFF' })))
+        $configureArgs = @('-S', $repo, '-B', $tree, '-G', 'Ninja',
+                           '-DCMAKE_BUILD_TYPE=Debug',
+                           "-DCMAKE_PREFIX_PATH=$qtRoot",
+                           ("-DVIRTUALITEMVIEWS_BUILD_SHARED=" + $(if ($isShared) { 'ON' } else { 'OFF' })))
+        if ($Asan) {
+            $configureArgs += '-DCMAKE_CXX_FLAGS=/fsanitize=address'
+            $configureArgs += '-DVIRTUALITEMVIEWS_BUILD_BENCHMARKS=OFF'
+        }
+        $configure = Invoke-Native $CMake $configureArgs
         if ($configure.ExitCode -ne 0) {
             Add-Result $combo 'configure' $false 'see output'
             Show-Tail $configure.Output
@@ -159,6 +181,11 @@ foreach ($qt in $QtBin) {
         $bin = Join-Path $tree 'bin'
         $env:PATH = "$qt;$bin;$env:PATH"
         $env:QT_QPA_PLATFORM = 'offscreen'
+        if ($Asan) {
+            # Qt leaves process-level allocations behind, so the leak checker has to be off:
+            # this run is about use-after-free / out-of-bounds.
+            $env:ASAN_OPTIONS = 'detect_leaks=0'
+        }
 
         # 2) tests
         $test = Invoke-Native $CTest @('--test-dir', $tree, '-C', 'Debug', '--output-on-failure')

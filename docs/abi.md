@@ -126,8 +126,8 @@ Qt 由 Config 里的 `find_dependency()` 找回，**但安装前缀按 Qt 大版
 
 | Qt | 编译器 | 静态 | 动态 | 验证方式 |
 | --- | --- | --- | --- | --- |
-| 6.11.2 / msvc2022_64 | MSVC 19.50 x64（VS 18 Community） | 通过 | 通过 | `all` 构建 + 20 个 CTest 目标 + 12 个示例退出码 0 |
-| 5.15.2 / msvc2019_64 | 同上 | 通过 | 通过 | 同上 |
+| 6.11.2 / msvc2022_64 | MSVC 19.50 x64（VS 18 Community） | 通过 | 通过 | `all` 构建 + 28 个 CTest 目标 + 12 个示例退出码 0；另有一个 AddressSanitizer 静态构建（`scripts/validate.ps1 -Asan`）同样全绿 |
+| 5.15.2 / msvc2019_64 | 同上 | 通过 | 通过 | 同上（含 ASan 静态构建） |
 
 构建环境：Ninja + CMake 4.x，C++17，Debug。两个 Qt 版本各跑静态与动态各一遍，共四种组合。
 
@@ -136,13 +136,16 @@ Qt 由 Config 里的 `find_dependency()` 找回，**但安装前缀按 Qt 大版
 * GCC / Clang / MinGW，Linux / macOS 上任意 Qt 版本（代码里 Qt 5 兼容点见 README 兼容约定表）；
 * Qt 6.2–6.10 的任意中间版本；
 * 多配置生成器（VS solution、Xcode）与 `MSVC_RUNTIME_LIBRARY`（`/MT` 之类）的组合；
-* 与 Qt 的 `QT_DISABLE_DEPRECATED_*`、`QT_NO_*` 裁剪宏的组合。
+* 与 Qt 的 `QT_DISABLE_DEPRECATED_*`、`QT_NO_*` 裁剪宏的组合；
+* **UBSan**（MSVC 只有 ASan，没有 UBSan）与 Linux/GCC/Clang 下的 ASan，见 [ci.md](ci.md) §5。
 
 ## 6. 发布前检查清单（v1.0）
 
 1. [x] `project(VERSION 1.0.0)`，`SOVERSION` = 1，`find_package` 兼容性 `SameMajorVersion`；
 2. [x] `pwsh -File scripts/validate.ps1` 全绿（四种组合 × 构建 / CTest / 12 个示例 / benchmark /
    安装 + 消费端共 28 个步骤，退出码 0）；
+2b. [x] `pwsh -File scripts/validate.ps1 -Asan`（Qt 6.11.2 与 5.15.2 各一个 MSVC ASan 静态构建）
+   全绿：28 个 CTest 目标 + 12 个示例，无 ASan 报告；UBSan / Linux 组合见 [ci.md](ci.md)；
 3. [x] 性能基线数字固化进 [performance.md](performance.md)（roadmap 3d）；
 4. [x] CHANGELOG 的破坏性变更段与 [api-stability.md](api-stability.md) §6 的欠账都清空。
 

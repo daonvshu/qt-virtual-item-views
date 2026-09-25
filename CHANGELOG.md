@@ -36,7 +36,10 @@
 * `tests/install/consumer/`：安装包的消费端冒烟测试（独立 CMake 工程，`find_package(VirtualItemViews)`
   之后跑 28 项运行期自检）。README 新增「安装与消费」一节，`docs/abi.md` 补上装出来的目录布局。
 * `scripts/validate.ps1`：一键验证。对每个 Qt kit × 库形态组合做 configure → `all` 构建 → CTest →
-  12 个示例退出码 → benchmark 不变量 → 安装 + 消费端冒烟测试，退出码 = 失败步数。
+  12 个示例退出码 → benchmark 不变量 → 安装 + 消费端冒烟测试，退出码 = 失败步数。新增 `-Asan`
+  开关：为每个 kit 额外建一个 MSVC AddressSanitizer 构建树（`-DCMAKE_CXX_FLAGS=/fsanitize=address`，
+  运行期 `ASAN_OPTIONS=detect_leaks=0`，跳过基准与安装消费端），实测 Qt 6.11.2 与 5.15.2 的
+  28 个 CTest 目标 + 12 个示例全绿、无 ASan 报告（见 [docs/ci.md](docs/ci.md) §5）。
 * [docs/performance.md](docs/performance.md) §3 的 v1.0 基线：列表 1M 行、表格 20 万行 x 100 列
   （Row/Cell 两种模式）、树 1M 顶层节点的实测数字与确切命令，供后续回归对比。
 * README 重排成面向 GitHub 的首页：徽章 + 一句话定位 + 亮点 + 能力概览 + 示例截图

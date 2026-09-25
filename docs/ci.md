@@ -16,7 +16,7 @@ configure → 构建 → CTest → 示例 → 基准不变量 → 安装 + 消�
 | --- | --- | --- |
 | `windows-msvc-qt6` | 主平台回归 | `scripts/validate.ps1` 一把梭（含库形态 × 安装消费端） |
 | `ubuntu-gcc-qt6` | 开源常见组合 | Qt 6 走 apt（`qt6-base-dev`），只有 Core/Gui/Widgets/Test |
-| `ubuntu-gcc-qt6-asan` | ASan + UBSan | `-fsanitize=address,undefined`，Debug |
+| `ubuntu-gcc-qt6-asan` | ASan + UBSan | `-fsanitize=address,undefined`，Debug。**ASan 部分本机已在 MSVC 上实跑**（见 §5），UBSan 需要 GCC/Clang |
 | `ubuntu-gcc-qt5` | 老版本回归 | 只在 runner 能稳定拿到 Qt 5.15 时加；拿不到就先不写 |
 
 ## 2. 可直接复制的 workflow
@@ -40,6 +40,9 @@ jobs:
       - name: 一键验证（4 种组合：Qt6/Qt5 x 静态/动态）
         shell: pwsh
         run: pwsh -NoProfile -File scripts/validate.ps1 -QtBin "$env:QT_ROOT_DIR/bin"
+      - name: AddressSanitizer（库 + 测试 + 示例）
+        shell: pwsh
+        run: pwsh -NoProfile -File scripts/validate.ps1 -Asan -Library Static -QtBin "$env:QT_ROOT_DIR/bin"
 
   ubuntu-qt6:
     runs-on: ubuntu-latest
@@ -92,6 +95,8 @@ jobs:
   在"示例自检"里误报，Linux 侧装上 `fonts-dejavu-core`（或任何字体包）即可。
 * **ASan 要关掉泄漏检测**：`detect_leaks=0`，否则 Qt 的进程级残留会让全绿变全红；
   UBSan 保留默认行为（`-fno-sanitize-recover` 可选，便于把 UB 直接变成失败）。
+* **Windows 上的 sanitizer 只有 ASan（MSVC `/fsanitize=address`），没有 UBSan**：`-Asan`
+  走的就是这条路（见 §5）。UBSan 与 GCC/Clang 那组仍然只能在 Linux runner 上做。
 * **Windows 侧不要自己拼 vcvars**：`scripts/validate.ps1` 已经处理 Qt 路径、vcvars 与
   构建树选择，直接给它 `-QtBin`（可给多个 kit）；它跑的是这些 kit × 静态/动态的所有组合，
   runner 上没有 Qt 5 时用 `-QtBin <单个 kit>` + `-Library Both` 即可，也可以用
@@ -102,3 +107,23 @@ jobs:
 * [abi.md](abi.md) §5 的支持矩阵：把"未实测"的行改成实测。
 * [roadmap.md](roadmap.md) §3e 与 Wave 4 行：`CI 未接入` → 已接入，并把 job 名写进去。
 * README 顶部徽章区：加 CI 徽章（只有 CI 真的绿过一次之后才加）。
+
+## 5. 本机已经跑过的 sanitizer（MSVC ASan，2026-09-26）
+
+`scripts/validate.ps1 -Asan` 是本机可复跑的那一半 sanitizer验证（Windows + MSVC 19.50 +
+Qt 6.11.2 / 5.15.2，静态、Debug）：
+
+```powershell
+pwsh -File scripts/validate.ps1 -Asan -Library Static -QtBin D:\devlib\Qt\6.11.2\msvc2022_64\bin
+pwsh -File scripts/validate.ps1 -Asan -Library Static -QtBin D:\devlib\Qt\5.15.2\msvc2019_64\bin
+```
+
+它对每个 kit 建一个独立构建树（`cmake-build-debug-qt{6,5}-asan`），配置项是
+`-DCMAKE_CXX_FLAGS=/fsanitize=address`，运行期 `ASAN_OPTIONS=detect_leaks=0`；基准与"安装 +
+消费端"在这一模式下跳过（前者在 ASan 下要跑几分钟，后者是独立 CMake 工程、得自己带上
+sanitizer 选项）。
+
+实测结果（两个 kit 都是）：`build all`、`ctest`（28 个目标：单元 / 变异 / GUI 交互全覆盖）、
+`examples`（12 个，`--exit-after` 退出码 0）全绿，**没有任何 ASan 报告**（UAF、越界、double free
+都没有出现）。这覆盖了审查"ASan/UBSan"里能在 Windows 上做的部分；剩下的 UBSan 与 GCC/Clang
+组合仍需要一个 Linux runner（配置见 §2）。
