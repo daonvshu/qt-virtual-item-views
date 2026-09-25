@@ -91,6 +91,8 @@ private slots:
     void paneOffsetKeepsAPaneInItsOwnSpace();
     void sectionMoveAnimatesWhileTheCommittedGeometryStaysAuthoritative();
     void resizeAndDisabledAnimationStayImmediate();
+    void programmaticReorderIsImmediateUnlessRequested();
+    void tableAnimationIsOptInPerMove();
     void tableForwardsTheAnimationSettings();
 
 private:
@@ -283,6 +285,7 @@ void TestVirtualHeaderView::sectionMoveAnimatesWhileTheCommittedGeometryStaysAut
     QVERIFY(moved != nullptr);
     QCOMPARE(moved->x(), 0);
 
+    m_header->setSectionMoveAnimated(true);
     m_geometry->moveSection(0, 3); // visual order: 1, 2, 3, 0, 4, ...
     QApplication::processEvents();
 
@@ -328,6 +331,67 @@ void TestVirtualHeaderView::resizeAndDisabledAnimationStayImmediate()
     QCOMPARE(m_header->sectionWidget(0)->x(), 0);
 }
 
+void TestVirtualHeaderView::programmaticReorderIsImmediateUnlessRequested()
+{
+    m_header->setSectionAnimationDuration(240);
+    QWidget *moved = m_header->sectionWidget(0);
+    QVERIFY(moved != nullptr);
+    QCOMPARE(moved->x(), 0);
+
+    // A plain order change (what a programmatic reorder produces) is applied at once:
+    // no animation the caller never asked for.
+    m_geometry->moveSection(0, 2); // visual order: 1, 2, 0, 3, ...
+    QApplication::processEvents();
+    QCOMPARE(moved->x(), 2 * kSectionWidth);
+    QCOMPARE(m_header->sectionWidget(1)->x(), 0);
+
+    // Asking for it explicitly runs the same transition a gesture would get.
+    m_header->setSectionMoveAnimated(true);
+    m_geometry->moveSection(2, 0); // back to 0, 1, 2, 3, ...
+    QApplication::processEvents();
+    QVERIFY(moved->x() != 0); // still on its way
+    QTest::qWait(400);
+    QCOMPARE(moved->x(), 0);
+    // The request is one-shot: the next programmatic change is immediate again.
+    m_geometry->moveSection(0, 1);
+    QApplication::processEvents();
+    QCOMPARE(moved->x(), kSectionWidth);
+}
+
+void TestVirtualHeaderView::tableAnimationIsOptInPerMove()
+{
+    QStandardItemModel model(20, 40);
+    SectionAdapter adapter;
+    PlainRowAdapter rowAdapter;
+    VirtualTableView view;
+    auto *header = new VirtualHeaderView(Qt::Horizontal);
+    header->setAdapter(&adapter);
+    view.setHorizontalHeader(header);
+    view.setTableAdapter(&rowAdapter);
+    view.setUniformItemHeight(24);
+    view.setDefaultColumnWidth(kSectionWidth);
+    view.setModel(&model);
+    vivtest::showView(&view, QSize(400, 200));
+    view.setHeaderAnimationDuration(240);
+
+    QWidget *moved = header->sectionWidget(0);
+    QVERIFY(moved != nullptr);
+
+    // Default: the move is immediate, in the header and in the body.
+    view.moveColumn(0, 3);
+    QApplication::processEvents();
+    QCOMPARE(view.columnGeometry(0).viewportX, 3 * kSectionWidth);
+    QCOMPARE(moved->x(), 3 * kSectionWidth);
+
+    // Explicitly animated: the committed geometry is final while the header slides.
+    view.moveColumn(0, 1, VirtualTableView::MoveAnimation::Animate);
+    QApplication::processEvents();
+    QCOMPARE(view.columnGeometry(0).viewportX, 0);
+    QVERIFY(moved->x() != 0);
+    QTest::qWait(400);
+    QCOMPARE(moved->x(), 0);
+}
+
 void TestVirtualHeaderView::tableForwardsTheAnimationSettings()
 {
     QStandardItemModel model(20, 40);
@@ -353,7 +417,7 @@ void TestVirtualHeaderView::tableForwardsTheAnimationSettings()
 
     // End to end: the committed column geometry is final while the header section
     // is still sliding to it.
-    view.moveColumn(0, 3);
+    view.moveColumn(0, 3, VirtualTableView::MoveAnimation::Animate);
     QApplication::processEvents();
     QCOMPARE(view.columnGeometry(0).viewportX, 3 * kSectionWidth);
     QWidget *moved = header->sectionWidget(0);

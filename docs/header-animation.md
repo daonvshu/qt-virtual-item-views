@@ -23,16 +23,20 @@ HeaderGeometry（committed）
 | 交互 | committed 是否变化 | 表头 | body |
 | --- | --- | --- | --- |
 | Hover / sort icon / badge | 否 | 业务控件自己的动画 | 不动 |
-| **Section move（换序）** | 是，且立刻最终 | **视觉过渡**（默认 160 ms） | commit 时重排一次，不跟帧 |
+| **Section move（换序，`MoveAnimation::Animate`）** | 是，且立刻最终 | **视觉过渡**（默认 160 ms） | commit 时重排一次，不跟帧 |
+| Section move（换序，程序化 / 默认 `Immediate`） | 是，且立刻最终 | 立刻 | 立刻 |
 | Resize（拖列宽） | 是，逐帧 | 立刻 | 逐帧 |
 | Hide / show | 是 | 立刻 | 立刻 |
 | 横向滚动 / pane 变化 | 否 | 立刻（否则会与 body 撕裂） | 逐帧 |
 
 判据只有一条：**body 会不会跟着每一帧变**。会，表头就必须逐帧跟上（resize、滚动、pane 变化）；
-不会（换序是唯一一种"先定终局、再让人看到过程"的交互），才把过程交给渲染器。
+不会（换序是唯一一种"先定终局、再让人看到过程"的交互），才把过程交给渲染器 —— 而且**只有被明确
+请求的换序才播**：程序化设置列顺序（`moveColumn()` 默认、模型换序、状态恢复）不应该变出一个没人
+要求的动画。
 
 实现上靠"视觉顺序是否变化"来区分：`VirtualHeaderView::relayout()` 比较本次与上次的可见列顺序，
-顺序变了且列集合没变（不是隐藏/插入/删除）才启动过渡，所以 resize / hide / 滚动都不会误触发。
+顺序变了且列集合没变（不是隐藏/插入/删除）、并且收到了一次性请求（`setSectionMoveAnimated(true)`）
+才启动过渡，所以 resize / hide / 滚动 / 程序化换序都不会误触发。
 
 ## 3. API
 
@@ -41,9 +45,14 @@ HeaderGeometry（committed）
 view.setHeaderAnimationEnabled(true);
 view.setHeaderAnimationDuration(240);
 
+// 程序化换序：默认即时；需要过渡时显式请求（只影响表头，committed 几何立刻生效）
+view.moveColumn(1, 4);                                   // 立刻
+view.moveColumn(1, 4, VirtualTableView::MoveAnimation::Animate);
+
 // 渲染器级（CustomRenderer 也可以自己实现）
 header->setSectionAnimationEnabled(true);
 header->setSectionAnimationDuration(240);
+header->setSectionMoveAnimated(true);   // 一次性请求，被下一次 relayout 消费
 ```
 
 设置会下发给主表头与每一个 pane 表头（§43），也会在安装新表头 / 新建 pane 表头时应用。
@@ -62,6 +71,9 @@ header->setSectionAnimationDuration(240);
 * **关闭动画**：当前正在飞行的 section 立刻落到 committed 位置（不会卡在中间）。
 * **被回收的 section**：只有还在物化集合里的 section 参与过渡；新进窗口的 section 直接出现在
   自己的 committed 位置，不做"从屏幕外飞入"。
+* **请求是一次性的**：`setSectionMoveAnimated(true)` 只对紧接着的那次换序生效；没有换序时它会在
+  下一次 relayout 被丢弃，不会残留到后来的某个变化上。视图在 `moveColumn(..., Animate)` 前后
+  给主表头与所有 pane 表头各设置/清除一次，所以"给 A 的请求"不会落到 B 上。
 * **pinned section**（§36，交互中的控件）：与其它 section 一样按 visual geometry 摆放。
 * **表头控件自己必须是 view 的子控件**：`VirtualTableView::setHorizontalHeader()` /
   `setVerticalHeader()` 会把控件 reparent 到视图。否则它是一个顶层窗口，位置按屏幕坐标解释

@@ -106,7 +106,21 @@ public:
     void setColumnWidth(int logicalIndex, int width);
     void setColumnHidden(int logicalIndex, bool hidden);
     bool isColumnHidden(int logicalIndex) const;
-    void moveColumn(int fromLogicalIndex, int toLogicalIndex);
+    /// Moves \a fromLogicalIndex to the visual position of \a toLogicalIndex.
+    ///
+    /// The change is applied immediately: a programmatic reorder never animates by
+    /// itself, so this changes the order (and the body) at once. Pass
+    /// MoveAnimation::Animate to ask the header renderers for their visual transition
+    /// as well - the committed geometry is final right away, only the header slides to
+    /// it (§23). Renderers without their own section placement (a native QHeaderView)
+    /// ignore that and show the new order at once.
+    enum class MoveAnimation {
+        Immediate,
+        Animate,
+    };
+    Q_ENUM(MoveAnimation)
+    void moveColumn(int fromLogicalIndex, int toLogicalIndex,
+                    MoveAnimation animation = MoveAnimation::Immediate);
     void setDefaultColumnWidth(int width);
     int defaultColumnWidth() const;
     void setColumnMinimumWidth(int width);
@@ -323,6 +337,9 @@ private:
     HeaderViewInterface *createHorizontalPaneHeader();
     /// Pushes the animation settings (§23/§24) into every header renderer.
     void applyHeaderAnimationSettings();
+    /// Asks every header renderer for a visual transition (or clears the request)
+    /// around a programmatic section move (§23).
+    void requestSectionMoveAnimation(bool animated);
     /// Lifts the body lines above the (re)materialized items.
     void raisePaneSeparatorLines();
     /// Column hosts of a row widget (direct children plus the clip host's).

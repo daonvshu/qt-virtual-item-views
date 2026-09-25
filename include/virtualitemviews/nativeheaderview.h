@@ -78,6 +78,16 @@ public:
     virtual void setSectionAnimationEnabled(bool enabled) { Q_UNUSED(enabled); }
     /// Duration of the visual transition; 0 means "no animation".
     virtual void setSectionAnimationDuration(int ms) { Q_UNUSED(ms); }
+    /// Tells the renderer whether the *next* committed order change is one it should
+    /// show as a transition (§23/§24).
+    ///
+    /// A committed order change is applied immediately by default: code that reorders
+    /// columns (or the model does it) gets the new order at once, never an animation
+    /// nobody asked for. The view sets this around an explicitly animated move
+    /// (`VirtualTableView::moveColumn(..., Animate)`), and a renderer that drives a
+    /// gesture itself - the widget header's drag - sets it after its single commit.
+    /// The flag is one-shot: the renderer consumes it with the next relayout.
+    virtual void setSectionMoveAnimated(bool animated) { Q_UNUSED(animated); }
 };
 
 /// QHeaderView driven by HeaderGeometry.

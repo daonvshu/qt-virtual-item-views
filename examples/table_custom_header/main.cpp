@@ -301,7 +301,9 @@ int main(int argc, char **argv)
                             .arg(stats.logicalItems)
                             .arg(view->columnCount())
                             .arg(stats.materializedItems)
-                            .arg(sectionWidgets < 0 ? QStringLiteral("native") : QString::number(sectionWidgets))
+                            .arg(sectionWidgets < 0
+                                     ? QStringLiteral("native（不支持过渡）")
+                                     : QString::number(sectionWidgets))
                             .arg(stats.createCount)
                             .arg(headerAdapter.created));
     };
@@ -311,11 +313,17 @@ int main(int argc, char **argv)
 
     // §23/§24：移动列时表头做视觉过渡，而 body 立刻采用 committed geometry。
     view->setHeaderAnimationDuration(parser.value(animationOption).toInt());
+    // 程序化换序默认即时（不播动画）；勾上它才让"移动一列"走 §23 的视觉过渡。
+    auto *animateMoves = new QCheckBox(QStringLiteral("换序时过渡"), &window);
+    animateMoves->setToolTip(QStringLiteral("程序化换序默认即时；勾选后显式请求表头的视觉过渡"));
+    toolbar->addWidget(animateMoves);
     auto *moveAction = toolbar->addAction(QStringLiteral("移动一列"));
-    QObject::connect(moveAction, &QAction::triggered, view, [view, columnCount]() {
+    QObject::connect(moveAction, &QAction::triggered, view, [view, columnCount, animateMoves]() {
         const int from = columnCount > 1 ? 1 : 0;
         const int to = qMin(columnCount - 1, from + 3);
-        view->moveColumn(from, to);
+        view->moveColumn(from, to, animateMoves->isChecked()
+                                       ? viv::VirtualTableView::MoveAnimation::Animate
+                                       : viv::VirtualTableView::MoveAnimation::Immediate);
     });
 
     const QString moveDemoPath = parser.value(moveDemoOption);
@@ -326,7 +334,8 @@ int main(int argc, char **argv)
             widgetHeader->setChecked(true); // 只有 widget 表头能做视觉过渡
         view->setHeaderAnimationDuration(1200);
         QTimer::singleShot(0, view, [view, columnCount]() {
-            view->moveColumn(1, qMin(columnCount - 1, 4));
+            view->moveColumn(1, qMin(columnCount - 1, 4),
+                             viv::VirtualTableView::MoveAnimation::Animate);
         });
         QTimer::singleShot(500, &app, [&window, view, moveDemoPath]() {
             const QPixmap shot = window.grab();

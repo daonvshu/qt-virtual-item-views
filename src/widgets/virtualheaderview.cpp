@@ -250,10 +250,11 @@ void VirtualHeaderView::relayout()
         return;
     }
 
-    // §23/§24: a section *move* animates, everything else is immediate. Only a
-    // reorder is a case where the committed geometry is final before the user sees
-    // the result; resizing, hiding and scrolling make the body follow every frame,
-    // so the header must follow them frame by frame as well.
+    // §23/§24: only an order change the caller asked for is shown as a transition
+    // (setSectionMoveAnimated()), everything else is immediate. A programmatic
+    // reorder therefore never animates unless the application requests it, and
+    // resizing, hiding and scrolling - where the body follows every frame - stay
+    // frame-synchronous as well.
     const QVector<int> order = visualOrder();
     bool sectionsReordered = false;
     if (!m_lastVisualOrder.isEmpty() && m_lastVisualOrder.size() == order.size()) {
@@ -264,6 +265,8 @@ void VirtualHeaderView::relayout()
         sectionsReordered = before == after && m_lastVisualOrder != order;
     }
     m_lastVisualOrder = order;
+    const bool animateMove = sectionsReordered && m_animateOrderChange;
+    m_animateOrderChange = false; // the request is consumed by this pass
 
     // 1) Visual range of the sections that intersect this widget.
     int firstVisual = -1;
@@ -328,7 +331,7 @@ void VirtualHeaderView::relayout()
 
     // 5) Position: the committed geometry, or the visual geometry while a section
     //    move is in flight (§23).
-    if (sectionsReordered && m_animationEnabled && m_animationDuration > 0
+    if (animateMove && m_animationEnabled && m_animationDuration > 0
         && !m_sectionWidgets.isEmpty()) {
         animateSectionMove();
     } else {
@@ -546,6 +549,12 @@ void VirtualHeaderView::mouseMoveEvent(QMouseEvent *event)
         const int target = sectionAt(pos);
         if (target >= 0 && target != m_pressedSection) {
             // Drag a section over a neighbour: swap their visual positions (§22).
+            //
+            // This commits per boundary crossing and is applied immediately (no
+            // animation) on purpose: §23 wants *one* commit and one transition at the
+            // end of the gesture, which is what the drag rewrite will do - animating
+            // every intermediate step here would only make the section lag behind the
+            // cursor.
             const int from = m_geometry->visualIndex(m_pressedSection);
             const int to = m_geometry->visualIndex(target);
             if (from >= 0 && to >= 0) {

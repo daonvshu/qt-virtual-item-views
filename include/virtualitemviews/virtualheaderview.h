@@ -83,6 +83,11 @@ public:
     /// Duration of the visual transition in milliseconds; 0 disables it as well.
     void setSectionAnimationDuration(int ms);
     int sectionAnimationDuration() const { return m_animationDuration; }
+    /// One-shot request for the next committed order change (§23): the renderer
+    /// records where its sections are now and slides them to the new order. Without
+    /// it an order change is applied at once, so a programmatic reorder never animates
+    /// unless the application asks for it.
+    void setSectionMoveAnimated(bool animated) override { m_animateOrderChange = animated; }
     /// Origin of the viewport inside the view; the table sets it so section x
     /// positions can be derived from HeaderGeometry (viewport coordinates).
     void setViewportOrigin(const QPoint &origin) override;
@@ -156,6 +161,9 @@ private:
     QVariantAnimation *m_slideAnimation = nullptr;
     bool m_animationEnabled = true;
     int m_animationDuration = 160;
+    /// One-shot gate (§24): only an order change the caller asked for is shown as a
+    /// transition. A plain geometry change is applied immediately.
+    bool m_animateOrderChange = false;
     /// Visual order of the last pass, to tell a section move (animate) from a
     /// resize or an offset change (immediate).
     QVector<int> m_lastVisualOrder;

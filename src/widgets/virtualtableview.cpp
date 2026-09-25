@@ -492,13 +492,21 @@ bool VirtualTableView::isColumnHidden(int logicalIndex) const
     return m_columns->isSectionHidden(logicalIndex);
 }
 
-void VirtualTableView::moveColumn(int fromLogicalIndex, int toLogicalIndex)
+void VirtualTableView::moveColumn(int fromLogicalIndex, int toLogicalIndex, MoveAnimation animation)
 {
     const int fromVisual = m_columns->visualIndex(fromLogicalIndex);
     const int toVisual = m_columns->visualIndex(toLogicalIndex);
     if (fromVisual < 0 || toVisual < 0)
         return;
+    // A programmatic reorder is immediate unless the caller asks for the visual
+    // transition (§23): code that sets an order should not get an animation nobody
+    // requested, and the flag is consumed by the very next relayout of each renderer.
+    const bool animate = animation == MoveAnimation::Animate;
+    if (animate)
+        requestSectionMoveAnimation(true);
     m_columns->moveSection(fromVisual, toVisual);
+    if (animate)
+        requestSectionMoveAnimation(false);
 }
 
 void VirtualTableView::setDefaultColumnWidth(int width)
@@ -651,6 +659,19 @@ void VirtualTableView::applyHeaderAnimationSettings()
             continue;
         header->setSectionAnimationEnabled(m_headerAnimationEnabled);
         header->setSectionAnimationDuration(m_headerAnimationDuration);
+    }
+}
+
+void VirtualTableView::requestSectionMoveAnimation(bool animated)
+{
+    // Every renderer of the view gets the request, and the one whose order does not
+    // change keeps it until the next move clears it - the flag is one-shot, so it can
+    // never leak into an unrelated change.
+    if (m_horizontalHeader)
+        m_horizontalHeader->setSectionMoveAnimated(animated);
+    for (HeaderViewInterface *header : m_paneHeaders) {
+        if (header)
+            header->setSectionMoveAnimated(animated);
     }
 }
 
