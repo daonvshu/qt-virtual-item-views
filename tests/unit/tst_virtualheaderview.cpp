@@ -62,6 +62,15 @@ public:
     int unbound = 0;
 };
 
+/// Sends a mouse event with an explicit button state: the drag logic needs the pressed
+/// buttons, which QTest::mouseMove does not always carry.
+void sendMouse(QWidget *widget, QEvent::Type type, const QPoint &pos, Qt::MouseButton button,
+               Qt::MouseButtons buttons)
+{
+    QMouseEvent event(type, pos, widget->mapToGlobal(pos), button, buttons, Qt::NoModifier);
+    QApplication::sendEvent(widget, &event);
+}
+
 /// Row adapter of the table level test: rows are irrelevant here, the header is
 /// the subject.
 class PlainRowAdapter : public TableWidgetAdapter
@@ -93,6 +102,10 @@ private slots:
     void resizeAndDisabledAnimationStayImmediate();
     void programmaticReorderIsImmediateUnlessRequested();
     void tableAnimationIsOptInPerMove();
+    void smallJitterIsStillAClick();
+    void dragPreviewsAndCommitsOnce();
+    void dragReordersInsideItsPaneOnly();
+    void escapeCancelsTheDrag();
     void tableForwardsTheAnimationSettings();
 
 private:
@@ -390,6 +403,127 @@ void TestVirtualHeaderView::tableAnimationIsOptInPerMove()
     QVERIFY(moved->x() != 0);
     QTest::qWait(400);
     QCOMPARE(moved->x(), 0);
+}
+
+void TestVirtualHeaderView::smallJitterIsStillAClick()
+{
+    const QPoint press(kSectionWidth + kSectionWidth / 2, kHeaderHeight / 2);
+    sendMouse(m_header, QEvent::MouseButtonPress, press, Qt::LeftButton, Qt::LeftButton);
+    // Below the drag distance: still a click, so nothing is reordered and the release
+    // sets the sort indicator like any other click.
+    sendMouse(m_header, QEvent::MouseMove, press + QPoint(2, 0), Qt::NoButton,
+              Qt::LeftButton);
+    sendMouse(m_header, QEvent::MouseButtonRelease, press + QPoint(2, 0), Qt::LeftButton,
+              Qt::NoButton);
+    QApplication::processEvents();
+
+    QCOMPARE(m_geometry->logicalIndex(0), 0);
+    QCOMPARE(m_geometry->logicalIndex(1), 1);
+    QCOMPARE(m_header->sectionWidget(0)->x(), 0);
+    QCOMPARE(m_header->sectionWidget(1)->x(), kSectionWidth);
+    QCOMPARE(m_geometry->sortIndicatorSection(), 1);
+    QCOMPARE(m_geometry->sortIndicatorOrder(), Qt::AscendingOrder);
+}
+
+void TestVirtualHeaderView::dragPreviewsAndCommitsOnce()
+{
+    m_header->setSectionAnimationDuration(200);
+    QWidget *dragged = m_header->sectionWidget(0);
+    QWidget *neighbour = m_header->sectionWidget(1);
+    QWidget *third = m_header->sectionWidget(2);
+    QVERIFY(dragged != nullptr);
+    QVERIFY(neighbour != nullptr);
+    QVERIFY(third != nullptr);
+
+    // Pick section 0 up in its middle and pull it towards the end of section 2.
+    sendMouse(m_header, QEvent::MouseButtonPress, QPoint(kSectionWidth / 2, 5), Qt::LeftButton,
+              Qt::LeftButton);
+    sendMouse(m_header, QEvent::MouseMove, QPoint(kSectionWidth / 2 + 2, 5), Qt::NoButton,
+              Qt::LeftButton);
+    // Below the drag distance nothing happened yet, not even visually.
+    QCOMPARE(dragged->x(), 0);
+    QCOMPARE(m_geometry->visualIndex(0), 0);
+
+    const QPoint target(2 * kSectionWidth + 60, 5);
+    sendMouse(m_header, QEvent::MouseMove, target, Qt::NoButton, Qt::LeftButton);
+    QApplication::processEvents();
+    // Preview: the committed order is untouched, the dragged section follows the
+    // pointer, and the sections it passed closed the gap behind it.
+    QCOMPARE(m_geometry->visualIndex(0), 0);
+    QVERIFY(dragged->x() > 2 * kSectionWidth);
+    QCOMPARE(neighbour->x(), 0);
+    QCOMPARE(third->x(), kSectionWidth);
+
+    // Release: one commit (0 lands behind 2) and the transition settles from where the
+    // preview left the section - it does not jump to the committed position.
+    sendMouse(m_header, QEvent::MouseButtonRelease, target, Qt::LeftButton, Qt::NoButton);
+    QApplication::processEvents();
+    QCOMPARE(m_geometry->visualIndex(0), 2);
+    QVERIFY(dragged->x() >= 2 * kSectionWidth);
+    QTest::qWait(400);
+    QCOMPARE(dragged->x(), 2 * kSectionWidth);
+    QCOMPARE(neighbour->x(), 0);
+    QCOMPARE(third->x(), kSectionWidth);
+}
+
+void TestVirtualHeaderView::dragReordersInsideItsPaneOnly()
+{
+    // A pane header shows only its own columns: a drag reorders inside that pane and
+    // leaves every other column alone.
+    m_header->setPaneFilter(QVector<int>({1, 3}), true);
+    m_header->setPaneOffset(0); // the pane packs its own columns (§31/§43)
+    QApplication::processEvents();
+    QWidget *one = m_header->sectionWidget(1);
+    QWidget *three = m_header->sectionWidget(3);
+    QVERIFY(one != nullptr);
+    QVERIFY(three != nullptr);
+    QCOMPARE(one->x(), 0);
+    QCOMPARE(three->x(), kSectionWidth);
+
+    sendMouse(m_header, QEvent::MouseButtonPress, QPoint(kSectionWidth / 2, 5), Qt::LeftButton,
+              Qt::LeftButton);
+    sendMouse(m_header, QEvent::MouseMove, QPoint(2 * kSectionWidth - 5, 5), Qt::NoButton,
+              Qt::LeftButton);
+    QApplication::processEvents();
+    // Nothing committed while the drag is in flight.
+    QCOMPARE(m_geometry->visualIndex(1), 1);
+    sendMouse(m_header, QEvent::MouseButtonRelease, QPoint(2 * kSectionWidth - 5, 5),
+              Qt::LeftButton, Qt::NoButton);
+    QApplication::processEvents();
+
+    // Column 1 now sits after column 3 inside the pane, while the columns outside the
+    // moved span keep their relative order (the ones in between shift, which is what a
+    // reorder in a flat order does). The transition starts at the preview position, so
+    // let it settle before comparing.
+    QTest::qWait(300);
+    QCOMPARE(three->x(), 0);
+    QCOMPARE(one->x(), kSectionWidth);
+    QCOMPARE(m_geometry->visualIndex(0), 0);
+    QVERIFY(m_geometry->visualIndex(1) > m_geometry->visualIndex(3));
+    QVERIFY(m_geometry->visualIndex(4) > m_geometry->visualIndex(3));
+}
+
+void TestVirtualHeaderView::escapeCancelsTheDrag()
+{
+    QWidget *dragged = m_header->sectionWidget(0);
+    QVERIFY(dragged != nullptr);
+    const int widthBefore = dragged->width();
+
+    sendMouse(m_header, QEvent::MouseButtonPress, QPoint(kSectionWidth / 2, 5), Qt::LeftButton,
+              Qt::LeftButton);
+    sendMouse(m_header, QEvent::MouseMove, QPoint(2 * kSectionWidth + 40, 5), Qt::NoButton,
+              Qt::LeftButton);
+    QApplication::processEvents();
+    QVERIFY(dragged->x() > kSectionWidth);
+
+    QKeyEvent escape(QEvent::KeyPress, Qt::Key_Escape, Qt::NoModifier);
+    QApplication::sendEvent(m_header, &escape);
+    QApplication::processEvents();
+    // Cancelled: back to the committed geometry, order untouched.
+    QCOMPARE(dragged->x(), 0);
+    QCOMPARE(dragged->width(), widthBefore);
+    QCOMPARE(m_geometry->logicalIndex(0), 0);
+    QCOMPARE(m_geometry->logicalIndex(1), 1);
 }
 
 void TestVirtualHeaderView::tableForwardsTheAnimationSettings()

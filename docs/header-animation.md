@@ -23,6 +23,7 @@ HeaderGeometry（committed）
 | 交互 | committed 是否变化 | 表头 | body |
 | --- | --- | --- | --- |
 | Hover / sort icon / badge | 否 | 业务控件自己的动画 | 不动 |
+| **Section move（拖动 `VirtualHeaderView` 的列）** | 只在松手时变一次 | 拖动期间是**视觉预览**（被拖的列跟随指针、邻居让出/合上插入位），松手提交后过渡收敛 | 提交时重排一次，不跟帧 |
 | **Section move（换序，`MoveAnimation::Animate`）** | 是，且立刻最终 | **视觉过渡**（默认 160 ms） | commit 时重排一次，不跟帧 |
 | Section move（换序，程序化 / 默认 `Immediate`） | 是，且立刻最终 | 立刻 | 立刻 |
 | Resize（拖列宽） | 是，逐帧 | 立刻 | 逐帧 |
@@ -67,6 +68,7 @@ header->setSectionMoveAnimated(true);   // 一次性请求，被下一次 relayo
 
 ## 5. 打断与边界
 
+* **拖动（§22）**：按下只记录，指针越过 `QApplication::startDragDistance()` 才算拖动（所以"点一下"和一两个像素的抖动仍然是点击/排序，不是换序——这条曾经是缺陷：旧实现一滑进邻居就提交一次，既不能连续拖，也会把点击误判成拖动）。拖动期间 `HeaderGeometry` 一个字节都不动，只改渲染器的视觉几何；松手时**一次提交**，然后由上面的过渡从预览位置收敛到 committed 位置。拖动被限制在同一个 pane 的列内（pane 表头只显示自己那几列）。按 Esc 取消，不提交。
 * **动画中再次换序**：从当前视觉位置继续滑向新的 committed 位置，不回跳。
 * **关闭动画**：当前正在飞行的 section 立刻落到 committed 位置（不会卡在中间）。
 * **被回收的 section**：只有还在物化集合里的 section 参与过渡；新进窗口的 section 直接出现在
@@ -91,3 +93,5 @@ header->setSectionMoveAnimated(true);   // 一次性请求，被下一次 relayo
   * `--animation <ms>` 改时长；
   * `--move-demo <png>` 无人值守演示：1200 ms 慢速过渡 + 途中截图，能直接看到 section 在飞、
     body 已经在终点位置。
+  * `--drag-demo <png>` 无人值守拖动演示：合成"按下 → 拖过几列"，在拖动途中截图（此时表头只显示
+    预览、committed 几何与 body 都没动），然后按 Esc 取消。

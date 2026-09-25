@@ -6,6 +6,7 @@
 #include <QAbstractItemModel>
 #include <QApplication>
 #include <QEasingCurve>
+#include <QKeyEvent>
 #include <QMouseEvent>
 #include <QResizeEvent>
 #include <QSet>
@@ -213,12 +214,23 @@ int VirtualHeaderView::sectionX(int logicalIndex) const
         // and a scrolling pane of a non-primary group stay aligned with the body.
         // The columns of a pane are not necessarily a contiguous slice of the
         // committed order, so their widths are accumulated over the pane's list.
-        int localX = 0;
+        // That list is a set: the pane shows it in the *committed* visual order, not
+        // in whatever order the filter happens to enumerate it in.
+        QVector<int> paneColumns;
+        paneColumns.reserve(m_paneFilter.size());
         for (int column : m_paneFilter) {
+            if (column >= 0 && column < m_geometry->sectionCount()
+                && !m_geometry->isSectionHidden(column)) {
+                paneColumns.append(column);
+            }
+        }
+        std::sort(paneColumns.begin(), paneColumns.end(), [this](int lhs, int rhs) {
+            return m_geometry->visualIndex(lhs) < m_geometry->visualIndex(rhs);
+        });
+        int localX = 0;
+        for (int column : paneColumns) {
             if (column == logicalIndex)
                 break;
-            if (m_geometry->isSectionHidden(column))
-                continue;
             localX += m_geometry->sectionSize(column);
         }
         return localX - int(m_paneOffset);
@@ -363,6 +375,10 @@ void VirtualHeaderView::positionSections()
 {
     if (!m_geometry)
         return;
+    if (m_dragging) {
+        positionDraggedSections();
+        return;
+    }
     for (auto it = m_sectionWidgets.constBegin(); it != m_sectionWidgets.constEnd(); ++it) {
         const int logical = it.key();
         QWidget *widget = it.value();
@@ -386,6 +402,148 @@ void VirtualHeaderView::positionSections()
         widget->setGeometry(visual, 0, width, height());
         widget->show();
     }
+}
+
+int VirtualHeaderView::dragTargetIndex() const
+{
+    if (m_dragSection < 0 || !m_geometry)
+        return -1;
+    const QVector<int> shown = visualOrder();
+    const int from = shown.indexOf(m_dragSection);
+    if (from < 0)
+        return -1;
+
+    // The dragged section's centre decides: every other section whose centre lies left
+    // of it ends up before it, which is exactly the `to` index moveSection() expects.
+    const int width = m_geometry->sectionSize(m_dragSection);
+    const int centre = sectionX(m_dragSection) + (m_dragCurrentX - m_dragStartX) + width / 2;
+    int to = 0;
+    for (int packed = 0; packed < shown.size(); ++packed) {
+        if (packed == from)
+            continue;
+        const int otherCentre =
+            sectionX(shown.at(packed)) + m_geometry->sectionSize(shown.at(packed)) / 2;
+        if (otherCentre < centre)
+            ++to;
+    }
+    return qBound(0, to, shown.size() - 1);
+}
+
+void VirtualHeaderView::positionDraggedSections()
+{
+    if (!m_geometry || m_dragSection < 0)
+        return;
+    const QVector<int> shown = visualOrder();
+    const int from = shown.indexOf(m_dragSection);
+    if (from < 0)
+        return;
+    const int to = dragTargetIndex();
+    const int draggedWidth = m_geometry->sectionSize(m_dragSection);
+
+    for (auto it = m_sectionWidgets.constBegin(); it != m_sectionWidgets.constEnd(); ++it) {
+        const int logical = it.key();
+        QWidget *widget = it.value();
+        const int committed = sectionX(logical);
+        if (committed == kSectionNotShown) {
+            widget->hide();
+            continue;
+        }
+        const int width = m_geometry->sectionSize(logical);
+        int visual = committed;
+        if (logical == m_dragSection) {
+            // The picked up section follows the pointer, keeping the grab offset.
+            visual = committed + (m_dragCurrentX - m_dragStartX);
+        } else {
+            const int packed = shown.indexOf(logical);
+            if (packed >= 0 && to >= 0) {
+                if (from < to && packed > from && packed <= to)
+                    visual = committed - draggedWidth; // the gap closes behind it
+                else if (from > to && packed >= to && packed < from)
+                    visual = committed + draggedWidth; // the gap opens in front of it
+            }
+        }
+        const bool visible = width > 0 && visual < this->width() && visual + width > 0;
+        if (!visible && !isSectionPinned(logical)) {
+            widget->hide();
+            continue;
+        }
+        widget->setGeometry(visual, 0, width, height());
+        widget->show();
+    }
+}
+
+void VirtualHeaderView::beginSectionDrag(int logicalIndex, int x)
+{
+    // A running transition would fight the preview.
+    if (m_slideAnimation)
+        m_slideAnimation->stop();
+    m_slideFrom.clear();
+    m_slideProgress = 1.0;
+
+    m_dragSection = logicalIndex;
+    m_dragStartX = x;
+    m_dragCurrentX = x;
+    m_dragging = true;
+    m_moved = true; // a drag is never a sort click
+    setCursor(Qt::ClosedHandCursor);
+    positionSections();
+}
+
+void VirtualHeaderView::updateSectionDrag(int x)
+{
+    if (!m_dragging || x == m_dragCurrentX)
+        return;
+    m_dragCurrentX = x;
+    positionSections();
+}
+
+void VirtualHeaderView::finishSectionDrag(bool commit)
+{
+    const int dragged = m_dragSection;
+    const bool wasDragging = m_dragging;
+    int fromVisual = -1;
+    int toVisual = -1;
+    if (wasDragging && dragged >= 0 && m_geometry) {
+        // The drag works in the packed order of the sections this header shows (hidden
+        // and filtered columns are not part of it), while moveSection() takes visual
+        // indices - so the target is converted by asking where the section that should
+        // precede the dragged one currently sits.
+        const QVector<int> shown = visualOrder();
+        const int packedFrom = shown.indexOf(dragged);
+        const int packedTo = dragTargetIndex();
+        if (packedFrom >= 0 && packedTo >= 0 && packedTo != packedFrom) {
+            QVector<int> rest = shown;
+            rest.removeAt(packedFrom);
+            if (!rest.isEmpty()) {
+                fromVisual = m_geometry->visualIndex(dragged);
+                if (packedTo > 0) {
+                    const int anchor =
+                        m_geometry->visualIndex(rest.at(qMin(packedTo - 1, rest.size() - 1)));
+                    toVisual = anchor - (fromVisual < anchor ? 1 : 0) + 1;
+                } else {
+                    const int first = m_geometry->visualIndex(rest.first());
+                    toVisual = first - (fromVisual < first ? 1 : 0);
+                }
+            }
+        }
+    }
+
+    m_dragSection = -1;
+    m_dragging = false;
+    unsetCursor();
+
+    if (commit && fromVisual >= 0 && toVisual >= 0) {
+        // §23: one commit, then the transition settles from where the preview left the
+        // sections. The body relayouts once, on this commit.
+        setSectionMoveAnimated(true);
+        m_geometry->moveSection(fromVisual, toVisual);
+        return; // the relayout triggered by the commit positions everything
+    }
+    // Cancelled or a no-op drag: back to the committed geometry.
+    m_slideFrom.clear();
+    m_slideProgress = 1.0;
+    positionSections();
+    update();
 }
 
 void VirtualHeaderView::animateSectionMove()
@@ -518,6 +676,8 @@ void VirtualHeaderView::mousePressEvent(QMouseEvent *event)
     }
     const QPoint pos = eventPosition(event);
     m_moved = false;
+    m_dragSection = -1;
+    m_dragging = false;
     m_resizeSection = resizeEdgeAt(pos);
     if (m_resizeSection >= 0) {
         m_resizeStartSize = m_geometry->storedSectionSize(m_resizeSection);
@@ -546,22 +706,17 @@ void VirtualHeaderView::mouseMoveEvent(QMouseEvent *event)
         return;
     }
     if (m_pressedSection >= 0 && (event->buttons() & Qt::LeftButton)) {
-        const int target = sectionAt(pos);
-        if (target >= 0 && target != m_pressedSection) {
-            // Drag a section over a neighbour: swap their visual positions (§22).
-            //
-            // This commits per boundary crossing and is applied immediately (no
-            // animation) on purpose: §23 wants *one* commit and one transition at the
-            // end of the gesture, which is what the drag rewrite will do - animating
-            // every intermediate step here would only make the section lag behind the
-            // cursor.
-            const int from = m_geometry->visualIndex(m_pressedSection);
-            const int to = m_geometry->visualIndex(target);
-            if (from >= 0 && to >= 0) {
-                m_geometry->moveSection(from, to);
-                m_moved = true;
+        // §22/§23: a drag is one gesture with one commit. Until the pointer passes the
+        // drag distance it is still a click; after that the sections only move in the
+        // *visual* geometry (a preview), and the committed order changes on the release.
+        if (!m_dragging) {
+            if (qAbs(pos.x() - m_pressedX) < QApplication::startDragDistance()) {
+                event->accept();
+                return;
             }
+            beginSectionDrag(m_pressedSection, m_pressedX);
         }
+        updateSectionDrag(pos.x());
         event->accept();
         return;
     }
@@ -577,7 +732,16 @@ void VirtualHeaderView::mouseReleaseEvent(QMouseEvent *event)
     }
     const QPoint pos = eventPosition(event);
     const bool wasResize = m_resizeSection >= 0;
+    const bool wasDragging = m_dragging;
     const int pressed = m_pressedSection;
+    if (wasDragging) {
+        finishSectionDrag(true);
+        m_resizeSection = -1;
+        m_pressedSection = -1;
+        m_moved = false;
+        event->accept();
+        return;
+    }
     m_resizeSection = -1;
     m_pressedSection = -1;
     unsetCursor();
@@ -599,6 +763,18 @@ void VirtualHeaderView::leaveEvent(QEvent *event)
 {
     unsetCursor();
     QWidget::leaveEvent(event);
+}
+
+void VirtualHeaderView::keyPressEvent(QKeyEvent *event)
+{
+    if (event->key() == Qt::Key_Escape && m_dragging) {
+        // Escape drops the preview: no commit, the sections go back to where the
+        // committed geometry says they are.
+        finishSectionDrag(false);
+        event->accept();
+        return;
+    }
+    QWidget::keyPressEvent(event);
 }
 
 void VirtualHeaderView::resizeEvent(QResizeEvent *event)

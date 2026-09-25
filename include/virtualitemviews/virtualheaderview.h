@@ -12,6 +12,7 @@
 #include <limits>
 
 class QAbstractItemModel;
+class QKeyEvent;
 class QVariantAnimation;
 
 namespace viv {
@@ -112,6 +113,7 @@ protected:
     void mousePressEvent(QMouseEvent *event) override;
     void mouseMoveEvent(QMouseEvent *event) override;
     void mouseReleaseEvent(QMouseEvent *event) override;
+    void keyPressEvent(QKeyEvent *event) override;
     void leaveEvent(QEvent *event) override;
 
 private:
@@ -129,9 +131,22 @@ private:
     /// Places every materialized section, honouring the visual geometry (§23 while
     /// an animation runs, the committed geometry otherwise).
     void positionSections();
+    /// Places the sections while a drag preview is active: the dragged section
+    /// follows the pointer, the others open / close the gap - all of it visual
+    /// geometry, the committed order is not touched before the release (§22/§23).
+    void positionDraggedSections();
     /// Starts the visual transition from the positions the materialized sections
     /// currently have to the committed ones.
     void animateSectionMove();
+    /// Drag-reorder (§22): the press picks a section up, a threshold decides whether it
+    /// is a drag or a click, and the release commits *once* so the visual transition can
+    /// settle from the preview position.
+    void beginSectionDrag(int logicalIndex, int x);
+    void updateSectionDrag(int x);
+    void finishSectionDrag(bool commit);
+    /// The index the dragged section would land on, in final-order terms - that is the
+    /// `to` argument of moveSection().
+    int dragTargetIndex() const;
     /// Logical columns in visual order, ignoring hidden and filtered ones.
     QVector<int> visualOrder() const;
     /// True when this widget shows \a logicalIndex at all.
@@ -170,6 +185,13 @@ private:
     /// True once a table told this renderer where its viewport starts; without that
     /// (a standalone header) its own client origin is the reference.
     bool m_viewportOriginSet = false;
+    /// Drag-reorder state (§22/§23): the section the press picked up and where the
+    /// pointer is. All of it is visual geometry - the committed order only changes on
+    /// the release.
+    int m_dragSection = -1;
+    int m_dragStartX = 0;
+    int m_dragCurrentX = 0;
+    bool m_dragging = false;
     int m_overscan = 1;
     bool m_sortInteractionEnabled = false;
 

@@ -18,8 +18,10 @@
 #include <QCheckBox>
 #include <QCommandLineParser>
 #include <QHBoxLayout>
+#include <QKeyEvent>
 #include <QLabel>
 #include <QMainWindow>
+#include <QMouseEvent>
 #include <QPainter>
 #include <QPixmap>
 #include <QPushButton>
@@ -30,6 +32,14 @@
 #include <cstdio>
 
 namespace {
+
+/// 合成一次鼠标事件（拖动演示用；示例里不能依赖 QtTest）。
+void sendMouse(QWidget *widget, QEvent::Type type, const QPoint &pos, Qt::MouseButton button,
+               Qt::MouseButtons buttons)
+{
+    QMouseEvent event(type, pos, widget->mapToGlobal(pos), button, buttons, Qt::NoModifier);
+    QApplication::sendEvent(widget, &event);
+}
 
 constexpr int kRowHeight = 28;
 
@@ -223,6 +233,9 @@ int main(int argc, char **argv)
     QCommandLineOption moveDemoOption(QStringLiteral("move-demo"),
                                       QStringLiteral("无人值守动画演示：慢速移动一列并在途中截图"),
                                       QStringLiteral("path"));
+    QCommandLineOption dragDemoOption(QStringLiteral("drag-demo"),
+                                      QStringLiteral("无人值守拖动演示：合成一次拖动并在途中截图"),
+                                      QStringLiteral("path"));
     QCommandLineOption animationOption(QStringLiteral("animation"),
                                        QStringLiteral("section 移动动画时长（ms，0 = 关闭）"),
                                        QStringLiteral("ms"), QStringLiteral("160"));
@@ -232,6 +245,7 @@ int main(int argc, char **argv)
     parser.addOption(frozenOption);
     parser.addOption(exitOption);
     parser.addOption(moveDemoOption);
+    parser.addOption(dragDemoOption);
     parser.addOption(animationOption);
     parser.process(app);
 
@@ -327,8 +341,37 @@ int main(int argc, char **argv)
     });
 
     const QString moveDemoPath = parser.value(moveDemoOption);
+    const QString dragDemoPath = parser.value(dragDemoOption);
     const int exitAfter = parser.value(exitOption).toInt();
-    if (!moveDemoPath.isEmpty()) {
+    if (!dragDemoPath.isEmpty()) {
+        // §22/§23 的拖动：按下 → 越过阈值后只动"视觉几何"（被拖的列跟随光标、邻居让出插入位），
+        // committed 几何在松手前一个字节都不动。这里在拖动途中截图，然后按 Esc 取消。
+        if (!widgetHeader->isChecked())
+            widgetHeader->setChecked(true);
+        QTimer::singleShot(0, &window, [view, &window, dragDemoPath]() {
+            QWidget *header = view->horizontalHeader()->headerWidget();
+            const int rowY = qMax(2, header->height() / 2);
+            const int pressX = view->columnGeometry(1).viewportX + view->columnWidth(1) / 2;
+            const int moveX = view->columnGeometry(4).viewportX + view->columnWidth(4) / 2;
+            sendMouse(header, QEvent::MouseButtonPress, QPoint(pressX, rowY), Qt::LeftButton,
+                      Qt::LeftButton);
+            sendMouse(header, QEvent::MouseMove, QPoint(moveX, rowY), Qt::NoButton, Qt::LeftButton);
+            QApplication::processEvents();
+
+            const QPixmap shot = window.grab();
+            const bool saved = shot.save(dragDemoPath);
+            std::printf("table_custom_header: drag-demo %s (%dx%d)%s committedOrder0=%d "
+                        "committedOrder4=%d\n",
+                        qPrintable(dragDemoPath), shot.width(), shot.height(),
+                        saved ? "" : " FAILED", view->columnGeometry(0).viewportX,
+                        view->columnGeometry(4).viewportX);
+            std::fflush(stdout);
+
+            QKeyEvent escape(QEvent::KeyPress, Qt::Key_Escape, Qt::NoModifier);
+            QApplication::sendEvent(header, &escape);
+            QCoreApplication::quit();
+        });
+    } else if (!moveDemoPath.isEmpty()) {
         // 慢速动画 + 途中截图：能直接看到 section 在飞、而 body 已经在终点位置。
         if (!widgetHeader->isChecked())
             widgetHeader->setChecked(true); // 只有 widget 表头能做视觉过渡
