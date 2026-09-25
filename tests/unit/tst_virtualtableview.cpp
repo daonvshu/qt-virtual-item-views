@@ -291,6 +291,7 @@ private slots:
     void frozenPanesDrawBodySeparatorLines();
     void paneSeparatorStyleIsCustomizable();
     void headerStateRestoresFrozenColumns();
+    void aBrokenStateLeavesTheViewUntouched();
 
 private:
     QStandardItemModel *m_model = nullptr;
@@ -1173,6 +1174,74 @@ void TestVirtualTableView::headerStateRestoresFrozenColumns()
     QVERIFY(m_view->restoreHeaderState(legacy));
     QCOMPARE(m_view->frozenColumns(), QVector<int>({2}));
     QCOMPARE(m_view->horizontalHeaderGeometry()->logicalIndex(0), 0);
+}
+
+void TestVirtualTableView::aBrokenStateLeavesTheViewUntouched()
+{
+    // The state is parsed and validated as a whole before anything is applied (P2-3):
+    // a corrupt tail used to return false *after* the column geometry had already been
+    // replaced, so a failed restore left the view half restored.
+    m_view->setFrozenColumns(QVector<int>({0, 1}));
+    m_view->setFrozenRightColumns(QVector<int>({4}));
+    m_view->moveColumn(2, 0);
+    m_view->setColumnWidth(1, kColumnWidth + 20);
+    m_view->setFrozenRows(2);
+    const QByteArray good = m_view->saveHeaderState();
+    QVERIFY(m_view->restoreHeaderState(good));
+
+    // Move to a state that differs from the saved one in every part the state covers,
+    // so "nothing changed" is observable.
+    m_view->clearFrozenColumns();
+    m_view->moveColumn(0, 4);
+    m_view->setColumnWidth(1, kColumnWidth);
+    m_view->setFrozenRows(0);
+    m_view->flushPendingRelayout();
+    const int widthBefore = m_view->columnWidth(1);
+    const int visual0Before = m_view->horizontalHeaderGeometry()->logicalIndex(0);
+    const int visual2Before = m_view->horizontalHeaderGeometry()->logicalIndex(2);
+    const int frozenBefore = m_view->frozenColumns().size();
+    const int frozenRowsBefore = m_view->frozenRows();
+    const auto checkUnchanged = [&]() {
+        QCOMPARE(m_view->columnWidth(1), widthBefore);
+        QCOMPARE(m_view->horizontalHeaderGeometry()->logicalIndex(0), visual0Before);
+        QCOMPARE(m_view->horizontalHeaderGeometry()->logicalIndex(2), visual2Before);
+        QCOMPARE(m_view->frozenColumns().size(), frozenBefore);
+        QCOMPARE(m_view->frozenRows(), frozenRowsBefore);
+    };
+
+    // (a) A truncated tail: the frozen row counts are missing.
+    const QByteArray truncated = good.left(good.size() - 4);
+    QVERIFY(!m_view->restoreHeaderState(truncated));
+    checkUnchanged();
+
+    // (b) A negative count where the frozen-left set begins.
+    QDataStream header(good);
+    header.setVersion(QDataStream::Qt_5_15);
+    quint32 magic = 0;
+    quint32 version = 0;
+    quint32 columnStateSize = 0;
+    header >> magic >> version >> columnStateSize;
+    const int setOffset = 4 + 4 + 4 + int(columnStateSize);
+    QByteArray negativeCount = good;
+    for (int byte = 0; byte < 4; ++byte)
+        negativeCount[setOffset + byte] = char(0xFF); // qint32(-1)
+    QVERIFY(!m_view->restoreHeaderState(negativeCount));
+    checkUnchanged();
+
+    // (c) A column state size that does not fit into int: reading it would allocate a
+    // negative-length buffer, so it is rejected before the cast.
+    QByteArray hugeSize = good;
+    for (int byte = 8; byte < 12; ++byte)
+        hugeSize[byte] = char(0xFF); // quint32(0xFFFFFFFF)
+    QVERIFY(!m_view->restoreHeaderState(hugeSize));
+    checkUnchanged();
+
+    // The intact state still restores everything (the guards do not reject the
+    // format itself).
+    QVERIFY(m_view->restoreHeaderState(good));
+    QCOMPARE(m_view->frozenColumns(), QVector<int>({0, 1}));
+    QCOMPARE(m_view->frozenRows(), 2);
+    QCOMPARE(m_view->columnWidth(1), kColumnWidth + 20);
 }
 
 QTEST_MAIN(TestVirtualTableView)

@@ -265,6 +265,9 @@ public:
 
     // -- persistence ---------------------------------------------------------
     QByteArray saveHeaderState() const;
+    /// Restores the column state, the frozen pane sets and the frozen row counts.
+    /// Parsing and validation happen before anything is applied, so a `false`
+    /// return means the view was not touched at all.
     bool restoreHeaderState(const QByteArray &state);
 
     // -- adapter -------------------------------------------------------------

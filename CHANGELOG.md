@@ -168,6 +168,14 @@
   仍然一一对应。回归测试：
   `tst_tablepanes::invalidPaneSpecsAreNormalizedWithOneWarningEach`（已确认还原旧实现时该用例
   会失败）。
+* **`restoreHeaderState()` 变成事务性的（P2-3）**：它先 `m_columns->restoreState(columnState)`，
+  之后才解析冻结列 / 冻结行，于是"状态尾部损坏"时函数返回 `false`，但视图的列状态已经被换掉
+  ——失败的操作留下一个半恢复的视图（列顺序/宽度变了，冻结设置没变）。现在整段状态先解析校验
+  到局部变量、全部合法后才一次性提交，返回 `false` 一定意味着"什么都没改"。
+  顺带把 `columnStateSize` 的检查补全：它是流里的 `quint32`，直接 `int()` 转换后再和
+  `state.size()` 比较，超 `INT_MAX` 的值会先变成负数、绕过检查（随后按负长度分配缓冲区）。
+  回归测试：`tst_virtualtableview::aBrokenStateLeavesTheViewUntouched`（尾部截断 / 负数条数 /
+  超 `int` 的长度三种损坏状态都不改变视图；已确认还原旧实现时该用例会失败）。
 
 ### Fixed（全量代码审查 Wave 3：虚拟化热路径）
 

@@ -1324,18 +1324,24 @@ bool VirtualTableView::restoreHeaderState(const QByteArray &state)
     quint32 version = 0;
     quint32 columnStateSize = 0;
     stream >> magic >> version >> columnStateSize;
+    // The size is an unsigned 32-bit field of the stream, so it is checked against
+    // both the buffer and int *before* anything is read with it: casting a huge value
+    // to int first would turn it into a negative length (P2-3).
     if (stream.status() != QDataStream::Ok || magic != kTableStateMagic
         || version < 1 || version > kTableStateVersionWithFrozenRows
-        || int(columnStateSize) > state.size()) {
+        || qint64(columnStateSize) > qint64(state.size())
+        || columnStateSize > quint32(std::numeric_limits<int>::max())) {
         // Not a table level state: accept a bare HeaderGeometry state so a state
         // saved before the pane sets existed keeps working.
         return m_columns->restoreState(state);
     }
 
+    // Parse and validate the whole state first: a corrupt tail must not leave the
+    // column geometry of the view changed (the frozen pane sets and the frozen row
+    // counts are parsed *after* the column state would have been applied, so this
+    // used to return false with the columns already moved).
     QByteArray columnState(int(columnStateSize), Qt::Uninitialized);
     if (stream.readRawData(columnState.data(), int(columnStateSize)) != int(columnStateSize))
-        return false;
-    if (!m_columns->restoreState(columnState))
         return false;
 
     QVector<int> frozenLeft;
@@ -1363,6 +1369,11 @@ bool VirtualTableView::restoreHeaderState(const QByteArray &state)
             return false;
     }
 
+    // Everything parsed: commit once. HeaderGeometry::restoreState() validates its
+    // own stream before touching a section, so a state we accepted here is applied
+    // completely or not at all.
+    if (!m_columns->restoreState(columnState))
+        return false;
     m_panes.setFrozenColumns(frozenLeft);
     m_panes.setFrozenRightColumns(frozenRight);
     setFrozenRows(int(frozenTopRows));
