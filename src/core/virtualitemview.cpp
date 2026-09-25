@@ -73,6 +73,65 @@ protected:
 private:
     bool m_frame = false;
 };
+
+/// Framework owned clipping container of the scrolling row pane (§31, row
+/// direction). It paints nothing, so a business item widget keeps its own
+/// background; Qt clips the children of a widget to its rect, which is what keeps
+/// a row that scrolled behind the frozen band from showing through it.
+class ItemPaneClipHost : public QWidget
+{
+public:
+    explicit ItemPaneClipHost(QWidget *parent = nullptr)
+        : QWidget(parent)
+    {
+        setObjectName(QStringLiteral("vivItemPaneClipHost"));
+        setFocusPolicy(Qt::NoFocus);
+    }
+};
+
+/// The line between two row panes (§31). The item widgets cover the viewport, so a
+/// line painted by the viewport itself would be hidden behind them; this overlay
+/// sits above them and lets input through.
+class ItemPaneSeparatorLine : public QWidget
+{
+public:
+    explicit ItemPaneSeparatorLine(QWidget *parent = nullptr)
+        : QWidget(parent)
+    {
+        setObjectName(QStringLiteral("vivItemPaneSeparatorLine"));
+        setAttribute(Qt::WA_TransparentForMouseEvents, true);
+        setFocusPolicy(Qt::NoFocus);
+    }
+
+    void setSeparator(const PaneSeparatorStyle &style, const QColor &styleSeparatorColor)
+    {
+        m_style = style;
+        m_resolvedColor = style.effectiveColor(styleSeparatorColor);
+        update();
+    }
+
+protected:
+    void paintEvent(QPaintEvent *) override
+    {
+        if (!m_style.isVisible() || m_resolvedColor.alpha() == 0)
+            return;
+        QPainter painter(this);
+        if (m_style.lineStyle == Qt::SolidLine) {
+            painter.fillRect(rect(), m_resolvedColor);
+            return;
+        }
+        QPen pen(m_resolvedColor);
+        pen.setStyle(m_style.lineStyle);
+        pen.setWidth(1);
+        painter.setPen(pen);
+        const int y = rect().top() + (qMax(0, rect().height() - 1)) / 2;
+        painter.drawLine(rect().left(), y, rect().right(), y);
+    }
+
+private:
+    PaneSeparatorStyle m_style;
+    QColor m_resolvedColor;
+};
 } // namespace
 
 namespace {
@@ -520,6 +579,11 @@ void VirtualItemView::materializeItems(const VisibleRange &rows)
     Q_UNUSED(rows);
 }
 
+void VirtualItemView::materializeItemRanges(const QVector<VisibleRange> &ranges)
+{
+    materializeItems(ranges.isEmpty() ? VisibleRange() : ranges.first());
+}
+
 void VirtualItemView::rebindItemsInRange(const QModelIndex &topLeft, const QModelIndex &bottomRight)
 {
     rebindItemsInModelRange(topLeft.parent(), topLeft.row(), bottomRight.row());
@@ -594,8 +658,16 @@ VisibleRange VirtualItemView::coreVisibleRange() const
     if (count <= 0 || viewExtent <= 0 || m_layout->contentExtent() <= 0)
         return range;
 
-    qsizetype first = qMin(m_layout->indexAtOffset(m_scrollOffset), count - 1);
-    qsizetype last = qMin(m_layout->indexAtOffset(m_scrollOffset + viewExtent - 1), count - 1);
+    // The scrolling pane starts below the frozen band, so the visible content
+    // window is shifted by its height (§31 row direction). Frozen rows are always
+    // visible and are reported by visibleItemRanges(), not by this window.
+    const qint64 top = m_scrollOffset + frozenTopExtent();
+    const qint64 bottom = m_scrollOffset + viewExtent - frozenBottomExtent() - 1;
+    if (bottom < top)
+        return range; // the frozen bands cover the whole viewport
+
+    qsizetype first = qMin(m_layout->indexAtOffset(top), count - 1);
+    qsizetype last = qMin(m_layout->indexAtOffset(bottom), count - 1);
     first = qMax<qsizetype>(0, first);
     last = qMax<qsizetype>(first, last);
     range.first = first;
@@ -612,7 +684,337 @@ QRect VirtualItemView::geometryForViewRow(qsizetype row) const
 {
     if (!m_layout)
         return QRect();
-    return m_layout->itemRect(row, m_scrollOffset);
+    return m_layout->itemRect(row, itemPaneScrollOffset(itemPaneForRow(row)));
+}
+
+// ---------------------------------------------------------------------------
+// Row panes (§31 row direction, docs/row-freezing.md)
+// ---------------------------------------------------------------------------
+
+int VirtualItemView::frozenRows() const
+{
+    if (!m_layout || m_frozenRows <= 0)
+        return 0;
+    const qsizetype count = m_layout->itemCount();
+    const int viewHeight = viewport()->height();
+    qsizetype rows = qBound<qsizetype>(qsizetype(0), m_frozenRows, count);
+    if (viewHeight > 0)
+        rows = qMin(rows, rowsFittingFromTop(viewHeight));
+    return int(rows);
+}
+
+int VirtualItemView::frozenBottomRows() const
+{
+    if (!m_layout || m_frozenBottomRows <= 0)
+        return 0;
+    const qsizetype count = m_layout->itemCount();
+    qsizetype rows = qBound<qsizetype>(qsizetype(0), m_frozenBottomRows,
+                                       count - qsizetype(frozenRows()));
+    const qint64 remaining = qint64(viewport()->height()) - frozenTopExtent();
+    if (remaining <= 0)
+        return 0;
+    rows = qMin(rows, rowsFittingFromBottom(remaining));
+    return int(rows);
+}
+
+void VirtualItemView::setFrozenRows(int count)
+{
+    const int clamped = qMax(0, count);
+    if (m_frozenRows == clamped)
+        return;
+    m_frozenRows = clamped;
+    markDirty();
+}
+
+void VirtualItemView::setFrozenBottomRows(int count)
+{
+    const int clamped = qMax(0, count);
+    if (m_frozenBottomRows == clamped)
+        return;
+    m_frozenBottomRows = clamped;
+    markDirty();
+}
+
+bool VirtualItemView::isRowFrozen(qsizetype row) const
+{
+    if (row < 0 || !m_layout)
+        return false;
+    const qsizetype count = m_layout->itemCount();
+    const qsizetype top = frozenRows();
+    if (row < top)
+        return true;
+    const qsizetype bottom = frozenBottomRows();
+    return bottom > 0 && row >= count - bottom;
+}
+
+qint64 VirtualItemView::frozenTopExtent() const
+{
+    const qsizetype rows = frozenRows();
+    if (rows <= 0 || !m_layout)
+        return 0;
+    return qMin<qint64>(m_layout->offsetOf(rows), m_layout->contentExtent());
+}
+
+qint64 VirtualItemView::frozenBottomExtent() const
+{
+    const qsizetype rows = frozenBottomRows();
+    if (rows <= 0 || !m_layout)
+        return 0;
+    return qMax<qint64>(0, m_layout->contentExtent() - m_layout->offsetOf(m_layout->itemCount() - rows));
+}
+
+qsizetype VirtualItemView::rowsFittingFromTop(qint64 extent) const
+{
+    if (!m_layout || extent <= 0)
+        return 0;
+    const qsizetype count = m_layout->itemCount();
+    const qint64 content = m_layout->contentExtent();
+    if (extent >= content)
+        return count;
+    // The row containing the boundary may stick out of the pane, so only the rows
+    // that end before it belong to the pane.
+    return qBound<qsizetype>(qsizetype(0), m_layout->indexAtOffset(extent), count);
+}
+
+qsizetype VirtualItemView::rowsFittingFromBottom(qint64 extent) const
+{
+    if (!m_layout || extent <= 0)
+        return 0;
+    const qsizetype count = m_layout->itemCount();
+    const qint64 content = m_layout->contentExtent();
+    if (extent >= content)
+        return count;
+    const qsizetype row = m_layout->indexAtOffset(content - extent);
+    if (row < 0)
+        return 0;
+    // Same rule from the other edge: the row the boundary falls into is not part of
+    // the pane.
+    return qBound<qsizetype>(qsizetype(0), count - row - 1, count);
+}
+
+ItemPane::Type VirtualItemView::itemPaneForRow(qsizetype row) const
+{
+    if (isRowFrozen(row)) {
+        const qsizetype top = frozenRows();
+        if (row < top)
+            return ItemPane::Type::FrozenTop;
+        return ItemPane::Type::FrozenBottom;
+    }
+    return ItemPane::Type::Scrollable;
+}
+
+qint64 VirtualItemView::itemPaneScrollOffset(ItemPane::Type type) const
+{
+    switch (type) {
+    case ItemPane::Type::FrozenTop:
+        return 0;
+    case ItemPane::Type::Scrollable:
+        return m_scrollOffset;
+    case ItemPane::Type::FrozenBottom:
+        // "Scrolled to the very bottom" pins the last rows to the bottom edge; the
+        // value is signed on purpose, so it also works when the content is shorter
+        // than the viewport.
+        return contentExtent() - qint64(viewportMainExtent());
+    }
+    return m_scrollOffset;
+}
+
+QVector<ItemPane> VirtualItemView::itemPanes() const
+{
+    QVector<ItemPane> panes;
+    if (!m_layout)
+        return panes;
+    const qsizetype count = m_layout->itemCount();
+    const int viewHeight = viewport()->height();
+    const int viewWidth = viewport()->width();
+    if (count <= 0 || viewHeight <= 0)
+        return panes;
+
+    const qsizetype topRows = frozenRows();
+    const qsizetype bottomRows = frozenBottomRows();
+    const qint64 topExtent = qMin<qint64>(frozenTopExtent(), viewHeight);
+    const qint64 bottomExtent = qMin<qint64>(frozenBottomExtent(), viewHeight - topExtent);
+
+    if (topRows > 0 && topExtent > 0) {
+        ItemPane top;
+        top.type = ItemPane::Type::FrozenTop;
+        top.viewportRect = QRect(0, 0, viewWidth, int(topExtent));
+        top.firstRow = 0;
+        top.lastRow = topRows - 1;
+        panes.append(top);
+    }
+
+    ItemPane scrolling;
+    scrolling.type = ItemPane::Type::Scrollable;
+    scrolling.viewportRect = QRect(0, int(topExtent), viewWidth,
+                                   int(viewHeight - topExtent - bottomExtent));
+    scrolling.firstRow = topRows;
+    scrolling.lastRow = count - bottomRows - 1;
+    panes.append(scrolling);
+
+    if (bottomRows > 0 && bottomExtent > 0) {
+        ItemPane bottom;
+        bottom.type = ItemPane::Type::FrozenBottom;
+        bottom.viewportRect = QRect(0, int(viewHeight - bottomExtent), viewWidth, int(bottomExtent));
+        bottom.firstRow = count - bottomRows;
+        bottom.lastRow = count - 1;
+        panes.append(bottom);
+    }
+    return panes;
+}
+
+QRect VirtualItemView::itemPaneRect(ItemPane::Type type) const
+{
+    for (const ItemPane &pane : itemPanes()) {
+        if (pane.type == type)
+            return pane.viewportRect;
+    }
+    return QRect();
+}
+
+ItemPane::Type VirtualItemView::itemPaneAtY(int y) const
+{
+    const QVector<ItemPane> panes = itemPanes();
+    for (const ItemPane &pane : panes) {
+        if (y >= pane.viewportRect.y()
+            && y < pane.viewportRect.y() + pane.viewportRect.height()) {
+            return pane.type;
+        }
+    }
+    // Outside every pane (a degenerate viewport): fall back to the pane that owns
+    // the edge the point is closest to.
+    if (!panes.isEmpty() && y < panes.first().viewportRect.y())
+        return panes.first().type;
+    return panes.isEmpty() ? ItemPane::Type::Scrollable : panes.last().type;
+}
+
+QVector<VisibleRange> VirtualItemView::visibleItemRanges() const
+{
+    QVector<VisibleRange> ranges;
+    if (frozenRows() > 0)
+        ranges.append(VisibleRange{0, qsizetype(frozenRows()) - 1});
+    const VisibleRange window = visibleItemRange();
+    if (window.isValid())
+        ranges.append(window);
+    if (frozenBottomRows() > 0) {
+        const qsizetype count = m_layout ? m_layout->itemCount() : 0;
+        ranges.append(VisibleRange{count - qsizetype(frozenBottomRows()), count - 1});
+    }
+    return ranges;
+}
+
+void VirtualItemView::setItemPaneSeparatorStyle(const PaneSeparatorStyle &style)
+{
+    if (m_itemPaneSeparatorStyle == style)
+        return;
+    m_itemPaneSeparatorStyle = style;
+    syncItemPanes();
+}
+
+QVector<QRect> VirtualItemView::itemPaneSeparatorRects() const
+{
+    QVector<QRect> rects;
+    rects.reserve(m_itemPaneSeparatorLines.size());
+    for (QWidget *line : m_itemPaneSeparatorLines) {
+        if (line->isVisible())
+            rects.append(line->geometry());
+    }
+    return rects;
+}
+
+void VirtualItemView::syncItemPanes()
+{
+    // The clip container only exists while something is frozen: an unused feature
+    // changes nothing at all (the item widgets keep the viewport as parent).
+    const QVector<ItemPane> panes = itemPanes();
+    const QRect scrollRect = itemPaneRect(ItemPane::Type::Scrollable);
+    if (panes.size() <= 1) {
+        if (m_scrollPaneHost) {
+            const QList<QWidget *> children =
+                m_scrollPaneHost->findChildren<QWidget *>(QString(), Qt::FindDirectChildrenOnly);
+            for (QWidget *child : children)
+                child->setParent(viewport());
+            m_scrollPaneHost->hide();
+            m_scrollPaneHost->setParent(nullptr);
+            m_scrollPaneHost->deleteLater();
+            m_scrollPaneHost = nullptr;
+        }
+    } else {
+        if (!m_scrollPaneHost)
+            m_scrollPaneHost = new ItemPaneClipHost(viewport());
+        if (m_scrollPaneHost->geometry() != scrollRect)
+            m_scrollPaneHost->setGeometry(scrollRect);
+        m_scrollPaneHost->setVisible(!scrollRect.isEmpty());
+    }
+
+    // One line per pane boundary (top|scrolling and scrolling|bottom). The band
+    // lies inside the pane above the boundary, so the lines of neighbouring panes
+    // stay continuous.
+    QVector<int> boundaries;
+    for (int index = 0; index + 1 < panes.size(); ++index) {
+        const ItemPane &before = panes.at(index);
+        const ItemPane &after = panes.at(index + 1);
+        if (before.viewportRect.height() <= 0 || after.viewportRect.height() <= 0)
+            continue;
+        boundaries.append(before.viewportRect.bottom() + 1);
+    }
+    while (m_itemPaneSeparatorLines.size() > boundaries.size()) {
+        QWidget *line = m_itemPaneSeparatorLines.takeLast();
+        line->hide();
+        line->setParent(nullptr);
+        line->deleteLater();
+    }
+    while (m_itemPaneSeparatorLines.size() < boundaries.size())
+        m_itemPaneSeparatorLines.append(new ItemPaneSeparatorLine(viewport()));
+
+    const QColor styleColor = palette().color(QPalette::Mid);
+    const int band = qMax(0, m_itemPaneSeparatorStyle.width);
+    const int lineWidth = m_itemPaneSeparatorStyle.lineStyle == Qt::SolidLine ? band
+                                                                             : qMax(1, band);
+    for (int i = 0; i < boundaries.size(); ++i) {
+        auto *line = static_cast<ItemPaneSeparatorLine *>(m_itemPaneSeparatorLines.at(i));
+        line->setSeparator(m_itemPaneSeparatorStyle, styleColor);
+        line->setGeometry(0, boundaries.at(i) - lineWidth, viewport()->width(), lineWidth);
+        line->setVisible(m_itemPaneSeparatorStyle.isVisible() && lineWidth > 0);
+    }
+    raiseItemPaneSeparatorLines();
+}
+
+void VirtualItemView::raiseItemPaneSeparatorLines() const
+{
+    // The items are (re)created by every materialization pass, so the boundary lines
+    // have to be lifted above them again. They are 1 px overlays that let input
+    // through, so they can sit on top of everything.
+    for (QWidget *line : m_itemPaneSeparatorLines)
+        line->raise();
+}
+
+void VirtualItemView::applyItemPaneGeometry(MaterializedItem &item, qsizetype row)
+{
+    QWidget *widget = item.widget;
+    if (!widget)
+        return;
+
+    QWidget *parent = viewport();
+    QPoint origin;
+    bool frozen = false;
+    if (m_scrollPaneHost) {
+        frozen = row >= 0 && isRowFrozen(row);
+        if (!frozen) {
+            // Scrollable rows live in the clip container: Qt clips a widget to its
+            // parent, so a row that scrolled behind the frozen band can never be
+            // seen through it.
+            parent = m_scrollPaneHost;
+            origin = itemPaneRect(ItemPane::Type::Scrollable).topLeft();
+        }
+    }
+    if (widget->parentWidget() != parent)
+        widget->setParent(parent);
+    widget->setGeometry(item.geometry.translated(-origin));
+    if (!widget->isVisible())
+        widget->show();
+    if (frozen)
+        widget->raise();
 }
 
 qsizetype VirtualItemView::visibleItemCount() const
@@ -682,21 +1084,29 @@ void VirtualItemView::scrollTo(const QModelIndex &index, ScrollHint hint)
     const qint64 size = m_layout->itemSize(row);
     qint64 offset = m_scrollOffset;
 
+    // A frozen row is pinned: nothing to scroll for it (§31 row direction). The
+    // scrolling rows are visible inside the scrolling pane, which starts below the
+    // frozen band, so its height - not the viewport height - is what counts.
+    if (isRowFrozen(row))
+        return;
+    const qint64 paneTop = frozenTopExtent();
+    const qint64 paneExtent = qMax<qint64>(0, viewExtent - paneTop - frozenBottomExtent());
+
     switch (hint) {
     case EnsureVisible:
-        if (start < offset)
-            offset = start;
-        else if (start + size > offset + viewExtent)
-            offset = start + size - viewExtent;
+        if (start < offset + paneTop)
+            offset = start - paneTop;
+        else if (start + size > offset + paneTop + paneExtent)
+            offset = start + size - paneTop - paneExtent;
         break;
     case PositionAtTop:
-        offset = start;
+        offset = start - paneTop;
         break;
     case PositionAtBottom:
-        offset = start + size - viewExtent;
+        offset = start + size - paneTop - paneExtent;
         break;
     case PositionAtCenter:
-        offset = start + size / 2 - viewExtent / 2;
+        offset = start + size / 2 - paneTop - paneExtent / 2;
         break;
     }
 
@@ -799,7 +1209,10 @@ QModelIndex VirtualItemView::indexAt(const QPoint &viewportPos) const
 {
     if (!m_layout)
         return QModelIndex();
-    const qsizetype row = m_layout->itemAtPoint(viewportPos, m_scrollOffset);
+    // Fold the point into the pane it belongs to (§31 row direction): a frozen pane
+    // does not scroll, the bottom one is pinned to the bottom edge.
+    const ItemPane::Type pane = itemPaneAtY(viewportPos.y());
+    const qsizetype row = m_layout->itemAtPoint(viewportPos, itemPaneScrollOffset(pane));
     if (row < 0 || row >= viewItemCount())
         return QModelIndex();
     return viewIndex(row);
@@ -812,7 +1225,7 @@ QRect VirtualItemView::visualRect(const QModelIndex &index) const
     const qsizetype row = viewItemForIndex(index);
     if (row < 0)
         return QRect();
-    return m_layout->itemRect(row, m_scrollOffset);
+    return m_layout->itemRect(row, itemPaneScrollOffset(itemPaneForRow(row)));
 }
 
 QWidget *VirtualItemView::widgetForIndex(const QModelIndex &index) const
@@ -904,6 +1317,7 @@ void VirtualItemView::relayout()
     // a WidgetAdapter: the kernel only computes ranges for it.
     if (!m_layout || (!m_adapter && usesItemWidgets())) {
         recycleAllItems();
+        syncItemPanes();
         syncScrollBars();
         return;
     }
@@ -937,16 +1351,32 @@ void VirtualItemView::relayout()
             const VisibleRange window = VisibleRange::expanded(visible.first, visible.last,
                                                               m_overscanBefore, m_overscanAfter,
                                                               count);
-            firstRow = window.first;
-            lastRow = window.last;
+            // The overscan must not reach into the frozen panes: those rows have their
+            // own range and would otherwise be materialized twice.
+            const qsizetype top = qsizetype(frozenRows());
+            const qsizetype bottom = qsizetype(frozenBottomRows());
+            firstRow = qBound<qsizetype>(top, window.first, count - bottom - 1);
+            lastRow = qBound<qsizetype>(firstRow, window.last, count - bottom - 1);
         }
     }
 
+    // Materialization ranges: the scrolling window plus the frozen rows, which are
+    // always on screen (§31 row direction) - exactly like frozen columns. The
+    // ranges are disjoint: the window starts below the frozen top rows and ends
+    // above the frozen bottom ones.
+    QVector<VisibleRange> ranges;
+    if (frozenRows() > 0)
+        ranges.append(VisibleRange{0, qsizetype(frozenRows()) - 1});
+    if (firstRow >= 0 && lastRow >= firstRow)
+        ranges.append(VisibleRange{firstRow, lastRow});
+    if (frozenBottomRows() > 0)
+        ranges.append(VisibleRange{count - qsizetype(frozenBottomRows()), count - 1});
+
     // ---- decide what to reuse, then recycle what is obsolete --------------
     if (!usesItemWidgets()) {
-        // The view materializes its own widgets (table cell mode): it only
-        // needs the window, not row widgets.
-        materializeItems(VisibleRange{firstRow, lastRow});
+        // The view materializes its own widgets (table cell mode): it only needs
+        // the ranges, not row widgets.
+        materializeItemRanges(ranges);
         m_inRelayout = false;
         syncScrollBars();
         afterMaterialize();
@@ -963,20 +1393,22 @@ void VirtualItemView::relayout()
     QVector<bool> claimed(int(m_items.size()), false);
     QList<qsizetype> desiredRows;
     QList<qsizetype> reuseIndex;
-    for (qsizetype row = firstRow; row >= 0 && row <= lastRow; ++row) {
-        const QModelIndex index = viewIndex(row);
-        if (!index.isValid())
-            continue;
-        const QPersistentModelIndex persistent(index);
-        const auto it = existing.constFind(persistent);
-        if (it != existing.constEnd() && !claimed.at(it.value())) {
-            claimed[it.value()] = true;
+    for (const VisibleRange &range : ranges) {
+        for (qsizetype row = range.first; row >= 0 && row <= range.last; ++row) {
+            const QModelIndex index = viewIndex(row);
+            if (!index.isValid())
+                continue;
+            const QPersistentModelIndex persistent(index);
+            const auto it = existing.constFind(persistent);
+            if (it != existing.constEnd() && !claimed.at(it.value())) {
+                claimed[it.value()] = true;
+                desiredRows.append(row);
+                reuseIndex.append(it.value());
+                continue;
+            }
             desiredRows.append(row);
-            reuseIndex.append(it.value());
-            continue;
+            reuseIndex.append(-1);
         }
-        desiredRows.append(row);
-        reuseIndex.append(-1);
     }
 
     // Recycling before creating lets the pool serve the incoming rows, so
@@ -1046,11 +1478,12 @@ void VirtualItemView::relayout()
     rebuildLookup();
 
     // ---- apply geometry ---------------------------------------------------
-    for (MaterializedItem &item : m_items) {
-        item.widget->setGeometry(item.geometry);
-        if (!item.widget->isVisible())
-            item.widget->show();
-    }
+    // The row panes decide the parent (the scrolling rows are clipped into their
+    // pane) and, for the frozen rows, lift them above the scrolling pane.
+    syncItemPanes();
+    for (MaterializedItem &item : m_items)
+        applyItemPaneGeometry(item, viewItemForIndex(item.index));
+    raiseItemPaneSeparatorLines();
 
     m_inRelayout = false;
 

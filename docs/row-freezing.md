@@ -1,7 +1,12 @@
 # 行冻结规格（§31 的行方向类比）
 
 方案文档 §31 只定义了列方向（`setFrozenColumns()` / `setFrozenRightColumns()`）。这份文档把
-行方向的语义先定下来，实现按第 6 节的顺序推进。**状态：规格已定，实现待做（roadmap 1c）。**
+行方向的语义先定下来，实现按第 6 节的顺序推进。
+
+**状态（roadmap 1c）**：第 1-4 步已实现并验证（内核行区间视图、行 pane 布局、两种物化模式的
+裁剪、命中/键盘/滚动 API + `tests/unit/tst_frozenrows` 11 个用例）；第 5 步（纵向表头按 pane
+切分）、第 6 步（表状态持久化）、第 7 步（示例与 README 收尾）待做。**在第 5 步落地前，行号条
+仍然按单一偏移绘制**，冻结行旁边会看到不属于该行的行号 —— 这是已知的、写在路线图里的中间状态。
 
 ## 1. 目标与非目标
 
@@ -73,6 +78,23 @@ struct ItemPane
   （`firstScrollableRow` / `scrollableRowCount` / `prefixHeight`），`SizeIndex` 仍按整表尺寸工作，
   纵向偏移在 `[prefixHeight, prefixHeight + 可滚动总高)` 空间里换算 —— 这样 `BlockSizeIndex`
   的分块与前缀和都不用为冻结行分叉。
+
+### 4.1 实现后的精确定义（第 1-4 步落地时确认下来的）
+
+* `verticalOffset()` 的语义与范围**完全不变**：仍是 `[0, contentExtent - viewportHeight]`，
+  `maximumVerticalOffset()` 也不变 —— 这正是"冻结不产生额外滚动空间"的算式体现（可滚动区高度减少
+  的像素数恰好等于冻结带高度）。
+* 三块 pane 的内容映射（`itemPaneScrollOffset()`）：
+  * 顶部冻结：0（内容 y = 屏幕 y）；
+  * 可滚动：`verticalOffset()` —— 于是可滚动 pane 的**顶边**显示内容 `offset + 冻结顶高`，
+    也就是 Excel 的行为：滚一行，内容就跟着走一行，被冻结带盖住的那些行不再出现在可滚动区顶部；
+  * 底部冻结：`contentExtent - viewportHeight`（"滚到最底"），这样最后几行正好贴在视口底边；
+    该值允许为负，内容比视口矮时同样成立。
+* 物化窗口 = 可滚动窗口（`coreVisibleRange()` 已经把冻结顶高加进上下边界）∪ 顶部冻结行 ∪ 底部
+  冻结行；overscan **不越过**冻结边界，否则冻结行会被物化两次。
+* Cell Widget Mode 的裁剪容器是"行 pane × 列 pane"的**交集**：`(顶部|可滚动|底部) × (每个列 pane)`。
+  Row Widget Mode 不需要新的表格侧容器 —— 行控件本身被内核的行 pane 容器裁一次，行控件内部的
+  列 pane 容器再裁一次，两个方向正交。
 
 ## 5. 绘制、命中与交互
 

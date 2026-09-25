@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QColor>
 #include <QtGlobal>
 
 namespace viv {
@@ -13,6 +14,38 @@ using WidgetType = int;
 
 /// Widget type used when an adapter does not classify its widgets.
 inline constexpr WidgetType kDefaultWidgetType = 0;
+
+/// Look of the line that separates two panes (§31). Shared by the column panes
+/// (VirtualTableView) and the row panes (VirtualItemView), so both boundaries look
+/// the same.
+struct PaneSeparatorStyle
+{
+    /// Pixels the line occupies inside the preceding pane (1 = the default hair
+    /// line, 0 hides the boundary line, 3 = a thick divider).
+    int width = 1;
+    /// Explicit colour. An invalid colour (the default) means "use the colour the
+    /// current style paints separators with", so the boundary line matches the
+    /// lines between items instead of a guessed palette role.
+    QColor color;
+    /// Solid by default; dashed/dotted lines are centred on the band.
+    Qt::PenStyle lineStyle = Qt::SolidLine;
+
+    bool isVisible() const { return width > 0; }
+    /// Colour to paint with: the explicit one, or \a styleSeparatorColor.
+    QColor effectiveColor(const QColor &styleSeparatorColor) const
+    {
+        return color.isValid() ? color : styleSeparatorColor;
+    }
+
+    friend bool operator==(const PaneSeparatorStyle &lhs, const PaneSeparatorStyle &rhs)
+    {
+        return lhs.width == rhs.width && lhs.color == rhs.color && lhs.lineStyle == rhs.lineStyle;
+    }
+    friend bool operator!=(const PaneSeparatorStyle &lhs, const PaneSeparatorStyle &rhs)
+    {
+        return !(lhs == rhs);
+    }
+};
 
 /// Inclusive range of item indices (visible rows, visible columns, ...).
 struct VisibleRange

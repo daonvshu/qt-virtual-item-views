@@ -12,6 +12,11 @@ endif()
 function(viv_add_test name)
     add_executable(${name} ${ARGN})
     target_link_libraries(${name} PRIVATE viv_test_support)
+    if(MSVC)
+        # Sources carry UTF-8 comments; without this the compiler falls back to the
+        # system code page and a multi-byte sequence can swallow the line ending.
+        target_compile_options(${name} PRIVATE /utf-8)
+    endif()
     add_test(NAME ${name} COMMAND ${name})
     # Widgets are created by the tests, so run them with the offscreen platform
     # plugin for reproducible, headless results.
@@ -34,6 +39,7 @@ viv_add_test(tst_dnd unit/tst_dnd.cpp)
 viv_add_test(tst_accessibility unit/tst_accessibility.cpp)
 viv_add_test(tst_tablespan unit/tst_tablespan.cpp)
 viv_add_test(tst_tablepanes unit/tst_tablepanes.cpp)
+viv_add_test(tst_frozenrows unit/tst_frozenrows.cpp)
 viv_add_test(tst_modelmutationfuzz fuzz/tst_modelmutationfuzz.cpp)
 
 if(VIRTUALITEMVIEWS_BUILD_GUI_TESTS)

@@ -44,29 +44,6 @@ struct TablePaneSpec
     friend bool operator!=(const TablePaneSpec &lhs, const TablePaneSpec &rhs) { return !(lhs == rhs); }
 };
 
-/// Look of the line that separates two panes (§31). The same style is used by
-/// the header edge line and by the body line, so the boundary stays continuous.
-struct PaneSeparatorStyle
-{
-    /// Pixels the line occupies inside the frozen pane (1 = the default hair
-    /// line, 0 hides the boundary line, 3 = a thick divider).
-    int width = 1;
-    /// Explicit colour. An invalid colour (the default) means "use the colour
-    /// the current style paints section separators with", so the boundary line
-    /// matches the lines between the other columns instead of a guessed palette
-    /// role.
-    QColor color;
-    /// Solid by default; dashed/dotted lines are centred on the band.
-    Qt::PenStyle lineStyle = Qt::SolidLine;
-
-    bool isVisible() const { return width > 0; }
-    /// Colour to paint with: the explicit one, or \a styleSeparatorColor.
-    QColor effectiveColor(const QColor &styleSeparatorColor) const
-    {
-        return color.isValid() ? color : styleSeparatorColor;
-    }
-};
-
 /// One horizontal pane of the table (architecture document §31).
 ///
 /// Every pane is derived from the same committed HeaderGeometry: a pane never

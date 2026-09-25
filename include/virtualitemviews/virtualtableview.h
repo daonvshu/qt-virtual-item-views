@@ -276,6 +276,9 @@ protected:
     bool isLayoutParent(const QModelIndex &parent) const override;
     QModelIndex indexForNavigation(qsizetype item, const QModelIndex &current) const override;
     void materializeItems(const VisibleRange &rows) override;
+    /// Cell Widget Mode materializes every range the kernel asks for: the scrolling
+    /// window plus the frozen rows (§31 row direction).
+    void materializeItemRanges(const QVector<VisibleRange> &ranges) override;
     void rebindItemsInRange(const QModelIndex &topLeft, const QModelIndex &bottomRight) override;
     QModelIndex indexAt(const QPoint &viewportPos) const override;
     bool canMeasureItem(qsizetype item) const override;
@@ -345,6 +348,10 @@ private:
     /// Creates/destroys/positions the clip container of every scrolling pane in
     /// Cell Widget Mode (§43).
     void syncCellPaneClipHosts();
+    /// Key of the cell clip container of one (row pane, column pane) pair: with
+    /// frozen rows the cells are clipped in both directions, so the container is an
+    /// intersection of a row pane and a column pane (§31).
+    static quint64 cellClipKey(ItemPane::Type rowPane, int columnPaneIndex);
     void applyColumnLayout(const MaterializedItem &item);
     /// Layout context of one row. \a rowIndex is the row being laid out; it is
     /// what makes the span decisions of that row available to the adapter
@@ -377,9 +384,11 @@ private:
     /// a pane shows its own columns at its own viewport x, so it needs its own
     /// renderer of the same geometry. The primary pane uses m_horizontalHeader.
     QVector<HeaderViewInterface *> m_paneHeaders;
-    /// Framework containers that clip the scrolling panes, keyed by pane index
-    /// (§43: several groups scroll independently, so each has its own).
-    QHash<int, QWidget *> m_cellClipHosts;
+    /// Framework containers that clip the cell widgets, keyed by
+    /// cellClipKey(row pane, column pane) (§43 "advanced panes" + §31 row
+    /// direction: several groups scroll independently, so each pane intersection
+    /// has its own).
+    QHash<quint64, QWidget *> m_cellClipHosts;
     /// 1 px body lines at the pane boundaries (left | scrollable | right).
     QVector<QWidget *> m_paneSeparatorLines;
     PaneSeparatorStyle m_paneSeparatorStyle;

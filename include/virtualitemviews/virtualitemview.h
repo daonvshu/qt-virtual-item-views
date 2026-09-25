@@ -1,5 +1,6 @@
 #pragma once
 
+#include <virtualitemviews/itempane.h>
 #include <virtualitemviews/materializeditem.h>
 #include <virtualitemviews/scrollmapper.h>
 #include <virtualitemviews/types.h>
@@ -297,6 +298,43 @@ public:
     /// Visible item range without overscan.
     VisibleRange visibleItemRange() const;
 
+    // -- row panes (§31 row direction, see docs/row-freezing.md) -------------
+    /// Freezes the first \a count rows at the top edge: they stay visible while the
+    /// rows below scroll, and they add no scroll space of their own (the frozen
+    /// height is not part of the scroll range, exactly like frozen columns).
+    ///
+    /// The value is clamped to the row count, and a frozen row that cannot fit into
+    /// the viewport is not frozen at all: a frozen pane never shows a row that
+    /// sticks out of it.
+    void setFrozenRows(int count);
+    /// Frozen rows at the top edge (the effective, clamped count).
+    int frozenRows() const;
+    /// Freezes the last \a count rows at the bottom edge. A row in both sets stays
+    /// on the top.
+    void setFrozenBottomRows(int count);
+    /// Frozen rows at the bottom edge (the effective, clamped count).
+    int frozenBottomRows() const;
+    bool isRowFrozen(qsizetype row) const;
+    /// Visible panes, top to bottom: the frozen top pane (when it has rows), the
+    /// scrolling pane and the frozen bottom pane. Without frozen rows there is
+    /// exactly one scrolling pane covering the viewport.
+    QVector<ItemPane> itemPanes() const;
+    /// Pane rect in viewport coordinates (empty when the pane does not exist).
+    QRect itemPaneRect(ItemPane::Type type) const;
+    /// Visible rows as up to three ranges: frozen top, scrolling window, frozen
+    /// bottom. Frozen rows are visible and their union with the window is not
+    /// contiguous, which is why visibleItemRange() keeps describing the scrolling
+    /// window only.
+    QVector<VisibleRange> visibleItemRanges() const;
+    /// Look of the line that separates the row panes.
+    void setItemPaneSeparatorStyle(const PaneSeparatorStyle &style);
+    PaneSeparatorStyle itemPaneSeparatorStyle() const { return m_itemPaneSeparatorStyle; }
+    /// Geometry of the row pane boundary lines, top to bottom (diagnostics/tests).
+    QVector<QRect> itemPaneSeparatorRects() const;
+    /// Container the scrolling rows are clipped into (null while no row is frozen,
+    /// in which case the row widgets keep the viewport as parent).
+    QWidget *scrollingPaneHost() const { return m_scrollPaneHost; }
+
     // -- diagnostics (tests, benchmarks, demos) ------------------------------
     qsizetype materializedItemCount() const { return m_items.size(); }
     qsizetype pinnedItemCount() const;
@@ -347,6 +385,13 @@ protected:
     /// usesItemWidgets() is false: \a rows is the materialization window
     /// (visible rows widened by the overscan).
     virtual void materializeItems(const VisibleRange &rows);
+    /// Same hook, but with every materialization range: the scrolling window
+    /// widened by the overscan *plus* the frozen rows, which are always on screen
+    /// (§31 row direction). The ranges are disjoint and in no particular order of
+    /// importance; the default implementation forwards the first one to
+    /// materializeItems(), so a subclass that only knows a single range keeps
+    /// working (without frozen rows in that mode).
+    virtual void materializeItemRanges(const QVector<VisibleRange> &ranges);
     /// Rebuilds the widgets affected by a dataChanged() range. The default
     /// implementation rebinds the row widgets.
     virtual void rebindItemsInRange(const QModelIndex &topLeft, const QModelIndex &bottomRight);
@@ -398,6 +443,28 @@ protected:
     /// Recreates the SizeIndex matching the current ItemHeightMode.
     void rebuildSizeIndex();
     int measuredHeightOf(const MaterializedItem &item) const;
+
+    // -- row panes (§31 row direction) ---------------------------------------
+    /// Height of the frozen top / bottom band in pixels (0 when nothing is frozen).
+    qint64 frozenTopExtent() const;
+    qint64 frozenBottomExtent() const;
+    /// Pane a view row belongs to.
+    ItemPane::Type itemPaneForRow(qsizetype row) const;
+    /// Vertical offset a pane draws its rows with: 0 for the top pane, the scroll
+    /// offset for the scrolling pane, and "scrolled to the very bottom" for the
+    /// bottom pane, which is what pins it to the bottom edge.
+    qint64 itemPaneScrollOffset(ItemPane::Type type) const;
+    /// Pane containing a viewport y (-1 when the viewport is empty).
+    ItemPane::Type itemPaneAtY(int y) const;
+    /// Rows of the frozen sets that actually fit into \a extent pixels.
+    qsizetype rowsFittingFromTop(qint64 extent) const;
+    qsizetype rowsFittingFromBottom(qint64 extent) const;
+    /// Creates/positions the scrolling pane clip container and the boundary lines.
+    void syncItemPanes();
+    /// Parents and positions one materialized item, honouring the row panes.
+    void applyItemPaneGeometry(MaterializedItem &item, qsizetype row);
+    /// Raises the boundary lines above the (re)materialized items.
+    void raiseItemPaneSeparatorLines() const;
 
     // -- events --------------------------------------------------------------
     void paintEvent(QPaintEvent *event) override;
@@ -488,6 +555,15 @@ private:
 
     ScrollMapper m_scrollMapper;
     qint64 m_scrollOffset = 0;
+    /// Requested frozen row counts; the effective ones are clamped to the rows that
+    /// fit (see frozenRows()/frozenBottomRows()).
+    int m_frozenRows = 0;
+    int m_frozenBottomRows = 0;
+    /// Container the scrolling rows are clipped into (§31 row direction).
+    QWidget *m_scrollPaneHost = nullptr;
+    /// Boundary lines between the row panes (1 px overlays, one per boundary).
+    QVector<QWidget *> m_itemPaneSeparatorLines;
+    PaneSeparatorStyle m_itemPaneSeparatorStyle;
     ScrollAnchor m_pendingAnchor;
     bool m_anchorPending = false;
     QPersistentModelIndex m_pressedIndex;
