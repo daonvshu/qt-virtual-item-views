@@ -72,7 +72,8 @@ QWidget**。
 
 未实现（按 §43 路线图）：accessibility
 还没有 `QAccessibleTableInterface`（行列朗读）与文本/编辑接口；行冻结
-（文档 §31 只写列方向）；树在"可见行数极大"时的增量行映射优化
+（文档 §31 只写列方向，语义规格见 [docs/row-freezing.md](docs/row-freezing.md)，实现待做）；
+树在"可见行数极大"时的增量行映射优化
 （现在一次 expand/collapse 需要重建可见行索引表，见 [docs/performance.md](docs/performance.md)）。
 推进顺序见 [docs/roadmap.md](docs/roadmap.md)。
 
@@ -358,9 +359,10 @@ docs/         architecture.md  lifecycle.md  model-signals.md  focus-ime.md
 * [docs/table-layout.md](docs/table-layout.md)：Table 阶段约束（HeaderGeometry 单一事实来源）
 * [docs/drag-and-drop.md](docs/drag-and-drop.md)：拖放契约（视图侧交互 vs 模型侧语义、三种落点语义）
 * [docs/accessibility.md](docs/accessibility.md)：辅助功能桥接（虚拟节点、可见行、树层次与行列语义）
-* [docs/spans.md](docs/spans.md)：span 与 advanced panes 的规格（待实现项的语义与顺序）
+* [docs/spans.md](docs/spans.md)：span 与 advanced panes 的规格（语义、实现状态、多滚动组细节）
 * [docs/performance.md](docs/performance.md)：复杂度、规模特性、基准使用与已知取舍
 * [docs/header-animation.md](docs/header-animation.md)：表头动画契约（committed/visual 两层几何、同步矩阵、渲染器支持）
+* [docs/row-freezing.md](docs/row-freezing.md)：行冻结规格（§31 行方向类比：不变量、API、布局与滚动、实现顺序）
 * [docs/roadmap.md](docs/roadmap.md)：进度与路线图（已完成 / 待做 / 每步完成定义 / 决策记录）
 
 ## 构建

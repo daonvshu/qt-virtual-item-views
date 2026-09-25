@@ -51,7 +51,8 @@ v0.7 的逐项细节与实现决定记在 [spans.md](spans.md)、[accessibility.
       测试：`tst_virtualheaderview` 3 个新用例；示例：`table_custom_header --move-demo`。
 - [ ] **1c 行冻结**（§31 只定义了列方向）：**在范围内**（用户 2026-09-25 决定）。实现垂直方向的
       pane 类比：行冻结 pane + 可滚动行区、两个区域各自的命中测试与裁剪、与 span/拖放/无障碍对齐，
-      并补规格文档与示例。
+      并补规格文档与示例。语义规格已经写好在 [row-freezing.md](row-freezing.md)（不变量、API、
+      布局与滚动、7 步实现顺序、3 个开放问题），实现待做。
 
 ### Wave 2（v0.9）：规模化与可访问性补完
 
