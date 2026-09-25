@@ -144,3 +144,12 @@
   回归测试：`tst_virtualtableview::rowHeaderMirrorsTheCommittedSizeUnderMeasuredWins`
   （ExplicitWins 下 70 两边一致；切换 MeasuredWins 后 body 与行号条都变成测量值 30；清除显式
   高度后立刻回到测量值；未物化的行立刻回到估计值）。
+
+### Fixed（全量代码审查 Wave 3：虚拟化热路径）
+
+* **`BlockSizeIndex` 的分裂真正保证块上界**：`splitBlockIfNeeded()` 以前只反复切同一个块，
+  切出来的 tail 不再检查 —— 一次插入 1,000,000 行会留下几十万行的块，而 `offsetOf/indexAt/
+  setSize` 的复杂度都依赖"每块 ≤ 2 x capacity"这个不变量。现在用一个待处理队列把所有超限的块
+  （包括切出来的 tail）都处理干净；新增诊断接口 `maxBlockRowCount()`。
+  回归测试：`tst_sizeindex::blockIndexBoundsEveryBlockAfterAHugeInsert`（capacity 4 插 1 万行、
+  默认 capacity 插 100 万行，断言上界与几何精确性）。

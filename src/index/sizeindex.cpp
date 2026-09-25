@@ -185,6 +185,14 @@ qsizetype BlockSizeIndex::blockCount() const
     return m_blocks.size();
 }
 
+qsizetype BlockSizeIndex::maxBlockRowCount() const
+{
+    qsizetype maximum = 0;
+    for (const Block &block : m_blocks)
+        maximum = qMax(maximum, block.rowCount);
+    return maximum;
+}
+
 void BlockSizeIndex::markOffsetsDirty()
 {
     m_offsetsDirty = true;
@@ -300,12 +308,26 @@ qsizetype BlockSizeIndex::splitBlockAt(qsizetype blockIndex, qsizetype local)
 
 void BlockSizeIndex::splitBlockIfNeeded(qsizetype blockIndex)
 {
-    // Blocks are allowed to grow to twice the capacity before they split, so
-    // the per-block scan (and the exception table) stays bounded without
-    // paying a rebuild per inserted row.
-    while (blockIndex < m_blocks.size()
-           && m_blocks.at(blockIndex).rowCount > m_blockCapacity * 2) {
-        splitBlockAt(blockIndex, m_blocks.at(blockIndex).rowCount / 2);
+    // Blocks are allowed to grow to twice the capacity before they split, so the
+    // per-block scan (and the exception table) stays bounded without paying a
+    // rebuild per inserted row. Every block the splits *create* has to be checked
+    // as well: splitting one huge block in half leaves a huge tail behind, and a
+    // single 1,000,000-row insert would otherwise keep a block of half a million
+    // rows (which breaks the bound the rest of the index relies on).
+    QVector<qsizetype> pending;
+    pending.append(blockIndex);
+    while (!pending.isEmpty()) {
+        const qsizetype index = pending.takeLast();
+        if (index < 0 || index >= m_blocks.size())
+            continue;
+        const qsizetype rows = m_blocks.at(index).rowCount;
+        if (rows <= m_blockCapacity * 2)
+            continue;
+        const qsizetype tail = splitBlockAt(index, rows / 2);
+        if (tail < 0)
+            continue;
+        pending.append(index);
+        pending.append(tail);
     }
 }
 

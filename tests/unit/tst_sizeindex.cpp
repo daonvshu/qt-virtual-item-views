@@ -37,6 +37,7 @@ private slots:
     void blockIndexKeepsMeasuredSizesAcrossInserts();
     void blockIndexMeasuredSizesSurviveSplices();
     void blockIndexAppendManyRowsKeepsBlockCountBounded();
+    void blockIndexBoundsEveryBlockAfterAHugeInsert();
 };
 
 void TestSizeIndex::fixedIndexGeometry()
@@ -493,6 +494,41 @@ void TestSizeIndex::blockIndexAppendManyRowsKeepsBlockCountBounded()
     QCOMPARE(index.totalSize(), qint64(1000));
     QCOMPARE(index.offsetOf(99), qint64(990));
     QCOMPARE(index.indexAt(999), qsizetype(99));
+}
+
+void TestSizeIndex::blockIndexBoundsEveryBlockAfterAHugeInsert()
+{
+    // Splitting a huge block in half leaves a huge *tail* behind: the split loop
+    // has to keep processing what it creates, otherwise the "per-block scan stays
+    // bounded" invariant is broken by a single big insert.
+    {
+        BlockSizeIndex small(100, 10, kTestBlockCapacity);
+        small.insert(50, 10000, 7);
+        QCOMPARE(small.count(), qsizetype(10100));
+        QVERIFY(small.maxBlockRowCount() <= 2 * kTestBlockCapacity);
+        QCOMPARE(small.sizeOf(0), 10);
+        QCOMPARE(small.sizeOf(49), 10);
+        QCOMPARE(small.sizeOf(50), 7);
+        QCOMPARE(small.sizeOf(10049), 7);
+        QCOMPARE(small.sizeOf(10050), 10);
+        QCOMPARE(small.totalSize(), qint64(50 * 10 + 10000 * 7 + 50 * 10));
+        QCOMPARE(small.offsetOf(10050), qint64(50 * 10 + 10000 * 7));
+        QCOMPARE(small.indexAt(50 * 10 + 10000 * 7), qsizetype(10050));
+    }
+    {
+        // The same invariant at a realistic capacity: one million rows at once.
+        BlockSizeIndex index(100, 10);
+        index.insert(50, 1000000, 7);
+        QCOMPARE(index.count(), qsizetype(1000100));
+        QVERIFY(index.maxBlockRowCount() <= 2 * index.blockCapacity());
+        QCOMPARE(index.sizeOf(50), 7);
+        QCOMPARE(index.sizeOf(1000049), 7);
+        QCOMPARE(index.sizeOf(1000050), 10);
+        QCOMPARE(index.totalSize(), qint64(50 * 10 + 1000000 * 7 + 50 * 10));
+        QCOMPARE(index.offsetOf(1000050), qint64(50 * 10 + 1000000 * 7));
+        QCOMPARE(index.indexAt(50 * 10 + 1000000 * 7), qsizetype(1000050));
+        QCOMPARE(index.indexAt(50 * 10 + 1000000 * 7 - 1), qsizetype(1000049));
+    }
 }
 
 QTEST_APPLESS_MAIN(TestSizeIndex)

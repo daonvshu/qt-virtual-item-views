@@ -128,6 +128,9 @@ public:
 
     qsizetype blockCapacity() const { return m_blockCapacity; }
     qsizetype blockCount() const;
+    /// Largest number of rows any block holds (diagnostics/tests). The split
+    /// policy keeps it at or below 2 * blockCapacity().
+    qsizetype maxBlockRowCount() const;
     /// Size used for items whose size was never measured.
     int estimatedSize() const { return m_estimatedSize; }
     /// Sizes of all items (mainly for tests and diagnostics).
