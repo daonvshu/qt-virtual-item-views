@@ -21,15 +21,19 @@ namespace viv {
 ///  - expand()/collapse() splice the flat visible list and traverse the model
 ///    only for the expanded subtree; the whole tree is never re-flattened,
 ///  - indexAtVisibleRow() is O(1),
-///  - visibleRowForIndex()/isVisible() are O(1) after a lazily rebuilt row
-///    lookup table, depth() is O(depth),
-///  - the lookup table is keyed by the model index *value*, not by a
-///    QPersistentModelIndex: one persistent index per visible row would register
-///    a million persistent indexes with the model (hundreds of bytes per row,
-///    and a quadratic cost when the table is cleared),
-///  - a structural change and an expand()/collapse() rebuild that table, which
-///    is O(visible rows) - the model itself is never walked for a collapsed
-///    sub-tree,
+///  - visibleRowForIndex()/isVisible() are O(depth x log(siblings)): the row of an
+///    item is the sum, over its ancestors, of "1 + the visible sub-tree sizes of
+///    the preceding siblings". Those sizes live in one Fenwick tree per expanded
+///    parent (see BranchBlock), so a wide parent costs 4 bytes per child and
+///    nothing is rebuilt when the expansion state changes,
+///  - no per-row lookup table at all: a table keyed by the model index *value*
+///    would have to be rebuilt on every expand/collapse (that is the O(visible
+///    rows) cost the benchmark used to show), and keying by
+///    QPersistentModelIndex would register a million persistent indexes with the
+///    model instead,
+///  - a structural change rebuilds the visible list (O(visible rows)), an
+///    expand()/collapse() only walks its own sub-tree and pokes the ancestors on
+///    the path - the model is never walked for a collapsed sub-tree,
 ///  - model mutations (insert/remove/move/layoutChanged) rebuild the visible
 ///    list while keeping the expansion state; modelReset clears it too.
 class TreeVisibilityIndex
@@ -78,20 +82,60 @@ public:
     void resetModelQueryCount() { m_modelQueryCount = 0; }
 
 private:
+    /// One parent's children: a Fenwick tree over the visible sub-tree size of each child.
+    ///
+    /// The visible row of a child is the prefix sum of the children before it, so a
+    /// sub-tree that grows or shrinks only updates its own entry and adds the delta to the
+    /// ancestors on the path (O(log children) each). A parent that is not expanded keeps no
+    /// block: nothing inside it is visible and no offset can shift.
+    struct BranchBlock
+    {
+        /// Fenwick tree, 1-based; index i covers children [i - lowbit(i), i).
+        QVector<qsizetype> tree;
+        qsizetype childCount = 0;
+
+        void reset(qsizetype children)
+        {
+            childCount = qMax<qsizetype>(0, children);
+            // QVector::assign() only exists in Qt 6; a filled copy reads the same in both.
+            tree = QVector<qsizetype>(int(childCount) + 1, qsizetype(0));
+        }
+        void add(qsizetype childIndex, qsizetype delta)
+        {
+            if (childIndex < 0 || childIndex >= childCount)
+                return;
+            for (qsizetype i = childIndex + 1; i <= childCount; i += i & -i)
+                tree[int(i)] += delta;
+        }
+        /// Sum of the visible sub-tree sizes of the children before \a childIndex.
+        qsizetype prefix(qsizetype childIndex) const
+        {
+            qsizetype sum = 0;
+            for (qsizetype i = qMin(childIndex, childCount); i > 0; i -= i & -i)
+                sum += tree.at(int(i));
+            return sum;
+        }
+        qsizetype total() const { return prefix(childCount); }
+    };
+
     int childCount(const QModelIndex &parent);
-    QVector<QModelIndex> visibleSubtreeRows(const QModelIndex &index);
-    void buildRowLookup() const;
-    bool isDescendantOf(const QModelIndex &candidate, const QModelIndex &ancestor) const;
+    /// Visible rows of \a index's sub-tree (that node excluded). When \a block is given it
+    /// is filled with each child's visible sub-tree size.
+    QVector<QModelIndex> visibleSubtreeRows(const QModelIndex &index, BranchBlock *block = nullptr);
+    /// Adds \a delta to the entry of every ancestor of \a index (and to the index itself),
+    /// stopping at the first ancestor that is not expanded - above and below it nothing
+    /// shifts, because nothing there is visible.
+    void addToAncestors(const QModelIndex &index, qsizetype delta);
+    /// Visible row of an item, computed from the branch blocks (see the contract above).
+    qsizetype visibleRowForKey(const QModelIndex &index) const;
 
     QAbstractItemModel *m_model = nullptr;
     QModelIndex m_rootIndex;
     QSet<QPersistentModelIndex> m_expanded;
     QVector<QModelIndex> m_visibleRows;
-    /// Visible row of an item, keyed by the model index value (column 0). Rows
-    /// are only looked up after a structural change was processed, so the row
-    /// component of a key is always current.
-    mutable QHash<QModelIndex, qsizetype> m_rowOf;
-    mutable bool m_rowOfDirty = true;
+    /// Children of every expanded parent (and of the root), keyed by the parent index
+    /// value; the invalid index is the model's invisible root.
+    QHash<QModelIndex, BranchBlock> m_branches;
     quint64 m_modelQueryCount = 0;
 };
 

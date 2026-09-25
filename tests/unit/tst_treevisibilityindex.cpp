@@ -76,6 +76,8 @@ private slots:
     void modelChangedKeepsExpansionState();
     void modelResetClearsExpansionState();
     void expandDoesNotWalkTheWholeTree();
+    void rowLookupStaysCorrectAcrossManySplices();
+    void expandingDeepInsideAWideTreeTouchesOnlyItsPath();
 
 private:
     QStandardItemModel *m_model = nullptr;
@@ -280,6 +282,92 @@ void TestTreeVisibilityIndex::expandDoesNotWalkTheWholeTree()
     index.collapse(model.index(0, 0));
     QCOMPARE(index.visibleRowCount(), qsizetype(400));
     QCOMPARE(index.modelQueryCount(), quint64(0));
+}
+
+void TestTreeVisibilityIndex::rowLookupStaysCorrectAcrossManySplices()
+{
+    // Wide and deep: every expand/collapse shifts the rows of everything below it, so the
+    // row of an item must keep matching the flat list whatever the order of operations was
+    // (this is what the per-parent prefix sums are for - a stale row would show up as a
+    // mismatch here).
+    QStandardItemModel model;
+    constexpr int kTopLevel = 60;
+    for (int row = 0; row < kTopLevel; ++row) {
+        auto *item = new QStandardItem(QStringLiteral("row-%1").arg(row));
+        for (int child = 0; child < 6; ++child) {
+            auto *sub = new QStandardItem(QStringLiteral("child-%1").arg(child));
+            for (int leaf = 0; leaf < 3; ++leaf)
+                sub->appendRow(new QStandardItem(QStringLiteral("leaf-%1").arg(leaf)));
+            item->appendRow(sub);
+        }
+        model.appendRow(item);
+    }
+    TreeVisibilityIndex index(&model);
+
+    const auto verifyRows = [&index, &model](const char *context) {
+        for (qsizetype row = 0; row < index.visibleRowCount(); ++row) {
+            const QModelIndex index_ = index.indexAtVisibleRow(row);
+            QVERIFY2(index.visibleRowForIndex(index_) == row,
+                     qPrintable(QStringLiteral("%1: row %2 (%3) maps back to %4")
+                                    .arg(QString::fromLatin1(context))
+                                    .arg(row)
+                                    .arg(index_.data().toString())
+                                    .arg(index.visibleRowForIndex(index_))));
+        }
+        // An item that is not visible must report -1.
+        QCOMPARE(index.visibleRowForIndex(model.index(0, 0, model.index(1, 0))), qsizetype(-1));
+    };
+
+    verifyRows("initial");
+    // Expand the first, a middle and the last branch, in an order that shifts everything.
+    for (int row : {0, 30, kTopLevel - 1, 30, 0}) {
+        index.expand(model.index(row, 0));
+        verifyRows("after expanding a branch");
+    }
+    // Deep inside one of them.
+    index.expand(model.index(2, 0, model.index(30, 0)));
+    verifyRows("after expanding a sub-branch");
+    index.collapse(model.index(30, 0));
+    verifyRows("after collapsing the branch");
+    index.expand(model.index(30, 0));   // the sub-branch state survived
+    verifyRows("after re-expanding it");
+}
+
+void TestTreeVisibilityIndex::expandingDeepInsideAWideTreeTouchesOnlyItsPath()
+{
+    // 2000 top level rows, each with 3 children: a million visible rows are not needed to
+    // show the property - what matters is that an expand/collapse does not have to touch
+    // (or rebuild anything for) the rows that are not on the path.
+    QStandardItemModel model;
+    constexpr int kTopLevel = 2000;
+    for (int row = 0; row < kTopLevel; ++row) {
+        auto *item = new QStandardItem(QStringLiteral("row-%1").arg(row));
+        for (int child = 0; child < 3; ++child)
+            item->appendRow(new QStandardItem(QStringLiteral("child-%1").arg(child)));
+        model.appendRow(item);
+    }
+    TreeVisibilityIndex index(&model);
+    index.expand(model.index(1500, 0));
+    QCOMPARE(index.visibleRowCount(), qsizetype(kTopLevel + 3));
+
+    // Expanding a sibling branch deep in the list: only its own children are queried, none
+    // of the ~2000 other rows.
+    index.resetModelQueryCount();
+    index.expand(model.index(1999, 0));
+    QVERIFY2(index.modelQueryCount() < 30,
+             qPrintable(QStringLiteral("model queries: %1").arg(index.modelQueryCount())));
+    QCOMPARE(index.visibleRowCount(), qsizetype(kTopLevel + 6));
+
+    // Row lookups after the shift: the last branch landed after all the rows that changed.
+    QCOMPARE(index.visibleRowForIndex(model.index(1999, 0)), qsizetype(1999 + 3));
+    QCOMPARE(index.visibleRowForIndex(model.index(2, 0, model.index(1999, 0))), qsizetype(2005));
+
+    // Collapsing again must not walk anything either.
+    index.resetModelQueryCount();
+    index.collapse(model.index(1500, 0));
+    QCOMPARE(index.modelQueryCount(), quint64(0));
+    QCOMPARE(index.visibleRowCount(), qsizetype(kTopLevel + 3));
+    QCOMPARE(index.visibleRowForIndex(model.index(1999, 0)), qsizetype(1999));
 }
 
 QTEST_MAIN(TestTreeVisibilityIndex)

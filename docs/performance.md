@@ -101,11 +101,25 @@ Debug 构建（Qt 6.8.3 / msvc2022_64，本机参考值，用于观察趋势而�
 * 前缀表是懒重建的：一次 `insert/remove` 后第一次查询需要付 O(B)。批量变更（模型一次性插入 N 行）
   只重建一次，符合"先正确后优化"的原则。
 * `materializedItems()` 返回的列表在每次 pass 后重建（W 很小），不是热路径瓶颈。
-* **树的可见行查询表是 O(可见行) 的派生结构**：`TreeVisibilityIndex` 用一个
-  `QHash<QModelIndex, row>` 把索引映射回可见行，`expand/collapse` 与每次结构变更后整体重建。
-  键是 index *值*（row/column/internalPointer）而不是 `QPersistentModelIndex`：后者会为每个可见行
-  向模型注册一个持久索引，一百万个可见行时内存从 80 MB 涨到 300+ MB，且清表在 Qt 的持久索引
-  记账下退化为二次复杂度（同一负载下 4 次 expand 从 0.88 s 涨到 12 s）。若以后要支持"百万级
-  同时可见行 + 频繁展开"，下一步是把这张表换成增量结构（分块/前缀和），公开接口不变。
+* **树的可见行映射是增量的（v0.8 / roadmap 2a）**：`TreeVisibilityIndex` 不再维护"整表反向哈希"。
+  索引 → 可见行由**每个已展开父节点一棵 Fenwick 树**（`BranchBlock`：每个子节点存自己的可见子树
+  大小）自底向上累加得到：`row(节点) = Σ 各层 (1 + 该层前序兄弟的可见子树大小)`。因此
+  `visibleRowForIndex()` 是 O(depth × log(siblings))，`expand/collapse` 只沿路径更新
+  （每层 O(log k)），既不重建任何表，也不扫描兄弟；`indexAtVisibleRow()` 仍是 O(1)（可见行列表
+  本身就是唯一事实来源）。分块只在"已展开的父节点"上分配，所以一棵宽树（一百万同时可见行）的
+  额外内存约 8 字节/行，而不是原来那一整张索引哈希表。
+  同一基准（`bench_listview --tree --rows 1000000`，100 万同时可见行）：
+
+  | 指标 | 旧（整表反向哈希） | 新（分块前缀和） |
+  | --- | --- | --- |
+  | 展开一条 4 层深路径 | 969.5 ms | **115.9 ms** |
+  | 折叠根节点 | 229.8 ms | **4.3 ms** |
+  | 打开树后的工作集 | 114.5 MB（+80.5） | **76.0 MB（+41.9）** |
+
+  结构变更（insert/remove/move/layoutChanged/reset）仍然整体重建可见行列表 —— 那是 O(可见行) 的
+  冷路径，也是文档里"先正确后优化"的边界：热路径（展开/折叠 + 滚动 + 锚点）不再依赖它。
+  不变量由 `tests/unit/tst_treevisibilityindex` 与 `tst_virtualtreeview` 守住：展开/折叠不遍历
+  整棵树（模型查询次数）、以及"每一行都能映射回它自己在可见行列表里的位置"（在很宽的树上反复
+  展开/折叠/再展开后逐一校验）。
 * 单元测试与基准运行在 offscreen 平台，不能替代真实合成器下的绘制耗时测量；本库的目标也不是
   击败 `QStyledItemDelegate` 的纯绘制性能（见 README 的定位）。

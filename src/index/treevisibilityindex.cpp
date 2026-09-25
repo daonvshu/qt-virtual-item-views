@@ -29,37 +29,66 @@ void TreeVisibilityIndex::setRootIndex(const QModelIndex &index)
 void TreeVisibilityIndex::rebuild()
 {
     m_visibleRows.clear();
-    m_rowOfDirty = true;
-    if (!m_model) {
-        m_rowOf.clear();
-        m_rowOfDirty = false;
+    m_branches.clear();
+    if (!m_model)
         return;
-    }
 
-    // Iterative depth-first walk: only expanded nodes are descended into, so a
-    // collapsed sub-tree costs a single rowCount() query.
-    struct Cursor
+    // Iterative depth-first walk: only expanded nodes are descended into, so a collapsed
+    // sub-tree costs a single rowCount() query. Every node that is descended into gets a
+    // branch block, filled with its children's visible sub-tree sizes as the walk leaves
+    // them (a child's size is only known once its own sub-tree was walked).
+    struct Frame
     {
-        QModelIndex parent;
+        QModelIndex parent;      // the node whose children are being walked
+        QModelIndex self;        // that node itself (invalid for the root frame)
+        qsizetype size = 1;      // visible rows of self's sub-tree, self included
         int next = 0;
+        int children = 0;
+        bool entered = false;
     };
 
-    QList<Cursor> cursors;
-    cursors.append({m_rootIndex, 0});
-    while (!cursors.isEmpty()) {
-        if (cursors.last().next >= childCount(cursors.last().parent)) {
-            cursors.removeLast();
+    QList<Frame> stack;
+    stack.append(Frame{m_rootIndex, QModelIndex(), 1, 0, 0, false});
+    while (!stack.isEmpty()) {
+        Frame &frame = stack.last();
+        if (!frame.entered) {
+            frame.entered = true;
+            frame.children = childCount(frame.parent);
+            if (frame.children > 0) {
+                BranchBlock block;
+                block.reset(frame.children);
+                m_branches.insert(frame.parent, block);
+            }
+        }
+        if (frame.next >= frame.children) {
+            const qsizetype size = frame.size;
+            const QModelIndex self = frame.self;
+            stack.removeLast();
+            if (!self.isValid())
+                continue; // the root frame: nothing to report upwards
+            // Report this sub-tree's size into *its* parent's block: the frame walks its own
+            // children, so the block to update is the one of self.parent().
+            auto block = m_branches.find(self.parent());
+            if (block != m_branches.end())
+                block->add(self.row(), size);
+            if (!stack.isEmpty())
+                stack.last().size += size;
             continue;
         }
-        const QModelIndex child = m_model->index(cursors.last().next, 0, cursors.last().parent);
+        const int childRow = frame.next++;
+        const QModelIndex child = m_model->index(childRow, 0, frame.parent);
         ++m_modelQueryCount;
-        ++cursors.last().next;
         m_visibleRows.append(child);
-        if (isExpanded(child) && childCount(child) > 0)
-            cursors.append({child, 0});
+        if (isExpanded(child) && childCount(child) > 0) {
+            // The child's own size is reported when its frame is left.
+            stack.append(Frame{child, child, 1, 0, 0, false});
+        } else {
+            frame.size += 1;
+            auto block = m_branches.find(frame.parent);
+            if (block != m_branches.end())
+                block->add(childRow, 1);
+        }
     }
-
-    buildRowLookup();
 }
 
 void TreeVisibilityIndex::handleModelChanged()
@@ -80,27 +109,48 @@ int TreeVisibilityIndex::childCount(const QModelIndex &parent)
     return m_model ? m_model->rowCount(parent) : 0;
 }
 
-void TreeVisibilityIndex::buildRowLookup() const
-{
-    m_rowOf.clear();
-    m_rowOf.reserve(m_visibleRows.size());
-    for (qsizetype row = 0; row < m_visibleRows.size(); ++row) {
-        const QModelIndex index = m_visibleRows.at(row);
-        if (index.isValid())
-            m_rowOf.insert(index, row);
-    }
-    m_rowOfDirty = false;
-}
-
 qsizetype TreeVisibilityIndex::visibleRowForIndex(const QModelIndex &index) const
 {
     if (!index.isValid() || !m_model || index.model() != m_model)
         return -1;
-    if (m_rowOfDirty)
-        buildRowLookup();
     // Visible rows are column 0 rows; a cell index maps to its row.
     const QModelIndex key = index.column() == 0 ? index : index.siblingAtColumn(0);
-    return m_rowOf.value(key, -1);
+    return visibleRowForKey(key);
+}
+
+qsizetype TreeVisibilityIndex::visibleRowForKey(const QModelIndex &index) const
+{
+    // Pre-order rank: walking up, every level contributes itself (1) plus the visible
+    // sub-tree sizes of the siblings before it. The root contributes nothing - its
+    // children start at row 0 - so the sum starts at -1.
+    qint64 row = -1;
+    for (QModelIndex current = index; current.isValid() && current != m_rootIndex;
+         current = current.parent()) {
+        const QModelIndex parent = current.parent();
+        if (parent != m_rootIndex && !isExpanded(parent))
+            return -1; // an ancestor is collapsed: the item is not visible
+        const auto block = m_branches.constFind(parent);
+        if (block == m_branches.constEnd() || current.row() >= block->childCount)
+            return -1;
+        row += 1 + block->prefix(current.row());
+        if (row < 0)
+            return -1;
+    }
+    return row;
+}
+
+void TreeVisibilityIndex::addToAncestors(const QModelIndex &index, qsizetype delta)
+{
+    if (delta == 0)
+        return;
+    for (QModelIndex current = index; current.isValid() && current != m_rootIndex;
+         current = current.parent()) {
+        const QModelIndex parent = current.parent();
+        auto block = m_branches.find(parent);
+        if (block == m_branches.end())
+            return; // not expanded: nothing inside it is visible, so no offset shifts
+        block->add(current.row(), delta);
+    }
 }
 
 QModelIndex TreeVisibilityIndex::indexAtVisibleRow(qsizetype row) const
@@ -133,15 +183,17 @@ void TreeVisibilityIndex::expand(const QModelIndex &index)
     if (!m_model || !index.isValid() || isExpanded(index))
         return;
 
-    m_expanded.insert(QPersistentModelIndex(index));
-
     const qsizetype row = visibleRowForIndex(index);
     if (row < 0)
-        return; // the expanded item is not visible: nothing to insert
+        return; // the item is not visible: its children cannot become visible either
 
-    const QVector<QModelIndex> subtreeRows = visibleSubtreeRows(index);
+    m_expanded.insert(QPersistentModelIndex(index));
+
+    BranchBlock block;
+    const QVector<QModelIndex> subtreeRows = visibleSubtreeRows(index, &block);
     if (subtreeRows.isEmpty())
-        return;
+        return; // no children: only the expansion state changed
+    m_branches.insert(index, block);
 
     QVector<QModelIndex> spliced;
     spliced.reserve(m_visibleRows.size() + subtreeRows.size());
@@ -149,7 +201,8 @@ void TreeVisibilityIndex::expand(const QModelIndex &index)
     spliced.append(subtreeRows);
     spliced.append(m_visibleRows.mid(int(row) + 1));
     m_visibleRows = spliced;
-    m_rowOfDirty = true;
+    // Everything below the anchor shifted down: tell the ancestors, not the whole tree.
+    addToAncestors(index, subtreeRows.size());
 }
 
 void TreeVisibilityIndex::expandRecursively(const QModelIndex &index)
@@ -188,12 +241,15 @@ void TreeVisibilityIndex::collapse(const QModelIndex &index)
     if (row < 0)
         return;
 
-    qsizetype end = row + 1;
-    while (end < m_visibleRows.size() && isDescendantOf(m_visibleRows.at(end), index))
-        ++end;
-    if (end > row + 1)
-        m_visibleRows.remove(int(row) + 1, int(end - row - 1));
-    m_rowOfDirty = true;
+    // The visible rows of a sub-tree are contiguous right after its own row, and their
+    // number is exactly the block's total - no scan with isDescendantOf() needed. The
+    // block is kept: the expansion state inside the sub-tree is untouched, so its sizes
+    // stay valid and re-expanding costs one splice instead of a re-walk.
+    const auto block = m_branches.constFind(index);
+    const qsizetype removed = block == m_branches.constEnd() ? 0 : block->total();
+    if (removed > 0)
+        m_visibleRows.remove(int(row) + 1, int(removed));
+    addToAncestors(index, -removed);
 }
 
 void TreeVisibilityIndex::setExpanded(const QModelIndex &index, bool expanded)
@@ -212,44 +268,59 @@ void TreeVisibilityIndex::collapseAll()
     rebuild();
 }
 
-QVector<QModelIndex> TreeVisibilityIndex::visibleSubtreeRows(const QModelIndex &index)
+QVector<QModelIndex> TreeVisibilityIndex::visibleSubtreeRows(const QModelIndex &index,
+                                                            BranchBlock *block)
 {
     QVector<QModelIndex> rows;
     if (!m_model || !index.isValid())
         return rows;
 
-    struct Cursor
+    if (block)
+        block->reset(childCount(index));
+
+    struct Frame
     {
         QModelIndex parent;
+        qsizetype row = -1;
+        qsizetype size = 1;
         int next = 0;
+        int children = 0;
+        /// True when this frame describes a direct child of the anchor: only those sizes
+        /// belong to the anchor's branch block (deeper frames report into their own parent,
+        /// which lives on the stack).
+        bool inBlock = false;
     };
 
-    QList<Cursor> cursors;
-    cursors.append({index, 0});
-    while (!cursors.isEmpty()) {
-        if (cursors.last().next >= childCount(cursors.last().parent)) {
-            cursors.removeLast();
+    QList<Frame> stack;
+    stack.append(Frame{index, -1, 1, 0, childCount(index), false});
+    while (!stack.isEmpty()) {
+        Frame &frame = stack.last();
+        if (frame.next >= frame.children) {
+            const qsizetype size = frame.size;
+            const qsizetype row = frame.row;
+            const bool inBlock = frame.inBlock;
+            stack.removeLast();
+            if (!stack.isEmpty())
+                stack.last().size += size;
+            if (block && inBlock)
+                block->add(row, size);
             continue;
         }
-        const QModelIndex child = m_model->index(cursors.last().next, 0, cursors.last().parent);
+        const int childRow = frame.next++;
+        const QModelIndex child = m_model->index(childRow, 0, frame.parent);
         ++m_modelQueryCount;
-        ++cursors.last().next;
         rows.append(child);
-        if (isExpanded(child) && childCount(child) > 0)
-            cursors.append({child, 0});
+        if (isExpanded(child) && childCount(child) > 0) {
+            const bool childInBlock = frame.parent == index;
+            stack.append(Frame{child, childRow, 1, 0, childCount(child), childInBlock});
+        } else {
+            frame.size += 1;
+            if (block && frame.parent == index)
+                block->add(childRow, 1);
+        }
     }
     return rows;
 }
 
-bool TreeVisibilityIndex::isDescendantOf(const QModelIndex &candidate, const QModelIndex &ancestor) const
-{
-    if (!candidate.isValid() || !ancestor.isValid())
-        return false;
-    for (QModelIndex parent = candidate.parent(); parent.isValid(); parent = parent.parent()) {
-        if (parent == ancestor)
-            return true;
-    }
-    return false;
-}
 
 } // namespace viv
