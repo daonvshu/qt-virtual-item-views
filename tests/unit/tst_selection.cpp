@@ -37,6 +37,7 @@ private slots:
     void init();
     void noSelectionNeverSelectsAnything();
     void spaceTogglesTheCurrentItem();
+    void spaceTogglesWholeRowsWhenRowsAreSelected();
     void selectRowsTogglesWholeRowsOnCtrlClick();
     void multiSelectionTogglesWholeRowsOnEveryClick();
 };
@@ -91,6 +92,37 @@ void TestSelection::spaceTogglesTheCurrentItem()
     settle();
     QVERIFY(m_view.selectionModel()->isSelected(m_model.index(4, 0)));
     QCOMPARE(m_view.currentIndex(), m_model.index(4, 0));
+}
+
+void TestSelection::spaceTogglesWholeRowsWhenRowsAreSelected()
+{
+    // The review's checklist pairs "SelectRows + Ctrl click" with "SelectRows + Space":
+    // the keyboard has to go through the same selection flags as the mouse, so Space
+    // toggles the *row* and not just the current cell.
+    m_view.setSelectionMode(VirtualItemView::SelectionMode::ExtendedSelection);
+    m_view.setSelectionBehavior(VirtualItemView::SelectionBehavior::SelectRows);
+    m_view.setCurrentIndex(m_model.index(7, 0));
+    QVERIFY(m_view.selectionModel()->isRowSelected(7, QModelIndex()));
+
+    QTest::keyClick(&m_view, Qt::Key_Space); // toggles the whole row off
+    settle();
+    QVERIFY(!m_view.selectionModel()->isRowSelected(7, QModelIndex()));
+    QVERIFY(!m_view.selectionModel()->hasSelection());
+    QVERIFY(m_view.selectionModel()->selectedIndexes().isEmpty());
+
+    QTest::keyClick(&m_view, Qt::Key_Space); // ... and back on, still a whole row
+    settle();
+    QVERIFY(m_view.selectionModel()->isRowSelected(7, QModelIndex()));
+    QVERIFY(m_view.selectionModel()->selectedRows().contains(m_model.index(7, 0)));
+    QCOMPARE(m_view.currentIndex(), m_model.index(7, 0));
+
+    // MultiSelection behaves the same way (every Space toggles that row).
+    m_view.setSelectionMode(VirtualItemView::SelectionMode::MultiSelection);
+    m_view.setCurrentIndex(m_model.index(2, 0));
+    QVERIFY(m_view.selectionModel()->isRowSelected(2, QModelIndex()));
+    QTest::keyClick(&m_view, Qt::Key_Space);
+    settle();
+    QVERIFY(!m_view.selectionModel()->isRowSelected(2, QModelIndex()));
 }
 
 void TestSelection::selectRowsTogglesWholeRowsOnCtrlClick()
