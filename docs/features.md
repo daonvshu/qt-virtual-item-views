@@ -1,7 +1,7 @@
 # 能力清单与状态（v1.0.0）
 
-> README 首页只放概览，这里是完整清单，按实现顺序逐条列出。每一项都有用例、示例或基准守着，
-> 验证方式见 [performance.md](performance.md) §2 与 `scripts/validate.ps1`。
+> 逐项能力状态，按实现顺序逐条列出。每一项都有用例、示例或基准守着，验证方式见
+> [performance.md](performance.md) §2 与 `scripts/validate.ps1`。
 
 | 能力 | 状态 |
 | --- | --- |

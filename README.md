@@ -1,97 +1,91 @@
 # VirtualItemViews
 
-> **Qt Widgets 的虚拟化 Item View 框架**：用 `QAbstractItemModel` 做数据源，只实例化可见区、overscan 与 pinned 范围内的**真实 QWidget**，滚动时复用它们。
+Qt Widgets 的虚拟化 Item View 框架：用 `QAbstractItemModel` 做数据源，只实例化可见区、overscan
+和 pinned 范围内的**真实 QWidget**，并在滚动时复用它们。
 
-Virtualized QWidget item views for Qt Widgets — real widgets, but only where you can see them. C++17 · Qt 5.15 / Qt 6.2+ · static or shared.
-
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Qt](https://img.shields.io/badge/Qt-5.15%20%7C%206.2%2B-41cd52.svg)](docs/abi.md)
-[![C++17](https://img.shields.io/badge/C%2B%2B-17-blue.svg)](CMakeLists.txt)
-[![Version](https://img.shields.io/badge/version-1.0.0-brightgreen.svg)](CHANGELOG.md)
-
-它**不是** `QListView` 的替代品。它解决的是另一个工程折中：复杂业务行用 Delegate 绘制会带来大量
-`paint`、`geometry`、`hit-test`、`editorEvent` 样板代码，而 `QListWidget + setItemWidget` 又会为
-每一行创建真实控件。VirtualItemViews 提供第三条路：**只创建看得见的行，且这些行是真正的
-QWidget**。
-
-## 亮点
-
-* **只创建看得见的行，而且它们是真控件** —— 行内的按钮、开关、进度条、编辑器、异步图片照常工作，
-  不用写 `paint()` / `sizeHint()` / `hitTest()` / `editorEvent()` 那一套 Delegate 样板。
-* **千万级逻辑行不虚**：1,000,000 行列表打开 15.8 ms、稳态滚动 0.89 ms/步、滚动期间 0 次
-  new/delete；1,000,000 个同时可见行的树打开 4.2 s、展开一条 4 层深路径 174.9 ms 且只查模型 48 次。
-  数字与命令见 [performance.md](docs/performance.md)。
-* **动态高度**：估计值 + 测量反馈 + `ScrollAnchor`，异步改变行高不让视口跳动。
-* **表格能干的活都干了**：冻结列（左/右）、冻结行（上/下）、span 合并、多滚动组（任意 pane 与
-  滚动组）、表头动画与拖动换序、Row Widget / Cell Widget 两种物化模式；列几何只有一个事实来源
-  （`HeaderGeometry`），没有第二份副本。
-* **树**：可见行压平 + 同一个 list kernel；expand/collapse 是增量的（每个已展开父节点一棵
-  Fenwick 前缀和），结构变更保留展开状态与滚动锚点。
-* **交互**：拖放（视图管交互、模型管语义，树支持「成为子节点」）、像素滚动、触控板 `pixelDelta`
-  1:1、焦点 / IME / popup pinning、`QSortFilterProxyModel` 直连。
-* **可访问性**：`QAccessibleInterface` 桥接只暴露可见行（百万行模型仍是十几个节点），表格另有
-  `QAccessibleTableInterface` / `QAccessibleTableCellInterface`。
-* **工程化**：静态库与动态库都支持，装完就是标准 CMake 包（消费端一行 `find_package`）；公开 API
-  按「应用 / 扩展 / 诊断 / 私有」四级冻结；`pwsh -File scripts/validate.ps1` 一条命令跑完四种组合
-  共 28 步验证。
-
-## 能力概览
-
-| 区域 | 内容 |
-| --- | --- |
-| 内核 | `VirtualItemView`（基于 `QAbstractScrollArea`）、`WidgetAdapter` / `WidgetRecycler` 分池、`ScrollMapper`（64 位逻辑滚动空间）、`SizeIndex`（固定 / 动态，动态侧只存「与估计值不同」的行）、`LayoutPolicy` / `ListLayout` |
-| 列表 | `VirtualListView`：固定高度 + 动态高度 + 异步测量 + 滚动锚点 |
-| 表格 | `VirtualTableView`：`HeaderGeometry` 单一事实来源、Row Widget / Cell Widget 两种模式、列 resize / move / hide / 排序 / 状态持久化 |
-| 冻结 | 冻结列（左/右）、冻结行（上/下）、显式 pane 列表与多滚动组、交界线样式 |
-| 合并 | span（`TableSpanProvider` / `TableSpanMap`）：矩形完全由已提交几何推出，两种物化模式都支持 |
-| 表头 | `NativeHeaderView`（QHeaderView 适配）、`VirtualHeaderView` + `HeaderWidgetAdapter`（每个可见 section 一个真控件）、换序动画 |
-| 树 | `VirtualTreeView`：增量展开/折叠、缩进、分支指示与自定义渲染器、结构变更保状态 |
-| 交互 | 拖放（含树「成为子节点」与边缘自动滚动）、选择模式、像素滚动、键盘导航、pin / IME / popup |
-| 数据 | 任意 `QAbstractItemModel`（含 `QSortFilterProxyModel`）、完整模型信号矩阵 |
-| 可访问性 | `installAccessibilityFactory()`、表格与单元格接口、焦点与动作 |
-| 工程化 | 静态 + 动态库、安装包与消费端冒烟测试、API / ABI 文档、12 个示例、基准与一键验证 |
-| 规模 | 十万到千万级逻辑行；实测基线见 [performance.md](docs/performance.md) |
-
-逐项状态（60 余条，含落点语义、边界与对应示例）见 **[docs/features.md](docs/features.md)**。
-
-## 界面预览
-
-下面几张图是仓库里的示例程序自己导出的（`--snapshot`，无人值守可复现），不是手绘示意图；
-重跑一遍就能得到同样的图：
-
-| 冻结行 + 冻结列 + 行号条（`table_frozen_rows --snapshot`） | 合并单元格（`table_spans --snapshot`） |
-| --- | --- |
-| ![冻结行与冻结列](docs/images/frozen.png) | ![合并单元格](docs/images/spans.png) |
-| 树 + 自定义分支图标（`tree_view --custom-icons --snapshot`） | 拖放：三种落点语义（`drag_drop --hover tree:120 --snapshot`） |
-| ![树](docs/images/tree.png) | ![拖放指示器](docs/images/dragdrop.png) |
-
-## 定位与适用场景
+## 适用场景
 
 适合：
 
-* 行内包含真实控件（按钮、开关、进度条、编辑器、异步图片）的企业列表；
+* 行内包含真实控件（按钮、开关、进度条、编辑器、异步图片）的企业列表、表格与树；
 * 行高由业务内容决定、甚至会异步变化的长列表；
 * 十万到千万级逻辑行，需要稳定内存与稳定滚动性能的场景。
 
 不适合：
 
-* 只需要纯绘制、追求极限吞吐的表格（请用 `QTableView` + `QStyledItemDelegate`）；
-* 需要 GPU / scenegraph 渲染的场景（本库的绘制走 QPainter，与 `QWidget` 行同源）；
+* 只需要纯绘制、追求极限吞吐的表格 —— 请用 `QTableView` + `QStyledItemDelegate`；
+* 需要 GPU / scenegraph 渲染的场景（本库的绘制走 QPainter，与 QWidget 行同源）；
 * 每行都是重型浏览器/视频控件、且要求十万级**同时可见**的场景（真控件始终有成本，
   虚拟化的收益来自"只看得到的那几十个"）。
 
-## 快速开始
+它**不是** `QListView` 的替代品。复杂业务行用 Delegate 绘制会带来大量 `paint()`、`sizeHint()`、
+`hitTest()`、`editorEvent()` 样板代码，而 `QListWidget + setItemWidget` 又会为每一行创建真实控件。
+VirtualItemViews 走第三条路：**只创建看得见的行，且这些行是真正的 QWidget**。
+
+## 基本架构
+
+```
+        VirtualListView / VirtualTableView / VirtualTreeView          业务 API
+                                  ↓
+        VirtualItemView（内核：滚动空间、可见区间、物化与回收、
+                        无效化合并、选择 / current / 焦点 / 拖放）
+             ↑                                      ↑
+    LayoutPolicy / ListLayout              WidgetAdapter / WidgetRecycler
+    SizeIndex（行高：固定 / 动态）          业务 QWidget 的创建、绑定与复用
+```
+
+* **内核**：`VirtualItemView`（继承 `QAbstractScrollArea`）持有滚动空间、可见区间、控件物化与
+  回收、无效化合并、选择与 current；子类只提供"视图行 ↔ QModelIndex"的映射和布局策略。
+* **布局**：`LayoutPolicy` / `ListLayout` 管几何，行高来自 `SizeIndex` —— `FixedSizeIndex` 固定
+  行高全部 O(1)，`BlockSizeIndex` 动态行高只保存"与估计值不同"的行（没测量过的行不占存储）。
+* **控件**：`WidgetAdapter` 定义"建控件 / 灌数据 / 解绑"三个函数，`WidgetRecycler` 按
+  `WidgetType` 分池；滚动只做 bind / recycle，稳态滚动不 new / delete。
+* **表格**在内核之上加 `HeaderGeometry`（列宽、顺序、隐藏、排序、横向偏移的唯一事实来源）与表头
+  渲染器（`NativeHeaderView`，或每个可见 section 一个真实控件的 `VirtualHeaderView`）。
+* **树**用 `TreeVisibilityIndex` 把模型树压平成"可见行"，再喂给同一个 list 内核实现。
+
+核心不变量：物化控件 = 可见 + overscan + pinned；池里的控件没有身份；一个 QModelIndex 同时最多
+对应一个控件；模型变更（insert / remove / move / dataChanged / reset）不需要业务手动 reload。
+
+## 怎么用
+
+### 列表：最小可用
 
 ```cpp
-#include <virtualitemviews/widgetadapter.h>
 #include <virtualitemviews/virtuallistview.h>
+#include <virtualitemviews/widgetadapter.h>
 
+// 1) 行内业务控件：长什么样、怎么响应用户，都是你自己的事
+class OrderCardWidget : public QWidget
+{
+public:
+    explicit OrderCardWidget(QWidget *parent = nullptr) : QWidget(parent)
+    {
+        m_title = new QLabel(this);
+        m_action = new QPushButton(QStringLiteral("处理"), this);   // 按钮照常收到自己的事件
+    }
+
+    void bind(const QModelIndex &index) { m_title->setText(index.data(Qt::DisplayRole).toString()); }
+
+    void unbind()
+    {
+        // 停掉与上一行绑定的定时器 / 动画 / 异步请求；控件马上会被拿去给别的行用
+    }
+
+    QSize sizeHint() const override { return QSize(600, 96); }
+
+private:
+    QLabel *m_title = nullptr;
+    QPushButton *m_action = nullptr;
+};
+
+// 2) 适配器：内核只问你三件事 —— 建控件、灌数据、解绑
 class OrderAdapter : public viv::WidgetAdapter
 {
 public:
     QWidget *createWidget(viv::WidgetType, QWidget *parent) override
     {
-        return new OrderCardWidget(parent);            // 行内真实业务控件
+        return new OrderCardWidget(parent);
     }
 
     void bindWidget(QWidget *widget, const QModelIndex &index) override
@@ -101,142 +95,334 @@ public:
 
     void unbindWidget(QWidget *widget, const QModelIndex &index) override
     {
-        static_cast<OrderCardWidget *>(widget)->stopAsyncWork(index);
+        Q_UNUSED(index);
+        static_cast<OrderCardWidget *>(widget)->unbind();
     }
 
     QSize estimatedSize(const QModelIndex &) const override { return QSize(600, 96); }
 };
 
+// 3) 接上模型
 OrderAdapter adapter;
-QMainWindow window;
-// 视图交给窗口持有：不要在栈上创建视图后再 setCentralWidget()，
-// 否则窗口析构时会 delete 一个栈对象（退出时崩溃）。
-auto *view = new viv::VirtualListView(&window);
+auto *view = new viv::VirtualListView(&window);   // 视图交给窗口持有，不要放栈上
 view->setAdapter(&adapter);
-view->setUniformItemHeight(96);       // 固定行高；动态行高见 setItemHeightMode(Variable)
-view->setOverscan(2, 2);
-view->setWheelScrollMode(viv::VirtualItemView::WheelScrollMode::Pixels);
-view->setWheelScrollPixels(48);       // 一个滚轮刻度 48 px，与行高无关
-view->setModel(model);                // 任意 QAbstractItemModel，含 QSortFilterProxyModel
-
-connect(view, &viv::VirtualItemView::clicked, [](const QModelIndex &index) {
-    // 行内 QPushButton 等控件仍然自己处理事件；空白区域点击会走到这里
-});
-
-view->scrollByPixels(24);             // 程序内同样按像素滚动
-const viv::VirtualViewStats stats = view->stats();  // 诊断/debug overlay
-// logicalItems / materializedItems / pooledWidgets / pinnedWidgets
-// createCount / bindCount / recycleCount
+view->setUniformItemHeight(96);                   // 固定行高
+view->setModel(&model);                           // 任意 QAbstractItemModel
 ```
 
-完整的可运行示例在 `examples/`（全部为像素滚动；都支持 `--exit-after <ms>`，另有各自的规模与
-滚动参数，如列表的 `--rows`、树的 `--devices`、统一的 `--wheel-pixels`，便于无人值守运行；
-退出码 0 表示正常结束）；[tests/install/consumer](tests/install/consumer) 是最小的**完整工程**
-（`CMakeLists.txt` + `main.cpp`），演示怎么从零把库用起来，见下文「安装与消费」：
-
-表格（Row Widget Mode）：一行一个业务 QWidget，列由 `ColumnHost` 承载，
-列几何全部来自 `HeaderGeometry`（表头与行共享同一份 committed geometry）：
+### 列表：动态行高（估计值 + 测量反馈）
 
 ```cpp
+// 行控件自己决定高度：视图会读它的 sizeHint()
+class NoteWidget : public QWidget
+{
+public:
+    QSize sizeHint() const override
+    {
+        const int body = m_expanded ? 20 + m_body->heightForWidth(qMax(200, width())) : 0;
+        return QSize(600, qMax(24, 24 + body));
+    }
+
+    void bind(const QModelIndex &index)
+    {
+        m_expanded = index.data(kExpandedRole).toBool();
+        m_body->setVisible(m_expanded);
+        updateGeometry();                          // 内容变了就告诉布局
+    }
+};
+
+view->setItemHeightMode(viv::VirtualItemView::ItemHeightMode::Variable);
+view->setEstimatedItemHeight(24);      // 还没量过的行先用这个高度，滚动范围立刻可用
+view->setAutoMeasureItemHeight(true);  // 行控件绑定后自动测量 sizeHint()
+
+// 异步改行高（图片下载完、展开/折叠之后）：在你的模型里发一次 dataChanged
+void NoteModel::setExpanded(const QModelIndex &index, bool expanded)
+{
+    // ...改数据...
+    emit dataChanged(index, index, { Qt::DisplayRole });
+}
+// 视图只重测这一行，并用滚动锚点补偿：视口上方的行变高时，正在看的内容不会跳。
+```
+
+### 列表：像素滚动、overscan、pin 与诊断
+
+```cpp
+view->setOverscan(2, 2);               // 视口上下各多留 2 行，减少滚动瞬间的建控件
+view->setWheelScrollMode(viv::VirtualItemView::WheelScrollMode::Pixels);
+view->setWheelScrollPixels(48);        // 一个滚轮刻度 48 px，与行高无关；触控板按 pixelDelta 1:1
+view->setVerticalOffset(1200);         // 也可以按像素直接定位
+view->scrollByPixels(24);
+view->scrollTo(model.index(500, 0), viv::VirtualItemView::ScrollHint::PositionAtCenter);
+
+// 让某一行离开可见区后仍然存在（异步操作、行内编辑器、正在播的动画……）
+view->setItemPinned(model.index(3, 0), true);
+view->pinWidget(widget);               // 等价于按控件反查 index 再 pin
+view->setMaxPinnedItems(50);           // 超过阈值只 qWarning 一次，方便定位"pin 得太多"
+
+// 诊断：实例化 / 池 / pin 的数量与累计 create / bind / recycle 次数
+const viv::VirtualViewStats stats = view->stats();
+view->setLifecycleLoggingEnabled(true);      // 有界事件日志（create/bind/unbind/recycle/pin）
+```
+
+### 表格：行控件模式（一行一个业务控件）
+
+```cpp
+// 行控件里用 ColumnHost 承载每一列，框架负责定位，不要自己算 x
 class OrderRowWidget : public QWidget
 {
 public:
     explicit OrderRowWidget(QWidget *parent = nullptr) : QWidget(parent)
     {
-        m_order = new QLabel(new viv::ColumnHost(0, this));     // 框架负责定位
-        m_status = new QLabel(new viv::ColumnHost(2, this));
+        m_order = new QLabel(new viv::ColumnHost(0, this));
+        m_status = new QLabel(new viv::ColumnHost(1, this));
+        m_amount = new QLabel(new viv::ColumnHost(2, this));
     }
-    // ...
+
+    void bind(const QModelIndex &rowIndex)
+    {
+        m_order->setText(rowIndex.siblingAtColumn(0).data().toString());
+        m_status->setText(rowIndex.siblingAtColumn(1).data().toString());
+        m_amount->setText(rowIndex.siblingAtColumn(2).data().toString());
+    }
+
+private:
+    QLabel *m_order = nullptr;
+    QLabel *m_status = nullptr;
+    QLabel *m_amount = nullptr;
+};
+
+class OrderTableAdapter : public viv::TableWidgetAdapter
+{
+public:
+    QWidget *createWidget(viv::WidgetType, QWidget *parent) override
+    {
+        return new OrderRowWidget(parent);
+    }
+
+    void bindWidget(QWidget *widget, const QModelIndex &index) override
+    {
+        static_cast<OrderRowWidget *>(widget)->bind(index);
+    }
+
+    QSize estimatedSize(const QModelIndex &) const override { return QSize(600, 44); }
 };
 
 auto *table = new viv::VirtualTableView(&window);
-table->setTableAdapter(&adapter);              // TableWidgetAdapter（可选 layoutRowWidget()）
+table->setTableAdapter(&adapter);
 table->setUniformItemHeight(44);
 table->setDefaultColumnWidth(150);
-table->setSortingEnabled(true);
-table->setModel(model);
+table->setModel(&model);
 
-table->setColumnHidden(1, true);               // 列状态只有一个写入口
+// 列状态只有一个写入口，表头、行、合并单元格都从同一份几何读
+table->setColumnWidth(1, 220);
+table->setColumnHidden(3, true);
 table->moveColumn(2, 0);
+table->setSortingEnabled(true);
+table->setSortIndicator(0, Qt::AscendingOrder);
+
+// 表头状态持久化：列宽 / 顺序 / 隐藏 / 排序 / 横向偏移
 const QByteArray state = table->saveHeaderState();
 table->restoreHeaderState(state);
-
-// Cell Widget Mode（可选）：每个可见 cell 一个 QWidget，二维虚拟化
-table->setCellAdapter(&cellAdapter);
-table->setMaterializationMode(viv::VirtualTableView::MaterializationMode::CellWidgets);
 ```
 
-冻结列（§31）：冻结列固定在自己的 pane 里，不参与横向滚动；三个 pane 都从同一份
-`HeaderGeometry` 派生，所以没有"冻结表头自己的列宽副本"，拖动列宽会同时影响所有 pane：
+不想用 `ColumnHost`、要自己摆列的话，实现 `layoutRowWidget(widget, rowIndex, context)` 钩子：
+`context.columnsToLayout()` 给出这一轮要摆的列，`context.columnX(column)` 是列在行控件内的 x，
+`context.column(column)` 是完整几何（宽度、是否隐藏），`context.paneHostForColumn(column)`
+是这一列该挂的裁剪容器（有冻结列或多滚动组时用）。
+
+### 表格：单元格模式（每个可见 cell 一个控件）
 
 ```cpp
-table->setFrozenColumns({0, 1});        // 左侧冻结（顺序无关，按视觉顺序排列）
-table->setFrozenRightColumns({N - 1});  // 右侧冻结，右对齐贴住视口右边
-table->isColumnFrozen(0);               // 查询
-const QVector<viv::TablePane> panes = table->panes();   // 三个 pane 的矩形与列集合
+class OrderCellAdapter : public viv::CellWidgetAdapter
+{
+public:
+    QWidget *createCellWidget(viv::WidgetType, QWidget *parent) override
+    {
+        return new QLabel(parent);
+    }
+
+    void bindCellWidget(QWidget *widget, const QModelIndex &index) override
+    {
+        static_cast<QLabel *>(widget)->setText(index.data(Qt::DisplayRole).toString());
+    }
+
+    // 按列分池：计数列用一套控件、状态列用另一套
+    viv::WidgetType cellWidgetType(const QModelIndex &index) const override
+    {
+        return index.column();
+    }
+};
+
+auto *table = new viv::VirtualTableView(&window);
+table->setModel(&model);
+table->setUniformItemHeight(28);
+table->setCellAdapter(&cellAdapter);
+table->setMaterializationMode(viv::VirtualTableView::MaterializationMode::CellWidgets);
+// 只实例化 visibleRows x visibleColumns；横向与纵向滚动都复用同一批控件
+```
+
+### 表格：冻结列与冻结行
+
+```cpp
+table->setFrozenColumns({0, 1});        // 左侧冻结两列（顺序无关，按视觉顺序排列）
+table->setFrozenRightColumns({N - 1});  // 右侧冻结一列，右对齐贴住视口右边
+table->setFrozenRows(2);                // 顶部冻结两行
+table->setFrozenBottomRows(1);          // 底部冻结一行（比如合计行）
+
+// 冻结 pane 与滚动 pane 共用同一份列几何 / 行几何，没有第二份列宽或行高副本
+table->isColumnFrozen(0);
+table->panes();                         // 列方向：冻结左 / 滚动 / 冻结右（可能还有多个滚动组）
+table->itemPanes();                     // 行方向：冻结上 / 滚动 / 冻结下（各自的矩形与行区间）
+
+// 交界线：表头与 body 连成一条，行方向的横向线还会跨过行号条
+viv::PaneSeparatorStyle style;
+style.width = 1;
+style.color = QColor();                 // 不设置就取当前样式画列分隔线的颜色
+style.lineStyle = Qt::SolidLine;
+table->setPaneSeparatorStyle(style);
+
 table->clearFrozenColumns();
 ```
 
-pane 交界那条线（表头 + body 连成一条）可以自定义颜色 / 线宽 / 线型：
+冻结不产生额外滚动空间：可滚动区少掉的像素恰好等于冻结带的宽度（列方向）/ 高度（行方向），
+所以横向与纵向的滚动范围都不会因为冻结而改变。
+
+### 表格：合并单元格（span）
 
 ```cpp
-viv::PaneSeparatorStyle separator;      // 默认：1px，颜色取"当前样式画列分隔线用的颜色"
-separator.width = 3;                    // 像素；0 = 不画这条线
-separator.color = QColor("#e05555");    // 不设置（invalid）就自动与列分隔线同色
-separator.lineStyle = Qt::SolidLine;    // 也支持 DashLine / DotLine（虚线在以该宽度为界的带内居中）
-table->setPaneSeparatorStyle(separator);
-```
+// 最省事的用法：直接给合并区域的行列跨度（从第 0 行第 0 列起横跨 3 列）
+table->setSpan(0, 0, 1, 3);
+table->removeSpan(0, 0);
+table->clearSpans();
 
-Row Widget Mode 下一行仍然只有一个业务控件（冻结列的 `ColumnHost` 被框架 `raise()` 到上层，
-遮住滚到它下面的列）；Cell Widget Mode 下冻结 cell 在任何滚动位置都保持实例化。
-`examples/table_many_columns` 勾选「冻结前 2 列」即可看到效果。
-
-树（v0.6）：树是"可见行压平 + 同一个 list kernel"，业务只管提供标准的
-`QAbstractItemModel` 树，展开状态、缩进、分支指示与键盘导航都由框架处理：
-
-```cpp
-auto *tree = new viv::VirtualTreeView(&window);
-tree->setAdapter(&adapter);                 // 与 List 相同的 WidgetAdapter
-tree->setUniformItemHeight(26);
-tree->setIndentation(20);                   // 每层缩进像素
-tree->setBranchIndicatorsVisible(true);     // 由视图绘制并可点击（行控件不受影响）
-tree->setModel(&treeModel);
-
-tree->expand(model.index(0, 0));            // 也可以双击 / 点分支指示 / Right 键
-tree->setRootIndex(model.index(3, 0));      // 只看某一棵子树
-const qsizetype visible = tree->visibleRowCount();
-```
-
-分支图标可以按状态自定义（不需要图片资源，也不解析样式表）。视图会把每个可见行的**每一格**交给
-渲染器：`cellDepth == itemDepth` 的那一格就是行自己那格（带展开/收起图标），更浅的格子是祖先格，
-可以画 `├ └ │` 这类连接线。状态字段与 `QTreeView::branch` 的伪状态一一对应：
-
-| `BranchIndicatorState` | `QTreeView::branch` | 含义 |
-| --- | --- | --- |
-| `hasChildren` | `:has-children` | 该格对应的节点有子节点 |
-| `hasSiblings` | `:has-siblings` | 同层下面还有兄弟节点（竖线要继续） |
-| `adjoinsItem` | `:adjoins-item` | 这一格就是行自己那格（只有它带展开/收起图标） |
-| `isExpanded` / `isOpen()` / `isClosed()` | `:open` / `:closed` | 展开状态（只对有子节点有意义） |
-| `isLeaf()` | `:!has-children` | 叶子 |
-| `cellDepth` / `itemDepth` | — | 格子的层级 / 行的深度 |
-
-```cpp
-class BranchGlyphRenderer : public viv::BranchIndicatorRenderer
+// 合并规则由业务决定时，实现自己的 provider
+class GroupSpanProvider : public viv::TableSpanProvider
 {
 public:
-    // 简单情形：一个状态一个图标。返回空 QIcon 表示这格不画东西。
+    // 约定：只有锚点报出 span，被覆盖的格子报 1x1
+    viv::TableSpan spanAt(const QModelIndex &index) const override
+    {
+        if (index.column() == 0 && isGroupHeader(index.row()))
+            return viv::TableSpan{1, 4};
+        return viv::TableSpan{};
+    }
+
+private:
+    bool isGroupHeader(int row) const { /* 你的规则 */ return row % 5 == 0; }
+};
+
+GroupSpanProvider provider;             // 生命周期由业务持有
+table->setSpanProvider(&provider);      // takeOwnership = true 时交给表格 delete
+
+// 合并矩形完全由已提交的列几何与行高推出；被覆盖的格子会折回锚点
+const QRect merged = table->cellRect(model.index(0, 0));
+const QModelIndex anchor = table->anchorIndex(model.index(0, 2));
+```
+
+### 表格：多个滚动组
+
+```cpp
+// 一块冻结列 + 两组各自滚动的列：任意数量的 pane 与滚动组，按视觉顺序给出
+viv::TablePaneSpec frozenPane;
+frozenPane.logicalColumns = {0};                // 左侧冻结
+frozenPane.scroll = viv::PaneScroll::Frozen;
+
+viv::TablePaneSpec leftGroup;
+leftGroup.logicalColumns = {1, 2, 3};
+leftGroup.scrollGroup = 0;                      // 组 0 是主组：跟随表头与横向滚动条
+
+viv::TablePaneSpec rightGroup;
+rightGroup.logicalColumns = {4, 5, 6};
+rightGroup.scrollGroup = 1;                     // 其它组自己驱动
+
+table->setPanes({frozenPane, leftGroup, rightGroup});
+table->scrollGroups();                          // {0, 1}
+table->setHorizontalOffset(1, 120);             // 只动组 1；主组用 setHorizontalOffset(120)
+table->maximumHorizontalOffset(1);
+```
+
+### 表格：每个可见列一个真实控件的表头
+
+```cpp
+// section 控件可以放徽标、进度、筛选按钮、搜索框……只在可见列上实例化
+class SectionHeader : public QWidget
+{
+public:
+    void setTitle(const QString &title) { m_title->setText(title); }
+
+private:
+    QLabel *m_title = nullptr;
+};
+
+class SectionHeaderAdapter : public viv::HeaderWidgetAdapter
+{
+public:
+    explicit SectionHeaderAdapter(const QAbstractItemModel *model) : m_model(model) {}
+
+    QWidget *createSection(viv::WidgetType, QWidget *parent) override
+    {
+        return new SectionHeader(parent);
+    }
+
+    void bindSection(QWidget *widget, int logicalIndex) override
+    {
+        static_cast<SectionHeader *>(widget)->setTitle(
+            m_model->headerData(logicalIndex, Qt::Horizontal, Qt::DisplayRole).toString());
+    }
+
+private:
+    const QAbstractItemModel *m_model = nullptr;
+};
+
+auto *header = new viv::VirtualHeaderView(Qt::Horizontal);
+header->setAdapter(&headerAdapter);
+header->setLabelModel(&model);
+header->setSortInteractionEnabled(true);
+header->setSectionOverscan(1);
+table->setHorizontalHeader(header);      // 表格接管所有权；传 nullptr 回到默认 native 表头
+
+// 换序动画：只有"换序"需要过渡（提交后 body 立刻到位，表头滑过去）
+table->setHeaderAnimationDuration(300);  // 0 = 关闭
+table->moveColumn(2, 0, viv::VirtualTableView::MoveAnimation::Animate);
+// 程序化换序默认即时（MoveAnimation::Immediate）；resize 与滚动保持逐帧同步，不做动画
+```
+
+### 树
+
+```cpp
+// 适配器与列表完全相同；模型是标准 QAbstractItemModel 树
+auto *tree = new viv::VirtualTreeView(&window);
+tree->setAdapter(&adapter);
+tree->setUniformItemHeight(26);
+tree->setIndentation(20);                // 每层缩进像素
+tree->setBranchIndicatorsVisible(true);  // 展开/收起图标由视图绘制并可点击（行控件不受影响）
+tree->setModel(&treeModel);
+
+tree->expand(treeModel.index(0, 0));                 // 也可以双击 / 点分支指示 / 按 Right
+tree->expandRecursively(treeModel.index(0, 0));      // 递归展开整棵子树
+tree->toggleExpanded(treeModel.index(0, 0));
+tree->collapseAll();
+tree->setRootIndex(treeModel.index(3, 0));           // 只看某一棵子树
+tree->visibleRowCount();                             // 压平之后的可见行数
+
+// 自定义分支图标：视图把每个可见行的每一格都交给你，一格一次调用
+class GlyphRenderer : public viv::BranchIndicatorRenderer
+{
+public:
+    // 简单情形：一个状态一个图标；返回空 QIcon 表示这一格不画图标
     QIcon branchIcon(const viv::BranchIndicatorState &state, const QModelIndex &) const override
     {
         if (!state.adjoinsItem || !state.hasChildren)
-            return QIcon();                       // 祖先格 / 叶子交给下面继续画线
+            return QIcon();                          // 祖先格 / 叶子交给下面画连接线
         return state.isExpanded ? m_openIcon : m_closedIcon;
     }
 
-    // 复杂情形：直接画（连接线 + 图标），QTreeView::branch 的图片资源可以整段搬过来。
+    // 复杂情形：直接画。state 的字段对应 QTreeView::branch 的
+    // has-children / has-siblings / adjoins-item / open / closed
     void paintBranch(QPainter *painter, const viv::BranchIndicatorState &state,
                      const QModelIndex &, const QRect &cellRect) const override
     {
-        if (!state.adjoinsItem) {                 // 祖先格：竖线 + 到下一层的横线
+        if (!state.adjoinsItem) {                    // 祖先格：竖线 + 到下一层的横线
             const int cx = cellRect.center().x();
             painter->drawLine(cx, cellRect.top(), cx,
                               state.hasSiblings ? cellRect.bottom() : cellRect.center().y());
@@ -245,259 +431,94 @@ public:
         }
         viv::BranchIndicatorRenderer::paintBuiltinBranch(painter, state, cellRect);
     }
+
+private:
+    QIcon m_openIcon;
+    QIcon m_closedIcon;
 };
 
-glyphRenderer;                                 // 生命周期由业务持有（takeOwnership = false）
+GlyphRenderer glyphRenderer;                 // 生命周期由业务持有（takeOwnership = false）
 tree->setBranchIndicatorRenderer(&glyphRenderer);
-tree->setBranchIndicatorRenderer(nullptr);     // 回到内置三角箭头
+tree->setBranchIndicatorRenderer(nullptr);   // 回到内置三角箭头
 ```
 
-`examples/tree_view` 勾选「自定义图标」就能看到这套渲染器（方块 = 有子节点、圆点 = 叶子、
-连接线按 `hasSiblings` / `adjoinsItem` 变化）；`--custom-icons --snapshot <file.png>` 可直接导出
-PNG，用于无人值守的视觉检查。
-
-拖放（v0.7，§38）：视图负责交互，模型负责语义。视图侧只要打开开关并在模型里给出 flags；插入、
-移动、拒绝全部写在模型里（`canDropMimeData()` / `dropMimeData()`），框架不替业务做决定：
+### 拖放
 
 ```cpp
-// 模型侧：可拖动 + 可接收，载荷自定义 MIME，落点语义自己实现
-Qt::ItemFlags Model::flags(const QModelIndex &index) const
+// 模型侧：能不能拖、能拖什么、落在哪里算合法、落了以后怎么改数据，都由模型回答
+Qt::ItemFlags OrderModel::flags(const QModelIndex &index) const
 {
     return Qt::ItemIsEnabled | Qt::ItemIsSelectable
          | Qt::ItemIsDragEnabled | Qt::ItemIsDropEnabled;
 }
-Qt::DropActions Model::supportedDropActions() const { return Qt::MoveAction | Qt::CopyAction; }
-QMimeData *Model::mimeData(const QModelIndexList &indexes) const { /* 打包载荷 */ }
-bool Model::canDropMimeData(const QMimeData *data, Qt::DropAction action,
-                           int row, int column, const QModelIndex &parent) const { /* 接不接受 */ }
-bool Model::dropMimeData(const QMimeData *data, Qt::DropAction action,
-                        int row, int column, const QModelIndex &parent) { /* 插入/移动/拒绝 */ }
 
-// 视图侧：打开拖放（同时把视口设为接受拖放），其余交给框架
-view->setDragEnabled(true);
-view->setDropIndicatorShown(true);              // 2px 插入线 / 树的框选；false 只是不画
-view->setDefaultDropAction(Qt::MoveAction);     // 列表拖动 = 移动
+Qt::DropActions OrderModel::supportedDropActions() const
+{
+    return Qt::MoveAction | Qt::CopyAction;
+}
+
+QMimeData *OrderModel::mimeData(const QModelIndexList &indexes) const
+{
+    auto *data = new QMimeData;
+    data->setData(QStringLiteral("application/x-order-id"), packedIds(indexes));
+    return data;
+}
+
+bool OrderModel::canDropMimeData(const QMimeData *data, Qt::DropAction action,
+                                 int row, int column, const QModelIndex &parent) const
+{
+    Q_UNUSED(action);
+    Q_UNUSED(column);
+    Q_UNUSED(parent);
+    return data->hasFormat(QStringLiteral("application/x-order-id")) && row != 0;
+}
+
+bool OrderModel::dropMimeData(const QMimeData *data, Qt::DropAction action,
+                              int row, int column, const QModelIndex &parent)
+{
+    return action == Qt::IgnoreAction ? true : moveOrInsert(data, row, parent);
+}
+
+// 视图侧：打开开关，剩下的交给框架（拖拽期会 pin 住拖拽源控件，边缘自动滚动）
+view->setDragEnabled(true);                   // 同时把视口设成可接收拖放
+view->setDropIndicatorShown(true);            // 列表/表格画插入线，树画框选
+view->setDefaultDropAction(Qt::MoveAction);   // 本视图发起的拖拽默认动作
 view->setDragDropActions(Qt::MoveAction | Qt::CopyAction);   // 可选：覆盖模型给的动作
 
-const viv::VirtualItemView::DropTarget target = view->dropTargetAt(viewportPos);   // 诊断/自测
-const QRect indicator = view->dropIndicatorRect(target);
+// 观察与诊断
 connect(view, &viv::VirtualItemView::itemDropped,
-        [](const QModelIndex &parent, int row, int column, Qt::DropAction action) { /* ... */ });
+        [](const QModelIndex &parent, int row, int column, Qt::DropAction action) {
+            // 模型已经接受了这次拖放，这里用来刷新统计、上报日志……
+        });
+const viv::VirtualItemView::DropTarget target = view->dropTargetAt(viewportPos);
+view->dropIndicatorRect(target);
 ```
 
-落点语义（详见 [docs/drag-and-drop.md](docs/drag-and-drop.md)）：列表按行的上/下半段插入；表格跟随
-`SelectionBehavior`（`SelectRows` = 整行，`SelectItems` = 单元格，冻结列用 `columnAtViewportX()`
-做 pane-aware 命中）；树的上/下 1/4 是"插到节点之间"，中间 1/2 是"成为该节点的子节点"
-（`DropTarget::ontoItem`，用框选指示器表示，对应 `QTreeView` 的 `OnItem`），最后一行之下的空白区
-追加到末尾。拖到视口上/下边缘会自动滚动，并按同一个视口位置重新解析目标。
+落点语义：列表按行的上/下半段决定插到前面还是后面；表格跟随 `SelectionBehavior`（整行模式按行
+插入，单元格模式按行列定位，冻结列做 pane 感知命中）；树的上/下 1/4 是"插到节点之间"，
+中间 1/2 是"成为该节点的子节点"，最后一行下方的空白区追加到末尾。拖到视口上/下边缘会自动
+滚动，并按同一个视口位置重新解析落点。
 
-```bash
-cmake -S . -B cmake-build-debug -DCMAKE_PREFIX_PATH=<Qt6 路径>
-cmake --build cmake-build-debug --config Debug
-ctest --test-dir cmake-build-debug -C Debug --output-on-failure
-cmake-build-debug/bin/simple_list        # 10 万行
-cmake-build-debug/bin/order_cards        # 复杂业务卡片（动态高度）
-cmake-build-debug/bin/dynamic_height     # 异步高度变化 + anchor
-cmake-build-debug/bin/million_rows       # 100 万行，观察控件数是否稳定
-cmake-build-debug/bin/table_row_widgets  # 表格 Row Widget Mode
-cmake-build-debug/bin/table_many_columns # 表格 Cell Widget Mode + 百列横向虚拟化
-cmake-build-debug/bin/tree_view          # 树：展开/折叠/缩进/分支指示
-cmake-build-debug/bin/drag_drop          # 拖放：列表 / 树 / 表格（冻结列）三种落点语义
-cmake-build-debug/bin/drag_drop --hover tree:120 --snapshot drop.png   # 合成悬停 + 截图
-cmake-build-debug/bin/table_spans        # 合并单元格：跨列分组标题 + 跨行合并 + 冻结列对照
-cmake-build-debug/bin/table_spans --cell-mode --snapshot spans.png     # 跨行合并由框架渲染
-cmake-build-debug/bin/table_panes        # 多个 pane + 两个独立滚动组（工具栏是组 1 的滚动条）
-cmake-build-debug/bin/table_panes --check                             # 自检：组 1 滚动不影响其它 pane
-cmake-build-debug/bin/table_many_columns --frozen 2 --frozen-rows 2 --snapshot frozen.png  # 冻结列 + 冻结行（行号条按 pane 切分）
-cmake-build-debug/bin/table_frozen_rows   # 行冻结：顶部 3 行 + 底部 2 行 + 左侧 1 列（可调）
-cmake-build-debug/bin/table_frozen_rows --check                          # 自检：冻结行不动、滚动范围不变、行号贴合
-cmake-build-debug/bin/table_custom_header --widget-header --sections 200   # Widget 表头：每可见列一个控件
-cmake-build-debug/bin/table_custom_header --move-demo header.png         # 表头换序动画（途中截图，显式请求过渡）
-cmake-build-debug/bin/table_custom_header --drag-demo drag.png           # 拖动列：预览途中截图（committed 几何未动）
-cmake-build-debug/bin/bench_listview --rows 1000000 --steps 2000
-cmake-build-debug/bin/bench_listview --table --table-columns 100
-cmake-build-debug/bin/bench_listview --tree
-```
+## 如何安装构建
 
-可执行文件统一在 `<build>/bin`、库在 `<build>/lib`（静态与动态都一样），所以示例/测试/基准
-不需要任何 PATH 技巧就能找到共享库 —— 原因与细节见 [docs/abi.md](docs/abi.md)。
-
-## 安装与消费
-
-装出来的包是标准的 CMake 包：消费端只需要 `find_package(VirtualItemViews)`，不需要知道源码树
-或构建树，也不用自己 `find_package(Qt6)`（Config 会用 `find_dependency()` 找回同一个 Qt）。
-
-```bash
-# 1) 构建并安装（静态或动态都行，默认静态）
-cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release \
-      -DCMAKE_PREFIX_PATH=<Qt6 kit 路径>
-cmake --build build
-cmake --install build --prefix <安装前缀>     # 头文件 + 库 + CMake package
-
-# 2) 消费端 CMakeLists（完整可跑的版本在 tests/install/consumer/）
-#    find_package(VirtualItemViews REQUIRED)
-#    target_link_libraries(app PRIVATE VirtualItemViews::VirtualItemViews)
-cmake -S tests/install/consumer -B consumer-build -G Ninja \
-      -DCMAKE_PREFIX_PATH="<安装前缀>;<Qt kit 路径>"
-cmake --build consumer-build
-consumer-build/viv_consumer                   # 自检：list/table/tree/span/冻结列/accessibility
-```
-
-* `CMAKE_PREFIX_PATH` 要把**安装前缀**和 **Qt kit** 两个都写上：安装前缀里是本库，Qt 由 Config 的
-  `find_dependency()` 去找。
-* 消费的是**动态**安装（`-DVIRTUALITEMVIEWS_BUILD_SHARED=ON`）时，`VirtualItemViews.dll` 在
-  `<prefix>/bin`：Windows 上把它放到 exe 同目录或加进 `PATH` 即可（上面自检脚本就是这么跑的）。
-  静态安装没有这一步。
-* 安装前缀是**按 Qt 大版本**区分的（Config 里写死了 `find_dependency(Qt6 …)` 或 Qt5），
-  Qt 5 与 Qt 6 各装各的前缀。
-* `tests/install/consumer` 是我们的冒烟测试：它只认 `find_package`，跑完 28 项自检（列表虚拟化、
-  表格几何/状态/span/冻结列与显式 pane、树展开折叠、accessibility 工厂），退出码 0 才算通过。
-  Qt 5.15.2 / Qt 6.11.2 × 静态 / 动态四种组合都已实跑通过。
-
-## 构建
-
-* C++17，CMake 3.16+，**Qt 6.2+ 或 Qt 5.15+**（Core/Gui/Widgets；测试需要对应版本的 Qt::Test）。
-  配置时给出 Qt kit 即可，无需改动工程：
+依赖：C++17、CMake 3.16+、Qt 6.2+ 或 Qt 5.15+（Core / Gui / Widgets）。
 
 ```bash
 git clone https://github.com/daonvshu/qt-virtual-item-views && cd qt-virtual-item-views
 
-# Qt 6
-cmake -S . -B cmake-build-debug-qt6  -G Ninja -DCMAKE_BUILD_TYPE=Debug \
-      -DCMAKE_PREFIX_PATH=<Qt6 kit 路径>
-# Qt 5
-cmake -S . -B cmake-build-debug-qt5  -G Ninja -DCMAKE_BUILD_TYPE=Debug \
-      -DCMAKE_PREFIX_PATH=<Qt5 kit 路径>
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release \
+      -DCMAKE_PREFIX_PATH=<Qt kit 路径>      # 默认构建静态库；加 -DVIRTUALITEMVIEWS_BUILD_SHARED=ON 构建动态库
+cmake --build build
+cmake --install build --prefix <安装前缀>
 ```
 
-本仓库的实测环境是 Windows + MSVC（VS 18 / 19.50 x64）+ Qt 6.11.2 或 Qt 5.15.2，
-四个组合（两代 Qt × 静态 / 动态）都由 `scripts/validate.ps1` 跑通；矩阵见
-[docs/abi.md](docs/abi.md)。
+装完之后是一个标准 CMake 包（头文件 + 库 + `VirtualItemViewsConfig.cmake`），消费端只写两行，
+Qt 由包的配置文件自己找回：
 
-* 选项：`VIRTUALITEMVIEWS_BUILD_SHARED`、`VIRTUALITEMVIEWS_BUILD_TESTS`、
-  `VIRTUALITEMVIEWS_BUILD_EXAMPLES`、`VIRTUALITEMVIEWS_BUILD_BENCHMARKS`、
-  `VIRTUALITEMVIEWS_BUILD_GUI_TESTS`。
-* **静态库（默认）与动态库都支持**：`-DVIRTUALITEMVIEWS_BUILD_SHARED=ON` 即构建
-  `VirtualItemViews.dll` + 导入库；符号可见性由 `include/virtualitemviews/global.h` 的
-  `VIRTUALITEMVIEWS_EXPORT` 决定，宏由 CMake 目标自动传播，业务代码不需要手工 define。
-  版本号/SOVERSION 规则、什么改动算 ABI 破坏、Qt 与编译器支持矩阵见 [docs/abi.md](docs/abi.md)。
-* 安装：`cmake --install` 会导出 `VirtualItemViews::VirtualItemViews` 目标与头文件
-  （`include/virtualitemviews/**`）。
-
-## Qt 5 / Qt 6 兼容约定
-
-CMake 用 `find_package(QT NAMES Qt6 Qt5 …)` 选择版本（Qt5Config 不定义 `QT_VERSION_MAJOR`，
-因此从 `Qt6::Core` / `Qt5::Core` target 推断），之后统一链接 `Qt${QT_VERSION_MAJOR}::*`。
-代码层面的差异只有三处，都集中在头文件注释里说明：
-
-| 差异 | 处理方式 |
-| --- | --- |
-| Qt 5 的 `QList` 没有 `QVector` 的 API（`resize/fill/remove(n)/insert(n)`、按长度构造） | 需要这些操作的可变长数组统一使用 `QVector<T>`（Qt 6 中 `QVector` 就是 `QList`），例如 `BlockSizeIndex` 的例外表和块列表、`TreeVisibilityIndex` 的可见行列表 |
-| `QAbstractItemModel::dataChanged()` 的 roles 参数在 Qt 5 是 `QVector<int>`、Qt 6 是 `QList<int>` | 槽函数统一声明为 `QVector<int>`（Qt 6 中两者同一类型） |
-| `QMouseEvent::position()` 只存在于 Qt 6 | 内部用 `QT_VERSION_CHECK(6,0,0)` 分支到 `QMouseEvent::pos()` |
-
-同一份代码已在 Qt 6.11.2 / msvc2022_64 与 Qt 5.15.2 / msvc2019_64 两套配置下编译并跑通全部测试。
-
-## 验证
-
-* **一条命令跑完全部验证**（项目自带脚本，不是只在本机可用的临时命令）：
-
-```bash
-pwsh -File scripts/validate.ps1                       # Qt6 + Qt5 x 静态 + 动态
-pwsh -File scripts/validate.ps1 -Library Static       # 只跑静态
-pwsh -File scripts/validate.ps1 -SkipBenchmarks -SkipExamples
+```cmake
+find_package(VirtualItemViews REQUIRED)
+target_link_libraries(app PRIVATE VirtualItemViews::VirtualItemViews)
 ```
 
-  脚本对每个组合依次做：configure → `all` 构建 → CTest → 12 个示例（`--exit-after`，退出码必须 0）
-  → benchmark 不变量自检 → `cmake --install` + [tests/install/consumer](tests/install/consumer)
-  消费端冒烟测试。Qt 路径默认取方案文档记录的本机 kit，可用 `-QtBin`/`-Vcvars`/`-CMake` 覆盖；
-  最后按失败步数返回退出码（0 = 全绿）。
-* 单元测试 / 变异测试 / GUI 交互测试都注册进 CTest（固定 `QT_QPA_PLATFORM=offscreen`）：
-  `ctest --test-dir <build> -C Debug --output-on-failure`。
-* **跑测试/示例/基准前必须把 Qt 的 `bin` 放进 `PATH`**（或用导入 MSVC + Qt 环境的验证脚本）：
-  否则测试会以"找不到 Qt6Core.dll/Qt5Core.dll"之类的缺 DLL 错误失败，看起来像大面积用例失败。
-  例如 `set PATH=<Qt kit>\bin;%PATH%`（本机实测用 `D:\devlib\Qt\6.11.2\msvc2022_64\bin`）后再运行；
-  `cmake --build` 自身不需要（构建系统用的是导入库）。
-  本库自己的共享库**不需要** PATH：它和可执行文件一起放在 `<build>/bin`（见 [docs/abi.md](docs/abi.md)）。
-* 示例与基准程序都可无人值守运行：示例传 `--exit-after <ms>` 时会在退出前打印一行统计
-  （可见行 / 实例化 / 累计创建），退出码 0 表示正常结束；基准程序在违反虚拟化不变量时返回非 0。
-* Debug 构建里 Qt 的 `Q_ASSERT` 失败在 MSVC 上会弹出模态对话框，headless 运行时表现为
-  "程序不动、CPU 为 0"。排查疑似卡住时先按"断言失败"看（最常见来源是模型不满足
-  `QAbstractItemModel` 契约，例如 `rowCount()` 对无效 parent 返回了 0），不要先怀疑滚动/回收路径。
-
-## 文档
-
-* [docs/architecture.md](docs/architecture.md)：分层、核心不变量、一次 materialization pass 的细节
-* [docs/lifecycle.md](docs/lifecycle.md)：控件生命周期状态机、适配器契约、pin 规则
-* [docs/model-signals.md](docs/model-signals.md)：模型信号处理矩阵与设计要点
-* [docs/focus-ime.md](docs/focus-ime.md)：焦点 / IME / popup pin 规则、诊断与 pin 上限
-* [docs/table-layout.md](docs/table-layout.md)：Table 阶段约束（HeaderGeometry 单一事实来源）
-* [docs/drag-and-drop.md](docs/drag-and-drop.md)：拖放契约（视图侧交互 vs 模型侧语义、三种落点语义）
-* [docs/accessibility.md](docs/accessibility.md)：辅助功能桥接（虚拟节点、可见行、树层次与行列语义）
-* [docs/spans.md](docs/spans.md)：span 与 advanced panes 的规格（语义、实现状态、多滚动组细节）
-* [docs/performance.md](docs/performance.md)：复杂度、规模特性、基准使用与已知取舍
-* [docs/header-animation.md](docs/header-animation.md)：表头动画契约（committed/visual 两层几何、同步矩阵、渲染器支持）
-* [docs/row-freezing.md](docs/row-freezing.md)：行冻结规格（§31 行方向类比：不变量、API、布局与滚动、实现顺序）
-* [docs/api-stability.md](docs/api-stability.md)：公开 API 的四级分类（应用/扩展/诊断/私有）、冻结规则与 v1.0 复核清单
-* [docs/abi.md](docs/abi.md)：版本号与 SOVERSION 规则、静态/动态构建、什么算 ABI 破坏、Qt 与编译器支持矩阵
-* [docs/features.md](docs/features.md)：完整能力清单与状态（README 首页只放概览）
-* [CHANGELOG.md](CHANGELOG.md)：版本变更（破坏性变更单独列出）
-* [docs/roadmap.md](docs/roadmap.md)：进度与路线图（已完成 / 待做 / 每步完成定义 / 决策记录）
-
-## 目录结构
-
-```
-include/
-  virtualitemviews/          公共头：virtualitemview.h  virtuallistview.h  virtualtableview.h
-                             virtualtreeview.h
-                             headergeometry.h  nativeheaderview.h  tablewidgetadapter.h
-                             widgetadapter.h  widgetrecycler.h  sizeindex.h  scrollmapper.h
-                             listlayout.h  layoutpolicy.h  materializeditem.h
-                             treevisibilityindex.h  types.h  accessibility.h
-                             tablepane.h  tablespan.h  headerwidgetadapter.h
-                             virtualheaderview.h  itempane.h  branchindicator.h
-src/
-  core/       scrollmapper.cpp  virtualitemview.cpp
-  index/      sizeindex.cpp (FixedSizeIndex / BlockSizeIndex)  treevisibilityindex.cpp
-  layout/     headergeometry.cpp  listlayout.cpp  tablepane.cpp  tablespan.cpp
-  recycler/   widgetrecycler.cpp
-  widgets/    accessibility.cpp  branchindicator.cpp  columnhost.cpp  nativeheaderview.cpp
-              virtualheaderview.cpp  virtuallistview.cpp  virtualtableview.cpp
-              virtualtreeview.cpp
-tests/
-  unit/       sizeindex / scrollmapper / widgetrecycler / listlayout / headergeometry /
-              treevisibilityindex / 内核 / ListView / TableView / TableCellMode / TreeView /
-              VirtualHeaderView / DragDrop / Accessibility / TableSpan / TablePanes / FrozenRows
-  fuzz/       随机 insert/remove/move/dataChanged/reset
-  gui/        List：鼠标/键盘/焦点 pinning/滚动数据新鲜度；Table：表头排序/横向滚轮/拖动列宽
-  install/    消费端冒烟测试（独立工程：只 find_package 安装好的包）
-scripts/      validate.ps1：一键验证（四种组合的构建/CTest/示例/基准/安装+消费端）
-benchmarks/   1M 行与稳态滚动零分配校验（可选 QListView/QListWidget 参考）
-              --table：row/cell 模式对照   --tree：宽树 + 结构变更 + 锚点
-examples/     simple_list / order_cards / dynamic_height / million_rows
-              table_row_widgets / table_many_columns / table_custom_header / tree_view / drag_drop
-              table_spans / table_panes / table_frozen_rows
-docs/         architecture.md  lifecycle.md  model-signals.md  focus-ime.md
-              table-layout.md  drag-and-drop.md  accessibility.md  spans.md
-              performance.md  header-animation.md  row-freezing.md  api-stability.md
-              abi.md  features.md  roadmap.md
-              images/     README 里的示例截图（由 examples 的 --snapshot 导出）
-```
-
-公共头以 `include/` 为根（例如 `#include <virtualitemviews/virtuallistview.h>`），安装后会放到
-`include/virtualitemviews/`。
-
-## 已知限制
-
-* accessibility 还没有文本/编辑接口（`TextInterface` / `EditableTextInterface`；行内编辑器是真实
-  控件，会自己暴露）。
-* 树的**结构变更**（insert/remove/move/reset）仍然整体重建可见行列表（O(可见行)），见
-  [performance.md](docs/performance.md) §4。
-* 未实测的组合：GCC / Clang / Linux、Qt 6.2–6.10 的中间版本、`/MT` 运行库；Release 构建的性能
-  基线也未采集（[abi.md](docs/abi.md) §5 列出了已实测与未实测）。
-* 完整清单（含设计取舍）见 [docs/features.md](docs/features.md) 与 [docs/roadmap.md](docs/roadmap.md)。
-
-## 命名与许可证
-
-* 命名空间 `viv`，公开类不使用 Qt 保留风格的 `Q` 前缀（例如 `VirtualListView`），v0.1 前冻结。
-* MIT，见 [LICENSE](LICENSE)。
+把 `<安装前缀>` 与 Qt kit 一起加进消费端的 `CMAKE_PREFIX_PATH` 就行（Qt 5 与 Qt 6 各装各的
+前缀）。动态库构建时共享库与可执行文件放在同一个目录，运行时不需要额外设置。
