@@ -127,6 +127,11 @@ public:
     /// Offset of the pane's own content (§43 "advanced panes"); see
     /// HeaderViewInterface::setPaneOffset(). A frozen pane keeps offset 0 even
     /// when the geometry scrolls.
+    ///
+    /// An explicit offset wins over the geometry's viewport offset with or without a
+    /// pane filter, so a renderer that is placed on one band of a split header (the
+    /// vertical strip of a frozen row pane, for example) keeps its own offset even when
+    /// the shared geometry scrolls or its sections change size.
     void setPaneOffset(qint64 offset) override;
 
     /// Colour the current style paints a header section separator with (probed by

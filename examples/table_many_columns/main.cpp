@@ -150,6 +150,9 @@ int main(int argc, char **argv)
     QCommandLineOption frozenRightOption(QStringLiteral("frozen-right"),
                                          QStringLiteral("右侧冻结列数（§31）"),
                                          QStringLiteral("count"), QStringLiteral("0"));
+    QCommandLineOption frozenRowsOption(QStringLiteral("frozen-rows"),
+                                        QStringLiteral("顶部冻结行数（§31 行方向，docs/row-freezing.md）"),
+                                        QStringLiteral("count"), QStringLiteral("0"));
     QCommandLineOption snapshotOption(QStringLiteral("snapshot"),
                                       QStringLiteral("渲染视口到 PNG 后退出"), QStringLiteral("file"));
     QCommandLineOption checkFrozenOption(QStringLiteral("check-frozen"),
@@ -166,6 +169,7 @@ int main(int argc, char **argv)
     parser.addOption(scrollOption);
     parser.addOption(frozenOption);
     parser.addOption(frozenRightOption);
+    parser.addOption(frozenRowsOption);
     parser.addOption(snapshotOption);
     parser.addOption(checkFrozenOption);
     parser.addOption(separatorWidthOption);
@@ -204,6 +208,9 @@ int main(int argc, char **argv)
     toolbar->addWidget(frozen);
     auto *frozenRight = new QCheckBox(QStringLiteral("冻结末尾 1 列"), &window);
     toolbar->addWidget(frozenRight);
+    // 冻结顶部 2 行（§31 行方向）：行号条会按行 pane 切成"冻结带 + 可滚动带"。
+    auto *frozenRows = new QCheckBox(QStringLiteral("冻结顶部 2 行"), &window);
+    toolbar->addWidget(frozenRows);
     auto *status = new QLabel(&window);
     window.statusBar()->addPermanentWidget(status);
 
@@ -222,6 +229,9 @@ int main(int argc, char **argv)
     });
     QObject::connect(frozenRight, &QCheckBox::toggled, view, [view, columnCount](bool on) {
         view->setFrozenRightColumns(on ? QVector<int>({columnCount - 1}) : QVector<int>());
+    });
+    QObject::connect(frozenRows, &QCheckBox::toggled, view, [view](bool on) {
+        view->setFrozenRows(on ? 2 : 0);
     });
 
     const auto updateStatus = [&]() {
@@ -272,6 +282,13 @@ int main(int argc, char **argv)
         view->setFrozenRightColumns(frozenColumns);
         const QSignalBlocker blocker(frozenRight);
         frozenRight->setChecked(true);
+    }
+    // 行冻结（§31 行方向）：冻结行钉在顶部，行号条按 pane 切分。
+    const int frozenRowCount = qMax(0, parser.value(frozenRowsOption).toInt());
+    if (frozenRowCount > 0) {
+        view->setFrozenRows(frozenRowCount);
+        const QSignalBlocker blocker(frozenRows);
+        frozenRows->setChecked(true);
     }
 
     // 冻结分界线的外观（§31）：颜色不设就用"当前样式画列分隔线用的颜色"。

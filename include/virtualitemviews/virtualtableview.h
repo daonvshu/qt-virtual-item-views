@@ -335,6 +335,17 @@ private:
     void syncPaneSeparatorLines();
     /// Pane header of the same kind as the installed horizontal header.
     HeaderViewInterface *createHorizontalPaneHeader();
+    /// Row-number strip of a frozen row pane (§31 row direction): same kind as the
+    /// installed vertical header. Null when the installed one cannot be cloned (a custom
+    /// renderer that is not a native header), in which case the strip stays single.
+    HeaderViewInterface *createVerticalPaneHeader();
+    /// Creates/destroys/positions the row-number strips of the frozen row panes: each
+    /// band of the strip shows its own rows with its own offset, because the content
+    /// positions (and therefore the row heights) are shared with the body.
+    void syncVerticalPaneHeaders();
+    /// Places every row-number strip on its pane rectangle (the whole viewport when no
+    /// row is frozen).
+    void layoutVerticalHeaderStrips();
     /// Pushes the animation settings (§23/§24) into every header renderer.
     void applyHeaderAnimationSettings();
     /// Asks every header renderer for a visual transition (or clears the request)
@@ -397,6 +408,10 @@ private:
     HeaderGeometry *m_rowHeaders = nullptr;
     HeaderViewInterface *m_horizontalHeader = nullptr;
     HeaderViewInterface *m_verticalHeader = nullptr;
+    /// Row-number strips of the frozen row panes (top / bottom band); the installed
+    /// vertical header keeps the scrolling band (§31 row direction).
+    HeaderViewInterface *m_frozenTopRowsHeader = nullptr;
+    HeaderViewInterface *m_frozenBottomRowsHeader = nullptr;
     /// Header renderer of every non-primary pane, indexed by pane index (§43):
     /// a pane shows its own columns at its own viewport x, so it needs its own
     /// renderer of the same geometry. The primary pane uses m_horizontalHeader.

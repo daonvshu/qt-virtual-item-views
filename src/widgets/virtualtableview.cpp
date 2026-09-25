@@ -21,6 +21,23 @@
 namespace viv {
 
 namespace {
+
+/// Offset of one band of the row-number strip: the content y its top edge shows. The
+/// strip sits on its pane rect, so a band below the frozen rows is shifted by the pane's
+/// y - that is what keeps the numbers glued to their rows (§31 row direction).
+qint64 rowStripOffset(const ItemPane &pane, qint64 verticalOffset, qint64 contentExtent)
+{
+    switch (pane.type) {
+    case ItemPane::Type::FrozenTop:
+        return 0;
+    case ItemPane::Type::FrozenBottom:
+        return qMax<qint64>(0, contentExtent - pane.viewportRect.height());
+    case ItemPane::Type::Scrollable:
+        return verticalOffset + qMax<qint64>(0, pane.viewportRect.y());
+    }
+    return verticalOffset;
+}
+
 /// Above this row count the native vertical header cannot mirror per-row heights
 /// cheaply (QHeaderView keeps an O(rows) position cache plus a Section per row
 /// here), so per-row mirroring is disabled; the widget header (v0.5) removes the
@@ -221,6 +238,7 @@ void VirtualTableView::setVerticalHeader(HeaderViewInterface *header)
     m_verticalHeader->setGeometryModel(m_rowHeaders);
     m_verticalHeader->setLabelModel(model());
     m_verticalHeader->headerWidget()->setParent(this);
+    syncVerticalPaneHeaders();
     layoutHeaderWidgets();
 }
 
@@ -309,12 +327,42 @@ void VirtualTableView::layoutHeaderWidgets()
             header->setViewportOrigin(origin);
     }
     if (m_verticalHeader) {
-        QWidget *widget = m_verticalHeader->headerWidget();
-        widget->setGeometry(viewportRect.x() - rowHeaderWidth, viewportRect.y(), rowHeaderWidth,
-                            viewportRect.height());
-        widget->setVisible(rowHeaderWidth > 0);
+        layoutVerticalHeaderStrips();
     }
     m_headersLaidOut = true;
+}
+
+void VirtualTableView::layoutVerticalHeaderStrips()
+{
+    if (!m_verticalHeader)
+        return;
+    // The row-number strip mirrors the row panes: every band is its own renderer, placed
+    // on its pane rectangle, so the numbers stay glued to their rows even when some rows
+    // are frozen (§31 row direction).
+    const int rowHeaderWidth = (m_verticalHeaderVisible && m_verticalHeader)
+        ? m_verticalHeaderWidth
+        : 0;
+    const QRect viewportRect = viewport()->geometry();
+    const QVector<ItemPane> panes = itemPanes();
+    for (const ItemPane &pane : panes) {
+        HeaderViewInterface *header = m_verticalHeader;
+        if (pane.type == ItemPane::Type::FrozenTop)
+            header = m_frozenTopRowsHeader;
+        else if (pane.type == ItemPane::Type::FrozenBottom)
+            header = m_frozenBottomRowsHeader;
+        if (!header)
+            continue;
+        QWidget *strip = header->headerWidget();
+        // The pane rects are viewport relative, the strips live in the view: the viewport's
+        // own origin is the bridge (with one pane - nothing frozen - the pane rect *is* the
+        // viewport rect, so this covers both cases).
+        const QRect rect = pane.viewportRect;
+        strip->setGeometry(viewportRect.x() - rowHeaderWidth, viewportRect.y() + rect.y(),
+                           rowHeaderWidth, rect.height());
+        strip->setVisible(rowHeaderWidth > 0 && rect.height() > 0);
+        if (header != m_verticalHeader)
+            strip->raise();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -763,6 +811,57 @@ HeaderViewInterface *VirtualTableView::createHorizontalPaneHeader()
     return new NativeHeaderView(Qt::Horizontal, this);
 }
 
+HeaderViewInterface *VirtualTableView::createVerticalPaneHeader()
+{
+    if (!m_verticalHeader)
+        return nullptr;
+    // Only a native strip can be cloned; a custom renderer cannot be asked to reproduce
+    // itself, so the strip then stays single (documented in docs/row-freezing.md).
+    if (!qobject_cast<QHeaderView *>(m_verticalHeader->headerWidget()))
+        return nullptr;
+    auto *header = new NativeHeaderView(Qt::Vertical, this);
+    header->setGeometryModel(m_rowHeaders);
+    header->setLabelModel(model());
+    connect(header, &QHeaderView::sectionResized, this,
+            &VirtualTableView::onVerticalHeaderUserResized, Qt::UniqueConnection);
+    return header;
+}
+
+void VirtualTableView::syncVerticalPaneHeaders()
+{
+    if (!m_verticalHeader)
+        return;
+    const QVector<ItemPane> panes = itemPanes();
+    HeaderViewInterface *&top = m_frozenTopRowsHeader;
+    HeaderViewInterface *&bottom = m_frozenBottomRowsHeader;
+    const bool wantsTop = panes.size() > 1 && itemPaneRect(ItemPane::Type::FrozenTop).height() > 0;
+    const bool wantsBottom = panes.size() > 1
+        && itemPaneRect(ItemPane::Type::FrozenBottom).height() > 0;
+
+    const auto drop = [this](HeaderViewInterface *&header) {
+        if (!header)
+            return;
+        header->headerWidget()->hide();
+        header->headerWidget()->deleteLater();
+        header = nullptr;
+    };
+    if (!wantsTop)
+        drop(top);
+    else if (!top)
+        top = createVerticalPaneHeader();
+    if (!wantsBottom)
+        drop(bottom);
+    else if (!bottom)
+        bottom = createVerticalPaneHeader();
+
+    // The installed strip goes back to following the geometry when nothing is frozen:
+    // an unused feature must change nothing at all.
+    if (panes.size() <= 1) {
+        if (qobject_cast<QHeaderView *>(m_verticalHeader->headerWidget()))
+            m_verticalHeader->setPaneOffset(HeaderViewInterface::kFollowGeometryOffset);
+    }
+}
+
 void VirtualTableView::syncPaneSeparatorLines()
 {
     // One line per pane boundary (§43: pane count - 1).
@@ -945,9 +1044,32 @@ void VirtualTableView::updateRowHeaderOffset()
 {
     if (!m_rowHeaders)
         return;
-    // The row-number strip consumes the same vertical offset as the body, so the
-    // numbers stay glued to their rows while scrolling.
-    m_rowHeaders->setViewportOffset(verticalOffset());
+    // Row panes can appear or disappear with a single call (setFrozenRows()), so the
+    // strips are reconciled first, then placed, then given their offsets (§31).
+    syncVerticalPaneHeaders();
+    // The frozen bands change the pane rectangles, so the strips are placed first (§31).
+    layoutVerticalHeaderStrips();
+    const QVector<ItemPane> panes = itemPanes();
+    if (panes.size() <= 1) {
+        // Unchanged: one strip, the geometry carries the offset, so a custom renderer
+        // that reads HeaderGeometry keeps working.
+        m_rowHeaders->setViewportOffset(verticalOffset());
+        return;
+    }
+    // Frozen rows: every band shows a different content range, and one geometry offset
+    // cannot express three. Each strip therefore owns its offset (an explicit pane
+    // offset wins over the geometry, see NativeHeaderView::setPaneOffset()), while the
+    // geometry keeps the scrolling band's mapping for custom renderers.
+    m_rowHeaders->setViewportOffset(verticalOffset() + frozenTopExtent());
+    for (const ItemPane &pane : panes) {
+        HeaderViewInterface *header = m_verticalHeader;
+        if (pane.type == ItemPane::Type::FrozenTop)
+            header = m_frozenTopRowsHeader;
+        else if (pane.type == ItemPane::Type::FrozenBottom)
+            header = m_frozenBottomRowsHeader;
+        if (header)
+            header->setPaneOffset(rowStripOffset(pane, verticalOffset(), contentExtent()));
+    }
 }
 
 void VirtualTableView::updateRowHeaderGeometry()
@@ -980,6 +1102,11 @@ void VirtualTableView::updateRowHeaderGeometry()
                                                                   : estimatedItemHeight();
     if (m_rowHeaders->defaultSectionSize() != defaultSize)
         m_rowHeaders->setDefaultSectionSize(defaultSize);
+    // The row header has to be able to express every height the kernel can produce (it
+    // clamps to 1 px). With the geometry's default minimum of 24 px the mirrored sizes
+    // would be clamped and the row numbers would drift away from their rows.
+    if (m_rowHeaders->minimumSectionSize() != 1)
+        m_rowHeaders->setMinimumSectionSize(1);
 
     // Mirror per-row heights only when they are needed: variable-height rows, or
     // rows the user resized explicitly. A uniform table keeps an empty geometry

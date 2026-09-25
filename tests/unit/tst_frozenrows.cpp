@@ -69,6 +69,55 @@ QStandardItemModel *tableModel(QObject *parent)
     auto *model = new QStandardItemModel(kRows, kColumns, parent);
     return model;
 }
+
+/// 行号条：可见的垂直表头就是当前每个行 pane 一条。
+QList<QHeaderView *> verticalStrips(VirtualTableView &view)
+{
+    QList<QHeaderView *> strips;
+    for (QHeaderView *header : view.findChildren<QHeaderView *>(QString(), Qt::FindDirectChildrenOnly)) {
+        if (header->orientation() == Qt::Vertical && header->isVisible())
+            strips.append(header);
+    }
+    return strips;
+}
+
+/// 第一个完整落在 \a pane 里的行（-1 = 没有），用来检查"行号贴合行"。
+int firstRowInside(VirtualTableView &view, QAbstractItemModel *model, const ItemPane &pane)
+{
+    for (int row = int(pane.firstRow); row <= int(pane.lastRow); ++row) {
+        const QRect rect = view.visualRect(model->index(row, 0));
+        if (rect.y() >= pane.viewportRect.y() && rect.bottom() <= pane.viewportRect.bottom())
+            return row;
+    }
+    return -1;
+}
+
+/// 每个行 pane 都必须有一条行号条贴在它的矩形上，并且这条带子里选中行的行号与 body
+/// 对齐（§31 行方向：行高只有一份，三条带子各自持有自己的偏移）。
+void verifyRowStripsAreGlued(VirtualTableView &view, QAbstractItemModel *model)
+{
+    // Pane rects are viewport relative, the strip widgets live in the view: the viewport's
+    // own origin is the bridge between the two.
+    const QRect viewportRect = view.viewport()->geometry();
+    const QVector<ItemPane> panes = view.itemPanes();
+    const QList<QHeaderView *> strips = verticalStrips(view);
+    QCOMPARE(strips.size(), panes.size());
+    for (const ItemPane &pane : panes) {
+        const int paneTop = viewportRect.y() + pane.viewportRect.y();
+        QHeaderView *strip = nullptr;
+        for (QHeaderView *candidate : strips) {
+            const QRect rect = candidate->geometry();
+            if (rect.y() == paneTop && rect.height() == pane.viewportRect.height())
+                strip = candidate;
+        }
+        QVERIFY(strip != nullptr);
+        const int row = firstRowInside(view, model, pane);
+        QVERIFY(row >= 0);
+        const QRect rowRect = view.visualRect(model->index(row, 0));
+        QCOMPARE(strip->geometry().y() + strip->sectionViewportPosition(row),
+                 viewportRect.y() + rowRect.y());
+    }
+}
 } // namespace
 
 /// 行冻结（§31 行方向，docs/row-freezing.md）：冻结行钉在上下边缘、不产生额外滚动
@@ -88,6 +137,7 @@ private slots:
     void bottomFrozenRowsArePinnedToTheBottom();
     void rowWidgetsAreClippedAtTheRowPanes();
     void cellsAreClippedByBothPaneDirections();
+    void verticalHeaderIsSplitPerRowPane();
     void frozenRowsAreClampedToWhatFits();
 };
 
@@ -438,6 +488,50 @@ void TestFrozenRows::cellsAreClippedByBothPaneDirections()
     QVERIFY(scrollingCell != nullptr);
     QCOMPARE(scrollingCell->parentWidget()->geometry().top(),
              view.itemPaneRect(ItemPane::Type::Scrollable).top());
+}
+void TestFrozenRows::verticalHeaderIsSplitPerRowPane()
+{
+    auto *model = tableModel(this);
+    FrozenTableAdapter adapter;
+    VirtualTableView view;
+    view.setTableAdapter(&adapter);
+    view.setUniformItemHeight(kRowHeight);
+    view.setDefaultColumnWidth(kColumnWidth);
+    view.setModel(model);
+    showView(&view, QSize(kViewWidth, kViewHeight));
+
+    // Without frozen rows the strip is a single renderer that follows the geometry.
+    QCOMPARE(verticalStrips(view).size(), 1);
+    verifyRowStripsAreGlued(view, model);
+
+    view.setFrozenRows(3);
+    view.setFrozenBottomRows(2);
+    view.flushPendingRelayout();
+    QApplication::processEvents();
+    QCOMPARE(view.itemPanes().size(), 3);
+    verifyRowStripsAreGlued(view, model);
+
+    // Scrolling moves the middle band only: every band still shows its own rows.
+    view.setVerticalOffset(20 * kRowHeight);
+    view.flushPendingRelayout();
+    QApplication::processEvents();
+    verifyRowStripsAreGlued(view, model);
+
+    // Row heights change -> the two frozen bands keep their rows, the scrolling band
+    // follows the new geometry (the explicit pane offset survives the geometry change).
+    view.setRowHeight(0, kRowHeight * 2);
+    view.flushPendingRelayout();
+    QApplication::processEvents();
+    verifyRowStripsAreGlued(view, model);
+
+    // Switching the freezing off drops the extra strips again: an unused feature must
+    // change nothing at all.
+    view.setFrozenRows(0);
+    view.setFrozenBottomRows(0);
+    view.flushPendingRelayout();
+    QApplication::processEvents();
+    QCOMPARE(verticalStrips(view).size(), 1);
+    QCOMPARE(view.itemPanes().size(), 1);
 }
 
 void TestFrozenRows::frozenRowsAreClampedToWhatFits()

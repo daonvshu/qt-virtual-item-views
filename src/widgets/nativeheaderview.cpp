@@ -183,13 +183,22 @@ void NativeHeaderView::syncHeaderFromGeometry()
         modelSections = orientation() == Qt::Horizontal ? model()->columnCount()
                                                        : model()->rowCount();
     }
-    const int sections = qMin(count, modelSections);
+    // A geometry with fewer sections than the model means "the remaining sections keep the
+    // default size" - the uniform-row-height case, where the row geometry deliberately
+    // stays empty to save memory. Those sections are mirrored as well: QHeaderView only
+    // applies a new default size to sections it creates later, so a strip whose sections
+    // were built before the default was known would otherwise keep Qt's own default (and
+    // the row numbers would drift away from their rows).
+    const int sections = qMin(qMax(count, modelSections), modelSections);
     for (int logical = 0; logical < sections; ++logical) {
-        const bool hidden = m_geometry->isSectionHidden(logical)
-            || !filterContains(m_paneFilter, m_paneFilterActive, logical);
+        const bool inGeometry = logical < count;
+        const bool hidden = inGeometry
+            && (m_geometry->isSectionHidden(logical)
+                || !filterContains(m_paneFilter, m_paneFilterActive, logical));
         if (isSectionHidden(logical) != hidden)
             setSectionHidden(logical, hidden);
-        const int size = m_geometry->storedSectionSize(logical);
+        const int size = inGeometry ? m_geometry->storedSectionSize(logical)
+                                    : m_geometry->defaultSectionSize();
         if (!hidden && sectionSize(logical) != size)
             resizeSection(logical, size);
     }
@@ -226,8 +235,8 @@ void NativeHeaderView::setViewportOffset(int offset)
 {
     if (m_applyingToHeader)
         return;
-    if (m_paneFilterActive && (m_frozenPane || m_paneOffset != kFollowGeometryOffset))
-        return; // the pane owns its offset; a frozen pane never scrolls
+    if (m_paneOffset != kFollowGeometryOffset)
+        return; // the pane owns its offset (setPaneOffset()); a frozen pane never scrolls
     setOffset(qMax(0, offset));
 }
 
@@ -235,9 +244,9 @@ qint64 NativeHeaderView::effectivePaneOffset() const
 {
     if (!m_geometry)
         return 0;
+    if (m_paneOffset != kFollowGeometryOffset)
+        return m_paneOffset; // an explicit offset wins, filter or not
     if (m_paneFilterActive) {
-        if (m_paneOffset != kFollowGeometryOffset)
-            return m_paneOffset;
         if (m_frozenPane)
             return 0; // a frozen pane never scrolls
     }
