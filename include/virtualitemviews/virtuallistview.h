@@ -3,6 +3,8 @@
 #include <virtualitemviews/global.h>
 #include <virtualitemviews/virtualitemview.h>
 
+#include <QPersistentModelIndex>
+
 class QAbstractItemModel;
 
 namespace viv {
@@ -27,7 +29,14 @@ public:
     explicit VirtualListView(QWidget *parent = nullptr);
     ~VirtualListView() override;
 
+    /// Switching the model drops the root: it names an item of the previous model.
+    void setModel(QAbstractItemModel *model) override;
+
     /// Root of the list. An invalid index means the invisible root of the model.
+    ///
+    /// The root is a *persistent* index, so it keeps naming the same item when
+    /// rows are inserted, removed or moved around it; an index of another model
+    /// (or a valid index while the view has no model) is rejected with a warning.
     void setRootIndex(const QModelIndex &index);
     QModelIndex rootIndex() const { return m_rootIndex; }
 
@@ -41,7 +50,7 @@ protected:
 
 private:
     ListLayout *m_listLayout = nullptr;
-    QModelIndex m_rootIndex;
+    QPersistentModelIndex m_rootIndex;
 };
 
 } // namespace viv

@@ -5,6 +5,8 @@
 #include <virtualitemviews/treevisibilityindex.h>
 #include <virtualitemviews/virtualitemview.h>
 
+#include <QPersistentModelIndex>
+
 class QAbstractItemModel;
 class QKeyEvent;
 class QMouseEvent;
@@ -37,6 +39,7 @@ public:
 
     void setModel(QAbstractItemModel *model) override;
 
+    /// Root of the flattened sub-tree; a persistent index, like the list's root.
     void setRootIndex(const QModelIndex &index);
     QModelIndex rootIndex() const { return m_rootIndex; }
 
@@ -132,7 +135,7 @@ private:
 
     TreeVisibilityIndex *m_visibility = nullptr;
     ListLayout *m_rowLayout = nullptr;
-    QModelIndex m_rootIndex;
+    QPersistentModelIndex m_rootIndex;
     int m_indentation = 20;
     bool m_branchIndicatorsVisible = true;
     BranchIndicatorRenderer *m_branchRenderer = nullptr;

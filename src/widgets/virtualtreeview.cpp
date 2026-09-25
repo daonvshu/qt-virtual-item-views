@@ -167,6 +167,11 @@ void VirtualTreeView::setRootIndex(const QModelIndex &index)
 {
     if (index == m_rootIndex)
         return;
+    if (index.isValid() && index.model() != model()) {
+        qWarning("VirtualTreeView::setRootIndex(): the index belongs to another model "
+                 "(or the view has no model); the root is unchanged");
+        return;
+    }
     m_rootIndex = index;
     m_visibility->setRootIndex(index);
     refreshVisibility(false);
@@ -502,7 +507,7 @@ VirtualItemView::DropTarget VirtualTreeView::resolveDropTarget(const QPoint &vie
     const qsizetype rows = viewItemCount();
     const QRect lastRect = rows > 0 ? geometryForViewRow(rows - 1) : QRect();
     if (rows <= 0 || viewportPos.y() > lastRect.bottom()) {
-        target.parent = m_rootIndex.isValid() ? m_rootIndex : QModelIndex();
+        target.parent = m_rootIndex.isValid() ? QModelIndex(m_rootIndex) : QModelIndex();
         target.row = treeModel->rowCount(target.parent);
         target.trailing = true;
         return target;

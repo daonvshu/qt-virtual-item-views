@@ -41,6 +41,7 @@ private slots:
     void wheelScrollsByPixelsByDefault();
     void pixelOffsetApiMovesTheViewport();
     void rootIndexRestrictsMaterialization();
+    void rootIndexSurvivesStructuralChangesAndRejectsForeignIndexes();
 };
 
 void TestVirtualListView::uniformHeightFitsFirstItemAutomatically()
@@ -331,6 +332,48 @@ void TestVirtualListView::rootIndexRestrictsMaterialization()
     view.flushPendingRelayout();
     QCOMPARE(view.materializedItemCount(), qsizetype(1));
     QCOMPARE(view.indexAt(QPoint(10, 5)), model.index(0, 0));
+}
+
+void TestVirtualListView::rootIndexSurvivesStructuralChangesAndRejectsForeignIndexes()
+{
+    QStandardItemModel model;
+    auto *root = new QStandardItem(QStringLiteral("root"));
+    for (int i = 0; i < 3; ++i)
+        root->appendRow(new QStandardItem(QStringLiteral("child-%1").arg(i)));
+    model.appendRow(root);
+
+    TestAdapter adapter(kUniformHeight);
+    VirtualListView view;
+    view.setAdapter(&adapter);
+    view.setUniformItemHeight(kUniformHeight);
+    view.setModel(&model);
+    view.setRootIndex(model.index(0, 0));
+    showView(&view, QSize(kViewWidth, kViewHeight));
+    QCOMPARE(view.materializedItemCount(), qsizetype(3));
+
+    // A sibling *before* the root: a plain QModelIndex would now name the new
+    // item, a persistent one keeps naming "root".
+    model.insertRow(0, new QStandardItem(QStringLiteral("new-root")));
+    view.flushPendingRelayout();
+    settle();
+    QCOMPARE(view.rootIndex().data().toString(), QStringLiteral("root"));
+    QCOMPARE(view.rootIndex().row(), 1);
+    QCOMPARE(view.materializedItemCount(), qsizetype(3));
+    QCOMPARE(static_cast<TestRowWidget *>(adapter.widgetForRow(0))->text(), QStringLiteral("child-0"));
+
+    // An index of another model is refused (and the root stays).
+    QStandardItemModel foreign;
+    foreign.appendRow(new QStandardItem(QStringLiteral("foreign")));
+    QTest::ignoreMessage(QtWarningMsg, QRegularExpression(QStringLiteral("another model")));
+    view.setRootIndex(foreign.index(0, 0));
+    QCOMPARE(view.rootIndex().row(), 1);
+
+    // ... and so is a valid index while there is no model at all.
+    view.setModel(nullptr);
+    QVERIFY(!view.rootIndex().isValid());
+    QTest::ignoreMessage(QtWarningMsg, QRegularExpression(QStringLiteral("another model")));
+    view.setRootIndex(foreign.index(0, 0));
+    QVERIFY(!view.rootIndex().isValid());
 }
 
 QTEST_MAIN(TestVirtualListView)

@@ -521,6 +521,11 @@ private:
     /// flag may have moved it to the start of the row/column.
     void pinCurrentIndex(const QModelIndex &index);
     QItemSelectionModel::SelectionFlags rowFlags() const;
+    /// Selection flags of a command (Select / Deselect / Toggle / ClearAndSelect)
+    /// with the SelectionBehavior applied. Every selection mutation goes through
+    /// here, so click, keyboard navigation and Space cannot drift apart - and
+    /// NoSelection answers NoUpdate, i.e. "select nothing", for all of them.
+    QItemSelectionModel::SelectionFlags selectionFlagsFor(QItemSelectionModel::SelectionFlags command) const;
     void appendLifecycleLog(const QString &entry);
     qint64 wheelStepPixels() const;
     qint64 scrollBarSingleStepPixels() const;

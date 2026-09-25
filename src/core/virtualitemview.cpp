@@ -390,6 +390,14 @@ QItemSelectionModel::SelectionFlags VirtualItemView::rowFlags() const
                                                                 : QItemSelectionModel::NoUpdate;
 }
 
+QItemSelectionModel::SelectionFlags
+VirtualItemView::selectionFlagsFor(QItemSelectionModel::SelectionFlags command) const
+{
+    if (m_selectionMode == SelectionMode::NoSelection)
+        return QItemSelectionModel::NoUpdate;
+    return command | rowFlags();
+}
+
 void VirtualItemView::appendLifecycleLog(const QString &entry)
 {
     if (!m_lifecycleLogEnabled)
@@ -2289,8 +2297,17 @@ void VirtualItemView::keyPressEvent(QKeyEvent *event)
         event->accept();
         return;
     case Qt::Key_Space:
-        if (m_selectionModel && current.isValid())
-            m_selectionModel->setCurrentIndex(current, QItemSelectionModel::Toggle | QItemSelectionModel::Current);
+        // Space toggles the current item (like QAbstractItemView) - but never in
+        // NoSelection mode, where nothing may be selected at all.
+        if (m_selectionModel && current.isValid()) {
+            const bool wasSelected = m_selectionModel->isSelected(current);
+            const QItemSelectionModel::SelectionFlags command = selectionFlagsFor(
+                wasSelected ? QItemSelectionModel::Deselect : QItemSelectionModel::Select);
+            if (command != QItemSelectionModel::NoUpdate) {
+                m_selectionModel->select(current, command);
+                pinCurrentIndex(current);
+            }
+        }
         event->accept();
         return;
     default:
@@ -2354,7 +2371,7 @@ void VirtualItemView::updateSelectionForClick(const QModelIndex &index, Qt::Keyb
         m_selectionModel->setCurrentIndex(index, QItemSelectionModel::Current);
         return;
     case SelectionMode::SingleSelection:
-        m_selectionModel->setCurrentIndex(index, QItemSelectionModel::ClearAndSelect | rowFlags());
+        m_selectionModel->setCurrentIndex(index, selectionFlagsFor(QItemSelectionModel::ClearAndSelect));
         pinCurrentIndex(index);
         m_selectionAnchor = QPersistentModelIndex(index);
         return;
@@ -2372,7 +2389,7 @@ void VirtualItemView::updateSelectionForClick(const QModelIndex &index, Qt::Keyb
         toggleClickedIndex(index);
         return;
     }
-    m_selectionModel->setCurrentIndex(index, QItemSelectionModel::ClearAndSelect | rowFlags());
+    m_selectionModel->setCurrentIndex(index, selectionFlagsFor(QItemSelectionModel::ClearAndSelect));
     pinCurrentIndex(index);
     m_selectionAnchor = QPersistentModelIndex(index);
 }
@@ -2381,10 +2398,14 @@ void VirtualItemView::toggleClickedIndex(const QModelIndex &index)
 {
     if (!m_selectionModel || !index.isValid())
         return;
-    // Toggle and keep the rest of the selection, like QAbstractItemView.
+    // Toggle and keep the rest of the selection, like QAbstractItemView. The
+    // command carries the SelectionBehavior, so SelectRows toggles the whole row
+    // instead of a single cell.
     const bool wasSelected = m_selectionModel->isSelected(index);
-    m_selectionModel->select(index, wasSelected ? QItemSelectionModel::Deselect
-                                                : QItemSelectionModel::Select);
+    const QItemSelectionModel::SelectionFlags command = selectionFlagsFor(
+        wasSelected ? QItemSelectionModel::Deselect : QItemSelectionModel::Select);
+    if (command != QItemSelectionModel::NoUpdate)
+        m_selectionModel->select(index, command);
     m_selectionModel->setCurrentIndex(index, QItemSelectionModel::Current | rowFlags());
     pinCurrentIndex(index);
     m_selectionAnchor = QPersistentModelIndex(index);
@@ -2399,11 +2420,11 @@ void VirtualItemView::extendSelectionTo(const QModelIndex &index)
     if (!m_selectionAnchor.isValid())
         m_selectionAnchor = QPersistentModelIndex(m_selectionModel->currentIndex());
     const QModelIndex base = m_selectionAnchor.isValid() ? QModelIndex(m_selectionAnchor) : index;
+    const QItemSelectionModel::SelectionFlags command = selectionFlagsFor(QItemSelectionModel::ClearAndSelect);
     if (base.isValid() && base.parent() == index.parent())
-        m_selectionModel->select(QItemSelection(base, index),
-                                 QItemSelectionModel::ClearAndSelect | rowFlags());
+        m_selectionModel->select(QItemSelection(base, index), command);
     else
-        m_selectionModel->select(index, QItemSelectionModel::ClearAndSelect | rowFlags());
+        m_selectionModel->select(index, command);
     m_selectionModel->setCurrentIndex(index, QItemSelectionModel::Current | rowFlags());
     pinCurrentIndex(index);
 }

@@ -132,7 +132,9 @@ private:
     qsizetype visibleRowForKey(const QModelIndex &index) const;
 
     QAbstractItemModel *m_model = nullptr;
-    QModelIndex m_rootIndex;
+    /// Persistent: the root names an *item*, so it survives inserts / removals /
+    /// moves of its siblings instead of silently pointing at another item.
+    QPersistentModelIndex m_rootIndex;
     QSet<QPersistentModelIndex> m_expanded;
     QVector<QModelIndex> m_visibleRows;
     /// Children of every expanded parent (and of the root), keyed by the parent index

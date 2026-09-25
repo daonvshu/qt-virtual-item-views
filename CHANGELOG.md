@@ -101,3 +101,15 @@
   因为冻结顶部行会盖住视口顶部、滚动 pane 的上沿并不在视口 0 处。
   回归测试：`tst_dynamicanchor`（3 例：overscan 上方行变高、冻结顶部行、冻结底部行；
   已确认还原旧实现时这三个用例都会失败）。
+* **rootIndex 现在是持久索引**：`VirtualListView` / `VirtualTreeView`（以及内部的
+  `TreeVisibilityIndex`）的 root 改成 `QPersistentModelIndex`，在它前面插入 / 删除 / 移动兄弟
+  行之后仍然指向同一个 item（此前只是个普通 `QModelIndex`，行号一变就指向别的行）；有效索引
+  属于别的模型、或视图还没有模型时 `setRootIndex()` 拒绝并 `qWarning`；换模型会清掉 root，
+  不再把外来 parent 交给新模型的 `rowCount()`。
+  回归测试：`tst_virtuallistview::rootIndexSurvivesStructuralChangesAndRejectsForeignIndexes`。
+* **选择语义统一到一个来源**：新增 `VirtualItemView::selectionFlagsFor()`，鼠标点击、键盘导航与
+  Space 都通过它把 `SelectionMode` + `SelectionBehavior` 组合成同一个选择命令。于是：
+  `NoSelection` 下 Space 不再能选中任何东西（此前它会 `Toggle` 当前项）；`SelectRows` 下
+  Ctrl 点击与 MultiSelection 的点击切换的是**整行**而不是单个单元格（此前只切一格）。
+  回归测试：`tst_selection`（4 例：NoSelection 的点击与 Space、Space 切换当前项、
+  SelectRows 的 Ctrl 点击切换整行、MultiSelection 每次点击切换整行）。

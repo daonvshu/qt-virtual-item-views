@@ -56,12 +56,23 @@ bool VirtualListView::isLayoutParent(const QModelIndex &parent) const
 // Configuration
 // ---------------------------------------------------------------------------
 
+void VirtualListView::setModel(QAbstractItemModel *model)
+{
+    // The root names an item of the previous model; keeping it would hand a
+    // foreign parent to the new model's rowCount().
+    m_rootIndex = QModelIndex();
+    VirtualItemView::setModel(model);
+}
+
 void VirtualListView::setRootIndex(const QModelIndex &index)
 {
     if (index == m_rootIndex)
         return;
-    if (index.isValid() && model() && index.model() != model())
+    if (index.isValid() && index.model() != model()) {
+        qWarning("VirtualListView::setRootIndex(): the index belongs to another model "
+                 "(or the view has no model); the root is unchanged");
         return;
+    }
 
     m_rootIndex = index;
     // Every identity mapping changed: rebuild the materialized set.
