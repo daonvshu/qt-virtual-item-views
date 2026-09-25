@@ -22,9 +22,11 @@ namespace viv {
 /// Performance contract:
 ///  - expand()/collapse() splice the flat visible list and traverse the model
 ///    only for the expanded subtree; the whole tree is never re-flattened. The
-///    splice moves the rows below the anchor once (memmove) and only writes the
-///    new sub-tree, so the cost is the tail move of a flat vector - removing it
-///    needs a rope/block structure and is tracked as 1.x work (docs/roadmap.md),
+///    splice moves the rows below the anchor once (memmove - QModelIndex is a value
+///    type) and only writes the new sub-tree, so what is left is the tail move of a
+///    flat vector: ~1.5 ms per splice on a million visible rows. Removing even that
+///    needs a rope/block structure, which changes this class' member layout - an ABI
+///    break, so it belongs to the next major version (docs/roadmap.md 决策表),
 ///  - indexAtVisibleRow() is O(1),
 ///  - visibleRowForIndex()/isVisible() are O(depth x log(siblings)): the row of an
 ///    item is the sum, over its ancestors, of "1 + the visible sub-tree sizes of

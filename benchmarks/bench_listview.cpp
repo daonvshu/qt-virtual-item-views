@@ -14,6 +14,7 @@
 #include <virtualitemviews/virtuallistview.h>
 #include <virtualitemviews/virtualtableview.h>
 #include <virtualitemviews/virtualtreeview.h>
+#include <virtualitemviews/treevisibilityindex.h>
 #include <virtualitemviews/widgetrecycler.h>
 
 #include <QApplication>
@@ -754,6 +755,79 @@ bool runWideTreeScenario(PathEncodedTreeModel &model, int steps, const char *lab
         && offsetRestored && collapsedBack;
 }
 
+/// The visible row list itself, without the view on top (P2-10 of the code review).
+///
+/// Expanding the *last* branch appends rows - no row below it has to move. Expanding
+/// the *first* one inserts at the front, so every other visible row shifts by one slot:
+/// on a flat vector that is a memmove of `visible rows x sizeof(QModelIndex)` (8 bytes
+/// each, 8 MB for a million rows), and it is what a rope/block structure would avoid.
+/// Measuring both ends of the list on the index alone isolates that cost - inside the
+/// view it hides behind the relayout that any expansion triggers anyway.
+bool runVisibilityIndexSpliceScenario(PathEncodedTreeModel &model, const char *label)
+{
+    std::printf("\nTree: visible row list, index only (%s)\n", label);
+
+    QElapsedTimer timer;
+    timer.start();
+    viv::TreeVisibilityIndex index(&model);
+    const double buildMs = timer.nsecsElapsed() / 1.0e6;
+    const qsizetype visibleCollapsed = index.visibleRowCount();
+    report("build the flat visible row list", buildMs);
+    reportCount("visible rows (all collapsed)", long long(visibleCollapsed));
+
+    const int roots = model.rowCount(QModelIndex());
+    const QModelIndex lastRoot = model.index(roots - 1, 0);
+    const QModelIndex firstRoot = model.index(0, 0);
+
+    // Expand the last root: the rows are appended, nothing below them moves.
+    timer.restart();
+    index.expand(lastRoot);
+    const double expandLastMs = timer.nsecsElapsed() / 1.0e6;
+    const qsizetype visibleWithLast = index.visibleRowCount();
+    timer.restart();
+    index.collapse(lastRoot);
+    const double collapseLastMs = timer.nsecsElapsed() / 1.0e6;
+
+    // Expand the first root: every other visible row shifts down by one slot.
+    timer.restart();
+    index.expand(firstRoot);
+    const double expandFirstMs = timer.nsecsElapsed() / 1.0e6;
+    const qsizetype visibleWithFirst = index.visibleRowCount();
+    timer.restart();
+    index.collapse(firstRoot);
+    const double collapseFirstMs = timer.nsecsElapsed() / 1.0e6;
+
+    // Steady state: the buffer is large enough now, so what is left is the tail move
+    // itself. This is the number the rope/block variant would remove. (Measured as a
+    // pair of real operations - a loop of expands alone would mostly measure the
+    // "already expanded" early return.)
+    constexpr int kSteadySteps = 20;
+    timer.restart();
+    for (int step = 0; step < kSteadySteps; ++step) {
+        index.expand(firstRoot);
+        index.collapse(firstRoot);
+    }
+    const double steadyPairMs = timer.nsecsElapsed() / 1.0e6;
+
+    report("expand the last root (append, no tail)", expandLastMs);
+    report("collapse the last root", collapseLastMs);
+    report("expand the first root (grows + moves the tail)", expandFirstMs);
+    report("collapse the first root (moves the tail)", collapseFirstMs);
+    report("expand+collapse the first root (per step)", steadyPairMs / kSteadySteps);
+    reportCount("rows inserted by one expanded root", long long(visibleWithLast - visibleCollapsed));
+
+    // The splice has to be invisible in the result: the rows are the same, the count
+    // comes back, and the first visible row is still the first root.
+    const bool sameCount = visibleWithFirst == visibleWithLast
+        && index.visibleRowCount() == visibleCollapsed;
+    const bool firstRowKept = index.indexAtVisibleRow(0) == firstRoot;
+    const bool orderKept = index.indexAtVisibleRow(visibleCollapsed - 1) == lastRoot;
+    std::printf("\n");
+    std::printf("  %-42s %10s\n", "visible rows restored", sameCount ? "yes" : "NO");
+    std::printf("  %-42s %10s\n", "first/last visible row kept", (firstRowKept && orderKept) ? "yes" : "NO");
+    return sameCount && firstRowKept && orderKept;
+}
+
 /// Heap tree: expand everything, then mutate it above the viewport. This is the
 /// "no business reload()" contract of the architecture document applied to a
 /// tree.
@@ -1129,11 +1203,12 @@ int main(int argc, char **argv)
         std::printf("\n=== Tree benchmark (%s) ===\n", treeLabelBytes.constData());
 
         const bool wideOk = runWideTreeScenario(wideTree, qMin(steps, 500), treeLabelBytes.constData());
+        const bool spliceOk = runVisibilityIndexSpliceScenario(wideTree, treeLabelBytes.constData());
         // The heap tree is small on purpose: the mutation scenario is about the
         // anchor contract, not about throughput.
         BenchTreeModel heapTree(200, 20);
         const bool heapOk = runHeapTreeScenario(heapTree, qMin(steps, 400));
-        if (!wideOk || !heapOk) {
+        if (!wideOk || !spliceOk || !heapOk) {
             std::printf("\nFAILED: tree invariants were violated.\n");
             result = 1;
         } else {

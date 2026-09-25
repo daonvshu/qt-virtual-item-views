@@ -76,13 +76,16 @@ bench_listview --tree
   materialized count bounded       : yes
 ```
 
-`--tree` 追加两个场景（同样以非 0 退出码报告不变量违规）：
+`--tree` 追加三个场景（同样以非 0 退出码报告不变量违规）：
 
 * **宽树**：默认 `--tree-roots 1000000`（1,000,000 个顶层节点 x 10 子节点、深度 4，逻辑节点
   11,111,100,000 个）。折叠状态就有 1,000,000 个可见行，用来验证实例化集合只随视口变化、
   稳态滚动零分配、以及"在视口上方展开/折叠时锚点行不动"。
 * **展开与变更**：堆树（`--tree-roots`/`--tree-branching` 之外的小树）全量展开，再在视口上方
   insert/remove 行，验证展开状态、可见行映射与锚点。
+* **只看索引的 splice**（P2-10）：不带视图，直接量 `TreeVisibilityIndex` 在 100 万可见行上的
+  expand/collapse —— "在**末尾**展开"（纯追加）与"在**开头**展开"（要搬尾部）的差值就是扁平
+  向量的那次 memmove；场景自带"可见行数恢复、首/末行不变"的不变量检查。
 
 ### v1.0 基线（2026-09-25 实测）
 
@@ -170,6 +173,25 @@ MSVC 19.50 x64、Windows 11、静态构建、`QT_QPA_PLATFORM=offscreen`。Debug
 
   结构变更（insert/remove/move/layoutChanged/reset）仍然整体重建可见行列表 —— 那是 O(可见行) 的
   冷路径，也是文档里"先正确后优化"的边界：热路径（展开/折叠 + 滚动 + 锚点）不再依赖它。
+
+* **树的 expand/collapse 是"原地 splice + memmove"（v1.0 收口时按 P2-10 改）**：`expand()` 以前
+  用 `mid(0, row+1) + 子树 + mid(row+1)` 重建整个可见行向量（两次整表拷贝 + 一次分配），之后
+  改成原地 splice；但 `std::move_backward` / `std::copy` 在 MSVC 上并没有被折成 `memmove`，
+  于是尾部搬移仍是逐元素拷贝。改成显式 `memmove` / `memcpy`（`QModelIndex` 是可平凡复制的值
+  类型，源码里有 `static_assert` 守着）后，`bench_listview --tree --tree-roots 1000000` 的
+  "只看索引"场景（新增，见 §3）在 100 万可见行上得到：
+
+  | 操作 | 改前 | 改后 |
+  | --- | --- | --- |
+  | 在**末尾**展开一个根（纯追加，无尾部搬移） | 0.05 ms | 0.05 ms |
+  | 在**开头**展开一个根（搬 1M 行 ≈ 8 MB） | 9.0 ms | **1.4 ms** |
+  | 折叠同一个根（搬尾部） | 1.5 ms | 1.5 ms |
+  | 稳态 expand+collapse 一对（20 次平均） | 10.6 ms | **2.9 ms** |
+
+  剩下的 1.4 ms / 次就是那次尾部 memmove（≈8 MB 的带宽代价），`QVector` 在这里已经贴着内存
+  带宽跑：要再往下只能把可见行表换成 rope / 分块 / 隐式树，而那会改变公开类
+  `TreeVisibilityIndex` 的成员布局，按 [abi.md](abi.md) §4 第 3 条属于 ABI 破坏 —— 因此它是
+  **下一个主版本**的议题，1.x 期间接受这个数字（决策见 [roadmap.md](roadmap.md) §5）。
 * **Release 基线尚未采集（roadmap 3d 的遗留项）**：§3 的数字全部来自 Debug 构建，够用来看趋势与
   回归，但不能当"发布版性能"引用。采集 Release 基线需要另一棵 `-DCMAKE_BUILD_TYPE=Release` 的树
   （`scripts/validate.ps1` 目前固定 Debug），留到有实际性能诉求时再做。

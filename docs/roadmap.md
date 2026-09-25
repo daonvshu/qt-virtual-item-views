@@ -165,7 +165,7 @@ Wave 3（v1.0 工程化交付）。**
 | **Wave 1 崩溃 / 悬空指针** | Adapter 切换 UAF、Recycler 池的 adapter 身份、Model/SelectionModel 生命周期（`QPointer` + 不变量）、表头 pane 渲染器析构顺序、视图析构解绑、Cell 模式在行/列移除与 reset 前解绑 | 已完成 |
 | **Wave 2 数据 / 状态正确性** | **已完成**：P1-1 列结构 remap（`tst_headerstructure`）、P1-2 动态高度锚点（`tst_dynamicanchor`）、P1-7 `RowSizePolicy` 与行号条一致（`tst_virtualtableview`）、P1-8 rootIndex 持久化 + 校验（`tst_virtuallistview`）、P1-9 选择语义统一（`tst_selection`）、P1-10 `scrollToColumn()` 的 pane 感知（`tst_tablepanes`）、P1-11 span 重叠校验与 `maximumSpan()` 重算（`tst_tablespan`）、P1-13 冻结行下的拖放坐标（`tst_dndfrozen`） | ✅ |
 | **Wave 3 虚拟化性能** | **已完成**：P1-3 列宽上下限语义 + 批量信号（`tst_headergeometry`）、P1-4 pane 局部前缀和 + 滚动只刷新窗口 + 表头 orderRevision 快路径（`tst_tablepanes::scrollingDoesNotWalkEveryColumn`）、P1-5 横向 64 位偏移与 extent（`tst_tablepanes`）、P1-12 `BlockSizeIndex` 分块上界（`tst_sizeindex`）、P2-1 relayout 队列合并、P2-7 多滚动组宽度按 extent 等比（`tst_tablepanes::scrollingPanesShareTheWidthProportionally`）、P2-8 纯横向滚动不跑纵向 pass（`tst_relayoutqueue`） | ✅ |
-| **Wave 4 API / 发布** | **已完成（除两项外部依赖）**：P1-14 vertical widget header 明确拒绝 + P2-4 表头 orientation 校验 + P2-5 动态子控件的事件过滤（`tst_virtualheaderview`）、P2-6 `TablePaneSpec` 规范化与校验（`tst_tablepanes`）、P2-3 事务化 `restoreHeaderState` + P2-9 行号条状态拆成"请求 / 实际支持"（`tst_virtualtableview`）、P2-2 pin 离屏项即物化（`tst_virtualitemview`）、P2-10 树的 expand 原地 splice（`tst_treevisibilityindex` 既有用例）。**留下两项**：P2-10 的彻底解法（把可见行表换成 rope/分块；审查自己列为可留到 1.x，见决策表）、CI 接入（配置与踩坑见 [ci.md](ci.md)，等一个 runner 再落地） | ✅ / ⏳ |
+| **Wave 4 API / 发布** | **已完成（除两项外部约束）**：P1-14 vertical widget header 明确拒绝 + P2-4 表头 orientation 校验 + P2-5 动态子控件的事件过滤（`tst_virtualheaderview`）、P2-6 `TablePaneSpec` 规范化与校验（`tst_tablepanes`）、P2-3 事务化 `restoreHeaderState` + P2-9 行号条状态拆成"请求 / 实际支持"（`tst_virtualtableview`）、P2-2 pin 离屏项即物化（`tst_virtualitemview`）、P2-10 树的 expand 原地 splice + memmove（`tst_treevisibilityindex`、`bench_listview --tree` 新场景）。**留下两项**：P2-10 的彻底解法（rope/分块会改公开类的成员布局 = ABI 破坏，只能进**主版本**，见决策表）、CI 接入（配置与踩坑见 [ci.md](ci.md)，等一个 runner 再落地） | ✅ / ⏳ |
 
 Wave 1 新增的回归测试：`tst_adapterreplacement`（8 例）、`tst_modellifetime`（6 例）、
 `tst_celllifecycle`（5 例）；四种组合（Qt 5.15.2 / 6.11.2 × 静态 / 动态）28 步验证全绿。
@@ -175,9 +175,10 @@ Wave 1 新增的回归测试：`tst_adapterreplacement`（8 例）、`tst_modell
 落地，每一步都带回归测试 + Qt 5 / Qt 6 双配置构建 + 全量 CTest。审查里的 3 个 P0、15 个 P1
 全部修完，10 个 P2 里 9 个完全修完，剩下两项：
 
-1. **P2-10（树的可视行向量）**：expand/collapse 仍要搬一次尾部（`QVector` 整体重建 → 现在是
-   单次 memmove + 只复制插入的子树），彻底去掉需要换成 rope / 分块 / 隐式树。审查的原话是
-   "不是 correctness bug……建议后续"，所以留到 1.x，见决策表。
+1. **P2-10（树的可视行向量）**：整表重建已经换成原地 splice + memmove（1M 可见行上从 9.0 ms
+   降到 1.4 ms/次），剩下的尾部搬移（≈1.5 ms/次）要去掉就得换成 rope / 分块 / 隐式树 —— 那会改
+   公开类 `TreeVisibilityIndex` 的成员布局，按 [abi.md](abi.md) §4 第 3 条是 ABI 破坏，只能在
+   **主版本**里做。审查的原话是"不是 correctness bug……建议后续"，见决策表。
 2. **CI**：本机没有 runner / 账号 / 网络，见 [ci.md](ci.md)。这不是代码问题，是环境问题。
 
 于是"能不能打 v1.0 tag"不再由这批审查条目决定 —— 剩下的两项都不改变对外契约。tag 由用户手动
@@ -232,5 +233,5 @@ Wave 1 新增的回归测试：`tst_adapterreplacement`（8 例）、`tst_modell
 | 2026-09-25 | 表头过渡改成**按需触发**：程序化换序默认即时，只有显式 `MoveAnimation::Animate`（或渲染器自己的手势）才播 | 用户反馈"手动设置列顺序也被当成了拖动"；程序化/模型换序/状态恢复不该变出没人要求的动画。现有 `moveColumn()` 调用语义不变（默认即时），过渡从"任何顺序变化都播"收敛为"被请求才播" |
 | 2026-09-25 | 拖动重排重做成"拖动距离阈值 + 视觉预览 + 松手一次提交"，并把单次过渡接回松手 | 旧实现每越过一个邻居就提交一次：既不能连续拖（只能一格一格挪），又会把点击/抖动误判成拖动，且逐格动画让 section 跟不上光标。现在 committed 几何只在松手时变一次，拖动期间只动渲染器的视觉几何 |
 | 2026-09-25 | 拖动期间"邻居让位"也走缓动，并且与换序过渡**同一套曲线与时长**（OutCubic，默认 300 ms；关闭动画时即刻） | 瞬移的让位看起来像跳帧：拖动是被拖列跟随光标、其他列让出插入位的一次连续运动。让位与过渡用同一个旋钮，手感才会一致（要更快就整体调小时长） |
-| 2026-09-26 | 树的可见行表保留扁平 `QVector`（expand 改成原地 splice），不做 rope / 分块 / 隐式树 | 审查的 P2-10 只说"每次 expand 都会整份拷贝"，而拷贝本身已经消掉（现在是一次 resize + 一次尾部 memmove）；彻底去掉尾部搬移要换掉"可见行 → 索引 O(1)"这条契约，收益与风险不成比例，所以留下完整方案（换 rope）但不在这版做。审查原文也把它列为"不是 correctness bug、建议后续" |
+| 2026-09-26 | 树的可见行表**这一个 1.x 版本内**保留扁平 `QVector`（expand 改成原地 splice + memmove），rope / 分块留到下一个主版本 | 审查的 P2-10 只说"每次 expand 都会整份拷贝"：拷贝本身已经消掉（原来两趟整表 `mid()` + 一次分配，现在一次 `resize` + 一次尾部 memmove），剩下的尾部搬移在 100 万可见行上是 ~1.5 ms / 次（`bench_listview --tree` 的新场景）。再往下只能换 rope / 分块 / 隐式树，而那会**改变 `TreeVisibilityIndex`（B 层公开类）的成员布局**，按 [abi.md](abi.md) §4 第 3 条就是 ABI 破坏 —— 换句话说它不能用 1.x 的次版本发布，只能进主版本。1.x 期间先接受这 1.5 ms |
 | 2026-09-26 | 审查提到的 CI 只提交**可复制配置**（[ci.md](ci.md)），不提交 `.github/workflows/` | 本机没有 runner / 账号 / 网络：写一个没跑过的 workflow 会给出一个假的"CI 通过"印象，而 `scripts/validate.ps1` 是本机真跑过的入口。拿到 runner 之后把 ci.md 里的 YAML 存成 workflow 即可，顺带把 abi.md 支持矩阵的"未实测"改成实测 |
