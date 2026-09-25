@@ -91,7 +91,7 @@ bench_listview --tree
 
 下面三张表是 v1.0 收口时的基准数字（roadmap 3d）。环境：**Debug**、Qt 6.11.2 / msvc2022_64、
 MSVC 19.50 x64、Windows 11、静态构建、`QT_QPA_PLATFORM=offscreen`。Debug 的绝对值偏悲观，
-只用来看趋势与"有没有数量级退化"；Release 基线尚未采集（见本文 §4 末条）。
+只用来看趋势与"有没有数量级退化"；同一台机器的 **Release 基线**紧跟在这三张表后面。
 
 **列表 1,000,000 行**（`bench_listview --rows 1000000 --steps 200`）
 
@@ -137,6 +137,52 @@ MSVC 19.50 x64、Windows 11、静态构建、`QT_QPA_PLATFORM=offscreen`。Debug
 
 这些场景的**不变量**（零分配滚动、实例化集合有界、增量展开/折叠、锚点稳定）不是"看完就丢"的
 一次性结论：`scripts/validate.ps1` 的第 4 步每次都会重跑这三档基准，并要求退出码为 0。
+
+### v1.0 Release 基线（2026-09-26 实测）
+
+同一台机器、同一套 Qt（6.11.2 / msvc2022_64）、同一批命令，只是把构建类型换成 **Release**
+（`-DCMAKE_BUILD_TYPE=Release`，静态构建，`QT_QPA_PLATFORM=offscreen`）。复跑：
+`pwsh -File scripts/validate.ps1 -Release -Library Static` —— 该模式同时把 **Release 的 28 个
+CTest 目标**跑一遍（6.5 s，Debug 下约 25 s），所以"优化 + NDEBUG 下行为是否一致"也有证据，
+不只是数字。
+
+**列表 1,000,000 行**
+
+| 指标 | Debug | Release |
+| --- | --- | --- |
+| 打开 | 15.77 ms | **4.04 ms** |
+| 稳态滚动 | 0.89 ms/步 | **0.05 ms/步**（200 步 9.26 ms） |
+| 随机跳转新建/销毁 | 0/0 | 0/0 |
+| `2000 x dataChanged` | 11.57 ms | **0.45 ms** |
+| `20 x insert 500` / `20 x remove 500` | 3.18 / 3.24 ms | **0.24 / 0.24 ms** |
+| `60 x resize relayout` | 24.56 ms | **1.20 ms** |
+| 进程 working set | +9.6 MB | +4.7 MB |
+
+**表格 200,000 行 x 100 列**
+
+| 指标 | Row Widget Debug → Release | Cell Widget Debug → Release |
+| --- | --- | --- |
+| 打开 | 42.27 → **5.94 ms** | 119.51 → **10.62 ms** |
+| 垂直滚动 | 0.85 → **0.04 ms/步** | 8.04 → **0.36 ms/步** |
+| 横向滚动（100 步） | 19.34 → **0.76 ms** | 1012.59 → **48.04 ms**（新建 264 个单元格） |
+| 列宽调整（60 次） | 21.89 → **1.37 ms** | 1043.22 → **28.54 ms** |
+| 进程 working set | +2.6 → +2.9 MB | +3.6 → +3.4 MB |
+
+**树 1,000,000 顶层节点 x 10 子节点（深度 4）**
+
+| 指标 | Debug | Release |
+| --- | --- | --- |
+| 打开 | 4225.24 ms | **120.35 ms** |
+| 展开一条 4 层深路径 | 174.90 ms / 48 次查询 | **4.44 ms / 48 次查询** |
+| 折叠根节点 | 10.83 ms | **1.52 ms** |
+| 稳态滚动 | 2.07 ms/步 | **0.03 ms/步** |
+| 堆树（4200 节点）全量展开 | 127.82 ms | **3.44 ms** |
+| 视口上方 insert/remove 各 200 行 | 459.00 / 502.01 ms | **15.70 / 15.08 ms** |
+| 进程 working set | +41.9 MB | +33.3 MB |
+
+可见行表本身的 splice（`--tree` 的"index only"场景，§4 末条有解释）：构建 100 万行 118.64 ms、
+末尾展开 0.01 ms、开头展开 1.29 ms、折叠 1.33 ms、稳态一对 2.86 ms —— Release 与 Debug 在这
+一档几乎一样，因为它就是一次内存搬移（带宽受限），优化编译没有可发挥的空间。
 
 ## 4. 已知取舍
 
@@ -192,9 +238,11 @@ MSVC 19.50 x64、Windows 11、静态构建、`QT_QPA_PLATFORM=offscreen`。Debug
   带宽跑：要再往下只能把可见行表换成 rope / 分块 / 隐式树，而那会改变公开类
   `TreeVisibilityIndex` 的成员布局，按 [abi.md](abi.md) §4 第 3 条属于 ABI 破坏 —— 因此它是
   **下一个主版本**的议题，1.x 期间接受这个数字（决策见 [roadmap.md](roadmap.md) §5）。
-* **Release 基线尚未采集（roadmap 3d 的遗留项）**：§3 的数字全部来自 Debug 构建，够用来看趋势与
-  回归，但不能当"发布版性能"引用。采集 Release 基线需要另一棵 `-DCMAKE_BUILD_TYPE=Release` 的树
-  （`scripts/validate.ps1` 目前固定 Debug），留到有实际性能诉求时再做。
+* **Release 基线已采集（原文说"留到有实际性能诉求时再做"，2026-09-26 补上）**：§3 的 Debug 表下面
+  是同一台机器的 Release 表（含 Release 的 28 个 CTest 目标），复跑就是
+  `pwsh -File scripts/validate.ps1 -Release -Library Static` —— 脚本现在支持 `-Release`（独立
+  构建树 `cmake-build-release-qt{6,5}[-shared]`）。Debug 与 Release 的比值在 3~35 倍之间，Debug
+  数字继续当"趋势与回归"用（绝对值和发布版无关）。
   不变量由 `tests/unit/tst_treevisibilityindex` 与 `tst_virtualtreeview` 守住：展开/折叠不遍历
   整棵树（模型查询次数）、以及"每一行都能映射回它自己在可见行列表里的位置"（在很宽的树上反复
   展开/折叠/再展开后逐一校验）。

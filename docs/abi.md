@@ -126,8 +126,8 @@ Qt 由 Config 里的 `find_dependency()` 找回，**但安装前缀按 Qt 大版
 
 | Qt | 编译器 | 静态 | 动态 | 验证方式 |
 | --- | --- | --- | --- | --- |
-| 6.11.2 / msvc2022_64 | MSVC 19.50 x64（VS 18 Community） | 通过 | 通过 | `all` 构建 + 28 个 CTest 目标 + 12 个示例退出码 0；另有一个 AddressSanitizer 静态构建（`scripts/validate.ps1 -Asan`）同样全绿 |
-| 5.15.2 / msvc2019_64 | 同上 | 通过 | 通过 | 同上（含 ASan 静态构建） |
+| 6.11.2 / msvc2022_64 | MSVC 19.50 x64（VS 18 Community） | 通过 | 通过 | Debug 与 Release 各：`all` 构建 + 28 个 CTest 目标 + 12 个示例退出码 0 + 三档基准 + 安装消费端；另有一个 AddressSanitizer 静态构建（`scripts/validate.ps1 -Asan`）同样全绿 |
+| 5.15.2 / msvc2019_64 | 同上 | 通过 | 通过 | 同上（含 Release 与 ASan） |
 
 构建环境：Ninja + CMake 4.x，C++17，Debug。两个 Qt 版本各跑静态与动态各一遍，共四种组合。
 
@@ -146,6 +146,9 @@ Qt 由 Config 里的 `find_dependency()` 找回，**但安装前缀按 Qt 大版
    安装 + 消费端共 28 个步骤，退出码 0）；
 2b. [x] `pwsh -File scripts/validate.ps1 -Asan`（Qt 6.11.2 与 5.15.2 各一个 MSVC ASan 静态构建）
    全绿：28 个 CTest 目标 + 12 个示例，无 ASan 报告；UBSan / Linux 组合见 [ci.md](ci.md)；
+2c. [x] `pwsh -File scripts/validate.ps1 -Release -Library Static` 全绿（两个 Qt 版本各
+   构建 / 28 个 CTest / 12 个示例 / 三档基准 / 安装消费端共 14 步），Release 基线进
+   [performance.md](performance.md) §3；
 3. [x] 性能基线数字固化进 [performance.md](performance.md)（roadmap 3d）；
 4. [x] CHANGELOG 的破坏性变更段与 [api-stability.md](api-stability.md) §6 的欠账都清空。
 

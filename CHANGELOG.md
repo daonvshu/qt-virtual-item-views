@@ -44,8 +44,12 @@
   `VirtualTableView::setHorizontalHeader(): …`）：审查建议的 `QT_FATAL_WARNINGS=1` 在
   offscreen 平台下不可用（Qt 自己的 offscreen 插件与缺失字体目录就会警告，实测 12 个示例全部
   abort），所以用这条等价的检查代替；Linux/CI 侧用 Xvfb + xcb 时可以开真正的 fatal warnings。
+  另有 `-Release` 开关：用 Release 构建树（`cmake-build-release-qt{6,5}[-shared]`）跑
+  构建 → 28 个 CTest 目标 → 12 个示例 → 三档基准 → 安装 + 消费端，两个 Qt 版本 14 步全绿。
 * [docs/performance.md](docs/performance.md) §3 的 v1.0 基线：列表 1M 行、表格 20 万行 x 100 列
   （Row/Cell 两种模式）、树 1M 顶层节点的实测数字与确切命令，供后续回归对比。
+  **Release 基线**（2026-09-26 补）：同一台机器的 Debug/Release 对照表（打开快 3~35 倍、稳态滚动
+  0.03–0.05 ms/步），外加 Release 下 28 个 CTest 目标全绿（`scripts/validate.ps1 -Release`）。
 * README 重排成面向 GitHub 的首页：徽章 + 一句话定位 + 亮点 + 能力概览 + 示例截图
   （`docs/images/`，由示例的 `--snapshot` 导出）+ 快速开始 + 安装/构建/验证；
   逐条能力状态移到 [docs/features.md](docs/features.md)。

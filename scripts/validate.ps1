@@ -27,6 +27,7 @@
     pwsh -File scripts/validate.ps1 -Library Static -SkipBenchmarks
     pwsh -File scripts/validate.ps1 -QtBin D:/Qt/6.8.3/msvc2022_64/bin
     pwsh -File scripts/validate.ps1 -Asan -QtBin D:/Qt/6.11.2/msvc2022_64/bin
+    pwsh -File scripts/validate.ps1 -Release -Library Static
 #>
 [CmdletBinding()]
 param(
@@ -41,6 +42,11 @@ param(
     [switch]$SkipExamples,
     [switch]$SkipBenchmarks,
     [switch]$SkipConsumer,
+    # Validates the Release configuration instead of Debug: separate trees
+    # (<...>-release[ -shared]) and ctest -C Release. Debug stays the default, and the
+    # two are independent runs - Release is where the optimised / NDEBUG code paths and
+    # the numbers quoted in docs/performance.md §3 come from.
+    [switch]$Release,
     # Adds a fifth step combination per Qt kit: the library + tests + examples built with
     # MSVC's AddressSanitizer (-DCMAKE_CXX_FLAGS=/fsanitize=address, tree <...>-asan).
     # The benchmarks would take minutes under ASan and the installed consumer is a
@@ -53,6 +59,10 @@ if ($Asan) {
     $SkipBenchmarks = $true
     $SkipConsumer = $true
 }
+if ($Asan -and $Release) {
+    throw "-Asan and -Release are separate runs: pick one (Release + ASan would need its own tree and numbers)."
+}
+$configuration = if ($Release) { 'Release' } else { 'Debug' }
 
 $ErrorActionPreference = 'Stop'
 $PSNativeCommandUseErrorActionPreference = $false
@@ -149,14 +159,15 @@ foreach ($qt in $QtBin) {
     foreach ($flavour in $flavours) {
         $isShared = ($flavour -eq 'shared')
         $sanitizerSuffix = if ($Asan) { '-asan' } else { '' }
-        $tree = Join-Path $repo ("cmake-build-debug-qt{0}{1}{2}" -f $major, $(if ($isShared) { '-shared' } else { '' }), $sanitizerSuffix)
-        $combo = "Qt$major/$flavour" + $(if ($Asan) { ' asan' } else { '' })
+        $treeName = "cmake-build-{0}-qt{1}{2}{3}" -f $configuration.ToLower(), $major, $(if ($isShared) { '-shared' } else { '' }), $sanitizerSuffix
+        $tree = Join-Path $repo $treeName
+        $combo = "Qt$major/$flavour" + $(if ($Asan) { ' asan' } else { '' }) + $(if ($Release) { ' release' } else { '' })
         Write-Host ""
         Write-Host "$combo  ($tree)"
 
         # 1) configure + build
         $configureArgs = @('-S', $repo, '-B', $tree, '-G', 'Ninja',
-                           '-DCMAKE_BUILD_TYPE=Debug',
+                           "-DCMAKE_BUILD_TYPE=$configuration",
                            "-DCMAKE_PREFIX_PATH=$qtRoot",
                            ("-DVIRTUALITEMVIEWS_BUILD_SHARED=" + $(if ($isShared) { 'ON' } else { 'OFF' })))
         if ($Asan) {
@@ -171,7 +182,7 @@ foreach ($qt in $QtBin) {
         }
         Add-Result $combo 'configure' $true
 
-        $build = Invoke-Native $CMake @('--build', $tree, '--target', 'all', '--config', 'Debug')
+        $build = Invoke-Native $CMake @('--build', $tree, '--target', 'all', '--config', $configuration)
         Add-Result $combo 'build all' ($build.ExitCode -eq 0)
         if ($build.ExitCode -ne 0) {
             Show-Tail $build.Output 25
@@ -191,7 +202,7 @@ foreach ($qt in $QtBin) {
         }
 
         # 2) tests
-        $test = Invoke-Native $CTest @('--test-dir', $tree, '-C', 'Debug', '--output-on-failure')
+        $test = Invoke-Native $CTest @('--test-dir', $tree, '-C', $configuration, '--output-on-failure')
         Add-Result $combo 'ctest' ($test.ExitCode -eq 0)
         if ($test.ExitCode -ne 0) {
             Show-Tail $test.Output 25
@@ -247,21 +258,21 @@ foreach ($qt in $QtBin) {
         # 5) install + consumer smoke test
         if (-not $SkipConsumer) {
             $prefix = Join-Path $tree 'install-root'
-            $consumerBuild = Join-Path $repo ("cmake-build-consumer-qt{0}{1}" -f $major, $(if ($isShared) { '-shared' } else { '' }))
-            $install = Invoke-Native $CMake @('--install', $tree, '--prefix', $prefix, '--config', 'Debug')
+            $consumerBuild = Join-Path $repo ("cmake-build-consumer-qt{0}{1}{2}" -f $major, $(if ($isShared) { '-shared' } else { '' }), $(if ($Release) { '-release' } else { '' }))
+            $install = Invoke-Native $CMake @('--install', $tree, '--prefix', $prefix, '--config', $configuration)
             if ($install.ExitCode -ne 0) {
                 Add-Result $combo 'install' $false
                 Show-Tail $install.Output
             } else {
                 Add-Result $combo 'install' $true
                 $consumer = Invoke-Native $CMake @('-S', (Join-Path $repo 'tests/install/consumer'), '-B', $consumerBuild,
-                                                   '-G', 'Ninja', '-DCMAKE_BUILD_TYPE=Debug',
+                                                   '-G', 'Ninja', "-DCMAKE_BUILD_TYPE=$configuration",
                                                    "-DCMAKE_PREFIX_PATH=$prefix;$qtRoot")
                 if ($consumer.ExitCode -ne 0) {
                     Add-Result $combo 'consumer configure' $false
                     Show-Tail $consumer.Output
                 } else {
-                    $consumerBuildStep = Invoke-Native $CMake @('--build', $consumerBuild, '--config', 'Debug')
+                    $consumerBuildStep = Invoke-Native $CMake @('--build', $consumerBuild, '--config', $configuration)
                     if ($consumerBuildStep.ExitCode -ne 0) {
                         Add-Result $combo 'consumer build' $false
                         Show-Tail $consumerBuildStep.Output

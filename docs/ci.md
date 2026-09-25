@@ -15,6 +15,7 @@ configure → 构建 → CTest → 示例 → 基准不变量 → 安装 + 消�
 | job | 目的 | 备注 |
 | --- | --- | --- |
 | `windows-msvc-qt6` | 主平台回归 | `scripts/validate.ps1` 一把梭（含库形态 × 安装消费端） |
+| `windows-msvc-release` | Release 构建 + Release 基准（审查要求的 "Release benchmark smoke"） | `scripts/validate.ps1 -Release -Library Static`，本机已实跑：两个 Qt 版本 14 步全绿 |
 | `ubuntu-gcc-qt6` | 开源常见组合 | Qt 6 走 apt（`qt6-base-dev`），只有 Core/Gui/Widgets/Test |
 | `ubuntu-gcc-qt6-asan` | ASan + UBSan | `-fsanitize=address,undefined`，Debug。**ASan 部分本机已在 MSVC 上实跑**（见 §5），UBSan 需要 GCC/Clang |
 | `ubuntu-gcc-qt5` | 老版本回归 | 只在 runner 能稳定拿到 Qt 5.15 时加；拿不到就先不写 |
@@ -43,6 +44,9 @@ jobs:
       - name: AddressSanitizer（库 + 测试 + 示例）
         shell: pwsh
         run: pwsh -NoProfile -File scripts/validate.ps1 -Asan -Library Static -QtBin "$env:QT_ROOT_DIR/bin"
+      - name: Release（构建 + CTest + 示例 + 基准 + 安装消费端）
+        shell: pwsh
+        run: pwsh -NoProfile -File scripts/validate.ps1 -Release -Library Static -QtBin "$env:QT_ROOT_DIR/bin"
 
   ubuntu-qt6:
     runs-on: ubuntu-latest
@@ -135,3 +139,13 @@ sanitizer 选项）。
 都没有出现）。这覆盖了审查"ASan/UBSan"里能在 Windows 上做的部分；剩下的 UBSan 与 GCC/Clang
 组合仍需要一个 Linux runner（配置见 §2）。同一轮里脚本新增了示例输出扫描（§3 的
 `QT_FATAL_WARNINGS` 替代方案）：12 个示例在正常退出码 0 的同时不打印任何库诊断。
+
+同一轮还把 **Release** 做成了可复跑的一半（审查的 "Release benchmark smoke"）：
+
+```powershell
+pwsh -File scripts/validate.ps1 -Release -Library Static
+```
+
+它用独立构建树 `cmake-build-release-qt{6,5}` 跑 configure → `all` → 28 个 CTest 目标 →
+12 个示例 → 三档基准 → 安装 + 消费端。实测两个 Qt 版本共 14 步全绿；数字（Debug/Release 对照）
+记在 [performance.md](performance.md) §3 的 Release 表。

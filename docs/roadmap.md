@@ -142,6 +142,8 @@ Wave 3（v1.0 工程化交付）。**
       §3 原来那组树数字是 Qt 6.8.3 时期测的却标成了 6.11.2（现在明确标注并换成实测值），
       "expand/collapse 由可见行查询表重建主导"这句在 2a 之后已经不对（现在 174.90 ms / 48 次
       模型查询，是增量的）。**Release 基线未采集**，作为遗留项写在 performance.md §4 末条。
+      （2026-09-26 补完：`scripts/validate.ps1 -Release` 采集了同一台机器的 Release 三档基线，
+      Release 的 28 个 CTest 目标也一并跑通 —— 见 performance.md §3 的 Release 表。）
 - [x] **3e 一键验证脚本**：`scripts/validate.ps1` 把本轮一直在手工做的检查固化下来 —— 对每个
       Qt kit × 库形态组合依次做 configure → `all` 构建 → CTest → 12 个示例（`--exit-after`，
       退出码必须 0）→ benchmark 不变量自检 → `cmake --install` + 消费端冒烟测试；
