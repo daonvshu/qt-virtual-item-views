@@ -121,6 +121,7 @@ private slots:
     void scrollingGroupCannotStealHitsFromItsNeighbour();
     void spansAreClippedAtEveryPaneBoundary();
     void resettingThePanesRestoresTheDefault();
+    void keyboardNavigationScrollsTheGroupOfTheColumn();
 };
 
 void TestTablePanes::defaultLayoutIsStillTheThreePanes()
@@ -550,6 +551,53 @@ void TestTablePanes::resettingThePanesRestoresTheDefault()
     QCOMPARE(view.panes().first().type, TablePane::Type::Scrollable);
     QCOMPARE(view.columnGeometry(0).viewportX, 0);
     QCOMPARE(view.columnGeometry(3).viewportX, 3 * kColumnWidth);
+}
+
+void TestTablePanes::keyboardNavigationScrollsTheGroupOfTheColumn()
+{
+    auto *model = new QStandardItemModel(20, kColumns, this);
+    PaneTableAdapter adapter;
+    VirtualTableView view;
+    view.setTableAdapter(&adapter);
+    view.setUniformItemHeight(kRowHeight);
+    view.setDefaultColumnWidth(kColumnWidth);
+    view.setModel(model);
+    showView(&view, QSize(kViewWidth, kViewHeight));
+    // frozen {0} | group 0 {1,2,3} | frozen {4} | group 1 {5..9}
+    view.setPanes(twoGroupPanes());
+    view.flushPendingRelayout();
+    QVERIFY(view.maximumHorizontalOffset(1) > 0);
+
+    // A frozen column is always visible: navigating onto it must not scroll the
+    // primary group (or any other).
+    view.setHorizontalOffset(view.maximumHorizontalOffset());
+    const qint64 primaryBefore = view.horizontalOffset(0);
+    QVERIFY(primaryBefore > 0);
+    view.setCurrentIndex(model->index(0, 1));
+    QTest::keyClick(&view, Qt::Key_Left);            // column 1 -> frozen column 0
+    view.flushPendingRelayout();
+    QCOMPARE(view.currentIndex(), model->index(0, 0));
+    QVERIFY(view.isColumnFrozen(0));
+    QCOMPARE(view.horizontalOffset(0), primaryBefore);
+    QCOMPARE(view.horizontalOffset(1), qint64(0));
+
+    // Navigating to the far end of the *second* group has to move that group, and
+    // leave the primary one alone.
+    view.setCurrentIndex(model->index(0, 5));
+    QTest::keyClick(&view, Qt::Key_Right);
+    QTest::keyClick(&view, Qt::Key_Right);
+    QTest::keyClick(&view, Qt::Key_Right);
+    QTest::keyClick(&view, Qt::Key_Right);           // column 5 -> 9
+    view.flushPendingRelayout();
+    QCOMPARE(view.currentIndex(), model->index(0, 9));
+    QVERIFY(view.horizontalOffset(1) > 0);
+    QCOMPARE(view.horizontalOffset(0), primaryBefore);
+
+    // ... and the column really is inside its own pane now.
+    const QRect paneRect = view.panes().at(view.paneIndexOfColumn(9)).viewportRect;
+    const ColumnGeometry geometry = view.columnGeometry(9);
+    QVERIFY(geometry.viewportX >= paneRect.x());
+    QVERIFY(geometry.viewportX + geometry.width <= paneRect.right() + 1);
 }
 
 QTEST_MAIN(TestTablePanes)

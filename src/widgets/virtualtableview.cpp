@@ -2366,14 +2366,42 @@ void VirtualTableView::scrollToColumn(int logicalIndex)
     const ColumnGeometry geometry = m_columns->columnGeometry(logicalIndex);
     if (!geometry.isValid() || geometry.hidden)
         return;
-    const int viewportWidth = viewport()->width();
-    const qint64 start = geometry.contentX;
-    const qint64 end = start + geometry.width;
-    const qint64 offset = m_columns->viewportOffset();
-    if (start < offset)
-        setHorizontalOffset(start);
-    else if (end > offset + viewportWidth)
-        setHorizontalOffset(end - viewportWidth);
+
+    // Which pane shows the column decides what "make it visible" means: a frozen
+    // column is always visible, and a column of another scroll group must move
+    // that group (the primary one is driven by the header geometry and the scroll
+    // bar, the others by setHorizontalOffset(group, ...)).
+    const int paneIndex = m_panes.paneIndexOfColumn(logicalIndex);
+    if (paneIndex < 0)
+        return;
+    const TablePane pane = m_panes.paneAt(paneIndex);
+    if (pane.isFrozen() || pane.viewportRect.width() <= 0)
+        return;
+
+    const int scrollGroup = pane.scrollGroup;
+    const qint64 groupOffset = m_panes.groupOffset(scrollGroup);
+    const int viewportX = m_panes.columnViewportX(logicalIndex);
+    if (viewportX < 0)
+        return;
+    // The pane packs its own columns from its own left edge, so the number that
+    // matters is the x inside the pane, not the flat content x.
+    const qint64 localStart = qint64(viewportX) - pane.viewportRect.x() + groupOffset;
+    const qint64 localEnd = localStart + geometry.width;
+    const qint64 paneWidth = pane.viewportRect.width();
+
+    qint64 wanted = groupOffset;
+    if (localStart < groupOffset)
+        wanted = localStart;
+    else if (localEnd > groupOffset + paneWidth)
+        wanted = localEnd - paneWidth;
+    wanted = qBound<qint64>(0, wanted, m_panes.maximumGroupOffset(scrollGroup));
+    if (wanted == groupOffset)
+        return;
+
+    if (scrollGroup == m_panes.primaryScrollGroup())
+        setHorizontalOffset(wanted);
+    else
+        setHorizontalOffset(scrollGroup, wanted);
 }
 
 // ---------------------------------------------------------------------------

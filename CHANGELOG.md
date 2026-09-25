@@ -120,3 +120,10 @@
   它所属那个 pane 的坐标系里。
   回归测试：`tst_dndfrozen`（2 例：冻结带与滚动带各自的落点、三条边界线的位置；
   已确认还原旧映射时用例会失败 —— 落点从第 0 行变成第 50 行、指示线跑到 y=-1500）。
+* **`scrollToColumn()` 的 pane 感知**：键盘导航调用它让 current 列可见，但它以前拿"扁平
+  contentX"和主滚动偏移比较，于是指向冻结列时会去滚主组，指向非主滚动组的列时会滚错组（甚至
+  什么都看不到）。现在先查列属于哪个 pane / 滚动组：冻结列直接返回（本来就可见）；其它情况
+  按列在**自己 pane 内**的 x 与 pane 宽度决定目标偏移，主组走 `setHorizontalOffset()`、
+  其它组走 `setHorizontalOffset(group, …)`。
+  回归测试：`tst_tablepanes::keyboardNavigationScrollsTheGroupOfTheColumn`
+  （已确认还原旧实现时用例会失败：第二组的偏移一直是 0）。
