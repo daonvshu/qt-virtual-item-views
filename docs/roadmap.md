@@ -28,7 +28,7 @@ v0.7 的逐项细节与实现决定记在 [spans.md](spans.md)、[accessibility.
 | Qt 5 | `D:\devlib\Qt\5.15.2\msvc2019_64` |
 | 工具链 | MSVC 18 (14.50.35717) x64 + Ninja + CMake 4.3（CLion 自带） |
 | 构建树 | `cmake-build-debug-qt6` / `cmake-build-debug-qt5` |
-| 验证 | 两种配置 `all` 构建通过；19 个 CTest 目标全绿（214 单元 + 4 变异 + 10 GUI 用例）；11 个示例与 `bench_listview` 已产出 |
+| 验证 | 两种配置 `all` 构建通过；20 个 CTest 目标全绿（247 单元 + 4 变异 + 10 GUI 用例）；12 个示例全部退出码 0；`bench_listview`（1M 行 / 表格 100 列 / 树）自检不变量通过 |
 
 注意：构建与测试必须在沙箱外运行。沙箱内 ninja 无法派生编译器子进程，构建会永久挂起
 （已用最小 ninja 工程复现）。
@@ -68,7 +68,8 @@ v0.7 的逐项细节与实现决定记在 [spans.md](spans.md)、[accessibility.
 
 ### Wave 2（v0.9）：规模化与可访问性补完
 
-两块互相独立，也不改结构，可按实际需求调序。
+两块互相独立，也不改结构，可按实际需求调序。**Wave 2 已全部完成（2026-09-25），下一步进入
+Wave 3（v1.0 工程化交付）。**
 
 - [x] **2a 树的增量可见行映射**：把"整表反向哈希 + 每次 expand/collapse 重建"换成**每个已展开
       父节点一棵 Fenwick 树**（`BranchBlock`），索引 → 可见行自底向上累加（O(depth × log siblings)），
@@ -84,8 +85,14 @@ v0.7 的逐项细节与实现决定记在 [spans.md](spans.md)、[accessibility.
       `selectedCells()` 只给窗口内的节点（计数精确、列表有界）。顺带把节点的
       `rowIndex()`（返回 QModelIndex）改名为 `rowModelIndex()`，避免与 Qt 的 int 版重名。
       仍未实现：`TextInterface`/`EditableTextInterface`（[accessibility.md](accessibility.md) §4）。
-- [ ] **2c `BlockSizeIndex` 内存优化**：只记录"与估计值不同"的行，公开接口不变
-      （[performance.md](performance.md) §4 第一条）。
+- [x] **2c `BlockSizeIndex` 内存优化**：块改成"一个基值 + 一张按行号排序的稀疏例外表"，即只记录
+      "实测过、且与估计值不同"的行；没测量过的行不占存储（一千万元素均匀内容约 40 MB → 约
+      0.6 MB）。语义：`setSize()` 写回基值即释放例外，`insert()` 在中间插入只切块、不搬动其它块的
+      例外，`remove()` 按块边界切两刀再整块丢弃并归并残留邻块；块超过 2 x capacity 对半切、
+      与邻块基值相同且合计不超过 capacity 就合并，因此最坏情况与旧的逐行实现同阶
+      （[performance.md](performance.md) §4 第一条）。公开接口不变，另加只给测试/诊断用的
+      `explicitSizeCount()`；新增 4 条用例（未测量行不占存储、估计值变化不改已测行、跨越删除与插入
+      后实测值仍在、逐行追加不会把索引碎成 N 个块）。
 
 ### Wave 3（v1.0）：工程化交付
 
@@ -118,6 +125,7 @@ v0.7 的逐项细节与实现决定记在 [spans.md](spans.md)、[accessibility.
 | 2026-09-25 | 构建必须在沙箱外运行 | 沙箱内 ninja 无法派生编译器子进程，构建会永久挂起（已用最小 ninja 工程复现） |
 | 2026-09-25 | 1c 行冻结纳入范围 | 用户要求：做一个垂直方向的 pane 类比，而不是写进非目标 |
 | 2026-09-25 | 表头动画只覆盖换序（resize/滚动/pane 变化保持逐帧同步） | §24 的判据是"body 是否逐帧跟随"；动画只做 body 不跟帧的那一种，避免表头与 body 撕裂 |
+| 2026-09-25 | `BlockSizeIndex` 用"块基值 + 稀疏例外表"，块 > 2 x capacity 对半切、与同基值邻块合并到 capacity | 逐行存 int 让一千万元素白付 40 MB；基值化后未测量的行零开销，而"切/合并"把每块的例外数夹在 2 x capacity 内，最坏复杂度与旧实现同阶，常见情况退化成 O(log B) |
 | 2026-09-25 | 视图会 reparent 应用传入的表头控件 | 顶层窗口的位置是屏幕坐标（带窗口边框偏移），表头会与 body 差几像素；reparent 后统一用视图坐标 |
 | 2026-09-25 | 行冻结里 `verticalOffset()` 的语义与范围保持不变（最大偏移仍 = 内容高 - 视口高） | 这正是"冻结不产生额外滚动空间"的算式：可滚动区少掉的像素数恰好等于冻结带高度；滚动到末尾时最后几行由底部冻结带绘制，内容仍然连续 |
 | 2026-09-25 | Cell Widget Mode 的裁剪容器改成"行 pane × 列 pane"交集，Row Widget Mode 不变（内核裁纵向、行内的列容器裁横向） | 两个方向的边界互相独立；Row 模式的行控件本身被内核容器裁一次，天然正交，不需要第二层容器 |

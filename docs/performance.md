@@ -5,18 +5,19 @@
 | 操作 | 复杂度 | 说明 |
 | --- | --- | --- |
 | `FixedSizeIndex::offsetOf/indexAt` | O(1) | 除乘 |
-| `BlockSizeIndex::offsetOf/indexAt` | O(log B + capacity) | 两张前缀表二分 + 块内线性 |
-| `BlockSizeIndex::setSize` | O(1) + 下次查询 O(B) | 懒重建前缀表 |
-| `BlockSizeIndex::insert` | O(capacity) | 块内插入 + 必要时分块 |
-| `BlockSizeIndex::remove` | O(capacity + B) | 逐块删除 |
+| `BlockSizeIndex::offsetOf/indexAt` | O(log B + E_b) | 两张前缀表二分 + 例外表二分/游走（E_b = 该行之前的例外数，恒 <= 2 x capacity） |
+| `BlockSizeIndex::setSize` | O(log B + E_b) | 例外表二分 + 一次内存移动，懒重建前缀表 |
+| `BlockSizeIndex::insert` | O(log B + capacity) | 切一次块 + 建一个新块 + 必要时与邻块合并 |
+| `BlockSizeIndex::remove` | O(B + capacity) | 按块边界切两刀后整块删除 + 归并邻块 |
 | `TreeVisibilityIndex::indexAtVisibleRow` | O(1) | 可见行数组下标 |
 | `TreeVisibilityIndex::visibleRowForIndex` / `depth` | O(1) / O(depth) | 查询表按 index 值建立，结构变更后整体重建 |
 | `TreeVisibilityIndex::expand` / `collapse` | O(被展开子树) + O(可见行) | 只遍历被展开的子树，**不重走整棵树**；可见行数组的插入/删除是 O(可见行) |
 | `relayout()` | O(W) | W = 可见 + overscan + pin |
 | 稳态滚动 | O(进入窗口的项数) | 以复用为主，通常 1~2 项 rebind |
 
-其中 B 为块数（约 N / 1024），capacity 为块容量（1024）：一百万行时前缀重建约 10^3 次加法，
-远低于一次全量 O(N) 重算。
+其中 B 为块数（约 N / 1024），capacity 为块容量（1024），E_b 为该行所在的块里排在该行之前的例外
+数（`BlockSizeIndex` 只保存"实测过、且与估计值不同"的行，见 §4）。一百万行时前缀重建约 10^3 次
+加法，远低于一次全量 O(N) 重算；没有被测量过的行不占任何额外存储。
 
 ## 2. 规模特性与校验
 
@@ -25,7 +26,7 @@
 | 逻辑行数初始化 | 与行数弱相关，不创建全量控件 | `tst_virtualitemview::materializesOnlyVisibleAndOverscan`（1,000,000 行） |
 | 可见控件数量 | visible + overscan + pinned | 同上以及 `materializedItemCount()` |
 | 稳态滚动 | 不 new/delete | `tst_virtualitemview::scrollingReusesWidgetsWithoutAllocating`、`tst_modelmutationfuzz::widgetCountStaysBounded` |
-| 内存 | 随可见项复杂度增长，不随逻辑行数线性增长 | 只持有可见项控件 + SizeIndex 的 int 数组 |
+| 内存 | 随可见项复杂度增长，不随逻辑行数线性增长 | 只持有可见项控件 + `SizeIndex` 的"块 + 稀疏例外"表（`tst_sizeindex::blockIndexStaysCompactWithoutMeasuredSizes` 守住"未测量的行不占存储"） |
 | 单项 `dataChanged` | 只影响对应可见控件/尺寸 | `tst_virtualitemview::dataChangedRebindsOnlyAffectedWidgets`（bind 次数 +1） |
 | resize | 不重建模型，不全量创建控件 | `tst_virtualitemview::resizeUpdatesVisibleRange` |
 | Table 列 resize | 只更新 materialized 行（不 rebind、不重建、不遍历逻辑行） | `tst_virtualtableview::columnResizeTouchesMaterializedRowsOnly`、`hugeModelColumnResizeDoesNotWalkRows`（1,000,000 行） |
@@ -80,7 +81,7 @@ bench_listview --tree
 * **展开与变更**：堆树（`--tree-roots`/`--tree-branching` 之外的小树）全量展开，再在视口上方
   insert/remove 行，验证展开状态、可见行映射与锚点。
 
-Debug 构建（Qt 6.8.3 / msvc2022_64，本机参考值，用于观察趋势而非横向比较）：
+Debug 构建（Qt 6.11.2 / msvc2022_64，本机参考值，用于观察趋势而非横向比较）：
 
 | 指标 | 1M 顶层节点宽树 | 4200 节点堆树（全展开） |
 | --- | --- | --- |
@@ -96,8 +97,18 @@ Debug 构建（Qt 6.8.3 / msvc2022_64，本机参考值，用于观察趋势而�
 
 ## 4. 已知取舍
 
-* `BlockSizeIndex` 目前按行保存 int 尺寸（一千万元素约 40 MB）。若需要更低内存，可改成只记录
-  "与估计值不同"的行，公开接口不变。
+* **`BlockSizeIndex` 只记录"与估计值不同"的行（v0.9 / roadmap 2c）**：每个块保存一个基值
+  （`baseSize`）+ 一张按行号排序的稀疏例外表（`QVector<Exception>`，例外 = 实测过且不等于基值的行）。
+  从来没有被测量过的行不占任何存储，一千万元素的均匀内容从约 40 MB 降到约 0.6 MB（9766 个块 x
+  48 B + 两张前缀表），实测尺寸则一个不漏地保留。公开接口（`SizeIndex`）与 `sizes()` /
+  `estimatedSize()` / `blockCount()` 的语义都没变，另加了一个只给测试和诊断用的
+  `explicitSizeCount()`（当前例外总数）。
+  语义要点：`setSize()` 写入的值恰好等于所在块的基值时不建例外（等于"回到估计值"），
+  `insert()` 在中间插入只切块、不搬动其它块的例外，`remove()` 先按块边界切两刀再整块丢弃，
+  残留的相邻同基值块在 `remove()` 后归并。
+  块的行数超过 2 x capacity 就对半切，基值相同、合计不超过 capacity 的相邻块合并（`insert()`
+  只并插入点两侧，`remove()` 后统一归并），因此 E_b 恒 <= 2 x capacity，最坏情况与旧的逐行实现
+  同阶，常见情况（没有例外的块）退化成 O(log B)。
 * 前缀表是懒重建的：一次 `insert/remove` 后第一次查询需要付 O(B)。批量变更（模型一次性插入 N 行）
   只重建一次，符合"先正确后优化"的原则。
 * `materializedItems()` 返回的列表在每次 pass 后重建（W 很小），不是热路径瓶颈。

@@ -104,9 +104,80 @@ QVector<int> BlockSizeIndex::sizes() const
 {
     QVector<int> result;
     result.reserve(int(m_count));
-    for (const Block &block : m_blocks)
-        result.append(block.sizes);
+    for (const Block &block : m_blocks) {
+        qsizetype row = 0;
+        for (const Exception &exception : block.exceptions) {
+            for (; row < exception.row; ++row)
+                result.append(block.baseSize);
+            result.append(exception.size);
+            row = exception.row + 1;
+        }
+        for (; row < block.rowCount; ++row)
+            result.append(block.baseSize);
+    }
     return result;
+}
+
+qsizetype BlockSizeIndex::explicitSizeCount() const
+{
+    qsizetype total = 0;
+    for (const Block &block : m_blocks)
+        total += block.exceptions.size();
+    return total;
+}
+
+bool BlockSizeIndex::exceptionRowLess(const Exception &exception, qsizetype row)
+{
+    return exception.row < row;
+}
+
+qsizetype BlockSizeIndex::exceptionPosition(const Block &block, qsizetype local)
+{
+    const auto it = std::lower_bound(block.exceptions.constBegin(), block.exceptions.constEnd(),
+                                     local, &BlockSizeIndex::exceptionRowLess);
+    return it - block.exceptions.constBegin();
+}
+
+int BlockSizeIndex::blockSizeAt(const Block &block, qsizetype local)
+{
+    const qsizetype position = exceptionPosition(block, local);
+    if (position < block.exceptions.size() && block.exceptions.at(position).row == local)
+        return block.exceptions.at(position).size;
+    return block.baseSize;
+}
+
+qint64 BlockSizeIndex::blockSumBelow(const Block &block, qsizetype local)
+{
+    const qsizetype rows = qBound<qsizetype>(qsizetype(0), local, block.rowCount);
+    qint64 sum = qint64(rows) * qint64(block.baseSize);
+    const qsizetype end = exceptionPosition(block, rows);
+    for (qsizetype i = 0; i < end; ++i)
+        sum += qint64(block.exceptions.at(i).size) - qint64(block.baseSize);
+    return sum;
+}
+
+qsizetype BlockSizeIndex::blockRowAt(const Block &block, qint64 offset)
+{
+    // Rows between two exceptions share the base size, so the containing row is
+    // one division away; only the sparse exceptions need a walk.
+    qsizetype row = 0;
+    qint64 remaining = offset;
+    for (const Exception &exception : block.exceptions) {
+        if (exception.row > row) {
+            const qint64 runSize = qint64(exception.row - row) * qint64(block.baseSize);
+            if (block.baseSize > 0 && remaining < runSize)
+                return row + qsizetype(remaining / qint64(block.baseSize));
+            remaining -= runSize;
+        }
+        row = exception.row;
+        if (remaining < exception.size)
+            return row;
+        remaining -= exception.size;
+        row = exception.row + 1;
+    }
+    if (block.baseSize <= 0)
+        return block.rowCount; // only zero-sized rows are left
+    return qMin(row + qsizetype(remaining / qint64(block.baseSize)), block.rowCount);
 }
 
 qsizetype BlockSizeIndex::blockCount() const
@@ -134,7 +205,7 @@ void BlockSizeIndex::ensureOffsets() const
         m_blockOffsets[i] = offset;
         m_blockStartRows[i] = row;
         offset += m_blocks.at(i).sum;
-        row += m_blocks.at(i).sizes.size();
+        row += m_blocks.at(i).rowCount;
     }
     m_blockOffsets[blockCount] = offset;
     m_blockStartRows[blockCount] = row;
@@ -172,65 +243,118 @@ qsizetype BlockSizeIndex::blockForOffset(qint64 offset) const
     return qMin(blockIndex, qsizetype(m_blocks.size()) - 1);
 }
 
-void BlockSizeIndex::rebuildFrom(const QVector<int> &sizes)
+void BlockSizeIndex::fillUniform(qsizetype count, int size)
 {
     m_blocks.clear();
-    m_blocks.append(Block());
-    qint64 total = 0;
-    for (int size : sizes) {
-        Block &block = m_blocks.last();
-        block.sizes.append(size);
-        block.sum += size;
-        total += size;
-        if (block.sizes.size() >= m_blockCapacity)
-            m_blocks.append(Block());
+    m_count = qMax<qsizetype>(0, count);
+    m_totalSize = qint64(m_count) * qint64(size);
+    if (m_count == 0) {
+        m_blocks.append(Block());
+    } else {
+        qsizetype remaining = m_count;
+        while (remaining > 0) {
+            const qsizetype chunk = qMin(remaining, m_blockCapacity);
+            Block block;
+            block.baseSize = size;
+            block.rowCount = chunk;
+            block.sum = qint64(chunk) * qint64(size);
+            m_blocks.append(block);
+            remaining -= chunk;
+        }
     }
-    if (m_blocks.size() > 1 && m_blocks.constLast().sizes.isEmpty())
-        m_blocks.removeLast();
-    m_count = sizes.size();
-    m_totalSize = total;
     markOffsetsDirty();
+}
+
+qsizetype BlockSizeIndex::splitBlockAt(qsizetype blockIndex, qsizetype local)
+{
+    const Block &block = m_blocks.at(blockIndex);
+    local = qBound<qsizetype>(qsizetype(0), local, block.rowCount);
+    if (local <= 0 || local >= block.rowCount)
+        return -1;
+
+    Block head;
+    head.baseSize = block.baseSize;
+    head.rowCount = local;
+    head.sum = blockSumBelow(block, local);
+
+    Block tail;
+    tail.baseSize = block.baseSize;
+    tail.rowCount = block.rowCount - local;
+    tail.sum = block.sum - head.sum;
+
+    for (const Exception &exception : block.exceptions) {
+        Exception moved = exception;
+        if (moved.row < local) {
+            head.exceptions.append(moved);
+        } else {
+            moved.row -= local;
+            tail.exceptions.append(moved);
+        }
+    }
+
+    m_blocks[blockIndex] = head;
+    m_blocks.insert(blockIndex + 1, tail);
+    markOffsetsDirty();
+    return blockIndex + 1;
 }
 
 void BlockSizeIndex::splitBlockIfNeeded(qsizetype blockIndex)
 {
-    Block &block = m_blocks[blockIndex];
-    if (block.sizes.size() <= m_blockCapacity * 2)
-        return;
+    // Blocks are allowed to grow to twice the capacity before they split, so
+    // the per-block scan (and the exception table) stays bounded without
+    // paying a rebuild per inserted row.
+    while (blockIndex < m_blocks.size()
+           && m_blocks.at(blockIndex).rowCount > m_blockCapacity * 2) {
+        splitBlockAt(blockIndex, m_blocks.at(blockIndex).rowCount / 2);
+    }
+}
 
-    const qsizetype half = block.sizes.size() / 2;
-    QVector<int> tail = block.sizes.mid(int(half));
-    block.sizes.resize(int(half));
+bool BlockSizeIndex::tryMergeWithNext(qsizetype blockIndex)
+{
+    if (blockIndex < 0 || blockIndex + 1 >= m_blocks.size())
+        return false;
 
-    qint64 tailSum = 0;
-    for (int size : tail)
-        tailSum += size;
-    block.sum -= tailSum;
+    Block &head = m_blocks[blockIndex];
+    Block &tail = m_blocks[blockIndex + 1];
+    if (head.baseSize != tail.baseSize || head.rowCount + tail.rowCount > m_blockCapacity
+        || head.exceptions.size() + tail.exceptions.size() > m_blockCapacity) {
+        return false;
+    }
 
-    Block newBlock;
-    newBlock.sizes = tail;
-    newBlock.sum = tailSum;
-    m_blocks.insert(blockIndex + 1, newBlock);
+    const qsizetype offset = head.rowCount;
+    head.exceptions.reserve(head.exceptions.size() + tail.exceptions.size());
+    for (const Exception &exception : tail.exceptions) {
+        Exception moved = exception;
+        moved.row += offset;
+        head.exceptions.append(moved);
+    }
+    head.rowCount += tail.rowCount;
+    head.sum += tail.sum;
+    m_blocks.removeAt(blockIndex + 1);
     markOffsetsDirty();
+    return true;
+}
+
+void BlockSizeIndex::compactBlocks()
+{
+    qsizetype blockIndex = 0;
+    while (blockIndex < m_blocks.size()) {
+        if (m_blocks.at(blockIndex).rowCount == 0) {
+            if (m_blocks.size() == 1)
+                break;
+            m_blocks.removeAt(blockIndex);
+            markOffsetsDirty();
+            continue;
+        }
+        if (!tryMergeWithNext(blockIndex))
+            ++blockIndex;
+    }
 }
 
 void BlockSizeIndex::reset(qsizetype count, int estimatedSize)
 {
     m_estimatedSize = qMax(0, estimatedSize);
-    const qsizetype clamped = qMax<qsizetype>(0, count);
-    if (clamped == 0) {
-        m_blocks.clear();
-        m_blocks.append(Block());
-        m_count = 0;
-        m_totalSize = 0;
-        markOffsetsDirty();
-        return;
-    }
-
-    QVector<int> sizes;
-    sizes.reserve(int(clamped));
-    sizes.fill(m_estimatedSize, int(clamped));
-    rebuildFrom(sizes);
+    fillUniform(count, m_estimatedSize);
 }
 
 qint64 BlockSizeIndex::totalSize() const
@@ -247,13 +371,7 @@ qint64 BlockSizeIndex::offsetOf(qsizetype index) const
     qsizetype local = 0;
     const qsizetype blockIndex = blockForRow(clamped, &local);
     ensureOffsets();
-
-    qint64 offset = m_blockOffsets.at(blockIndex);
-    const Block &block = m_blocks.at(blockIndex);
-    const qsizetype end = qMin(local, qsizetype(block.sizes.size()));
-    for (qsizetype i = 0; i < end; ++i)
-        offset += block.sizes.at(i);
-    return offset;
+    return m_blockOffsets.at(blockIndex) + blockSumBelow(m_blocks.at(blockIndex), local);
 }
 
 qsizetype BlockSizeIndex::indexAt(qint64 offset) const
@@ -276,12 +394,14 @@ qsizetype BlockSizeIndex::indexAt(qint64 offset) const
     while (blockIndex < m_blocks.size()) {
         const Block &block = m_blocks.at(blockIndex);
         const qsizetype startRow = m_blockStartRows.at(blockIndex);
-        for (qsizetype i = 0; i < block.sizes.size(); ++i) {
-            const int size = block.sizes.at(i);
-            if (remaining < size)
-                return startRow + i;
-            remaining -= size;
-        }
+        const qsizetype local = blockRowAt(block, remaining);
+        if (local < block.rowCount)
+            return startRow + local;
+        // The block holds only zero-sized rows: the offset belongs to a later
+        // block (total size guarantees it exists).
+        remaining -= block.sum;
+        if (remaining < 0)
+            remaining = 0;
         ++blockIndex;
     }
     return m_count;
@@ -294,9 +414,9 @@ int BlockSizeIndex::sizeOf(qsizetype index) const
     qsizetype local = 0;
     const qsizetype blockIndex = blockForRow(index, &local);
     const Block &block = m_blocks.at(blockIndex);
-    if (local < 0 || local >= block.sizes.size())
+    if (local < 0 || local >= block.rowCount)
         return 0;
-    return block.sizes.at(local);
+    return blockSizeAt(block, local);
 }
 
 void BlockSizeIndex::setSize(qsizetype index, int size)
@@ -308,14 +428,30 @@ void BlockSizeIndex::setSize(qsizetype index, int size)
     qsizetype local = 0;
     const qsizetype blockIndex = blockForRow(index, &local);
     Block &block = m_blocks[blockIndex];
-    if (local < 0 || local >= block.sizes.size())
+    if (local < 0 || local >= block.rowCount)
         return;
 
-    const int previous = block.sizes.at(local);
+    const int previous = blockSizeAt(block, local);
     if (previous == clampedSize)
         return;
 
-    block.sizes[local] = clampedSize;
+    // Rows whose measured size happens to equal the block base carry no
+    // exception, so measuring them back to the estimate releases the entry.
+    const qsizetype position = exceptionPosition(block, local);
+    const bool hadException =
+        position < block.exceptions.size() && block.exceptions.at(position).row == local;
+    if (clampedSize == block.baseSize) {
+        if (hadException)
+            block.exceptions.removeAt(int(position));
+    } else if (hadException) {
+        block.exceptions[position].size = clampedSize;
+    } else {
+        Exception exception;
+        exception.row = local;
+        exception.size = clampedSize;
+        block.exceptions.insert(int(position), exception);
+    }
+
     block.sum += qint64(clampedSize) - qint64(previous);
     m_totalSize += qint64(clampedSize) - qint64(previous);
     markOffsetsDirty();
@@ -329,24 +465,37 @@ void BlockSizeIndex::insert(qsizetype index, qsizetype count, int estimate)
     if (estimate > 0)
         m_estimatedSize = estimate;
 
-    const qsizetype clamped = qBound<qsizetype>(qsizetype(0), index, m_count);
     if (m_count == 0) {
-        QVector<int> sizes;
-        sizes.reserve(int(count));
-        sizes.fill(size, int(count));
-        rebuildFrom(sizes);
+        fillUniform(count, size);
         return;
     }
 
+    const qsizetype clamped = qBound<qsizetype>(qsizetype(0), index, m_count);
     qsizetype local = 0;
     const qsizetype blockIndex = blockForRow(clamped, &local);
-    Block &block = m_blocks[blockIndex];
-    local = qBound<qsizetype>(qsizetype(0), local, qsizetype(block.sizes.size()));
-    block.sizes.insert(int(local), int(count), size);
-    block.sum += qint64(size) * qint64(count);
+    local = qBound<qsizetype>(qsizetype(0), local, m_blocks.at(blockIndex).rowCount);
+
+    // Inserting a uniform run is a split plus one new block; the rows themselves
+    // are never materialised.
+    qsizetype at = blockIndex;
+    const qsizetype tail = splitBlockAt(blockIndex, local);
+    if (tail >= 0)
+        at = tail;
+    else if (local > 0)
+        at = blockIndex + 1; // the run starts at the end of its block
+
+    Block block;
+    block.baseSize = size;
+    block.rowCount = count;
+    block.sum = qint64(size) * qint64(count);
+    m_blocks.insert(at, block);
     m_count += count;
-    m_totalSize += qint64(size) * qint64(count);
-    splitBlockIfNeeded(blockIndex);
+    m_totalSize += block.sum;
+
+    splitBlockIfNeeded(at);
+    if (at > 0 && tryMergeWithNext(at - 1))
+        --at;
+    tryMergeWithNext(at);
     markOffsetsDirty();
 }
 
@@ -360,44 +509,36 @@ void BlockSizeIndex::remove(qsizetype index, qsizetype count)
     if (removed <= 0)
         return;
 
+    // Cut the range out on block boundaries first, so that the rest of the work
+    // is "drop whole blocks" and the exceptions of the surviving neighbours do
+    // not have to be shifted one by one.
     qsizetype local = 0;
-    qsizetype blockIndex = blockForRow(first, &local);
-    qsizetype remaining = removed;
+    const qsizetype endBlock = blockForRow(first + removed, &local);
+    if (local > 0)
+        splitBlockAt(endBlock, local);
 
-    while (remaining > 0 && blockIndex < m_blocks.size()) {
-        Block &block = m_blocks[blockIndex];
-        if (local >= block.sizes.size()) {
-            ++blockIndex;
-            local = 0;
-            continue;
-        }
+    const qsizetype startBlock = blockForRow(first, &local);
+    if (local > 0)
+        splitBlockAt(startBlock, local);
 
-        const qsizetype take = qMin(remaining, qsizetype(block.sizes.size()) - local);
-        qint64 removedSum = 0;
-        for (qsizetype i = 0; i < take; ++i)
-            removedSum += block.sizes.at(local + i);
+    const qsizetype from = blockForRow(first, nullptr);
+    const qsizetype to = first + removed >= m_count ? m_blocks.size()
+                                                    : blockForRow(first + removed, nullptr);
+    qint64 removedSum = 0;
+    for (qsizetype i = from; i < to; ++i)
+        removedSum += m_blocks.at(i).sum;
+    for (qsizetype i = to - 1; i >= from; --i)
+        m_blocks.removeAt(i);
 
-        block.sizes.remove(int(local), int(take));
-        block.sum -= removedSum;
-        block.sum = qMax<qint64>(0, block.sum);
-        m_totalSize -= removedSum;
-        m_count -= take;
-        remaining -= take;
+    m_count -= removed;
+    m_totalSize = qMax<qint64>(0, m_totalSize - removedSum);
 
-        if (block.sizes.isEmpty() && m_blocks.size() > 1) {
-            m_blocks.removeAt(blockIndex);
-        } else if (remaining > 0) {
-            ++blockIndex;
-        }
-        local = 0;
-    }
-
-    if (m_blocks.isEmpty())
-        m_blocks.append(Block());
     if (m_count == 0) {
         m_blocks.clear();
         m_blocks.append(Block());
         m_totalSize = 0;
+    } else {
+        compactBlocks();
     }
     markOffsetsDirty();
 }

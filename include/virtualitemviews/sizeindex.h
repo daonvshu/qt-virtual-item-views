@@ -82,14 +82,26 @@ private:
 
 /// Size index for dynamic content, backed by fixed-capacity blocks.
 ///
-/// Each block stores the sizes of the items it owns plus their sum; a lazily
-/// rebuilt prefix table over the block sums provides O(log B) block lookup.
-/// blockForRow()/indexAt() are O(log B + capacity) and setSize() is O(1) until
-/// the prefix tables are rebuilt (O(B)) on the next query. insert() costs
-/// O(capacity) and remove() O(capacity + B). This matches the "first version
-/// may be simpler than O(log N)" guidance of the architecture document; the
-/// public API is ready to be backed by a Fenwick tree or an implicit balanced
-/// tree later on.
+/// Each block stores one *base* size plus a sparse, sorted table of exceptions:
+/// the rows whose measured size differs from that base. Rows that were never
+/// measured therefore cost nothing at all, so uniform content keeps one entry
+/// per block instead of 4 bytes per row (ten million rows: ~40 MB before, well
+/// under 1 MB now). A measured size is never rewritten by a later estimate
+/// change, nor by inserts/removals of other rows.
+///
+/// A lazily rebuilt prefix table over the block sums provides O(log B) block
+/// lookup (B = block count); the row inside a block is found by binary
+/// searching its exceptions and then walking the (usually empty) remainder.
+/// blockForRow()/indexAt()/setSize() are O(log B + E_b) with E_b the exceptions
+/// below the row, setSize() additionally pays the vector shift inside the
+/// block, insert() is O(log B + capacity) and remove() O(B + capacity).
+/// Splitting a block above 2 * capacity and merging neighbours that fit into
+/// one capacity keeps E_b <= 2 * capacity, so the worst case stays the
+/// O(log B + capacity) of the previous representation while the common case (a
+/// block nobody ever measured) is O(log B). This matches the "first version may
+/// be simpler than O(log N)" guidance of the architecture document; the public
+/// API is ready to be backed by a Fenwick tree or an implicit balanced tree
+/// later on.
 class BlockSizeIndex : public SizeIndex
 {
 public:
@@ -118,25 +130,58 @@ public:
     int estimatedSize() const { return m_estimatedSize; }
     /// Sizes of all items (mainly for tests and diagnostics).
     QVector<int> sizes() const;
+    /// Number of rows whose measured size differs from the estimate of the
+    /// block that owns them (tests and diagnostics). A freshly reset index
+    /// reports 0, and a setSize() either adds one or removes one.
+    qsizetype explicitSizeCount() const;
 
 protected:
     qsizetype itemCount() const override { return m_count; }
 
 private:
+    /// A row of a block whose measured size differs from the block base.
+    struct Exception
+    {
+        /// Row relative to the first row of the block.
+        qsizetype row = 0;
+        int size = 0;
+    };
+
     struct Block
     {
+        /// Size of every row that has no exception of its own.
+        int baseSize = 0;
+        /// Sum of the sizes of all rows of the block.
         qint64 sum = 0;
-        /// QVector (not QList) so that the Qt 5 vector API (resize/fill/remove)
-        /// is available; Qt 6 aliases QVector to QList.
-        QVector<int> sizes;
+        qsizetype rowCount = 0;
+        /// QVector (not QList) so that the Qt 5 vector API (resize/remove) is
+        /// available; Qt 6 aliases QVector to QList. Sorted by \c row.
+        QVector<Exception> exceptions;
     };
+
+    static bool exceptionRowLess(const Exception &exception, qsizetype row);
+    /// Index of the first exception at or after \a local.
+    static qsizetype exceptionPosition(const Block &block, qsizetype local);
+    static int blockSizeAt(const Block &block, qsizetype local);
+    /// Sum of the sizes of the rows [0, \a local) of \a block.
+    static qint64 blockSumBelow(const Block &block, qsizetype local);
+    /// Local row of \a block that contains \a offset (relative to the block
+    /// start). Returns \c block.rowCount when no row of the block covers it,
+    /// which only happens for zero-sized rows.
+    static qsizetype blockRowAt(const Block &block, qint64 offset);
 
     void ensureOffsets() const;
     void markOffsetsDirty();
     qsizetype blockForRow(qsizetype index, qsizetype *localOffset) const;
     qsizetype blockForOffset(qint64 offset) const;
+    /// Replaces the whole index by \a count rows of \a size.
+    void fillUniform(qsizetype count, int size);
+    /// Splits the block so that a new block starts at \a local; returns its
+    /// index, or -1 when the split point is already a block boundary.
+    qsizetype splitBlockAt(qsizetype blockIndex, qsizetype local);
     void splitBlockIfNeeded(qsizetype blockIndex);
-    void rebuildFrom(const QVector<int> &sizes);
+    bool tryMergeWithNext(qsizetype blockIndex);
+    void compactBlocks();
 
     /// Pixel offset of every block start, plus a trailing sentinel (totalSize).
     mutable QVector<qint64> m_blockOffsets;

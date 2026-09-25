@@ -33,6 +33,10 @@ private slots:
     void blockIndexRemoveEverything();
     void blockIndexMatchesReferenceModel();
     void blockIndexHandlesMillionItems();
+    void blockIndexStaysCompactWithoutMeasuredSizes();
+    void blockIndexKeepsMeasuredSizesAcrossInserts();
+    void blockIndexMeasuredSizesSurviveSplices();
+    void blockIndexAppendManyRowsKeepsBlockCountBounded();
 };
 
 void TestSizeIndex::fixedIndexGeometry()
@@ -382,6 +386,113 @@ void TestSizeIndex::blockIndexHandlesMillionItems()
     QCOMPARE(index.totalSize(), qint64(48000000 - 48 + 1000000));
     QCOMPARE(index.offsetOf(999999), qint64(47999952));
     QCOMPARE(index.indexAt(47999952), qsizetype(999999));
+}
+
+void TestSizeIndex::blockIndexStaysCompactWithoutMeasuredSizes()
+{
+    // Rows nobody measured yet must not be stored one by one: the index only
+    // pays for the blocks (1,000,000 / 1024 rounded up) plus the exceptions.
+    BlockSizeIndex index(1000000, 48, 1024);
+    QCOMPARE(index.explicitSizeCount(), qsizetype(0));
+    QCOMPARE(index.blockCount(), qsizetype(977));
+    QCOMPARE(index.sizeOf(0), 48);
+    QCOMPARE(index.sizeOf(999999), 48);
+    QCOMPARE(index.sizes().size(), 1000000);
+
+    // Measuring one row records exactly one exception.
+    index.setSize(123456, 90);
+    QCOMPARE(index.explicitSizeCount(), qsizetype(1));
+    QCOMPARE(index.sizeOf(123456), 90);
+    QCOMPARE(index.totalSize(), qint64(999999) * 48 + 90);
+    QCOMPARE(index.offsetOf(123457), qint64(123456) * 48 + 90);
+    QCOMPARE(index.indexAt(qint64(123456) * 48 + 90), qsizetype(123457));
+
+    // Measuring it back to the estimate releases the entry again.
+    index.setSize(123456, 48);
+    QCOMPARE(index.explicitSizeCount(), qsizetype(0));
+    QCOMPARE(index.totalSize(), qint64(1000000) * 48);
+}
+
+void TestSizeIndex::blockIndexKeepsMeasuredSizesAcrossInserts()
+{
+    BlockSizeIndex index(0, 0, kTestBlockCapacity);
+    index.reset(6, 20);
+    index.setSize(2, 50);
+    index.setSize(4, 30);
+    QCOMPARE(index.explicitSizeCount(), qsizetype(2));
+
+    // insert() moves the estimate. Rows measured before the change must keep
+    // their size, and rows that were never measured keep the reset estimate.
+    index.insert(6, 2, 12);
+    QCOMPARE(index.count(), qsizetype(8));
+    QCOMPARE(index.estimatedSize(), 12);
+    QCOMPARE(index.explicitSizeCount(), qsizetype(2));
+    QCOMPARE(index.sizeOf(0), 20);
+    QCOMPARE(index.sizeOf(2), 50);
+    QCOMPARE(index.sizeOf(4), 30);
+    QCOMPARE(index.sizeOf(5), 20);
+    QCOMPARE(index.sizeOf(6), 12);
+    QCOMPARE(index.sizeOf(7), 12);
+    QCOMPARE(index.totalSize(), qint64(4 * 20 + 50 + 30 + 2 * 12));
+    QCOMPARE(index.offsetOf(2), qint64(40));
+    QCOMPARE(index.indexAt(89), qsizetype(2));
+    QCOMPARE(index.indexAt(90), qsizetype(3));
+
+    // A row measured to a value that happens to equal its block base carries no
+    // exception (the entry is released), even when it was explicitly set.
+    index.setSize(2, 20);
+    QCOMPARE(index.explicitSizeCount(), qsizetype(1));
+    QCOMPARE(index.sizeOf(2), 20);
+    QCOMPARE(index.totalSize(), qint64(6 * 20 + 10 + 2 * 12));
+}
+
+void TestSizeIndex::blockIndexMeasuredSizesSurviveSplices()
+{
+    BlockSizeIndex index(0, 0, kTestBlockCapacity);
+    QVector<int> reference;
+    index.reset(10, 10);
+    for (int i = 0; i < 10; ++i)
+        reference.append(10);
+    index.setSize(7, 55);
+    reference[7] = 55;
+
+    // Removing rows in front of a measured row, shifting its block and then
+    // inserting before it must all keep that row's measured size.
+    index.remove(0, 3);
+    reference.remove(0, 3);
+    index.insert(1, 4, 9);
+    for (int i = 0; i < 4; ++i)
+        reference.insert(1, 9);
+    index.setSize(10, 0);
+    reference[10] = 0;
+
+    QCOMPARE(index.count(), qsizetype(reference.size()));
+    QCOMPARE(index.sizes(), reference);
+    QCOMPARE(index.sizeOf(8), 55); // the measured row moved from 7 to 8
+
+    qint64 offset = 0;
+    for (qsizetype row = 0; row < index.count(); ++row) {
+        QCOMPARE(index.offsetOf(row), offset);
+        if (index.sizeOf(row) > 0)
+            QCOMPARE(index.indexAt(offset), row);
+        offset += index.sizeOf(row);
+    }
+    QCOMPARE(index.totalSize(), offset);
+}
+
+void TestSizeIndex::blockIndexAppendManyRowsKeepsBlockCountBounded()
+{
+    BlockSizeIndex index(0, 0, kTestBlockCapacity);
+    for (int i = 0; i < 100; ++i)
+        index.insert(index.count(), 1, 10);
+
+    QCOMPARE(index.count(), qsizetype(100));
+    // Appending row by row must not fragment the index into 100 blocks.
+    QVERIFY(index.blockCount() <= 100 / kTestBlockCapacity + 1);
+    QCOMPARE(index.explicitSizeCount(), qsizetype(0));
+    QCOMPARE(index.totalSize(), qint64(1000));
+    QCOMPARE(index.offsetOf(99), qint64(990));
+    QCOMPARE(index.indexAt(999), qsizetype(99));
 }
 
 QTEST_APPLESS_MAIN(TestSizeIndex)

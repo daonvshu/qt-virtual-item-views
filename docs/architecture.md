@@ -140,9 +140,10 @@ ListLayout / SizeIndex    createWidget / bindWidget / unbindWidget
 `SizeIndex` 是稳定接口，内部算法可替换（见 `docs/performance.md`）：
 
 * `FixedSizeIndex`：固定高度，全部 O(1)。
-* `BlockSizeIndex`：动态高度，分块存储 + 懒重建的两张前缀表（块起始行、块起始像素），
-  `offsetOf/indexAt/setSize` 为 O(log B + capacity)，`insert` O(capacity)，`remove` O(capacity + B)。
-  B = 1024 时，一百万行的前缀重建约 10^3 次加法。
+* `BlockSizeIndex`：动态高度，每个块存一个基值 + 稀疏例外表（只记"实测过且不等于基值"的行），
+  外加懒重建的两张前缀表（块起始行、块起始像素）。`offsetOf/indexAt/setSize` 为
+  O(log B + 该行之前的例外数)，`insert` O(log B + capacity)，`remove` O(B + capacity)。
+  B = 1024 时，一百万行的前缀重建约 10^3 次加法；没测量过的行不占存储（见 `docs/performance.md` §4）。
 
 ## 6. 与业务层的边界
 

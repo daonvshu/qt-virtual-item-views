@@ -28,7 +28,7 @@ QWidget**。
 | `VirtualItemView`（基于 QAbstractScrollArea 的虚拟化内核） | 已实现 |
 | `WidgetAdapter` / `WidgetRecycler`（按 WidgetType 分池） | 已实现 |
 | `ScrollMapper`（64 位逻辑滚动空间 + 带锚点压缩映射） | 已实现 |
-| `SizeIndex`：`FixedSizeIndex` + `BlockSizeIndex`（分块） | 已实现 |
+| `SizeIndex`：`FixedSizeIndex` + `BlockSizeIndex`（分块，每块一个基值 + 只记"与估计值不同"的稀疏例外） | 已实现 |
 | `LayoutPolicy` / `ListLayout`（几何策略，含 margins、横向布局预留） | 已实现 |
 | `VirtualListView`：固定高度 + 动态高度（估计值 + 测量反馈） | 已实现 |
 | `VirtualTableView`（v0.4 Table MVP，Row Widget Mode） | 已实现 |
@@ -49,7 +49,8 @@ QWidget**。
 | 拖放观测：`itemDropped(parent, row, column, action)` 信号、`dropTargetAt()`/`dropIndicatorRect()`/`dropIndicatorStyle()` 诊断接口 | 已实现 |
 | Accessibility（v0.7，§37）：`installAccessibilityFactory()` 注册 `QAccessibleInterface` 桥接，按需暴露**可见行**（列表项 / 树节点 / 表格行 + 可见列的 cell），文本与状态取自 model 与已提交几何，100 万行模型仍是十几个节点 | 已实现 |
 | Accessibility 导航：current 作为 `focusChild()`、`childAt()` 命中、树层次（parent/children 往返）、表格行列语义、`press` 等价 `activateIndex()`（发 `clicked()`/`activated()`）、`setFocus`/`scrollUp/Down/Left/Right` 动作、Focus/Selection/ModelChange 事件 | 已实现 |
-| Accessibility 表格接口（v0.8，§37 / roadmap 2b）：表格视图节点实现 `QAccessibleTableInterface`（按**模型坐标**读：`rowCount()`/`columnCount()`/`cellAt()`、`columnDescription()`/`rowDescription()` 给表头文字、选择查询与整行整列选择），单元格节点实现 `QAccessibleTableCellInterface`（坐标、`table()`、`isSelected()`、合并单元格的 `rowExtent()`/`columnExtent()`）；`selectedCells()` 仍然只给窗口内的节点，百万行"全选"不会物化一百万个接口 | 已实现 |
+| Accessibility 表格接口（v0.9，§37 / roadmap 2b）：表格视图节点实现 `QAccessibleTableInterface`（按**模型坐标**读：`rowCount()`/`columnCount()`/`cellAt()`、`columnDescription()`/`rowDescription()` 给表头文字、选择查询与整行整列选择），单元格节点实现 `QAccessibleTableCellInterface`（坐标、`table()`、`isSelected()`、合并单元格的 `rowExtent()`/`columnExtent()`）；`selectedCells()` 仍然只给窗口内的节点，百万行"全选"不会物化一百万个接口 | 已实现 |
+| `BlockSizeIndex` 内存（v0.9，roadmap 2c，[docs/performance.md](docs/performance.md) §4）：只记录"实测过且与估计值不同"的行，没测量过的行不占存储，一千万元素均匀内容从约 40 MB 降到约 0.6 MB；`setSize()` 恰好写回基值时就释放例外，公开接口不变 | 已实现 |
 | Span（v0.7，§43）：`TableSpanProvider` / `TableSpanMap` + `setSpan()/removeSpan()/clearSpans()`；合并矩形完全由已提交列几何与行高推出（不存第二份几何），`indexAt()/cellRect()` 折回锚点，Cell Widget Mode 只物化锚点并把锚点控件放大到合并矩形 | 已实现 |
 | Span 一致性：拖放落点与插入指示器按锚点/合并矩形、accessibility 合并区域只暴露一个 cell、span 不跨 pane（裁剪到锚点 pane）、隐藏列自动变窄、列宽/行高变化后合并矩形自动跟随 | 已实现 |
 | Span 两种模式：Cell Widget Mode 只物化锚点（跨行合并由框架渲染）；Row Widget Mode 隐藏被覆盖列的 `ColumnHost`、锚点 host 占合并矩形，并在 `TableRowLayoutContext::spans()` 里把决定交给业务（`examples/table_spans`） | 已实现 |
@@ -68,15 +69,14 @@ QWidget**。
 | 像素滚动：`WheelScrollMode`（Pixels 默认 / Items）、`setWheelScrollPixels()`、`scrollByPixels()`、`setVerticalOffset()`、触控板 `pixelDelta` 1:1 | 已实现 |
 | 可选生命周期日志 `setLifecycleLoggingEnabled()`（create/bind/unbind/recycle/pin） | 已实现 |
 | `TreeVisibilityIndex`（可见行压平、**增量**展开/折叠、深度、row 双向查询）：每个已展开父节点一棵 Fenwick 前缀和，索引 → 可见行 O(depth × log siblings)，展开/折叠只沿路径更新（百万可见行下 4 层展开 969 ms → 116 ms、折叠 230 ms → 4 ms、工作集 114 → 76 MB） | 已实现 |
-| 单元测试 243 个用例 + 4 个变异测试 + 10 个 GUI 交互场景（共 20 个 CTest 目标） | 已实现 |
+| 单元测试 247 个用例 + 4 个变异测试 + 10 个 GUI 交互场景（共 20 个 CTest 目标） | 已实现 |
 | 12 个示例（simple list / order cards / dynamic height / million rows / table row widgets / table many columns / table custom header / tree / drag & drop / table spans / table panes / table frozen rows） | 已实现 |
 | benchmark（1M 行、表格 row vs cell、树：宽树 + 变更 + 锚点，稳态滚动零分配校验） | 已实现 |
 
-未实现（按 §43 路线图）：accessibility
-还没有文本/编辑接口（`TextInterface`/`EditableTextInterface`，行内编辑器自己是真实控件会自己暴露）；
-树在"可见行数极大"时的增量行映射优化
-（现在一次 expand/collapse 需要重建可见行索引表，见 [docs/performance.md](docs/performance.md)）。
-推进顺序见 [docs/roadmap.md](docs/roadmap.md)。
+未实现（按 §43 路线图）：accessibility 还没有文本/编辑接口
+（`TextInterface`/`EditableTextInterface`，行内编辑器自己是真实控件会自己暴露）；
+树的**结构变更**（insert/remove/move/reset）仍然整体重建可见行列表（O(可见行)，见
+[docs/performance.md](docs/performance.md) §4）。推进顺序见 [docs/roadmap.md](docs/roadmap.md)。
 
 ## 快速开始
 
@@ -378,10 +378,10 @@ docs/         architecture.md  lifecycle.md  model-signals.md  focus-ime.md
 ```bash
 # Qt 6
 cmake -S . -B cmake-build-debug-qt6  -G Ninja -DCMAKE_BUILD_TYPE=Debug \
-      -DCMAKE_PREFIX_PATH=E:/dev_library/Qt/6.8.3/msvc2022_64
+      -DCMAKE_PREFIX_PATH=D:/devlib/Qt/6.11.2/msvc2022_64
 # Qt 5
 cmake -S . -B cmake-build-debug-qt5  -G Ninja -DCMAKE_BUILD_TYPE=Debug \
-      -DCMAKE_PREFIX_PATH=E:/dev_library/Qt/5.15.2/msvc2019_64
+      -DCMAKE_PREFIX_PATH=D:/devlib/Qt/5.15.2/msvc2019_64
 ```
 
 * 选项：`VIRTUALITEMVIEWS_BUILD_SHARED`、`VIRTUALITEMVIEWS_BUILD_TESTS`、
@@ -398,11 +398,11 @@ CMake 用 `find_package(QT NAMES Qt6 Qt5 …)` 选择版本（Qt5Config 不定�
 
 | 差异 | 处理方式 |
 | --- | --- |
-| Qt 5 的 `QList` 没有 `QVector` 的 API（`resize/fill/remove(n)/insert(n)`、按长度构造） | 需要这些操作的可变长数组统一使用 `QVector<T>`（Qt 6 中 `QVector` 就是 `QList`），例如 `BlockSizeIndex` 的块、`TreeVisibilityIndex` 的可见行列表 |
+| Qt 5 的 `QList` 没有 `QVector` 的 API（`resize/fill/remove(n)/insert(n)`、按长度构造） | 需要这些操作的可变长数组统一使用 `QVector<T>`（Qt 6 中 `QVector` 就是 `QList`），例如 `BlockSizeIndex` 的例外表和块列表、`TreeVisibilityIndex` 的可见行列表 |
 | `QAbstractItemModel::dataChanged()` 的 roles 参数在 Qt 5 是 `QVector<int>`、Qt 6 是 `QList<int>` | 槽函数统一声明为 `QVector<int>`（Qt 6 中两者同一类型） |
 | `QMouseEvent::position()` 只存在于 Qt 6 | 内部用 `QT_VERSION_CHECK(6,0,0)` 分支到 `QMouseEvent::pos()` |
 
-同一份代码已在 Qt 6.8.3 / msvc2022_64 与 Qt 5.15.2 / msvc2019_64 两套配置下编译并跑通全部测试。
+同一份代码已在 Qt 6.11.2 / msvc2022_64 与 Qt 5.15.2 / msvc2019_64 两套配置下编译并跑通全部测试。
 
 ### 验证
 
@@ -410,7 +410,7 @@ CMake 用 `find_package(QT NAMES Qt6 Qt5 …)` 选择版本（Qt5Config 不定�
   `ctest --test-dir <build> -C Debug --output-on-failure`。
 * **跑测试/示例/基准前必须把 Qt 的 `bin` 放进 `PATH`**（或用导入 MSVC + Qt 环境的验证脚本）：
   否则测试会以"找不到 Qt6Core.dll/Qt5Core.dll"之类的缺 DLL 错误失败，看起来像大面积用例失败。
-  例如 `set PATH=E:\dev_library\Qt\6.8.3\msvc2022_64\bin;%PATH%` 后再运行；
+  例如 `set PATH=D:\devlib\Qt\6.11.2\msvc2022_64\bin;%PATH%` 后再运行；
   `cmake --build` 自身不需要（构建系统用的是导入库）。
 * 示例与基准程序都可无人值守运行：示例传 `--exit-after <ms>` 时会在退出前打印一行统计
   （可见行 / 实例化 / 累计创建），退出码 0 表示正常结束；基准程序在违反虚拟化不变量时返回非 0。
