@@ -9,6 +9,8 @@
 #include <QVector>
 #include <QWidget>
 
+#include <limits>
+
 class QAbstractItemModel;
 
 namespace viv {
@@ -56,6 +58,12 @@ public:
     void setPaneFilter(const QVector<int> &logicalColumns, bool frozen) override;
     void clearPaneFilter() override;
     bool hasPaneFilter() const { return m_paneFilterActive; }
+    /// Offset of the pane's own content (§43 "advanced panes"): the sections are
+    /// packed from the pane's left edge and shifted by \a offset, so a frozen pane
+    /// (0) and a scrolling pane of a group other than the primary one stay aligned
+    /// with the body. kFollowGeometryOffset (the default) keeps the header on the
+    /// committed geometry, which is what a whole-table header uses.
+    void setPaneOffset(qint64 offset) override;
     /// Origin of the viewport inside the view; the table sets it so section x
     /// positions can be derived from HeaderGeometry (viewport coordinates).
     void setViewportOrigin(const QPoint &origin) override;
@@ -86,8 +94,16 @@ private:
     void connectGeometry(HeaderGeometry *geometry, bool connectSignals);
     void relayout();
     void recycleAllSections();
-    /// x of \a logicalIndex inside this widget (-1 when hidden/unknown).
+    /// Value sectionX() returns for a section this widget does not show. A pane
+    /// offset may legitimately place a shown section at a negative x (a frozen
+    /// pane shifted left, or a scrolling pane scrolled to its end), so the
+    /// position itself cannot double as the "not shown" marker.
+    static constexpr int kSectionNotShown = std::numeric_limits<int>::min();
+    /// x of \a logicalIndex inside this widget (kSectionNotShown when hidden,
+    /// filtered or unknown).
     int sectionX(int logicalIndex) const;
+    /// True when this widget shows \a logicalIndex at all.
+    bool showsSection(int logicalIndex) const;
     int sectionAt(const QPoint &pos) const;
     /// Logical section whose leading/trailing edge is under \a pos (or -1).
     int resizeEdgeAt(const QPoint &pos) const;
@@ -105,6 +121,7 @@ private:
     QPoint m_viewportOrigin;
     QVector<int> m_paneFilter;
     bool m_paneFilterActive = false;
+    qint64 m_paneOffset = kFollowGeometryOffset;
     int m_overscan = 1;
     bool m_sortInteractionEnabled = false;
 

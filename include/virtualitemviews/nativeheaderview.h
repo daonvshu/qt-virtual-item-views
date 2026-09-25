@@ -55,6 +55,17 @@ public:
     }
     /// Shows every section again (no pane filter).
     virtual void clearPaneFilter() {}
+
+    /// Horizontal offset of the pane's own content (§43 "advanced panes").
+    ///
+    /// A pane renderer packs the columns of its own pane from the pane's left
+    /// edge and shifts them by \a offset: 0 keeps a frozen pane pinned, the scroll
+    /// group's offset places a scrolling pane that is not the primary one, and
+    /// kFollowGeometryOffset (the default) keeps the renderer on HeaderGeometry's
+    /// committed position plus its viewport offset - which is what a whole-table
+    /// header and the primary scrolling pane use.
+    static constexpr qint64 kFollowGeometryOffset = -1;
+    virtual void setPaneOffset(qint64 offset) { Q_UNUSED(offset); }
 };
 
 /// QHeaderView driven by HeaderGeometry.
@@ -91,6 +102,11 @@ public:
     void clearPaneFilter() override;
     bool hasPaneFilter() const { return m_paneFilterActive; }
 
+    /// Offset of the pane's own content (§43 "advanced panes"); see
+    /// HeaderViewInterface::setPaneOffset(). A frozen pane keeps offset 0 even
+    /// when the geometry scrolls.
+    void setPaneOffset(qint64 offset) override;
+
     /// Colour the current style paints a header section separator with (probed by
     /// rendering a section and reading its edge pixel). The pane boundary line -
     /// header edge and the body line - uses it, so it matches the separators
@@ -120,6 +136,9 @@ private:
     void onHeaderSectionMoved(int logicalIndex, int oldVisualIndex, int newVisualIndex);
     void onGeometryChanged();
     void applySection(int logicalIndex);
+    /// Offset this header lays its sections out with: its own pane offset, or the
+    /// geometry's viewport offset when it follows the committed geometry.
+    qint64 effectivePaneOffset() const;
 
     HeaderGeometry *m_geometry = nullptr;
     /// True while the geometry is being applied to the header, so that the
@@ -130,6 +149,7 @@ private:
     QVector<int> m_paneFilter;
     bool m_paneFilterActive = false;
     bool m_frozenPane = false;
+    qint64 m_paneOffset = kFollowGeometryOffset;
 };
 
 } // namespace viv

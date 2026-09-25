@@ -6,6 +6,8 @@
 #include <QLabel>
 #include <QStandardItemModel>
 
+#include <limits>
+
 using namespace viv;
 
 namespace {
@@ -72,6 +74,7 @@ private slots:
     void dragOnASectionEdgeResizesIt();
     void clickSetsTheSortIndicator();
     void paneFilterLimitsTheSections();
+    void paneOffsetKeepsAPaneInItsOwnSpace();
 
 private:
     QStandardItemModel *m_model = nullptr;
@@ -205,6 +208,51 @@ void TestVirtualHeaderView::paneFilterLimitsTheSections()
     m_header->clearPaneFilter();
     QApplication::processEvents();
     QVERIFY(m_header->materializedSections().size() > 2);
+}
+
+void TestVirtualHeaderView::paneOffsetKeepsAPaneInItsOwnSpace()
+{
+    // §43 "advanced panes": a pane packs its own columns from its own left edge and
+    // shifts them by its own offset, so a frozen pane stays pinned while the
+    // geometry scrolls and a scrolling pane of a non-primary group follows the
+    // offset of that group instead of the geometry's.
+    const auto sectionX = [this](int logicalIndex) {
+        QWidget *widget = m_header->sectionWidget(logicalIndex);
+        return widget ? widget->x() : std::numeric_limits<int>::min();
+    };
+    m_geometry->setViewportOffset(3 * kSectionWidth);
+
+    // A frozen pane: offset 0, sections packed from the pane's left edge, no
+    // matter how far the geometry has scrolled.
+    m_header->setPaneFilter(QVector<int>({1, 3}), true);
+    m_header->setPaneOffset(0);
+    QApplication::processEvents();
+    QCOMPARE(sectionX(1), 0);
+    QCOMPARE(sectionX(3), kSectionWidth);
+
+    // A scrolling pane of a group other than the primary one: the same packing,
+    // shifted by the offset of that group instead of the geometry's.
+    m_header->setPaneOffset(kSectionWidth / 2);
+    QApplication::processEvents();
+    QCOMPARE(sectionX(1), -kSectionWidth / 2);
+    QCOMPARE(sectionX(3), kSectionWidth - kSectionWidth / 2);
+
+    // Back to the committed geometry: the pane follows the geometry's offset again
+    // (the columns that are inside the window, since the header only materializes
+    // what it shows).
+    m_header->setPaneFilter(QVector<int>({3, 4}), false);
+    m_header->setPaneOffset(HeaderViewInterface::kFollowGeometryOffset);
+    QApplication::processEvents();
+    QCOMPARE(sectionX(3), 0);
+    QCOMPARE(sectionX(4), kSectionWidth);
+
+    // A pane whose columns are not contiguous still packs its own columns.
+    m_header->setPaneFilter(QVector<int>({2, 5}), false);
+    m_geometry->setViewportOffset(0);
+    m_header->setPaneOffset(10);
+    QApplication::processEvents();
+    QCOMPARE(sectionX(2), -10);
+    QCOMPARE(sectionX(5), kSectionWidth - 10);
 }
 
 QTEST_MAIN(TestVirtualHeaderView)

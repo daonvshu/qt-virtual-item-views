@@ -5,6 +5,7 @@
 #include <QtTest>
 
 #include <QHeaderView>
+#include <QLabel>
 #include <QStandardItemModel>
 
 using namespace viv;
@@ -71,6 +72,34 @@ TablePaneSpec scrollablePane(const QVector<int> &columns, int group = 0)
     spec.scrollGroup = group;
     return spec;
 }
+
+/// Two scroll groups with a frozen column on each side: the primary group (group
+/// 0) sits in the middle, the second group scrolls on its own (§43).
+QVector<TablePaneSpec> twoGroupPanes()
+{
+    return {frozenPane({0}), scrollablePane({1, 2, 3}, 0), frozenPane({4}),
+            scrollablePane({5, 6, 7, 8, 9}, 1)};
+}
+
+/// Row widget of a materialized row (the row widgets cover the viewport).
+QWidget *rowWidgetFor(VirtualTableView &view, int row)
+{
+    for (const MaterializedItem &item : view.materializedItems()) {
+        if (int(item.index.row()) == row)
+            return item.widget;
+    }
+    return nullptr;
+}
+
+/// Smallest CellWidgetAdapter: one label per cell, enough to see where a cell
+/// widget ends up.
+class PaneCellAdapter : public CellWidgetAdapter
+{
+public:
+    QWidget *createCellWidget(WidgetType, QWidget *parent) override { return new QLabel(parent); }
+    void bindCellWidget(QWidget *, const QModelIndex &) override {}
+    void unbindCellWidget(QWidget *, const QModelIndex &) override {}
+};
 } // namespace
 
 /// §43 "advanced panes" (see docs/spans.md): the pane layout is an ordered list
@@ -85,7 +114,11 @@ private slots:
     void explicitPanesAreLaidOutInOrder();
     void everyPaneHasItsOwnHeader();
     void everyBoundaryHasItsOwnLine();
-    void secondScrollingGroupIsRefusedForNow();
+    void secondScrollingGroupScrollsIndependently();
+    void secondScrollingGroupKeepsItsOwnClipContainer();
+    void cellModeClipsEveryScrollingPane();
+    void nonPrimaryPaneHeaderFollowsItsOwnGroup();
+    void scrollingGroupCannotStealHitsFromItsNeighbour();
     void spansAreClippedAtEveryPaneBoundary();
     void resettingThePanesRestoresTheDefault();
 };
@@ -264,7 +297,7 @@ void TestTablePanes::everyBoundaryHasItsOwnLine()
     }
 }
 
-void TestTablePanes::secondScrollingGroupIsRefusedForNow()
+void TestTablePanes::secondScrollingGroupScrollsIndependently()
 {
     auto *model = new QStandardItemModel(20, kColumns, this);
     PaneTableAdapter adapter;
@@ -275,15 +308,197 @@ void TestTablePanes::secondScrollingGroupIsRefusedForNow()
     view.setModel(model);
     showView(&view, QSize(kViewWidth, kViewHeight));
 
-    QTest::ignoreMessage(QtWarningMsg,
-                         "VirtualTableView::setPanes(): only one scrolling group is supported for "
-                         "now (each group needs its own pane clip container); the call was "
-                         "ignored.");
-    view.setPanes({frozenPane({0}), scrollablePane({1, 2, 3}, 0), scrollablePane({4, 5, 6}, 1)});
-    // Nothing changed: the API stays honest instead of misrendering.
-    QVERIFY(view.paneSpecs().isEmpty());
-    QCOMPARE(view.scrollGroups(), QVector<int>({0}));
-    QCOMPARE(view.panes().size(), 1);
+    view.setPanes(twoGroupPanes());
+    view.flushPendingRelayout();
+    QCOMPARE(view.panes().size(), 4);
+    QCOMPARE(view.scrollGroups(), QVector<int>({0, 1}));
+    // The primary group is the one the header geometry and the scroll bar drive.
+    QCOMPARE(view.primaryScrollGroup(), 0);
+    // Both scrolling panes get a share of the viewport, so both can scroll.
+    QVERIFY(view.maximumHorizontalOffset(0) > 0);
+    QVERIFY(view.maximumHorizontalOffset(1) > 0);
+
+    const QVector<TablePane> panes = view.panes();
+    QCOMPARE(view.paneIndexOfColumn(1), 1);
+    QCOMPARE(view.paneIndexOfColumn(6), 3);
+    const int primaryColumnX = view.columnGeometry(1).viewportX;
+    const int secondColumnX = view.columnGeometry(6).viewportX;
+
+    // Group 1 moves on its own: the primary group and the frozen columns stay put.
+    const qint64 step = qMin<qint64>(40, view.maximumHorizontalOffset(1));
+    QVERIFY(step > 0);
+    view.setHorizontalOffset(1, step);
+    view.flushPendingRelayout();
+    QCOMPARE(view.horizontalOffset(1), step);
+    QCOMPARE(view.horizontalOffset(0), qint64(0));
+    QCOMPARE(view.columnGeometry(0).viewportX, 0);
+    QCOMPARE(view.columnGeometry(1).viewportX, primaryColumnX);
+    QCOMPARE(view.columnGeometry(4).viewportX, panes.at(2).viewportRect.x());
+    QCOMPARE(view.columnGeometry(6).viewportX, secondColumnX - int(step));
+
+    // The primary group keeps being driven by the view (geometry + scroll bar).
+    view.setHorizontalOffset(view.maximumHorizontalOffset());
+    view.flushPendingRelayout();
+    QCOMPARE(view.horizontalOffset(), view.maximumHorizontalOffset());
+    QCOMPARE(view.horizontalOffset(1), step); // untouched by the primary group
+    QCOMPARE(view.columnGeometry(6).viewportX, secondColumnX - int(step));
+}
+
+void TestTablePanes::secondScrollingGroupKeepsItsOwnClipContainer()
+{
+    auto *model = new QStandardItemModel(20, kColumns, this);
+    PaneTableAdapter adapter;
+    VirtualTableView view;
+    view.setTableAdapter(&adapter);
+    view.setUniformItemHeight(kRowHeight);
+    view.setDefaultColumnWidth(kColumnWidth);
+    view.setModel(model);
+    showView(&view, QSize(kViewWidth, kViewHeight));
+
+    view.setPanes(twoGroupPanes());
+    view.flushPendingRelayout();
+
+    QWidget *rowWidget = rowWidgetFor(view, 0);
+    QVERIFY(rowWidget != nullptr);
+    auto *row = static_cast<PaneRowWidget *>(rowWidget);
+
+    // One clip container per scrolling pane: without it the second group would
+    // paint over the frozen column that sits between the two groups.
+    const QList<QWidget *> clipHosts = rowWidget->findChildren<QWidget *>(
+        QStringLiteral("vivPaneClipHost"), Qt::FindDirectChildrenOnly);
+    QCOMPARE(clipHosts.size(), 2);
+
+    const QVector<TablePane> panes = view.panes();
+    for (int column = 0; column < kColumns; ++column) {
+        const int paneIndex = view.paneIndexOfColumn(column);
+        QVERIFY(paneIndex >= 0);
+        const TablePane pane = panes.at(paneIndex);
+        ColumnHost *host = row->host(column);
+        QVERIFY(host != nullptr);
+        if (pane.type == TablePane::Type::Scrollable) {
+            QVERIFY(host->parentWidget() != rowWidget);
+            // The container sits exactly on the pane the column belongs to.
+            QCOMPARE(host->parentWidget()->geometry().x(), pane.viewportRect.x());
+            QCOMPARE(host->parentWidget()->geometry().width(), pane.viewportRect.width());
+        } else {
+            // A frozen column is never clipped: it keeps the row widget as parent.
+            QCOMPARE(host->parentWidget(), static_cast<QWidget *>(rowWidget));
+        }
+    }
+}
+
+void TestTablePanes::cellModeClipsEveryScrollingPane()
+{
+    auto *model = new QStandardItemModel(20, kColumns, this);
+    PaneCellAdapter adapter;
+    VirtualTableView view;
+    view.setCellAdapter(&adapter);
+    view.setUniformItemHeight(kRowHeight);
+    view.setDefaultColumnWidth(kColumnWidth);
+    view.setModel(model);
+    view.setMaterializationMode(VirtualTableView::MaterializationMode::CellWidgets);
+    showView(&view, QSize(kViewWidth, kViewHeight));
+
+    view.setPanes(twoGroupPanes());
+    view.flushPendingRelayout();
+
+    // Cell Widget Mode gets one clip container per scrolling pane as well.
+    const QList<QWidget *> clipHosts = view.viewport()->findChildren<QWidget *>(
+        QStringLiteral("vivPaneClipHost"), Qt::FindDirectChildrenOnly);
+    QCOMPARE(clipHosts.size(), 2);
+
+    for (QWidget *clipHost : clipHosts) {
+        const QRect rect = clipHost->geometry();
+        bool found = false;
+        for (const TablePane &pane : view.panes()) {
+            if (pane.type == TablePane::Type::Scrollable && pane.viewportRect == rect) {
+                found = true;
+                break;
+            }
+        }
+        QVERIFY(found);
+    }
+}
+
+void TestTablePanes::nonPrimaryPaneHeaderFollowsItsOwnGroup()
+{
+    auto *model = new QStandardItemModel(20, kColumns, this);
+    PaneTableAdapter adapter;
+    VirtualTableView view;
+    view.setTableAdapter(&adapter);
+    view.setUniformItemHeight(kRowHeight);
+    view.setDefaultColumnWidth(kColumnWidth);
+    view.setModel(model);
+    showView(&view, QSize(kViewWidth, kViewHeight));
+
+    view.setPanes(twoGroupPanes());
+    view.flushPendingRelayout();
+    view.setHorizontalOffset(1, view.maximumHorizontalOffset(1));
+    view.flushPendingRelayout();
+    QApplication::processEvents();
+    QVERIFY(view.horizontalOffset(1) > 0);
+
+    const int viewportX = view.viewport()->geometry().x();
+    const QVector<TablePane> panes = view.panes();
+    QVector<QHeaderView *> headers;
+    for (QHeaderView *header : view.findChildren<QHeaderView *>()) {
+        if (header->orientation() == Qt::Horizontal && header->isVisible())
+            headers.append(header);
+    }
+    QCOMPARE(headers.size(), panes.size());
+
+    // Header and body agree pixel for pixel inside every pane (§45.1) - also in
+    // the pane of the second scroll group, which lays out with its own offset.
+    for (const TablePane &pane : panes) {
+        QHeaderView *header = nullptr;
+        for (QHeaderView *candidate : headers) {
+            if (candidate->geometry().x() == viewportX + pane.viewportRect.x()
+                && candidate->width() == pane.viewportRect.width()) {
+                header = candidate;
+                break;
+            }
+        }
+        QVERIFY(header != nullptr);
+        for (int column : pane.logicalColumns) {
+            if (header->isSectionHidden(column))
+                continue;
+            const ColumnGeometry geometry = view.columnGeometry(column);
+            QCOMPARE(header->geometry().x() + header->sectionViewportPosition(column),
+                     geometry.viewportX + viewportX);
+        }
+    }
+}
+
+void TestTablePanes::scrollingGroupCannotStealHitsFromItsNeighbour()
+{
+    auto *model = new QStandardItemModel(20, kColumns, this);
+    PaneTableAdapter adapter;
+    VirtualTableView view;
+    view.setTableAdapter(&adapter);
+    view.setUniformItemHeight(kRowHeight);
+    view.setDefaultColumnWidth(kColumnWidth);
+    view.setModel(model);
+    showView(&view, QSize(kViewWidth, kViewHeight));
+
+    view.setPanes(twoGroupPanes());
+    view.flushPendingRelayout();
+    view.setHorizontalOffset(1, view.maximumHorizontalOffset(1));
+    view.flushPendingRelayout();
+
+    // Scrolled to its end, the content of group 1 starts left of its own pane and
+    // sticks out into the frozen pane in between: that strip belongs to the frozen
+    // column, not to the pane that scrolled it there.
+    const VirtualItemView &asView = view;
+    const QRect frozenPane = view.panes().at(2).viewportRect;
+    const QModelIndex onFrozenStrip = asView.indexAt(QPoint(frozenPane.x() + 5, 5));
+    QVERIFY(onFrozenStrip.isValid());
+    QCOMPARE(onFrozenStrip.column(), 4);
+
+    // Inside the pane of group 1 the hit belongs to group 1.
+    const QRect secondPane = view.panes().at(3).viewportRect;
+    const QModelIndex inSecondPane = asView.indexAt(QPoint(secondPane.x() + 5, 5));
+    QVERIFY(inSecondPane.isValid());
+    QCOMPARE(view.paneIndexOfColumn(inSecondPane.column()), 3);
 }
 
 void TestTablePanes::spansAreClippedAtEveryPaneBoundary()

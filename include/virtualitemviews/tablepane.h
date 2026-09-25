@@ -161,6 +161,15 @@ public:
     // -- scroll groups (§43 "advanced panes") --------------------------------
     /// Scroll group of a column; -1 for a frozen column or a hidden one.
     int scrollGroupOfColumn(int logicalIndex) const;
+    /// Index of the primary scrolling pane: the first pane of the list that
+    /// scrolls, which is the pane the horizontal scroll bar and
+    /// HeaderGeometry::viewportOffset() drive (-1 when nothing scrolls).
+    int primaryPaneIndex() const;
+    /// Scroll group of the primary pane (-1 when nothing scrolls). The primary
+    /// group is the one that follows the header geometry: its offset is
+    /// HeaderGeometry::viewportOffset(), so the scroll bar and every geometry
+    /// query keep working for it (§43). With the default panes that is group 0.
+    int primaryScrollGroup() const { return m_primaryScrollGroup; }
     /// Scroll groups of the current layout, ascending (empty when nothing
     /// scrolls).
     QVector<int> scrollGroups() const;
@@ -168,12 +177,12 @@ public:
     qint64 groupExtent(int scrollGroup) const { return m_groupExtents.value(scrollGroup, 0); }
     /// Width the group currently has.
     int groupWidth(int scrollGroup) const { return m_groupWidths.value(scrollGroup, 0); }
-    /// Offset of one group. Group 0 is the primary group: the header geometry's
-    /// viewport offset drives it, so a table with the default three panes behaves
-    /// exactly as before.
+    /// Offset of one group. The primary group (see primaryScrollGroup()) is driven
+    /// by the header geometry's viewport offset, so a table with the default three
+    /// panes behaves exactly as before.
     qint64 groupOffset(int scrollGroup) const;
     /// Sets the offset of \a scrollGroup, clamped to [0, maximumGroupOffset()].
-    /// Group 0 is ignored: the application scrolls it through
+    /// The primary group is ignored: the application scrolls it through
     /// setHorizontalOffset() (the header and the scroll bar drive it).
     void setGroupOffset(int scrollGroup, qint64 offset);
     qint64 maximumGroupOffset(int scrollGroup) const
@@ -184,19 +193,19 @@ public:
     /// Width of the frozen left/right pane (0 when it does not exist).
     int frozenLeftWidth() const { return paneRect(TablePane::Type::FrozenLeft).width(); }
     int frozenRightWidth() const { return paneRect(TablePane::Type::FrozenRight).width(); }
-    /// Extent of the columns of the scrollable pane only.
-    qint64 scrollableExtent() const { return m_scrollableExtent; }
+    /// Extent of the primary scroll group. With the default panes it is the extent
+    /// of the scrolling pane; an explicit pane list may put several scrolling panes
+    /// into one group, and then the group is what scrolls.
+    qint64 scrollableExtent() const { return groupExtent(primaryScrollGroup()); }
     /// Width available to the scrollable pane.
     int scrollableWidth() const { return paneRect(TablePane::Type::Scrollable).width(); }
-    /// Maximum horizontal offset of the scrollable pane.
-    qint64 maximumOffset() const
-    {
-        return qMax<qint64>(0, m_scrollableExtent - scrollableWidth());
-    }
+    /// Maximum horizontal offset of the primary scroll group.
+    qint64 maximumOffset() const { return maximumGroupOffset(primaryScrollGroup()); }
 
     /// Visual index range of the scrollable columns that intersect the
-    /// scrollable pane (the range may contain hidden or frozen indices, callers
-    /// skip them - same contract as HeaderGeometry::visibleVisualRange()).
+    /// scrolling panes, all groups together (the range may contain hidden or
+    /// frozen indices, callers skip them - same contract as
+    /// HeaderGeometry::visibleVisualRange()).
     VisibleRange visibleScrollableRange() const { return m_visibleScrollable; }
     /// Logical columns to lay out, in visual order: the frozen columns plus the
     /// scrollable columns of the visible window widened by \a overscan sections.
@@ -224,8 +233,9 @@ private:
     QHash<int, int> m_groupWidths;
     /// Visible window (visual indexes) of every pane, keyed by pane index.
     QHash<int, VisibleRange> m_paneWindows;
-    qint64 m_scrollableExtent = 0;
     VisibleRange m_visibleScrollable;
+    /// Scroll group of the primary pane (see primaryScrollGroup()).
+    int m_primaryScrollGroup = -1;
     int m_viewportWidth = 0;
     int m_viewportHeight = 0;
 };

@@ -1,4 +1,4 @@
-# Span 与 advanced panes 规格（§43 v0.7 待实现项）
+# Span 与 advanced panes 规格（§43 v0.7）
 
 方案文档在 v0.7 里只写了名字（`spans`、`advanced table panes`），没有语义。这份文档把语义先定下来，
 实现按第 6 节的顺序推进。两条不变量先摆在前面，它们决定了后面所有取舍：
@@ -90,8 +90,8 @@ public:
 
 ## 5. Advanced panes（> 3 个 pane / 嵌套 pane）
 
-当前 `TablePaneLayout` 固定三段：`FrozenLeft | Scrollable | FrozenRight`（§31）。扩展目标是
-"任意数量的 pane"，语义如下：
+`TablePaneLayout` 不再假设固定三段：输入是**有序 pane 列表**，显式列表为空时回落到
+`FrozenLeft | Scrollable | FrozenRight`（`setFrozenColumns()` 的语法糖），语义如下：
 
 ```cpp
 enum class PaneScroll { Frozen, Scrollable };   // 冻结 = 不参与横向偏移
@@ -104,15 +104,30 @@ struct PaneSpec
 void setPanes(const QVector<PaneSpec> &specs);   // 空 = 回到默认三段
 ```
 
-* **布局**：pane 从左到右依次排布，宽度 = 组内可见列宽之和（超出视口的 pane 被压缩到 0，
-  与今天 `TablePaneLayout::update()` 的做法一致）；每个 pane 一个 `PaneClipHost` 负责裁剪。
-* **滚动**：同 `scrollGroup` 的 scrollable pane 共享一个横向偏移（一个滚动条）；
-  Frozen pane 不参与偏移。多组 = 多个横向偏移，默认只给第一组接滚动条，
-  其余组通过 `setHorizontalOffset(group, offset)` 由业务驱动（例如"左右两侧各自独立滚动"的场景）。
-* **pane 交界线**：仍然是一根覆盖控件（`vivPaneSeparatorLine`），数量 = pane 数 - 1。
+* **布局**：pane 从左到右依次排布。冻结 pane 取自己的可见宽度（按顺序，放不下时后面的压缩
+  到 0）；剩下的宽度按 extent 比例分给各滚动 pane —— 只有一个滚动 pane 时（默认三段布局、
+  以及所有把滚动交给单个 pane 的显式列表）这就是"主滚动 pane 拿剩下的宽度"，逐像素不变。
+  比例分配是多滚动组的前提：让第一个滚动 pane 吃掉全部剩余宽度的话，第二个组要么整列全露、
+  要么把主 pane 压到 0，两个组都无法真正滚动。
+* **滚动**：同 `scrollGroup` 的 pane 共享一个横向偏移。**首个滚动 pane 所在的组是主组**，
+  它的偏移来自 `HeaderGeometry::viewportOffset()`，也就是视图自己的横向滚动条驱动的那个
+  （默认三段布局下就是组 0）。其余组通过 `setHorizontalOffset(group, offset)` 由业务驱动，
+  典型场景是"左右两侧各自独立滚动"。
+* **裁剪**：**每个滚动 pane 一个 `PaneClipHost`**（Cell Widget Mode 挂在 viewport 上，
+  Row Widget Mode 挂在行控件里）。Qt 把子控件裁到父控件，所以一个组滚出去的列不可能画到
+  邻居 pane 上；冻结列不进容器（它们不动，也不需要裁剪）。只有一个 pane 时完全不建容器，
+  未使用的能力对现状零影响。
+* **命中测试**：`columnAtViewportX()` 在候选列上多判一次"这一列是否在自己的 pane 矩形内"。
+  pane 是硬边界：被滚出去的列即使像素位置落在邻居 pane 里，也不参与命中。
+* **pane 交界线**：一根覆盖控件（`vivPaneSeparatorLine`），数量 = pane 数 - 1。
 * **向后兼容**：`setFrozenColumns()/setFrozenRightColumns()` 是 `setPanes()` 的语法糖
   （冻结列在左/右各成一组，其余为可滚动组），`panes()`/`paneTypeForColumn()` 语义不变。
-* 表头同样 pane 化：每个 pane 一个表头实例 + `setPaneFilter()`（今天的机制直接复用）。
+* **表头**：每个 pane 一个渲染器 + `setPaneFilter()`，再加一个新的
+  `setPaneOffset(qint64)`：冻结 pane 用 0（永远不动），非主组的滚动 pane 用自己组的偏移，
+  主滚动 pane 用 `kFollowGeometryOffset`（跟随 `HeaderGeometry`）。widget 表头按 pane 自己
+  的列序打包定位，native 表头用 `QHeaderView::setOffset()`，两者都与 body 逐像素对齐。
+* 示例：`examples/table_panes`（左侧冻结 2 列 | 组 0 | 中间冻结 | 组 1 | 右侧冻结，
+  工具栏里是组 1 的滚动条，`--check` 自检、`--snapshot` 截图）。
 
 ## 6. 实现顺序
 
@@ -140,7 +155,7 @@ CTest 与示例（见 README 的"验证"一节）。
 | 2. Cell Widget Mode 只物化锚点（锚点控件放大到合并矩形） | 已完成 |
 | 4. 拖放：命中被覆盖单元格时列折回锚点，插入指示器用合并矩形 | 已完成（选择/键盘沿用同一套 `indexAt()` 折回） |
 | 3. Row Widget Mode：`TableRowLayoutContext` 暴露 `spanOf()/spanRect()`，框架按 span 摆放 `ColumnHost` | 已完成 |
-| 5. Advanced panes：把固定三段重构为 pane 列表（`TablePaneSpec`） | 已完成（任意冻结 pane + 一个滚动组；多滚动组见下） |
+| 5. Advanced panes：把固定三段重构为 pane 列表（`TablePaneSpec`） | 已完成（任意冻结 pane + 任意滚动组，见下） |
 | 6. 示例 `examples/table_spans` | 已完成 |
 
 顺带对齐的既有能力：accessibility 桥接（§37）也走同一套锚点语义 —— 合并区域只暴露一个
@@ -183,8 +198,24 @@ CTest 与示例（见 README 的"验证"一节）。
 * `spanRect()` 的"不跨 pane"判定改用 `paneIndexOfColumn()`，因此**每一个** pane 边界都是
   span 的硬边界（两个同类冻结 pane 之间也一样）。
 
-还剩一件：**多滚动组**。多组要求"每个滚动 pane 一个裁剪容器"（现在只有主滚动 pane 有，
-冻结列靠 `raise()` 压住），所以 `setPanes()` 目前对第二个滚动组是**显式拒绝**的
-（`qWarning` + 忽略），不会出现"API 接受但第二组画到邻居 pane 上"的状态。
-布局引擎本身已经支持多组（每组各自的 extent/宽度/偏移、`setHorizontalOffset(group, offset)`），
-补上裁剪容器即可放开 —— 这是第 5b 步的唯一剩余项。
+### 第 5b 步的落地方式（多滚动组）
+
+* **裁剪容器**从"主滚动 pane 一个"改成"每个滚动 pane 一个"：Cell Widget Mode 用
+  `m_cellClipHosts`（pane 序号 -> 容器，容器挂在 viewport 上），Row Widget Mode 用行控件里
+  带 pane 序号的子容器。Row 模式的容器**不再用 widget 指针做 key**（旧实现用
+  `QHash<QWidget*, ...>`，行控件被回收/销毁后会留下悬垂键；现在按对象名 + pane 序号属性在
+  行控件里查找，顺带修掉了回收路径上的隐患）。
+* **主组语义**：主组是"首个滚动 pane 所在的组"。`groupOffset()` 对主组返回
+  `HeaderGeometry::viewportOffset()`，`setGroupOffset()` 对主组是空操作，
+  `maximumOffset()` / `scrollableExtent()` / `scrollableWidth()` 都按主组算 ——
+  默认布局（组 0 = 唯一的滚动 pane）逐像素不变，而显式列表即使不从组 0 开始滚动也自洽。
+* **表头**：`HeaderViewInterface::setPaneOffset()` 是新增的渲染器契约；native 表头把它喂给
+  `QHeaderView::setOffset()`，widget 表头按 pane 自己的列序累加宽度再减偏移。顺带修掉一个
+  潜在缺陷：widget 表头原来用 `HeaderGeometry` 的扁平 x 定位，冻结 pane 的列会跟着滚动漂移
+  （`left < 0` 还被当成"不在窗口里"直接跳过），现在 pane 路径按 pane 自己的空间定位，
+  负 x 是合法的（左边缘被裁掉一截的列照样物化）。
+* **命中测试**：`columnAtViewportX()` 增加 pane 矩形判定。多组下不同 pane 的列在像素上必然
+  重叠（各自有自己的偏移），没有这条判定时组 1 滚到末尾会"偷走"中间冻结 pane 的命中。
+* **测试**：`tests/unit/tst_tablepanes` 从 7 个用例扩到 13 个（两个滚动组独立滚动、每 pane 一个
+  裁剪容器（row 与 cell 两种模式）、非主组表头对齐、命中不越界），`tst_virtualheaderview`
+  新增 `setPaneOffset` 的 pane 内定位用例。

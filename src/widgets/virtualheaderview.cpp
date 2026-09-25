@@ -119,6 +119,15 @@ void VirtualHeaderView::clearPaneFilter()
         return;
     m_paneFilterActive = false;
     m_paneFilter.clear();
+    m_paneOffset = kFollowGeometryOffset;
+    relayout();
+}
+
+void VirtualHeaderView::setPaneOffset(qint64 offset)
+{
+    if (m_paneOffset == offset)
+        return;
+    m_paneOffset = offset;
     relayout();
 }
 
@@ -160,13 +169,37 @@ bool VirtualHeaderView::isFiltered(int logicalIndex) const
     return m_paneFilterActive && !m_paneFilter.contains(logicalIndex);
 }
 
-int VirtualHeaderView::sectionX(int logicalIndex) const
+bool VirtualHeaderView::showsSection(int logicalIndex) const
 {
     if (!m_geometry || logicalIndex < 0 || isFiltered(logicalIndex))
-        return -1;
+        return false;
     const ColumnGeometry geometry = m_geometry->columnGeometry(logicalIndex);
     if (!geometry.isValid() || geometry.hidden)
-        return -1;
+        return false;
+    return true;
+}
+
+int VirtualHeaderView::sectionX(int logicalIndex) const
+{
+    if (!showsSection(logicalIndex))
+        return kSectionNotShown;
+    const ColumnGeometry geometry = m_geometry->columnGeometry(logicalIndex);
+    if (m_paneFilterActive && m_paneOffset != kFollowGeometryOffset) {
+        // Pane layout (§43 "advanced panes"): a pane packs *its own* columns from
+        // its own left edge and shifts them by its own offset, so a frozen pane
+        // and a scrolling pane of a non-primary group stay aligned with the body.
+        // The columns of a pane are not necessarily a contiguous slice of the
+        // committed order, so their widths are accumulated over the pane's list.
+        int localX = 0;
+        for (int column : m_paneFilter) {
+            if (column == logicalIndex)
+                break;
+            if (m_geometry->isSectionHidden(column))
+                continue;
+            localX += m_geometry->sectionSize(column);
+        }
+        return localX - int(m_paneOffset);
+    }
     // HeaderGeometry is in viewport coordinates, this widget is placed inside the
     // view (normally on a pane rect).
     return geometry.viewportX + m_viewportOrigin.x() - x();
@@ -198,7 +231,7 @@ void VirtualHeaderView::relayout()
             continue;
         const int left = sectionX(logical);
         const int width = m_geometry->sectionSize(logical);
-        if (left < 0 || width <= 0)
+        if (left == kSectionNotShown || width <= 0)
             continue;
         if (left < this->width() && left + width > 0) {
             if (firstVisual < 0)
@@ -250,7 +283,8 @@ void VirtualHeaderView::relayout()
         }
         const int left = sectionX(logical);
         const int width = m_geometry->sectionSize(logical);
-        const bool visible = left >= 0 && width > 0 && left < this->width() && left + width > 0;
+        const bool visible = left != kSectionNotShown && width > 0 && left < this->width()
+            && left + width > 0;
         if (!visible && !isSectionPinned(logical)) {
             widget->hide();
             continue;
@@ -318,7 +352,7 @@ int VirtualHeaderView::sectionAt(const QPoint &pos) const
         return -1;
     for (int logical : materializedSections()) {
         const int left = sectionX(logical);
-        if (left < 0)
+        if (left == kSectionNotShown)
             continue;
         if (pos.x() >= left && pos.x() < left + m_geometry->sectionSize(logical))
             return logical;
@@ -332,7 +366,7 @@ int VirtualHeaderView::resizeEdgeAt(const QPoint &pos) const
         return -1;
     for (int logical : materializedSections()) {
         const int left = sectionX(logical);
-        if (left < 0)
+        if (left == kSectionNotShown)
             continue;
         const int right = left + m_geometry->sectionSize(logical);
         if (qAbs(pos.x() - right) <= kResizeMargin)

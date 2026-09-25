@@ -122,8 +122,8 @@ bool TablePaneLayout::update(int viewportWidth, int viewportHeight)
     m_groupByLogical.fill(-1, count);
     m_groupExtents.clear();
     m_groupWidths.clear();
-    m_scrollableExtent = 0;
     m_visibleScrollable = VisibleRange();
+    m_primaryScrollGroup = -1;
     m_paneWindows.clear();
 
     if (!m_geometry || count <= 0) {
@@ -201,23 +201,53 @@ bool TablePaneLayout::update(int viewportWidth, int viewportHeight)
         pane.pane.type = primaryIndex < 0 || index < primaryIndex ? TablePane::Type::FrozenLeft
                                                                  : TablePane::Type::FrozenRight;
     }
+    // The primary group is the one that follows the committed header geometry: it
+    // is the group of the first scrolling pane, which is group 0 for the default
+    // panes and for any list that starts its scrolling pane at group 0.
+    if (primaryIndex >= 0)
+        m_primaryScrollGroup = resolved.at(primaryIndex).pane.scrollGroup;
 
     // -----------------------------------------------------------------------
-    // 2. Widths: every pane gets its extent, the primary scrolling pane takes
-    //    what is left (the panes before and after it keep their size, exactly
-    //    like the default three pane layout).
+    // 2. Widths: a frozen pane takes its own extent (in order, so panes that do
+    //    not fit are compressed and the last ones collapse to 0) and the scrolling
+    //    panes share what is left in proportion to their extents. With a single
+    //    scrolling pane - the default three panes, and every list that leaves the
+    //    scrolling to one pane - this is exactly "the primary pane takes what is
+    //    left", pixel for pixel as before. Distributing instead of letting the
+    //    first scrolling pane take everything is what makes a second scroll group
+    //    usable at all: otherwise it either shows all of its columns or squeezes
+    //    the primary pane down to 0.
     // -----------------------------------------------------------------------
     int remaining = width;
     for (int index = 0; index < resolved.size(); ++index) {
-        if (index == primaryIndex)
-            continue;
         ResolvedPane &pane = resolved[index];
+        if (pane.pane.type == TablePane::Type::Scrollable)
+            continue;
         pane.width = qMin(pane.extent, remaining);
         remaining -= pane.width;
     }
+    remaining = qMax(0, remaining);
+    qint64 scrollingExtent = 0;
+    for (const ResolvedPane &pane : resolved) {
+        if (pane.pane.type == TablePane::Type::Scrollable)
+            scrollingExtent += pane.extent;
+    }
+    for (int index = 0; index < resolved.size(); ++index) {
+        ResolvedPane &pane = resolved[index];
+        if (pane.pane.type != TablePane::Type::Scrollable || index == primaryIndex)
+            continue;
+        if (scrollingExtent <= 0) {
+            pane.width = 0;
+            continue;
+        }
+        pane.width = int(qint64(remaining) * qint64(pane.extent) / scrollingExtent);
+        remaining -= pane.width;
+    }
     if (primaryIndex >= 0) {
-        ResolvedPane &primary = resolved[primaryIndex];
-        primary.width = qMax(0, remaining);
+        // The primary pane absorbs the rounding, so the widths always add up to
+        // the viewport width - and with a single scrolling pane it takes exactly
+        // what is left, like before.
+        resolved[primaryIndex].width = qMax(0, remaining);
     }
 
     // Group extents and widths are known before any offset is clamped below.
@@ -264,11 +294,16 @@ bool TablePaneLayout::update(int viewportWidth, int viewportHeight)
             contentX += size;
         }
         pane.contentX = contentX;
-        if (paneIndex == primaryIndex) {
-            m_scrollableExtent = contentX;
-            m_visibleScrollable = pane.window;
-        }
         m_paneWindows.insert(paneIndex, pane.window);
+        if (pane.pane.type == TablePane::Type::Scrollable && pane.window.isValid()) {
+            // Every scrolling pane contributes (§43 "advanced panes"): with several
+            // scroll groups the scrollable columns on screen are the union of their
+            // windows, and one group may hold more than one pane.
+            m_visibleScrollable = m_visibleScrollable.isValid()
+                ? VisibleRange{qMin(m_visibleScrollable.first, pane.window.first),
+                               qMax(m_visibleScrollable.last, pane.window.last)}
+                : pane.window;
+        }
     }
 
     for (const ResolvedPane &pane : resolved)
@@ -347,14 +382,23 @@ QVector<int> TablePaneLayout::scrollGroups() const
     return groups;
 }
 
+int TablePaneLayout::primaryPaneIndex() const
+{
+    for (int index = 0; index < m_panes.size(); ++index) {
+        if (m_panes.at(index).type == TablePane::Type::Scrollable)
+            return index;
+    }
+    return -1;
+}
+
 qint64 TablePaneLayout::groupOffset(int scrollGroup) const
 {
     qint64 offset = 0;
-    if (scrollGroup == 0) {
-        // The primary group follows the committed header geometry: the scroll
-        // bar and every geometry query keep working exactly as before.
+    if (scrollGroup >= 0 && scrollGroup == m_primaryScrollGroup) {
+        // The primary group follows the committed header geometry: the scroll bar
+        // and every geometry query keep working exactly as before.
         offset = m_geometry ? m_geometry->viewportOffset() : 0;
-    } else {
+    } else if (scrollGroup >= 0) {
         offset = m_groupOffsets.value(scrollGroup, 0);
     }
     return qBound<qint64>(qint64(0), offset, maximumGroupOffset(scrollGroup));
@@ -362,7 +406,7 @@ qint64 TablePaneLayout::groupOffset(int scrollGroup) const
 
 void TablePaneLayout::setGroupOffset(int scrollGroup, qint64 offset)
 {
-    if (scrollGroup == 0)
+    if (scrollGroup < 0 || scrollGroup == m_primaryScrollGroup)
         return; // the application scrolls the primary group through the view
     m_groupOffsets.insert(scrollGroup, qMax<qint64>(0, offset));
 }

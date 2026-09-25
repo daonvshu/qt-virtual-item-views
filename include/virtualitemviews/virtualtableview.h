@@ -8,6 +8,7 @@
 
 #include <QHash>
 #include <QPersistentModelIndex>
+#include <QSet>
 #include <QVector>
 
 class QAbstractItemModel;
@@ -86,9 +87,11 @@ public:
     int columnCount() const;
     ColumnGeometry columnGeometry(int logicalIndex) const;
     int columnWidth(int logicalIndex) const;
-    /// Logical column under a viewport x, honoring the panes (§31): a frozen
+    /// Logical column under a viewport x, honoring the panes (§31/§43): a frozen
     /// column is hit by its own viewport x, a scrollable one by the horizontal
-    /// offset of the scrollable pane. -1 when no column is under \a viewportX.
+    /// offset of its own scroll group, and a column is only hit inside the pane it
+    /// belongs to (a pane is a hard boundary, also between two scrolling groups).
+    /// -1 when no column is under \a viewportX.
     int columnAtViewportX(int viewportX) const;
     /// Visible columns as visual indices (hidden ones included in the range).
     VisibleRange visibleColumns() const;
@@ -112,6 +115,8 @@ public:
     bool stretchLastColumn() const;
 
     // -- horizontal scrolling -------------------------------------------------
+    /// Offset of the primary scroll group (group 0): the group the header
+    /// geometry and the horizontal scroll bar drive.
     qint64 horizontalOffset() const;
     void setHorizontalOffset(qint64 offset);
     void scrollByHorizontalPixels(qint64 pixels);
@@ -143,20 +148,26 @@ public:
     /// "frozen left | scrollable | frozen right" layout, so setFrozenColumns()
     /// stays the shorthand for the common case.
     ///
-    /// The current implementation supports any number of frozen panes plus one
-    /// scrolling group; a second scrolling group is refused with a warning until
-    /// every scrolling pane has its own clip container (see docs/spans.md).
+    /// Any number of frozen panes and scrolling groups is supported. Panes of one
+    /// scroll group share a horizontal offset; the group of the *first* scrolling
+    /// pane is the primary group and is the one the header geometry and the
+    /// horizontal scroll bar drive, so keep that pane in group 0 to have the
+    /// scroll bar control it. Every other group is driven by
+    /// setHorizontalOffset(group, offset).
     void setPanes(const QVector<TablePaneSpec> &panes);
     QVector<TablePaneSpec> paneSpecs() const { return m_panes.paneSpecs(); }
     /// Index of the pane that shows \a logicalIndex (-1 when hidden/unknown).
     int paneIndexOfColumn(int logicalIndex) const { return m_panes.paneIndexOfColumn(logicalIndex); }
     /// Scroll groups of the current layout, ascending.
     QVector<int> scrollGroups() const { return m_panes.scrollGroups(); }
-    /// Horizontal offset of one scroll group; group 0 is the primary group, the
-    /// one the header geometry and the scroll bar drive.
+    /// Scroll group of the pane the header geometry and the scroll bar drive
+    /// (the first scrolling pane of the list; -1 when nothing scrolls).
+    int primaryScrollGroup() const { return m_panes.primaryScrollGroup(); }
+    /// Horizontal offset of one scroll group. The primary group follows the header
+    /// geometry, so setHorizontalOffset(qint64) moves it.
     qint64 horizontalOffset(int scrollGroup) const { return m_panes.groupOffset(scrollGroup); }
-    /// Sets the offset of \a scrollGroup (no-op for group 0: use
-    /// setHorizontalOffset(qint64) for the primary group).
+    /// Sets the offset of \a scrollGroup (no-op for the primary group: use
+    /// setHorizontalOffset(qint64) there, the scroll bar drives it).
     void setHorizontalOffset(int scrollGroup, qint64 offset);
     qint64 maximumHorizontalOffset(int scrollGroup) const
     {
@@ -298,16 +309,36 @@ private:
     void raisePaneSeparatorLines();
     /// Column hosts of a row widget (direct children plus the clip host's).
     QList<ColumnHost *> rowColumnHosts(QWidget *rowWidget) const;
-    /// Ensures the scrollable pane clip container of a row widget (§31).
-    QWidget *ensureRowPaneClipHost(QWidget *rowWidget, const QRect &rowRect);
-    /// Ensures the clip container of the cell mode cells (§31).
-    void ensureCellPaneClipHost();
+    /// Clip containers of a row widget, one per scrolling pane (empty when the
+    /// panes do not need clipping: a single pane covers the whole viewport).
+    QVector<QWidget *> rowPaneClipHosts(QWidget *rowWidget) const;
+    /// Clip container of \a paneIndex inside a row widget, or null.
+    QWidget *rowPaneClipHost(QWidget *rowWidget, int paneIndex) const;
+    /// Clip container of one pane inside a row widget (§31/§43): created on
+    /// demand and positioned on the pane's rectangle in row widget coordinates.
+    /// Several panes scroll independently, so every scrolling pane has its own.
+    QWidget *ensureRowPaneClipHost(QWidget *rowWidget, int paneIndex, const QRect &paneLocalRect);
+    /// Drops the clip containers of \a rowWidget that no longer belong to a
+    /// scrolling pane (nothing is frozen or the pane list changed) and hands their
+    /// column hosts back to the row widget. The containers are found through the
+    /// row widget's children (they carry their pane index), so no widget pointer is
+    /// ever kept on the side.
+    void dropStaleRowPaneClipHosts(QWidget *rowWidget, const QSet<int> &scrollingPanes);
+    /// True while the pane layout has more than one pane, i.e. while a scrolling
+    /// pane has to be clipped against its neighbours.
+    bool panesNeedClipping() const { return m_panes.panes().size() > 1; }
+    /// Creates/destroys/positions the clip container of every scrolling pane in
+    /// Cell Widget Mode (§43).
+    void syncCellPaneClipHosts();
     void applyColumnLayout(const MaterializedItem &item);
     /// Layout context of one row. \a rowIndex is the row being laid out; it is
     /// what makes the span decisions of that row available to the adapter
     /// (§43 "spans"). Without a row index the span context stays empty.
+    /// \a paneHosts maps a pane index to the framework clip container of that
+    /// pane; adapters that lay their own children out use it to clip them the
+    /// same way the ColumnHost logic does (§43 "advanced panes").
     TableRowLayoutContext layoutContext(const QRect &viewportRect,
-                                        QWidget *scrollablePaneHost = nullptr,
+                                        const QHash<int, QWidget *> &paneHosts = QHash<int, QWidget *>(),
                                         const QModelIndex &rowIndex = QModelIndex()) const;
     void updateRowHeaderGeometry();
     void scrollToColumn(int logicalIndex);
@@ -331,13 +362,15 @@ private:
     /// a pane shows its own columns at its own viewport x, so it needs its own
     /// renderer of the same geometry. The primary pane uses m_horizontalHeader.
     QVector<HeaderViewInterface *> m_paneHeaders;
-    /// Framework container that clips the scrollable pane (see §31).
-    QWidget *m_cellClipHost = nullptr;
+    /// Framework containers that clip the scrolling panes, keyed by pane index
+    /// (§43: several groups scroll independently, so each has its own).
+    QHash<int, QWidget *> m_cellClipHosts;
     /// 1 px body lines at the pane boundaries (left | scrollable | right).
     QVector<QWidget *> m_paneSeparatorLines;
     PaneSeparatorStyle m_paneSeparatorStyle;
-    /// Row widget -> its scrollable pane clip container.
-    QHash<QWidget *, QWidget *> m_rowClipHosts;
+    // The clip containers of a row widget are its children, tagged with their pane
+    // index (see PaneClipHost): a recycled row widget can never leave a stale
+    // pointer behind.
     bool m_ownHorizontalHeader = false;
     bool m_ownVerticalHeader = false;
     TableWidgetAdapter *m_tableAdapter = nullptr;

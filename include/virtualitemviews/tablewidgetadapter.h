@@ -83,7 +83,33 @@ public:
     /// lays out its own children (instead of ColumnHost) must parent them here,
     /// otherwise they stay visible under a frozen pane. Null when no column is
     /// frozen.
+    ///
+    /// It is the container of the primary pane; with several scroll groups use
+    /// paneHostForColumn() / paneHost() so every pane is clipped against its own
+    /// neighbours (§43 "advanced panes").
     QWidget *scrollablePaneHost() const { return m_scrollablePaneHost; }
+    /// Clip container of a pane (null for a frozen pane and when the panes do not
+    /// need clipping).
+    QWidget *paneHost(int paneIndex) const { return m_paneHosts.value(paneIndex, nullptr); }
+    /// Clip container of the pane that shows \a logicalIndex (null for a frozen
+    /// column).
+    QWidget *paneHostForColumn(int logicalIndex) const
+    {
+        return paneHost(paneIndex(logicalIndex));
+    }
+    /// Index of the pane that shows \a logicalIndex (-1 when hidden/unknown).
+    int paneIndex(int logicalIndex) const
+    {
+        return m_panes ? m_panes->paneIndexOfColumn(logicalIndex) : -1;
+    }
+    /// Pane at \a paneIndex; an invalid pane when it does not exist.
+    TablePane paneAt(int paneIndex) const
+    {
+        return m_panes ? m_panes->paneAt(paneIndex) : TablePane();
+    }
+    /// Rect of the pane at \a paneIndex in viewport coordinates (empty when it
+    /// does not exist).
+    QRect paneRectAt(int paneIndex) const { return paneAt(paneIndex).viewportRect; }
 
     // -- spans (§43) ---------------------------------------------------------
     /// Span decisions of this row. Empty when nothing is merged.
@@ -95,6 +121,8 @@ private:
     const HeaderGeometry *m_geometry = nullptr;
     const TablePaneLayout *m_panes = nullptr;
     QWidget *m_scrollablePaneHost = nullptr;
+    /// Pane index -> framework clip container of that pane (§43).
+    QHash<int, QWidget *> m_paneHosts;
     TableSpanContext m_spans;
     int m_columnCount = 0;
     QRect m_viewportRect;

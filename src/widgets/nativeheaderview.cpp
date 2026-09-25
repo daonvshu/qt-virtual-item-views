@@ -7,6 +7,8 @@
 #include <QImage>
 #include <QStyleOptionHeader>
 
+#include <limits>
+
 namespace viv {
 
 namespace {
@@ -171,8 +173,8 @@ void NativeHeaderView::syncHeaderFromGeometry()
     setDefaultSectionSize(m_geometry->defaultSectionSize());
     setSortIndicatorShown(m_geometry->sortIndicatorSection() >= 0);
     setSortIndicator(m_geometry->sortIndicatorSection(), m_geometry->sortIndicatorOrder());
-    if (!(m_paneFilterActive && m_frozenPane))
-        setOffset(int(qMax<qint64>(0, m_geometry->viewportOffset())));
+    setOffset(int(qBound<qint64>(qint64(0), effectivePaneOffset(),
+                                qint64(std::numeric_limits<int>::max()))));
 
     // Apply only the differences: comparing is cheap, writing invalidates
     // QHeaderView's internal caches.
@@ -224,9 +226,30 @@ void NativeHeaderView::setViewportOffset(int offset)
 {
     if (m_applyingToHeader)
         return;
-    if (m_paneFilterActive && m_frozenPane)
-        return; // a frozen pane never scrolls
+    if (m_paneFilterActive && (m_frozenPane || m_paneOffset != kFollowGeometryOffset))
+        return; // the pane owns its offset; a frozen pane never scrolls
     setOffset(qMax(0, offset));
+}
+
+qint64 NativeHeaderView::effectivePaneOffset() const
+{
+    if (!m_geometry)
+        return 0;
+    if (m_paneFilterActive) {
+        if (m_paneOffset != kFollowGeometryOffset)
+            return m_paneOffset;
+        if (m_frozenPane)
+            return 0; // a frozen pane never scrolls
+    }
+    return m_geometry->viewportOffset();
+}
+
+void NativeHeaderView::setPaneOffset(qint64 offset)
+{
+    if (m_paneOffset == offset)
+        return;
+    m_paneOffset = offset;
+    syncHeaderFromGeometry();
 }
 
 void NativeHeaderView::setPaneFilter(const QVector<int> &logicalColumns, bool frozen)
@@ -240,11 +263,6 @@ void NativeHeaderView::setPaneFilter(const QVector<int> &logicalColumns, bool fr
     // A pane mirrors the committed visual order; local moves would fight it.
     setSectionsMovable(false);
     syncHeaderFromGeometry();
-    if (frozen && offset() != 0) {
-        m_applyingToHeader = true;
-        setOffset(0);
-        m_applyingToHeader = false;
-    }
 }
 
 void NativeHeaderView::clearPaneFilter()
@@ -254,6 +272,7 @@ void NativeHeaderView::clearPaneFilter()
     m_paneFilterActive = false;
     m_paneFilter.clear();
     m_frozenPane = false;
+    m_paneOffset = kFollowGeometryOffset;
     setSectionsMovable(orientation() == Qt::Horizontal);
     syncHeaderFromGeometry();
 }
