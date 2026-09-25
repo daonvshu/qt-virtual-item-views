@@ -40,6 +40,10 @@
   开关：为每个 kit 额外建一个 MSVC AddressSanitizer 构建树（`-DCMAKE_CXX_FLAGS=/fsanitize=address`，
   运行期 `ASAN_OPTIONS=detect_leaks=0`，跳过基准与安装消费端），实测 Qt 6.11.2 与 5.15.2 的
   28 个 CTest 目标 + 12 个示例全绿、无 ASan 报告（见 [docs/ci.md](docs/ci.md) §5）。
+  示例一步现在还会捕获输出并拒绝**任何库诊断**（库的 `qWarning` 一定带类名，如
+  `VirtualTableView::setHorizontalHeader(): …`）：审查建议的 `QT_FATAL_WARNINGS=1` 在
+  offscreen 平台下不可用（Qt 自己的 offscreen 插件与缺失字体目录就会警告，实测 12 个示例全部
+  abort），所以用这条等价的检查代替；Linux/CI 侧用 Xvfb + xcb 时可以开真正的 fatal warnings。
 * [docs/performance.md](docs/performance.md) §3 的 v1.0 基线：列表 1M 行、表格 20 万行 x 100 列
   （Row/Cell 两种模式）、树 1M 顶层节点的实测数字与确切命令，供后续回归对比。
 * README 重排成面向 GitHub 的首页：徽章 + 一句话定位 + 亮点 + 能力概览 + 示例截图

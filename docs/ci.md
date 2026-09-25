@@ -53,16 +53,19 @@ jobs:
       - run: cmake --build build
       # 无显示器：测试与示例都用 offscreen 平台插件（CTest 已经在测试属性里设好了）
       - run: ctest --test-dir build --output-on-failure --no-tests=error
+      - run: sudo apt-get install -y xvfb
       - name: 示例自检（必须退出 0，且不允许任何 qWarning）
-        env:
-          QT_QPA_PLATFORM: offscreen
-          QT_FATAL_WARNINGS: '1'
+        # 这里用 Xvfb + xcb（而不是 offscreen）：offscreen 插件自己会发
+        # "This plugin does not support propagateSizeHints()"，配上 QT_FATAL_WARNINGS=1
+        # 会把每个示例都变成失败。装好字体（fontconfig + dejavu）后 xcb 下没有这类噪声。
+        # 本机（Windows/MSVC）没有这条路径，改由 scripts/validate.ps1 扫描示例输出里的
+        # 库类名来达到同样目的，见 §3。
         run: |
           for exe in build/bin/*; do
             case "$exe" in
               *tst_*|*bench_*) continue ;;
             esac
-            "$exe" --exit-after 800
+            xvfb-run -a env QT_FATAL_WARNINGS=1 "$exe" --exit-after 800
           done
 
   ubuntu-asan:
@@ -86,13 +89,17 @@ jobs:
 
 * **测试与示例都需要一个平台插件**：CI 上没有显示器，必须
   `QT_QPA_PLATFORM=offscreen`。CTest 里已经通过测试属性设好；示例要用 `env:` 给。
-* **`QT_FATAL_WARNINGS=1` 只给示例/基准**：库里有若干**故意**发 `qWarning()` 的路径
-  （span 重叠、pin 超过上限、表头方向不匹配、pane 列表被规范化、行号条超过镜像上限……），
-  对应的单元测试正是靠这些警告来断言行为的，把它们变成致命错误会让这些用例直接中止。
-  示例则相反：它们不该产生任何警告，这一条正好守住"正常用法不打印任何东西"。
-* **offscreen 下没有字体**：Qt 6 起不再随包提供字体，缺字体时 `QFontDatabase` 会发
-  `qWarning("Cannot find font directory ...")`。这会让上面那条 `QT_FATAL_WARNINGS=1`
-  在"示例自检"里误报，Linux 侧装上 `fonts-dejavu-core`（或任何字体包）即可。
+* **`QT_FATAL_WARNINGS=1` 不能无脑全开**，两边都会被误伤：
+  - **单元测试**里有若干**故意**发 `qWarning()` 的路径（span 重叠、pin 超过上限、表头方向不匹配、
+    pane 列表被规范化、行号条超过镜像上限……），对应的用例正是靠这些警告断言行为的，变成致命错误
+    会让它们直接中止；
+  - **offscreen 平台插件**自己会发 `This plugin does not support propagateSizeHints()`，
+    而 Qt 6 起不再随包提供字体、缺字体时 `QFontDatabase` 又会发 `Cannot find font directory ...`
+    —— 本机实测：12 个示例在 `QT_QPA_PLATFORM=offscreen` + `QT_FATAL_WARNINGS=1` 下**全部**
+    以退出码 3（abort）结束，而它们在自己退出码 0 的正常运行里不打印任何东西。
+  所以：Linux job 用 Xvfb + xcb（上一条 YAML）来获得这个门禁；本机脚本改用"扫描示例输出里的
+  库类名"（库的诊断一定会带上 `VirtualTableView::…` 这类类名，见 §2 的
+  `scripts/validate.ps1` 第 3 步），实测 12 个示例干净、而带库警告的测试输出会被判红。
 * **ASan 要关掉泄漏检测**：`detect_leaks=0`，否则 Qt 的进程级残留会让全绿变全红；
   UBSan 保留默认行为（`-fno-sanitize-recover` 可选，便于把 UB 直接变成失败）。
 * **Windows 上的 sanitizer 只有 ASan（MSVC `/fsanitize=address`），没有 UBSan**：`-Asan`
@@ -126,4 +133,5 @@ sanitizer 选项）。
 实测结果（两个 kit 都是）：`build all`、`ctest`（28 个目标：单元 / 变异 / GUI 交互全覆盖）、
 `examples`（12 个，`--exit-after` 退出码 0）全绿，**没有任何 ASan 报告**（UAF、越界、double free
 都没有出现）。这覆盖了审查"ASan/UBSan"里能在 Windows 上做的部分；剩下的 UBSan 与 GCC/Clang
-组合仍需要一个 Linux runner（配置见 §2）。
+组合仍需要一个 Linux runner（配置见 §2）。同一轮里脚本新增了示例输出扫描（§3 的
+`QT_FATAL_WARNINGS` 替代方案）：12 个示例在正常退出码 0 的同时不打印任何库诊断。

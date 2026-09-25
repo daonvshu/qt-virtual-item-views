@@ -181,6 +181,9 @@ foreach ($qt in $QtBin) {
         $bin = Join-Path $tree 'bin'
         $env:PATH = "$qt;$bin;$env:PATH"
         $env:QT_QPA_PLATFORM = 'offscreen'
+        # Without this Qt sends its messages to the debugger when the process has no
+        # console, and the example check below would be blind to them.
+        $env:QT_FORCE_STDERR_LOGGING = '1'
         if ($Asan) {
             # Qt leaves process-level allocations behind, so the leak checker has to be off:
             # this run is about use-after-free / out-of-bounds.
@@ -194,8 +197,18 @@ foreach ($qt in $QtBin) {
             Show-Tail $test.Output 25
         }
 
-        # 3) examples (every one must exit 0 with --exit-after)
+        # 3) examples: every one must exit 0 with --exit-after and must not report a
+        #    library warning. The library's diagnostics always name the class they come
+        #    from ("VirtualTableView::setHorizontalHeader(): ..."), so their names double
+        #    as the deny list. QT_FATAL_WARNINGS=1 would be the direct way, but it is not
+        #    usable here: Qt's offscreen plugin ("does not support propagateSizeHints")
+        #    and this Qt build's missing font directory warn on their own, and the unit
+        #    tests *deliberately* exercise warning paths (see docs/ci.md §3).
         if (-not $SkipExamples) {
+            $libraryNames = @('VirtualItemView', 'VirtualListView', 'VirtualTableView',
+                              'VirtualTreeView', 'VirtualHeaderView', 'NativeHeaderView',
+                              'HeaderGeometry', 'TableSpanMap', 'TablePaneLayout',
+                              'WidgetRecycler')
             $bad = @()
             foreach ($name in $examples) {
                 $exe = Join-Path $bin "$name.exe"
@@ -203,9 +216,16 @@ foreach ($qt in $QtBin) {
                     $bad += "$name (missing)"
                     continue
                 }
-                & $exe --exit-after $ExampleMs *> $null
+                $output = (& $exe --exit-after $ExampleMs 2>&1 | Out-String)
                 if ($LASTEXITCODE -ne 0) {
                     $bad += "$name=$LASTEXITCODE"
+                    continue
+                }
+                foreach ($libraryName in $libraryNames) {
+                    if ($output -like "*$libraryName*") {
+                        $bad += "$name (library warning)"
+                        break
+                    }
                 }
             }
             Add-Result $combo "examples ($($examples.Count))" ($bad.Count -eq 0) ($bad -join ', ')

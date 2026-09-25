@@ -156,6 +156,10 @@ Wave 3（v1.0 工程化交付）。**
       **sanitizer 的一半已经实跑**（2026-09-26）：脚本新增 `-Asan`，对 Qt 6.11.2 与 5.15.2 各建一个
       `/fsanitize=address` 的静态构建树，`all` 构建 + 28 个 CTest 目标 + 12 个示例全绿、没有任何
       ASan 报告（命令与结论见 [ci.md](ci.md) §5）。UBSan 与 GCC/Clang 组合仍等 runner。
+      **警告门禁**：审查建议的 `QT_FATAL_WARNINGS=1` 在 offscreen 下不可用（Qt 自己的平台插件与
+      缺失的字体目录就会警告，实测 12 个示例全部 abort，退出码 3），所以脚本第 3 步改成扫描示例
+      输出里的库类名 —— 实测 12 个示例干净、带库警告的输出会被判红；Linux job 用 Xvfb + xcb 时
+      仍可开 `QT_FATAL_WARNINGS=1`（两边的取舍写在 [ci.md](ci.md) §3）。
 
 ## 3. 代码审查与修复（2026-09-25）
 
