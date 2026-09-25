@@ -50,13 +50,12 @@ public:
 
     /// Size model of the layout, when the layout is index based (rows/columns).
     virtual SizeIndex *sizeIndex() const { return nullptr; }
-    /// Replaces the size model. The default implementation ignores it; index
-    /// based layouts (ListLayout) take ownership and use it.
-    virtual void setSizeIndex(SizeIndex *index, bool takeOwnership = true)
-    {
-        Q_UNUSED(index);
-        Q_UNUSED(takeOwnership);
-    }
+    /// Replaces the size model. An index based layout (ListLayout) takes
+    /// ownership and uses it; a policy that has no size index at all - the
+    /// default - releases what it was told to own, so handing a policy an index
+    /// can never leak it (see docs/api-stability.md: no "accepted but ignored"
+    /// entry points).
+    virtual void setSizeIndex(SizeIndex *index, bool takeOwnership = true);
 
     /// Mutation hooks used by the kernel.
     virtual void resetItems(qsizetype count, int estimate) = 0;

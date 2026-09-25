@@ -17,6 +17,9 @@ namespace viv {
 /// as the scrollbar step itself, and value -> offset -> value round trips are
 /// exact. This is what keeps the scrollbar stable (no thumb jitter) while
 /// dragging and while the height of the content changes.
+///
+/// (The architecture document calls the two directions toScrollbar()/
+/// toLogical(); the API names are toScrollBarValue()/toLogicalOffset().)
 class ScrollMapper
 {
 public:
@@ -42,10 +45,6 @@ public:
 
     int toScrollBarValue(qint64 offset) const;
     qint64 toLogicalOffset(int value) const;
-
-    /// Names used by the architecture document.
-    int toScrollbar(qint64 logicalOffset) const { return toScrollBarValue(logicalOffset); }
-    qint64 toLogical(int scrollbarValue) const { return toLogicalOffset(scrollbarValue); }
 
     /// Re-centres the compression window. Call this whenever the viewport
     /// position changes (scrollbar drag, wheel, keyboard, programmatic scroll)

@@ -61,6 +61,7 @@ set(VIRTUALITEMVIEWS_PUBLIC_HEADERS
     include/virtualitemviews/branchindicator.h
     include/virtualitemviews/headergeometry.h
     include/virtualitemviews/headerwidgetadapter.h
+    include/virtualitemviews/itempane.h
     include/virtualitemviews/layoutpolicy.h
     include/virtualitemviews/listlayout.h
     include/virtualitemviews/materializeditem.h

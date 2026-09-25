@@ -25,7 +25,6 @@ public:
     SizeIndex *sizeIndex() const { return m_sizeIndex; }
     /// Replaces the size index. The previous owned index is deleted.
     void setSizeIndex(SizeIndex *sizeIndex, bool takeOwnership = true) override;
-    void setOwnsSizeIndex(bool owns);
 
     qsizetype itemCount() const override;
     int itemSize(qsizetype item) const override;

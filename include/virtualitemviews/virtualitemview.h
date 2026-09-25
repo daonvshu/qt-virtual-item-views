@@ -119,8 +119,9 @@ public:
     };
     Q_ENUM(SelectionMode)
 
-    /// Which part of an item gets selected. SelectColumns arrives with
-    /// VirtualTableView.
+    /// Which part of an item gets selected: the item, or its whole row. There is
+    /// deliberately no SelectColumns: rows are the materialized unit, and a
+    /// column has no selection gesture of its own.
     enum class SelectionBehavior {
         SelectItems,
         SelectRows,

@@ -10,6 +10,14 @@ namespace {
 constexpr qint64 kGeometryClamp = qint64(1) << 24;
 }
 
+void LayoutPolicy::setSizeIndex(SizeIndex *index, bool takeOwnership)
+{
+    // A policy without an index model cannot use what it was handed, but it can
+    // still honour the ownership part of the contract.
+    if (takeOwnership)
+        delete index;
+}
+
 ListLayout::ListLayout(Qt::Orientation orientation)
     : m_sizeIndex(new FixedSizeIndex())
     , m_orientation(orientation)
@@ -43,11 +51,6 @@ void ListLayout::setSizeIndex(SizeIndex *sizeIndex, bool takeOwnership)
         delete m_sizeIndex;
     m_sizeIndex = sizeIndex ? sizeIndex : new FixedSizeIndex();
     m_ownsSizeIndex = sizeIndex ? takeOwnership : true;
-}
-
-void ListLayout::setOwnsSizeIndex(bool owns)
-{
-    m_ownsSizeIndex = owns;
 }
 
 void ListLayout::setEstimate(int estimate)

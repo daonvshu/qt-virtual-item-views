@@ -5,6 +5,44 @@
 
 using namespace viv;
 
+namespace {
+/// Counts destructions so a test can prove that an index handed to a policy was
+/// released (docs/api-stability.md: no "accepted but ignored" entry points).
+class CountingSizeIndex : public BlockSizeIndex
+{
+public:
+    CountingSizeIndex() : BlockSizeIndex(0, 10, 4) {}
+    ~CountingSizeIndex() override { ++destroyed; }
+
+    static int destroyed;
+};
+
+int CountingSizeIndex::destroyed = 0;
+
+/// A policy with no size index at all: it ignores the model but still owns what
+/// it is told to own.
+class BarePolicy : public LayoutPolicy
+{
+public:
+    Qt::Orientation orientation() const override { return Qt::Vertical; }
+    qsizetype itemCount() const override { return 0; }
+    int itemSize(qsizetype) const override { return 0; }
+    qint64 offsetOf(qsizetype) const override { return 0; }
+    qsizetype indexAtOffset(qint64) const override { return 0; }
+    qint64 contentExtent() const override { return 0; }
+    int crossExtent() const override { return 0; }
+    void setCrossExtent(int) override {}
+    QRect itemRect(qsizetype, qint64) const override { return QRect(); }
+    qsizetype itemAtPoint(const QPoint &, qint64) const override { return -1; }
+    bool isVariableSized() const override { return false; }
+    void resetItems(qsizetype, int) override {}
+    void insertItems(qsizetype, qsizetype, int) override {}
+    void removeItems(qsizetype, qsizetype) override {}
+    void moveItems(qsizetype, qsizetype, qsizetype) override {}
+    void setItemSize(qsizetype, int) override {}
+};
+} // namespace
+
 class TestListLayout : public QObject
 {
     Q_OBJECT
@@ -19,6 +57,7 @@ private slots:
     void moveItemsKeepsSizes();
     void resetItemsUsesEstimate();
     void horizontalOrientationUsesWidth();
+    void policyWithoutSizeIndexReleasesOwnership();
 };
 
 void TestListLayout::uniformItemGeometry()
@@ -157,6 +196,31 @@ void TestListLayout::horizontalOrientationUsesWidth()
     QCOMPARE(layout.itemRect(1, 20), QRect(30, 0, 50, 120));
     QCOMPARE(layout.itemAtPoint(QPoint(30, 10), 20), qsizetype(1));
     QCOMPARE(layout.itemAtPoint(QPoint(30, 200), 20), qsizetype(-1));
+}
+
+void TestListLayout::policyWithoutSizeIndexReleasesOwnership()
+{
+    CountingSizeIndex::destroyed = 0;
+    BarePolicy policy;
+
+    policy.setSizeIndex(new CountingSizeIndex(), true);
+    QCOMPARE(CountingSizeIndex::destroyed, 1);
+
+    // Without ownership the caller keeps the object, so the policy must not
+    // delete it.
+    auto *kept = new CountingSizeIndex();
+    policy.setSizeIndex(kept, false);
+    QCOMPARE(policy.sizeIndex(), nullptr);
+    QCOMPARE(CountingSizeIndex::destroyed, 1);
+    delete kept;
+    QCOMPARE(CountingSizeIndex::destroyed, 2);
+
+    // A layout that does have an index model keeps and uses it.
+    ListLayout layout(new CountingSizeIndex(), Qt::Vertical);
+    layout.setCrossExtent(100);
+    layout.resetItems(3, 10);
+    QCOMPARE(layout.itemCount(), qsizetype(3));
+    QCOMPARE(CountingSizeIndex::destroyed, 2);
 }
 
 QTEST_APPLESS_MAIN(TestListLayout)

@@ -69,9 +69,10 @@ QWidget**。
 | 像素滚动：`WheelScrollMode`（Pixels 默认 / Items）、`setWheelScrollPixels()`、`scrollByPixels()`、`setVerticalOffset()`、触控板 `pixelDelta` 1:1 | 已实现 |
 | 可选生命周期日志 `setLifecycleLoggingEnabled()`（create/bind/unbind/recycle/pin） | 已实现 |
 | `TreeVisibilityIndex`（可见行压平、**增量**展开/折叠、深度、row 双向查询）：每个已展开父节点一棵 Fenwick 前缀和，索引 → 可见行 O(depth × log siblings)，展开/折叠只沿路径更新（百万可见行下 4 层展开 969 ms → 116 ms、折叠 230 ms → 4 ms、工作集 114 → 76 MB） | 已实现 |
-| 单元测试 247 个用例 + 4 个变异测试 + 10 个 GUI 交互场景（共 20 个 CTest 目标） | 已实现 |
+| 单元测试 248 个用例 + 4 个变异测试 + 10 个 GUI 交互场景（共 20 个 CTest 目标） | 已实现 |
 | 12 个示例（simple list / order cards / dynamic height / million rows / table row widgets / table many columns / table custom header / tree / drag & drop / table spans / table panes / table frozen rows） | 已实现 |
 | benchmark（1M 行、表格 row vs cell、树：宽树 + 变更 + 锚点，稳态滚动零分配校验） | 已实现 |
+| API 稳定性（v1.0，[docs/api-stability.md](docs/api-stability.md)）：23 个公开头文件按"应用 / 扩展 / 诊断 / 私有"四级冻结，只加不删、不改默认值语义、不新增"接受但忽略"的入口；变更记进 [CHANGELOG.md](CHANGELOG.md) | 已实现 |
 
 未实现（按 §43 路线图）：accessibility 还没有文本/编辑接口
 （`TextInterface`/`EditableTextInterface`，行内编辑器自己是真实控件会自己暴露）；
@@ -327,7 +328,7 @@ include/
                              listlayout.h  layoutpolicy.h  materializeditem.h
                              treevisibilityindex.h  types.h  accessibility.h
                              tablepane.h  tablespan.h  headerwidgetadapter.h
-                             virtualheaderview.h
+                             virtualheaderview.h  itempane.h  branchindicator.h
 src/
   core/       scrollmapper.cpp  virtualitemview.cpp
   index/      sizeindex.cpp (FixedSizeIndex / BlockSizeIndex)  treevisibilityindex.cpp
@@ -349,7 +350,8 @@ examples/     simple_list / order_cards / dynamic_height / million_rows
               table_spans / table_panes / table_frozen_rows
 docs/         architecture.md  lifecycle.md  model-signals.md  focus-ime.md
               table-layout.md  drag-and-drop.md  accessibility.md  spans.md
-              performance.md  header-animation.md  roadmap.md
+              performance.md  header-animation.md  row-freezing.md  api-stability.md
+              roadmap.md
 ```
 
 公共头以 `include/` 为根（例如 `#include <virtualitemviews/virtuallistview.h>`），安装后会放到
@@ -368,6 +370,8 @@ docs/         architecture.md  lifecycle.md  model-signals.md  focus-ime.md
 * [docs/performance.md](docs/performance.md)：复杂度、规模特性、基准使用与已知取舍
 * [docs/header-animation.md](docs/header-animation.md)：表头动画契约（committed/visual 两层几何、同步矩阵、渲染器支持）
 * [docs/row-freezing.md](docs/row-freezing.md)：行冻结规格（§31 行方向类比：不变量、API、布局与滚动、实现顺序）
+* [docs/api-stability.md](docs/api-stability.md)：公开 API 的四级分类（应用/扩展/诊断/私有）、冻结规则与 v1.0 复核清单
+* [CHANGELOG.md](CHANGELOG.md)：版本变更（破坏性变更单独列出）
 * [docs/roadmap.md](docs/roadmap.md)：进度与路线图（已完成 / 待做 / 每步完成定义 / 决策记录）
 
 ## 构建
