@@ -164,16 +164,16 @@ Wave 3（v1.0 工程化交付）。**
 | --- | --- | --- |
 | **Wave 1 崩溃 / 悬空指针** | Adapter 切换 UAF、Recycler 池的 adapter 身份、Model/SelectionModel 生命周期（`QPointer` + 不变量）、表头 pane 渲染器析构顺序、视图析构解绑、Cell 模式在行/列移除与 reset 前解绑 | 已完成 |
 | **Wave 2 数据 / 状态正确性** | **已完成**：P1-1 列结构 remap（`tst_headerstructure`）、P1-2 动态高度锚点（`tst_dynamicanchor`）、P1-7 `RowSizePolicy` 与行号条一致（`tst_virtualtableview`）、P1-8 rootIndex 持久化 + 校验（`tst_virtuallistview`）、P1-9 选择语义统一（`tst_selection`）、P1-10 `scrollToColumn()` 的 pane 感知（`tst_tablepanes`）、P1-11 span 重叠校验与 `maximumSpan()` 重算（`tst_tablespan`）、P1-13 冻结行下的拖放坐标（`tst_dndfrozen`） | ✅ |
-| **Wave 3 虚拟化性能** | **已完成**：P1-3 列宽上下限语义 + 批量信号（`tst_headergeometry`）、P1-4 pane 局部前缀和 + 滚动只刷新窗口 + 表头 orderRevision 快路径（`tst_tablepanes::scrollingDoesNotWalkEveryColumn`）、P1-5 横向 64 位偏移与 extent（`tst_tablepanes`）、P1-12 `BlockSizeIndex` 分块上界（`tst_sizeindex`）、P2-1 relayout 队列合并、P2-8 纯横向滚动不跑纵向 pass（`tst_relayoutqueue`） | ✅ |
-| **Wave 4 API / 发布** | **已完成（除两项外部依赖）**：P1-14 vertical widget header 明确拒绝 + P2-4 表头 orientation 校验 + P2-5 动态子控件的事件过滤（`tst_virtualheaderview`）、P2-6 `TablePaneSpec` 规范化与校验（`tst_tablepanes`）、P2-3 事务化 `restoreHeaderState` + P2-9 行号条状态拆成"请求 / 实际支持"（`tst_virtualtableview`）、P2-2 pin 离屏项即物化（`tst_virtualitemview`）。**留下两项**：P2-10 树的 visible 结构换成 rope/分块（审查自己列为可留到 1.x，且不是正确性问题，见决策表）、CI 接入（配置与踩坑见 [ci.md](ci.md)，等一个 runner 再落地） | ✅ / ⏳ |
+| **Wave 3 虚拟化性能** | **已完成**：P1-3 列宽上下限语义 + 批量信号（`tst_headergeometry`）、P1-4 pane 局部前缀和 + 滚动只刷新窗口 + 表头 orderRevision 快路径（`tst_tablepanes::scrollingDoesNotWalkEveryColumn`）、P1-5 横向 64 位偏移与 extent（`tst_tablepanes`）、P1-12 `BlockSizeIndex` 分块上界（`tst_sizeindex`）、P2-1 relayout 队列合并、P2-7 多滚动组宽度按 extent 等比（`tst_tablepanes::scrollingPanesShareTheWidthProportionally`）、P2-8 纯横向滚动不跑纵向 pass（`tst_relayoutqueue`） | ✅ |
+| **Wave 4 API / 发布** | **已完成（除两项外部依赖）**：P1-14 vertical widget header 明确拒绝 + P2-4 表头 orientation 校验 + P2-5 动态子控件的事件过滤（`tst_virtualheaderview`）、P2-6 `TablePaneSpec` 规范化与校验（`tst_tablepanes`）、P2-3 事务化 `restoreHeaderState` + P2-9 行号条状态拆成"请求 / 实际支持"（`tst_virtualtableview`）、P2-2 pin 离屏项即物化（`tst_virtualitemview`）、P2-10 树的 expand 原地 splice（`tst_treevisibilityindex` 既有用例）。**留下两项**：P2-10 的彻底解法（把可见行表换成 rope/分块；审查自己列为可留到 1.x，见决策表）、CI 接入（配置与踩坑见 [ci.md](ci.md)，等一个 runner 再落地） | ✅ / ⏳ |
 
 Wave 1 新增的回归测试：`tst_adapterreplacement`（8 例）、`tst_modellifetime`（6 例）、
 `tst_celllifecycle`（5 例）；四种组合（Qt 5.15.2 / 6.11.2 × 静态 / 动态）28 步验证全绿。
 
 **v1.0 tag 暂缓**：`PROJECT_VERSION` 保持 `1.0.0`（尚未打 tag）。Wave 1（P0）、Wave 2
 （数据 / 状态正确性）、Wave 3（虚拟化性能）与 Wave 4 的 **P0/P1 与全部可本地验证的 P2** 都已
-落地，每一步都带回归测试 + Qt 5 / Qt 6 双配置构建 + 全量 CTest。审查里的 18 个 P1 全部修完、
-10 个 P2 里只剩两个：
+落地，每一步都带回归测试 + Qt 5 / Qt 6 双配置构建 + 全量 CTest。审查里的 3 个 P0、15 个 P1
+全部修完，10 个 P2 里 9 个完全修完，剩下两项：
 
 1. **P2-10（树的可视行向量）**：expand/collapse 仍要搬一次尾部（`QVector` 整体重建 → 现在是
    单次 memmove + 只复制插入的子树），彻底去掉需要换成 rope / 分块 / 隐式树。审查的原话是

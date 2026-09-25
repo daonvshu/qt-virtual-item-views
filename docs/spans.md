@@ -122,6 +122,10 @@ void setPanes(const QVector<PaneSpec> &specs);   // 空 = 回到默认三段
   以及所有把滚动交给单个 pane 的显式列表）这就是"主滚动 pane 拿剩下的宽度"，逐像素不变。
   比例分配是多滚动组的前提：让第一个滚动 pane 吃掉全部剩余宽度的话，第二个组要么整列全露、
   要么把主 pane 压到 0，两个组都无法真正滚动。
+  **比例的分母是"留给滚动 pane 的总宽度"，不是"还在流动的剩余宽度"**：每个非主滚动 pane 都用
+  同一个 `可用宽度` 算自己的份额，主 pane 最后吃掉取整余数。早先用"递减的 remaining ÷ 总
+  extent"会让每个 pane 都比前一个按比例更小（900 px 视口里三个等宽组得到 134 / 100 / 66
+  而不是 100 / 100 / 100，组多了尾巴会塌成 0）。
 * **滚动**：同 `scrollGroup` 的 pane 共享一个横向偏移。**首个滚动 pane 所在的组是主组**，
   它的偏移来自 `HeaderGeometry::viewportOffset()`，也就是视图自己的横向滚动条驱动的那个
   （默认三段布局下就是组 0）。其余组通过 `setHorizontalOffset(group, offset)` 由业务驱动，

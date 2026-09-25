@@ -388,6 +388,13 @@ bool TablePaneLayout::update(int viewportWidth, int viewportHeight)
         if (pane.pane.type == TablePane::Type::Scrollable)
             scrollingExtent += pane.extent;
     }
+    // Every non-primary scrolling pane takes its share of the *whole* width that is
+    // left for the scrolling panes. Using the running remainder as the numerator
+    // (with the same denominator) made each pane proportionally smaller than the one
+    // before it: three equal groups in a 900 px viewport came out 134/100/66 instead
+    // of 100/100/100 (P2-7). The primary pane still absorbs the rounding, so the
+    // widths always add up to the viewport width.
+    const int availableWidth = remaining;
     for (int index = 0; index < resolved.size(); ++index) {
         ResolvedPane &pane = resolved[index];
         if (pane.pane.type != TablePane::Type::Scrollable || index == primaryIndex)
@@ -396,7 +403,7 @@ bool TablePaneLayout::update(int viewportWidth, int viewportHeight)
             pane.width = 0;
             continue;
         }
-        pane.width = int(qint64(remaining) * qint64(pane.extent) / scrollingExtent);
+        pane.width = int(qint64(availableWidth) * qint64(pane.extent) / scrollingExtent);
         remaining -= pane.width;
     }
     if (primaryIndex >= 0) {

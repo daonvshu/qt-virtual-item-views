@@ -136,6 +136,7 @@ private slots:
     void horizontalOffsetSurvivesBeyondTheIntRange();
     void scrollingDoesNotWalkEveryColumn();
     void invalidPaneSpecsAreNormalizedWithOneWarningEach();
+    void scrollingPanesShareTheWidthProportionally();
 };
 
 void TestTablePanes::defaultLayoutIsStillTheThreePanes()
@@ -759,6 +760,56 @@ void TestTablePanes::invalidPaneSpecsAreNormalizedWithOneWarningEach()
     QCOMPARE(view.paneSpecs().at(1).scrollGroup, 0);
     QCOMPARE(view.paneSpecs().at(3).scrollGroup, 0);
     QCOMPARE(view.paneIndexOfColumn(5), 3);
+}
+
+void TestTablePanes::scrollingPanesShareTheWidthProportionally()
+{
+    // Three scrolling groups with the same extent have to get the same width (P2-7).
+    // The old formula divided the *remaining* width by the total scrolling extent, so
+    // every pane was proportionally smaller than its predecessor: with a 900 px
+    // viewport that is 134 / 100 / 66 instead of 100 / 100 / 100 - and with more
+    // groups the tail collapses to nothing.
+    auto *model = new QStandardItemModel(20, 12, this);
+    PaneTableAdapter adapter;
+    VirtualTableView view;
+    view.setTableAdapter(&adapter);
+    view.setUniformItemHeight(kRowHeight);
+    view.setDefaultColumnWidth(kColumnWidth);
+    view.setModel(model);
+    showView(&view, QSize(kViewWidth, kViewHeight));
+
+    view.setPanes({scrollablePane({0, 1, 2}, 0), scrollablePane({3, 4, 5}, 1),
+                   scrollablePane({6, 7, 8}, 2)});
+    view.flushPendingRelayout();
+
+    const QVector<TablePane> panes = view.panes();
+    QCOMPARE(panes.size(), 3);
+    const int total = view.viewport()->width();
+    const int share = total / 3; // equal extents: exactly a third, rounded down
+    QCOMPARE(panes.at(1).viewportRect.width(), share);
+    QCOMPARE(panes.at(2).viewportRect.width(), share);
+    // The primary pane (the first scrolling group) absorbs the rounding, so the
+    // widths still add up to the viewport and the panes stay adjacent.
+    QCOMPARE(panes.at(0).viewportRect.width(), total - 2 * share);
+    QCOMPARE(panes.at(0).viewportRect.x(), 0);
+    QCOMPARE(panes.at(1).viewportRect.x(), panes.at(0).viewportRect.width());
+    QCOMPARE(panes.at(2).viewportRect.x(),
+             panes.at(0).viewportRect.width() + panes.at(1).viewportRect.width());
+    QCOMPARE(panes.at(2).viewportRect.x() + panes.at(2).viewportRect.width(), total);
+
+    // Different extents still follow the ratio (3 : 3 : 4 columns of equal width).
+    view.setPanes({scrollablePane({0, 1, 2}, 0), scrollablePane({3, 4, 5}, 1),
+                   scrollablePane({6, 7, 8, 9}, 2)});
+    view.flushPendingRelayout();
+    const QVector<TablePane> ratioPanes = view.panes();
+    const int threeTenths = total * 3 / 10;
+    const int fourTenths = total * 4 / 10;
+    QCOMPARE(ratioPanes.at(1).viewportRect.width(), threeTenths);
+    QCOMPARE(ratioPanes.at(2).viewportRect.width(), fourTenths);
+    QCOMPARE(ratioPanes.at(0).viewportRect.width(), total - threeTenths - fourTenths);
+    QCOMPARE(ratioPanes.at(0).viewportRect.width() + ratioPanes.at(1).viewportRect.width()
+                 + ratioPanes.at(2).viewportRect.width(),
+             total);
 }
 
 QTEST_MAIN(TestTablePanes)
