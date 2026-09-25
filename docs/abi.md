@@ -139,7 +139,7 @@ Qt 由 Config 里的 `find_dependency()` 找回，**但安装前缀按 Qt 大版
 
 1. `project(VERSION 1.0.0)`，`SOVERSION` 随主版本变成 1，`find_package` 兼容性切到
    `SameMajorVersion`；
-2. 四种组合（Qt 5/6 × 静态/动态）全部 `all` 构建 + CTest + 示例退出码 0；
-3. `cmake --install` + 最小消费端 `find_package(VirtualItemViews)` 编译并运行（roadmap 3c）；
-4. 性能基线数字固化进 [performance.md](performance.md)（roadmap 3d）；
-5. CHANGELOG 的 `Breaking` 段与 `docs/api-stability.md` §6 的欠账都清空。
+2. `pwsh -File scripts/validate.ps1` 全绿（四种组合 × 构建 / CTest / 12 个示例 / benchmark /
+   安装 + 消费端是 28 个步骤，退出码 0）；
+3. 性能基线数字固化进 [performance.md](performance.md)（roadmap 3d）；
+4. CHANGELOG 的 `Breaking` 段与 `docs/api-stability.md` §6 的欠账都清空。

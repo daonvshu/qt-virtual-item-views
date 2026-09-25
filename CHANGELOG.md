@@ -27,6 +27,8 @@
   define。ABI 规则、SOVERSION 与支持矩阵见 [docs/abi.md](docs/abi.md)。
 * `tests/install/consumer/`：安装包的消费端冒烟测试（独立 CMake 工程，`find_package(VirtualItemViews)`
   之后跑 28 项运行期自检）。README 新增「安装与消费」一节，`docs/abi.md` 补上装出来的目录布局。
+* `scripts/validate.ps1`：一键验证。对每个 Qt kit × 库形态组合做 configure → `all` 构建 → CTest →
+  12 个示例退出码 → benchmark 不变量 → 安装 + 消费端冒烟测试，退出码 = 失败步数。
 * `BlockSizeIndex::explicitSizeCount()`（诊断）：当前"实测过且不等于基值"的行数。
 * `VirtualItemView::visibleItemRanges()` / 行 pane 查询族（v0.8 行冻结，见
   [docs/row-freezing.md](docs/row-freezing.md)）。

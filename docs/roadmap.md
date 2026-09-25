@@ -28,7 +28,7 @@ v0.7 的逐项细节与实现决定记在 [spans.md](spans.md)、[accessibility.
 | Qt 5 | `D:\devlib\Qt\5.15.2\msvc2019_64` |
 | 工具链 | MSVC 18 (14.50.35717) x64 + Ninja + CMake 4.3（CLion 自带） |
 | 构建树 | `cmake-build-debug-qt6` / `cmake-build-debug-qt5`（静态）与 `cmake-build-debug-qt6-shared` / `cmake-build-debug-qt5-shared`（动态） |
-| 验证 | 四种组合（Qt 6.11.2 / Qt 5.15.2 × 静态 / 动态）`all` 构建通过；20 个 CTest 目标全绿（248 单元 + 4 变异 + 10 GUI 用例）；12 个示例全部退出码 0；`bench_listview`（1M 行 / 表格 100 列 / 树）自检不变量通过 |
+| 验证 | 一条命令：`pwsh -File scripts/validate.ps1` —— 四种组合（Qt 6.11.2 / Qt 5.15.2 × 静态 / 动态）共 28 个步骤全绿：`all` 构建、20 个 CTest 目标（248 单元 + 4 变异 + 10 GUI 用例）、12 个示例退出码 0、`bench_listview` 不变量自检、`cmake --install` + 消费端冒烟测试 |
 
 注意：构建与测试必须在沙箱外运行。沙箱内 ninja 无法派生编译器子进程，构建会永久挂起
 （已用最小 ninja 工程复现）。
@@ -126,7 +126,14 @@ Wave 3（v1.0 工程化交付）。**
       accessibility 工厂。四种组合（Qt 5.15.2 / 6.11.2 × 静态 / 动态）都做了
       install → configure → build → run，全部 28/28 通过、退出码 0。
 - [ ] 性能基线固化：把 bench 数字写进 [performance.md](performance.md)，保留稳态滚动零分配断言。
-- [ ] 一键验证脚本 / CI：双 Qt 构建 + CTest + 示例退出码。
+- [x] **3e 一键验证脚本**：`scripts/validate.ps1` 把本轮一直在手工做的检查固化下来 —— 对每个
+      Qt kit × 库形态组合依次做 configure → `all` 构建 → CTest → 12 个示例（`--exit-after`，
+      退出码必须 0）→ benchmark 不变量自检 → `cmake --install` + 消费端冒烟测试；
+      Qt/vcvars/cmake 路径都能用参数覆盖，失败步不中止（一次跑完看到全部问题），退出码 = 失败步数。
+      实测：`pwsh -File scripts/validate.ps1` 对四种组合共 28 个步骤全绿、退出码 0（约 4.5 分钟）。
+      **CI 未接入**：本机没有 CI 账号/网络，提交一个没跑过的 workflow 是不负责任的；脚本就是 CI 的
+      入口（`pwsh -File scripts/validate.ps1 -QtBin <runner 上的 Qt bin>`），接入时只需要一个
+      Windows + MSVC + Qt 的 job 包一层，见 [abi.md](abi.md) §5 的支持矩阵。
 
 ## 3. 每一步的完成定义
 
@@ -158,6 +165,8 @@ Wave 3（v1.0 工程化交付）。**
 | 2026-09-25 | `PROJECT_VERSION` 先落到 `0.9.0`（与已完成的 Wave 2 对齐），1.0 收尾再 bump 到 `1.0.0`；0.x 期间 `find_package` 用 `SameMinorVersion` | 版本号要如实反映进度：Wave 3 还没做完就不是 1.0；0.x 没有 ABI 承诺，不该让"要 0.9"的消费端匹配到 0.10 |
 | 2026-09-25 | 安装冒烟测试是一个**独立工程**（`tests/install/consumer`），不进主构建树 | 只有独立 configure/build 才能真正证明"装出来的包能被人消费"；放在主构建里就只能证明"源码树里的头文件能被自己的 target 用到"，而那从来不是问题所在 |
 | 2026-09-25 | 安装前缀按 Qt 大版本区分（`VirtualItemViewsConfig.cmake` 里写死 `find_dependency(Qt6 …)`） | 一个前缀里混两个 Qt 大版本需要包名/目标名去版本化，代价远大于收益；Qt 5 与 Qt 6 各装各的前缀更简单也更好理解 |
+| 2026-09-25 | 一键验证写成项目自带脚本 `scripts/validate.ps1`，不提交未验证过的 CI workflow | 脚本能在本机真跑、能进发布清单；CI 配置在拿到 runner 之前无法验证，宁可先留一句"怎么接" |
+| 2026-09-25 | 验证脚本遇错不中止（跑完全部组合再汇总，退出码 = 失败步数） | 四种组合跑一轮要几分钟，第一处失败就退出会让人反复重跑；一次拿到全部失败信息更省时间 |
 | 2026-09-25 | 视图会 reparent 应用传入的表头控件 | 顶层窗口的位置是屏幕坐标（带窗口边框偏移），表头会与 body 差几像素；reparent 后统一用视图坐标 |
 | 2026-09-25 | 行冻结里 `verticalOffset()` 的语义与范围保持不变（最大偏移仍 = 内容高 - 视口高） | 这正是"冻结不产生额外滚动空间"的算式：可滚动区少掉的像素数恰好等于冻结带高度；滚动到末尾时最后几行由底部冻结带绘制，内容仍然连续 |
 | 2026-09-25 | Cell Widget Mode 的裁剪容器改成"行 pane × 列 pane"交集，Row Widget Mode 不变（内核裁纵向、行内的列容器裁横向） | 两个方向的边界互相独立；Row 模式的行控件本身被内核容器裁一次，天然正交，不需要第二层容器 |

@@ -350,6 +350,7 @@ tests/
   fuzz/       随机 insert/remove/move/dataChanged/reset
   gui/        List：鼠标/键盘/焦点 pinning/滚动数据新鲜度；Table：表头排序/横向滚轮/拖动列宽
   install/    消费端冒烟测试（独立工程：只 find_package 安装好的包）
+scripts/      validate.ps1：一键验证（四种组合的构建/CTest/示例/基准/安装+消费端）
 benchmarks/   1M 行与稳态滚动零分配校验（可选 QListView/QListWidget 参考）
               --table：row/cell 模式对照   --tree：宽树 + 结构变更 + 锚点
 examples/     simple_list / order_cards / dynamic_height / million_rows
@@ -454,6 +455,18 @@ CMake 用 `find_package(QT NAMES Qt6 Qt5 …)` 选择版本（Qt5Config 不定�
 
 ### 验证
 
+* **一条命令跑完全部验证**（项目自带脚本，不是只在本机可用的临时命令）：
+
+```bash
+pwsh -File scripts/validate.ps1                       # Qt6 + Qt5 x 静态 + 动态
+pwsh -File scripts/validate.ps1 -Library Static       # 只跑静态
+pwsh -File scripts/validate.ps1 -SkipBenchmarks -SkipExamples
+```
+
+  脚本对每个组合依次做：configure → `all` 构建 → CTest → 12 个示例（`--exit-after`，退出码必须 0）
+  → benchmark 不变量自检 → `cmake --install` + [tests/install/consumer](tests/install/consumer)
+  消费端冒烟测试。Qt 路径默认取方案文档记录的本机 kit，可用 `-QtBin`/`-Vcvars`/`-CMake` 覆盖；
+  最后按失败步数返回退出码（0 = 全绿）。
 * 单元测试 / 变异测试 / GUI 交互测试都注册进 CTest（固定 `QT_QPA_PLATFORM=offscreen`）：
   `ctest --test-dir <build> -C Debug --output-on-failure`。
 * **跑测试/示例/基准前必须把 Qt 的 `bin` 放进 `PATH`**（或用导入 MSVC + Qt 环境的验证脚本）：
