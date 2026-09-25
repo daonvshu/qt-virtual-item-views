@@ -330,15 +330,15 @@ cmake-build-debug/bin/bench_listview --tree
 ```bash
 # 1) 构建并安装（静态或动态都行，默认静态）
 cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release \
-      -DCMAKE_PREFIX_PATH=D:/devlib/Qt/6.11.2/msvc2022_64
+      -DCMAKE_PREFIX_PATH=<Qt6 kit 路径>
 cmake --build build
-cmake --install build --prefix D:/viv        # 头文件 + 库 + CMake package
+cmake --install build --prefix <安装前缀>     # 头文件 + 库 + CMake package
 
 # 2) 消费端 CMakeLists（完整可跑的版本在 tests/install/consumer/）
 #    find_package(VirtualItemViews REQUIRED)
 #    target_link_libraries(app PRIVATE VirtualItemViews::VirtualItemViews)
 cmake -S tests/install/consumer -B consumer-build -G Ninja \
-      -DCMAKE_PREFIX_PATH="D:/viv;D:/devlib/Qt/6.11.2/msvc2022_64"
+      -DCMAKE_PREFIX_PATH="<安装前缀>;<Qt kit 路径>"
 cmake --build consumer-build
 consumer-build/viv_consumer                   # 自检：list/table/tree/span/冻结列/accessibility
 ```
@@ -360,13 +360,19 @@ consumer-build/viv_consumer                   # 自检：list/table/tree/span/�
   配置时给出 Qt kit 即可，无需改动工程：
 
 ```bash
+git clone https://github.com/daonvshu/qt-virtual-item-views && cd qt-virtual-item-views
+
 # Qt 6
 cmake -S . -B cmake-build-debug-qt6  -G Ninja -DCMAKE_BUILD_TYPE=Debug \
-      -DCMAKE_PREFIX_PATH=D:/devlib/Qt/6.11.2/msvc2022_64
+      -DCMAKE_PREFIX_PATH=<Qt6 kit 路径>
 # Qt 5
 cmake -S . -B cmake-build-debug-qt5  -G Ninja -DCMAKE_BUILD_TYPE=Debug \
-      -DCMAKE_PREFIX_PATH=D:/devlib/Qt/5.15.2/msvc2019_64
+      -DCMAKE_PREFIX_PATH=<Qt5 kit 路径>
 ```
+
+本仓库的实测环境是 Windows + MSVC（VS 18 / 19.50 x64）+ Qt 6.11.2 或 Qt 5.15.2，
+四个组合（两代 Qt × 静态 / 动态）都由 `scripts/validate.ps1` 跑通；矩阵见
+[docs/abi.md](docs/abi.md)。
 
 * 选项：`VIRTUALITEMVIEWS_BUILD_SHARED`、`VIRTUALITEMVIEWS_BUILD_TESTS`、
   `VIRTUALITEMVIEWS_BUILD_EXAMPLES`、`VIRTUALITEMVIEWS_BUILD_BENCHMARKS`、
@@ -410,7 +416,7 @@ pwsh -File scripts/validate.ps1 -SkipBenchmarks -SkipExamples
   `ctest --test-dir <build> -C Debug --output-on-failure`。
 * **跑测试/示例/基准前必须把 Qt 的 `bin` 放进 `PATH`**（或用导入 MSVC + Qt 环境的验证脚本）：
   否则测试会以"找不到 Qt6Core.dll/Qt5Core.dll"之类的缺 DLL 错误失败，看起来像大面积用例失败。
-  例如 `set PATH=D:\devlib\Qt\6.11.2\msvc2022_64\bin;%PATH%` 后再运行；
+  例如 `set PATH=<Qt kit>\bin;%PATH%`（本机实测用 `D:\devlib\Qt\6.11.2\msvc2022_64\bin`）后再运行；
   `cmake --build` 自身不需要（构建系统用的是导入库）。
   本库自己的共享库**不需要** PATH：它和可执行文件一起放在 `<build>/bin`（见 [docs/abi.md](docs/abi.md)）。
 * 示例与基准程序都可无人值守运行：示例传 `--exit-after <ms>` 时会在退出前打印一行统计
