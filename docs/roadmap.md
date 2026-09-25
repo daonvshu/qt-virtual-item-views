@@ -151,7 +151,26 @@ Wave 3（v1.0 工程化交付）。**
       入口（`pwsh -File scripts/validate.ps1 -QtBin <runner 上的 Qt bin>`），接入时只需要一个
       Windows + MSVC + Qt 的 job 包一层，见 [abi.md](abi.md) §5 的支持矩阵。
 
-## 3. 每一步的完成定义
+## 3. 代码审查与修复（2026-09-25）
+
+外部全量代码审查（`VirtualItemViews_Full_Code_Review.md`，按仓库惯例本地保留、不入库）列出
+3 个 P0、15 个 P1、10 个 P2，并给出"修完 P0 + 主要 P1 再打 1.0 tag"的结论。修复按审查建议的
+顺序分批落地，每批都带回归测试与四组合验证：
+
+| 批次 | 内容 | 状态 |
+| --- | --- | --- |
+| **Wave 1 崩溃 / 悬空指针** | Adapter 切换 UAF、Recycler 池的 adapter 身份、Model/SelectionModel 生命周期（`QPointer` + 不变量）、表头 pane 渲染器析构顺序、视图析构解绑、Cell 模式在行/列移除与 reset 前解绑 | 已完成 |
+| **Wave 2 数据 / 状态正确性** | 列的 insert/remove/move 同时 remap 列状态、冻结列与显式 pane、排序指示器；动态高度锚点捕获时机；`RowSizePolicy` 与行号条一致；rootIndex 持久化；选择语义（Space / 多选 / 整行）；span 重叠校验；冻结行下的拖放坐标；`scrollToColumn()` 的 pane 感知 | 待做 |
+| **Wave 3 虚拟化性能** | HeaderGeometry 批量信号、pane 布局滚动快路径、表头可见区间快路径、横向 `ScrollMapper` + qint64 extent、`BlockSizeIndex` 分块上界、纯横向滚动不触发纵向 relayout | 待做 |
+| **Wave 4 API / 发布** | Vertical widget header（实现或明确拒绝）、`TablePaneSpec` 结构校验、事务化 `restoreHeaderState`、vertical header 状态不粘滞、relayout 队列合并、Linux CI + ASan/UBSan | 待做 |
+
+Wave 1 新增的回归测试：`tst_adapterreplacement`（8 例）、`tst_modellifetime`（6 例）、
+`tst_celllifecycle`（5 例）；四种组合（Qt 5.15.2 / 6.11.2 × 静态 / 动态）28 步验证全绿。
+
+**v1.0 tag 暂缓**：`PROJECT_VERSION` 保持 `1.0.0`（尚未打 tag），但按审查结论，tag 要等
+Wave 1 + Wave 2 完成之后再打。
+
+## 4. 每一步的完成定义
 
 沿用既有节奏，走完才算完成：
 
@@ -162,7 +181,7 @@ Wave 3（v1.0 工程化交付）。**
 5. 同步 [features.md](features.md) 能力表、README 概览与本文件。
 6. 一个独立提交。
 
-## 4. 决策记录
+## 5. 决策记录
 
 | 日期 | 决定 | 理由 |
 | --- | --- | --- |
@@ -184,6 +203,8 @@ Wave 3（v1.0 工程化交付）。**
 | 2026-09-25 | 一键验证写成项目自带脚本 `scripts/validate.ps1`，不提交未验证过的 CI workflow | 脚本能在本机真跑、能进发布清单；CI 配置在拿到 runner 之前无法验证，宁可先留一句"怎么接" |
 | 2026-09-25 | 验证脚本遇错不中止（跑完全部组合再汇总，退出码 = 失败步数） | 四种组合跑一轮要几分钟，第一处失败就退出会让人反复重跑；一次拿到全部失败信息更省时间 |
 | 2026-09-25 | 性能基线只固化 Debug + 本机工具链的数字，并显式标注"Release 未测" | 把 Debug 数字包装成"发布性能"比不写更糟；基线的价值是回归对比，不是横向吹牛，所以环境、命令、局限性都写在表旁边 |
+| 2026-09-25 | 切换 Adapter / 切换 Row-Cell 模式 / 替换 cell adapter 时**清空控件池**，而不是给池的 key 加 adapter 身份 | 池只按 `WidgetType` 分池，而业务默认都返回 0：跨 adapter 复用等于把 A 的控件交给 B 去 `static_cast`。清池是最小且绝对安全的解法（代价是配置级切换要重建控件），"adapter 身份 + type" 的池 key 留到确有性能诉求时再做 |
+| 2026-09-25 | v1.0 tag 暂缓，先修完代码审查的 Wave 1 + Wave 2 | 审查指出 Adapter/Recycler、Model 生命周期、列结构 remap 这三组问题若在 1.0 ABI 冻结后再修，会逼着改公开类的成员布局与 ownership 语义，与 1.x 的 `SameMajorVersion` 承诺冲突 |
 | 2026-09-25 | 视图会 reparent 应用传入的表头控件 | 顶层窗口的位置是屏幕坐标（带窗口边框偏移），表头会与 body 差几像素；reparent 后统一用视图坐标 |
 | 2026-09-25 | 行冻结里 `verticalOffset()` 的语义与范围保持不变（最大偏移仍 = 内容高 - 视口高） | 这正是"冻结不产生额外滚动空间"的算式：可滚动区少掉的像素数恰好等于冻结带高度；滚动到末尾时最后几行由底部冻结带绘制，内容仍然连续 |
 | 2026-09-25 | Cell Widget Mode 的裁剪容器改成"行 pane × 列 pane"交集，Row Widget Mode 不变（内核裁纵向、行内的列容器裁横向） | 两个方向的边界互相独立；Row 模式的行控件本身被内核容器裁一次，天然正交，不需要第二层容器 |

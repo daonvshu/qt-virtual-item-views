@@ -185,15 +185,29 @@ VirtualItemView::VirtualItemView(QWidget *parent)
 
 VirtualItemView::~VirtualItemView()
 {
-    // Widgets are children of the viewport and are deleted with it; only
-    // non-owned collaborators have to be released here.
-    disconnectModel(m_model);
-    if (m_ownSelectionModel)
-        delete m_selectionModel;
-    if (m_ownAdapter)
+    // Materialized widgets have to be released while the adapter and the
+    // recycler are both alive: business code stops its timers / async requests
+    // in unbindWidget(), and a pooled widget must not outlive the factory that
+    // created it. Only then may the owned collaborators go away.
+    recycleAllItems();
+    if (m_recycler)
+        m_recycler->clear();
+    disconnectModel(m_model.data());
+    if (m_ownSelectionModel) {
+        delete m_selectionModel.data();
+        m_selectionModel = nullptr;
+        m_ownSelectionModel = false;
+    }
+    if (m_ownAdapter) {
         delete m_adapter;
-    if (m_ownLayout)
+        m_adapter = nullptr;
+        m_ownAdapter = false;
+    }
+    if (m_ownLayout) {
         delete m_layout;
+        m_layout = nullptr;
+        m_ownLayout = false;
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -202,10 +216,10 @@ VirtualItemView::~VirtualItemView()
 
 void VirtualItemView::setModel(QAbstractItemModel *model)
 {
-    if (m_model == model)
+    if (m_model.data() == model)
         return;
 
-    disconnectModel(m_model);
+    disconnectModel(m_model.data());
     // A drag or drop in flight refers to the outgoing model (§38).
     finishDrag();
     recycleAllItems();
@@ -217,8 +231,14 @@ void VirtualItemView::setModel(QAbstractItemModel *model)
     m_model = model;
     connectModel(model);
 
+    // Invariant: selectionModel()->model() == model(), or there is no selection
+    // model at all. A selection model of the outgoing model cannot address the
+    // new one, so it is detached (an external one is not deleted).
     if (m_ownSelectionModel) {
-        delete m_selectionModel;
+        delete m_selectionModel.data();
+        m_selectionModel = nullptr;
+        m_ownSelectionModel = false;
+    } else if (m_selectionModel && m_selectionModel->model() != model) {
         m_selectionModel = nullptr;
     }
     if (!m_selectionModel && model) {
@@ -274,12 +294,18 @@ void VirtualItemView::resetLayoutForNewModel()
 
 void VirtualItemView::setSelectionModel(QItemSelectionModel *selectionModel)
 {
-    if (m_selectionModel == selectionModel)
+    if (m_selectionModel.data() == selectionModel)
         return;
-    if (m_ownSelectionModel)
-        delete m_selectionModel;
+    if (selectionModel && m_model && selectionModel->model() != m_model.data()) {
+        qWarning("VirtualItemView::setSelectionModel(): the selection model belongs to another "
+                 "model; the current selection model is kept");
+        return;
+    }
+    if (m_ownSelectionModel) {
+        delete m_selectionModel.data();
+        m_ownSelectionModel = false;
+    }
     m_selectionModel = selectionModel;
-    m_ownSelectionModel = false;
 }
 
 QModelIndex VirtualItemView::currentIndex() const
@@ -395,9 +421,17 @@ void VirtualItemView::setAdapter(WidgetAdapter *adapter, bool takeOwnership)
         m_ownAdapter = m_ownAdapter || takeOwnership;
         return;
     }
+    // Order matters: hand the materialized widgets back through the *old*
+    // adapter, drop every pooled widget (a widget class of another adapter must
+    // never be handed out through the new adapter's WidgetType namespace), and
+    // only then let the old adapter die.
     recycleAllItems();
-    if (m_ownAdapter)
+    if (m_recycler)
+        m_recycler->clear();
+    if (m_ownAdapter) {
         delete m_adapter;
+        m_adapter = nullptr;
+    }
     m_adapter = adapter;
     m_ownAdapter = takeOwnership;
     relayout();

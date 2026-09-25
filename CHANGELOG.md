@@ -57,3 +57,31 @@
 * **产物布局变化**：可执行文件从 `<build>/examples/…`、`<build>/tests/…`、
   `<build>/benchmarks/…` 统一到 `<build>/bin`，库统一到 `<build>/lib`。旧路径下的二进制不再更新，
   请按新路径调用（`<build>/bin/table_spans`）；`find_package` 的消费端不受影响。
+
+### Fixed（全量代码审查 Wave 1：崩溃 / 悬空指针）
+
+修复来自 [VirtualItemViews_Full_Code_Review.md](VirtualItemViews_Full_Code_Review.md) 的 P0/P1
+生命周期问题（回归测试：`tst_adapterreplacement`、`tst_modellifetime`、`tst_celllifecycle`）：
+
+* **Adapter 切换 UAF**：`VirtualTableView::setTableAdapter()` 以前先 `delete` 旧 adapter，再让
+  基类 `setAdapter()` 用旧指针调 `unbindWidget()`。现在统一成"用旧 adapter 解绑 → 丢弃它的控件池
+  → 再删除旧 adapter"，表头（`VirtualHeaderView::setAdapter()`）与单元格 adapter 同理。
+* **Recycler 池没有 adapter 身份**：两个 adapter 都用默认 `WidgetType 0` 时，旧 adapter 的控件会
+  被新 adapter 取走并 `static_cast` 成错误的类型。切换 adapter、切换
+  `MaterializationMode`、替换 cell adapter 时都会清空池（见"行为变化"）。
+* **Model / SelectionModel 悬空**：`m_model` / `m_selectionModel` 改成 `QPointer`；删除模型后视图
+  的后续操作与析构不再解引用已释放对象。并加上不变量：`selectionModel()->model()` 必须是
+  `model()`，否则 `setSelectionModel()` 拒绝并 `qWarning`；换模型时属于旧模型的 selection model
+  会被摘掉（外部的不会被删除）。
+* **表头 pane 渲染器析构顺序**：主表头是 widget 表头、且它拥有 `HeaderWidgetAdapter` 时，派生
+  出来的 pane 表头（借用同一个 adapter）以前靠 `deleteLater()`/父子析构，会晚于 adapter 释放。
+  现在换表头与析构都按"先销毁派生 pane 渲染器 → 再销毁主渲染器 → 再销毁 adapter"的顺序，
+  并且按接口指针 `delete`（`HeaderViewInterface` 不要求渲染器本身就是 QWidget）。
+* **视图析构不解绑**：`~VirtualItemView()` 现在先 `recycleAllItems()` + 清池，再释放自己拥有的
+  adapter / layout，业务在 `unbindWidget()` 里停定时器、退订异步结果的行为在析构路径上也成立。
+* **Cell Widget Mode 结构变更**：行 / 列被移除以及 `modelReset` 之前，单元格控件会先解绑（此时
+  persistent index 仍然有效），业务拿到的仍是旧的行列身份，而不是无效索引。
+
+**行为变化**：切换 adapter、切换 Row/Cell 模式、替换 cell adapter 时，旧控件池会被清空
+（池里的控件立即销毁并重新创建），而不是跨 adapter / 跨模式复用 —— 这是"池没有 adapter 身份"
+这一根本问题的当前解法（另一种解法是给池的 key 加上 adapter 身份，留待日后）。

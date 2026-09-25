@@ -157,13 +157,22 @@ VirtualTableView::VirtualTableView(QWidget *parent)
 
 VirtualTableView::~VirtualTableView()
 {
-    // Cells are children of the viewport, but they must be unbound while the
-    // adapter is still alive.
+    // Teardown order matters. Cells are unbound first (they need the cell
+    // adapter), then every derived pane renderer - a widget pane header borrows
+    // the primary header's adapter, so it must be gone before that adapter is
+    // destroyed - then the primary renderers (which may own the header adapter),
+    // and only then the adapters themselves.
     recycleAllCells();
+    for (HeaderViewInterface *&paneHeader : m_paneHeaders) {
+        deleteHeader(paneHeader);
+    }
+    m_paneHeaders.clear();
+    deleteHeader(m_frozenTopRowsHeader);
+    deleteHeader(m_frozenBottomRowsHeader);
     if (m_ownHorizontalHeader)
-        delete m_horizontalHeader;
+        deleteHeader(m_horizontalHeader);
     if (m_ownVerticalHeader)
-        delete m_verticalHeader;
+        deleteHeader(m_verticalHeader);
     if (m_ownTableAdapter)
         delete m_tableAdapter;
     if (m_ownCellAdapter)
@@ -175,6 +184,18 @@ VirtualTableView::~VirtualTableView()
 // ---------------------------------------------------------------------------
 // Headers
 // ---------------------------------------------------------------------------
+
+void VirtualTableView::deleteHeader(HeaderViewInterface *&header)
+{
+    if (!header)
+        return;
+    // Delete through the interface: HeaderViewInterface does not require the
+    // renderer to be the QWidget itself (a composed renderer would leak its
+    // wrapper when only the widget is deleted), and the virtual destructor is
+    // what releases the widget.
+    delete header;
+    header = nullptr;
+}
 
 void VirtualTableView::ensureHeaders()
 {
@@ -209,8 +230,15 @@ void VirtualTableView::setHorizontalHeader(HeaderViewInterface *header)
     }
     if (m_horizontalHeader == header)
         return;
+    // The derived pane renderers were cloned from the installed header (a widget
+    // header hands them its adapter), so they have to be destroyed before the
+    // header that owns that adapter.
+    for (HeaderViewInterface *&paneHeader : m_paneHeaders) {
+        deleteHeader(paneHeader);
+    }
+    m_paneHeaders.clear();
     if (m_ownHorizontalHeader && m_horizontalHeader)
-        delete m_horizontalHeader->headerWidget();
+        deleteHeader(m_horizontalHeader);
     m_horizontalHeader = header;
     m_ownHorizontalHeader = true;
     m_horizontalHeader->setGeometryModel(m_columns);
@@ -222,6 +250,7 @@ void VirtualTableView::setHorizontalHeader(HeaderViewInterface *header)
     m_horizontalHeader->headerWidget()->setParent(this);
     applyHeaderAnimationSettings();
     layoutHeaderWidgets();
+    syncHeaderPanes();
 }
 
 void VirtualTableView::setVerticalHeader(HeaderViewInterface *header)
@@ -234,8 +263,10 @@ void VirtualTableView::setVerticalHeader(HeaderViewInterface *header)
     }
     if (m_verticalHeader == header)
         return;
+    deleteHeader(m_frozenTopRowsHeader);
+    deleteHeader(m_frozenBottomRowsHeader);
     if (m_ownVerticalHeader && m_verticalHeader)
-        delete m_verticalHeader->headerWidget();
+        deleteHeader(m_verticalHeader);
     m_verticalHeader = header;
     m_ownVerticalHeader = true;
     m_verticalHeader->setGeometryModel(m_rowHeaders);
@@ -384,6 +415,16 @@ void VirtualTableView::setModel(QAbstractItemModel *model)
     // Persistent cell indexes of the old model are invalid now.
     recycleAllCells();
     connectColumnSignals(model);
+    if (model) {
+        // Connected *after* the kernel's own handlers, so the row widgets are
+        // released first and the cells are still bound to a valid index here.
+        connect(model, &QAbstractItemModel::rowsAboutToBeRemoved, this,
+                &VirtualTableView::onRowsAboutToBeRemovedForCells);
+        connect(model, &QAbstractItemModel::columnsAboutToBeRemoved, this,
+                &VirtualTableView::onColumnsAboutToBeRemovedForCells);
+        connect(model, &QAbstractItemModel::modelAboutToBeReset, this,
+                &VirtualTableView::onModelAboutToBeResetForCells);
+    }
     if (m_horizontalHeader)
         m_horizontalHeader->setLabelModel(model);
     if (m_verticalHeader)
@@ -752,10 +793,7 @@ void VirtualTableView::syncHeaderPanes()
     // One header renderer per pane (§43 "advanced panes"), indexed by pane index.
     // The primary (scrolling) pane keeps the installed horizontal header.
     for (int index = panes.size(); index < m_paneHeaders.size(); ++index) {
-        if (HeaderViewInterface *stale = m_paneHeaders.at(index)) {
-            stale->headerWidget()->hide();
-            stale->headerWidget()->deleteLater();
-        }
+        deleteHeader(m_paneHeaders[index]);
     }
     m_paneHeaders.resize(panes.size());
     int primaryIndex = -1;
@@ -774,9 +812,7 @@ void VirtualTableView::syncHeaderPanes()
         // the pane list changed must not stay behind as a second header.
         if (paneIndex == primaryIndex || panes.at(paneIndex).logicalColumns.isEmpty()) {
             if (header) {
-                header->headerWidget()->hide();
-                header->headerWidget()->deleteLater();
-                header = nullptr;
+                deleteHeader(header);
             }
             continue;
         }
@@ -845,11 +881,7 @@ void VirtualTableView::syncVerticalPaneHeaders()
         && itemPaneRect(ItemPane::Type::FrozenBottom).height() > 0;
 
     const auto drop = [this](HeaderViewInterface *&header) {
-        if (!header)
-            return;
-        header->headerWidget()->hide();
-        header->headerWidget()->deleteLater();
-        header = nullptr;
+        deleteHeader(header);
     };
     if (!wantsTop)
         drop(top);
@@ -1295,11 +1327,17 @@ void VirtualTableView::setTableAdapter(TableWidgetAdapter *adapter, bool takeOwn
         m_ownTableAdapter = m_ownTableAdapter || takeOwnership;
         return;
     }
-    if (m_ownTableAdapter && m_tableAdapter)
-        delete m_tableAdapter;
+    // setAdapter() recycles the row widgets through the *old* adapter and drops
+    // the pool, so the old adapter may only be deleted after that call. Deleting
+    // it first would let the kernel call unbindWidget() on a freed object.
+    TableWidgetAdapter *previous = m_ownTableAdapter ? m_tableAdapter : nullptr;
+    if (previous == adapter)
+        previous = nullptr;
+    m_ownTableAdapter = false;
     m_tableAdapter = adapter;
-    m_ownTableAdapter = takeOwnership;
     setAdapter(adapter, false); // the kernel uses the same adapter
+    delete previous;
+    m_ownTableAdapter = takeOwnership;
 }
 
 TableWidgetAdapter *VirtualTableView::tableAdapter() const
@@ -1319,6 +1357,11 @@ void VirtualTableView::setMaterializationMode(MaterializationMode mode)
     // kernel does not recycle row widgets while cell mode is active.
     recycleAllCells();
     recycleAllItems();
+    // Row widgets and cell widgets live in the same recycler, and both use
+    // WidgetType 0 by default: a pool entry of the old mode must never be handed
+    // out as a widget of the new mode.
+    if (recycler())
+        recycler()->clear();
     m_materializationMode = mode;
     relayout();
 }
@@ -1329,9 +1372,15 @@ void VirtualTableView::setCellAdapter(CellWidgetAdapter *adapter, bool takeOwner
         m_ownCellAdapter = m_ownCellAdapter || takeOwnership;
         return;
     }
+    // Recycle (unbind with the old adapter) and drop the pool *before* the old
+    // adapter is deleted - same reasoning as setAdapter()/setTableAdapter().
     recycleAllCells();
-    if (m_ownCellAdapter)
+    if (recycler())
+        recycler()->clear();
+    if (m_ownCellAdapter) {
         delete m_cellAdapter;
+        m_cellAdapter = nullptr;
+    }
     m_cellAdapter = adapter;
     m_ownCellAdapter = takeOwnership;
     relayout();
@@ -1622,6 +1671,64 @@ void VirtualTableView::recycleAllCells()
     }
     m_cells.clear();
     m_cellTypes.clear();
+}
+
+// ---------------------------------------------------------------------------
+// Cell lifecycle (Cell Widget Mode)
+// ---------------------------------------------------------------------------
+
+void VirtualTableView::onRowsAboutToBeRemovedForCells(const QModelIndex &parent, int first, int last)
+{
+    recycleCellsInRowRange(parent, first, last);
+}
+
+void VirtualTableView::onColumnsAboutToBeRemovedForCells(const QModelIndex &parent, int first,
+                                                         int last)
+{
+    recycleCellsInColumnRange(parent, first, last);
+}
+
+void VirtualTableView::onModelAboutToBeResetForCells()
+{
+    // The persistent index of every cell dies with the model reset, so the
+    // widgets are unbound while the model still describes them.
+    recycleAllCells();
+}
+
+void VirtualTableView::recycleCellsInRowRange(const QModelIndex &parent, int first, int last)
+{
+    if (m_cells.isEmpty() || !m_cellAdapter)
+        return;
+    QHash<QPersistentModelIndex, QWidget *> kept;
+    kept.reserve(m_cells.size());
+    for (auto it = m_cells.constBegin(); it != m_cells.constEnd(); ++it) {
+        const QModelIndex index = it.key();
+        const bool removed = index.isValid() && index.parent() == parent
+            && index.row() >= first && index.row() <= last;
+        if (removed)
+            recycleCell(it.key(), it.value());
+        else
+            kept.insert(it.key(), it.value());
+    }
+    m_cells = kept;
+}
+
+void VirtualTableView::recycleCellsInColumnRange(const QModelIndex &parent, int first, int last)
+{
+    if (m_cells.isEmpty() || !m_cellAdapter)
+        return;
+    QHash<QPersistentModelIndex, QWidget *> kept;
+    kept.reserve(m_cells.size());
+    for (auto it = m_cells.constBegin(); it != m_cells.constEnd(); ++it) {
+        const QModelIndex index = it.key();
+        const bool removed = index.isValid() && (!parent.isValid() || index.parent() == parent)
+            && index.column() >= first && index.column() <= last;
+        if (removed)
+            recycleCell(it.key(), it.value());
+        else
+            kept.insert(it.key(), it.value());
+    }
+    m_cells = kept;
 }
 
 bool VirtualTableView::isCellPinned(const QPersistentModelIndex &index, const QWidget *widget) const

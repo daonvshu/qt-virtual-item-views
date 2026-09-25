@@ -11,6 +11,7 @@
 #include <QItemSelectionModel>
 #include <QList>
 #include <QPersistentModelIndex>
+#include <QPointer>
 #include <QSet>
 #include <QVector>
 
@@ -98,11 +99,14 @@ public:
 
     // -- model ---------------------------------------------------------------
     virtual void setModel(QAbstractItemModel *model);
-    QAbstractItemModel *model() const { return m_model; }
+    QAbstractItemModel *model() const { return m_model.data(); }
 
     // -- selection -----------------------------------------------------------
+    /// Replaces the selection model. The model of \a selectionModel has to be
+    /// model(); a selection model of another model is rejected with a warning,
+    /// because the view would otherwise hold two different models at once.
     void setSelectionModel(QItemSelectionModel *selectionModel);
-    QItemSelectionModel *selectionModel() const { return m_selectionModel; }
+    QItemSelectionModel *selectionModel() const { return m_selectionModel.data(); }
 
     QModelIndex currentIndex() const;
     void setCurrentIndex(const QModelIndex &index);
@@ -552,8 +556,10 @@ private:
     void onModelAboutToBeReset();
     void onModelReset();
 
-    QAbstractItemModel *m_model = nullptr;
-    QItemSelectionModel *m_selectionModel = nullptr;
+    /// Both are watched: a business that deletes its model (or selection model)
+    /// before the view must not leave the view with a dangling pointer.
+    QPointer<QAbstractItemModel> m_model;
+    QPointer<QItemSelectionModel> m_selectionModel;
     bool m_ownSelectionModel = false;
     WidgetAdapter *m_adapter = nullptr;
     bool m_ownAdapter = false;

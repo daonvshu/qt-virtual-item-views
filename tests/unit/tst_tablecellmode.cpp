@@ -395,7 +395,10 @@ void TestTableCellMode::switchingModeReleasesTheOtherWidgets()
     m_view->setMaterializationMode(VirtualTableView::MaterializationMode::CellWidgets);
     m_view->flushPendingRelayout();
     QCOMPARE(m_view->materializedCellCount(), cells);
-    QCOMPARE(m_view->destroyedWidgetCount(), qsizetype(0));
+    // The widgets of the other mode are dropped on purpose: row widgets and cell
+    // widgets share one recycler and both use WidgetType 0 by default, so a
+    // pooled row widget must never be handed out as a cell widget.
+    QVERIFY(m_view->destroyedWidgetCount() > 0);
 }
 
 void TestTableCellMode::focusedCellIsNotRecycled()

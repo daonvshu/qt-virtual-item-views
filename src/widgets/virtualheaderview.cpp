@@ -188,11 +188,20 @@ void VirtualHeaderView::setViewportOrigin(const QPoint &origin)
 
 void VirtualHeaderView::setAdapter(HeaderWidgetAdapter *adapter, bool takeOwnership)
 {
-    if (m_adapter == adapter)
+    if (m_adapter == adapter) {
+        m_ownAdapter = m_ownAdapter || takeOwnership;
         return;
+    }
+    // Same rule as the view: unbind with the old adapter, drop its pooled section
+    // widgets (they belong to another adapter's WidgetType namespace), and only
+    // then let the old adapter be deleted.
     recycleAllSections();
-    if (m_ownAdapter)
+    if (m_recycler)
+        m_recycler->clear();
+    if (m_ownAdapter) {
         delete m_adapter;
+        m_adapter = nullptr;
+    }
     m_adapter = adapter;
     m_ownAdapter = adapter && takeOwnership;
     relayout();

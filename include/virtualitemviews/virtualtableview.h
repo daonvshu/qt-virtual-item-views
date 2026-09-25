@@ -316,6 +316,19 @@ protected:
     void wheelEvent(QWheelEvent *event) override;
 
 private:
+    /// Deletes a header renderer through its interface (a renderer does not have
+    /// to be a QWidget itself, so deleting `headerWidget()` would leak the
+    /// wrapper) and clears the pointer.
+    void deleteHeader(HeaderViewInterface *&header);
+    /// Cell Widget Mode: a cell has to be unbound *before* the model invalidates
+    /// its persistent index, otherwise the business loses the row / column the
+    /// widget was bound to.
+    void onRowsAboutToBeRemovedForCells(const QModelIndex &parent, int first, int last);
+    void onColumnsAboutToBeRemovedForCells(const QModelIndex &parent, int first, int last);
+    void onModelAboutToBeResetForCells();
+    void recycleCellsInRowRange(const QModelIndex &parent, int first, int last);
+    void recycleCellsInColumnRange(const QModelIndex &parent, int first, int last);
+
     void ensureHeaders();
     void adoptHeader(HeaderViewInterface *&current, bool &owns, HeaderViewInterface *replacement,
                      HeaderGeometry *geometry, Qt::Orientation orientation);
