@@ -5,6 +5,7 @@
 
 #include <QAbstractItemModel>
 #include <QApplication>
+#include <QChildEvent>
 #include <QCursor>
 #include <QEasingCurve>
 #include <QKeyEvent>
@@ -406,8 +407,8 @@ void VirtualHeaderView::relayout()
             widget->hide();
             m_sectionWidgets.insert(logical, widget);
             m_adapter->bindSection(widget, logical);
-            // Bound widgets are watched once: their children only change when the
-            // business rebinds them (§25 cursor).
+            // Watched at bind time and then kept up to date through ChildAdded, since
+            // the business may add its widgets later (§25 cursor).
             watchMouse(widget);
         }
     }
@@ -902,6 +903,16 @@ void VirtualHeaderView::watchMouse(QWidget *root)
 
 bool VirtualHeaderView::eventFilter(QObject *watched, QEvent *event)
 {
+    if (event->type() == QEvent::ChildAdded) {
+        // A widget the business creates after the section was bound - a state label
+        // that only appears when there is something to report, a button that is
+        // added on demand - is not in the scan done at bind time. Its parent reports
+        // its arrival here, and the new subtree is watched recursively (§25).
+        auto *child = qobject_cast<QWidget *>(static_cast<QChildEvent *>(event)->child());
+        if (child)
+            watchMouse(child);
+        return QWidget::eventFilter(watched, event);
+    }
     auto *widget = qobject_cast<QWidget *>(watched);
     if (!widget || !m_geometry)
         return QWidget::eventFilter(watched, event);

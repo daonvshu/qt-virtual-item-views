@@ -151,7 +151,9 @@ table->setHorizontalHeader(header);     // 传给 nullptr 回到 native 表头
   的子控件）身上，而不是表头本身。渲染器在绑定 section 时对整棵子树打开鼠标跟踪并安装事件过滤器，
   把指针位置换算回表头坐标后再算"是否在某个 section 边缘 ±3 px"——否则"调整宽度"光标一旦设上就
   永远不重置，而且因为子控件继承父控件光标，整片表头都会变成那个图标。过滤器**从不消费**事件，
-  业务控件的 hover / 点击 / 拖拽全都照旧。
+  业务控件的 hover / 点击 / 拖拽全都照旧。绑定之后再出现的子控件（按需创建的状态标签、按钮）
+  通过 `QEvent::ChildAdded` **递归**补装，所以"绑定之后才建出来的子树"和绑定时就存在的一样参与
+  光标换算。
 * **冻结列**：`setPaneFilter(columns, frozen)` 让同一个类也能当冻结 pane 的表头
   （只 materialize 本 pane 的 section），表格会自动用同类渲染器创建 pane 表头（§31）。
 * 表头动画（§23/§24）：已按"committed vs visual 两层几何 + 按需过渡"实现，见

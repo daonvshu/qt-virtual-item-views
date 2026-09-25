@@ -176,6 +176,12 @@
   `state.size()` 比较，超 `INT_MAX` 的值会先变成负数、绕过检查（随后按负长度分配缓冲区）。
   回归测试：`tst_virtualtableview::aBrokenStateLeavesTheViewUntouched`（尾部截断 / 负数条数 /
   超 `int` 的长度三种损坏状态都不改变视图；已确认还原旧实现时该用例会失败）。
+* **绑定之后新增的子控件也参与光标换算（P2-5）**：`watchMouse()` 只在 section 绑定时扫描一次
+  `findChildren<QWidget*>()`，所以业务在绑定之后才建出来的控件（按需出现的状态标签、只在可编辑
+  行上出现的按钮）不在过滤器里 —— 指针移到那片区域时表头收不到位置更新，"调整宽度"光标会一直粘在
+  上一次的形状上，正是 §25 想避免的那个现象。现在渲染器自己处理 `QEvent::ChildAdded` 并**递归**
+  补装过滤器与鼠标跟踪，绑定之后新建的子树和绑定时就存在的一样。回归测试：
+  `tst_virtualheaderview::childrenAddedAfterBindingAreWatchedToo`（已确认还原旧实现时该用例会失败）。
 
 ### Fixed（全量代码审查 Wave 3：虚拟化热路径）
 

@@ -111,6 +111,7 @@ private slots:
     void dragReordersInsideItsPaneOnly();
     void escapeCancelsTheDrag();
     void hoverOverASectionWidgetUpdatesTheCursor();
+    void childrenAddedAfterBindingAreWatchedToo();
     void tableForwardsTheAnimationSettings();
 
 private:
@@ -694,6 +695,44 @@ void TestVirtualHeaderView::hoverOverASectionWidgetUpdatesTheCursor()
     QCOMPARE(m_header->cursor().shape(), Qt::ArrowCursor);
     moveInside(label, QPoint(label->width() - 1, 5));
     QCOMPARE(m_header->cursor().shape(), Qt::SplitHCursor);
+}
+
+void TestVirtualHeaderView::childrenAddedAfterBindingAreWatchedToo()
+{
+    // The filter cannot only be installed on the subtree that exists when the section
+    // is bound: a business widget that appears later (a state label, a button for a
+    // row that became editable) would then stop reporting its position, and the
+    // resize cursor would stick again for that part of the header (§25).
+    QWidget *section = m_header->sectionWidget(1);
+    QVERIFY(section != nullptr);
+    QCOMPARE(section->x(), kSectionWidth);
+
+    // A container added after the binding, and a label added inside that container
+    // afterwards: both are only reachable through ChildAdded.
+    auto *late = new QWidget(section);
+    late->setGeometry(kSectionWidth - 20, 0, 20, kHeaderHeight);
+    auto *lateLabel = new QLabel(late);
+    lateLabel->setGeometry(0, 0, 20, kHeaderHeight);
+    QApplication::processEvents();
+
+    const auto moveInside = [](QWidget *widget, const QPoint &local) {
+        QMouseEvent event(QEvent::MouseMove, local, widget->mapToGlobal(local), Qt::NoButton,
+                          Qt::NoButton, Qt::NoModifier);
+        QApplication::sendEvent(widget, &event);
+    };
+
+    // The label covers the trailing edge of section 1 (header x = 180), so a move near
+    // its own right edge has to switch to the width cursor...
+    moveInside(lateLabel, QPoint(19, 5));
+    QCOMPARE(m_header->cursor().shape(), Qt::SplitHCursor);
+    // ... and back in the middle of the header it has to go away again.
+    moveInside(lateLabel, QPoint(5, 5));
+    QCOMPARE(m_header->cursor().shape(), Qt::ArrowCursor);
+
+    // Both the container and its later child are watched (mouse tracking included),
+    // which is what makes the assertion above work with real mouse events as well.
+    QVERIFY(late->hasMouseTracking());
+    QVERIFY(lateLabel->hasMouseTracking());
 }
 
 void TestVirtualHeaderView::tableForwardsTheAnimationSettings()
