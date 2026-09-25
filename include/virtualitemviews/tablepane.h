@@ -9,6 +9,8 @@
 #include <virtualitemviews/global.h>
 #include <virtualitemviews/types.h>
 
+#include <functional>
+
 namespace viv {
 
 class HeaderGeometry;
@@ -114,6 +116,14 @@ public:
     const QVector<TablePaneSpec> &paneSpecs() const { return m_specs; }
     bool usesExplicitPanes() const { return !m_specs.isEmpty(); }
 
+    /// Model structure changes: the frozen sets and every explicit pane spec name
+    /// *columns*, so their logical indices have to follow the items when the model
+    /// inserts, removes or moves columns. Call these before the next update().
+    void insertLogicalColumns(int first, int count);
+    void removeLogicalColumns(int first, int count);
+    /// \a destination is in pre-move coordinates, like the model signal.
+    void moveLogicalColumns(int start, int count, int destination);
+
     /// Recomputes the cached pane rects and column positions. The panes span the
     /// full viewport height. Returns true when the layout changed.
     bool update(int viewportWidth, int viewportHeight);
@@ -192,6 +202,9 @@ public:
 private:
     int extentOf(const QVector<int> &logicalColumns) const;
     QVector<int> visualOrderOf(const QVector<int> &logicalColumns) const;
+    /// Applies \a remap (which may yield -1 for a dropped column) to the frozen
+    /// sets and to every explicit pane spec, dropping what is gone.
+    void remapLogicalColumns(const std::function<int(int)> &remap);
 
     const HeaderGeometry *m_geometry = nullptr;
     QVector<int> m_frozenLeft;

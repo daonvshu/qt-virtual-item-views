@@ -43,12 +43,100 @@ void HeaderGeometry::setSectionCount(int count)
         }
     }
 
-    m_logicalToVisual.resize(clamped);
-    for (int visual = 0; visual < m_visualToLogical.size(); ++visual)
-        m_logicalToVisual[m_visualToLogical.at(visual)] = visual;
+    rebuildIndexMaps();
 
     invalidateCaches();
     emit sectionCountChanged(clamped);
+    emitGeometryChanged();
+}
+
+void HeaderGeometry::rebuildIndexMaps()
+{
+    m_logicalToVisual.resize(sectionCount());
+    for (int visual = 0; visual < m_visualToLogical.size(); ++visual)
+        m_logicalToVisual[m_visualToLogical.at(visual)] = visual;
+}
+
+void HeaderGeometry::insertLogicalSections(int first, int count)
+{
+    if (count <= 0)
+        return;
+    const int total = sectionCount();
+    const int at = qBound(0, first, total);
+
+    QVector<Section> sections;
+    sections.reserve(total + count);
+    for (int logical = 0; logical < at; ++logical)
+        sections.append(m_sections.at(logical));
+    for (int index = 0; index < count; ++index) {
+        Section section;
+        section.size = m_defaultSectionSize;
+        sections.append(section);
+    }
+    for (int logical = at; logical < total; ++logical)
+        sections.append(m_sections.at(logical));
+    m_sections = sections;
+
+    // The state of every existing section stays with its item: only the logical
+    // numbers after the insertion point shift. The new sections go to the end of
+    // the visual order, exactly like a freshly appended column.
+    for (int visual = 0; visual < m_visualToLogical.size(); ++visual) {
+        if (m_visualToLogical.at(visual) >= at)
+            m_visualToLogical[visual] += count;
+    }
+    for (int index = 0; index < count; ++index)
+        m_visualToLogical.append(at + index);
+    rebuildIndexMaps();
+
+    if (m_sortIndicatorSection >= at)
+        m_sortIndicatorSection += count;
+
+    invalidateCaches();
+    emit sectionCountChanged(sectionCount());
+    emitGeometryChanged();
+}
+
+void HeaderGeometry::removeLogicalSections(int first, int count)
+{
+    if (count <= 0)
+        return;
+    const int total = sectionCount();
+    const int at = qBound(0, first, total);
+    const int removed = qMin(count, total - at);
+    if (removed <= 0)
+        return;
+
+    QVector<Section> sections;
+    sections.reserve(total - removed);
+    for (int logical = 0; logical < at; ++logical)
+        sections.append(m_sections.at(logical));
+    for (int logical = at + removed; logical < total; ++logical)
+        sections.append(m_sections.at(logical));
+    m_sections = sections;
+
+    QVector<int> visualOrder;
+    visualOrder.reserve(m_visualToLogical.size());
+    for (int visual = 0; visual < m_visualToLogical.size(); ++visual) {
+        const int logical = m_visualToLogical.at(visual);
+        if (logical >= at && logical < at + removed)
+            continue;                                    // the column is gone
+        visualOrder.append(logical >= at + removed ? logical - removed : logical);
+    }
+    m_visualToLogical = visualOrder;
+    rebuildIndexMaps();
+
+    if (m_sortIndicatorSection >= at) {
+        if (m_sortIndicatorSection < at + removed) {
+            // The sorted column was removed: there is nothing left to indicate.
+            m_sortIndicatorSection = -1;
+            emit sortIndicatorChanged(m_sortIndicatorSection, m_sortIndicatorOrder);
+        } else {
+            m_sortIndicatorSection -= removed;
+        }
+    }
+
+    invalidateCaches();
+    emit sectionCountChanged(sectionCount());
     emitGeometryChanged();
 }
 
@@ -330,8 +418,9 @@ void HeaderGeometry::moveLogicalSections(int start, int count, int destination)
 
     for (int visual = 0; visual < m_visualToLogical.size(); ++visual)
         m_visualToLogical[visual] = remap(m_visualToLogical.at(visual));
-    for (int visual = 0; visual < m_visualToLogical.size(); ++visual)
-        m_logicalToVisual[m_visualToLogical.at(visual)] = visual;
+    // The sort indicator names a column, not a position.
+    m_sortIndicatorSection = remap(m_sortIndicatorSection);
+    rebuildIndexMaps();
 
     invalidateCaches();
     emitGeometryChanged();

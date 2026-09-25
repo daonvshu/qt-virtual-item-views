@@ -48,7 +48,18 @@ public:
 
     // -- section set ---------------------------------------------------------
     int sectionCount() const { return int(m_sections.size()); }
+    /// Grows/shrinks the section set at the end. Model structure changes should
+    /// use the logical insert/remove/move calls below instead: they keep the
+    /// per-section state (width, visibility, explicit size) with the item it
+    /// describes, which appending can never do.
     void setSectionCount(int count);
+    /// `columnsInserted(parent, first, last)`: the new sections carry the default
+    /// state and appear at the end of the visual order (nothing has moved them
+    /// yet), while every section after \a first keeps its own state.
+    void insertLogicalSections(int first, int count);
+    /// `columnsRemoved(parent, first, last)`: the sections of the removed columns
+    /// are dropped, the ones after them keep their state and shift down.
+    void removeLogicalSections(int first, int count);
     int visibleSectionCount() const;
     int hiddenSectionCount() const;
     bool isEmpty() const { return sectionCount() == 0; }
@@ -147,6 +158,8 @@ private:
     };
 
     void rebuildCaches() const;
+    /// Rebuilds logicalIndex -> visualIndex from the visual order.
+    void rebuildIndexMaps();
     void invalidateCaches();
     void emitGeometryChanged();
     bool isValidVisualOrder(const QVector<qint32> &order) const;

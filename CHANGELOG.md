@@ -85,3 +85,13 @@
 **行为变化**：切换 adapter、切换 Row/Cell 模式、替换 cell adapter 时，旧控件池会被清空
 （池里的控件立即销毁并重新创建），而不是跨 adapter / 跨模式复用 —— 这是"池没有 adapter 身份"
 这一根本问题的当前解法（另一种解法是给池的 key 加上 adapter 身份，留待日后）。
+
+### Fixed（全量代码审查 Wave 2：数据 / 状态正确性）
+
+* **列的 insert / remove / move 不再让列状态跟错列**：`HeaderGeometry` 新增
+  `insertLogicalSections()` / `removeLogicalSections()`（并按同一排列 remap 排序指示器），
+  `TablePaneLayout` 新增 `insertLogicalColumns()` / `removeLogicalColumns()` /
+  `moveLogicalColumns()`（remap 冻结列集与显式 pane 规格）。表格的 `columnsInserted` /
+  `columnsRemoved` / `columnsMoved` 改走这些接口，于是"第 1 列插入一列"之后，老列的宽度、
+  隐藏状态、显式尺寸、冻结归属与排序指示器都还跟着原来那一列，而不是整体向右错位一格。
+  回归测试：`tst_headerstructure`（4 例：中间插入 / 中间删除 / 移动列 / 显式 pane 规格）。

@@ -452,20 +452,23 @@ void VirtualTableView::connectColumnSignals(QAbstractItemModel *model)
 
 void VirtualTableView::onColumnsInserted(const QModelIndex &parent, int first, int last)
 {
-    Q_UNUSED(first);
-    Q_UNUSED(last);
     if (parent.isValid())
         return;
-    m_columns->setSectionCount(columnCount());
+    // The inserted columns carry the default state; every column after them keeps
+    // its own width / visibility / explicit size, and the frozen sets, the pane
+    // specs and the sort indicator follow the columns they name.
+    const int count = qMax(0, last - first + 1);
+    m_columns->insertLogicalSections(first, count);
+    m_panes.insertLogicalColumns(first, count);
 }
 
 void VirtualTableView::onColumnsRemoved(const QModelIndex &parent, int first, int last)
 {
-    Q_UNUSED(first);
-    Q_UNUSED(last);
     if (parent.isValid())
         return;
-    m_columns->setSectionCount(columnCount());
+    const int count = qMax(0, last - first + 1);
+    m_columns->removeLogicalSections(first, count);
+    m_panes.removeLogicalColumns(first, count);
 }
 
 void VirtualTableView::onColumnsMoved(const QModelIndex &parent, int start, int end,
@@ -475,7 +478,9 @@ void VirtualTableView::onColumnsMoved(const QModelIndex &parent, int start, int 
         m_columns->setSectionCount(columnCount());
         return;
     }
-    m_columns->moveLogicalSections(start, end - start + 1, destinationColumn);
+    const int count = qMax(0, end - start + 1);
+    m_columns->moveLogicalSections(start, count, destinationColumn);
+    m_panes.moveLogicalColumns(start, count, destinationColumn);
 }
 
 // ---------------------------------------------------------------------------

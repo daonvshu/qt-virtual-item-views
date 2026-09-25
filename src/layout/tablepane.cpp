@@ -66,6 +66,69 @@ void TablePaneLayout::setPaneSpecs(const QVector<TablePaneSpec> &specs)
     }
 }
 
+void TablePaneLayout::remapLogicalColumns(const std::function<int(int)> &remap)
+{
+    const auto remapList = [&remap](const QVector<int> &columns) {
+        QVector<int> result;
+        result.reserve(columns.size());
+        for (int logical : columns) {
+            const int mapped = remap(logical);
+            if (mapped >= 0)
+                result.append(mapped);
+        }
+        return result;
+    };
+
+    m_frozenLeft = remapList(m_frozenLeft);
+    m_frozenRight = remapList(m_frozenRight);
+    for (TablePaneSpec &spec : m_specs)
+        spec.logicalColumns = remapList(spec.logicalColumns);
+}
+
+void TablePaneLayout::insertLogicalColumns(int first, int count)
+{
+    if (count <= 0)
+        return;
+    remapLogicalColumns([first, count](int logical) {
+        return logical >= first ? logical + count : logical;
+    });
+}
+
+void TablePaneLayout::removeLogicalColumns(int first, int count)
+{
+    if (count <= 0)
+        return;
+    remapLogicalColumns([first, count](int logical) {
+        if (logical >= first + count)
+            return logical - count;
+        if (logical >= first)
+            return -1;                       // this column is gone
+        return logical;
+    });
+}
+
+void TablePaneLayout::moveLogicalColumns(int start, int count, int destination)
+{
+    if (count <= 0 || start < 0 || destination < 0)
+        return;
+    // Same permutation as HeaderGeometry::moveLogicalSections(): the destination
+    // is expressed in pre-move coordinates.
+    const int target = destination > start + count - 1 ? destination - count : destination;
+    if (target == start)
+        return;
+    remapLogicalColumns([start, count, target](int logical) {
+        if (logical >= start && logical < start + count)
+            return target + (logical - start);
+        if (target < start) {
+            if (logical >= target && logical < start)
+                return logical + count;
+        } else if (logical >= start + count && logical < target + count) {
+            return logical - count;
+        }
+        return logical;
+    });
+}
+
 int TablePaneLayout::extentOf(const QVector<int> &logicalColumns) const
 {
     if (!m_geometry)

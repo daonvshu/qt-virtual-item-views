@@ -160,7 +160,7 @@ Wave 3（v1.0 工程化交付）。**
 | 批次 | 内容 | 状态 |
 | --- | --- | --- |
 | **Wave 1 崩溃 / 悬空指针** | Adapter 切换 UAF、Recycler 池的 adapter 身份、Model/SelectionModel 生命周期（`QPointer` + 不变量）、表头 pane 渲染器析构顺序、视图析构解绑、Cell 模式在行/列移除与 reset 前解绑 | 已完成 |
-| **Wave 2 数据 / 状态正确性** | 列的 insert/remove/move 同时 remap 列状态、冻结列与显式 pane、排序指示器；动态高度锚点捕获时机；`RowSizePolicy` 与行号条一致；rootIndex 持久化；选择语义（Space / 多选 / 整行）；span 重叠校验；冻结行下的拖放坐标；`scrollToColumn()` 的 pane 感知 | 待做 |
+| **Wave 2 数据 / 状态正确性** | ✅ P1-1 列的 insert/remove/move remap（`HeaderGeometry::insertLogicalSections/removeLogicalSections` + `TablePaneLayout::insertLogicalColumns/removeLogicalColumns/moveLogicalColumns`，排序指示器一起 remap；回归测试 `tst_headerstructure`）<br>待做：P1-2 动态高度锚点捕获时机、P1-7 `RowSizePolicy` 与行号条一致、P1-8 rootIndex 持久化、P1-9 选择语义（Space / 多选 / 整行）、P1-10 `scrollToColumn()` 的 pane 感知、P1-11 span 重叠校验、P1-13 冻结行下的拖放坐标 | 进行中 |
 | **Wave 3 虚拟化性能** | HeaderGeometry 批量信号、pane 布局滚动快路径、表头可见区间快路径、横向 `ScrollMapper` + qint64 extent、`BlockSizeIndex` 分块上界、纯横向滚动不触发纵向 relayout | 待做 |
 | **Wave 4 API / 发布** | Vertical widget header（实现或明确拒绝）、`TablePaneSpec` 结构校验、事务化 `restoreHeaderState`、vertical header 状态不粘滞、relayout 队列合并、Linux CI + ASan/UBSan | 待做 |
 
