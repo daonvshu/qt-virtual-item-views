@@ -35,6 +35,7 @@ QWidget**。
 | `HeaderGeometry`：列宽/顺序/隐藏/排序状态的唯一事实来源（§14/§45.10） | 已实现 |
 | `NativeHeaderView`：QHeaderView 与 HeaderGeometry 双向同步（无信号回环） | 已实现 |
 | `VirtualHeaderView` + `HeaderWidgetAdapter`（§17-§19）：每个可见 section 一个真实 QWidget，只 materialize 可见列 + 横向 overscan + pinned | 已实现 |
+| 表头动画（§23/§24）：committed geometry 与 visual geometry 分离 —— 换序时 section 由渲染器滑到新位置（默认 160 ms，`setHeaderAnimationDuration()` 可调、0 关闭），body 只在 commit 时重排一次；resize / 滚动 / pane 变化保持逐帧同步，native 表头渲染器忽略该设置 | 已实现 |
 | `ColumnHost` / `TableRowLayoutContext`：框架定位列，业务只管内容（§26/§27） | 已实现 |
 | 列 resize/move/hide、表头点击排序、横向像素滚动、表头状态 save/restore | 已实现 |
 | 冻结列（v0.7，§31）：`setFrozenColumns()` / `setFrozenRightColumns()`，冻结 pane 与可滚动 pane 共享同一份 `HeaderGeometry` | 已实现 |
@@ -65,11 +66,11 @@ QWidget**。
 | 像素滚动：`WheelScrollMode`（Pixels 默认 / Items）、`setWheelScrollPixels()`、`scrollByPixels()`、`setVerticalOffset()`、触控板 `pixelDelta` 1:1 | 已实现 |
 | 可选生命周期日志 `setLifecycleLoggingEnabled()`（create/bind/unbind/recycle/pin） | 已实现 |
 | `TreeVisibilityIndex`（可见行压平、增量展开/折叠、深度、row 双向查询） | 已实现 |
-| 单元测试 211 个用例 + 4 个变异测试 + 10 个 GUI 交互场景（共 19 个 CTest 目标） | 已实现 |
+| 单元测试 214 个用例 + 4 个变异测试 + 10 个 GUI 交互场景（共 19 个 CTest 目标） | 已实现 |
 | 11 个示例（simple list / order cards / dynamic height / million rows / table row widgets / table many columns / table custom header / tree / drag & drop / table spans / table panes） | 已实现 |
 | benchmark（1M 行、表格 row vs cell、树：宽树 + 变更 + 锚点，稳态滚动零分配校验） | 已实现 |
 
-未实现（按 §43 路线图）：表头动画（§23/§24）；accessibility
+未实现（按 §43 路线图）：accessibility
 还没有 `QAccessibleTableInterface`（行列朗读）与文本/编辑接口；行冻结
 （文档 §31 只写列方向）；树在"可见行数极大"时的增量行映射优化
 （现在一次 expand/collapse 需要重建可见行索引表，见 [docs/performance.md](docs/performance.md)）。
@@ -302,6 +303,8 @@ cmake-build-debug/examples/table_spans        # 合并单元格：跨列分组�
 cmake-build-debug/examples/table_spans --cell-mode --snapshot spans.png     # 跨行合并由框架渲染
 cmake-build-debug/examples/table_panes        # 多个 pane + 两个独立滚动组（工具栏是组 1 的滚动条）
 cmake-build-debug/examples/table_panes --check                             # 自检：组 1 滚动不影响其它 pane
+cmake-build-debug/examples/table_custom_header --widget-header --sections 200   # Widget 表头：每可见列一个控件
+cmake-build-debug/examples/table_custom_header --move-demo header.png         # 表头换序动画（途中截图）
 cmake-build-debug/benchmarks/bench_listview --rows 1000000 --steps 2000
 cmake-build-debug/benchmarks/bench_listview --table --table-columns 100
 cmake-build-debug/benchmarks/bench_listview --tree
@@ -340,7 +343,7 @@ examples/     simple_list / order_cards / dynamic_height / million_rows
               table_spans / table_panes
 docs/         architecture.md  lifecycle.md  model-signals.md  focus-ime.md
               table-layout.md  drag-and-drop.md  accessibility.md  spans.md
-              performance.md
+              performance.md  header-animation.md  roadmap.md
 ```
 
 公共头以 `include/` 为根（例如 `#include <virtualitemviews/virtuallistview.h>`），安装后会放到
@@ -357,6 +360,7 @@ docs/         architecture.md  lifecycle.md  model-signals.md  focus-ime.md
 * [docs/accessibility.md](docs/accessibility.md)：辅助功能桥接（虚拟节点、可见行、树层次与行列语义）
 * [docs/spans.md](docs/spans.md)：span 与 advanced panes 的规格（待实现项的语义与顺序）
 * [docs/performance.md](docs/performance.md)：复杂度、规模特性、基准使用与已知取舍
+* [docs/header-animation.md](docs/header-animation.md)：表头动画契约（committed/visual 两层几何、同步矩阵、渲染器支持）
 * [docs/roadmap.md](docs/roadmap.md)：进度与路线图（已完成 / 待做 / 每步完成定义 / 决策记录）
 
 ## 构建

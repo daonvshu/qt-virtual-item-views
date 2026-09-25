@@ -66,6 +66,18 @@ public:
     /// header and the primary scrolling pane use.
     static constexpr qint64 kFollowGeometryOffset = -1;
     virtual void setPaneOffset(qint64 offset) { Q_UNUSED(offset); }
+
+    /// Visual geometry animation of a section move (§23/§24).
+    ///
+    /// A renderer that places its own sections can slide a moved section to its
+    /// committed position instead of teleporting; the table body keeps reading the
+    /// committed HeaderGeometry, so it never follows an intermediate frame. A
+    /// renderer that cannot do this - the native QHeaderView adapter, whose
+    /// placement and painting belong to Qt - ignores both calls and keeps its
+    /// immediate behaviour; the header and the body then simply agree at once.
+    virtual void setSectionAnimationEnabled(bool enabled) { Q_UNUSED(enabled); }
+    /// Duration of the visual transition; 0 means "no animation".
+    virtual void setSectionAnimationDuration(int ms) { Q_UNUSED(ms); }
 };
 
 /// QHeaderView driven by HeaderGeometry.

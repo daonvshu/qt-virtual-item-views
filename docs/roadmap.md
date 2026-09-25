@@ -28,7 +28,7 @@ v0.7 的逐项细节与实现决定记在 [spans.md](spans.md)、[accessibility.
 | Qt 5 | `D:\devlib\Qt\5.15.2\msvc2019_64` |
 | 工具链 | MSVC 18 (14.50.35717) x64 + Ninja + CMake 4.3（CLion 自带） |
 | 构建树 | `cmake-build-debug-qt6` / `cmake-build-debug-qt5` |
-| 验证 | 两种配置 `all` 构建通过；19 个 CTest 目标全绿（211 单元 + 4 变异 + 10 GUI 用例）；11 个示例与 `bench_listview` 已产出 |
+| 验证 | 两种配置 `all` 构建通过；19 个 CTest 目标全绿（214 单元 + 4 变异 + 10 GUI 用例）；11 个示例与 `bench_listview` 已产出 |
 
 注意：构建与测试必须在沙箱外运行。沙箱内 ninja 无法派生编译器子进程，构建会永久挂起
 （已用最小 ninja 工程复现）。
@@ -44,11 +44,14 @@ v0.7 的逐项细节与实现决定记在 [spans.md](spans.md)、[accessibility.
       主组（首个滚动 pane 的组）仍由 `HeaderGeometry` + 滚动条驱动，其余组由
       `setHorizontalOffset(group, offset)` 驱动；表头新增 `setPaneOffset()`；命中测试按 pane
       裁剪。示例 `examples/table_panes`（`--check` 自检 / `--snapshot` 截图）。
-- [ ] **1b 表头动画**（§23/§24）：committed geometry 与 visual geometry 分离，动画只发生在
-      渲染器层（`VirtualHeaderView`/`HeaderWidgetAdapter`），表格只提交一次。优先级：
-      sort icon → section move transition → resize / frozen pane transition。
-- [ ] **1c 行冻结**（§31 只定义了列方向）：待定项，要么实现（垂直方向的 pane 类比），
-      要么明确写进 README 的"非目标"。
+- [x] **1b 表头动画**（§23/§24）：committed 与 visual 两层几何分离（[header-animation.md](header-animation.md)）。
+      `VirtualHeaderView` 在换序时把 section 滑到新位置（默认 160 ms，可关、可调），body 只在 commit
+      时重排一次；resize / 滚动 / pane 变化逐帧同步；native 表头渲染器忽略该设置（支持矩阵见文档）。
+      顺带修掉"应用自己创建的表头控件从未 reparent、按屏幕坐标摆放"导致的表头/body 几像素错位。
+      测试：`tst_virtualheaderview` 3 个新用例；示例：`table_custom_header --move-demo`。
+- [ ] **1c 行冻结**（§31 只定义了列方向）：**在范围内**（用户 2026-09-25 决定）。实现垂直方向的
+      pane 类比：行冻结 pane + 可滚动行区、两个区域各自的命中测试与裁剪、与 span/拖放/无障碍对齐，
+      并补规格文档与示例。
 
 ### Wave 2（v0.9）：规模化与可访问性补完
 
@@ -91,3 +94,6 @@ v0.7 的逐项细节与实现决定记在 [spans.md](spans.md)、[accessibility.
 | 2026-09-25 | 多滚动 pane 的宽度按 extent 比例分配（而不是"首个滚动 pane 拿全部剩余"） | 否则第二个组要么整列全露、要么把主 pane 压到 0，两个组都无法滚动；单滚动 pane 时逐像素不变 |
 | 2026-09-25 | 主组 = 首个滚动 pane 所在的组（默认布局下是组 0），不写死组 0 | 显式列表可以任意编号；默认布局与既有测试逐像素一致 |
 | 2026-09-25 | 构建必须在沙箱外运行 | 沙箱内 ninja 无法派生编译器子进程，构建会永久挂起（已用最小 ninja 工程复现） |
+| 2026-09-25 | 1c 行冻结纳入范围 | 用户要求：做一个垂直方向的 pane 类比，而不是写进非目标 |
+| 2026-09-25 | 表头动画只覆盖换序（resize/滚动/pane 变化保持逐帧同步） | §24 的判据是"body 是否逐帧跟随"；动画只做 body 不跟帧的那一种，避免表头与 body 撕裂 |
+| 2026-09-25 | 视图会 reparent 应用传入的表头控件 | 顶层窗口的位置是屏幕坐标（带窗口边框偏移），表头会与 body 差几像素；reparent 后统一用视图坐标 |

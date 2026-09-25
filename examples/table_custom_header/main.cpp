@@ -21,10 +21,13 @@
 #include <QLabel>
 #include <QMainWindow>
 #include <QPainter>
+#include <QPixmap>
 #include <QPushButton>
 #include <QStatusBar>
 #include <QTimer>
 #include <QToolBar>
+
+#include <cstdio>
 
 namespace {
 
@@ -217,11 +220,19 @@ int main(int argc, char **argv)
     QCommandLineOption exitOption(QStringLiteral("exit-after"),
                                   QStringLiteral("毫秒后自动退出（0 = 一直运行）"),
                                   QStringLiteral("ms"), QStringLiteral("0"));
+    QCommandLineOption moveDemoOption(QStringLiteral("move-demo"),
+                                      QStringLiteral("无人值守动画演示：慢速移动一列并在途中截图"),
+                                      QStringLiteral("path"));
+    QCommandLineOption animationOption(QStringLiteral("animation"),
+                                       QStringLiteral("section 移动动画时长（ms，0 = 关闭）"),
+                                       QStringLiteral("ms"), QStringLiteral("160"));
     parser.addOption(rowsOption);
     parser.addOption(sectionsOption);
     parser.addOption(widgetOption);
     parser.addOption(frozenOption);
     parser.addOption(exitOption);
+    parser.addOption(moveDemoOption);
+    parser.addOption(animationOption);
     parser.process(app);
 
     const int rowCount = qMax(1, parser.value(rowsOption).toInt());
@@ -298,8 +309,37 @@ int main(int argc, char **argv)
     QObject::connect(view, &viv::VirtualTableView::columnGeometryChanged, &window, updateStatus);
     QTimer::singleShot(0, &window, updateStatus);
 
+    // §23/§24：移动列时表头做视觉过渡，而 body 立刻采用 committed geometry。
+    view->setHeaderAnimationDuration(parser.value(animationOption).toInt());
+    auto *moveAction = toolbar->addAction(QStringLiteral("移动一列"));
+    QObject::connect(moveAction, &QAction::triggered, view, [view, columnCount]() {
+        const int from = columnCount > 1 ? 1 : 0;
+        const int to = qMin(columnCount - 1, from + 3);
+        view->moveColumn(from, to);
+    });
+
+    const QString moveDemoPath = parser.value(moveDemoOption);
     const int exitAfter = parser.value(exitOption).toInt();
-    if (exitAfter > 0) {
+    if (!moveDemoPath.isEmpty()) {
+        // 慢速动画 + 途中截图：能直接看到 section 在飞、而 body 已经在终点位置。
+        if (!widgetHeader->isChecked())
+            widgetHeader->setChecked(true); // 只有 widget 表头能做视觉过渡
+        view->setHeaderAnimationDuration(1200);
+        QTimer::singleShot(0, view, [view, columnCount]() {
+            view->moveColumn(1, qMin(columnCount - 1, 4));
+        });
+        QTimer::singleShot(500, &app, [&window, view, moveDemoPath]() {
+            const QPixmap shot = window.grab();
+            const bool saved = shot.save(moveDemoPath);
+            std::printf("table_custom_header: move-demo %s (%dx%d)%s committedX1=%d "
+                        "committedX4=%d\n",
+                        qPrintable(moveDemoPath), shot.width(), shot.height(),
+                        saved ? "" : " FAILED", view->columnGeometry(1).viewportX,
+                        view->columnGeometry(4).viewportX);
+            std::fflush(stdout);
+            QCoreApplication::quit();
+        });
+    } else if (exitAfter > 0) {
         QTimer::singleShot(exitAfter, &app, [view, &headerAdapter, &model, exitAfter, columnCount]() {
             int sections = -1;
             if (auto *header = dynamic_cast<viv::VirtualHeaderView *>(view->horizontalHeader()))

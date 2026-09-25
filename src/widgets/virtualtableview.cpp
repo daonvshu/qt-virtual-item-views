@@ -164,6 +164,7 @@ void VirtualTableView::ensureHeaders()
         m_horizontalHeader->setGeometryModel(m_columns);
         m_horizontalHeader->setLabelModel(model());
         m_horizontalHeader->setSortInteractionEnabled(m_sortingEnabled);
+        applyHeaderAnimationSettings();
     }
     if (!m_verticalHeader) {
         m_verticalHeader = new NativeHeaderView(Qt::Vertical, this);
@@ -194,6 +195,12 @@ void VirtualTableView::setHorizontalHeader(HeaderViewInterface *header)
     m_ownHorizontalHeader = true;
     m_horizontalHeader->setGeometryModel(m_columns);
     m_horizontalHeader->setLabelModel(model());
+    // The header is part of the view, so the pane rects and the viewport origin mean
+    // the same thing for it as for the body. A renderer created by the application
+    // is usually parentless - a top level window - and would then be placed in
+    // screen coordinates (off by its frame margins, and not clipped by the view).
+    m_horizontalHeader->headerWidget()->setParent(this);
+    applyHeaderAnimationSettings();
     layoutHeaderWidgets();
 }
 
@@ -213,6 +220,7 @@ void VirtualTableView::setVerticalHeader(HeaderViewInterface *header)
     m_ownVerticalHeader = true;
     m_verticalHeader->setGeometryModel(m_rowHeaders);
     m_verticalHeader->setLabelModel(model());
+    m_verticalHeader->headerWidget()->setParent(this);
     layoutHeaderWidgets();
 }
 
@@ -613,6 +621,39 @@ void VirtualTableView::setPaneSeparatorStyle(const PaneSeparatorStyle &style)
     emit columnGeometryChanged();
 }
 
+void VirtualTableView::setHeaderAnimationEnabled(bool enabled)
+{
+    if (m_headerAnimationEnabled == enabled)
+        return;
+    m_headerAnimationEnabled = enabled;
+    applyHeaderAnimationSettings();
+}
+
+void VirtualTableView::setHeaderAnimationDuration(int ms)
+{
+    const int clamped = qMax(0, ms);
+    if (m_headerAnimationDuration == clamped)
+        return;
+    m_headerAnimationDuration = clamped;
+    applyHeaderAnimationSettings();
+}
+
+void VirtualTableView::applyHeaderAnimationSettings()
+{
+    // The primary header plus every pane renderer (§43): the setting is a property
+    // of the view, not of one renderer.
+    if (m_horizontalHeader) {
+        m_horizontalHeader->setSectionAnimationEnabled(m_headerAnimationEnabled);
+        m_horizontalHeader->setSectionAnimationDuration(m_headerAnimationDuration);
+    }
+    for (HeaderViewInterface *header : m_paneHeaders) {
+        if (!header)
+            continue;
+        header->setSectionAnimationEnabled(m_headerAnimationEnabled);
+        header->setSectionAnimationDuration(m_headerAnimationDuration);
+    }
+}
+
 void VirtualTableView::updatePaneLayout()
 {
     const bool changed = m_panes.update(viewport()->width(), viewport()->height());
@@ -687,6 +728,7 @@ void VirtualTableView::syncHeaderPanes()
         m_horizontalHeader->setPaneFilter(panes.at(primaryIndex).logicalColumns, false);
     else
         m_horizontalHeader->clearPaneFilter();
+    applyHeaderAnimationSettings();
 }
 
 HeaderViewInterface *VirtualTableView::createHorizontalPaneHeader()

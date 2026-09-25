@@ -5,9 +5,11 @@
 
 #include <QAbstractItemModel>
 #include <QApplication>
+#include <QEasingCurve>
 #include <QMouseEvent>
 #include <QResizeEvent>
 #include <QSet>
+#include <QVariantAnimation>
 
 #include <algorithm>
 
@@ -131,8 +133,29 @@ void VirtualHeaderView::setPaneOffset(qint64 offset)
     relayout();
 }
 
+void VirtualHeaderView::setSectionAnimationEnabled(bool enabled)
+{
+    if (m_animationEnabled == enabled)
+        return;
+    m_animationEnabled = enabled;
+    if (!enabled) {
+        // Whatever is in flight lands on the committed geometry now.
+        if (m_slideAnimation)
+            m_slideAnimation->stop();
+        m_slideFrom.clear();
+        m_slideProgress = 1.0;
+        positionSections();
+    }
+}
+
+void VirtualHeaderView::setSectionAnimationDuration(int ms)
+{
+    m_animationDuration = qMax(0, ms);
+}
+
 void VirtualHeaderView::setViewportOrigin(const QPoint &origin)
 {
+    m_viewportOriginSet = true;
     if (m_viewportOrigin == origin)
         return;
     m_viewportOrigin = origin;
@@ -200,9 +223,12 @@ int VirtualHeaderView::sectionX(int logicalIndex) const
         }
         return localX - int(m_paneOffset);
     }
-    // HeaderGeometry is in viewport coordinates, this widget is placed inside the
-    // view (normally on a pane rect).
-    return geometry.viewportX + m_viewportOrigin.x() - x();
+    // HeaderGeometry is in viewport coordinates and this widget is placed inside the
+    // view (normally on a pane rect), so its own origin has to be subtracted.
+    // Without a table (a standalone header) there is no view coordinate space: the
+    // widget's own client origin is the reference, and nothing is subtracted.
+    const int ownOriginX = m_viewportOriginSet ? x() : 0;
+    return geometry.viewportX + m_viewportOrigin.x() - ownOriginX;
 }
 
 void VirtualHeaderView::relayout()
@@ -210,6 +236,7 @@ void VirtualHeaderView::relayout()
     if (m_orientation != Qt::Horizontal || !m_geometry || !m_adapter
         || m_geometry->sectionCount() <= 0) {
         recycleAllSections();
+        m_lastVisualOrder.clear();
         update();
         return;
     }
@@ -218,9 +245,25 @@ void VirtualHeaderView::relayout()
                            m_labelModel ? m_labelModel->columnCount() : m_geometry->sectionCount());
     if (count <= 0) {
         recycleAllSections();
+        m_lastVisualOrder.clear();
         update();
         return;
     }
+
+    // §23/§24: a section *move* animates, everything else is immediate. Only a
+    // reorder is a case where the committed geometry is final before the user sees
+    // the result; resizing, hiding and scrolling make the body follow every frame,
+    // so the header must follow them frame by frame as well.
+    const QVector<int> order = visualOrder();
+    bool sectionsReordered = false;
+    if (!m_lastVisualOrder.isEmpty() && m_lastVisualOrder.size() == order.size()) {
+        QVector<int> before = m_lastVisualOrder;
+        QVector<int> after = order;
+        std::sort(before.begin(), before.end());
+        std::sort(after.begin(), after.end());
+        sectionsReordered = before == after && m_lastVisualOrder != order;
+    }
+    m_lastVisualOrder = order;
 
     // 1) Visual range of the sections that intersect this widget.
     int firstVisual = -1;
@@ -269,7 +312,7 @@ void VirtualHeaderView::relayout()
         it = m_sectionWidgets.erase(it);
     }
 
-    // 4) Acquire, bind and position.
+    // 4) Acquire and bind.
     for (int logical : wanted) {
         QWidget *widget = m_sectionWidgets.value(logical, nullptr);
         if (!widget) {
@@ -281,18 +324,101 @@ void VirtualHeaderView::relayout()
             m_sectionWidgets.insert(logical, widget);
             m_adapter->bindSection(widget, logical);
         }
-        const int left = sectionX(logical);
+    }
+
+    // 5) Position: the committed geometry, or the visual geometry while a section
+    //    move is in flight (§23).
+    if (sectionsReordered && m_animationEnabled && m_animationDuration > 0
+        && !m_sectionWidgets.isEmpty()) {
+        animateSectionMove();
+    } else {
+        m_slideFrom.clear();
+        m_slideProgress = 1.0;
+        positionSections();
+    }
+    update();
+}
+
+QVector<int> VirtualHeaderView::visualOrder() const
+{
+    QVector<int> order;
+    if (!m_geometry)
+        return order;
+    const int count = qMin(m_geometry->sectionCount(),
+                           m_labelModel ? m_labelModel->columnCount() : m_geometry->sectionCount());
+    order.reserve(count);
+    for (int visual = 0; visual < count; ++visual) {
+        const int logical = m_geometry->logicalIndex(visual);
+        if (logical < 0 || m_geometry->isSectionHidden(logical) || isFiltered(logical))
+            continue;
+        order.append(logical);
+    }
+    return order;
+}
+
+void VirtualHeaderView::positionSections()
+{
+    if (!m_geometry)
+        return;
+    for (auto it = m_sectionWidgets.constBegin(); it != m_sectionWidgets.constEnd(); ++it) {
+        const int logical = it.key();
+        QWidget *widget = it.value();
+        const int committed = sectionX(logical);
+        if (committed == kSectionNotShown) {
+            widget->hide();
+            continue;
+        }
         const int width = m_geometry->sectionSize(logical);
-        const bool visible = left != kSectionNotShown && width > 0 && left < this->width()
-            && left + width > 0;
+        int visual = committed;
+        if (m_slideProgress < 1.0) {
+            const auto from = m_slideFrom.constFind(logical);
+            if (from != m_slideFrom.constEnd())
+                visual = from.value() + qRound(qreal(committed - from.value()) * m_slideProgress);
+        }
+        const bool visible = width > 0 && visual < this->width() && visual + width > 0;
         if (!visible && !isSectionPinned(logical)) {
             widget->hide();
             continue;
         }
-        widget->setGeometry(left, 0, width, height());
+        widget->setGeometry(visual, 0, width, height());
         widget->show();
     }
-    update();
+}
+
+void VirtualHeaderView::animateSectionMove()
+{
+    // Where the materialized sections are right now: an interrupted transition
+    // continues from the current visual position, never from a stale one.
+    m_slideFrom.clear();
+    for (auto it = m_sectionWidgets.constBegin(); it != m_sectionWidgets.constEnd(); ++it) {
+        if (it.value()->isVisible())
+            m_slideFrom.insert(it.key(), it.value()->x());
+    }
+
+    if (!m_slideAnimation) {
+        m_slideAnimation = new QVariantAnimation(this);
+        m_slideAnimation->setStartValue(0.0);
+        m_slideAnimation->setEndValue(1.0);
+        m_slideAnimation->setEasingCurve(QEasingCurve::OutCubic);
+        connect(m_slideAnimation, &QVariantAnimation::valueChanged, this,
+                [this](const QVariant &value) {
+                    m_slideProgress = value.toReal();
+                    positionSections();
+                });
+        connect(m_slideAnimation, &QVariantAnimation::finished, this, [this]() {
+            if (m_slideProgress < 1.0)
+                return; // stopped before the end, not finished
+            m_slideProgress = 1.0;
+            m_slideFrom.clear();
+            positionSections();
+        });
+    }
+
+    m_slideAnimation->stop();
+    m_slideAnimation->setDuration(m_animationDuration);
+    m_slideProgress = 0.0;
+    positionSections();
+    m_slideAnimation->start();
 }
 
 bool VirtualHeaderView::isSectionPinned(int logicalIndex) const

@@ -1,5 +1,8 @@
 #include <virtualitemviews/headergeometry.h>
 #include <virtualitemviews/virtualheaderview.h>
+#include <virtualitemviews/virtualtableview.h>
+
+#include "vivtestfixtures.h"
 
 #include <QtTest>
 
@@ -58,6 +61,17 @@ public:
     int bound = 0;
     int unbound = 0;
 };
+
+/// Row adapter of the table level test: rows are irrelevant here, the header is
+/// the subject.
+class PlainRowAdapter : public TableWidgetAdapter
+{
+public:
+    QWidget *createWidget(WidgetType, QWidget *parent) override { return new QWidget(parent); }
+    void bindWidget(QWidget *, const QModelIndex &) override {}
+    void unbindWidget(QWidget *, const QModelIndex &) override {}
+    QSize estimatedSize(const QModelIndex &) const override { return QSize(640, 24); }
+};
 } // namespace
 
 /// VirtualHeaderView materializes only the sections of its window (§17-§19).
@@ -75,6 +89,9 @@ private slots:
     void clickSetsTheSortIndicator();
     void paneFilterLimitsTheSections();
     void paneOffsetKeepsAPaneInItsOwnSpace();
+    void sectionMoveAnimatesWhileTheCommittedGeometryStaysAuthoritative();
+    void resizeAndDisabledAnimationStayImmediate();
+    void tableForwardsTheAnimationSettings();
 
 private:
     QStandardItemModel *m_model = nullptr;
@@ -253,6 +270,97 @@ void TestVirtualHeaderView::paneOffsetKeepsAPaneInItsOwnSpace()
     QApplication::processEvents();
     QCOMPARE(sectionX(2), -10);
     QCOMPARE(sectionX(5), kSectionWidth - 10);
+}
+
+void TestVirtualHeaderView::sectionMoveAnimatesWhileTheCommittedGeometryStaysAuthoritative()
+{
+    // §23: a section move is committed before the user sees the result, so the
+    // renderer slides the section there. The body reads the committed geometry, so
+    // it never follows an intermediate frame - the header does.
+    m_header->setSectionAnimationDuration(240);
+    QVERIFY(m_header->sectionAnimationEnabled());
+    QWidget *moved = m_header->sectionWidget(0);
+    QVERIFY(moved != nullptr);
+    QCOMPARE(moved->x(), 0);
+
+    m_geometry->moveSection(0, 3); // visual order: 1, 2, 3, 0, 4, ...
+    QApplication::processEvents();
+
+    // Committed geometry (body, scroll bar, column queries): final at once.
+    QCOMPARE(m_geometry->columnGeometry(0).viewportX, 3 * kSectionWidth);
+    QCOMPARE(m_geometry->columnGeometry(1).viewportX, 0);
+    QCOMPARE(m_geometry->columnGeometry(2).viewportX, kSectionWidth);
+
+    // Visual geometry (the header section widget): still on its way.
+    const int startedAt = moved->x();
+    QVERIFY(startedAt < 3 * kSectionWidth);
+    QTest::qWait(120);
+    const int midway = moved->x();
+    QVERIFY(midway >= startedAt);
+    QVERIFY(midway <= 3 * kSectionWidth);
+
+    QTest::qWait(200);
+    QCOMPARE(moved->x(), 3 * kSectionWidth);
+    QCOMPARE(m_header->sectionWidget(1)->x(), 0);
+    QCOMPARE(m_header->sectionWidget(2)->x(), kSectionWidth);
+}
+
+void TestVirtualHeaderView::resizeAndDisabledAnimationStayImmediate()
+{
+    // A resize is one of the cases where the body follows every frame (§24), so the
+    // header must not lag behind it.
+    m_header->setSectionAnimationDuration(240);
+    m_geometry->moveSection(0, 2); // visual order: 1, 2, 0, 3, ...
+    QTest::qWait(300);
+    QCOMPARE(m_header->sectionWidget(0)->x(), 2 * kSectionWidth);
+
+    m_geometry->resizeSection(0, 2 * kSectionWidth);
+    QApplication::processEvents();
+    QCOMPARE(m_header->sectionWidget(0)->width(), 2 * kSectionWidth);
+    // Everything after the resized section moves immediately, no easing.
+    QCOMPARE(m_header->sectionWidget(3)->x(), 4 * kSectionWidth);
+
+    // With the animation off a move is immediate as well.
+    m_header->setSectionAnimationEnabled(false);
+    QVERIFY(!m_header->sectionAnimationEnabled());
+    m_geometry->moveSection(2, 0); // back to 0, 1, 2, 3, ...
+    QApplication::processEvents();
+    QCOMPARE(m_header->sectionWidget(0)->x(), 0);
+}
+
+void TestVirtualHeaderView::tableForwardsTheAnimationSettings()
+{
+    QStandardItemModel model(20, 40);
+    SectionAdapter adapter;
+    PlainRowAdapter rowAdapter;
+    VirtualTableView view;
+    auto *header = new VirtualHeaderView(Qt::Horizontal);
+    header->setAdapter(&adapter);
+    view.setHorizontalHeader(header);
+    view.setTableAdapter(&rowAdapter);
+    view.setUniformItemHeight(24);
+    view.setDefaultColumnWidth(kSectionWidth);
+    view.setModel(&model);
+    vivtest::showView(&view, QSize(400, 200));
+    QVERIFY(header->width() > 0);
+
+    view.setHeaderAnimationDuration(160);
+    QCOMPARE(header->sectionAnimationDuration(), 160);
+    view.setHeaderAnimationEnabled(false);
+    QVERIFY(!header->sectionAnimationEnabled());
+    view.setHeaderAnimationEnabled(true);
+    QVERIFY(header->sectionAnimationEnabled());
+
+    // End to end: the committed column geometry is final while the header section
+    // is still sliding to it.
+    view.moveColumn(0, 3);
+    QApplication::processEvents();
+    QCOMPARE(view.columnGeometry(0).viewportX, 3 * kSectionWidth);
+    QWidget *moved = header->sectionWidget(0);
+    QVERIFY(moved != nullptr);
+    QVERIFY(moved->x() < 3 * kSectionWidth);
+    QTest::qWait(300);
+    QCOMPARE(moved->x(), 3 * kSectionWidth);
 }
 
 QTEST_MAIN(TestVirtualHeaderView)

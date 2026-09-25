@@ -12,6 +12,7 @@
 #include <limits>
 
 class QAbstractItemModel;
+class QVariantAnimation;
 
 namespace viv {
 
@@ -64,6 +65,24 @@ public:
     /// with the body. kFollowGeometryOffset (the default) keeps the header on the
     /// committed geometry, which is what a whole-table header uses.
     void setPaneOffset(qint64 offset) override;
+
+    /// Visual geometry animation (§23/§24), on by default.
+    ///
+    /// A section move is the one interaction whose committed geometry is final
+    /// before the user sees the result, so the renderer slides the section from its
+    /// old position to the committed one instead of teleporting. Only the header
+    /// moves: the body, the scroll bar and every geometry query read the committed
+    /// HeaderGeometry, so they jump once - at the commit - and never follow an
+    /// intermediate frame.
+    ///
+    /// Resizing a section, scrolling and pane changes stay immediate: those are the
+    /// cases where the body *does* follow every frame (§24), so animating the
+    /// header alone would tear header and body apart.
+    void setSectionAnimationEnabled(bool enabled);
+    bool sectionAnimationEnabled() const { return m_animationEnabled; }
+    /// Duration of the visual transition in milliseconds; 0 disables it as well.
+    void setSectionAnimationDuration(int ms);
+    int sectionAnimationDuration() const { return m_animationDuration; }
     /// Origin of the viewport inside the view; the table sets it so section x
     /// positions can be derived from HeaderGeometry (viewport coordinates).
     void setViewportOrigin(const QPoint &origin) override;
@@ -102,6 +121,14 @@ private:
     /// x of \a logicalIndex inside this widget (kSectionNotShown when hidden,
     /// filtered or unknown).
     int sectionX(int logicalIndex) const;
+    /// Places every materialized section, honouring the visual geometry (§23 while
+    /// an animation runs, the committed geometry otherwise).
+    void positionSections();
+    /// Starts the visual transition from the positions the materialized sections
+    /// currently have to the committed ones.
+    void animateSectionMove();
+    /// Logical columns in visual order, ignoring hidden and filtered ones.
+    QVector<int> visualOrder() const;
     /// True when this widget shows \a logicalIndex at all.
     bool showsSection(int logicalIndex) const;
     int sectionAt(const QPoint &pos) const;
@@ -122,6 +149,19 @@ private:
     QVector<int> m_paneFilter;
     bool m_paneFilterActive = false;
     qint64 m_paneOffset = kFollowGeometryOffset;
+    /// Visual geometry (§23): visual x a section slides away from, and the
+    /// progress of the transition (1 = committed geometry).
+    QHash<int, int> m_slideFrom;
+    qreal m_slideProgress = 1.0;
+    QVariantAnimation *m_slideAnimation = nullptr;
+    bool m_animationEnabled = true;
+    int m_animationDuration = 160;
+    /// Visual order of the last pass, to tell a section move (animate) from a
+    /// resize or an offset change (immediate).
+    QVector<int> m_lastVisualOrder;
+    /// True once a table told this renderer where its viewport starts; without that
+    /// (a standalone header) its own client origin is the reference.
+    bool m_viewportOriginSet = false;
     int m_overscan = 1;
     bool m_sortInteractionEnabled = false;
 
