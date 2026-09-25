@@ -157,6 +157,17 @@
   `setGeometryModel()` 同样拒绝）—— 此前会被照单收下，然后拿另一个轴的表头几何去排布。
   回归测试：`tst_virtualheaderview::verticalWidgetHeaderIsRefusedLoudly`、
   `mismatchedHeaderOrientationsAreRefused`（已确认还原旧实现时两例都会失败）。
+* **显式 pane 列表会被校验并规范化（P2-6）**：规格一直写着"同一组的列必须相邻"，但
+  `setPaneSpecs()` 只是把列表原样存下来。于是同一个 logical column 可以被两个 pane 同时
+  声明 —— 这一列会在两个表头 pane 里各画一份，而 body 的归属（`m_paneIndexByLogical`）只留
+  最后一次写入，即"表头与 body 各说一套"。现在 `TablePaneLayout::setPaneSpecs()` 会规范化：
+  一列只属于**第一个**声明它的 pane（后面的 pane 丢掉；负数索引同样丢掉）、负数 `scrollGroup`
+  按 0 处理、同一组的 pane 不相邻（`组 0 | 冻结 | 组 0`）保持原样但警告一次。每类问题每次调用
+  最多一条 `qWarning()`，而"同一份非法列表传第二遍"是 no-op（`paneSpecs()` 返回的就是规范化后
+  的列表，视图也不再白跑一趟 relayout）。pane 数量与序号不变，所以 `panes()`/`paneSpecs()`
+  仍然一一对应。回归测试：
+  `tst_tablepanes::invalidPaneSpecsAreNormalizedWithOneWarningEach`（已确认还原旧实现时该用例
+  会失败）。
 
 ### Fixed（全量代码审查 Wave 3：虚拟化热路径）
 

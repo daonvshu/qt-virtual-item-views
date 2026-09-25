@@ -1490,9 +1490,13 @@ QColor VirtualTableView::itemPaneSeparatorColor() const
 
 void VirtualTableView::setPanes(const QVector<TablePaneSpec> &panes)
 {
-    if (m_panes.paneSpecs() == panes)
-        return;
+    // The layout normalizes the list (a column belongs to one pane, a scroll group
+    // is never negative), so the "nothing changed" test compares what it stores
+    // rather than what came in: passing the same broken list twice is a no-op.
+    const QVector<TablePaneSpec> previous = m_panes.paneSpecs();
     m_panes.setPaneSpecs(panes);
+    if (m_panes.paneSpecs() == previous)
+        return;
     // The clip containers are keyed by pane index, so they are dropped and
     // recreated for the new list before the layout runs.
     syncCellPaneClipHosts();

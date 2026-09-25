@@ -106,6 +106,17 @@ struct PaneSpec
 void setPanes(const QVector<PaneSpec> &specs);   // 空 = 回到默认三段
 ```
 
+* **列表会被规范化 + 校验**（`TablePaneLayout::setPaneSpecs()`，`qWarning()` 每次调用最多各一条）：
+  - **一列只能属于一个 pane**：同一个 logical column 出现在多个 pane 时，**先出现的 pane 保留**
+    它，后面的 pane 里被丢掉（否则这一列会在两个表头 pane 里各画一份，而 body 的归属取决于
+    写入顺序 —— `m_paneIndexByLogical` 只留最后一次）。负数索引同样丢掉。
+  - **`scrollGroup` 不能为负**：负数按 0 处理。
+  - **同一组的 pane 必须相邻**：组被别的 pane 隔开时（例如 `组 0 | 冻结 | 组 0`）会警告 ——
+    同组共享一个偏移，分开摆意味着同一份偏移在两个地方各滚一次，几乎不会是业务想要的。
+    这种配置仍然照做（pane 数与序号保持不变，`panes()`/`paneSpecs()` 才不会错位），但也只警告一次。
+  - 规范化后的列表就是 `paneSpecs()` 的返回值：把同一份非法输入再传一次是 no-op，不会重复警告、
+    也不会多跑一趟 relayout。
+
 * **布局**：pane 从左到右依次排布。冻结 pane 取自己的可见宽度（按顺序，放不下时后面的压缩
   到 0）；剩下的宽度按 extent 比例分给各滚动 pane —— 只有一个滚动 pane 时（默认三段布局、
   以及所有把滚动交给单个 pane 的显式列表）这就是"主滚动 pane 拿剩下的宽度"，逐像素不变。

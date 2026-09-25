@@ -101,6 +101,16 @@ public:
     void bindCellWidget(QWidget *, const QModelIndex &) override {}
     void unbindCellWidget(QWidget *, const QModelIndex &) override {}
 };
+
+/// Counts the diagnostics of setPaneSpecs(): the review asks for "warning + reject
+/// or first wins", so the tests assert both the normalization and the warning count.
+int g_paneSpecWarnings = 0;
+
+void countPaneSpecWarnings(QtMsgType type, const QMessageLogContext &, const QString &message)
+{
+    if (type == QtWarningMsg && message.contains(QStringLiteral("setPaneSpecs")))
+        ++g_paneSpecWarnings;
+}
 } // namespace
 
 /// §43 "advanced panes" (see docs/spans.md): the pane layout is an ordered list
@@ -125,6 +135,7 @@ private slots:
     void keyboardNavigationScrollsTheGroupOfTheColumn();
     void horizontalOffsetSurvivesBeyondTheIntRange();
     void scrollingDoesNotWalkEveryColumn();
+    void invalidPaneSpecsAreNormalizedWithOneWarningEach();
 };
 
 void TestTablePanes::defaultLayoutIsStillTheThreePanes()
@@ -675,6 +686,79 @@ void TestTablePanes::scrollingDoesNotWalkEveryColumn()
     QVERIFY(!visible.isEmpty());
     QVERIFY(visible.first() > 0);
     QVERIFY(visible.last() < kColumns);
+}
+
+void TestTablePanes::invalidPaneSpecsAreNormalizedWithOneWarningEach()
+{
+    // docs/spans.md §5: one column belongs to one pane, a scroll group is never
+    // negative and the panes of one group have to be neighbours. Each broken
+    // configuration is normalized (first wins / clamp / keep but warn) and reports
+    // exactly one diagnostic per problem per call.
+    auto *model = new QStandardItemModel(20, kColumns, this);
+    PaneTableAdapter adapter;
+    VirtualTableView view;
+    view.setTableAdapter(&adapter);
+    view.setUniformItemHeight(kRowHeight);
+    view.setDefaultColumnWidth(kColumnWidth);
+    view.setModel(model);
+    showView(&view, QSize(kViewWidth, kViewHeight));
+
+    // (a) A column in two panes: the first pane keeps it, the second one loses it.
+    const QVector<TablePaneSpec> duplicated
+        = {frozenPane({0, 1}), scrollablePane({2, 3, 4}), frozenPane({5}),
+           frozenPane({0, 6})};
+    g_paneSpecWarnings = 0;
+    QtMessageHandler defaultHandler = qInstallMessageHandler(countPaneSpecWarnings);
+    view.setPanes(duplicated);
+    qInstallMessageHandler(defaultHandler);
+    QCOMPARE(g_paneSpecWarnings, 1);
+    QCOMPARE(view.paneSpecs().size(), 4);
+    QCOMPARE(view.paneSpecs().at(3).logicalColumns, QVector<int>({6}));
+    QCOMPARE(view.paneSpecs().at(0).logicalColumns, QVector<int>({0, 1}));
+    QCOMPARE(view.paneIndexOfColumn(0), 0);
+    QCOMPARE(view.paneIndexOfColumn(6), 3);
+
+    // The normalized list is what paneSpecs() returns, so passing the same broken
+    // list again is a no-op: no second warning, no second relayout.
+    g_paneSpecWarnings = 0;
+    defaultHandler = qInstallMessageHandler(countPaneSpecWarnings);
+    view.setPanes(duplicated);
+    qInstallMessageHandler(defaultHandler);
+    QCOMPARE(g_paneSpecWarnings, 0);
+    QCOMPARE(view.paneSpecs().size(), 4);
+
+    // (b) A negative scroll group is clamped to 0 (the group the view scrolls with
+    // its own horizontal scroll bar).
+    g_paneSpecWarnings = 0;
+    defaultHandler = qInstallMessageHandler(countPaneSpecWarnings);
+    view.setPanes({frozenPane({0}), scrollablePane({1, 2, 3, 4, 5, 6, 7, 8, 9}, -3)});
+    qInstallMessageHandler(defaultHandler);
+    view.flushPendingRelayout();
+    QCOMPARE(g_paneSpecWarnings, 1);
+    QCOMPARE(view.paneSpecs().at(1).scrollGroup, 0);
+    QVERIFY(view.maximumHorizontalOffset(0) > 0);
+    QCOMPARE(view.maximumHorizontalOffset(-3), qint64(0));
+    view.setHorizontalOffset(view.maximumHorizontalOffset(0));
+    QVERIFY(view.horizontalOffset(0) > 0);
+
+    // (c) One group split in two places: kept as written (pane indexes must not
+    // move) but reported once.
+    g_paneSpecWarnings = 0;
+    defaultHandler = qInstallMessageHandler(countPaneSpecWarnings);
+    view.setPanes(twoGroupPanes());
+    qInstallMessageHandler(defaultHandler);
+    QCOMPARE(g_paneSpecWarnings, 0); // legal: each group is one run
+    g_paneSpecWarnings = 0;
+    defaultHandler = qInstallMessageHandler(countPaneSpecWarnings);
+    view.setPanes({frozenPane({0}), scrollablePane({1, 2, 3}, 0), frozenPane({4}),
+                   scrollablePane({5, 6, 7, 8, 9}, 0)});
+    qInstallMessageHandler(defaultHandler);
+    view.flushPendingRelayout();
+    QCOMPARE(g_paneSpecWarnings, 1);
+    QCOMPARE(view.paneSpecs().size(), 4);
+    QCOMPARE(view.paneSpecs().at(1).scrollGroup, 0);
+    QCOMPARE(view.paneSpecs().at(3).scrollGroup, 0);
+    QCOMPARE(view.paneIndexOfColumn(5), 3);
 }
 
 QTEST_MAIN(TestTablePanes)

@@ -112,6 +112,12 @@ public:
     ///
     /// Every pane of the list is kept - also one that currently has no visible
     /// column - so panes() and paneSpecs() stay index compatible.
+    ///
+    /// The list is normalized: a column belongs to the first pane that names it
+    /// (later panes lose it, negative indexes are dropped), a negative scroll
+    /// group becomes 0, and a group whose panes are not neighbours is kept as
+    /// written but warned about - each problem at most once per call, and only
+    /// when the list really changes.
     void setPaneSpecs(const QVector<TablePaneSpec> &specs);
     const QVector<TablePaneSpec> &paneSpecs() const { return m_specs; }
     bool usesExplicitPanes() const { return !m_specs.isEmpty(); }

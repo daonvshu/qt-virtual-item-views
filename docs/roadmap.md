@@ -162,7 +162,7 @@ Wave 3（v1.0 工程化交付）。**
 | **Wave 1 崩溃 / 悬空指针** | Adapter 切换 UAF、Recycler 池的 adapter 身份、Model/SelectionModel 生命周期（`QPointer` + 不变量）、表头 pane 渲染器析构顺序、视图析构解绑、Cell 模式在行/列移除与 reset 前解绑 | 已完成 |
 | **Wave 2 数据 / 状态正确性** | **已完成**：P1-1 列结构 remap（`tst_headerstructure`）、P1-2 动态高度锚点（`tst_dynamicanchor`）、P1-7 `RowSizePolicy` 与行号条一致（`tst_virtualtableview`）、P1-8 rootIndex 持久化 + 校验（`tst_virtuallistview`）、P1-9 选择语义统一（`tst_selection`）、P1-10 `scrollToColumn()` 的 pane 感知（`tst_tablepanes`）、P1-11 span 重叠校验与 `maximumSpan()` 重算（`tst_tablespan`）、P1-13 冻结行下的拖放坐标（`tst_dndfrozen`） | ✅ |
 | **Wave 3 虚拟化性能** | **已完成**：P1-3 列宽上下限语义 + 批量信号（`tst_headergeometry`）、P1-4 pane 局部前缀和 + 滚动只刷新窗口 + 表头 orderRevision 快路径（`tst_tablepanes::scrollingDoesNotWalkEveryColumn`）、P1-5 横向 64 位偏移与 extent（`tst_tablepanes`）、P1-12 `BlockSizeIndex` 分块上界（`tst_sizeindex`）、P2-1 relayout 队列合并、P2-8 纯横向滚动不跑纵向 pass（`tst_relayoutqueue`） | ✅ |
-| **Wave 4 API / 发布** | **进行中**：P1-14 vertical widget header 明确拒绝 + P2-4 表头 orientation 校验（`tst_virtualheaderview`）；剩余 P2-2 pin 的离屏语义、P2-3 事务化 `restoreHeaderState`、P2-5 动态子控件的事件过滤、P2-6 `TablePaneSpec` 结构校验、P2-9 vertical header 状态不粘滞、P2-10 树的 visible 结构优化、Linux CI + ASan/UBSan | 🚧 |
+| **Wave 4 API / 发布** | **进行中**：P1-14 vertical widget header 明确拒绝 + P2-4 表头 orientation 校验（`tst_virtualheaderview`）、P2-6 `TablePaneSpec` 规范化与校验（`tst_tablepanes`）；剩余 P2-2 pin 的离屏语义、P2-3 事务化 `restoreHeaderState`、P2-5 动态子控件的事件过滤、P2-9 vertical header 状态不粘滞、P2-10 树的 visible 结构优化、Linux CI + ASan/UBSan | 🚧 |
 
 Wave 1 新增的回归测试：`tst_adapterreplacement`（8 例）、`tst_modellifetime`（6 例）、
 `tst_celllifecycle`（5 例）；四种组合（Qt 5.15.2 / 6.11.2 × 静态 / 动态）28 步验证全绿。

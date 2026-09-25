@@ -9,6 +9,85 @@
 namespace viv {
 
 namespace {
+/// Result of normalizing a pane list: what is stored, plus the diagnostics that
+/// describe what had to be fixed. They are reported by the caller only when the
+/// list really changes, so passing the same broken list twice stays a no-op.
+struct ValidatedPaneSpecs
+{
+    QVector<TablePaneSpec> specs;
+    /// At most one message per kind of problem, in the order they were found.
+    QVector<QString> warnings;
+};
+
+/// A column may be claimed by one pane only, a scroll group is never negative and
+/// the panes of one group have to be neighbours (docs/spans.md §5). A broken
+/// configuration would otherwise show one column twice in the header while the body
+/// ownership falls back to "whoever was written last".
+ValidatedPaneSpecs validated(const QVector<TablePaneSpec> &specs)
+{
+    ValidatedPaneSpecs result;
+    result.specs.reserve(specs.size());
+    QSet<int> claimed;
+    QHash<int, int> lastPaneOfGroup;
+    bool reportedDuplicate = false;
+    bool reportedNegativeGroup = false;
+    bool reportedSplitGroup = false;
+    for (int index = 0; index < specs.size(); ++index) {
+        const TablePaneSpec &spec = specs.at(index);
+        TablePaneSpec pane = spec;
+        pane.logicalColumns.clear();
+        for (int logical : spec.logicalColumns) {
+            if (logical < 0 || claimed.contains(logical)) {
+                if (!reportedDuplicate) {
+                    result.warnings.append(
+                        QStringLiteral("TablePaneLayout::setPaneSpecs(): pane %1 shows column %2, "
+                                       "which is negative or already shown by an earlier pane; "
+                                       "the earlier pane keeps it")
+                            .arg(index)
+                            .arg(logical));
+                    reportedDuplicate = true;
+                }
+                continue;
+            }
+            claimed.insert(logical);
+            pane.logicalColumns.append(logical);
+        }
+        if (pane.isFrozen()) {
+            result.specs.append(pane);
+            continue;
+        }
+        if (pane.scrollGroup < 0) {
+            if (!reportedNegativeGroup) {
+                result.warnings.append(
+                    QStringLiteral("TablePaneLayout::setPaneSpecs(): scroll group %1 is negative; "
+                                   "using group 0")
+                        .arg(pane.scrollGroup));
+                reportedNegativeGroup = true;
+            }
+            pane.scrollGroup = 0;
+        }
+        // Looking the group up *before* inserting the new pane tells "the pane right
+        // before this one is of the same group" apart from "some earlier pane was":
+        // only the latter splits one group into two places.
+        const auto previous = lastPaneOfGroup.constFind(pane.scrollGroup);
+        if (previous != lastPaneOfGroup.constEnd() && previous.value() != index - 1) {
+            if (!reportedSplitGroup) {
+                result.warnings.append(
+                    QStringLiteral("TablePaneLayout::setPaneSpecs(): pane %1 repeats scroll group "
+                                   "%2 after pane %3, so the group is not a run of neighbouring "
+                                   "panes; it shares one offset and would scroll in two places")
+                        .arg(index)
+                        .arg(pane.scrollGroup)
+                        .arg(previous.value()));
+                reportedSplitGroup = true;
+            }
+        }
+        lastPaneOfGroup.insert(pane.scrollGroup, index);
+        result.specs.append(pane);
+    }
+    return result;
+}
+
 /// Keeps the frozen sets deduplicated; the visual order is derived in update().
 QVector<int> normalized(const QVector<int> &logicalColumns)
 {
@@ -61,9 +140,12 @@ void TablePaneLayout::setFrozenRightColumns(const QVector<int> &logicalColumns)
 
 void TablePaneLayout::setPaneSpecs(const QVector<TablePaneSpec> &specs)
 {
-    if (specs == m_specs)
+    const ValidatedPaneSpecs validatedSpecs = validated(specs);
+    if (validatedSpecs.specs == m_specs)
         return;
-    m_specs = specs;
+    for (const QString &warning : validatedSpecs.warnings)
+        qWarning("%s", qUtf8Printable(warning));
+    m_specs = validatedSpecs.specs;
     // An explicit list replaces the frozen sets: they are the shorthand for the
     // default three panes, not a second truth.
     if (!m_specs.isEmpty()) {
