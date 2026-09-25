@@ -253,9 +253,7 @@ void HeaderGeometry::setMinimumSectionSize(int size)
     m_minimumSectionSize = clamped;
     if (m_maximumSectionSize < clamped)
         m_maximumSectionSize = clamped;
-    for (int logical = 0; logical < sectionCount(); ++logical)
-        resizeSection(logical, m_sections.at(logical).size);
-    emitGeometryChanged();
+    clampSectionsToTheSizeRange();
 }
 
 void HeaderGeometry::setMaximumSectionSize(int size)
@@ -264,8 +262,37 @@ void HeaderGeometry::setMaximumSectionSize(int size)
     if (m_maximumSectionSize == clamped)
         return;
     m_maximumSectionSize = clamped;
-    for (int logical = 0; logical < sectionCount(); ++logical)
-        resizeSection(logical, m_sections.at(logical).size);
+    clampSectionsToTheSizeRange();
+}
+
+void HeaderGeometry::clampSectionsToTheSizeRange()
+{
+    // Deliberately *not* a loop over resizeSection(): that marks every section
+    // explicit (so setDefaultSectionSize() would never affect them again) and
+    // emits a full geometryChanged() per section, which turns "change the minimum
+    // width" into O(N) renderer syncs. Here the whole bulk change is one pass and,
+    // at most, one geometryChanged().
+    QVector<QPair<int, QPair<int, int>>> resized;   // logical, old -> new
+    resized.reserve(m_sections.size());
+    for (int logical = 0; logical < sectionCount(); ++logical) {
+        Section &section = m_sections[logical];
+        const int clamped = clampedSize(section.size);
+        if (clamped == section.size)
+            continue;
+        resized.append({logical, {section.size, clamped}});
+        section.size = clamped;
+    }
+    // The default follows the range too: otherwise a section created later would
+    // start below the minimum (or above the maximum).
+    const int clampedDefault = clampedSize(m_defaultSectionSize);
+    const bool defaultChanged = clampedDefault != m_defaultSectionSize;
+    m_defaultSectionSize = clampedDefault;
+
+    if (resized.isEmpty() && !defaultChanged)
+        return;
+    invalidateCaches();
+    for (const QPair<int, QPair<int, int>> &entry : resized)
+        emit sectionResized(entry.first, entry.second.first, entry.second.second);
     emitGeometryChanged();
 }
 

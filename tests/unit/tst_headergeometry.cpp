@@ -21,6 +21,9 @@ private slots:
     void saveRestoreRoundTrip();
     void restoreRejectsMismatchedState();
     void sectionCountChangeKeepsState();
+    void changingLimitsKeepsImplicitSizesImplicit();
+    void changingLimitsClampsTheDefaultSize();
+    void changingLimitsEmitsOneBulkGeometryChange();
 };
 
 void TestHeaderGeometry::defaultSectionGeometry()
@@ -322,6 +325,82 @@ void TestHeaderGeometry::sectionCountChangeKeepsState()
     geometry.setSectionCount(2);
     QCOMPARE(geometry.sectionCount(), 2);
     QCOMPARE(geometry.visualIndex(1), 1);
+}
+
+void TestHeaderGeometry::changingLimitsKeepsImplicitSizesImplicit()
+{
+    HeaderGeometry geometry;
+    geometry.setDefaultSectionSize(100);
+    geometry.setSectionCount(4);
+    geometry.resizeSection(1, 250);                  // one explicit section
+    QVERIFY(geometry.isSectionSizeExplicit(1));
+
+    // Raising the minimum clamps the sections, but must not turn them explicit:
+    // they still follow the default size afterwards.
+    geometry.setMinimumSectionSize(150);
+    QCOMPARE(geometry.sectionSize(0), 150);
+    QCOMPARE(geometry.sectionSize(2), 150);
+    QCOMPARE(geometry.sectionSize(1), 250);          // the explicit one keeps its size
+    QVERIFY(!geometry.isSectionSizeExplicit(0));
+    QVERIFY(!geometry.isSectionSizeExplicit(2));
+    QVERIFY(geometry.isSectionSizeExplicit(1));
+
+    geometry.setDefaultSectionSize(180);
+    QCOMPARE(geometry.sectionSize(0), 180);
+    QCOMPARE(geometry.sectionSize(1), 250);
+
+    // ... and lowering the maximum clamps them without freezing them either.
+    geometry.setMaximumSectionSize(200);
+    QCOMPARE(geometry.sectionSize(1), 200);
+    QVERIFY(geometry.isSectionSizeExplicit(1));
+    QCOMPARE(geometry.sectionSize(0), 180);
+    geometry.setDefaultSectionSize(60);              // clamped to the minimum 150
+    QCOMPARE(geometry.sectionSize(0), 150);
+    QVERIFY(!geometry.isSectionSizeExplicit(0));
+}
+
+void TestHeaderGeometry::changingLimitsClampsTheDefaultSize()
+{
+    HeaderGeometry geometry;
+    geometry.setDefaultSectionSize(100);
+    geometry.setSectionCount(2);
+
+    // The default follows the range, so a section created later cannot start
+    // below the minimum (or above the maximum).
+    geometry.setMinimumSectionSize(200);
+    QCOMPARE(geometry.defaultSectionSize(), 200);
+    geometry.setSectionCount(3);
+    QCOMPARE(geometry.sectionSize(2), 200);
+
+    geometry.setMaximumSectionSize(120);
+    QCOMPARE(geometry.maximumSectionSize(), 200);    // the minimum wins over the maximum
+    QCOMPARE(geometry.defaultSectionSize(), 200);
+    geometry.setMinimumSectionSize(24);
+    QCOMPARE(geometry.minimumSectionSize(), 24);
+    geometry.setMaximumSectionSize(120);
+    QCOMPARE(geometry.maximumSectionSize(), 120);
+    QCOMPARE(geometry.defaultSectionSize(), 120);
+}
+
+void TestHeaderGeometry::changingLimitsEmitsOneBulkGeometryChange()
+{
+    HeaderGeometry geometry;
+    geometry.setDefaultSectionSize(100);
+    geometry.setSectionCount(500);
+    QSignalSpy geometrySpy(&geometry, &HeaderGeometry::geometryChanged);
+    QSignalSpy resizeSpy(&geometry, &HeaderGeometry::sectionResized);
+
+    // One pass, one bulk signal - not one full renderer sync per section.
+    geometry.setMinimumSectionSize(150);
+    QCOMPARE(geometrySpy.count(), 1);
+    QCOMPARE(resizeSpy.count(), 500);
+    QCOMPARE(geometry.sectionSize(499), 150);
+
+    geometrySpy.clear();
+    resizeSpy.clear();
+    geometry.setMinimumSectionSize(150);              // no-op: nothing changes at all
+    QCOMPARE(geometrySpy.count(), 0);
+    QCOMPARE(resizeSpy.count(), 0);
 }
 
 QTEST_APPLESS_MAIN(TestHeaderGeometry)

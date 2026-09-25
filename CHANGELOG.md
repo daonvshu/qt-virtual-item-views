@@ -153,3 +153,11 @@
   （包括切出来的 tail）都处理干净；新增诊断接口 `maxBlockRowCount()`。
   回归测试：`tst_sizeindex::blockIndexBoundsEveryBlockAfterAHugeInsert`（capacity 4 插 1 万行、
   默认 capacity 插 100 万行，断言上界与几何精确性）。
+* **列宽上下限不再污染"显式尺寸"**：`setMinimumSectionSize()` / `setMaximumSectionSize()`
+  以前对每个 section 调 `resizeSection()` —— 那会把它们全部变成**显式**尺寸（此后
+  `setDefaultSectionSize()` 再也影响不到它们），而且每个 section 都发一次 `geometryChanged()`，
+  让一次"改最小宽度"变成 O(N) 次渲染器全量同步。现在批量夹取走一趟内部通道：保持 quiet 标记，
+  `m_defaultSectionSize` 也跟着夹到 [min, max]（否则之后新建的 section 会低于最小值），
+  整个批量只发至多一次 `geometryChanged()`（单 section 的 `sectionResized` 照旧逐个发）。
+  回归测试：`tst_headergeometry` 新增 3 例（隐式尺寸仍然跟随默认值、默认值被夹取、
+  500 个 section 的批量修改只有 1 次 `geometryChanged` 且重复设置是纯 no-op）。

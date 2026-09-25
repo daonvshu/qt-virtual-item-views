@@ -161,7 +161,7 @@ Wave 3（v1.0 工程化交付）。**
 | --- | --- | --- |
 | **Wave 1 崩溃 / 悬空指针** | Adapter 切换 UAF、Recycler 池的 adapter 身份、Model/SelectionModel 生命周期（`QPointer` + 不变量）、表头 pane 渲染器析构顺序、视图析构解绑、Cell 模式在行/列移除与 reset 前解绑 | 已完成 |
 | **Wave 2 数据 / 状态正确性** | **已完成**：P1-1 列结构 remap（`tst_headerstructure`）、P1-2 动态高度锚点（`tst_dynamicanchor`）、P1-7 `RowSizePolicy` 与行号条一致（`tst_virtualtableview`）、P1-8 rootIndex 持久化 + 校验（`tst_virtuallistview`）、P1-9 选择语义统一（`tst_selection`）、P1-10 `scrollToColumn()` 的 pane 感知（`tst_tablepanes`）、P1-11 span 重叠校验与 `maximumSpan()` 重算（`tst_tablespan`）、P1-13 冻结行下的拖放坐标（`tst_dndfrozen`） | ✅ |
-| **Wave 3 虚拟化性能** | ✅ P1-12 `BlockSizeIndex` 分块上界（`tst_sizeindex`）<br>待做：P1-3 HeaderGeometry 的 min/max 语义与批量信号（避免 O(N²)）、P1-4 pane 布局 / 表头可见区间滚动快路径（横向虚拟化热路径不应是 O(总列数)）、P1-5 横向 `ScrollMapper` + qint64 extent、P2-1 relayout 队列合并、P2-8 纯横向滚动不触发纵向 relayout | 进行中 |
+| **Wave 3 虚拟化性能** | ✅ P1-3 列宽上下限不再把隐式尺寸变显式、默认值跟随夹取、批量只发一次 `geometryChanged`（`tst_headergeometry`）<br>✅ P1-12 `BlockSizeIndex` 分块上界（`tst_sizeindex`）<br>待做：P1-4 pane 布局 / 表头可见区间滚动快路径（横向虚拟化热路径不应是 O(总列数)）、P1-5 横向 `ScrollMapper` + qint64 extent、P2-1 relayout 队列合并、P2-8 纯横向滚动不触发纵向 relayout | 进行中 |
 | **Wave 4 API / 发布** | Vertical widget header（实现或明确拒绝）、`TablePaneSpec` 结构校验、事务化 `restoreHeaderState`、vertical header 状态不粘滞、relayout 队列合并、Linux CI + ASan/UBSan | 待做 |
 
 Wave 1 新增的回归测试：`tst_adapterreplacement`（8 例）、`tst_modellifetime`（6 例）、

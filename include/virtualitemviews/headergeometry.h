@@ -160,6 +160,9 @@ private:
     void rebuildCaches() const;
     /// Rebuilds logicalIndex -> visualIndex from the visual order.
     void rebuildIndexMaps();
+    /// Clamps every section (and the default size) into the current minimum /
+    /// maximum range in one pass, emitting at most one geometryChanged().
+    void clampSectionsToTheSizeRange();
     void invalidateCaches();
     void emitGeometryChanged();
     bool isValidVisualOrder(const QVector<qint32> &order) const;
