@@ -13,6 +13,7 @@
 
 class QAbstractItemModel;
 class QKeyEvent;
+class QTimer;
 class QVariantAnimation;
 
 namespace viv {
@@ -136,6 +137,11 @@ private:
     /// follows the pointer, the others open / close the gap - all of it visual
     /// geometry, the committed order is not touched before the release (§22/§23).
     void positionDraggedSections();
+    /// One step of the preview easing: the sections that make room for the dragged one
+    /// move towards their new slot instead of jumping there. Driven by a short timer
+    /// while the drag is active, so the arrangement also finishes when the pointer is
+    /// standing still.
+    void advanceDragPreview();
     /// Starts the visual transition from the positions the materialized sections
     /// currently have to the committed ones.
     void animateSectionMove();
@@ -202,6 +208,11 @@ private:
     int m_dragStartX = 0;
     int m_dragCurrentX = 0;
     bool m_dragging = false;
+    /// Preview easing (§22/§23): the sections that make room slide towards their slot
+    /// instead of teleporting. The timer keeps stepping while a drag is active, the
+    /// factor comes from the animation duration (1 = jump, as with the animation off).
+    QTimer *m_previewTimer = nullptr;
+    qreal m_previewFollow = 1.0;
     int m_overscan = 1;
     bool m_sortInteractionEnabled = false;
 

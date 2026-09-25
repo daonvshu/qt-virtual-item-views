@@ -11,9 +11,11 @@
 #include <QMouseEvent>
 #include <QResizeEvent>
 #include <QSet>
+#include <QTimer>
 #include <QVariantAnimation>
 
 #include <algorithm>
+#include <QtMath>
 
 namespace viv {
 
@@ -44,6 +46,16 @@ VirtualHeaderView::VirtualHeaderView(Qt::Orientation orientation, QWidget *paren
     setAttribute(Qt::WA_OpaquePaintEvent, false);
     setFocusPolicy(Qt::NoFocus);
     setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+
+    // A drag is driven by mouse moves, but the sections that make room for the dragged
+    // one have to keep easing when the pointer stands still - hence a short timer that
+    // only runs while a drag is active (§22/§23).
+    m_previewTimer = new QTimer(this);
+    m_previewTimer->setInterval(16);
+    connect(m_previewTimer, &QTimer::timeout, this, [this]() {
+        if (m_dragging)
+            advanceDragPreview();
+    });
 }
 
 VirtualHeaderView::~VirtualHeaderView()
@@ -453,18 +465,26 @@ void VirtualHeaderView::positionDraggedSections()
             continue;
         }
         const int width = m_geometry->sectionSize(logical);
-        int visual = committed;
+        int target = committed;
         if (logical == m_dragSection) {
             // The picked up section follows the pointer, keeping the grab offset.
-            visual = committed + (m_dragCurrentX - m_dragStartX);
+            target = committed + (m_dragCurrentX - m_dragStartX);
         } else {
             const int packed = shown.indexOf(logical);
             if (packed >= 0 && to >= 0) {
                 if (from < to && packed > from && packed <= to)
-                    visual = committed - draggedWidth; // the gap closes behind it
+                    target = committed - draggedWidth; // the gap closes behind it
                 else if (from > to && packed >= to && packed < from)
-                    visual = committed + draggedWidth; // the gap opens in front of it
+                    target = committed + draggedWidth; // the gap opens in front of it
             }
+        }
+        // The dragged section tracks the pointer exactly; the others ease towards their
+        // slot, so making room reads as a movement instead of a jump (§23).
+        int visual = target;
+        if (logical != m_dragSection && m_previewFollow < 1.0 && widget->isVisible()) {
+            const int delta = target - widget->x();
+            if (qAbs(delta) > 1)
+                visual = widget->x() + int(qRound(qreal(delta) * m_previewFollow));
         }
         const bool visible = width > 0 && visual < this->width() && visual + width > 0;
         if (!visible && !isSectionPinned(logical)) {
@@ -474,6 +494,15 @@ void VirtualHeaderView::positionDraggedSections()
         widget->setGeometry(visual, 0, width, height());
         widget->show();
     }
+}
+
+void VirtualHeaderView::advanceDragPreview()
+{
+    if (!m_dragging)
+        return;
+    // Re-runs the preview pass: sections still on their way move another step, sections
+    // that arrived keep their place, and the dragged section keeps following the pointer.
+    positionSections();
 }
 
 void VirtualHeaderView::beginSectionDrag(int logicalIndex, int x)
@@ -489,7 +518,14 @@ void VirtualHeaderView::beginSectionDrag(int logicalIndex, int x)
     m_dragCurrentX = x;
     m_dragging = true;
     m_moved = true; // a drag is never a sort click
+    // Ease towards the slot so that making room takes about one animation duration;
+    // with the animation off it is an immediate jump, like everything else.
+    m_previewFollow = (m_animationEnabled && m_animationDuration > 0)
+        ? 1.0 - qPow(0.02, 16.0 / double(m_animationDuration))
+        : 1.0;
     setCursor(Qt::ClosedHandCursor);
+    if (m_previewTimer && m_previewFollow < 1.0)
+        m_previewTimer->start();
     positionSections();
 }
 
@@ -534,6 +570,8 @@ void VirtualHeaderView::finishSectionDrag(bool commit)
 
     m_dragSection = -1;
     m_dragging = false;
+    if (m_previewTimer)
+        m_previewTimer->stop();
     updateCursor(mapFromGlobal(QCursor::pos()));
 
     if (commit && fromVisual >= 0 && toVisual >= 0) {

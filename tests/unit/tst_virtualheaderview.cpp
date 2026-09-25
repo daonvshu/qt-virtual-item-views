@@ -104,6 +104,7 @@ private slots:
     void tableAnimationIsOptInPerMove();
     void smallJitterIsStillAClick();
     void dragPreviewsAndCommitsOnce();
+    void dragRoomEasesAndCanBeTurnedOff();
     void dragReordersInsideItsPaneOnly();
     void escapeCancelsTheDrag();
     void hoverOverASectionWidgetUpdatesTheCursor();
@@ -448,10 +449,15 @@ void TestVirtualHeaderView::dragPreviewsAndCommitsOnce()
     const QPoint target(2 * kSectionWidth + 60, 5);
     sendMouse(m_header, QEvent::MouseMove, target, Qt::NoButton, Qt::LeftButton);
     QApplication::processEvents();
-    // Preview: the committed order is untouched, the dragged section follows the
-    // pointer, and the sections it passed closed the gap behind it.
+    // Preview: the committed order is untouched and the dragged section follows the
+    // pointer exactly.
     QCOMPARE(m_geometry->visualIndex(0), 0);
     QVERIFY(dragged->x() > 2 * kSectionWidth);
+    // The sections it passed are still on their way - making room eases instead of
+    // jumping - and the preview timer keeps them going while the pointer stands still.
+    QVERIFY(neighbour->x() > 0);
+    QVERIFY(third->x() > kSectionWidth);
+    QTest::qWait(250);
     QCOMPARE(neighbour->x(), 0);
     QCOMPARE(third->x(), kSectionWidth);
 
@@ -465,6 +471,33 @@ void TestVirtualHeaderView::dragPreviewsAndCommitsOnce()
     QCOMPARE(dragged->x(), 2 * kSectionWidth);
     QCOMPARE(neighbour->x(), 0);
     QCOMPARE(third->x(), kSectionWidth);
+}
+
+void TestVirtualHeaderView::dragRoomEasesAndCanBeTurnedOff()
+{
+    // The arrangement of the other sections is part of the animation: with it switched
+    // off (or a duration of 0) making room is immediate, like everything else.
+    m_header->setSectionAnimationEnabled(false);
+    QWidget *dragged = m_header->sectionWidget(0);
+    QWidget *neighbour = m_header->sectionWidget(1);
+    QVERIFY(dragged != nullptr);
+    QVERIFY(neighbour != nullptr);
+
+    sendMouse(m_header, QEvent::MouseButtonPress, QPoint(kSectionWidth / 2, 5), Qt::LeftButton,
+              Qt::LeftButton);
+    sendMouse(m_header, QEvent::MouseMove, QPoint(2 * kSectionWidth + 60, 5), Qt::NoButton,
+              Qt::LeftButton);
+    QApplication::processEvents();
+    QCOMPARE(neighbour->x(), 0); // immediate, no easing
+    QVERIFY(dragged->x() > 2 * kSectionWidth);
+
+    // Escape drops the preview; the order never changed.
+    QKeyEvent escape(QEvent::KeyPress, Qt::Key_Escape, Qt::NoModifier);
+    QApplication::sendEvent(m_header, &escape);
+    QApplication::processEvents();
+    QCOMPARE(neighbour->x(), kSectionWidth);
+    QCOMPARE(dragged->x(), 0);
+    QCOMPARE(m_geometry->visualIndex(0), 0);
 }
 
 void TestVirtualHeaderView::dragReordersInsideItsPaneOnly()
