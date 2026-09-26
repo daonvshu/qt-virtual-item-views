@@ -419,6 +419,12 @@ protected:
     /// Recycles the materialized items whose index lies in the model range
     /// (identity based, so it also works for a tree).
     void recycleItemsInModelRange(const QModelIndex &parent, int first, int last);
+    /// Re-binds the materialized items whose index lies in the model range (identity
+    /// based). The kernel uses it for dataChanged(); a subclass uses it when the
+    /// *schema* of its item widget changed without the identity changing - the table
+    /// does that after a column insert / remove / move, so a business row widget that
+    /// builds its column hosts in bindWidget() can rebuild them.
+    void rebindItemsInModelRange(const QModelIndex &parent, int first, int last);
     /// Moves the current item to view row \a item and ensures it is visible.
     void moveCurrentToItem(qsizetype item, Qt::KeyboardModifiers modifiers = Qt::NoModifier);
     /// Hook that lets a subclass veto the automatic height measurement of an
@@ -513,7 +519,6 @@ private:
     bool isPinnedItem(const MaterializedItem &item) const;
     /// True when \a widget (or one of its children) owns the focus or an active
     /// popup, that is: when it must not be recycled.
-    void rebindItemsInModelRange(const QModelIndex &parent, int first, int last);
     void checkPinLimit();
     void moveCurrentTo(qsizetype row, Qt::KeyboardModifiers modifiers);
     void updateSelectionForClick(const QModelIndex &index, Qt::KeyboardModifiers modifiers);

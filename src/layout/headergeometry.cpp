@@ -49,6 +49,13 @@ void HeaderGeometry::setSectionCount(int count)
             if (m_visualToLogical.at(visual) >= removedFrom)
                 m_visualToLogical.remove(visual);
         }
+        // A sort indicator that pointed into the removed tail has nothing left to name.
+        // setSectionCount() is the path a model reset / setModel takes, so it has to do the
+        // same cleanup as removeLogicalSections() (P1-7 of the second review).
+        if (m_sortIndicatorSection >= clamped) {
+            m_sortIndicatorSection = -1;
+            emit sortIndicatorChanged(m_sortIndicatorSection, m_sortIndicatorOrder);
+        }
     } else {
         for (int logical = sectionCount(); logical < clamped; ++logical) {
             Section section;
@@ -94,19 +101,37 @@ void HeaderGeometry::insertLogicalSections(int first, int count)
     m_sections = sections;
 
     // The state of every existing section stays with its item: only the logical
-    // numbers after the insertion point shift. The new sections go to the end of
-    // the visual order, exactly like a freshly appended column.
+    // numbers after the insertion point shift.
+    //
+    // The new sections take the visual slots of the section that used to sit at the
+    // insertion point (the "successor"), which is what QHeaderView does as well: an
+    // untouched header whose visual order equals the logical one shows "A | X | B | C"
+    // after X is inserted before B. Appending them at the end - what this used to do -
+    // showed "A | B | C | X", i.e. a middle insert behaved like an append (P1-4 of the
+    // second review). A custom visual order keeps its shape: the new sections land where
+    // the successor column is, the rest keeps its relative order.
+    int slot = m_visualToLogical.size();
+    for (int visual = 0; visual < m_visualToLogical.size(); ++visual) {
+        if (m_visualToLogical.at(visual) == at) {
+            slot = visual;
+            break;
+        }
+    }
     for (int visual = 0; visual < m_visualToLogical.size(); ++visual) {
         if (m_visualToLogical.at(visual) >= at)
             m_visualToLogical[visual] += count;
     }
     for (int index = 0; index < count; ++index)
-        m_visualToLogical.append(at + index);
+        m_visualToLogical.insert(slot + index, at + index);
     ++m_orderRevision;
     rebuildIndexMaps();
 
-    if (m_sortIndicatorSection >= at)
+    if (m_sortIndicatorSection >= at) {
         m_sortIndicatorSection += count;
+        // The indicator names a column, so its *number* moved with the insert: listeners
+        // that only watch sortIndicatorChanged have to be told (P1-6 of the second review).
+        emit sortIndicatorChanged(m_sortIndicatorSection, m_sortIndicatorOrder);
+    }
 
     invalidateCaches();
     emit sectionCountChanged(sectionCount());
@@ -150,6 +175,7 @@ void HeaderGeometry::removeLogicalSections(int first, int count)
             emit sortIndicatorChanged(m_sortIndicatorSection, m_sortIndicatorOrder);
         } else {
             m_sortIndicatorSection -= removed;
+            emit sortIndicatorChanged(m_sortIndicatorSection, m_sortIndicatorOrder);
         }
     }
 
@@ -302,12 +328,13 @@ void HeaderGeometry::clampSectionsToTheSizeRange()
     }
     // The default follows the range too: otherwise a section created later would
     // start below the minimum (or above the maximum).
-    const int clampedDefault = clampedSize(m_defaultSectionSize);
-    const bool defaultChanged = clampedDefault != m_defaultSectionSize;
-    m_defaultSectionSize = clampedDefault;
+    m_defaultSectionSize = clampedSize(m_defaultSectionSize);
 
-    if (resized.isEmpty() && !defaultChanged)
-        return;
+    // No early return: this is only called from the two limit setters, so the *range*
+    // changed even when no section size had to be clamped - and a renderer keeps its own
+    // copy of the range (a Native QHeaderView, for instance, has setMinimumSectionSize() /
+    // setMaximumSectionSize()) which it only re-reads on this notification (P1-3 of the
+    // second review: changing the minimum without clamping left the native header stale).
     invalidateCaches();
     for (const QPair<int, QPair<int, int>> &entry : resized)
         emit sectionResized(entry.first, entry.second.first, entry.second.second);
@@ -465,7 +492,14 @@ void HeaderGeometry::moveLogicalSections(int start, int count, int destination)
     for (int visual = 0; visual < m_visualToLogical.size(); ++visual)
         m_visualToLogical[visual] = remap(m_visualToLogical.at(visual));
     // The sort indicator names a column, not a position.
+    const int sortBeforeMove = m_sortIndicatorSection;
     m_sortIndicatorSection = remap(m_sortIndicatorSection);
+    if (m_sortIndicatorSection != sortBeforeMove)
+        emit sortIndicatorChanged(m_sortIndicatorSection, m_sortIndicatorOrder);
+    // The logical index of every visual slot changes, so a renderer that caches the order
+    // (or the logical index per slot) has to re-derive it - same contract as moveSection()
+    // and the insert/remove paths (P1-5 of the second review).
+    ++m_orderRevision;
     rebuildIndexMaps();
 
     invalidateCaches();

@@ -107,6 +107,7 @@ private slots:
     void removingAColumnInTheMiddleKeepsTheOtherColumnState();
     void movingAColumnKeepsTheSortIndicatorAndTheFrozenSet();
     void paneCacheIsUpToDateImmediatelyAfterAColumnInsert();
+    void structuralRemapDoesNotResortTheModel();
     void explicitPaneSpecsFollowColumnStructureChanges();
 };
 
@@ -224,6 +225,36 @@ void TestHeaderStructure::paneCacheIsUpToDateImmediatelyAfterAColumnInsert()
     const QRect scrollRect = m_view->panes().at(m_view->paneIndexOfColumn(1)).viewportRect;
     QVERIFY(m_view->columnGeometry(1).viewportX >= scrollRect.x());
     QVERIFY(m_view->columnGeometry(1).width > 0);
+}
+
+void TestHeaderStructure::structuralRemapDoesNotResortTheModel()
+{
+    // P1-6, table side: HeaderGeometry now reports the renamed sort indicator through
+    // sortIndicatorChanged, and in this view that signal means "the user asked for a sort".
+    // A structural remap must not make the view sort a model that has already changed.
+    m_view->setSortingEnabled(true);
+    m_view->setSortIndicator(3, Qt::AscendingOrder);
+    QSignalSpy requested(m_view, &VirtualTableView::sortIndicatorRequested);
+    QVERIFY(requested.isValid());
+
+    // Insert in front of the sorted column: its number shifts, without a sort request.
+    m_model->insertNewColumn(1, QStringLiteral("X"));
+    QCOMPARE(m_view->horizontalHeaderGeometry()->sortIndicatorSection(), 4);
+    QCOMPARE(requested.count(), 0);
+
+    // Removing in front of it shifts it down, again without a request.
+    m_model->removeOneColumn(0);
+    QCOMPARE(m_view->horizontalHeaderGeometry()->sortIndicatorSection(), 3);
+    QCOMPARE(requested.count(), 0);
+
+    // Moving a column changes it too.
+    m_model->moveOneColumn(3, 0);
+    QCOMPARE(m_view->horizontalHeaderGeometry()->sortIndicatorSection(), 0);
+    QCOMPARE(requested.count(), 0);
+
+    // A click still sorts (the guard is scoped to the structural remap).
+    m_view->setSortIndicator(1, Qt::AscendingOrder);
+    QCOMPARE(requested.count(), 1);
 }
 
 void TestHeaderStructure::explicitPaneSpecsFollowColumnStructureChanges()

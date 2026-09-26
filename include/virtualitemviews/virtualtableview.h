@@ -334,6 +334,9 @@ private:
     /// to be a QWidget itself, so deleting `headerWidget()` would leak the
     /// wrapper) and clears the pointer.
     void deleteHeader(HeaderViewInterface *&header);
+    /// Re-binds every materialized row after a column structure change, so a business row
+    /// widget that builds its column schema in bindWidget() can rebuild it (Row Widget Mode).
+    void rebindMaterializedRows();
     /// Cell Widget Mode: a cell has to be unbound *before* the model invalidates
     /// its persistent index, otherwise the business loses the row / column the
     /// widget was bound to.

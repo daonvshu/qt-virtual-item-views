@@ -203,7 +203,7 @@ Wave 1 新增的回归测试：`tst_adapterreplacement`（8 例）、`tst_modell
 | 批次 | 内容 | 状态 |
 | --- | --- | --- |
 | **Wave A 崩溃 / 过期身份** | P0-1 `~VirtualTableView` 的 owned adapter UAF（复现即崩溃）、P0-2 Tree / Header 的非 owning QObject 协作者改 `QPointer`、P0-3 Widget Header 真正重绑已物化 section（重命名 / 结构变化 / 排序）、P1-1 列结构变更时 pane remap 顺序（缓存落后一次结构） | ✅ |
-| **Wave B HeaderGeometry 语义** | P1-4 中间插入的新列放到后继列的视觉槽位、P1-5 `moveLogicalSections()` 补 `orderRevision`、P1-6 sort indicator 的结构性 remap 补信号、P1-7 `setSectionCount()` 缩小时清理越界排序指示器、P1-3 min/max 属性变化即使没有 clamp 也要发通知、P1-2 Row Widget Mode 列结构变化后重绑可见行、P2-2/P2-3 对应回归测试 | 待做 |
+| **Wave B HeaderGeometry 语义** | **已完成**：P1-4 中间插入落到后继列的视觉槽位（`tst_headergeometry::insertedSectionsTakeTheSuccessorVisualSlot`）、P1-5 `moveLogicalSections()` 补 `orderRevision`、P1-6 结构性 remap 如实上报 `sortIndicatorChanged` + 表格侧 `m_sortGuard` 防重复排序（`tst_headergeometry::structuralRemapsReportTheSortIndicator`、`tst_headerstructure::structuralRemapDoesNotResortTheModel`）、P1-7 `setSectionCount()` 缩小时清理越界排序指示器、P1-3 min/max 变化即使无 clamp 也通知（`tst_virtualtableview::nativeHeaderFollowsLimitChangesImmediately`）、P1-2 列结构变化后重绑可见行（`tst_virtualtableview::columnStructureChangesRebindTheRowWidgets`，含 P2-2 的业务级 schema 回归）、P2-3 Widget Header 数据刷新（Wave A 的 P0-3 用例覆盖实际文本） | ✅ |
 | **Wave C 超宽表性能** | P1-8 pane-filtered Header 的 O(N²)（成员缓存 + 二分）、P1-9 非主滚动组走快路径、P1-10 NativeHeader 的 granular + full sync 重复、P2-4 文档写明 NativeHeader 的 int 几何边界、frozen WidgetHeader benchmark | 待做 |
 
 Wave A 的实测证据（修复前的失败形态）：

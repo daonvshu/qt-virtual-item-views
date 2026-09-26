@@ -21,10 +21,14 @@ private slots:
     void saveRestoreRoundTrip();
     void restoreRejectsMismatchedState();
     void sectionCountChangeKeepsState();
+    void shrinkingTheSectionSetClearsAnOutOfRangeSortIndicator();
     void changingLimitsKeepsImplicitSizesImplicit();
     void changingLimitsClampsTheDefaultSize();
     void changingLimitsEmitsOneBulkGeometryChange();
+    void changingLimitsNotifiesEvenWithoutClamping();
     void orderRevisionOnlyMovesWhenTheOrderCanChange();
+    void insertedSectionsTakeTheSuccessorVisualSlot();
+    void structuralRemapsReportTheSortIndicator();
 };
 
 void TestHeaderGeometry::defaultSectionGeometry()
@@ -232,6 +236,90 @@ void TestHeaderGeometry::moveLogicalSectionsFollowsModel()
     QCOMPARE(geometry.totalExtent(), qint64(10 + 30 + 40));
 }
 
+void TestHeaderGeometry::structuralRemapsReportTheSortIndicator()
+{
+    // P1-6 of the second review: the indicator names a *column*, so a structural remap that
+    // renames it has to say so - otherwise code that only listens to sortIndicatorChanged
+    // (or a renderer that rebuilds the section UI on that signal) keeps the old number.
+    HeaderGeometry geometry;
+    geometry.setSectionCount(6);
+    geometry.setSortIndicator(4, Qt::DescendingOrder);
+    // Qt 5 needs the metatype registered before QSignalSpy can record the enum argument (a
+    // renderer's direct connection does not need it - Qt 6 registers enums automatically).
+    qRegisterMetaType<Qt::SortOrder>("Qt::SortOrder");
+    QSignalSpy spy(&geometry, &HeaderGeometry::sortIndicatorChanged);
+    QVERIFY(spy.isValid());
+
+    // Insert in front of it: the number shifts.
+    geometry.insertLogicalSections(1, 1);
+    QCOMPARE(geometry.sortIndicatorSection(), 5);
+    QCOMPARE(spy.count(), 1);
+    QCOMPARE(spy.at(0).at(0).toInt(), 5);
+    QCOMPARE(spy.at(0).at(1).toInt(), int(Qt::DescendingOrder));
+
+    // Remove in front of it: the number shifts down.
+    spy.clear();
+    geometry.removeLogicalSections(0, 1);
+    QCOMPARE(geometry.sortIndicatorSection(), 4);
+    QCOMPARE(spy.count(), 1);
+    QCOMPARE(spy.at(0).at(0).toInt(), 4);
+
+    // Remove the sorted column itself: the indicator is cleared.
+    spy.clear();
+    geometry.removeLogicalSections(4, 1);
+    QCOMPARE(geometry.sortIndicatorSection(), -1);
+    QCOMPARE(spy.count(), 1);
+    QCOMPARE(spy.at(0).at(0).toInt(), -1);
+
+    // A model move remaps it as well.
+    geometry.setSortIndicator(0, Qt::AscendingOrder);
+    spy.clear();
+    geometry.moveLogicalSections(0, 1, 3);
+    QCOMPARE(geometry.sortIndicatorSection(), 2);
+    QCOMPARE(spy.count(), 1);
+    QCOMPARE(spy.at(0).at(0).toInt(), 2);
+}
+
+void TestHeaderGeometry::insertedSectionsTakeTheSuccessorVisualSlot()
+{
+    // P1-4 of the second review: a middle insert used to append the new sections to the end
+    // of the visual order, so an untouched header (visual order == logical order) showed
+    // "A | B | C | X" after inserting X before B instead of "A | X | B | C" - which is what
+    // QHeaderView does.
+    HeaderGeometry identity(Qt::Horizontal);
+    identity.setSectionCount(3);
+    identity.resizeSection(1, 77);           // B keeps its own state
+    identity.insertLogicalSections(1, 1);    // A X B C
+
+    QCOMPARE(identity.sectionCount(), 4);
+    QVector<int> visual;
+    for (int slot = 0; slot < identity.sectionCount(); ++slot)
+        visual.append(identity.logicalIndex(slot));
+    QCOMPARE(visual, QVector<int>({0, 1, 2, 3}));            // stays in logical order
+    QCOMPARE(identity.storedSectionSize(1), identity.defaultSectionSize()); // X is new
+    QCOMPARE(identity.storedSectionSize(2), 77);             // B followed its item
+
+    // A custom visual order keeps its shape: move A to the end first (B C A), then insert a
+    // column before C (= logical 1). The new column takes C's visual slot.
+    HeaderGeometry custom(Qt::Horizontal);
+    custom.setSectionCount(3);
+    custom.moveSection(0, 2);                                // visual B C A = logical 1 2 0
+    custom.insertLogicalSections(1, 1);                      // Y B C A  (Y = the new logical 1)
+    QVector<int> customVisual;
+    for (int slot = 0; slot < custom.sectionCount(); ++slot)
+        customVisual.append(custom.logicalIndex(slot));
+    QCOMPARE(customVisual, QVector<int>({1, 2, 3, 0}));
+
+    // Appending at the end still appends: there is no successor to take a slot from.
+    HeaderGeometry appended(Qt::Horizontal);
+    appended.setSectionCount(3);
+    appended.insertLogicalSections(3, 2);
+    QVector<int> appendedVisual;
+    for (int slot = 0; slot < appended.sectionCount(); ++slot)
+        appendedVisual.append(appended.logicalIndex(slot));
+    QCOMPARE(appendedVisual, QVector<int>({0, 1, 2, 3, 4}));
+}
+
 void TestHeaderGeometry::sortIndicatorRoundTrip()
 {
     HeaderGeometry geometry;
@@ -328,6 +416,31 @@ void TestHeaderGeometry::sectionCountChangeKeepsState()
     QCOMPARE(geometry.visualIndex(1), 1);
 }
 
+void TestHeaderGeometry::shrinkingTheSectionSetClearsAnOutOfRangeSortIndicator()
+{
+    // P1-7 of the second review: setSectionCount() is the path a model reset / setModel
+    // takes, and it left a sort indicator pointing at an index that no longer exists.
+    HeaderGeometry geometry;
+    geometry.setSectionCount(10);
+    geometry.setSortIndicator(8, Qt::DescendingOrder);
+    QSignalSpy spy(&geometry, &HeaderGeometry::sortIndicatorChanged);
+    QVERIFY(spy.isValid());
+
+    geometry.setSectionCount(3);
+    QCOMPARE(geometry.sectionCount(), 3);
+    QCOMPARE(geometry.sortIndicatorSection(), -1);
+    QCOMPARE(spy.count(), 1);
+    QCOMPARE(spy.at(0).at(0).toInt(), -1);
+
+    // A surviving indicator is left alone (and reports nothing).
+    geometry.setSectionCount(10);
+    geometry.setSortIndicator(2, Qt::AscendingOrder);
+    spy.clear();
+    geometry.setSectionCount(4);
+    QCOMPARE(geometry.sortIndicatorSection(), 2);
+    QCOMPARE(spy.count(), 0);
+}
+
 void TestHeaderGeometry::changingLimitsKeepsImplicitSizesImplicit()
 {
     HeaderGeometry geometry;
@@ -404,6 +517,33 @@ void TestHeaderGeometry::changingLimitsEmitsOneBulkGeometryChange()
     QCOMPARE(resizeSpy.count(), 0);
 }
 
+void TestHeaderGeometry::changingLimitsNotifiesEvenWithoutClamping()
+{
+    // P1-3 of the second review: when a new minimum did not clamp anything, the setter
+    // returned without a notification - but a renderer keeps its own copy of the range
+    // (QHeaderView::setMinimumSectionSize()) and only re-reads it on that notification.
+    HeaderGeometry geometry;
+    geometry.setDefaultSectionSize(100);
+    geometry.setSectionCount(20);
+    geometry.setMinimumSectionSize(24);
+    QSignalSpy geometrySpy(&geometry, &HeaderGeometry::geometryChanged);
+    QVERIFY(geometrySpy.isValid());
+
+    geometry.setMinimumSectionSize(30);              // 100 > 30: nothing to clamp
+    QCOMPARE(geometry.minimumSectionSize(), 30);
+    QCOMPARE(geometrySpy.count(), 1);                // ... but the range changed
+
+    geometrySpy.clear();
+    geometry.setMaximumSectionSize(50000);           // nothing to clamp either
+    QCOMPARE(geometry.maximumSectionSize(), 50000);
+    QCOMPARE(geometrySpy.count(), 1);
+
+    // A repeated set is still a no-op.
+    geometrySpy.clear();
+    geometry.setMinimumSectionSize(30);
+    QCOMPARE(geometrySpy.count(), 0);
+}
+
 void TestHeaderGeometry::orderRevisionOnlyMovesWhenTheOrderCanChange()
 {
     HeaderGeometry geometry;
@@ -428,6 +568,13 @@ void TestHeaderGeometry::orderRevisionOnlyMovesWhenTheOrderCanChange()
     const quint32 afterMove = geometry.orderRevision();
     geometry.setSectionCount(6);              // appended sections join the order
     QVERIFY(geometry.orderRevision() != afterMove);
+
+    // A model-side move remaps the logical indices of the visual order, so a renderer that
+    // caches "logical index per visual slot" has to see a new revision as well (P1-5 of the
+    // second review: moveLogicalSections() did not bump it).
+    const quint32 afterAppend = geometry.orderRevision();
+    geometry.moveLogicalSections(0, 1, 3);
+    QVERIFY(geometry.orderRevision() != afterAppend);
 }
 
 QTEST_APPLESS_MAIN(TestHeaderGeometry)

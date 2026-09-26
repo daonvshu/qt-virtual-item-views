@@ -282,6 +282,48 @@
   `tst_headerstructure::paneCacheIsUpToDateImmediatelyAfterAColumnInsert`（修复前 pane 的列集合
   仍是 `{0,1}`，正确的 `{0,2}` 要等下一次结构变化）。
 
+### Fixed（第二轮代码审查 Wave B：HeaderGeometry 语义与业务行 schema，2026-09-26）
+
+* **中间插入的新列放到后继列的视觉槽位（P1-4）**：`insertLogicalSections()` 把新 section 无条件
+  append 到视觉顺序末尾，于是"视觉顺序 == 逻辑顺序"的普通表头在 B 前插入 X 会显示
+  `A | B | C | X`，而 QHeaderView 的行为是 `A | X | B | C`。现在新 section 落在**插入点的后继列**
+  原来的视觉槽位：逻辑顺序保持逻辑顺序，自定义顺序保持自己的形状（末尾 append 仍然 append）。
+  回归测试：`tst_headergeometry::insertedSectionsTakeTheSuccessorVisualSlot`（三种顺序：恒等顺序、
+  自定义顺序、末尾追加）。
+* **`moveLogicalSections()` 补 `orderRevision`（P1-5）**：模型侧换序会重写每个视觉槽位的 logical
+  编号，但这个方法没有 bump revision，而 `VirtualHeaderView` 正是靠 revision 判断"要不要重新推导
+  可见顺序"——于是换序后表头可能沿用过期的顺序缓存。现在与 `moveSection()`/insert/remove 一致。
+  回归测试并入 `tst_headergeometry::orderRevisionOnlyMovesWhenTheOrderCanChange`。
+* **结构性 remap 如实上报排序指示器（P1-6）**：insert/remove/move 会重命名排序指示器所指的列，
+  但只有"被排序的列被删除"时发过 `sortIndicatorChanged`；列号平移与 move 后的 remap 都不发。
+  现在三种 remap 只要改变了 section 编号就发一次（含 `-1`），而**表格侧加 guard**
+  （`m_sortGuard`）防止这个"结构性信号"被当成"用户要求排序"再去 `model->sort()` 一次。
+  回归测试：`tst_headergeometry::structuralRemapsReportTheSortIndicator`、
+  `tst_headerstructure::structuralRemapDoesNotResortTheModel`（Qt 5 的 `QSignalSpy` 需要先
+  `qRegisterMetaType<Qt::SortOrder>()` 才能记录该枚举参数）。
+* **`setSectionCount()` 缩小时清理越界排序指示器（P1-7）**：模型 reset / `setModel` 走的是这个
+  入口，它以前只截断 section 与视觉顺序，把指向被删尾部列的排序指示器留着。现在与
+  `removeLogicalSections()` 一致：越界即清成 `-1` 并通知。回归测试：
+  `tst_headergeometry::shrinkingTheSectionSetClearsAnOutOfRangeSortIndicator`。
+* **min/max 变化即使不需要 clamp 也要通知（P1-3）**：`clampSectionsToTheSizeRange()` 在没有
+  section/default 需要夹取时直接返回，而渲染器（`NativeHeaderView` → `QHeaderView::
+  setMinimumSectionSize()`）只在这条通知里重新读取范围 —— 于是"把最小宽度从 24 改成 30"之后
+  HeaderGeometry 与原生表头对允许宽度的认知不一致。现在两个 setter 一律走一次 bulk 通知
+  （重复设置同一个值仍是 no-op）。回归测试：
+  `tst_headergeometry::changingLimitsNotifiesEvenWithoutClamping`、
+  `tst_virtualtableview::nativeHeaderFollowsLimitChangesImmediately`。
+* **列结构变化后重绑可见行（P1-2，含 P2-2 的业务级回归）**：Row Widget Mode 下行的 identity 不
+  变，所以行控件不会被回收，`bindWidget()` 也不会再调用 —— 而业务通常正是在 `bindWidget()` 里
+  按列数建 `ColumnHost`，于是"几何正确、业务行还是旧 schema"。现在 insert/remove/move 三个路径
+  都会先 `rebindMaterializedRows()`（复用内核 dataChanged 用的那条 `rebindItemsInModelRange()`），
+  随后的 pane/几何更新再摆放业务重建出来的 hosts；Cell Widget Mode 不需要（cell 有自己的
+  persistent identity）。为此 `rebindItemsInModelRange()` 从 private 移到 protected（B 层子类
+  契约，1.0 定稿前的调整）。回归测试：
+  `tst_virtualtableview::columnStructureChangesRebindTheRowWidgets`（用一个只发列信号的模型 +
+  一个"只在 bindWidget 里重建 schema"的业务行控件；已确认去掉重绑时用例失败）。
+* **Widget Header 的数据刷新用例（P2-3）** 由 Wave A 的 P0-3 两条覆盖：重命名、插入/删除/reset、
+  排序指示器都断言 section 控件的**实际文本**。
+
 ### Fixed（GCC / Clang 可移植性：MinGW 实测，2026-09-26）
 
 审查的 ABI 矩阵里"GCC / Clang / MinGW"一直是未实测项。装上 Qt 安装器自带的 MinGW kit 之后，

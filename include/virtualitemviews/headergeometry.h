@@ -54,8 +54,10 @@ public:
     /// describes, which appending can never do.
     void setSectionCount(int count);
     /// `columnsInserted(parent, first, last)`: the new sections carry the default
-    /// state and appear at the end of the visual order (nothing has moved them
-    /// yet), while every section after \a first keeps its own state.
+    /// state and take the visual slots of the section that followed them (the one
+    /// that used to sit at \a first), like QHeaderView: a header in logical order
+    /// stays in logical order, a custom order keeps its shape. Every section after
+    /// \a first keeps its own state.
     void insertLogicalSections(int first, int count);
     /// `columnsRemoved(parent, first, last)`: the sections of the removed columns
     /// are dropped, the ones after them keep their state and shift down.

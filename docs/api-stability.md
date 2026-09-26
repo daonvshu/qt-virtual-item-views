@@ -52,7 +52,7 @@
 | `types.h` | A | 冻结。`WidgetType` 别名、`PaneSeparatorStyle`、`VisibleRange` |
 | `itempane.h` | A | 冻结。`itemPanes()` 的返回值；与 `TablePane` 对称 |
 | `branchindicator.h` | B | 冻结。`BranchIndicatorState` 的字段对应 `QTreeView::branch` 的状态词汇 |
-| `virtualitemview.h` | A + B | 公开部分冻结；protected 部分是子类契约（B 层），`viewItemCount()`/`viewIndex()`/`isLayoutParent()` 是三个必须实现的钩子 |
+| `virtualitemview.h` | A + B | 公开部分冻结；protected 部分是子类契约（B 层），`viewItemCount()`/`viewIndex()`/`isLayoutParent()` 是三个必须实现的钩子；`rebindItemsInModelRange()`（第二轮审查 P1-2 起）也在这一层，子类在自己的 item widget schema 变化而 identity 不变时用它重绑 |
 | `layoutpolicy.h` | B | 冻结。见第 5 节第 1 条 |
 | `listlayout.h` | B | 冻结（本次删掉了一个测试用入口，见第 5 节第 2 条） |
 | `sizeindex.h` | B | 冻结。`SizeIndex` 是稳定接口、实现可换（[performance.md](performance.md)）；`sizes()`/`blockCount()`/`explicitSizeCount()`/`estimatedSize()` 是 C 层诊断 |

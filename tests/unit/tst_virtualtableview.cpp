@@ -53,6 +53,107 @@ private:
     QVector<QLabel *> m_labels;
 };
 
+/// Row widget of the "business schema" test: it grows and shrinks its ColumnHosts with the
+/// model, but only ever inside bindWidget() - which is the contract the review asks about.
+///
+/// The hosts are looked up through the child tree (not cached pointers): the framework
+/// reparents them into its pane clip containers, and a clip container that goes away takes
+/// its hosts with it.
+class SchemaRowWidget : public QWidget
+{
+public:
+    explicit SchemaRowWidget(QWidget *parent = nullptr) : QWidget(parent) {}
+
+    /// Hosts sorted by their logical column.
+    QList<ColumnHost *> hostsInColumnOrder() const
+    {
+        QList<ColumnHost *> hosts = findChildren<ColumnHost *>();
+        std::sort(hosts.begin(), hosts.end(), [](ColumnHost *lhs, ColumnHost *rhs) {
+            return lhs->logicalColumn() < rhs->logicalColumn();
+        });
+        return hosts;
+    }
+
+    void rebuildForColumns(int columns)
+    {
+        QList<ColumnHost *> hosts = hostsInColumnOrder();
+        while (hosts.size() > columns) {
+            delete hosts.takeLast();
+        }
+        for (int column = 0; column < columns; ++column) {
+            const bool present = std::any_of(hosts.cbegin(), hosts.cend(), [column](ColumnHost *host) {
+                return host->logicalColumn() == column;
+            });
+            if (present)
+                continue;
+            auto *host = new ColumnHost(column, this);
+            auto *label = new QLabel(host);
+            label->setObjectName(QStringLiteral("cellLabel"));
+            label->setGeometry(2, 0, 80, 18);
+            hosts.append(host);
+        }
+    }
+
+    ColumnHost *host(int column) const
+    {
+        for (ColumnHost *host : hostsInColumnOrder()) {
+            if (host->logicalColumn() == column)
+                return host;
+        }
+        return nullptr;
+    }
+
+    QLabel *label(int column) const
+    {
+        ColumnHost *host = this->host(column);
+        return host ? host->findChild<QLabel *>() : nullptr;
+    }
+
+    int hostCount() const { return hostsInColumnOrder().size(); }
+
+    void clearTexts()
+    {
+        for (ColumnHost *host : hostsInColumnOrder()) {
+            if (QLabel *label = host->findChild<QLabel *>())
+                label->setText(QString());
+        }
+    }
+
+    QSize sizeHint() const override { return QSize(400, kRowHeight); }
+};
+
+class SchemaRowAdapter : public TableWidgetAdapter
+{
+public:
+    QWidget *createWidget(WidgetType, QWidget *parent) override
+    {
+        ++created;
+        return new SchemaRowWidget(parent);
+    }
+
+    void bindWidget(QWidget *widget, const QModelIndex &index) override
+    {
+        ++bound;
+        auto *row = static_cast<SchemaRowWidget *>(widget);
+        const int columns = index.model() ? index.model()->columnCount() : 0;
+        row->rebuildForColumns(columns);
+        for (int column = 0; column < columns; ++column)
+            row->label(column)->setText(index.siblingAtColumn(column).data(Qt::DisplayRole).toString());
+    }
+
+    void unbindWidget(QWidget *widget, const QModelIndex &) override
+    {
+        ++unbound;
+        static_cast<SchemaRowWidget *>(widget)->clearTexts();
+    }
+
+    QSize estimatedSize(const QModelIndex &) const override { return QSize(400, kRowHeight); }
+
+    int bound = 0;
+    int unbound = 0;
+    int created = 0;
+};
+
 class TableTestAdapter : public TableWidgetAdapter
 {
 public:
@@ -157,6 +258,31 @@ public:
         beginResetModel();
         m_rows = rows;
         endResetModel();
+    }
+
+    /// Column structure changes that emit *only* the column signals: a plain
+    /// QAbstractTableModel does not additionally reset the view (QStandardItemModel
+    /// emits coarser signals), which is what the column-structure tests need to isolate.
+    void insertDataColumn(int at)
+    {
+        beginInsertColumns(QModelIndex(), at, at);
+        ++m_columns;
+        endInsertColumns();
+    }
+
+    void removeDataColumn(int at)
+    {
+        beginRemoveColumns(QModelIndex(), at, at);
+        --m_columns;
+        endRemoveColumns();
+    }
+
+    void moveDataColumn(int from, int to)
+    {
+        const int destination = to > from ? to + 1 : to;
+        if (!beginMoveColumns(QModelIndex(), from, from, QModelIndex(), destination))
+            return;
+        endMoveColumns();
     }
 
 private:
@@ -282,6 +408,8 @@ private slots:
     void materializesOnlyVisibleRows();
     void rowWidgetModeCreatesNoCellWidgets();
     void headerAndRowsAgreeOnColumnBoundaries();
+    void nativeHeaderFollowsLimitChangesImmediately();
+    void columnStructureChangesRebindTheRowWidgets();
     void columnResizeTouchesMaterializedRowsOnly();
     void geometryIsTheSingleAuthority();
     void columnMoveFollowsTheGeometry();
@@ -393,6 +521,85 @@ void TestVirtualTableView::headerAndRowsAgreeOnColumnBoundaries()
         QVERIFY(host != nullptr);
         QCOMPARE(host->mapTo(m_view->viewport(), QPoint(0, 0)).x(), geometry.viewportX);
         QCOMPARE(host->width(), geometry.width);
+    }
+}
+
+void TestVirtualTableView::nativeHeaderFollowsLimitChangesImmediately()
+{
+    // P1-3 of the second review: the native renderer keeps its own copy of the section size
+    // range and only re-reads it when the geometry notifies. Changing the range *without*
+    // clamping any section used to skip that notification, so header and geometry disagreed
+    // about the allowed widths until the next unrelated change.
+    auto *native = qobject_cast<QHeaderView *>(m_view->horizontalHeader()->headerWidget());
+    QVERIFY(native != nullptr);
+    HeaderGeometry *geometry = m_view->horizontalHeaderGeometry();
+    QCOMPARE(geometry->sectionSize(0), kColumnWidth);
+
+    geometry->setMinimumSectionSize(40);         // below the current width: nothing is clamped
+    QCOMPARE(native->minimumSectionSize(), 40);
+
+    geometry->setMaximumSectionSize(333);        // above the current width as well
+    QCOMPARE(native->maximumSectionSize(), 333);
+
+    // ... and the new range is in force: the header clamps a resize the same way the
+    // geometry does.
+    m_view->setColumnWidth(1, 10);
+    QCOMPARE(m_view->columnWidth(1), 40);
+    QCOMPARE(native->sectionSize(1), 40);
+}
+
+void TestVirtualTableView::columnStructureChangesRebindTheRowWidgets()
+{
+    // P1-2 / P2-2 of the second review: in Row Widget Mode the row keeps its identity across
+    // a column insert/remove/move, so the widget is not recycled - but the business row
+    // widget builds its column schema in bindWidget(), and nothing told it. The result was
+    // "geometry right, business row still the old schema".
+    // A model that emits only the column signals: QStandardItemModel additionally resets
+    // the view's materialized set, which would mask the missing re-bind.
+    BigTableModel model(50, 3, this);
+    SchemaRowAdapter adapter;
+    VirtualTableView view;
+    view.setTableAdapter(&adapter);
+    view.setUniformItemHeight(kRowHeight);
+    view.setDefaultColumnWidth(kColumnWidth);
+    view.setModel(&model);
+    showView(&view, QSize(kViewWidth, kViewHeight));
+
+    QWidget *widget = rowWidgetFor(view, 1);
+    QVERIFY(widget != nullptr);
+    auto *row = static_cast<SchemaRowWidget *>(widget);
+    QCOMPARE(row->hostCount(), 3);
+    QCOMPARE(row->label(1)->text(), cellText(1, 1));
+
+    const auto rowMatchesTheModel = [&](int modelRow) {
+        auto *schemaRow = static_cast<SchemaRowWidget *>(rowWidgetFor(view, modelRow));
+        QVERIFY(schemaRow != nullptr);
+        QCOMPARE(schemaRow->hostCount(), model.columnCount());
+        for (int column = 0; column < model.columnCount(); ++column) {
+            QCOMPARE(schemaRow->label(column)->text(), cellText(modelRow, column));
+        }
+    };
+
+    const int bindsBefore = adapter.bound;
+    model.insertDataColumn(1);
+    view.flushPendingRelayout();
+    QVERIFY(adapter.bound > bindsBefore);        // the visible rows were re-bound
+    QCOMPARE(rowWidgetFor(view, 1), widget);     // ... without recycling (identity kept)
+    rowMatchesTheModel(1);
+
+    model.removeDataColumn(3);
+    view.flushPendingRelayout();
+    rowMatchesTheModel(1);
+
+    model.moveDataColumn(0, 2);
+    view.flushPendingRelayout();
+    rowMatchesTheModel(1);
+
+    // The hosts follow the geometry of the *new* column layout.
+    for (int column : view.visibleColumnLogicalIndexes()) {
+        ColumnHost *host = row->host(column);
+        QVERIFY(host != nullptr);
+        QCOMPARE(host->width(), view.columnGeometry(column).width);
     }
 }
 

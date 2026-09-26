@@ -481,8 +481,19 @@ void VirtualTableView::onColumnsInserted(const QModelIndex &parent, int first, i
     // change behind, so paneOfColumn()/paneIndexOfColumn()/columnViewportX() answered
     // with the layout from before the insert (P1-1 of the second review).
     const int count = qMax(0, last - first + 1);
+    // A column structure change keeps every row identity, so no row widget is recycled -
+    // but the business row widget usually builds one ColumnHost per column, and that schema
+    // just changed. bindWidget() is the only hook the business gets for it; the pane and
+    // geometry update below then positions the hosts it (re)created (P1-2 of the second
+    // review).
+    rebindMaterializedRows();
     m_panes.insertLogicalColumns(first, count);
+    // The remap renames the sorted column, which HeaderGeometry reports through
+    // sortIndicatorChanged - a signal that normally means "the user asked for a sort".
+    // The model already inserted the column, so there is nothing to sort here.
+    m_sortGuard = true;
     m_columns->insertLogicalSections(first, count);
+    m_sortGuard = false;
 }
 
 void VirtualTableView::onColumnsRemoved(const QModelIndex &parent, int first, int last)
@@ -490,8 +501,11 @@ void VirtualTableView::onColumnsRemoved(const QModelIndex &parent, int first, in
     if (parent.isValid())
         return;
     const int count = qMax(0, last - first + 1);
+    rebindMaterializedRows();
     m_panes.removeLogicalColumns(first, count);
+    m_sortGuard = true;
     m_columns->removeLogicalSections(first, count);
+    m_sortGuard = false;
 }
 
 void VirtualTableView::onColumnsMoved(const QModelIndex &parent, int start, int end,
@@ -502,8 +516,11 @@ void VirtualTableView::onColumnsMoved(const QModelIndex &parent, int start, int 
         return;
     }
     const int count = qMax(0, end - start + 1);
+    rebindMaterializedRows();
     m_panes.moveLogicalColumns(start, count, destinationColumn);
+    m_sortGuard = true;
     m_columns->moveLogicalSections(start, count, destinationColumn);
+    m_sortGuard = false;
 }
 
 // ---------------------------------------------------------------------------
@@ -813,6 +830,17 @@ void VirtualTableView::updatePaneLayout()
     // Every column x may have moved: rows, cells and the scroll bar follow.
     updateColumnLayout();
     syncHorizontalScrollBar();
+}
+
+void VirtualTableView::rebindMaterializedRows()
+{
+    // Cell Widget Mode does not need this: a cell widget carries its own persistent index, so
+    // a structural change materializes/drops cells through the normal window logic.
+    if (m_materializationMode == MaterializationMode::CellWidgets)
+        return;
+    // Same helper the dataChanged path uses - it only touches materialized rows and keeps the
+    // bind bookkeeping (diagnostics/log) consistent.
+    rebindItemsInModelRange(QModelIndex(), 0, std::numeric_limits<int>::max());
 }
 
 void VirtualTableView::updatePaneLayoutForScroll()
