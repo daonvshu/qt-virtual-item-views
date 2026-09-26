@@ -10,6 +10,8 @@ class QWidget;
 
 namespace viv {
 
+class HeaderGeometry;
+
 /// Adapter of the section widgets of a VirtualHeaderView (architecture document
 /// §18). Same contract as WidgetAdapter: the recycler creates/destroys widgets,
 /// a pooled widget keeps no identity, and bindSection() has to be able to run
@@ -36,6 +38,17 @@ public:
     /// told what it is. The default does nothing: an adapter that reads the model through
     /// its own reference keeps working.
     virtual void setLabelModel(QAbstractItemModel *model) { Q_UNUSED(model); }
+
+    /// Tells the adapter which header geometry the sections are laid out with.
+    ///
+    /// Symmetric to setLabelModel(): a section widget that draws sort state
+    /// (`sortIndicatorSection()` / `sortIndicatorOrder()`) or reads a column width otherwise
+    /// has to capture the geometry somewhere, and `VirtualHeaderView::setGeometryModel()` is a
+    /// public, replaceable collaborator. Called by that setter, by `setAdapter()` (with the
+    /// geometry the header already has) and with nullptr when the header drops the geometry or
+    /// the geometry is destroyed - so an adapter that stores it can hold a plain pointer or a
+    /// `QPointer` and never has to guess. The default does nothing.
+    virtual void setGeometryModel(HeaderGeometry *geometry) { Q_UNUSED(geometry); }
 
     /// Fills \a widget with the data of \a logicalIndex; called before the widget
     /// is shown and every time the section widget is reused. It is also called

@@ -112,6 +112,11 @@ void VirtualHeaderView::setGeometryModel(HeaderGeometry *geometry)
     m_lastVisualOrder.clear();
     m_lastOrderRevision = 0;
     connectGeometry(m_geometry, true);
+    // The geometry is a collaborator of the adapter too (a section widget that draws sort state
+    // reads its sort indicator): tell it which geometry the sections are laid out with, exactly
+    // like setLabelModel() does for the labels (P1.3 of the fourth review).
+    if (m_adapter)
+        m_adapter->setGeometryModel(m_geometry.data());
     relayout();
 }
 
@@ -120,6 +125,13 @@ void VirtualHeaderView::connectGeometry(HeaderGeometry *geometry, bool connectSi
     if (!geometry)
         return;
     if (connectSignals) {
+        // A destroyed collaborator is reported to the adapter as "no geometry" - the header's
+        // QPointer goes null at the same moment, so both sides agree without guessing
+        // (P1.3 of the fourth review).
+        connect(geometry, &QObject::destroyed, this, [this]() {
+            if (m_adapter)
+                m_adapter->setGeometryModel(nullptr);
+        });
         // Any of these changes moves sections or changes which ones own a widget.
         connect(geometry, &HeaderGeometry::geometryChanged, this, [this]() {
             // Widths, visibility, order and the section set may all have changed: the pane
@@ -159,6 +171,13 @@ void VirtualHeaderView::setLabelModel(QAbstractItemModel *model)
         disconnect(m_labelModel, nullptr, this, nullptr);
     m_labelModel = model;
     if (m_labelModel) {
+        // A label model that is destroyed underneath the header is reported to the adapter as
+        // "no model": the adapter then holds no pointer that it would have to clear itself
+        // (P1.3 of the fourth review; the header's own QPointer covers the header side).
+        connect(m_labelModel, &QObject::destroyed, this, [this]() {
+            if (m_adapter)
+                m_adapter->setLabelModel(nullptr);
+        });
         // A rename touches only the named sections, so those are rebound in place. A
         // structural change moves the logical identity of every section: the materialized
         // widgets are recycled on the *about to* signal (unbound while their old identity
@@ -308,6 +327,8 @@ void VirtualHeaderView::setAdapter(HeaderWidgetAdapter *adapter, bool takeOwners
     // "setAdapter() then setLabelModel()" would behave differently (P1.1 of the fourth review).
     if (m_adapter)
         m_adapter->setLabelModel(m_labelModel.data());
+    if (m_adapter)
+        m_adapter->setGeometryModel(m_geometry.data());
     relayout();
     emit adapterChanged();
 }

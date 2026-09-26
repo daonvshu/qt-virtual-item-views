@@ -65,7 +65,13 @@ public:
     /// Columns to lay out: visible range widened by the horizontal overscan.
     VisibleRange visibleColumns() const { return m_visibleColumns; }
     /// Logical indices to lay out, left to right (hidden columns skipped).
-    /// Frozen columns are always included (§31).
+    ///
+    /// One window per pane (§31/§43): every pane contributes the slots it can show plus
+    /// `columnOverscan()`, and that holds for a frozen pane too - its offset is 0, so its
+    /// window is simply "the columns that fit into the pane's width". A frozen pane that is
+    /// wider than the viewport therefore does **not** hand over all of its columns
+    /// (P1 of the third review). Use column()/pane() for a single column that is not in the
+    /// list, and `visibleScrollableRange()` for the scrolling panes as a range.
     QVector<int> columnsToLayout() const;
 
     // -- panes (§31) ---------------------------------------------------------

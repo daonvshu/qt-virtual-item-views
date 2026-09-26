@@ -103,9 +103,12 @@ public:
     {
         ++bindCount;
         QString text = labelModel()->headerData(logicalIndex, Qt::Horizontal).toString();
-        if (m_geometry && m_geometry->sortIndicatorSection() == logicalIndex) {
-            text += m_geometry->sortIndicatorOrder() == Qt::AscendingOrder ? QStringLiteral(" ^")
-                                                                         : QStringLiteral(" v");
+        // The geometry comes from the header's hook when it has one (the pattern this test now
+        // teaches); the constructor argument is the fallback of an adapter that captured it.
+        HeaderGeometry *geometry = hookedGeometry() ? hookedGeometry() : m_geometry;
+        if (geometry && geometry->sortIndicatorSection() == logicalIndex) {
+            text += geometry->sortIndicatorOrder() == Qt::AscendingOrder ? QStringLiteral(" ^")
+                                                                        : QStringLiteral(" v");
         }
         static_cast<SectionWidget *>(widget)->setText(text);
     }
@@ -126,6 +129,14 @@ public:
 
     QAbstractItemModel *labelModel() const { return m_hookedModel ? m_hookedModel : m_model; }
 
+    /// The geometry hook (P1.3 of the fourth review): the adapter that draws sort state gets
+    /// the geometry from the header instead of capturing it once.
+    void setGeometryModel(HeaderGeometry *geometry) override
+    {
+        ++geometryModelChanges;
+        m_hookedGeometry = geometry;
+    }
+
     QString textOf(VirtualHeaderView *header, int logicalIndex) const
     {
         QWidget *widget = header->sectionWidget(logicalIndex);
@@ -135,11 +146,14 @@ public:
     int bindCount = 0;
     int unbindCount = 0;
     int labelModelChanges = 0;
+    int geometryModelChanges = 0;
+    HeaderGeometry *hookedGeometry() const { return m_hookedGeometry; }
 
 private:
     QAbstractItemModel *m_model = nullptr;
     QAbstractItemModel *m_hookedModel = nullptr;
     HeaderGeometry *m_geometry = nullptr;
+    HeaderGeometry *m_hookedGeometry = nullptr;
 };
 } // namespace
 
@@ -176,6 +190,7 @@ private slots:
     void sortIndicatorChangesRebindTheSections();
     void switchingTheLabelModelRebindsTheSections();
     void installingAnAdapterHandsOverTheCurrentLabelModel();
+    void theAdapterFollowsTheGeometryCollaborator();
     void switchingTheGeometryInvalidatesThePaneCache();
     void restoringASortStateRebindsTheSections();
     void tableForwardsTheAnimationSettings();
@@ -927,6 +942,38 @@ void TestVirtualHeaderView::installingAnAdapterHandsOverTheCurrentLabelModel()
     QApplication::processEvents();
     QCOMPARE(second->labelModel(), static_cast<QAbstractItemModel *>(m_model));
     QCOMPARE(second->textOf(m_header, 2), QStringLiteral("c2"));
+}
+
+void TestVirtualHeaderView::theAdapterFollowsTheGeometryCollaborator()
+{
+    // P1.3 of the fourth review: setGeometryModel() is a public, replaceable collaborator, and a
+    // section widget that draws sort state or reads a column width has to read it. Without a
+    // hook the adapter captured the pointer once - so a replacement left it on the old geometry
+    // and a destroyed geometry left it dangling. The header now hands the geometry over (also on
+    // setAdapter()) and reports nullptr when the collaborator goes away.
+    auto *adapter = new ModelSectionAdapter(m_model, nullptr);
+    QCOMPARE(adapter->hookedGeometry(), nullptr);
+    m_header->setAdapter(adapter, true);
+    QCOMPARE(adapter->hookedGeometry(), m_geometry);   // setAdapter() hands over what it has
+
+    auto *replacement = new HeaderGeometry(Qt::Horizontal, this);
+    replacement->setSectionCount(m_model->columnCount());
+    replacement->setDefaultSectionSize(kSectionWidth);
+    const int changesBefore = adapter->geometryModelChanges;
+    m_header->setGeometryModel(replacement);
+    QApplication::processEvents();
+    QVERIFY(adapter->geometryModelChanges > changesBefore);
+    QCOMPARE(adapter->hookedGeometry(), replacement);
+    QCOMPARE(m_header->geometryModel(), replacement);
+    // The sort state the section UI draws comes from the *current* geometry.
+    replacement->setSortIndicator(2, Qt::DescendingOrder);
+    QApplication::processEvents();
+    QCOMPARE(adapter->textOf(m_header, 2), QStringLiteral("c2 v"));
+
+    // A destroyed collaborator is reported as "no geometry", not as a dangling pointer.
+    delete replacement;
+    QCOMPARE(m_header->geometryModel(), nullptr);
+    QCOMPARE(adapter->hookedGeometry(), nullptr);
 }
 
 void TestVirtualHeaderView::switchingTheGeometryInvalidatesThePaneCache()

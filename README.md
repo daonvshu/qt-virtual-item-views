@@ -358,7 +358,13 @@ private:
 class SectionHeaderAdapter : public viv::HeaderWidgetAdapter
 {
 public:
-    explicit SectionHeaderAdapter(const QAbstractItemModel *model) : m_model(model) {}
+    // 表头会把当前 label model 交给 adapter（换模型、装 adapter 都会通知），
+    // 所以业务不需要在构造函数里抓住一个可能过期的裸指针。
+    void setLabelModel(QAbstractItemModel *model) override { m_model = model; }
+
+    // 需要画排序状态的自绘 section 还可以覆盖 setGeometryModel()：
+    // 表头会在 setGeometryModel()/setAdapter() 时把当前 HeaderGeometry 交给它，
+    // 几何被销毁时通知 nullptr。
 
     QWidget *createSection(viv::WidgetType, QWidget *parent) override
     {
@@ -367,12 +373,14 @@ public:
 
     void bindSection(QWidget *widget, int logicalIndex) override
     {
+        if (!m_model)
+            return;
         static_cast<SectionHeader *>(widget)->setTitle(
             m_model->headerData(logicalIndex, Qt::Horizontal, Qt::DisplayRole).toString());
     }
 
 private:
-    const QAbstractItemModel *m_model = nullptr;
+    QPointer<QAbstractItemModel> m_model;
 };
 
 auto *header = new viv::VirtualHeaderView(Qt::Horizontal);

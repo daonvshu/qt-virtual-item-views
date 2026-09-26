@@ -10,7 +10,7 @@
 | 层 | 含义 | 兼容承诺 |
 | --- | --- | --- |
 | **A 应用 API** | 业务代码直接调用的入口 | 冻结：类名/函数名/信号名/枚举名到下一个主版本不变；只允许**追加**（新类、新函数、新枚举值、新信号），不允许删函数、改签名、改默认值语义 |
-| **B 扩展 API** | 子类、自定义策略/渲染器、少见场景 | 冻结同上，但允许在**次版本**里调整 protected 契约（须记进 `docs/roadmap.md` 的决策记录 + CHANGELOG） |
+| **B 扩展 API** | 子类、自定义策略/渲染器、少见场景 | 冻结同上。protected 契约的调整只允许以**加法**（新增带默认实现的钩子，见 `abi.md` §4 第 3 条）或**放宽**约束的形式出现在次版本里，并记进 `docs/roadmap.md` 的决策记录 + CHANGELOG；删除 / 改签名仍然只能进主版本 —— 于是 1.x 内 B 层也不会出现"业务必须改代码"的破坏 |
 | **C 诊断 API** | 测试、基准、调试面板 | 不保证名字与返回结构；只保证"要么能用、要么在 CHANGELOG 里写明改了" |
 | **D 私有实现** | `src/**` 的一切（容器、缓存、`PaneClipHost`、`ColumnHost` 的布局规则等） | 无承诺，随时可改 |
 
@@ -19,8 +19,9 @@
 
 ## 2. 冻结规则
 
-1. **只加不删**（A/B 层）：新增 API 随时可以；删除或改签名只能进主版本，并且要在
-   CHANGELOG 的 `Breaking` 段落里写清"改了什么、怎么迁移"。
+1. **只加不删**（A/B 层）：新增 API 随时可以 —— 包括给基类新增一个**带默认实现**的虚函数
+   （既有子类不需要实现它，重编即可；[abi.md](abi.md) §4 第 3 条）。删除函数、新增**纯虚**
+   函数或改签名只能进主版本，并且要在 CHANGELOG 的 `Breaking` 段落里写清"改了什么、怎么迁移"。
 2. **不改默认值语义**：`setX()` 的默认参数、`X()` 的默认返回值属于契约的一部分，
    例如 `setPanes({})` 回到默认三段布局、`moveColumn()` 程序化换序默认不动画。
 3. **不新增"接受但忽略"的入口**：一个公开入口要么完整实现，要么明确拒绝（返回
@@ -55,7 +56,7 @@
 | `headergeometry.h` | A | 冻结。列宽/顺序/隐藏/排序/偏移的唯一事实来源 + `saveState()/restoreState()` |
 | `nativeheaderview.h` | A（`HeaderViewInterface` 为 B） | 冻结。`HeaderViewInterface` 里带默认实现的可选钩子（`setPaneFilter()`/`setPaneOffset()`/动画三件套）**允许被渲染器忽略**，这是刻意的渲染器能力约定，已在文档写明；`fullSyncCount()` 是 C 层诊断 |
 | `virtualheaderview.h` | B | 冻结。section 动画与拖动重排的视觉几何是公开契约（[header-animation.md](header-animation.md)）；`paneCacheRebuildCount()` / `materializationVisits()` 是 C 层诊断 |
-| `headerwidgetadapter.h` | B | 冻结。3 个虚函数 |
+| `headerwidgetadapter.h` | B | 冻结。`sectionType()` / `createSection()` / `bindSection()` / `unbindSection()` 是 4 个核心虚函数；`setLabelModel()` / `setGeometryModel()` 是带默认实现的**可选协作者钩子**（第三、第四轮审查加的，默认什么都不做），属于规则 1 说的"加法" |
 | `accessibility.h` | A（节点类为 C） | `installAccessibilityFactory()`/`removeAccessibilityFactory()` 冻结；`AccessibleVirtualItem`/`AccessibleVirtualItemView` 是实现细节（C 层），只通过 Qt 的 `QAccessibleInterface` 暴露 |
 | `tablespan.h` | A | 冻结。`TableSpanProvider` 的锚点契约（只有锚点报 span）是语义契约 |
 | `types.h` | A | 冻结。`WidgetType` 别名、`PaneSeparatorStyle`、`VisibleRange` |

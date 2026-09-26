@@ -24,6 +24,7 @@
 #include <QMouseEvent>
 #include <QPainter>
 #include <QPixmap>
+#include <QPointer>
 #include <QPushButton>
 #include <QStatusBar>
 #include <QTimer>
@@ -183,10 +184,13 @@ private:
 class WidgetHeaderAdapter : public viv::HeaderWidgetAdapter
 {
 public:
-    explicit WidgetHeaderAdapter(const WideModel *model)
-        : m_model(model)
-    {
-    }
+    WidgetHeaderAdapter() = default;
+
+    /// The header tells the adapter which model the labels come from (and it may change: the
+    /// table hands its pane clones the same adapter). Holding a QPointer keeps this safe even if
+    /// the model is destroyed first; the downcast happens per call, so no captured pointer
+    /// survives a replacement.
+    void setLabelModel(QAbstractItemModel *model) override { m_model = model; }
 
     QWidget *createSection(viv::WidgetType, QWidget *parent) override
     {
@@ -196,9 +200,13 @@ public:
 
     void bindSection(QWidget *widget, int logicalIndex) override
     {
-        const QString title = m_model->headerData(logicalIndex, Qt::Horizontal, Qt::DisplayRole).toString();
+        // dynamic_cast instead of qobject_cast: the example's model carries no Q_OBJECT macro.
+        auto *model = dynamic_cast<WideModel *>(m_model.data());
+        if (!model)
+            return;
+        const QString title = model->headerData(logicalIndex, Qt::Horizontal, Qt::DisplayRole).toString();
         static_cast<SectionHeader *>(widget)->bind(logicalIndex, title,
-                                                  m_model->pendingCount(logicalIndex), false,
+                                                  model->pendingCount(logicalIndex), false,
                                                   Qt::AscendingOrder);
         ++bound;
     }
@@ -207,7 +215,7 @@ public:
     int bound = 0;
 
 private:
-    const WideModel *m_model = nullptr;
+    QPointer<QAbstractItemModel> m_model;
 };
 
 } // namespace
@@ -254,7 +262,7 @@ int main(int argc, char **argv)
 
     WideModel model(rowCount, columnCount);
     RowAdapter rowAdapter(columnCount);
-    WidgetHeaderAdapter headerAdapter(&model);
+    WidgetHeaderAdapter headerAdapter;
 
     QMainWindow window;
     auto *view = new viv::VirtualTableView(&window);

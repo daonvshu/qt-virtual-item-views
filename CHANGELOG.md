@@ -81,7 +81,7 @@
 
 ### Fixed（全量代码审查 Wave 1：崩溃 / 悬空指针）
 
-修复来自 [VirtualItemViews_Full_Code_Review.md](VirtualItemViews_Full_Code_Review.md) 的 P0/P1
+修复来自 `VirtualItemViews_Full_Code_Review.md`（第一轮审查，本地保留、不入库）的 P0/P1
 生命周期问题（回归测试：`tst_adapterreplacement`、`tst_modellifetime`、`tst_celllifecycle`）：
 
 * **Adapter 切换 UAF**：`VirtualTableView::setTableAdapter()` 以前先 `delete` 旧 adapter，再让
@@ -283,6 +283,50 @@
   `geometryChanged` 就是那次统一重建）。回归测试：
   `tst_headerstructure::paneCacheIsUpToDateImmediatelyAfterAColumnInsert`（修复前 pane 的列集合
   仍是 `{0,1}`，正确的 `{0,2}` 要等下一次结构变化）。
+
+### Fixed（第四轮 Release Gate：A/B/C 三组，2026-09-26）
+
+第四轮全量审查（`VirtualItemViews_Fourth_Release_Gate_Review.md`，本地保留、不入库）定位为
+v1.0 tag 前的 Release Gate：确认第三轮的问题都已修复，另外提出 4 个 tag 前必修项（Gate A）、
+3 个 API 契约定稿项（Gate B）与 3 个文档收口项（Gate C）。三组都已落地：
+
+* **`VirtualItemView::setAdapter()` 改成 virtual，`VirtualTableView` 同签名 override（P1）**：
+  第三轮只修好了直接调用（typed 重载 + 名字隐藏），通过 `VirtualItemView *` 的多态调用仍然只写
+  基类指针 —— 于是 `m_tableAdapter = A`、`m_adapter = B`，A 的 recycler 继续造控件而 B 去
+  `bindWidget()`，两者 WidgetType 语义不同时就是 UB。现在 override 里 `dynamic_cast` 到
+  `TableWidgetAdapter`：不是表格 adapter 就警告并保留现有配置（`nullptr` 表示清空），
+  `setTableAdapter()` 仍是 typed 便捷入口。回归：
+  `tst_adapterreplacement::thePolymorphicSetAdapterKeepsTheTableInvariant`。
+* **column-0 结构变化不再"改活着的 MaterializedItem 的索引"（P1）**：第三轮的 re-key 路线缺三件
+  事 —— `unbindWidget()` 拿不到旧身份（业务在 unbind 里退订 / 取消异步都会漏）、`WidgetType` 没有
+  重算、`m_itemLookup` 没有重建（`widgetForIndex(canonical)` 返回 nullptr）。现在 about-to-change
+  时 `recycleAllItems()`（旧索引仍有效，老实 unbind，控件进池复用），after-change 时按 canonical
+  `(row, 0)` 重新物化并重键显式 pin；Tree 额外在列结构信号上重建可见行映射（不重置实测行高）。
+  回归：`tst_virtualtableview::columnZeroChangesReleaseTheRowWidgetsFirst`。
+* **`VirtualTableView::setModel()` 同步所有派生表头（P1）**：主表头会换 label model，但已经物化的
+  pane 渲染器与冻结行条只在"第一次创建"时拿到 model，列数相同的模型切换会让它们继续画旧标题
+  （Widget 表头还会通过 B 的 adapter 重绑旧模型的信号）。现在 setModel() 统一把新 model 交给
+  `m_paneHeaders` / 两个冻结行条。回归：
+  `tst_virtualtableview::switchingTheModelRebindsEveryPaneHeader`。
+* **`VirtualHeaderView::setAdapter()` 交接当前 label model（P1）**：
+  `setLabelModel(); setAdapter();` 这个顺序原来让新 adapter 收不到 model（旧实现下自绘 section 会在
+  `bindSection()` 里解引用空模型直接崩），现在两种顺序结果一致。回归：
+  `tst_virtualheaderview::installingAnAdapterHandsOverTheCurrentLabelModel`。
+* **`HeaderWidgetAdapter::setGeometryModel()` 新钩子（Gate B）**：与 `setLabelModel()` 对称 ——
+  自绘排序状态的 section 原来只能自己抓 `HeaderGeometry*`，而 `setGeometryModel()` 是公开可替换
+  API、几何还可能先销毁。现在表头在 `setGeometryModel()` / `setAdapter()` 时把几何交给 adapter，
+  几何销毁时通知 `nullptr`（label model 同理）。README 与 `examples/table_custom_header` 的示例
+  adapter 改用钩子 + `QPointer`，不再示范"构造函数里抓裸 model"。回归：
+  `tst_virtualheaderview::theAdapterFollowsTheGeometryCollaborator`。
+* **文档收口（Gate C）**：`abi.md` §4 补上"新增带默认实现的 non-pure 虚函数**不是**源码破坏
+  （要求重编即可）；改签名 / 新增纯虚 / 删除虚函数才是"，`api-stability.md` 第 1 条与 B 层承诺
+  按同一口径改写（并修正 `headerwidgetadapter.h` 的虚函数数量）；`model-signals.md` 写明
+  List / Tree 的列方向契约（column 0 由内核统一处理，非 0 列只有 Table 关心，Tree 会重建可见行
+  映射）；`tablewidgetadapter.h` 的 `columnsToLayout()` 注释改成"每个 pane 只给窗口 + overscan"；
+  CHANGELOG 里指向"不入库的审查文档"的 Markdown 链接改成普通代码文本。
+
+验证：四处 Gate A 修复都做了反向验证（旧实现下用例分别失败 / 崩溃），然后
+`scripts/validate.ps1 -Library Both`（Qt 6.11.2 + Qt 5.15.2 x 静态/动态库）28 步全绿。
 
 ### Changed（1.0 发布策略定案：1.x 只承诺源码 API，二进制 ABI 为 best effort，2026-09-26）
 

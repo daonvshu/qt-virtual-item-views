@@ -239,7 +239,7 @@ smoke。按审查的判据，这一版已经可以视为 1.0 候选（tag 由仓
 5. 同步 [features.md](features.md) 能力表、README 概览与本文件。
 6. 一个独立提交。
 
-## 6. 第三轮代码审查与修复（2026-09-26）
+## 6. 代码审查与修复（第三、四轮，2026-09-26）
 
 第三轮全量审查（`VirtualItemViews_Third_Full_Code_Review.md`）确认前两轮的修复都已到位，并给出
 1 个新 P0、若干 P1/P2，以及一个**必须在打 tag 前决定**的发布策略问题。同样按"先复现（或先确认
@@ -292,6 +292,29 @@ configure / 构建 / CTest / 示例 / 基准 / 安装 + 消费端）：
 物化 section 数 <= 64"的断言）。10 万列那一档仍是手动运行，数字与注意事项见
 [performance.md](performance.md) §3/§4。
 
+### 第四轮 Release Gate（2026-09-26）
+
+第四轮审查（`VirtualItemViews_Fourth_Release_Gate_Review.md`）的定位是"v1.0 tag 前的最后一道
+闸门"，不再重做架构判断。它的结论是"还差最后一个修复包"，并给出 Gate A（tag 前必修 4 项）、
+Gate B（API 契约定稿 3 项）、Gate C（文档收口 3 项）。三组都已落地：
+
+| 批次 | 内容 | 状态 |
+| --- | --- | --- |
+| **Gate A tag 前必修** | `VirtualItemView::setAdapter()` 改 virtual + Table 同签名 override（多态调用不再造成 A 造控件 / B 绑控件）；column-0 结构变化改成"变更前回收 + 变更后按 canonical 身份重新物化"；`setModel()` 同步槽 pane 表头与冻结行条；`VirtualHeaderView::setAdapter()` 交接当前 label model | ✅ |
+| **Gate B API 契约定稿** | 新增 `HeaderWidgetAdapter::setGeometryModel()` 钩子（与 `setLabelModel()` 对称，销毁 / 替换时通知 `nullptr`）；README 与 `examples/table_custom_header` 改用钩子 + `QPointer`；`model-signals.md` 写明 List / Tree 的列方向契约 | ✅ |
+| **Gate C 文档收口** | `abi.md` 补"新增带默认实现的 non-pure 虚函数不是源码破坏"；B 层 protected 承诺改成"只加 / 只放宽，删除与改签名仍进主版本"；`headerwidgetadapter.h` 虚函数数量、CHANGELOG 的 broken link、`columnsToLayout()` 注释 | ✅ |
+
+Gate A 的实测证据（修复前的失败形态，都是先还原旧实现再跑用例）：
+
+* 多态 `setAdapter()`：旧实现下 `table.tableAdapter()` 仍指向 A（用例在指针比较处失败）；
+* column-0 生命周期：旧实现下 `unbindWidget()` 一次都没被调用（用例在 `adapter.unbound > 0` 处失败）；
+* `setModel()` 同步：旧实现下 pane clone 的 `labelModel()` 仍是模型 A；
+* `setAdapter()` 交接 model：旧实现下自绘 section 在 `bindSection()` 里解引用空模型**直接崩溃**
+  （`Exception code 0xc0000005`，栈顶就是 `ModelSectionAdapter::bindSection()`）。
+
+验证：`scripts/validate.ps1 -Library Both`（Qt 6.11.2 + Qt 5.15.2 x 静态/动态库：configure /
+全量构建 / 28 个 CTest / 12 个示例 / 4 档基准 / 安装 + 消费端）28 步全绿。
+
 ## 7. 决策记录
 
 | 日期 | 决定 | 理由 |
@@ -334,4 +357,7 @@ configure / 构建 / CTest / 示例 / 基准 / 安装 + 消费端）：
 | 2026-09-26 | 审查提到的 CI 只提交**可复制配置**（[ci.md](ci.md)），不提交 `.github/workflows/` | 本机没有 runner / 账号 / 网络：写一个没跑过的 workflow 会给出一个假的"CI 通过"印象，而 `scripts/validate.ps1` 是本机真跑过的入口。拿到 runner 之后把 ci.md 里的 YAML 存成 workflow 即可，顺带把 abi.md 支持矩阵的"未实测"改成实测 |
 | 2026-09-26 | 第二轮审查的每条 P0/P1 都先用"会失败的回归测试"在本机复现，再改；审查方只做静态推演 | 三条 P0 里有两条在复现时**直接崩溃**（Table 析构 UAF、standalone 表头解引用已删几何），说明静态推演与真实运行之间仍有差距；把"复现 → 修 → 反向验证"固定成流程，比照着结论改代码可靠 |
 | 2026-09-26 | 第三轮审查 Wave 2 的三处宽表性能修复都补了"与机器无关的计数断言"（`fullSyncCount()` 不涨、`visibleColumnLogicalIndexes()` 有界、`materializationVisits()`），而不是只测耗时 | 耗时断言在 CI/别的机器上必然抖；而这次发现"只看物化数量看不出 sparse pane 的退化"（旧实现扫完 10 万个 visual 后仍被 pane 过滤集合挡掉，物化结果一直是 3 个），说明**可观测的计数**才是能守住的契约 |
-| 2026-09-26 | 1.0 的发布策略定案：**1.x 只承诺源码 API / 语义兼容，二进制 ABI = best effort**（选审查 §10 的方案 B，不做 PIMPL 重构） | 核心公开类都把实现状态放在头文件里（9 个高频演进的类没有 PIMPL）。承诺二进制兼容就等于"给私有缓存加一个成员也要升主版本"——而 1.0 收口前后三轮审查修的正是这类内部状态（本轮就加了 `m_columnChangeRows`、`m_materializationVisits` 等）。这个库的主要使用方式是源码 / CMake 集成，使用者跟随版本重编的成本远低于把 1.x 的实现演进空间锁死。配套改动：`abi.md` §1/§4/§6 把"1.x 二进制兼容"改写为"版本匹配 ≠ ABI 承诺"，`api-stability.md` 新增第 7 条（私有成员布局不是源码契约），CMake 的 `SameMajorVersion` 注释写明它只是包版本策略。被否决的另一条路（打 tag 前 PIMPL 化 9 个类）留作 2.0 的候选；真正需要跨编译器二进制复用只能走那条 |
+| 2026-09-26 | 1.0 的发布策略定案：**1.x 只承诺源码 API / 语义兼容，二进制 ABI = best effort**（选审查 §10 的方案 B，不做 PIMPL 重构） | 核心公开类都把实现状态放在头文件里（9 个高频演进的类没有 PIMPL）。承诺二进制兼容就等于"给私有缓存加一个成员也要升主版本"——而 1.0 收口前后三轮审查反复改的正是这类内部状态（第三轮加过 `m_materializationVisits`，第四轮又重做了 column-0 身份缓存）。这个库的主要使用方式是源码 / CMake 集成，使用者跟随版本重编的成本远低于把 1.x 的实现演进空间锁死。配套改动：`abi.md` §1/§4/§6 把"1.x 二进制兼容"改写为"版本匹配 ≠ ABI 承诺"，`api-stability.md` 新增第 7 条（私有成员布局不是源码契约），CMake 的 `SameMajorVersion` 注释写明它只是包版本策略。被否决的另一条路（打 tag 前 PIMPL 化 9 个类）留作 2.0 的候选；真正需要跨编译器二进制复用只能走那条 |
+| 2026-09-26 | column-0 结构变化用"**变更前回收 + 变更后按 canonical 身份物化**"，不再"改活着的 MaterializedItem 的索引"（第四轮 Gate A 第 2 项） | re-key 路线看着省一次 recycle，实际上省不掉契约：`unbindWidget()` 拿不到旧身份（业务在那里的退订 / 取消异步会漏）、`WidgetType` 不会重算、`m_itemLookup` 不会重建（`widgetForIndex()` 与 `indexForWidget()` 不对称）。回收走的是池复用（`unbind -> pool -> acquire -> bind`），不是持续 new/delete，所以"多付"的只是一次 acquire；而 WidgetType 与 lookup 的正确性一次拿回 |
+| 2026-09-26 | `HeaderWidgetAdapter` 增加 `setGeometryModel()` 协作者钩子，并让 `setLabelModel()` / `setGeometryModel()` 在**替换时交接当前值、销毁时通知 `nullptr`**（第四轮 Gate B 第 5 项） | `setGeometryModel()` 是公开可替换 API，几何还可能先销毁（Header 用 `QPointer` 自保）；自绘排序状态的 section 只能自己抓指针，就必然踩"替换后仍是旧几何 / 销毁后悬空"。一个默认空实现的钩子解决这一整类问题，且它是"加法"（见 [abi.md](abi.md) §4 第 3 条），不需要进主版本 |
+| 2026-09-26 | **列方向的完整契约归 Table**：List / Tree 只承诺行方向（column 0 变化由内核统一回收重绑，非 0 列对它们没有可见影响，Tree 额外重建可见行映射） | `viewIndex()` 在三个视图里都是 `(row, 0)`：列方向的多列、列宽、列序、冻结与多滚动组本来就只有 Table 有。写清楚之后，"往 List 的模型里插一列"就不必假装有第二列；同时把 Tree 的可见行索引（存的是 `QModelIndex` 值）在列变化时重建，消掉"指向改名 / 失效 cell"的隐患 |

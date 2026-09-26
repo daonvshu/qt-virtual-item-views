@@ -43,6 +43,24 @@
 | `modelReset` | 行走通用路径（`resetItems()` → `resetLayoutForNewModel()`），列由 `setSectionCount(columnCount())` 收口 | 列状态按"新模型"重建；冻结集合与显式 pane 规格按列号保留，越界的列号在下一次 pane 重建时自然消失（pane 只保留几何里存在的列） |
 | `headerDataChanged` | — | 表头渲染器自己重绑被点名的区间（Widget 表头）或 QHeaderView 自行重绘（native） |
 
+### List / Tree 的列方向结构变更
+
+List 与 Tree 的**显示身份**是 `(row, 0)`（`viewIndex()` 就是取第 0 列那个 cell），所以：
+
+* 触碰 **column 0** 的 insert / remove / move 由内核统一处理，对三个视图一致：变更**之前**把所有
+  已物化控件交还 adapter（此时旧索引仍有效，`unbindWidget()` 拿到的是真正绑定过的身份），变更
+  之后按 canonical `(row, 0)` 重新物化 —— 顺带重算 `WidgetType`、重建索引查找表。显式 pin 也按
+  行号重键到新身份。
+* 不碰 column 0 的列变化对 List / Tree **没有可见影响**：它们只读第 0 列。这类变化只有
+  Table 会映射到 `HeaderGeometry` / pane 布局与行内 schema 重绑。
+* Tree 另外需要重建可见行映射：`TreeVisibilityIndex` 存的是 `QModelIndex` 值，列变化会让它们
+  指向的 cell 改名（删掉 column 0 时甚至失效），所以 Tree 在列结构信号上会重新推导可见行
+  （`onColumnStructureChanged()`：只重建映射，**不**重置实测行高与滚动锚点）。
+
+换句话说：**列方向的完整契约是 Table 的**（多列、列宽、列序、冻结 / 多滚动组都在那里）；
+List / Tree 承诺的是行方向的完整性，"往 List 的模型里插一列"只是把第 0 列换了内容，不会
+变出第二列来。
+
 ## 设计要点
 
 * **合并刷新**：每个处理函数只调用 `markDirty()`，由一次事件循环内的合并 `relayout()` 完成重排，
