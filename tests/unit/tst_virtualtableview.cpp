@@ -10,6 +10,9 @@
 #include <QPainter>
 #include <QScrollBar>
 #include <QStandardItemModel>
+#include <QDragEnterEvent>
+#include <QDropEvent>
+#include <QMimeData>
 
 #include <algorithm>
 
@@ -635,6 +638,8 @@ private slots:
     void columnZeroChangesReleaseTheRowWidgetsFirst();
     void setAdapterConfiguresTheTableNotJustTheBase();
     void switchingTheModelRebindsEveryPaneHeader();
+    void rowInsertKeepsTheColumnWidths();
+    void rowInsertKeepsTheExplicitRowHeights();
     void columnResizeTouchesMaterializedRowsOnly();
     void geometryIsTheSingleAuthority();
     void columnMoveFollowsTheGeometry();
@@ -1030,6 +1035,124 @@ void TestVirtualTableView::columnZeroChangesReleaseTheRowWidgetsFirst()
     QVERIFY(adapter.bound > 0);
     checkContract("insert at 2");
     rowIsSymmetric("insert at 2");
+}
+
+/// Drops a row from another model onto \a view at \a viewportPos: the four events a real drag
+/// sends, with a payload of the kind a QStandardItemModel source hands over (the drag_drop
+/// example drags a tree node into the table exactly like this).
+bool dropARowInto(VirtualTableView &view, const QPoint &viewportPos)
+{
+    QStandardItemModel source(1, 1);
+    source.setItem(0, 0, new QStandardItem(QStringLiteral("dropped")));
+    QScopedPointer<QMimeData> payload(source.mimeData({source.index(0, 0)}));
+    if (!payload)
+        return false;
+    view.setDragEnabled(true);
+    QDragEnterEvent enter(viewportPos, Qt::CopyAction, payload.data(), Qt::LeftButton,
+                          Qt::NoModifier);
+    QApplication::sendEvent(view.viewport(), &enter);
+    QDragMoveEvent move(viewportPos, Qt::CopyAction, payload.data(), Qt::LeftButton,
+                        Qt::NoModifier);
+    QApplication::sendEvent(view.viewport(), &move);
+    if (!move.isAccepted())
+        return false;
+    QDropEvent drop(QPointF(viewportPos), Qt::CopyAction, payload.data(), Qt::LeftButton,
+                    Qt::NoModifier);
+    QApplication::sendEvent(view.viewport(), &drop);
+    return drop.isAccepted();
+}
+
+void TestVirtualTableView::rowInsertKeepsTheColumnWidths()
+{
+    // Follow-up of the fourth review (found with examples/drag_drop: "dropping a row into the
+    // table collapses every column"): the native header mirrors QHeaderView::sectionResized()
+    // back into the geometry, but QHeaderView also emits it for its *own* layout work - a model
+    // change re-lays out the sections and reports the size they had before that pass, which is 0.
+    // Writing those 0s into the geometry clamped every column to the minimum width (24). It needs
+    // a *pane* header to show up: the pane clones re-lay out on every model change.
+    QStandardItemModel model(20, 4, this);
+    for (int row = 0; row < 20; ++row) {
+        for (int column = 0; column < 4; ++column)
+            model.setItem(row, column, new QStandardItem(cellText(row, column)));
+    }
+    TableTestAdapter adapter(4);
+    VirtualTableView view;
+    view.setTableAdapter(&adapter);
+    view.setUniformItemHeight(kRowHeight);
+    view.setDefaultColumnWidth(kColumnWidth);
+    view.setModel(&model);
+    showView(&view, QSize(kViewWidth, kViewHeight));
+    view.setFrozenColumns({0, 1});        // the pane clone + its own filter
+    view.setColumnWidth(2, 200);
+    view.setColumnWidth(3, 90);
+    view.flushPendingRelayout();
+    QCOMPARE(view.columnWidth(0), kColumnWidth);
+    QCOMPARE(view.columnWidth(2), 200);
+
+    // A drop inserts a row into the model; the geometry must not move.
+    QVERIFY(dropARowInto(view, QPoint(kColumnWidth * 2 + 10, kRowHeight + 5)));
+    view.flushPendingRelayout();
+    QCoreApplication::processEvents();
+
+    QCOMPARE(model.rowCount(), 21);
+    QCOMPARE(view.columnWidth(0), kColumnWidth);   // frozen pane, own width
+    QCOMPARE(view.columnWidth(1), kColumnWidth);
+    QCOMPARE(view.columnWidth(2), 200);            // primary pane, explicit width
+    QCOMPARE(view.columnWidth(3), 90);
+    QCOMPARE(view.rowHeight(0), kRowHeight);
+    QCOMPARE(view.uniformItemHeight(), kRowHeight);
+
+    // Removing a row and inserting a column take the same mirror path.
+    QVERIFY(model.removeRow(0));
+    view.flushPendingRelayout();
+    QCOMPARE(view.columnWidth(2), 200);
+    model.insertColumn(2);
+    view.flushPendingRelayout();
+    QCOMPARE(view.columnWidth(0), kColumnWidth);
+    QCOMPARE(view.columnWidth(3), 200);
+    QCOMPARE(view.columnWidth(4), 90);
+
+    // The same rule protects a hidden column's width: QHeaderView reports 0 for a section it
+    // does not show, and hiding a column must not rewrite its stored width (docs mention that
+    // the width survives a hide/show round trip).
+    view.setColumnHidden(3, true);
+    view.flushPendingRelayout();
+    view.setColumnHidden(3, false);
+    view.flushPendingRelayout();
+    QCOMPARE(view.columnWidth(3), 200);
+}
+
+void TestVirtualTableView::rowInsertKeepsTheExplicitRowHeights()
+{
+    // The same hole on the vertical axis: the frozen-row strips are pane headers for m_rowHeaders,
+    // so a model change must not clamp the explicit row heights to the minimum either.
+    QStandardItemModel model(20, 2, this);
+    TableTestAdapter adapter(2);
+    VirtualTableView view;
+    view.setTableAdapter(&adapter);
+    view.setUniformItemHeight(kRowHeight);
+    view.setDefaultColumnWidth(kColumnWidth);
+    view.setModel(&model);
+    showView(&view, QSize(kViewWidth, kViewHeight));
+    view.setFrozenRows(2);                 // the vertical pane strips
+    view.setRowHeight(3, 60);              // the user dragged that boundary
+    view.setRowHeight(4, 44);
+    view.flushPendingRelayout();
+    QCOMPARE(view.rowHeight(3), 60);
+
+    // Drop above the two resized rows: their heights have to move with them.
+    // The insert a *drop* performs goes through QStandardItemModel::dropMimeData(), which reports
+    // it as a layout change - the kernel rebuilds every derived row size then, so the heights the
+    // user set are only preserved because they are re-applied to the rows they belong to.
+    QSignalSpy layoutSpy(&model, &QAbstractItemModel::layoutChanged);
+    QVERIFY(dropARowInto(view, QPoint(kColumnWidth / 2, 2)));
+    QVERIFY(layoutSpy.count() > 0);
+    view.flushPendingRelayout();
+    QCoreApplication::processEvents();
+
+    QCOMPARE(view.rowHeight(4), 60);       // the heights followed their rows
+    QCOMPARE(view.rowHeight(5), 44);
+    QCOMPARE(view.rowHeight(2), kRowHeight);
 }
 
 void TestVirtualTableView::switchingTheModelRebindsEveryPaneHeader()

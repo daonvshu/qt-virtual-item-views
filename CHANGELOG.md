@@ -284,6 +284,35 @@
   `tst_headerstructure::paneCacheIsUpToDateImmediatelyAfterAColumnInsert`（修复前 pane 的列集合
   仍是 `{0,1}`，正确的 `{0,2}` 要等下一次结构变化）。
 
+### Fixed（拖放示例暴露的两处几何重置，2026-09-26）
+
+用户报告 `examples/drag_drop` 里"把行拖进右边的表格后，列宽和行高都被重置成最小"。查下来是两个
+不同的原因，第一个是库的 bug：
+
+* **native pane 表头把 `QHeaderView` 自己的重排当成了用户拖宽（P1）**：`NativeHeaderView`
+  把 `QHeaderView::sectionResized()` 回写进 `HeaderGeometry`（geometry 是唯一事实来源，表头只
+  镜像；用户拖宽度就是靠这条回写）。但 `QHeaderView` 在**它自己**重排 section 时也会发这个信号
+  —— 模型变化（插入一行）、pane 过滤更新、resize policy 切换都会 —— 而那时它报的是"这一步
+  布局之前"的尺寸，也就是 **0**。0 写进 geometry 后被 `clampedSize()` 收进最小列宽（24），于是
+  一次插入行就把**所有**列压成 24。触发条件里必须有一个 pane 表头克隆（示例默认冻结 2 列），
+  所以"只有带冻结列的表格"才会看到。现在 `onHeaderSectionResized()` 忽略 `newSize <= 0`
+  （交互拖动永远被 `QHeaderView` 收在最小尺寸以上，不可能报 0），并且忽略本 pane 不显示的
+  section（它们的宽度属于显示它们的那个 pane）。回归测试：
+  `tst_virtualtableview::rowInsertKeepsTheColumnWidths`（修前 120 → 24，修后保持；含"插入列 /
+  删除行"的同类路径）。
+* **`layoutChanged` 之后用户设的行高被丢**：`QStandardItemModel::dropMimeData()` 把"插入一行"
+  上报成 **layoutChanged**（不是 `rowsInserted`），而内核的契约是"尺寸按 row 保存，重排后不再
+  可信 → 回到估计值"。这条契约对**测量出来**的尺寸成立，但用户显式设置的行高挂在**行身份**上
+  （`m_explicitRowHeights` 存的是持久索引），不该跟着丢。现在 `layoutChanged` 之后会把这些行高
+  重新应用到它们所在的行（`RowSizePolicy::MeasuredWins` 时测量仍然获胜）。回归测试：
+  `tst_virtualtableview::rowInsertKeepsTheExplicitRowHeights`（修前 60/44 → 30/30，修后跟着行
+  一起下移）。文档同步：[model-signals.md](docs/model-signals.md) 的 `layoutChanged` 一行现在
+  区分"测量尺寸"与"显式行高"。
+
+示例本身没有配置错误：它的表格用的是 `QStandardItemModel` 默认的拖放实现，那条路径本来就会发
+`layoutChanged`。上面第二项修好之后，示例里的列宽与用户拖过的行高都能保住。验证：
+`scripts/validate.ps1 -Library Both`（Qt 6.11.2 + Qt 5.15.2 x 静态/动态库）28 步全绿。
+
 ### Fixed（第四轮 Release Gate：A/B/C 三组，2026-09-26）
 
 第四轮全量审查（`VirtualItemViews_Fourth_Release_Gate_Review.md`，本地保留、不入库）定位为

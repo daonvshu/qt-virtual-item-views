@@ -15,7 +15,7 @@
 | `rowsMoved`（同 parent） | `moveItems(start, count, destRow)`，逐个恢复原尺寸 | 按持久身份重新定位，身份不变则控件不变 | `QPersistentModelIndex` 跟随 | 保持数值偏移 |
 | `rowsMoved`（跨 parent） | 重新 reset 布局 | 全部回收 | 重建 | 保持偏移（clamp） |
 | `layoutAboutToBeChanged` | — | 全部回收（行与项的映射可能被完全改写） | — | 捕获 anchor |
-| `layoutChanged` | `resetItems(count, estimate)`：尺寸按 row 保存，重排后不再可信，回到估计值（Variable 模式会重新测量） | 下一 pass 重建 | `changePersistentIndexList` 由模型负责 | 应用 anchor |
+| `layoutChanged` | `resetItems(count, estimate)`：**测量得到的**尺寸按 row 保存，重排后不再可信，回到估计值（Variable 模式会重新测量）；**用户显式设置的行高**不属于这一类 —— 它挂在行身份上（`m_explicitRowHeights` 是持久索引），所以重建之后会重新应用到那一行（`RowSizePolicy::MeasuredWins` 时测量仍然获胜） | 下一 pass 重建 | `changePersistentIndexList` 由模型负责 | 应用 anchor |
 | `modelAboutToBeReset` | — | 全部回收，清除显式 pin | — | 取消 anchor |
 | `modelReset` | `resetItems(count, estimate)` | 下一 pass 重建 | `QItemSelectionModel` 清空 | 复位到 0 |
 

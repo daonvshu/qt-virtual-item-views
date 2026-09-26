@@ -148,6 +148,21 @@ void NativeHeaderView::onHeaderSectionResized(int logicalIndex, int oldSize, int
     Q_UNUSED(oldSize);
     if (m_applyingToHeader || !m_geometry)
         return;
+    // QHeaderView emits sectionResized() for its *own* layout work as well: a model change, a
+    // pane filter update or a resize-policy switch re-lays out the sections and reports the size
+    // they had *before* that pass - which is 0 for a section that has not been laid out yet or
+    // that this header does not show. A real edit never reports 0, because QHeaderView clamps an
+    // interactive drag to its minimum section size. Writing those 0s back into the geometry
+    // clamps them to the minimum width, i.e. one model change with a pane header present
+    // collapsed every column (fourth review follow-up: dropping a row into the table in the
+    // drag_drop example did exactly that).
+    if (newSize <= 0)
+        return;
+    // The sections of a *pane* header that this pane does not show have no width here: their
+    // width belongs to the pane that shows them (the geometry keeps it even while they are
+    // hidden by this filter).
+    if (m_paneFilterActive && !filterContains(m_paneFilter, true, logicalIndex))
+        return;
     syncGeometryFromHeaderSectionSize(logicalIndex, newSize);
 }
 
@@ -164,6 +179,9 @@ void NativeHeaderView::syncGeometryFromHeaderSectionSize(int logicalIndex, int s
         return;
     if (m_geometry->storedSectionSize(logicalIndex) == size)
         return;
+    qWarning("DEBUG header->geometry: logical=%d size=%d stored=%d columns=%d width=%d widget=%p",
+             logicalIndex, size, m_geometry->storedSectionSize(logicalIndex),
+             m_geometry->sectionCount(), this->width(), this);
     // The user resized the section: the geometry is updated and stays the
     // authority, the body re-queries it.
     m_geometry->resizeSection(logicalIndex, size);

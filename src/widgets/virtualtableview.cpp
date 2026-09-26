@@ -487,6 +487,29 @@ void VirtualTableView::connectColumnSignals(QAbstractItemModel *model)
     connect(model, &QAbstractItemModel::modelReset, this, [this]() {
         m_columns->setSectionCount(columnCount());
     });
+    // A layout change rebuilds every row size from the estimate (the kernel's contract: sizes
+    // keyed by row cannot be trusted after a reorder - see docs/model-signals.md). The heights
+    // the *user* set are not those derived sizes: they are attached to their row through
+    // m_explicitRowHeights (a persistent index), so they are re-applied here. Under
+    // RowSizePolicy::MeasuredWins the measurement still wins (canMeasureItem()).
+    connect(model, &QAbstractItemModel::layoutChanged, this,
+            [this](const QList<QPersistentModelIndex> &, QAbstractItemModel::LayoutChangeHint) {
+                reapplyExplicitRowHeights();
+            });
+}
+
+void VirtualTableView::reapplyExplicitRowHeights()
+{
+    if (m_explicitRowHeights.isEmpty() || !m_rowLayout)
+        return;
+    const qsizetype count = viewItemCount();
+    for (auto it = m_explicitRowHeights.cbegin(); it != m_explicitRowHeights.cend(); ++it) {
+        const qsizetype row = viewItemForIndex(it.key());
+        if (row >= 0 && row < count)
+            m_rowLayout->setItemSize(row, it.value());
+    }
+    updateRowHeaderGeometry();
+    markDirty();
 }
 
 void VirtualTableView::onColumnsInserted(const QModelIndex &parent, int first, int last)

@@ -447,6 +447,9 @@ private:
                                         const QHash<int, QWidget *> &paneHosts = QHash<int, QWidget *>(),
                                         const QModelIndex &rowIndex = QModelIndex()) const;
     void updateRowHeaderGeometry();
+    /// Re-applies the heights the user set (m_explicitRowHeights, keyed by row identity) after a
+    /// layout change rebuilt every derived size from the estimate.
+    void reapplyExplicitRowHeights();
     void scrollToColumn(int logicalIndex);
     void onSortIndicatorChanged(int logicalIndex, Qt::SortOrder order);
 
