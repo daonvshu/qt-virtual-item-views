@@ -34,8 +34,14 @@ void TreeVisibilityIndex::rebuild()
 {
     m_visibleRows.clear();
     m_branches.clear();
-    if (!m_model)
+    if (!m_model) {
+        // The model is gone (deleted before this index, or set to nullptr): every piece
+        // of state that names it has to go with it, including the expansion state and the
+        // root - otherwise a later query could hand out an index of a dead model.
+        m_expanded.clear();
+        m_rootIndex = QModelIndex();
         return;
+    }
 
     // Iterative depth-first walk: only expanded nodes are descended into, so a collapsed
     // sub-tree costs a single rowCount() query. Every node that is descended into gets a
@@ -159,7 +165,7 @@ void TreeVisibilityIndex::addToAncestors(const QModelIndex &index, qsizetype del
 
 QModelIndex TreeVisibilityIndex::indexAtVisibleRow(qsizetype row) const
 {
-    if (row < 0 || row >= m_visibleRows.size())
+    if (!m_model || row < 0 || row >= m_visibleRows.size())
         return QModelIndex();
     return m_visibleRows.at(row);
 }
@@ -167,7 +173,9 @@ QModelIndex TreeVisibilityIndex::indexAtVisibleRow(qsizetype row) const
 int TreeVisibilityIndex::depth(const QModelIndex &index) const
 {
     int depth = 0;
-    if (!index.isValid())
+    // Walking parents touches the model, so a stale index of a deleted or replaced model
+    // must not get here (the base view checks the same way before it calls in).
+    if (!index.isValid() || !m_model || index.model() != m_model)
         return -1;
     QModelIndex parent = index.parent();
     while (parent.isValid() && parent != m_rootIndex) {
@@ -179,7 +187,10 @@ int TreeVisibilityIndex::depth(const QModelIndex &index) const
 
 bool TreeVisibilityIndex::isExpanded(const QModelIndex &index) const
 {
-    return index.isValid() && m_expanded.contains(QPersistentModelIndex(index));
+    // The model check comes first: building a QPersistentModelIndex registers it with the
+    // model, which would dereference a dangling one (see the P0-2 review finding).
+    return m_model && index.isValid() && index.model() == m_model
+        && m_expanded.contains(QPersistentModelIndex(index));
 }
 
 void TreeVisibilityIndex::expand(const QModelIndex &index)

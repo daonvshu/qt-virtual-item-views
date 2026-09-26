@@ -7,6 +7,7 @@
 #include <QHash>
 #include <QList>
 #include <QPoint>
+#include <QPointer>
 #include <QVector>
 #include <QWidget>
 
@@ -125,6 +126,9 @@ protected:
 
 private:
     void connectGeometry(HeaderGeometry *geometry, bool connectSignals);
+    /// Re-binds the materialized sections in the logical range [first, last] so a widget
+    /// that is already on screen picks up a changed label or state.
+    void rebindMaterializedSections(int first, int last);
     void relayout();
     void recycleAllSections();
     /// Value sectionX() returns for a section this widget does not show. A pane
@@ -178,8 +182,11 @@ private:
     bool isFiltered(int logicalIndex) const;
 
     Qt::Orientation m_orientation = Qt::Horizontal;
-    HeaderGeometry *m_geometry = nullptr;
-    QAbstractItemModel *m_labelModel = nullptr;
+    /// Both are non-owning collaborators of a public standalone widget, so a business
+    /// may delete either before the header: watched, so a dangling pointer cannot be
+    /// dereferenced (P0-2 of the second review).
+    QPointer<HeaderGeometry> m_geometry;
+    QPointer<QAbstractItemModel> m_labelModel;
     HeaderWidgetAdapter *m_adapter = nullptr;
     bool m_ownAdapter = false;
     WidgetRecycler *m_recycler = nullptr;

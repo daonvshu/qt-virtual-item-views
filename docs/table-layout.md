@@ -144,6 +144,15 @@ table->setHorizontalHeader(header);     // 传给 nullptr 回到 native 表头
   `qWarning()`，`setGeometryModel()` 也拒绝另一个方向的几何。行号条用
   `NativeHeaderView(Qt::Vertical)` 或自己实现 `HeaderViewInterface`。表格侧同样会拒绝方向不匹配的
   渲染器（`setHorizontalHeader()` / `setVerticalHeader()` 警告并保持原渲染器不变）。
+* **`bindSection()` 是唯一的"状态变了"钩子**：重命名一列（`headerDataChanged`）只会重绑被点名的
+  logical 区间；列插入 / 删除 / 移动与 `modelReset` 会先把已物化 section 全部回收（在**旧身份**仍
+  有效时 `unbindSection()`），随后整批重新 acquire + `bindSection()`；几何的排序指示器变化同样会
+  重绑。也就是说 `bindSection()` 必须能从零重建这个 section 的 UI（标题、排序箭头、按钮状态……），
+  而 `unbindSection()` 只在控件离开物化集合时才被调用 —— 不要把它当成"重绑之前一定会来一次"。
+* **非 owning 协作者的生命周期**：`setGeometryModel()` / `setLabelModel()` / `setAdapter()` 都不接管
+  所有权（`HeaderWidgetAdapter` 可用 `takeOwnership` 交给渲染器，但默认不接管）。几何、标签模型与
+  adapter 都要比表头活得久；几何与标签模型是 `QPointer` 观察的，业务先删它们不会造成悬空解引用
+  （表头会当作"没有几何 / 没有模型"处理），但 adapter 不是 QObject，删早了就是未定义行为。
 * **交互**：离 section 边缘 ±3 px 按住拖动 = 改列宽（§21/§25）；按住 section 拖过拖动距离阈值 =
   重排（§22，拖动期间只有视觉预览，松手才提交一次，详见 [header-animation.md](header-animation.md)）；
   单击 = 排序（§33）；子控件获得焦点或打开 popup 的 section 会被 pin，不回收（§36）。

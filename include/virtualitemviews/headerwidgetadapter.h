@@ -28,12 +28,18 @@ public:
     virtual QWidget *createSection(WidgetType type, QWidget *parent) = 0;
 
     /// Fills \a widget with the data of \a logicalIndex; called before the widget
-    /// is shown and every time the section widget is reused.
+    /// is shown and every time the section widget is reused. It is also called
+    /// again for a widget that is *already* bound when the state of its section
+    /// changes (a renamed column, a column inserted/removed/moved, a new sort
+    /// indicator), so the section UI must be rebuildable from scratch here - that
+    /// is the only "state changed" hook a renderer gets.
     virtual void bindSection(QWidget *widget, int logicalIndex) = 0;
 
     /// Detaches \a widget from \a logicalIndex (stop timers, animations,
     /// subscriptions; clear the content). Animation state must never leak into
-    /// the section the widget is bound to next (§19).
+    /// the section the widget is bound to next (§19). This is a *recycle* hook:
+    /// it is called when the widget leaves the materialized set, not before a
+    /// re-bind of the same section.
     virtual void unbindSection(QWidget *widget, int logicalIndex)
     {
         Q_UNUSED(widget);

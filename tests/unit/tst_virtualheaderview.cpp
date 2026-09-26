@@ -81,6 +81,54 @@ public:
     void unbindWidget(QWidget *, const QModelIndex &) override {}
     QSize estimatedSize(const QModelIndex &) const override { return QSize(640, 24); }
 };
+
+/// Section adapter of the "model changed" tests: binds the text from the model's
+/// headerData() (that is what the README example does) and appends the sort marker of
+/// the geometry, so both sources are observable on the widget.
+class ModelSectionAdapter : public HeaderWidgetAdapter
+{
+public:
+    ModelSectionAdapter(QAbstractItemModel *model, HeaderGeometry *geometry)
+        : m_model(model)
+        , m_geometry(geometry)
+    {
+    }
+
+    QWidget *createSection(WidgetType, QWidget *parent) override
+    {
+        return new SectionWidget(parent);
+    }
+
+    void bindSection(QWidget *widget, int logicalIndex) override
+    {
+        ++bindCount;
+        QString text = m_model->headerData(logicalIndex, Qt::Horizontal).toString();
+        if (m_geometry && m_geometry->sortIndicatorSection() == logicalIndex) {
+            text += m_geometry->sortIndicatorOrder() == Qt::AscendingOrder ? QStringLiteral(" ^")
+                                                                         : QStringLiteral(" v");
+        }
+        static_cast<SectionWidget *>(widget)->setText(text);
+    }
+
+    void unbindSection(QWidget *widget, int) override
+    {
+        ++unbindCount;
+        static_cast<SectionWidget *>(widget)->setText(QString());
+    }
+
+    QString textOf(VirtualHeaderView *header, int logicalIndex) const
+    {
+        QWidget *widget = header->sectionWidget(logicalIndex);
+        return widget ? static_cast<SectionWidget *>(widget)->text() : QString();
+    }
+
+    int bindCount = 0;
+    int unbindCount = 0;
+
+private:
+    QAbstractItemModel *m_model = nullptr;
+    HeaderGeometry *m_geometry = nullptr;
+};
 } // namespace
 
 /// VirtualHeaderView materializes only the sections of its window (§17-§19).
@@ -112,6 +160,8 @@ private slots:
     void escapeCancelsTheDrag();
     void hoverOverASectionWidgetUpdatesTheCursor();
     void childrenAddedAfterBindingAreWatchedToo();
+    void modelChangesRebindTheMaterializedSections();
+    void sortIndicatorChangesRebindTheSections();
     void tableForwardsTheAnimationSettings();
 
 private:
@@ -736,6 +786,78 @@ void TestVirtualHeaderView::childrenAddedAfterBindingAreWatchedToo()
     // which is what makes the assertion above work with real mouse events as well.
     QVERIFY(late->hasMouseTracking());
     QVERIFY(lateLabel->hasMouseTracking());
+}
+
+void TestVirtualHeaderView::modelChangesRebindTheMaterializedSections()
+{
+    // P0-3 of the second review: the header connected the model's change signals to
+    // relayout(), but relayout() only bound *newly acquired* widgets - an already
+    // materialized section kept the label it was bound with, so a renamed column and a
+    // structural change both left the visible sections showing the wrong identity.
+    auto *adapter = new ModelSectionAdapter(m_model, m_geometry);
+    m_header->setAdapter(adapter, true); // the header owns it, so it outlives the test body
+    QApplication::processEvents();
+    QVERIFY(adapter->bindCount > 0);
+    QCOMPARE(adapter->textOf(m_header, 1), QStringLiteral("c1"));
+
+    // (a) headerDataChanged: the visible section has to show the new title.
+    m_model->setHeaderData(1, Qt::Horizontal, QStringLiteral("renamed"));
+    QApplication::processEvents();
+    QCOMPARE(adapter->textOf(m_header, 1), QStringLiteral("renamed"));
+
+    // (b) columnsInserted in the middle: every materialized section shows the label of the
+    // logical column it occupies *now*, and the widget that used to be column 1 is not
+    // left showing the old labels.
+    m_model->insertColumn(1);
+    m_model->setHeaderData(1, Qt::Horizontal, QStringLiteral("inserted"));
+    QApplication::processEvents();
+    for (int logical : m_header->materializedSections()) {
+        QCOMPARE(adapter->textOf(m_header, logical),
+                 m_model->headerData(logical, Qt::Horizontal).toString());
+    }
+
+    // (c) columnsRemoved: same contract.
+    m_model->removeColumn(0);
+    m_model->setHeaderData(0, Qt::Horizontal, QStringLiteral("first"));
+    QApplication::processEvents();
+    for (int logical : m_header->materializedSections()) {
+        QCOMPARE(adapter->textOf(m_header, logical),
+                 m_model->headerData(logical, Qt::Horizontal).toString());
+    }
+
+    // (d) modelReset: the sections are rebuilt from scratch and bound again.
+    m_model->clear();
+    m_model->setColumnCount(12);
+    QStringList labels;
+    for (int column = 0; column < 12; ++column)
+        labels << QStringLiteral("reset%1").arg(column);
+    m_model->setHorizontalHeaderLabels(labels);
+    QApplication::processEvents();
+    QVERIFY(!m_header->materializedSections().isEmpty());
+    for (int logical : m_header->materializedSections()) {
+        QCOMPARE(adapter->textOf(m_header, logical),
+                 m_model->headerData(logical, Qt::Horizontal).toString());
+    }
+}
+
+void TestVirtualHeaderView::sortIndicatorChangesRebindTheSections()
+{
+    // The section UI is built in bindSection(), so a sort change that only updated the
+    // geometry would leave the arrow of the business widget stale.
+    auto *adapter = new ModelSectionAdapter(m_model, m_geometry);
+    m_header->setAdapter(adapter, true);
+    QApplication::processEvents();
+
+    QTest::mouseClick(m_header, Qt::LeftButton, Qt::NoModifier,
+                      QPoint(kSectionWidth + kSectionWidth / 2, kHeaderHeight / 2));
+    QApplication::processEvents();
+    QCOMPARE(m_geometry->sortIndicatorSection(), 1);
+    QCOMPARE(adapter->textOf(m_header, 1), QStringLiteral("c1 ^"));
+
+    QTest::mouseClick(m_header, Qt::LeftButton, Qt::NoModifier,
+                      QPoint(kSectionWidth + kSectionWidth / 2, kHeaderHeight / 2));
+    QApplication::processEvents();
+    QCOMPARE(adapter->textOf(m_header, 1), QStringLiteral("c1 v"));
 }
 
 void TestVirtualHeaderView::tableForwardsTheAnimationSettings()

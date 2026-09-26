@@ -7,6 +7,8 @@
 
 #include <QAbstractTableModel>
 
+#include <algorithm>
+
 using namespace viv;
 using namespace vivtest;
 
@@ -104,6 +106,7 @@ private slots:
     void insertingAColumnInTheMiddleKeepsTheOtherColumnState();
     void removingAColumnInTheMiddleKeepsTheOtherColumnState();
     void movingAColumnKeepsTheSortIndicatorAndTheFrozenSet();
+    void paneCacheIsUpToDateImmediatelyAfterAColumnInsert();
     void explicitPaneSpecsFollowColumnStructureChanges();
 };
 
@@ -186,6 +189,41 @@ void TestHeaderStructure::movingAColumnKeepsTheSortIndicatorAndTheFrozenSet()
     QCOMPARE(m_view->frozenColumns(), QVector<int>({2}));
     // ... and the sort indicator follows c to logical 0.
     QCOMPARE(m_view->horizontalHeaderGeometry()->sortIndicatorSection(), 0);
+}
+
+void TestHeaderStructure::paneCacheIsUpToDateImmediatelyAfterAColumnInsert()
+{
+    // P1-1 of the second review: the model handler mutated the header geometry first, and
+    // that emits geometryChanged synchronously - which rebuilds the pane cache from the
+    // *old* frozen set. The remap of the pane state happened afterwards, so every answer
+    // the cache gives (paneOfColumn, paneIndexOfColumn, the pane's column list, the column
+    // x derived from the pane prefix sums) stayed one structure change behind.
+    m_view->setFrozenColumns({0, 1}); // a and b
+    m_view->flushPendingRelayout();
+    QCOMPARE(m_view->panes().at(0).logicalColumns, QVector<int>({0, 1}));
+    QCOMPARE(m_view->paneIndexOfColumn(1), m_view->paneIndexOfColumn(0));
+
+    m_model->insertNewColumn(1, QStringLiteral("X")); // a X b c d e
+    m_view->flushPendingRelayout();
+
+    // The frozen set names the columns, so a and b are still frozen - now logical 0 and 2 -
+    // and the new column X is not. The cache has to agree immediately.
+    QCOMPARE(m_view->frozenColumns(), QVector<int>({0, 2}));
+    QCOMPARE(m_view->panes().at(0).logicalColumns, QVector<int>({0, 2}));
+    // The scrolling pane holds every non-frozen column; its *order* is visual order, which
+    // is what the new column's visual slot decides (see the P1-4 test below).
+    QVector<int> scrolling = m_view->panes().at(1).logicalColumns;
+    std::sort(scrolling.begin(), scrolling.end());
+    QCOMPARE(scrolling, QVector<int>({1, 3, 4, 5}));
+    QCOMPARE(m_view->paneIndexOfColumn(2), m_view->paneIndexOfColumn(0));
+    QVERIFY(m_view->paneIndexOfColumn(1) != m_view->paneIndexOfColumn(0));
+    QCOMPARE(m_view->paneIndexOfColumn(1), m_view->paneIndexOfColumn(3));
+
+    // The x of the newly inserted column is computed inside its own (scrolling) pane: a
+    // stale cache would have put it in the frozen pane's coordinate space instead.
+    const QRect scrollRect = m_view->panes().at(m_view->paneIndexOfColumn(1)).viewportRect;
+    QVERIFY(m_view->columnGeometry(1).viewportX >= scrollRect.x());
+    QVERIFY(m_view->columnGeometry(1).width > 0);
 }
 
 void TestHeaderStructure::explicitPaneSpecsFollowColumnStructureChanges()

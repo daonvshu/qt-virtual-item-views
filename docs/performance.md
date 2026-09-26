@@ -240,7 +240,7 @@ CTest 目标**跑一遍（6.5 s，Debug 下约 25 s），所以"优化 + NDEBUG 
   剩下的 1.4 ms / 次就是那次尾部 memmove（≈8 MB 的带宽代价），`QVector` 在这里已经贴着内存
   带宽跑：要再往下只能把可见行表换成 rope / 分块 / 隐式树，而那会改变公开类
   `TreeVisibilityIndex` 的成员布局，按 [abi.md](abi.md) §4 第 3 条属于 ABI 破坏 —— 因此它是
-  **下一个主版本**的议题，1.x 期间接受这个数字（决策见 [roadmap.md](roadmap.md) §5）。
+  **下一个主版本**的议题，1.x 期间接受这个数字（决策见 [roadmap.md](roadmap.md) §6）。
 * **Release 基线已采集（原文说"留到有实际性能诉求时再做"，2026-09-26 补上）**：§3 的 Debug 表下面
   是同一台机器的 Release 表（含 Release 的 28 个 CTest 目标），复跑就是
   `pwsh -File scripts/validate.ps1 -Release -Library Static` —— 脚本现在支持 `-Release`（独立

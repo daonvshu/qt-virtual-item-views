@@ -7,6 +7,7 @@
 #include <QList>
 #include <QModelIndex>
 #include <QPersistentModelIndex>
+#include <QPointer>
 #include <QSet>
 #include <QVector>
 #include <QtGlobal>
@@ -62,7 +63,9 @@ public:
     /// Hook for modelReset: resets the expansion state as well.
     void handleModelReset();
 
-    qsizetype visibleRowCount() const { return m_visibleRows.size(); }
+    /// Zero while there is no model - also when the model was deleted from under the view
+    /// (the pointer is watched, so the stale-visible-rows state cannot leak out).
+    qsizetype visibleRowCount() const { return m_model ? m_visibleRows.size() : 0; }
     /// Visible row of an item, or -1 when it is not visible.
     qsizetype visibleRowForIndex(const QModelIndex &index) const;
     QModelIndex indexAtVisibleRow(qsizetype row) const;
@@ -136,7 +139,9 @@ private:
     /// Visible row of an item, computed from the branch blocks (see the contract above).
     qsizetype visibleRowForKey(const QModelIndex &index) const;
 
-    QAbstractItemModel *m_model = nullptr;
+    /// Watched: the index is used standalone, so the business may delete the model before
+    /// the index (see the model lifetime contract in docs/api-stability.md).
+    QPointer<QAbstractItemModel> m_model;
     /// Persistent: the root names an *item*, so it survives inserts / removals /
     /// moves of its siblings instead of silently pointing at another item.
     QPersistentModelIndex m_rootIndex;

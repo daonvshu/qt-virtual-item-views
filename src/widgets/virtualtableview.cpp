@@ -158,11 +158,20 @@ VirtualTableView::VirtualTableView(QWidget *parent)
 VirtualTableView::~VirtualTableView()
 {
     // Teardown order matters. Cells are unbound first (they need the cell
-    // adapter), then every derived pane renderer - a widget pane header borrows
-    // the primary header's adapter, so it must be gone before that adapter is
-    // destroyed - then the primary renderers (which may own the header adapter),
-    // and only then the adapters themselves.
+    // adapter), then the materialized rows: the *base* destructor would release
+    // them, but by then this class has already deleted the owned table adapter -
+    // unbindWidget() on a freed adapter is a use-after-free (P0-1 of the second
+    // review: it crashed in VirtualItemView::recycleItem() under MSVC Debug). So the
+    // rows and the pool go first, while every adapter is still alive; the base pass
+    // then finds nothing left to release.
     recycleAllCells();
+    recycleAllItems();
+    if (WidgetRecycler *pool = recycler())
+        pool->clear();
+    // Every derived pane renderer next - a widget pane header borrows the primary
+    // header's adapter, so it must be gone before that adapter is destroyed - then the
+    // primary renderers (which may own the header adapter), and only then the adapters
+    // themselves.
     for (HeaderViewInterface *&paneHeader : m_paneHeaders) {
         deleteHeader(paneHeader);
     }
@@ -465,9 +474,15 @@ void VirtualTableView::onColumnsInserted(const QModelIndex &parent, int first, i
     // The inserted columns carry the default state; every column after them keeps
     // its own width / visibility / explicit size, and the frozen sets, the pane
     // specs and the sort indicator follow the columns they name.
+    //
+    // The pane state is remapped *before* the geometry: the geometry emits
+    // geometryChanged synchronously and that is what rebuilds the pane cache
+    // (updatePaneLayout()). Doing it the other way round left the cache one structure
+    // change behind, so paneOfColumn()/paneIndexOfColumn()/columnViewportX() answered
+    // with the layout from before the insert (P1-1 of the second review).
     const int count = qMax(0, last - first + 1);
-    m_columns->insertLogicalSections(first, count);
     m_panes.insertLogicalColumns(first, count);
+    m_columns->insertLogicalSections(first, count);
 }
 
 void VirtualTableView::onColumnsRemoved(const QModelIndex &parent, int first, int last)
@@ -475,8 +490,8 @@ void VirtualTableView::onColumnsRemoved(const QModelIndex &parent, int first, in
     if (parent.isValid())
         return;
     const int count = qMax(0, last - first + 1);
-    m_columns->removeLogicalSections(first, count);
     m_panes.removeLogicalColumns(first, count);
+    m_columns->removeLogicalSections(first, count);
 }
 
 void VirtualTableView::onColumnsMoved(const QModelIndex &parent, int start, int end,
@@ -487,8 +502,8 @@ void VirtualTableView::onColumnsMoved(const QModelIndex &parent, int start, int 
         return;
     }
     const int count = qMax(0, end - start + 1);
-    m_columns->moveLogicalSections(start, count, destinationColumn);
     m_panes.moveLogicalColumns(start, count, destinationColumn);
+    m_columns->moveLogicalSections(start, count, destinationColumn);
 }
 
 // ---------------------------------------------------------------------------

@@ -86,6 +86,8 @@ public:
     }
     void unbindWidget(QWidget *, const QModelIndex &) override
     {
+        if (destroyed)
+            ++unboundAfterDestruction;
         ++unbound;
         --liveWidgets;
         ++unboundTotal;
@@ -97,6 +99,8 @@ public:
     static bool destroyed;
     static int liveWidgets;
     static int unboundTotal;
+    /// Non-zero when the view called this method on an adapter it had already deleted.
+    static int unboundAfterDestruction;
     int bound = 0;
     int unbound = 0;
 };
@@ -104,6 +108,7 @@ public:
 bool OwnedTableAdapter::destroyed = false;
 int OwnedTableAdapter::liveWidgets = 0;
 int OwnedTableAdapter::unboundTotal = 0;
+int OwnedTableAdapter::unboundAfterDestruction = 0;
 
 class OtherTableAdapter : public TableWidgetAdapter
 {
@@ -245,6 +250,7 @@ class TestAdapterReplacement : public QObject
 private slots:
     void listAdapterReplacementNeverCrossesWidgetClasses();
     void ownedTableAdapterIsReleasedAfterUnbinding();
+    void destroyingTheViewUnbindsRowsBeforeItDeletesTheOwnedTableAdapter();
     void rowAndCellModeNeverShareWidgets();
     void headerAdapterReplacementNeverCrossesWidgetClasses();
     void replacingAWidgetHeaderDestroysItsPaneRenderers();
@@ -298,6 +304,33 @@ void TestAdapterReplacement::ownedTableAdapterIsReleasedAfterUnbinding()
     QVERIFY(OwnedTableAdapter::destroyed);
     QVERIFY(adapterB.bound > 0);
     QCOMPARE(adapterB.foreignWidgets, 0);
+}
+
+void TestAdapterReplacement::destroyingTheViewUnbindsRowsBeforeItDeletesTheOwnedTableAdapter()
+{
+    // P0-1 of the second review: ~VirtualTableView() deleted the owned table adapter and
+    // only then let the *base* destructor release the materialized rows - the final
+    // unbindWidget() therefore ran on a freed object (deterministic use-after-free; the
+    // first round only covered "replace the adapter before destroying the view").
+    OwnedTableAdapter::destroyed = false;
+    OwnedTableAdapter::liveWidgets = 0;
+    OwnedTableAdapter::unboundTotal = 0;
+    OwnedTableAdapter::unboundAfterDestruction = 0;
+
+    {
+        QStandardItemModel model(50, 3);
+        VirtualTableView table;
+        table.setModel(&model);
+        table.setUniformItemHeight(30);
+        table.setTableAdapter(new OwnedTableAdapter, true);
+        showView(&table);
+        QVERIFY(OwnedTableAdapter::liveWidgets > 0); // rows are materialized and bound
+    }
+
+    QVERIFY(OwnedTableAdapter::destroyed);
+    QVERIFY(OwnedTableAdapter::unboundTotal > 0);
+    QCOMPARE(OwnedTableAdapter::unboundAfterDestruction, 0); // no unbind on a dead adapter
+    QCOMPARE(OwnedTableAdapter::liveWidgets, 0);             // nothing stayed bound
 }
 
 void TestAdapterReplacement::rowAndCellModeNeverShareWidgets()

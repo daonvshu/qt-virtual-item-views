@@ -113,6 +113,14 @@ void VirtualHeaderView::connectGeometry(HeaderGeometry *geometry, bool connectSi
         connect(geometry, &HeaderGeometry::geometryChanged, this, [this]() { relayout(); });
         connect(geometry, &HeaderGeometry::sectionCountChanged, this, [this](int) { relayout(); });
         connect(geometry, &HeaderGeometry::offsetChanged, this, [this](qint64) { relayout(); });
+        // The sort indicator belongs to the geometry but is drawn by the section widget
+        // the business builds in bindSection(), so the change has to reach the sections
+        // that are already on screen (both the old and the new sorted one).
+        connect(geometry, &HeaderGeometry::sortIndicatorChanged, this,
+                [this](int, Qt::SortOrder) {
+                    rebindMaterializedSections(std::numeric_limits<int>::min(),
+                                               std::numeric_limits<int>::max());
+                });
     } else {
         disconnect(geometry, nullptr, this, nullptr);
     }
@@ -126,9 +134,29 @@ void VirtualHeaderView::setLabelModel(QAbstractItemModel *model)
         disconnect(m_labelModel, nullptr, this, nullptr);
     m_labelModel = model;
     if (m_labelModel) {
-        // Header labels changed: rebind the materialized sections.
+        // A rename touches only the named sections, so those are rebound in place. A
+        // structural change moves the logical identity of every section: the materialized
+        // widgets are recycled on the *about to* signal (unbound while their old identity
+        // is still the valid one, see recycleAllSections()) and acquired again afterwards.
+        // Relayout alone was not enough: it only binds newly acquired widgets, so an
+        // already materialized section kept the label and identity it was bound with
+        // (P0-3 of the second review).
         connect(m_labelModel, &QAbstractItemModel::headerDataChanged, this,
-                [this](Qt::Orientation, int, int) { relayout(); });
+                [this](Qt::Orientation orientation, int first, int last) {
+                    if (orientation != m_orientation)
+                        return;
+                    rebindMaterializedSections(first, last);
+                });
+        connect(m_labelModel, &QAbstractItemModel::columnsAboutToBeInserted, this,
+                [this](const QModelIndex &, int, int) { recycleAllSections(); });
+        connect(m_labelModel, &QAbstractItemModel::columnsAboutToBeRemoved, this,
+                [this](const QModelIndex &, int, int) { recycleAllSections(); });
+        connect(m_labelModel, &QAbstractItemModel::columnsAboutToBeMoved, this,
+                [this](const QModelIndex &, int, int, const QModelIndex &, int) {
+                    recycleAllSections();
+                });
+        connect(m_labelModel, &QAbstractItemModel::modelAboutToBeReset, this,
+                [this]() { recycleAllSections(); });
         connect(m_labelModel, &QAbstractItemModel::modelReset, this, [this]() { relayout(); });
         connect(m_labelModel, &QAbstractItemModel::columnsInserted, this,
                 [this](const QModelIndex &, int, int) { relayout(); });
@@ -138,6 +166,19 @@ void VirtualHeaderView::setLabelModel(QAbstractItemModel *model)
                 [this](const QModelIndex &, int, int, const QModelIndex &, int) { relayout(); });
     }
     relayout();
+}
+
+void VirtualHeaderView::rebindMaterializedSections(int first, int last)
+{
+    if (!m_adapter)
+        return;
+    for (auto it = m_sectionWidgets.cbegin(); it != m_sectionWidgets.cend(); ++it) {
+        if (it.key() < first || it.key() > last)
+            continue;
+        // Re-binding is also how the business learns about the change, so this is the
+        // contract for "the state of this section changed" (sort indicator included).
+        m_adapter->bindSection(it.value(), it.key());
+    }
 }
 
 void VirtualHeaderView::setSortInteractionEnabled(bool enabled)

@@ -4,6 +4,7 @@
 #include <virtualitemviews/tablepane.h>
 
 #include <QHeaderView>
+#include <QPointer>
 
 class QAbstractItemModel;
 
@@ -168,7 +169,9 @@ private:
     /// geometry's viewport offset when it follows the committed geometry.
     qint64 effectivePaneOffset() const;
 
-    HeaderGeometry *m_geometry = nullptr;
+    /// Non-owning collaborator of a public standalone header: watched, so a geometry the
+    /// business deletes first cannot be dereferenced (P0-2 of the second review).
+    QPointer<HeaderGeometry> m_geometry;
     /// True while the geometry is being applied to the header, so that the
     /// resulting QHeaderView signals do not write back into the geometry.
     bool m_applyingToHeader = false;

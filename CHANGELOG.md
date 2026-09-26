@@ -237,6 +237,51 @@
   只有一个滚动 pane 时逐像素不变。回归测试：
   `tst_tablepanes::scrollingPanesShareTheWidthProportionally`（已确认还原旧公式时该用例会失败）。
 
+### Fixed（第二轮代码审查 Wave A：生命周期 / 表头身份，2026-09-26）
+
+第二轮全量审查（`VirtualItemViews_Second_Full_Code_Review.md`，本地保留、不入库）列出 3 个 P0 +
+10 个 P1 + 4 个 P2。Wave A（崩溃 / 过期身份）四条的落地：
+
+* **`~VirtualTableView()` 先删 owned table adapter、基类才 unbind 已物化行（P0-1 UAF）**：
+  Row Widget Mode 下"自己拥有 table adapter 且销毁时还有已物化行"的路径会在**已释放**的 adapter 上
+  调 `unbindWidget()`。新增回归用例（`tst_adapterreplacement::destroyingTheViewUnbindsRowsBeforeItDeletesTheOwnedTableAdapter`）
+  在旧代码下**直接崩溃**（MSVC Debug：`VirtualItemView::recycleItem()` 里的访问违例，调用栈就是审查
+  推演的 `~VirtualTableview → recycleAllItems → m_adapter->unbindWidget`）。现在派生析构的第一
+  阶段就 `recycleAllCells(); recycleAllItems(); recycler()->clear();`，即"所有 adapter 都还活着
+  时"把行与池清干净，基类那一趟就是空操作。
+* **Tree 与 Header 的非 owning QObject 协作者仍是裸指针（P0-2）**：
+  - `TreeVisibilityIndex::m_model` 改成 `QPointer`：模型被删除后 `visibleRowCount()` 返回 0、
+    `indexAtVisibleRow()` 返回无效索引、`rebuild()` 顺带清掉展开状态与 root；`depth()` /
+    `isExpanded()` 也先查模型（构造 `QPersistentModelIndex` 会**注册**到模型上，拿一个过期索引进来
+    就是一次悬空解引用）。
+  - `VirtualHeaderView::m_labelModel` / `m_geometry` 与 `NativeHeaderView::m_geometry` 改成
+    `QPointer`：standalone 表头在业务先删 model / geometry 之后不再解引用悬空指针。
+  实测（修复前）：树在模型删除后仍报 23 个"可见行"；standalone Widget Header 的 `labelModel()`
+  仍返回悬空指针，随后在 `QList` 里触发 Qt 的 `ASSERT: size_t(d.size) <= MaxSize` 致命断言。
+  回归测试：`tst_modellifetime::deletingTheModelBehindATreeIsSafe` /
+  `deletingTheLabelModelBehindAWidgetHeaderIsSafe` / `deletingTheGeometryBehindAStandaloneHeaderIsSafe`。
+  **内部成员类型变化**（`TreeVisibilityIndex` 与两个表头渲染器的私有成员）：按
+  [docs/abi.md](docs/abi.md) §4 第 3 条属于 ABI 变化，因为 1.0 仍未打 tag，记在这里作为
+  1.0 定稿前的内部收口。
+* **Widget Header 不会重新 bind 已存在的 section（P0-3）**：`headerDataChanged` / 列结构变化 /
+  `modelReset` 都只是 `relayout()`，而 `relayout()` 只 bind **新 acquire** 的控件 —— 重命名一列后
+  屏幕上的 section 仍显示旧标题，结构变化后 section 与逻辑列身份错位。
+  现在：`headerDataChanged` 只重绑被点名的 logical 区间；`columnsAboutToBeInserted/Removed/Moved`
+  与 `modelAboutToBeReset` 先 `recycleAllSections()`（在**旧身份**仍有效时 unbind），随后的
+  inserted/removed/moved/reset 再 `relayout()` 重新 acquire + bind；几何的
+  `sortIndicatorChanged` 也重绑已物化 section（排序箭头这类状态由 `bindSection()` 画）。
+  `HeaderWidgetAdapter` 的契约随之写明：`bindSection()` 会对**已绑定**的同一个控件再次调用，
+  `unbindSection()` 只是回收钩子。回归测试：
+  `tst_virtualheaderview::modelChangesRebindTheMaterializedSections`、
+  `sortIndicatorChangesRebindTheSections`（修复前：标题保持 "c1"、结构变化后文本错位）。
+* **列结构变更时 pane 状态的 remap 顺序反了（P1-1）**：模型处理器先改 `HeaderGeometry`（它同步
+  发 `geometryChanged` → `updatePaneLayout()` 重建 pane 缓存），之后才 remap `TablePaneLayout` 里
+  的 frozen 集合 / 显式 pane 规格 —— 于是缓存里的 pane 归属、每列的 pane 槽位与前缀和都是"上一次
+  结构"的答案。现在 insert/remove/move 三个路径都**先 remap pane 状态、再改几何**（几何的
+  `geometryChanged` 就是那次统一重建）。回归测试：
+  `tst_headerstructure::paneCacheIsUpToDateImmediatelyAfterAColumnInsert`（修复前 pane 的列集合
+  仍是 `{0,1}`，正确的 `{0,2}` 要等下一次结构变化）。
+
 ### Fixed（GCC / Clang 可移植性：MinGW 实测，2026-09-26）
 
 审查的 ABI 矩阵里"GCC / Clang / MinGW"一直是未实测项。装上 Qt 安装器自带的 MinGW kit 之后，

@@ -193,7 +193,29 @@ Wave 1 新增的回归测试：`tst_adapterreplacement`（8 例）、`tst_modell
 于是"能不能打 v1.0 tag"不再由这批审查条目决定 —— 剩下的两项都不改变对外契约。tag 由用户手动
 打（见决策表）。
 
-## 4. 每一步的完成定义
+## 4. 第二轮代码审查与修复（2026-09-26）
+
+第二轮全量审查（`VirtualItemViews_Second_Full_Code_Review.md`）在"上一轮 18 条 P0/P1 已修"的
+基础上给出 3 个新 P0、10 个新 P1、4 个 P2，并按 Wave A（崩溃 / 过期身份）、Wave B（HeaderGeometry
+语义）、Wave C（超宽表性能）排序。审查方本机没有 Qt，结论是"静态推演 + 信号顺序推演"，所以每一条
+都先用一个**会失败的回归测试**在本机复现（或确认现状已满足）再改：
+
+| 批次 | 内容 | 状态 |
+| --- | --- | --- |
+| **Wave A 崩溃 / 过期身份** | P0-1 `~VirtualTableView` 的 owned adapter UAF（复现即崩溃）、P0-2 Tree / Header 的非 owning QObject 协作者改 `QPointer`、P0-3 Widget Header 真正重绑已物化 section（重命名 / 结构变化 / 排序）、P1-1 列结构变更时 pane remap 顺序（缓存落后一次结构） | ✅ |
+| **Wave B HeaderGeometry 语义** | P1-4 中间插入的新列放到后继列的视觉槽位、P1-5 `moveLogicalSections()` 补 `orderRevision`、P1-6 sort indicator 的结构性 remap 补信号、P1-7 `setSectionCount()` 缩小时清理越界排序指示器、P1-3 min/max 属性变化即使没有 clamp 也要发通知、P1-2 Row Widget Mode 列结构变化后重绑可见行、P2-2/P2-3 对应回归测试 | 待做 |
+| **Wave C 超宽表性能** | P1-8 pane-filtered Header 的 O(N²)（成员缓存 + 二分）、P1-9 非主滚动组走快路径、P1-10 NativeHeader 的 granular + full sync 重复、P2-4 文档写明 NativeHeader 的 int 几何边界、frozen WidgetHeader benchmark | 待做 |
+
+Wave A 的实测证据（修复前的失败形态）：
+
+* P0-1：`tst_adapterreplacement` 的新用例在旧代码下**崩溃**（`VirtualItemView::recycleItem()`
+  访问违例，调用栈 = 审查的推演）。
+* P0-2：树在模型删除后仍报 23 个可见行；standalone Widget Header 的 `labelModel()` 仍返回悬空
+  指针并触发 Qt 的 `ASSERT: size_t(d.size) <= MaxSize`。
+* P0-3：`headerDataChanged` 后 section 仍显示旧标题；结构变化后 section 文本与逻辑列身份错位。
+* P1-1：插入一列后 pane 的列集合仍是 `{0,1}`（应为 `{0,2}`），要等下一次结构变化才对。
+
+## 5. 每一步的完成定义
 
 沿用既有节奏，走完才算完成：
 
@@ -204,7 +226,7 @@ Wave 1 新增的回归测试：`tst_adapterreplacement`（8 例）、`tst_modell
 5. 同步 [features.md](features.md) 能力表、README 概览与本文件。
 6. 一个独立提交。
 
-## 5. 决策记录
+## 6. 决策记录
 
 | 日期 | 决定 | 理由 |
 | --- | --- | --- |
@@ -244,3 +266,4 @@ Wave 1 新增的回归测试：`tst_adapterreplacement`（8 例）、`tst_modell
 | 2026-09-25 | 拖动期间"邻居让位"也走缓动，并且与换序过渡**同一套曲线与时长**（OutCubic，默认 300 ms；关闭动画时即刻） | 瞬移的让位看起来像跳帧：拖动是被拖列跟随光标、其他列让出插入位的一次连续运动。让位与过渡用同一个旋钮，手感才会一致（要更快就整体调小时长） |
 | 2026-09-26 | 树的可见行表**这一个 1.x 版本内**保留扁平 `QVector`（expand 改成原地 splice + memmove），rope / 分块留到下一个主版本 | 审查的 P2-10 只说"每次 expand 都会整份拷贝"：拷贝本身已经消掉（原来两趟整表 `mid()` + 一次分配，现在一次 `resize` + 一次尾部 memmove），剩下的尾部搬移在 100 万可见行上是 ~1.5 ms / 次（`bench_listview --tree` 的新场景）。再往下只能换 rope / 分块 / 隐式树，而那会**改变 `TreeVisibilityIndex`（B 层公开类）的成员布局**，按 [abi.md](abi.md) §4 第 3 条就是 ABI 破坏 —— 换句话说它不能用 1.x 的次版本发布，只能进主版本。1.x 期间先接受这 1.5 ms |
 | 2026-09-26 | 审查提到的 CI 只提交**可复制配置**（[ci.md](ci.md)），不提交 `.github/workflows/` | 本机没有 runner / 账号 / 网络：写一个没跑过的 workflow 会给出一个假的"CI 通过"印象，而 `scripts/validate.ps1` 是本机真跑过的入口。拿到 runner 之后把 ci.md 里的 YAML 存成 workflow 即可，顺带把 abi.md 支持矩阵的"未实测"改成实测 |
+| 2026-09-26 | 第二轮审查的每条 P0/P1 都先用"会失败的回归测试"在本机复现，再改；审查方只做静态推演 | 三条 P0 里有两条在复现时**直接崩溃**（Table 析构 UAF、standalone 表头解引用已删几何），说明静态推演与真实运行之间仍有差距；把"复现 → 修 → 反向验证"固定成流程，比照着结论改代码可靠 |
