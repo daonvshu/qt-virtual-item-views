@@ -278,6 +278,16 @@ public:
     bool restoreHeaderState(const QByteArray &state);
 
     // -- adapter -------------------------------------------------------------
+    /// Typed entry point, and the reason it exists: the table *hides* the inherited
+    /// `setAdapter(WidgetAdapter *)`. The inherited setter only stored the base adapter,
+    /// while every row materialization reads the table adapter - so
+    /// `table.setAdapter(&tableAdapter)` compiled, reported a non-null `adapter()` and
+    /// still created no row widget at all (P1 of the third review). A derived overload
+    /// with the same name hides the base one, so `setAdapter(TableWidgetAdapter *)`
+    /// configures the table exactly like setTableAdapter(). List and Tree keep their
+    /// own `setAdapter()`; the three views now read the same call.
+    void setAdapter(TableWidgetAdapter *adapter, bool takeOwnership = false);
+    /// Alias of setAdapter(); kept because the examples and the docs use it.
     void setTableAdapter(TableWidgetAdapter *adapter, bool takeOwnership = false);
     TableWidgetAdapter *tableAdapter() const;
 

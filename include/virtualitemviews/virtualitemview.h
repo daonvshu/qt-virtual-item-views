@@ -452,6 +452,13 @@ protected:
 
     // -- kernel API for subclasses -------------------------------------------
     LayoutPolicy *layoutPolicy() const { return m_layout; }
+    /// Replaces the layout policy. This is an **initialization-time** hook: List, Table and
+    /// Tree create their policy in the constructor, hand it over here and keep their own
+    /// typed pointer to it (`m_listLayout` / `m_rowLayout`), so replacing the policy later
+    /// would leave those caches dangling. A subclass that needs its own policy passes it in
+    /// its constructor (or, for a direct VirtualItemView subclass that caches nothing, uses
+    /// this as the only place the policy is set) - it is not a runtime swap
+    /// (P1 of the third review).
     void setLayoutPolicy(LayoutPolicy *policy, bool takeOwnership = true);
     /// Rebuilds the layout item count from the model (after a model change).
     void resetLayoutForNewModel();

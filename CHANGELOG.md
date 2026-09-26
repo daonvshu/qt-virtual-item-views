@@ -282,6 +282,32 @@
   `tst_headerstructure::paneCacheIsUpToDateImmediatelyAfterAColumnInsert`（修复前 pane 的列集合
   仍是 `{0,1}`，正确的 `{0,2}` 要等下一次结构变化）。
 
+### Changed（第三轮代码审查 Wave 3a：API 统一与文档同步，2026-09-26）
+
+第三轮审查的 Wave 3 里有两件不需要拍板的事先做掉，ABI 策略（PIMPL 化 vs 只承诺源码 API）
+单独留待决定，见 [roadmap.md](roadmap.md) §6 与 [abi.md](abi.md)：
+
+* **`VirtualTableView::setAdapter()` 不再是"编译得过但什么都不做"的入口（P1）**：表格公开继承
+  `VirtualItemView::setAdapter(WidgetAdapter *)`，而它只写基类 `m_adapter`，行物化读的却是
+  `m_tableAdapter` —— 于是 `table.setAdapter(&tableAdapter)` 能编译、`adapter()` 非空，
+  却一个行控件都不创建。现在表格提供一个同名的 typed 重载
+  `setAdapter(TableWidgetAdapter *, bool takeOwnership = false)`，按 C++ 的名字隐藏规则挡掉基类
+  那个重载，三个视图的主入口因此统一成 `setAdapter(...)`（List / Tree 本来就是自己的类型）；
+  `setTableAdapter()` 保留为别名，示例与文档不用改。内部 `setTableAdapter()` 里那句对基类
+  setter 的调用改成显式限定 `VirtualItemView::setAdapter(...)`（否则会递归回自己）。
+  回归测试：`tst_virtualtableview::setAdapterConfiguresTheTableNotJustTheBase`（还原旧实现时
+  该用例在 `tableAdapter()` 上失败）。
+* **`setLayoutPolicy()` 明确成"初始化期钩子"**：List / Table / Tree 都在构造期把自己的策略指针
+  缓存成成员（`m_listLayout` / `m_rowLayout`），运行时替换策略会让这些缓存悬空。审查给了两个
+  选项（写成"仅初始化期使用"，或给 Table 补一套替换契约），1.0 前选前者：`virtualitemview.h`
+  现在把这条写清楚（B 层子类契约）。
+* **文档 drift 同步（P1/§11）**：`model-signals.md` 的 Table 列表格重写成实际顺序
+  （重绑已物化行 → pane 逻辑 remap → 几何结构变化 + sort guard，含 `modelReset` 的列收口）；
+  `ci.md` 开头那句"Linux / GCC / Clang / ASan 未实测"改成"Windows 上 GCC/Clang/ASan/UBSan
+  已实测，Linux/macOS 未实测"；`api-stability.md` 里那条"公开签名不出现 `QVector<int>`"
+  与实现不符，改成真正的约定"公开容器统一写 `QVector<T>`"（Qt 6 里它是 `QList` 的别名，
+  Qt 5 里是独立类型，混用会让同一份业务代码代入不同签名集）。
+
 ### Fixed（第三轮代码审查 Wave 2：超宽表收尾，2026-09-26）
 
 第二轮审查把"结构性 pass 与滚动 pass"分开之后，第三轮又指出三处仍然按**总列数**付费的地方

@@ -461,6 +461,7 @@ private slots:
     void nativeHeaderStaysInSyncWithEveryGeometryChange();
     void columnStructureChangesRebindTheRowWidgets();
     void columnZeroChangesKeepTheRowIdentityCanonical();
+    void setAdapterConfiguresTheTableNotJustTheBase();
     void columnResizeTouchesMaterializedRowsOnly();
     void geometryIsTheSingleAuthority();
     void columnMoveFollowsTheGeometry();
@@ -766,6 +767,30 @@ void TestVirtualTableView::columnZeroChangesKeepTheRowIdentityCanonical()
     view.flushPendingRelayout();
     checkCanonical("move from 0");
     QCOMPARE(identityOf(1), model.index(1, 0));
+}
+
+void TestVirtualTableView::setAdapterConfiguresTheTableNotJustTheBase()
+{
+    // P1 of the third review: VirtualTableView inherited setAdapter(WidgetAdapter *),
+    // which only stored the *base* adapter - while the recycler factory and every row
+    // materialization read m_tableAdapter. That call therefore compiled, reported
+    // adapter() != nullptr and materialized nothing at all. The table now hides the
+    // inherited overload with its own typed setAdapter(TableWidgetAdapter *), so the
+    // call the docs of List/Tree/Table have in common does the right thing here too.
+    BigTableModel model(20, 3, this);
+    RecordingRowAdapter adapter;
+    VirtualTableView view;
+    view.setAdapter(&adapter);              // TableWidgetAdapter * -> the typed overload
+    view.setUniformItemHeight(kRowHeight);
+    view.setDefaultColumnWidth(kColumnWidth);
+    view.setModel(&model);
+    showView(&view, QSize(kViewWidth, kViewHeight));
+    view.flushPendingRelayout();
+
+    QCOMPARE(view.tableAdapter(), &adapter);   // the table adapter really is set...
+    QCOMPARE(view.adapter(), &adapter);        // ...and the kernel sees the same object
+    QVERIFY(adapter.bound > 0);                // ...so rows are materialized
+    QVERIFY(view.materializedItemCount() > 0);
 }
 
 void TestVirtualTableView::columnResizeTouchesMaterializedRowsOnly()

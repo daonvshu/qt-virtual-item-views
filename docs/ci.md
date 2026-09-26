@@ -6,9 +6,11 @@ configure → 构建 → CTest → 示例 → 基准不变量 → 安装 + 消�
 —— 一个绿的 CI 徽章只有在它真的跑过之后才有意义。所以这里留下**可以直接复制**的配置与踩过的
 环境坑，拿到 runner（或 GitHub 账号）时把 YAML 存成 `.github/workflows/ci.yml` 即可。
 
-> 本地已实测的是 Windows + MSVC 19.50 + Qt 5.15.2 / 6.11.2 × 静态 / 动态四种组合，
-> 28 个 CTest 目标 + 12 个示例 + 消费端冒烟全绿；Linux / GCC / Clang / ASan 未实测
-> （见 [abi.md](abi.md) §5 的支持矩阵）。
+> 本地已实测的是 **Windows**：MSVC 19.50 + Qt 5.15.2 / 6.11.2 × 静态 / 动态四种组合
+> （28 个 CTest 目标 + 12 个示例 + 消费端冒烟全绿），MinGW 的 **GCC 13.1 / GCC 8.1 /
+> llvm-mingw Clang 17.0.6** 三个 kit（Debug + Release），以及 **MSVC ASan** 与
+> **llvm-mingw UBSan**（见 §5 与 [abi.md](abi.md) §5 的支持矩阵）。
+> **Linux / macOS 未实测** —— 那需要一台 runner；下表里的 `ubuntu-*` job 就是为此准备的。
 
 ## 1. 该跑的 job
 

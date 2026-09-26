@@ -29,8 +29,11 @@
 4. **所有权必须在签名里可见**：`takeOwnership = false` 是默认值；`takeOwnership = true`
    表示"我接管、我会删"。有所有权的重载不能悄悄把它交给别人。
 5. **诊断接口不写进业务代码**：C 层随时可能改名，业务依赖它们就等于自愿承担破坏性变更。
-6. **Qt 版本差异不外泄**：公开签名不出现 `QList<int>`/`QVector<int>` 这类在两代 Qt 里
-   不同的类型（`onDataChanged` 那种私有槽除外），见 README 的兼容约定表。
+6. **Qt 版本差异不外泄**：容器类型统一写 **`QVector<T>`**。它在两代 Qt 里都存在，但含义
+   不同 —— Qt 6 把 `QVector` 别名到 `QList`（同一类型），Qt 5 里两者是**不同类型**，
+   所以签名里混用 `QList<T>` 会让同一份业务代码在两个 Qt 大版本下代入不同的类型集
+   （`include/virtualitemviews/sizeindex.h` 里就有一处显式注释说明为什么写 `QVector`）。
+   `onDataChanged()` 那种私有槽不受此约束。
 
 ## 3. 复核清单（2026-09-25，roadmap 3a）
 

@@ -21,11 +21,27 @@
 
 ## Table 的列信号
 
-| 信号 | HeaderGeometry | 说明 |
+三件事按固定顺序做，顺序本身是契约（第二轮审查 P1-1 / P1-2，第三轮审查重新确认）：
+
+1. **先重绑已物化的行**（`rebindMaterializedRows()`）：列结构变化不改行身份，但业务行控件的
+   schema（"一列一个 `ColumnHost`"）刚刚变了，`bindWidget()` 是业务唯一能感知这件事的钩子。
+2. **再 remap pane 状态**（`TablePaneLayout::insert/remove/moveLogicalColumns()`）：冻结集合、
+   显式 pane 规格、每列的 pane 槽位与前缀和都跟着列走。
+3. **最后改几何**（`HeaderGeometry::insert/remove/moveLogicalSections()`）：几何同步发
+   `geometryChanged`，那一次信号就是 pane 缓存的统一重建点。反过来做会让缓存落后一次结构变化
+   （`paneOfColumn()` / `columnViewportX()` 仍按插入前的布局回答）。
+
+排序指示器指名的是某一列，remap 可能让它改名或消失：几何会在 `sortIndicatorChanged` 里如实上报，
+而表格在这三条路径上用 `m_sortGuard` 把这次"结构性改名"和"用户要求排序"区分开 —— 后者才会去
+`model->sort()`。
+
+| 信号 | 顺序 | 说明 |
 | --- | --- | --- |
-| `columnsInserted` / `columnsRemoved` / `modelReset` | `setSectionCount(columnCount())` | 新列使用 `defaultSectionSize`，已有列的尺寸与隐藏状态保留 |
-| `columnsMoved` | `moveLogicalSections(start, count, destination)` | 尺寸与隐藏状态随列移动，视觉顺序按同一置换重映射 |
-| `headerDataChanged` | — | QHeaderView 自行重绘，geometry 无需变化 |
+| `columnsInserted` | 重绑行 → `insertLogicalColumns()` → `insertLogicalSections(first, count)` | 新列使用 `defaultSectionSize`；已有列的尺寸与隐藏状态保留；排序与冻结集合按列改名 |
+| `columnsRemoved` | 重绑行 → `removeLogicalColumns()` → `removeLogicalSections(first, count)` | 被删列从 pane 与几何里同时消失；指名它的排序指示器随之清理 |
+| `columnsMoved` | 重绑行 → `moveLogicalColumns()` → `moveLogicalSections(start, count, destination)` | 尺寸与隐藏状态随列移动，视觉顺序按同一置换重映射 |
+| `modelReset` | 行走通用路径（`resetItems()` → `resetLayoutForNewModel()`），列由 `setSectionCount(columnCount())` 收口 | 列状态按"新模型"重建；冻结集合与显式 pane 规格按列号保留，越界的列号在下一次 pane 重建时自然消失（pane 只保留几何里存在的列） |
+| `headerDataChanged` | — | 表头渲染器自己重绑被点名的区间（Widget 表头）或 QHeaderView 自行重绘（native） |
 
 ## 设计要点
 

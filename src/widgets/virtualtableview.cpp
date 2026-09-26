@@ -1472,6 +1472,13 @@ bool VirtualTableView::restoreHeaderState(const QByteArray &state)
 // Adapter
 // ---------------------------------------------------------------------------
 
+void VirtualTableView::setAdapter(TableWidgetAdapter *adapter, bool takeOwnership)
+{
+    // The inherited VirtualItemView::setAdapter(WidgetAdapter *) is hidden by this
+    // overload on purpose (P1 of the third review); setTableAdapter() is the real one.
+    setTableAdapter(adapter, takeOwnership);
+}
+
 void VirtualTableView::setTableAdapter(TableWidgetAdapter *adapter, bool takeOwnership)
 {
     if (m_tableAdapter == adapter) {
@@ -1486,7 +1493,9 @@ void VirtualTableView::setTableAdapter(TableWidgetAdapter *adapter, bool takeOwn
         previous = nullptr;
     m_ownTableAdapter = false;
     m_tableAdapter = adapter;
-    setAdapter(adapter, false); // the kernel uses the same adapter
+    // Qualified on purpose: the unqualified name would find this class's typed overload
+    // above and recurse into setTableAdapter(). The kernel reads the base adapter.
+    VirtualItemView::setAdapter(adapter, false);
     delete previous;
     m_ownTableAdapter = takeOwnership;
 }
