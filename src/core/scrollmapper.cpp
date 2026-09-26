@@ -6,10 +6,6 @@
 
 namespace viv {
 
-namespace {
-constexpr qint64 kRoundedValueLimit = qint64(1) << 52;
-}
-
 void ScrollMapper::setExtents(qint64 contentExtent, int viewportExtent)
 {
     m_contentExtent = qMax<qint64>(0, contentExtent);

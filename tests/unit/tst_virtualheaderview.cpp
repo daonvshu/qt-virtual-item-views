@@ -214,7 +214,10 @@ void TestVirtualHeaderView::dragOnASectionEdgeResizesIt()
     QTest::mousePress(m_header, Qt::LeftButton, Qt::NoModifier, QPoint(edgeX, kHeaderHeight / 2));
     // QTest::mouseMove does not carry the pressed button in Qt 5, so the move is
     // sent explicitly for both Qt versions.
-    QMouseEvent move(QEvent::MouseMove, QPointF(edgeX + 40, kHeaderHeight / 2), Qt::NoButton,
+    // The six argument form (with the global position) exists in Qt 5 and Qt 6; the
+    // five argument one is deprecated in Qt 6 (it has no global position).
+    const QPointF local(edgeX + 40, kHeaderHeight / 2);
+    QMouseEvent move(QEvent::MouseMove, local, m_header->mapToGlobal(local.toPoint()), Qt::NoButton,
                      Qt::LeftButton, Qt::NoModifier);
     QApplication::sendEvent(m_header, &move);
     QTest::mouseRelease(m_header, Qt::LeftButton, Qt::NoModifier,

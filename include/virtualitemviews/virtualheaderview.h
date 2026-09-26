@@ -85,10 +85,10 @@ public:
     /// Resizing a section, scrolling and pane changes stay immediate: those are the
     /// cases where the body *does* follow every frame (§24), so animating the
     /// header alone would tear header and body apart.
-    void setSectionAnimationEnabled(bool enabled);
+    void setSectionAnimationEnabled(bool enabled) override;
     bool sectionAnimationEnabled() const { return m_animationEnabled; }
     /// Duration of the visual transition in milliseconds; 0 disables it as well.
-    void setSectionAnimationDuration(int ms);
+    void setSectionAnimationDuration(int ms) override;
     int sectionAnimationDuration() const { return m_animationDuration; }
     /// One-shot request for the next committed order change (§23): the renderer
     /// records where its sections are now and slides them to the new order. Without

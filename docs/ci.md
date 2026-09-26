@@ -16,6 +16,7 @@ configure → 构建 → CTest → 示例 → 基准不变量 → 安装 + 消�
 | --- | --- | --- |
 | `windows-msvc-qt6` | 主平台回归 | `scripts/validate.ps1` 一把梭（含库形态 × 安装消费端） |
 | `windows-msvc-release` | Release 构建 + Release 基准（审查要求的 "Release benchmark smoke"） | `scripts/validate.ps1 -Release -Library Static`，本机已实跑：两个 Qt 版本 14 步全绿 |
+| `windows-mingw-gcc` / `-clang` | Windows 上的 GCC / Clang（审查要求的 GNU 工具链覆盖） | `scripts/validate.ps1 -MinGW -Library Static`，本机已实跑：三个 kit（GCC 13.1 / Clang 17.0.6 / GCC 8.1）Debug + Release 各 21 步全绿 |
 | `ubuntu-gcc-qt6` | 开源常见组合 | Qt 6 走 apt（`qt6-base-dev`），只有 Core/Gui/Widgets/Test |
 | `ubuntu-gcc-qt6-asan` | ASan + UBSan | `-fsanitize=address,undefined`，Debug。**ASan 部分本机已在 MSVC 上实跑**（见 §5），UBSan 需要 GCC/Clang |
 | `ubuntu-gcc-qt5` | 老版本回归 | 只在 runner 能稳定拿到 Qt 5.15 时加；拿不到就先不写 |
@@ -47,6 +48,10 @@ jobs:
       - name: Release（构建 + CTest + 示例 + 基准 + 安装消费端）
         shell: pwsh
         run: pwsh -NoProfile -File scripts/validate.ps1 -Release -Library Static -QtBin "$env:QT_ROOT_DIR/bin"
+      - name: MinGW（GCC + Clang，Qt 安装器自带的 kit）
+        shell: pwsh
+        # 需要 runner 上装有 Qt 的 mingw / llvm-mingw kit 与对应工具链；路径用 -MinGWKits 覆盖。
+        run: pwsh -NoProfile -File scripts/validate.ps1 -MinGW -Library Static
 
   ubuntu-qt6:
     runs-on: ubuntu-latest
@@ -149,3 +154,26 @@ pwsh -File scripts/validate.ps1 -Release -Library Static
 它用独立构建树 `cmake-build-release-qt{6,5}` 跑 configure → `all` → 28 个 CTest 目标 →
 12 个示例 → 三档基准 → 安装 + 消费端。实测两个 Qt 版本共 14 步全绿；数字（Debug/Release 对照）
 记在 [performance.md](performance.md) §3 的 Release 表。
+
+### GCC / Clang（Windows 上的 MinGW kit，2026-09-26）
+
+同一个脚本还有 `-MinGW`：三个 kit 各自建树（`cmake-build-{debug,release}-mingw-<kit>`），
+不导入 vcvars，而是把 kit 自己的编译器 bin 放到 PATH 前面、并把
+`-DCMAKE_CXX_COMPILER=<kit>/g++|clang++` 传给主工程与安装消费端：
+
+```powershell
+pwsh -File scripts/validate.ps1 -MinGW -Library Static            # Debug
+pwsh -File scripts/validate.ps1 -MinGW -Library Static -Release   # Release
+```
+
+| kit | Qt | 编译器 | 结果 |
+| --- | --- | --- | --- |
+| `gcc13-qt6` | 6.11.2 / `mingw_64` | GCC 13.1.0 | Debug 与 Release 各 7 步全绿（构建 / 28 CTest / 12 示例 / 3 基准 / 安装 / 消费端），`-Wall -Wextra -Wpedantic` 零警告 |
+| `clang17-qt6` | 6.11.2 / `llvm-mingw_64` | Clang 17.0.6 | 同上，零警告 |
+| `gcc81-qt5` | 5.15.2 / `mingw81_64` | GCC 8.1.0 | 同上（本机最老的组合） |
+
+这一轮 GCC/Clang 报出并修掉的问题都是 MSVC 看不见的：MSVC 专有的 `long long(x)` 函数式转换
+（30 处，改成 `static_cast`）、MinGW 8.1 头文件里只有 `GetProcessMemoryInfo`（`K32…` 别名需要
+`_WIN32_WINNT`，所以基准改为 `GetProcessMemoryInfo` + `psapi`）、3 处缺 `override`、1 处未用常量、
+1 处 Qt 6 弃用的 `QMouseEvent` 构造。**Linux 仍然未实测**（那需要一台 Linux 机器或 runner：
+平台相关的字体查找、D-Bus、X11/Wayland 坐标都不在 Windows MinGW 的覆盖范围内）。

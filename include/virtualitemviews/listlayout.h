@@ -23,7 +23,7 @@ public:
     Qt::Orientation orientation() const override { return m_orientation; }
     void setOrientation(Qt::Orientation orientation);
 
-    SizeIndex *sizeIndex() const { return m_sizeIndex; }
+    SizeIndex *sizeIndex() const override { return m_sizeIndex; }
     /// Replaces the size index. The previous owned index is deleted.
     void setSizeIndex(SizeIndex *sizeIndex, bool takeOwnership = true) override;
 

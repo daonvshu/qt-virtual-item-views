@@ -151,7 +151,10 @@ quint64 processWorkingSetBytes()
 {
 #ifdef Q_OS_WIN
     PROCESS_MEMORY_COUNTERS counters{};
-    if (K32GetProcessMemoryInfo(GetCurrentProcess(), &counters, sizeof(counters)))
+    // GetProcessMemoryInfo (psapi) rather than K32GetProcessMemoryInfo (kernel32):
+    // older MinGW-w64 headers only declare the K32 name when _WIN32_WINNT is set, and
+    // both report the same numbers.
+    if (GetProcessMemoryInfo(GetCurrentProcess(), &counters, sizeof(counters)))
         return quint64(counters.WorkingSetSize);
 #endif
     return 0;
@@ -556,10 +559,10 @@ bool runTableScenario(const char *name, viv::VirtualTableView::MaterializationMo
     const bool cellMode = mode == viv::VirtualTableView::MaterializationMode::CellWidgets;
     std::printf("\nTable: %s\n", name);
     report("open (setModel + show + layout)", openMs);
-    reportCount("materialized rows", long long(view.materializedItemCount()));
-    reportCount("materialized cells", long long(view.materializedCellCount()));
-    reportCount("widgets created", long long(cellMode ? cellAdapter.created : rowAdapter.created));
-    reportCount("visible columns (visual)", long long(view.visibleColumns().count()));
+    reportCount("materialized rows", static_cast<long long>(view.materializedItemCount()));
+    reportCount("materialized cells", static_cast<long long>(view.materializedCellCount()));
+    reportCount("widgets created", static_cast<long long>(cellMode ? cellAdapter.created : rowAdapter.created));
+    reportCount("visible columns (visual)", static_cast<long long>(view.visibleColumns().count()));
     reportMemory("working set", baseline);
 
     // Warm up away from the model start so that the materialization window has
@@ -596,8 +599,8 @@ bool runTableScenario(const char *name, viv::VirtualTableView::MaterializationMo
 
     const int createdAfter = rowAdapter.created + cellAdapter.created;
     reportCount("widgets created while interacting", createdAfter - createdBefore);
-    reportCount("widgets destroyed", long long(view.destroyedWidgetCount()));
-    reportCount("pooled widgets", long long(view.pooledWidgetCount()));
+    reportCount("widgets destroyed", static_cast<long long>(view.destroyedWidgetCount()));
+    reportCount("pooled widgets", static_cast<long long>(view.pooledWidgetCount()));
 
     const viv::VirtualViewStats stats = view.stats();
     const bool verticalFree = createdByVerticalScroll == 0;
@@ -650,9 +653,9 @@ bool runWideTreeScenario(PathEncodedTreeModel &model, int steps, const char *lab
     const int createdAfterOpen = adapter.created;
     std::printf("\nTree: wide tree (%s)\n", label);
     report("open (setModel + show + layout)", openMs);
-    reportCount("logical nodes (whole tree)", long long(model.nodeCount()));
-    reportCount("visible rows (collapsed)", long long(view.visibleRowCount()));
-    reportCount("materialized items", long long(view.materializedItemCount()));
+    reportCount("logical nodes (whole tree)", static_cast<long long>(model.nodeCount()));
+    reportCount("visible rows (collapsed)", static_cast<long long>(view.visibleRowCount()));
+    reportCount("materialized items", static_cast<long long>(view.materializedItemCount()));
     reportCount("widgets created", createdAfterOpen);
     reportMemory("working set", baseline);
 
@@ -668,8 +671,8 @@ bool runWideTreeScenario(PathEncodedTreeModel &model, int steps, const char *lab
     const double expandMs = timer.nsecsElapsed() / 1.0e6;
     const quint64 expandQueries = view.visibilityIndex()->modelQueryCount();
     report("expand a 4 level deep path", expandMs);
-    reportCount("  model queries for those expands", long long(expandQueries));
-    reportCount("  visible rows after expanding", long long(view.visibleRowCount()));
+    reportCount("  model queries for those expands", static_cast<long long>(expandQueries));
+    reportCount("  visible rows after expanding", static_cast<long long>(view.visibleRowCount()));
 
     timer.restart();
     view.collapse(model.index(0, 0));
@@ -695,7 +698,7 @@ bool runWideTreeScenario(PathEncodedTreeModel &model, int steps, const char *lab
         report("per scroll step", scrollMs / steps);
     reportCount("widgets created while scrolling", createdByScroll);
     reportCount("widgets destroyed while scrolling",
-                long long(view.destroyedWidgetCount()) - destroyedBeforeScroll);
+                static_cast<long long>(view.destroyedWidgetCount()) - destroyedBeforeScroll);
 
     // ---- expand/collapse above the viewport keeps the anchor --------------
     // Scroll into the middle of the content, so root 0 sits well above the
@@ -734,7 +737,7 @@ bool runWideTreeScenario(PathEncodedTreeModel &model, int steps, const char *lab
     std::printf("  %-42s %10s\n", "anchor row after expand",
                 qPrintable(anchorAfterExpand.data().toString()));
     reportCount("rows inserted above the anchor", insertedRows);
-    reportCount("vertical offset delta (px)", long long(offsetAfterExpand - offsetBefore));
+    reportCount("vertical offset delta (px)", static_cast<long long>(offsetAfterExpand - offsetBefore));
     std::printf("  %-42s %10s\n", "anchor kept while expanding", expandKept ? "yes" : "NO");
     std::printf("  %-42s %10s\n", "anchor kept while collapsing", collapseKept ? "yes" : "NO");
     std::printf("  %-42s %10s\n", "offset moved by the inserted rows", offsetMoved ? "yes" : "NO");
@@ -773,7 +776,7 @@ bool runVisibilityIndexSpliceScenario(PathEncodedTreeModel &model, const char *l
     const double buildMs = timer.nsecsElapsed() / 1.0e6;
     const qsizetype visibleCollapsed = index.visibleRowCount();
     report("build the flat visible row list", buildMs);
-    reportCount("visible rows (all collapsed)", long long(visibleCollapsed));
+    reportCount("visible rows (all collapsed)", static_cast<long long>(visibleCollapsed));
 
     const int roots = model.rowCount(QModelIndex());
     const QModelIndex lastRoot = model.index(roots - 1, 0);
@@ -814,7 +817,7 @@ bool runVisibilityIndexSpliceScenario(PathEncodedTreeModel &model, const char *l
     report("expand the first root (grows + moves the tail)", expandFirstMs);
     report("collapse the first root (moves the tail)", collapseFirstMs);
     report("expand+collapse the first root (per step)", steadyPairMs / kSteadySteps);
-    reportCount("rows inserted by one expanded root", long long(visibleWithLast - visibleCollapsed));
+    reportCount("rows inserted by one expanded root", static_cast<long long>(visibleWithLast - visibleCollapsed));
 
     // The splice has to be invisible in the result: the rows are the same, the count
     // comes back, and the first visible row is still the first root.
@@ -864,9 +867,9 @@ bool runHeapTreeScenario(BenchTreeModel &model, int steps)
 
     std::printf("\nTree: heap tree (%d nodes, fully expanded)\n", model.nodeCount());
     report("expand every branch", expandAllMs);
-    reportCount("model queries while expanding everything", long long(expandAllQueries));
-    reportCount("visible rows (fully expanded)", long long(view.visibleRowCount()));
-    reportCount("materialized items", long long(view.materializedItemCount()));
+    reportCount("model queries while expanding everything", static_cast<long long>(expandAllQueries));
+    reportCount("visible rows (fully expanded)", static_cast<long long>(view.visibleRowCount()));
+    reportCount("materialized items", static_cast<long long>(view.materializedItemCount()));
     reportCount("widgets created", adapter.created);
 
     // ---- mutations above the viewport keep the anchored row ----------------
@@ -901,18 +904,18 @@ bool runHeapTreeScenario(BenchTreeModel &model, int steps)
     std::printf("\nTree: model mutations above the viewport (%d scroll steps)\n", steps);
     report("20 x insert 10 children", insertMs);
     report("20 x remove 10 children", removeMs);
-    reportCount("visible rows added", long long(visibleAfterInsert - visibleBefore));
-    reportCount("visible rows after removing", long long(visibleAfterRemove));
+    reportCount("visible rows added", static_cast<long long>(visibleAfterInsert - visibleBefore));
+    reportCount("visible rows after removing", static_cast<long long>(visibleAfterRemove));
     reportCount("widgets created by the mutations", adapter.created - createdBefore);
-    reportCount("widgets destroyed", long long(view.destroyedWidgetCount()));
+    reportCount("widgets destroyed", static_cast<long long>(view.destroyedWidgetCount()));
     std::printf("  %-42s %10s\n", "anchor before", qPrintable(anchorBefore.data().toString()));
     std::printf("  %-42s %10s\n", "anchor after inserting",
                 qPrintable(anchorAfterInsert.data().toString()));
     std::printf("  %-42s %10s\n", "anchor after removing",
                 qPrintable(anchorAfterRemove.data().toString()));
-    reportCount("offset before", long long(offsetBefore));
-    reportCount("offset after inserting", long long(offsetAfterInsert));
-    reportCount("offset after removing", long long(view.verticalOffset()));
+    reportCount("offset before", static_cast<long long>(offsetBefore));
+    reportCount("offset after inserting", static_cast<long long>(offsetAfterInsert));
+    reportCount("offset after removing", static_cast<long long>(view.verticalOffset()));
     std::printf("  %-42s %10s\n", "anchor kept while inserting", insertKept ? "yes" : "NO");
     std::printf("  %-42s %10s\n", "anchor kept while removing", removeKept ? "yes" : "NO");
 
@@ -933,7 +936,7 @@ bool runHeapTreeScenario(BenchTreeModel &model, int steps)
     // Expanding a tree of this size touches every branch once: the query count
     // must stay proportional to the model, never depth x model.
     const bool proportional = expandAllQueries < quint64(model.nodeCount()) * 4;
-    reportCount("model nodes (after mutations)", long long(model.nodeCount()));
+    reportCount("model nodes (after mutations)", static_cast<long long>(model.nodeCount()));
     const bool mutationsRecovered = visibleAfterRemove == visibleBefore;
 
     std::printf("\n");
@@ -1056,9 +1059,9 @@ int main(int argc, char **argv)
     if (steps > 0)
         report("per step", scrollMs / steps);
     reportCount("widgets created while scrolling", createdContinuous);
-    reportCount("widgets destroyed", long long(view.destroyedWidgetCount()));
-    reportCount("pooled widgets", long long(view.pooledWidgetCount()));
-    reportCount("live widgets", long long(adapter.created - int(view.destroyedWidgetCount())));
+    reportCount("widgets destroyed", static_cast<long long>(view.destroyedWidgetCount()));
+    reportCount("pooled widgets", static_cast<long long>(view.pooledWidgetCount()));
+    reportCount("live widgets", static_cast<long long>(adapter.created - int(view.destroyedWidgetCount())));
     reportCount("materialized items", view.materializedItemCount());
 
     // ---- scenario 2: random jumps (boundary crossings may grow the pool) ---
@@ -1072,7 +1075,7 @@ int main(int argc, char **argv)
     const int createdDuringJumps = adapter.created - createdBeforeJumps;
     std::printf("\nRandom scrollbar jumps\n");
     reportCount("widgets created during jumps", createdDuringJumps);
-    reportCount("widgets destroyed", long long(view.destroyedWidgetCount()));
+    reportCount("widgets destroyed", static_cast<long long>(view.destroyedWidgetCount()));
     reportCount("materialized items", view.materializedItemCount());
 
     const bool widgetsStable = createdContinuous == 0;
@@ -1116,7 +1119,7 @@ int main(int argc, char **argv)
     report("60 x resize relayout", resizeMs);
     reportCount("logical rows after mutations", model.rowCount());
     reportCount("widgets created", adapter.created);
-    reportCount("widgets destroyed", long long(view.destroyedWidgetCount()));
+    reportCount("widgets destroyed", static_cast<long long>(view.destroyedWidgetCount()));
     reportMemory("working set after mutations", baselineMemory);
 
     std::printf("\n");

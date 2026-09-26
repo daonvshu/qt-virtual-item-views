@@ -46,6 +46,9 @@
   abort），所以用这条等价的检查代替；Linux/CI 侧用 Xvfb + xcb 时可以开真正的 fatal warnings。
   另有 `-Release` 开关：用 Release 构建树（`cmake-build-release-qt{6,5}[-shared]`）跑
   构建 → 28 个 CTest 目标 → 12 个示例 → 三档基准 → 安装 + 消费端，两个 Qt 版本 14 步全绿。
+  还有 `-MinGW` 开关：Windows 上的 GCC / Clang 覆盖（Qt 安装器的 `mingw_64` +
+  `mingw1310_64`、`llvm-mingw_64` + `llvm-mingw1706_64`、`mingw81_64` + `mingw810_64`），
+  三个 kit 各建 `cmake-build-{debug,release}-mingw-<kit>`，Debug 与 Release 各 21 步全绿。
 * [docs/performance.md](docs/performance.md) §3 的 v1.0 基线：列表 1M 行、表格 20 万行 x 100 列
   （Row/Cell 两种模式）、树 1M 顶层节点的实测数字与确切命令，供后续回归对比。
   **Release 基线**（2026-09-26 补）：同一台机器的 Debug/Release 对照表（打开快 3~35 倍、稳态滚动
@@ -230,6 +233,30 @@
   仍然吃取整余数，所以宽度之和恒等于视口宽度、组间比例与 extent 一致（等宽组就是等宽）。
   只有一个滚动 pane 时逐像素不变。回归测试：
   `tst_tablepanes::scrollingPanesShareTheWidthProportionally`（已确认还原旧公式时该用例会失败）。
+
+### Fixed（GCC / Clang 可移植性：MinGW 实测，2026-09-26）
+
+审查的 ABI 矩阵里"GCC / Clang / MinGW"一直是未实测项。装上 Qt 安装器自带的 MinGW kit 之后，
+三个组合（Qt 6.11.2 + GCC 13.1、Qt 6.11.2 + Clang 17.0.6（llvm-mingw）、Qt 5.15.2 + GCC 8.1）
+的 Debug 与 Release 各 7 步全部跑通（构建 / 28 个 CTest / 12 个示例 / 3 档基准 / 安装 /
+消费端），顺带修掉六处**只有在 GCC/Clang 下才暴露**的问题 —— 它们此前被 MSVC 全部放过：
+
+* **MSVC 专有的函数式类型转换**：`benchmarks/bench_listview.cpp` 里 30 处
+  `long long(x)` —— GCC/Clang 直接报 `expected primary-expression before 'long'`。全部改成
+  `static_cast<long long>(x)`。库本身没有这种写法（只有基准有）。
+* **`K32GetProcessMemoryInfo` 在 MinGW 8.1 头文件里不存在**：这个 Windows 7+ 的 kernel32 别名
+  需要 `_WIN32_WINNT`，老 MinGW-w64 头文件里没有声明。改成 `GetProcessMemoryInfo`（psapi，
+  数值相同），并在 `benchmarks/CMakeLists.txt` 里对 `WIN32` 显式链接 `psapi`。
+* **3 处覆盖虚函数但没写 `override`**：`ListLayout::sizeIndex()`、
+  `VirtualHeaderView::setSectionAnimationEnabled()` / `setSectionAnimationDuration()`
+  （Clang 的 `-Winconsistent-missing-override`）。
+* **一处未使用的常量**：`src/core/scrollmapper.cpp` 里的 `kRoundedValueLimit`
+  （Clang 的 `-Wunused-const-variable`），删掉。
+* **Qt 6 弃用的 `QMouseEvent` 构造**（`tst_virtualheaderview`）：改用带全局坐标的六参构造，
+  同时兼容 Qt 5（`QPointF::toPoint()`）。
+
+复跑：`pwsh -File scripts/validate.ps1 -MinGW -Library Static`（Debug 与 Release 各 21 步）。
+Linux / macOS 仍在未实测清单里（字体查找、D-Bus、X11/Wayland 都不属于 Windows MinGW 的覆盖范围）。
 
 ### Fixed（全量代码审查 Wave 3：虚拟化热路径）
 

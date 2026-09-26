@@ -34,7 +34,7 @@ v0.7 的逐项细节与实现决定记在 [spans.md](spans.md)、[accessibility.
 | Qt 5 | `D:\devlib\Qt\5.15.2\msvc2019_64` |
 | 工具链 | MSVC 18 (14.50.35717) x64 + Ninja + CMake 4.3（CLion 自带） |
 | 构建树 | `cmake-build-debug-qt6` / `cmake-build-debug-qt5`（静态）与 `cmake-build-debug-qt6-shared` / `cmake-build-debug-qt5-shared`（动态） |
-| 验证 | 一条命令：`pwsh -File scripts/validate.ps1` —— 四种组合（Qt 6.11.2 / Qt 5.15.2 × 静态 / 动态）共 28 个步骤全绿：`all` 构建、28 个 CTest 目标（单元 + 变异 + GUI 交互 + 两个 memmove/splice 场景所在的基准用例）、12 个示例退出码 0、`bench_listview` 不变量自检、`cmake --install` + 消费端冒烟测试；`-Asan` 再加一个 MSVC AddressSanitizer 组合（见 [ci.md](ci.md) §5） |
+| 验证 | 一条命令：`pwsh -File scripts/validate.ps1` —— MSVC 四种组合（Qt 6.11.2 / Qt 5.15.2 × 静态 / 动态）共 28 个步骤全绿：`all` 构建、28 个 CTest 目标（单元 + 变异 + GUI 交互）、12 个示例退出码 0、`bench_listview` 不变量自检、`cmake --install` + 消费端冒烟测试。另有三个开关：`-Asan`（MSVC AddressSanitizer）、`-Release`（Release 构建 + 基准）、`-MinGW`（Windows 上的 GCC 13.1 / Clang 17.0.6 / GCC 8.1 三个 kit，Debug 与 Release 各 21 步）—— 见 [abi.md](abi.md) §5/§6 与 [ci.md](ci.md) §5 |
 
 注意：构建与测试必须在沙箱外运行。沙箱内 ninja 无法派生编译器子进程，构建会永久挂起
 （已用最小 ninja 工程复现）。

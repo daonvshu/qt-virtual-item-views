@@ -128,12 +128,19 @@ Qt 由 Config 里的 `find_dependency()` 找回，**但安装前缀按 Qt 大版
 | --- | --- | --- | --- | --- |
 | 6.11.2 / msvc2022_64 | MSVC 19.50 x64（VS 18 Community） | 通过 | 通过 | Debug 与 Release 各：`all` 构建 + 28 个 CTest 目标 + 12 个示例退出码 0 + 三档基准 + 安装消费端；另有一个 AddressSanitizer 静态构建（`scripts/validate.ps1 -Asan`）同样全绿 |
 | 5.15.2 / msvc2019_64 | 同上 | 通过 | 通过 | 同上（含 Release 与 ASan） |
+| 6.11.2 / mingw_64 | **GCC 13.1.0**（Qt 在线安装器的 `mingw1310_64`） | 通过 | — | `scripts/validate.ps1 -MinGW`：Debug 与 Release 各 `all` 构建 + 28 个 CTest 目标 + 12 个示例 + 三档基准 + 安装消费端；`-Wall -Wextra -Wpedantic` 下**零警告** |
+| 6.11.2 / llvm-mingw_64 | **Clang 17.0.6**（`llvm-mingw1706_64`） | 通过 | — | 同上；默认警告级别下零警告（修掉 3 处 `override` 缺失、1 处未用常量、1 处 Qt 6 弃用构造） |
+| 5.15.2 / mingw81_64 | **GCC 8.1.0**（Qt 安装器的 `mingw810_64`） | 通过 | — | 同上（本机最老的组合：Qt 5.15 + GCC 8.1） |
 
-构建环境：Ninja + CMake 4.x，C++17，Debug。两个 Qt 版本各跑静态与动态各一遍，共四种组合。
+构建环境：Ninja + CMake 4.x，C++17。MSVC 的两个 Qt 版本各跑静态与动态各一遍（四种组合，
+Debug + Release），MinGW / llvm-mingw 三个 kit 跑静态的 Debug + Release。
+MinGW 组合的复跑命令：`pwsh -File scripts/validate.ps1 -MinGW -Library Static`（路径可用
+`-MinGWKits` / `-NinjaBin` 覆盖），详见 [ci.md](ci.md) §5。
 
 **未实测**（只在 CMake 层面被接受，没有任何 CI/本机证据，使用前请自测）：
 
-* GCC / Clang / MinGW，Linux / macOS 上任意 Qt 版本（代码里 Qt 5 兼容点见 README 兼容约定表）；
+* Linux / macOS 上任意 Qt 版本（**Windows 上的 GCC 与 Clang 已实测**，见上表；平台相关的部分
+  如 `QFontDatabase` 的字体查找、D-Bus 集成、X11/Wayland 的窗口内坐标仍未覆盖）；
 * Qt 6.2–6.10 的任意中间版本；
 * 多配置生成器（VS solution、Xcode）与 `MSVC_RUNTIME_LIBRARY`（`/MT` 之类）的组合；
 * 与 Qt 的 `QT_DISABLE_DEPRECATED_*`、`QT_NO_*` 裁剪宏的组合；
@@ -149,6 +156,8 @@ Qt 由 Config 里的 `find_dependency()` 找回，**但安装前缀按 Qt 大版
 2c. [x] `pwsh -File scripts/validate.ps1 -Release -Library Static` 全绿（两个 Qt 版本各
    构建 / 28 个 CTest / 12 个示例 / 三档基准 / 安装消费端共 14 步），Release 基线进
    [performance.md](performance.md) §3；
+2d. [x] `pwsh -File scripts/validate.ps1 -MinGW -Library Static`（GCC 13.1 / Clang 17.0.6 /
+   GCC 8.1）Debug 与 Release 各 21 步全绿，两个编译器在最高警告级别下零警告；
 3. [x] 性能基线数字固化进 [performance.md](performance.md)（roadmap 3d）；
 4. [x] CHANGELOG 的破坏性变更段与 [api-stability.md](api-stability.md) §6 的欠账都清空。
 

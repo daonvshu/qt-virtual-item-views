@@ -137,6 +137,9 @@ MSVC 19.50 x64、Windows 11、静态构建、`QT_QPA_PLATFORM=offscreen`。Debug
 
 这些场景的**不变量**（零分配滚动、实例化集合有界、增量展开/折叠、锚点稳定）不是"看完就丢"的
 一次性结论：`scripts/validate.ps1` 的第 4 步每次都会重跑这三档基准，并要求退出码为 0。
+同样的三档基准还在其它工具链上各跑了一遍（不变量全部通过，数字未单独列表）：MSVC
+AddressSanitizer（`-Asan`）、Release（`-Release`），以及 Windows 上的 GCC 13.1 /
+Clang 17.0.6 / GCC 8.1（`-MinGW`）。
 
 ### v1.0 Release 基线（2026-09-26 实测）
 
