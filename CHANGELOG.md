@@ -282,6 +282,45 @@
   `tst_headerstructure::paneCacheIsUpToDateImmediatelyAfterAColumnInsert`（修复前 pane 的列集合
   仍是 `{0,1}`，正确的 `{0,2}` 要等下一次结构变化）。
 
+### Fixed（第三轮代码审查 Wave 1：生命周期与身份边界，2026-09-26）
+
+第三轮全量审查（`VirtualItemViews_Third_Full_Code_Review.md`，本地保留、不入库）在"上一轮
+Wave A/B/C 都已修"的基础上给出 1 个新 P0、若干 P1/P2 与一个发布策略决策。Wave 1（生命周期 /
+身份）四条：
+
+* **pane 渲染器跟随主表头的 adapter 替换（P0-1 UAF）**：表格为冻结 / 显式 pane 克隆的
+  `VirtualHeaderView` **借用**主表头的 adapter（`header->setAdapter(widgetHeader->adapter())`），
+  而公开的 `primaryHeader->setAdapter(newAdapter, true)` 会立刻删除旧 adapter —— pane 克隆仍然
+  指向它，之后任何 relayout / recycle / 析构都会在已释放对象上调 `unbindSection()`。
+  现在 `VirtualHeaderView` 新增 `adapterAboutToChange()` / `adapterChanged()` 两个信号，
+  表格安装 widget 主表头时连上它们：替换前先销毁派生 pane 渲染器（此时旧 adapter 还活着，
+  unbind 走的就是它），替换后重建（borrow 新 adapter）。回归测试：
+  `tst_adapterreplacement::replacingThePaneHeaderAdapterRebuildsItsClones`（还原旧实现时用例
+  先断言失败、随后在 `~VirtualHeaderView::recycleAllSections()` **崩溃**）。
+* **列 0 结构变化后的行身份保持 canonical（P1）**：表格的行物化身份是 **(row, 0) 这个 cell**，
+  而"在列 0 前插入 / 删除列 0 / 移动列 0"会重命名或直接失效那个 cell —— adapter 随之收到
+  `column() != 0` 甚至 invalid 的行索引（`layoutRowWidget()` 同样）。现在内核在
+  `columnsAboutToBe*` 且改到列 0 时快照已物化行与 pinned 行的**行号**（那时旧身份仍有效），
+  在 `columns*` 之后按 `model->index(row, 0)` 重建身份（列变化不动行号），pinned 集合也一并
+  重键。回归测试：`tst_virtualtableview::columnZeroChangesKeepTheRowIdentityCanonical`
+  （insert@0 / remove@0 / move@0，逐项断言 adapter 只看到 valid 且 column()==0 的索引，
+  并断言 `indexForWidget()` 仍是 (row, 0)；还原旧实现时 12 次 bind 拿到 column 1）。
+* **表头协作者替换语义（P1）**：`setGeometryModel()` 现在失效 pane 缓存与"上次视觉顺序"备忘
+  （不然 standalone 表头换了几何还在用旧前缀和打包）；`setLabelModel()` 除了重绑已物化 section，
+  还会通过新的可选钩子 `HeaderWidgetAdapter::setLabelModel(QAbstractItemModel *)` 通知 adapter
+  —— README 的示例 adapter 正是把 model 存在自己身上，否则"表头有 label model"和"adapter 里
+  又存一份"永远是双状态（切换模型后 section 仍显示旧标题）。回归测试：
+  `tst_virtualheaderview::switchingTheLabelModelRebindsTheSections` /
+  `switchingTheGeometryInvalidatesThePaneCache`。
+* **`restoreState()` 履行 order/sort 通知契约（P1）**：restore 会整体替换视觉顺序、隐藏集合与排序
+  状态，但既没有 bump `orderRevision`（依赖它跳过重建的渲染器会继续用旧顺序），也不发
+  `sortIndicatorChanged`（自绘排序箭头的 section 保持旧状态）。现在 restore 提交后 bump
+  revision，排序状态变化时补发信号；`VirtualTableView::restoreHeaderState()` 在恢复期间置
+  `m_sortGuard`，避免这个"结构性信号"被当成"用户要求排序"再去 `model->sort()`。Widget 表头也
+  在 `bulkGeometryChanged` 上重绑已物化 section（限额 / 默认尺寸 / restore 这类变化没有粒度
+  信号）。回归测试：`tst_headergeometry::restoringAStateBumpsTheOrderRevision`、
+  `tst_virtualheaderview::restoringASortStateRebindsTheSections`。
+
 ### Fixed（第二轮代码审查 Wave C：超宽表性能，2026-09-26）
 
 * **pane 过滤表头不再 O(N²)（P1-8）**：`VirtualHeaderView` 在 pane 模式下每次 `isFiltered()` 都线性

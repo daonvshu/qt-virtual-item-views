@@ -5,6 +5,7 @@
 
 #include <QtGlobal>
 
+class QAbstractItemModel;
 class QWidget;
 
 namespace viv {
@@ -26,6 +27,15 @@ public:
     }
 
     virtual QWidget *createSection(WidgetType type, QWidget *parent) = 0;
+
+    /// Tells the adapter which model the labels come from.
+    ///
+    /// Called by VirtualHeaderView::setLabelModel() (with nullptr when the header drops its
+    /// model), so an adapter that captures the model - the README example does - does not
+    /// keep a second, stale copy of it: the header owns the model reference, the adapter is
+    /// told what it is. The default does nothing: an adapter that reads the model through
+    /// its own reference keeps working.
+    virtual void setLabelModel(QAbstractItemModel *model) { Q_UNUSED(model); }
 
     /// Fills \a widget with the data of \a logicalIndex; called before the widget
     /// is shown and every time the section widget is reused. It is also called

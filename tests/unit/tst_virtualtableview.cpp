@@ -154,6 +154,55 @@ public:
     int created = 0;
 };
 
+/// Adapter of the row-identity test: records every index it is handed, so a non-canonical
+/// (column != 0) or invalid row index shows up as a counter instead of a silent misread.
+class RecordingRowAdapter : public TableWidgetAdapter
+{
+public:
+    QWidget *createWidget(WidgetType, QWidget *parent) override
+    {
+        auto *label = new QLabel(parent);
+        label->setObjectName(QStringLiteral("recordingRow"));
+        return label;
+    }
+
+    void bindWidget(QWidget *, const QModelIndex &index) override
+    {
+        ++bound;
+        countIndex(index);
+    }
+
+    void unbindWidget(QWidget *, const QModelIndex &) override { ++unbound; }
+
+    void layoutRowWidget(QWidget *, const QModelIndex &rowIndex,
+                         const TableRowLayoutContext &) override
+    {
+        ++layoutCalls;
+        if (!rowIndex.isValid())
+            ++layoutInvalid;
+        else if (rowIndex.column() != 0)
+            ++layoutNonCanonical;
+    }
+
+    QSize estimatedSize(const QModelIndex &) const override { return QSize(400, kRowHeight); }
+
+    void countIndex(const QModelIndex &index)
+    {
+        if (!index.isValid())
+            ++invalidIndexes;
+        else if (index.column() != 0)
+            ++nonCanonicalIndexes;
+    }
+
+    int bound = 0;
+    int unbound = 0;
+    int invalidIndexes = 0;
+    int nonCanonicalIndexes = 0;
+    int layoutCalls = 0;
+    int layoutInvalid = 0;
+    int layoutNonCanonical = 0;
+};
+
 class TableTestAdapter : public TableWidgetAdapter
 {
 public:
@@ -411,6 +460,7 @@ private slots:
     void nativeHeaderFollowsLimitChangesImmediately();
     void nativeHeaderStaysInSyncWithEveryGeometryChange();
     void columnStructureChangesRebindTheRowWidgets();
+    void columnZeroChangesKeepTheRowIdentityCanonical();
     void columnResizeTouchesMaterializedRowsOnly();
     void geometryIsTheSingleAuthority();
     void columnMoveFollowsTheGeometry();
@@ -650,6 +700,72 @@ void TestVirtualTableView::nativeHeaderStaysInSyncWithEveryGeometryChange()
     m_model->insertColumn(2);                        // sectionCountChanged
     QCOMPARE(native->count(), m_model->columnCount());
     QCOMPARE(geometry->sectionCount(), m_model->columnCount());
+}
+
+void TestVirtualTableView::columnZeroChangesKeepTheRowIdentityCanonical()
+{
+    // P1 of the third review: a table tracks a materialized row by its (row, 0) cell, and a
+    // column insert/remove/move that touches column 0 renames or invalidates exactly that
+    // cell. The adapter then received a non-canonical (column != 0) - or, after removing
+    // column 0, an invalid - row index, and layoutRowWidget() the same.
+    BigTableModel model(20, 3, this);
+    RecordingRowAdapter adapter;
+    VirtualTableView view;
+    view.setTableAdapter(&adapter);
+    view.setUniformItemHeight(kRowHeight);
+    view.setDefaultColumnWidth(kColumnWidth);
+    view.setModel(&model);
+    showView(&view, QSize(kViewWidth, kViewHeight));
+
+    const auto checkCanonical = [&](const char *phase) {
+        QVERIFY2(adapter.invalidIndexes == 0 && adapter.nonCanonicalIndexes == 0,
+                 qPrintable(QStringLiteral("%1: bindWidget saw %2 invalid / %3 non-canonical "
+                                           "indexes")
+                                .arg(QString::fromLatin1(phase))
+                                .arg(adapter.invalidIndexes)
+                                .arg(adapter.nonCanonicalIndexes)));
+        QVERIFY2(adapter.layoutInvalid == 0 && adapter.layoutNonCanonical == 0,
+                 qPrintable(QStringLiteral("%1: layoutRowWidget saw %2 invalid / %3 "
+                                           "non-canonical indexes")
+                                .arg(QString::fromLatin1(phase))
+                                .arg(adapter.layoutInvalid)
+                                .arg(adapter.layoutNonCanonical)));
+        QVERIFY(adapter.layoutCalls > 0);
+    };
+    const auto resetCounters = [&]() {
+        adapter.invalidIndexes = 0;
+        adapter.nonCanonicalIndexes = 0;
+        adapter.layoutInvalid = 0;
+        adapter.layoutNonCanonical = 0;
+        adapter.layoutCalls = 0;
+    };
+    const auto identityOf = [&](int row) {
+        QWidget *widget = rowWidgetFor(view, row);
+        return widget ? view.indexForWidget(widget) : QModelIndex();
+    };
+
+    QCOMPARE(identityOf(1), model.index(1, 0));
+
+    // (a) Insert a column *before* column 0: the old identity cell becomes column 1.
+    resetCounters();
+    model.insertDataColumn(0);
+    view.flushPendingRelayout();
+    checkCanonical("insert at 0");
+    QCOMPARE(identityOf(1), model.index(1, 0));
+
+    // (b) Remove column 0: the old identity cell is gone entirely (it would be invalid).
+    resetCounters();
+    model.removeDataColumn(0);
+    view.flushPendingRelayout();
+    checkCanonical("remove at 0");
+    QCOMPARE(identityOf(1), model.index(1, 0));
+
+    // (c) Move column 0 to the end: the identity cell moves to another column.
+    resetCounters();
+    model.moveDataColumn(0, 2);
+    view.flushPendingRelayout();
+    checkCanonical("move from 0");
+    QCOMPARE(identityOf(1), model.index(1, 0));
 }
 
 void TestVirtualTableView::columnResizeTouchesMaterializedRowsOnly()

@@ -232,7 +232,27 @@ smoke。按审查的判据，这一版已经可以视为 1.0 候选（tag 由仓
 5. 同步 [features.md](features.md) 能力表、README 概览与本文件。
 6. 一个独立提交。
 
-## 6. 决策记录
+## 6. 第三轮代码审查与修复（2026-09-26）
+
+第三轮全量审查（`VirtualItemViews_Third_Full_Code_Review.md`）确认前两轮的修复都已到位，并给出
+1 个新 P0、若干 P1/P2，以及一个**必须在打 tag 前决定**的发布策略问题。同样按"先复现（或先确认
+现状确实不满足契约）→ 再改 → 反向验证"推进：
+
+| 批次 | 内容 | 状态 |
+| --- | --- | --- |
+| **Wave 1 生命周期 / 身份** | P0-1 pane 渲染器跟随主表头 adapter 替换（复现即崩溃）、P1 列 0 结构变化后的 canonical 行身份、P1 `setGeometryModel()`/`setLabelModel()` 替换语义（含新的 `HeaderWidgetAdapter::setLabelModel()` 钩子）、P1 `restoreState()` 的 order/sort 通知（含 restore 期间的 sort guard） | ✅ |
+| **Wave 2 宽表收尾** | Native 表头 non-primary offset 走 O(1)（不再整表同步）、frozen pane 的 body 按 pane 窗口物化、sparse explicit pane 的 Widget 表头直接遍历 pane slots | 待做 |
+| **Wave 3 API / ABI 决策** | 隐藏 / 统一 `VirtualTableView::setAdapter()`、决定"PIMPL + binary ABI"还是"只承诺 source API"、同步 `api-stability.md` / `abi.md` / `model-signals.md` / `ci.md` 的 drift | 待做（其中 ABI 策略需要用户拍板） |
+| **Wave 4 tag 前验证** | Debug + Release × Qt5/Qt6 × MSVC/MinGW GCC/llvm-mingw Clang + ASan/UBSan + 28 CTest + 12 示例 + 消费端 + wide-header benchmark 四种 pane 形态 | 大部分已常态化，收口时重跑 |
+
+Wave 1 的实测证据（修复前的失败形态）：
+
+* P0-1：用例在旧代码下**崩溃**（`~VirtualHeaderView::recycleAllSections()` 里在已释放的 adapter
+  上 unbind），并且 pane 克隆的 `adapter()` 仍指向旧 A。
+* P1 行身份：insert@0 后 12 次 `bindWidget()` 收到 `column() == 1` 的索引，
+  `indexForWidget()` 返回 `(1, 1)` 而不是 `(1, 0)`。
+
+## 7. 决策记录
 
 | 日期 | 决定 | 理由 |
 | --- | --- | --- |

@@ -254,6 +254,7 @@ private slots:
     void rowAndCellModeNeverShareWidgets();
     void headerAdapterReplacementNeverCrossesWidgetClasses();
     void replacingAWidgetHeaderDestroysItsPaneRenderers();
+    void replacingThePaneHeaderAdapterRebuildsItsClones();
     void destroyingTheViewUnbindsEveryMaterializedRow();
 };
 
@@ -409,6 +410,61 @@ void TestAdapterReplacement::replacingAWidgetHeaderDestroysItsPaneRenderers()
     table.setHorizontalHeader(nullptr);
     settle();
     QCOMPARE(virtualHeaderCount(&table), 0);
+}
+
+void TestAdapterReplacement::replacingThePaneHeaderAdapterRebuildsItsClones()
+{
+    // P0-1 of the third review: the pane renderers of a widget header *borrow* its adapter.
+    // Replacing that adapter through the public setAdapter() deleted the old one while the
+    // clones still pointed at it - the next relayout / scroll / destruction called
+    // unbindSection() on freed memory.
+    QStandardItemModel model(20, 400);
+    VirtualTableView table;
+    table.setModel(&model);
+    table.setUniformItemHeight(30);
+    OtherTableAdapter rowAdapter;
+    table.setTableAdapter(&rowAdapter, false);
+
+    auto *primary = new VirtualHeaderView(Qt::Horizontal);
+    primary->setAdapter(new SectionAdapterA, true);   // the header owns adapter A
+    table.setHorizontalHeader(primary);
+    table.setFrozenColumns({0});                      // -> a frozen pane renderer borrowing A
+    showView(&table, QSize(600, 200));
+
+    // The clone is a sibling widget that borrowed A.
+    const auto clonedHeaders = [&table]() {
+        QList<VirtualHeaderView *> headers;
+        for (VirtualHeaderView *candidate : table.findChildren<VirtualHeaderView *>()) {
+            if (candidate != table.horizontalHeader()->headerWidget())
+                headers.append(candidate);
+        }
+        return headers;
+    };
+    const QList<VirtualHeaderView *> before = clonedHeaders();
+    QVERIFY(!before.isEmpty());
+    auto *adapterA = primary->adapter();
+    QVERIFY(adapterA != nullptr);
+    for (VirtualHeaderView *clone : before)
+        QCOMPARE(clone->adapter(), adapterA);
+
+    // Replace the primary's adapter: A is deleted right here, so every clone has to be
+    // rebuilt against B (and none of them may unbind through the dead A).
+    auto *adapterB = new SectionAdapterB;
+    primary->setAdapter(adapterB, true);
+    table.flushPendingRelayout();
+
+    const QList<VirtualHeaderView *> after = clonedHeaders();
+    QVERIFY(!after.isEmpty());
+    for (VirtualHeaderView *clone : after) {
+        QCOMPARE(clone->adapter(), adapterB);
+        QVERIFY(clone->materializedSectionCount() > 0);
+    }
+
+    // Scrolling and destroying the table now uses B everywhere.
+    table.setHorizontalOffset(50 * 80);
+    table.flushPendingRelayout();
+    table.setHorizontalOffset(50 * 80);
+    table.flushPendingRelayout();
 }
 
 void TestAdapterReplacement::destroyingTheViewUnbindsEveryMaterializedRow()

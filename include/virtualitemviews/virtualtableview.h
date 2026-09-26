@@ -337,6 +337,10 @@ private:
     /// Re-binds every materialized row after a column structure change, so a business row
     /// widget that builds its column schema in bindWidget() can rebuild it (Row Widget Mode).
     void rebindMaterializedRows();
+    /// Drops / rebuilds the derived pane renderers of the horizontal header when its adapter
+    /// is replaced (they borrow that adapter, see VirtualHeaderView::adapterAboutToChange()).
+    void dropDerivedPaneHeaders();
+    void rebuildDerivedPaneHeaders();
     /// Cell Widget Mode: a cell has to be unbound *before* the model invalidates
     /// its persistent index, otherwise the business loses the row / column the
     /// widget was bound to.

@@ -102,7 +102,7 @@ public:
     void bindSection(QWidget *widget, int logicalIndex) override
     {
         ++bindCount;
-        QString text = m_model->headerData(logicalIndex, Qt::Horizontal).toString();
+        QString text = labelModel()->headerData(logicalIndex, Qt::Horizontal).toString();
         if (m_geometry && m_geometry->sortIndicatorSection() == logicalIndex) {
             text += m_geometry->sortIndicatorOrder() == Qt::AscendingOrder ? QStringLiteral(" ^")
                                                                          : QStringLiteral(" v");
@@ -116,6 +116,16 @@ public:
         static_cast<SectionWidget *>(widget)->setText(QString());
     }
 
+    /// The header tells the adapter which model the labels come from (the README example
+    /// captures the model in the adapter, so this is the hook that keeps it in sync).
+    void setLabelModel(QAbstractItemModel *model) override
+    {
+        ++labelModelChanges;
+        m_hookedModel = model;
+    }
+
+    QAbstractItemModel *labelModel() const { return m_hookedModel ? m_hookedModel : m_model; }
+
     QString textOf(VirtualHeaderView *header, int logicalIndex) const
     {
         QWidget *widget = header->sectionWidget(logicalIndex);
@@ -124,9 +134,11 @@ public:
 
     int bindCount = 0;
     int unbindCount = 0;
+    int labelModelChanges = 0;
 
 private:
     QAbstractItemModel *m_model = nullptr;
+    QAbstractItemModel *m_hookedModel = nullptr;
     HeaderGeometry *m_geometry = nullptr;
 };
 } // namespace
@@ -162,6 +174,9 @@ private slots:
     void childrenAddedAfterBindingAreWatchedToo();
     void modelChangesRebindTheMaterializedSections();
     void sortIndicatorChangesRebindTheSections();
+    void switchingTheLabelModelRebindsTheSections();
+    void switchingTheGeometryInvalidatesThePaneCache();
+    void restoringASortStateRebindsTheSections();
     void tableForwardsTheAnimationSettings();
 
 private:
@@ -858,6 +873,88 @@ void TestVirtualHeaderView::sortIndicatorChangesRebindTheSections()
                       QPoint(kSectionWidth + kSectionWidth / 2, kHeaderHeight / 2));
     QApplication::processEvents();
     QCOMPARE(adapter->textOf(m_header, 1), QStringLiteral("c1 v"));
+}
+
+void TestVirtualHeaderView::switchingTheLabelModelRebindsTheSections()
+{
+    // P1 of the third review: the adapter usually captures the model (the README example
+    // does), so switching the header's label model has to (a) tell the adapter and (b)
+    // re-bind the sections that are already on screen - relayout() alone left them showing
+    // the titles of the outgoing model.
+    auto *adapter = new ModelSectionAdapter(m_model, m_geometry);
+    m_header->setAdapter(adapter, true);
+    QApplication::processEvents();
+    QCOMPARE(adapter->textOf(m_header, 1), QStringLiteral("c1"));
+    const int changesBefore = adapter->labelModelChanges;
+
+    QStandardItemModel otherModel(1, 40);
+    QStringList labels;
+    for (int column = 0; column < 40; ++column)
+        labels << QStringLiteral("other%1").arg(column);
+    otherModel.setHorizontalHeaderLabels(labels);
+
+    m_header->setLabelModel(&otherModel);
+    QApplication::processEvents();
+
+    QCOMPARE(adapter->labelModelChanges, changesBefore + 1);
+    QCOMPARE(adapter->labelModel(), static_cast<QAbstractItemModel *>(&otherModel));
+    QCOMPARE(adapter->textOf(m_header, 1), QStringLiteral("other1"));
+    QCOMPARE(adapter->textOf(m_header, 0), QStringLiteral("other0"));
+}
+
+void TestVirtualHeaderView::switchingTheGeometryInvalidatesThePaneCache()
+{
+    // P1 of the third review: the pane cache (packing order + prefix sums) described the
+    // geometry that was just replaced, so a standalone header that switches geometries kept
+    // packing its pane with the old widths.
+    auto *adapter = new ModelSectionAdapter(m_model, m_geometry);
+    m_header->setAdapter(adapter, true);
+    m_header->setPaneFilter(QVector<int>({0, 1}), false);
+    m_header->setPaneOffset(0);
+    QApplication::processEvents();
+    QWidget *second = m_header->sectionWidget(1);
+    QVERIFY(second != nullptr);
+    QCOMPARE(second->x(), kSectionWidth);
+
+    auto *narrowGeometry = new HeaderGeometry(Qt::Horizontal, this);
+    narrowGeometry->setSectionCount(m_model->columnCount());
+    narrowGeometry->setDefaultSectionSize(kSectionWidth / 2);
+    m_header->setGeometryModel(narrowGeometry);
+    QApplication::processEvents();
+
+    QCOMPARE(m_header->geometryModel(), narrowGeometry);
+    // The pane packs with the *new* widths.
+    QWidget *first = m_header->sectionWidget(0);
+    QVERIFY(first != nullptr);
+    QCOMPARE(first->x(), 0);
+    QCOMPARE(second->x(), kSectionWidth / 2);
+    QCOMPARE(second->width(), kSectionWidth / 2);
+}
+
+void TestVirtualHeaderView::restoringASortStateRebindsTheSections()
+{
+    // P1 of the third review: restoreState() replaced the sort state without emitting
+    // sortIndicatorChanged, so a custom section UI that draws the arrow kept the state it
+    // had before the restore.
+    auto *adapter = new ModelSectionAdapter(m_model, m_geometry);
+    m_header->setAdapter(adapter, true);
+    m_header->setSortInteractionEnabled(true);
+    QApplication::processEvents();
+
+    m_geometry->setSortIndicator(2, Qt::AscendingOrder);
+    QApplication::processEvents();
+    QCOMPARE(adapter->textOf(m_header, 2), QStringLiteral("c2 ^"));
+    const QByteArray state = m_geometry->saveState();
+
+    m_geometry->setSortIndicator(5, Qt::DescendingOrder);
+    QApplication::processEvents();
+    QCOMPARE(adapter->textOf(m_header, 5), QStringLiteral("c5 v"));
+
+    QVERIFY(m_geometry->restoreState(state));
+    QApplication::processEvents();
+    QCOMPARE(m_geometry->sortIndicatorSection(), 2);
+    QCOMPARE(adapter->textOf(m_header, 2), QStringLiteral("c2 ^"));
+    QCOMPARE(adapter->textOf(m_header, 5), QStringLiteral("c5"));   // no stale arrow
 }
 
 void TestVirtualHeaderView::tableForwardsTheAnimationSettings()

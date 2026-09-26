@@ -105,6 +105,12 @@ void VirtualHeaderView::setGeometryModel(HeaderGeometry *geometry)
     }
     connectGeometry(m_geometry, false);
     m_geometry = geometry;
+    // The pane cache, the remembered visual order and its revision all describe the geometry
+    // that was just replaced (P1 of the third review - a standalone header may switch
+    // geometries through the public API).
+    m_paneCacheDirty = true;
+    m_lastVisualOrder.clear();
+    m_lastOrderRevision = 0;
     connectGeometry(m_geometry, true);
     relayout();
 }
@@ -124,6 +130,14 @@ void VirtualHeaderView::connectGeometry(HeaderGeometry *geometry, bool connectSi
         });
         connect(geometry, &HeaderGeometry::sectionCountChanged, this, [this](int) { relayout(); });
         connect(geometry, &HeaderGeometry::offsetChanged, this, [this](qint64) { relayout(); });
+        // Bulk changes (a restored state, the size range, the default size) carry no granular
+        // signal, so the visible section UI is re-bound from the geometry: a custom renderer
+        // that draws a sort badge or a state label is then up to date even when the sort
+        // state itself did not change (P1 of the third review).
+        connect(geometry, &HeaderGeometry::bulkGeometryChanged, this, [this]() {
+            rebindMaterializedSections(std::numeric_limits<int>::min(),
+                                       std::numeric_limits<int>::max());
+        });
         // The sort indicator belongs to the geometry but is drawn by the section widget
         // the business builds in bindSection(), so the change has to reach the sections
         // that are already on screen (both the old and the new sorted one).
@@ -176,6 +190,13 @@ void VirtualHeaderView::setLabelModel(QAbstractItemModel *model)
         connect(m_labelModel, &QAbstractItemModel::columnsMoved, this,
                 [this](const QModelIndex &, int, int, const QModelIndex &, int) { relayout(); });
     }
+    // The label model is part of the section binding contract: an adapter that captured the
+    // model (the README example does) is told about the switch, and the sections that are
+    // already materialized are re-bound from the new model instead of keeping the old titles
+    // (P1 of the third review).
+    if (m_adapter)
+        m_adapter->setLabelModel(model);
+    rebindMaterializedSections(std::numeric_limits<int>::min(), std::numeric_limits<int>::max());
     relayout();
 }
 
@@ -265,6 +286,10 @@ void VirtualHeaderView::setAdapter(HeaderWidgetAdapter *adapter, bool takeOwners
         m_ownAdapter = m_ownAdapter || takeOwnership;
         return;
     }
+    // Collaborators that borrowed the old adapter (the table's pane renderers) have to
+    // release their sections first: they unbind through that adapter, which is still alive
+    // here but may be deleted a few lines below (P0-1 of the third review).
+    emit adapterAboutToChange();
     // Same rule as the view: unbind with the old adapter, drop its pooled section
     // widgets (they belong to another adapter's WidgetType namespace), and only
     // then let the old adapter be deleted.
@@ -278,6 +303,7 @@ void VirtualHeaderView::setAdapter(HeaderWidgetAdapter *adapter, bool takeOwners
     m_adapter = adapter;
     m_ownAdapter = adapter && takeOwnership;
     relayout();
+    emit adapterChanged();
 }
 
 void VirtualHeaderView::setSectionOverscan(int sections)

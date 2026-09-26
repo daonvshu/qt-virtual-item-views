@@ -255,6 +255,16 @@ void VirtualTableView::setHorizontalHeader(HeaderViewInterface *header)
         deleteHeader(m_horizontalHeader);
     m_horizontalHeader = header;
     m_ownHorizontalHeader = true;
+    // A widget header owns (or at least holds) the adapter that the derived pane renderers
+    // borrow, so a later adapter replacement has to tear them down first - they would
+    // otherwise keep a pointer to an adapter that was just deleted (P0-1 of the third
+    // review).
+    if (auto *widgetHeader = dynamic_cast<VirtualHeaderView *>(m_horizontalHeader)) {
+        connect(widgetHeader, &VirtualHeaderView::adapterAboutToChange, this,
+                &VirtualTableView::dropDerivedPaneHeaders, Qt::UniqueConnection);
+        connect(widgetHeader, &VirtualHeaderView::adapterChanged, this,
+                &VirtualTableView::rebuildDerivedPaneHeaders, Qt::UniqueConnection);
+    }
     m_horizontalHeader->setGeometryModel(m_columns);
     m_horizontalHeader->setLabelModel(model());
     // The header is part of the view, so the pane rects and the viewport origin mean
@@ -915,6 +925,24 @@ void VirtualTableView::syncHeaderPanes()
     applyHeaderAnimationSettings();
 }
 
+void VirtualTableView::dropDerivedPaneHeaders()
+{
+    // The derived pane renderers borrow the primary header's adapter: their sections have to
+    // be unbound through that adapter *before* it is replaced (and deleted), so they go away
+    // here and are rebuilt by rebuildDerivedPaneHeaders().
+    for (HeaderViewInterface *&paneHeader : m_paneHeaders)
+        deleteHeader(paneHeader);
+    m_paneHeaders.clear();
+}
+
+void VirtualTableView::rebuildDerivedPaneHeaders()
+{
+    // The primary header has a new adapter: recreate the pane renderers so they borrow the
+    // new one (they were dropped by dropDerivedPaneHeaders()).
+    syncHeaderPanes();
+    layoutHeaderWidgets();
+}
+
 HeaderViewInterface *VirtualTableView::createHorizontalPaneHeader()
 {
     if (auto *widgetHeader = dynamic_cast<VirtualHeaderView *>(m_horizontalHeader)) {
@@ -1421,7 +1449,14 @@ bool VirtualTableView::restoreHeaderState(const QByteArray &state)
     // Everything parsed: commit once. HeaderGeometry::restoreState() validates its
     // own stream before touching a section, so a state we accepted here is applied
     // completely or not at all.
-    if (!m_columns->restoreState(columnState))
+    // The restore may replace the sort state, which the geometry reports through
+    // sortIndicatorChanged - the same signal a user click produces. The model is not to be
+    // sorted here: a restored state says what the state *was*, not that the user asked for a
+    // sort now (P1 of the third review).
+    m_sortGuard = true;
+    const bool restored = m_columns->restoreState(columnState);
+    m_sortGuard = false;
+    if (!restored)
         return false;
     m_panes.setFrozenColumns(frozenLeft);
     m_panes.setFrozenRightColumns(frozenRight);

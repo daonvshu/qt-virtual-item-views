@@ -419,12 +419,22 @@ protected:
     /// Recycles the materialized items whose index lies in the model range
     /// (identity based, so it also works for a tree).
     void recycleItemsInModelRange(const QModelIndex &parent, int first, int last);
+    /// Column structure changes that touch column 0 rename (or invalidate) the (row, 0) cell
+    /// the kernel uses as the materialized row identity. These snapshot the row numbers while
+    /// the old identity is still valid and rebuild the canonical index afterwards.
+    void captureRowIdentityForColumnChange();
+    void restoreRowIdentityAfterColumnChange();
     /// Re-binds the materialized items whose index lies in the model range (identity
     /// based). The kernel uses it for dataChanged(); a subclass uses it when the
     /// *schema* of its item widget changed without the identity changing - the table
     /// does that after a column insert / remove / move, so a business row widget that
     /// builds its column hosts in bindWidget() can rebuild them.
     void rebindItemsInModelRange(const QModelIndex &parent, int first, int last);
+    /// Captured rows of the materialized items (parallel to m_items, -1 = nothing to
+    /// restore) and of the pinned items, plus whether a restore is pending.
+    QVector<qsizetype> m_columnChangeRows;
+    QVector<qsizetype> m_columnChangePinnedRows;
+    bool m_columnChangePending = false;
     /// Moves the current item to view row \a item and ensures it is visible.
     void moveCurrentToItem(qsizetype item, Qt::KeyboardModifiers modifiers = Qt::NoModifier);
     /// Hook that lets a subclass veto the automatic height measurement of an

@@ -684,6 +684,9 @@ QByteArray HeaderGeometry::saveState() const
 
 bool HeaderGeometry::restoreState(const QByteArray &state)
 {
+    // Captured before the commit so a replaced sort state can be reported after it.
+    const int sortBeforeRestore = m_sortIndicatorSection;
+    const Qt::SortOrder orderBeforeRestore = m_sortIndicatorOrder;
     QDataStream stream(state);
     stream.setVersion(QDataStream::Qt_5_15);
 
@@ -737,7 +740,16 @@ bool HeaderGeometry::restoreState(const QByteArray &state)
                                                                   : Qt::DescendingOrder;
     m_stretchLastSection = stretch != 0;
 
+    // The restored order / hidden set are a structural change, so the revision has to move
+    // (a renderer caches the visual order by revision, and the order may just have been
+    // replaced wholesale), and a sort state that differs from the live one is reported
+    // through the signal a renderer builds its sort UI from (P1 of the third review).
+    ++m_orderRevision;
     invalidateCaches();
+    if (m_sortIndicatorSection != sortBeforeRestore
+        || m_sortIndicatorOrder != orderBeforeRestore) {
+        emit sortIndicatorChanged(m_sortIndicatorSection, m_sortIndicatorOrder);
+    }
     emit bulkGeometryChanged();
     emitGeometryChanged();
     return true;

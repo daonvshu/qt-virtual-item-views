@@ -30,6 +30,7 @@ private slots:
     void insertedSectionsTakeTheSuccessorVisualSlot();
     void structuralRemapsReportTheSortIndicator();
     void granularChangesDoNotEmitTheBulkSignal();
+    void restoringAStateBumpsTheOrderRevision();
 };
 
 void TestHeaderGeometry::defaultSectionGeometry()
@@ -279,6 +280,27 @@ void TestHeaderGeometry::structuralRemapsReportTheSortIndicator()
     QCOMPARE(geometry.sortIndicatorSection(), 2);
     QCOMPARE(spy.count(), 1);
     QCOMPARE(spy.at(0).at(0).toInt(), 2);
+}
+
+void TestHeaderGeometry::restoringAStateBumpsTheOrderRevision()
+{
+    // P1 of the third review: restoreState() replaces the visual order and the hidden set -
+    // both are exactly what orderRevision() is a contract for, but the revision stayed put,
+    // so a renderer that skips re-deriving the order (VirtualHeaderView does) kept the old
+    // one.
+    HeaderGeometry geometry;
+    geometry.setSectionCount(6);
+    const QByteArray state = geometry.saveState();
+    const quint32 before = geometry.orderRevision();
+
+    geometry.setSectionHidden(2, true);          // a change that bumps the revision
+    geometry.moveSection(0, 3);
+    const quint32 changed = geometry.orderRevision();
+    QVERIFY(changed != before);
+
+    QVERIFY(geometry.restoreState(state));
+    QVERIFY(geometry.orderRevision() != changed);
+    QVERIFY(!geometry.isSectionHidden(2));
 }
 
 void TestHeaderGeometry::granularChangesDoNotEmitTheBulkSignal()

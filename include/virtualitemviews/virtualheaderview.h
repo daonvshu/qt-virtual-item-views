@@ -119,6 +119,15 @@ public:
     void setSectionOverscan(int sections);
     int sectionOverscan() const { return m_overscan; }
 
+signals:
+    /// Emitted *before* the current adapter is released (and before it is deleted when this
+    /// renderer owns it). A collaborator that borrowed `adapter()` - the table's derived
+    /// pane renderers do - has to drop its sections here, while the adapter is still alive.
+    void adapterAboutToChange();
+    /// Emitted after the new adapter is installed, so a collaborator can borrow it and
+    /// rebuild what it dropped.
+    void adapterChanged();
+
 protected:
     void resizeEvent(QResizeEvent *event) override;
     void mousePressEvent(QMouseEvent *event) override;
