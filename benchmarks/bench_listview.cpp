@@ -571,50 +571,149 @@ private:
     QVector<BenchTreeNode *> m_roots;
 };
 
-/// Very wide table + one frozen column, scrolled horizontally: the scenario behind P1-8/P1-9
-/// of the second review. It compares the two header renderers, because the body/pane layout
-/// was already window-bounded while the *header* used to walk every column per scroll.
+/// Very wide table, four pane shapes, both header renderers, scrolled horizontally: the
+/// scenario behind P1-8/P1-9 of the second review and §6/§7/§8 of the third one.
+///
+/// The per-step times are machine dependent - they are the point of the benchmark - but the
+/// numbers printed next to them are not: a scroll or a relayout must stay bounded by the
+/// pane window (a binary search plus the visible slots), never by the column count, and the
+/// shape fails when it does not. The four shapes are exactly the ones the third review asks
+/// the pre-tag gate to cover: primary group, frozen pane, non-primary scroll group and a
+/// pane whose columns are spread over the whole visual order.
 bool runWideHeaderScenario(int columns, int steps)
 {
     TableModel model(20, columns, 0);
     BenchTableAdapter rowAdapter;
     BenchTableHeaderAdapter headerAdapter;
 
-    const auto runOne = [&](bool widgetHeader) {
-        viv::VirtualTableView view;
-        view.setTableAdapter(&rowAdapter);
-        view.setUniformItemHeight(24);
-        view.setDefaultColumnWidth(40);
-        view.setModel(&model);
-        if (widgetHeader) {
-            auto *header = new viv::VirtualHeaderView(Qt::Horizontal);
-            header->setAdapter(&headerAdapter);
-            view.setHorizontalHeader(header);
-        }
-        view.setFrozenColumns(QVector<int>({0}));
-        view.resize(1000, 600);
-        view.show();
-        QApplication::processEvents();
-        view.flushPendingRelayout();
-
-        QElapsedTimer timer;
-        timer.start();
-        for (int step = 1; step <= steps; ++step) {
-            view.setHorizontalOffset(qint64(step) * 97);
-            view.flushPendingRelayout();
-        }
-        const double ms = timer.nsecsElapsed() / 1.0e6;
-        reportCount("  materialized rows", static_cast<long long>(view.materializedItemCount()));
-        return ms;
+    const auto frozenPane = [](const QVector<int> &logicalColumns) {
+        viv::TablePaneSpec spec;
+        spec.logicalColumns = logicalColumns;
+        spec.scroll = viv::PaneScroll::Frozen;
+        return spec;
+    };
+    const auto scrollablePane = [](const QVector<int> &logicalColumns, int group) {
+        viv::TablePaneSpec spec;
+        spec.logicalColumns = logicalColumns;
+        spec.scroll = viv::PaneScroll::Scrollable;
+        spec.scrollGroup = group;
+        return spec;
     };
 
-    std::printf("\nTable: very wide table, %d columns, 1 frozen, %d horizontal steps\n",
+    struct Shape
+    {
+        const char *label;
+        QVector<viv::TablePaneSpec> panes;   // empty = the default three panes
+        QVector<int> frozenColumns;          // used together with the default panes
+        int scrollGroup = 0;                 // the group the steps move
+    };
+    QVector<Shape> shapes;
+    shapes.append({"primary group, no frozen columns", {}, {}, 0});
+    shapes.append({"one frozen column", {}, {0}, 0});
+    {
+        // A second scroll group: the body of the group *and* its pane header follow the
+        // group offset, and neither may pay a structural pass per step (P1-9 of the second
+        // review, §6 of the third one).
+        QVector<int> rest;
+        for (int column = 5; column < columns; ++column)
+            rest.append(column);
+        Shape shape;
+        shape.label = "second scroll group";
+        shape.panes = {frozenPane({0}), scrollablePane({1, 2, 3}, 0), frozenPane({4}),
+                       scrollablePane(rest, 1)};
+        shape.scrollGroup = 1;
+        shapes.append(shape);
+    }
+    {
+        // A frozen pane with thousands of columns: the pane shows a few dozen and that
+        // window is what the body materializes (§7 of the third review).
+        QVector<int> frozen;
+        for (int column = 0; column < columns / 2; ++column)
+            frozen.append(column);
+        shapes.append({"many frozen columns", {}, frozen, 0});
+    }
+    {
+        // Adjacent *slots* whose global visual order spans the whole table: the header
+        // pass has to stay bounded by the pane window, not by the visuals in between
+        // (§8 of the third review).
+        QVector<int> rest;
+        for (int column = 1; column < columns; ++column) {
+            if (column != columns / 2 && column != columns - 1)
+                rest.append(column);
+        }
+        Shape shape;
+        shape.label = "sparse pane {0, half, last}";
+        shape.panes = {frozenPane({0, columns / 2, columns - 1}), scrollablePane(rest, 0)};
+        shapes.append(shape);
+    }
+
+    std::printf("\nTable: very wide table, %d columns, %d horizontal steps per pane shape\n",
                 columns, steps);
-    const double nativeMs = runOne(false);
-    report("native header, per step", nativeMs / steps);
-    const double widgetMs = runOne(true);
-    report("widget header, per step", widgetMs / steps);
-    return nativeMs > 0 && widgetMs > 0;
+    bool ok = true;
+    for (const Shape &shape : shapes) {
+        std::printf("\npane shape: %s (scrolling group %d)\n", shape.label, shape.scrollGroup);
+        for (bool widgetHeader : {false, true}) {
+            const char *headerName = widgetHeader ? "widget" : "native";
+            viv::VirtualTableView view;
+            view.setTableAdapter(&rowAdapter);
+            view.setUniformItemHeight(24);
+            view.setDefaultColumnWidth(40);
+            view.setModel(&model);
+            viv::VirtualHeaderView *header = nullptr;
+            if (widgetHeader) {
+                header = new viv::VirtualHeaderView(Qt::Horizontal);
+                header->setAdapter(&headerAdapter);
+                view.setHorizontalHeader(header);
+            }
+            if (shape.panes.isEmpty())
+                view.setFrozenColumns(shape.frozenColumns);
+            else
+                view.setPanes(shape.panes);
+            view.resize(1000, 600);
+            view.show();
+            QApplication::processEvents();
+            view.flushPendingRelayout();
+
+            // The structural pass builds the pane caches, so it is allowed to be O(columns).
+            char label[128];
+            std::snprintf(label, sizeof(label), "%s: structural visits", headerName);
+            reportCount(label, static_cast<long long>(view.horizontalLayoutColumnVisits()));
+            std::snprintf(label, sizeof(label), "%s: visible columns", headerName);
+            reportCount(label, static_cast<long long>(view.visibleColumnLogicalIndexes().size()));
+            std::snprintf(label, sizeof(label), "%s: materialized rows", headerName);
+            reportCount(label, static_cast<long long>(view.materializedItemCount()));
+
+            const qint64 maximum = view.maximumHorizontalOffset(shape.scrollGroup);
+            QElapsedTimer timer;
+            timer.start();
+            for (int step = 1; step <= steps; ++step) {
+                // A remainder keeps the first visible column partially scrolled out.
+                const qint64 wanted = qint64(step) * 97;
+                view.setHorizontalOffset(shape.scrollGroup,
+                                         maximum > 0 ? wanted % maximum : qint64(0));
+                view.flushPendingRelayout();
+            }
+            const double ms = timer.nsecsElapsed() / 1.0e6;
+
+            // The pane window is a binary search over the pane's prefix sums: a scroll that
+            // walked the columns would show up here (thousands, not "a few").
+            const qsizetype scrollVisits = view.horizontalLayoutColumnVisits();
+            ok = ok && scrollVisits < 100;
+            std::snprintf(label, sizeof(label), "%s: per step (%s visits)", headerName,
+                          scrollVisits < 100 ? "bounded" : "UNBOUNDED");
+            report(label, steps > 0 ? ms / steps : ms);
+            if (widgetHeader && header) {
+                // Sections on screen belong to this shape's windows only - a sparse or
+                // frozen pane must not materialize columns it does not show.
+                std::snprintf(label, sizeof(label), "%s: materialized header sections",
+                              headerName);
+                const qsizetype sections = header->materializedSectionCount();
+                reportCount(label, static_cast<long long>(sections));
+                ok = ok && sections <= 64;
+            }
+        }
+    }
+    return ok;
 }
 
 bool runTableScenario(const char *name, viv::VirtualTableView::MaterializationMode mode,

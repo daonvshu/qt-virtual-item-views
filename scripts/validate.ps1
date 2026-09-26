@@ -170,7 +170,12 @@ $examples = @('simple_list', 'order_cards', 'dynamic_height', 'million_rows',
 $benchmarks = @(
     [pscustomobject]@{ Name = 'list 1M rows';  Args = @('--rows', '1000000', '--steps', '200') },
     [pscustomobject]@{ Name = 'table 100 cols'; Args = @('--table', '--table-columns', '100', '--rows', '200000', '--steps', '100') },
-    [pscustomobject]@{ Name = 'tree';          Args = @('--tree', '--tree-roots', '300000') }
+    [pscustomobject]@{ Name = 'tree';          Args = @('--tree', '--tree-roots', '300000') },
+    # The four wide-table pane shapes (primary / frozen / non-primary group / sparse pane) with
+    # both header renderers, at the column count that keeps a Debug gate run short. The
+    # benchmark asserts the window-bounded invariants itself; 100,000 columns is a manual run
+    # (its native header structural pass takes minutes in Debug - see docs/performance.md §4).
+    [pscustomobject]@{ Name = 'wide header 10k'; Args = @('--wide-header', '--wide-columns', '10000', '--steps', '100') }
 )
 
 # -- combinations ------------------------------------------------------------

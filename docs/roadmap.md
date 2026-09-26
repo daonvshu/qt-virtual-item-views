@@ -243,7 +243,7 @@ smoke。按审查的判据，这一版已经可以视为 1.0 候选（tag 由仓
 | **Wave 1 生命周期 / 身份** | P0-1 pane 渲染器跟随主表头 adapter 替换（复现即崩溃）、P1 列 0 结构变化后的 canonical 行身份、P1 `setGeometryModel()`/`setLabelModel()` 替换语义（含新的 `HeaderWidgetAdapter::setLabelModel()` 钩子）、P1 `restoreState()` 的 order/sort 通知（含 restore 期间的 sort guard） | ✅ |
 | **Wave 2 宽表收尾** | Native 表头 non-primary offset 走 O(1)（不再整表同步）、frozen pane 的 body 按 pane 窗口物化、sparse explicit pane 的 Widget 表头直接遍历 pane slots | ✅ |
 | **Wave 3 API / ABI 决策** | 隐藏 / 统一 `VirtualTableView::setAdapter()`（✅ 3a）、`setLayoutPolicy()` 明确成初始化期钩子（✅ 3a）、同步 `model-signals.md` / `ci.md` / `api-stability.md` 的 drift（✅ 3a）；**决定"PIMPL + binary ABI"还是"只承诺 source API"**（⏳ 待用户拍板） | 🟡 3a 已完成，ABI 策略待拍板 |
-| **Wave 4 tag 前验证** | Debug + Release × Qt5/Qt6 × MSVC/MinGW GCC/llvm-mingw Clang + ASan/UBSan + 28 CTest + 12 示例 + 消费端 + wide-header benchmark 四种 pane 形态 | 大部分已常态化，收口时重跑 |
+| **Wave 4 tag 前验证** | Debug + Release × Qt5/Qt6 × MSVC/MinGW GCC/llvm-mingw Clang + ASan/UBSan + 28 CTest + 12 示例 + 消费端 + wide-header benchmark 四种 pane 形态 | 🟡 wide-header 四种形态已进基准一步（含断言），收口时按清单重跑全矩阵 |
 
 Wave 1 的实测证据（修复前的失败形态）：
 

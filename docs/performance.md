@@ -91,9 +91,26 @@ bench_listview --wide-header --wide-columns 100000 --steps 200
 * **只看索引的 splice**（P2-10）：不带视图，直接量 `TreeVisibilityIndex` 在 100 万可见行上的
   expand/collapse —— "在**末尾**展开"（纯追加）与"在**开头**展开"（要搬尾部）的差值就是扁平
   向量的那次 memmove；场景自带"可见行数恢复、首/末行不变"的不变量检查。
-* **极宽表的表头**（P1-8/P1-9）：10 万列 + 1 个冻结列，分别装 native 与 Widget 表头各滚 N 步，
-  报告每步耗时。Debug 实测（200 步）：1 万列 0.52 / 0.92 ms、10 万列 1.17 / 1.48 ms
-  —— 列数 ×10 而每步只涨 1.3~2.2 倍，说明表头与 pane 布局一样只跟可见窗口走。
+* **极宽表的表头**（P1-8/P1-9，第三轮审查 Wave 2 扩到 §6/§7/§8 的四种 pane 形态）：同一个
+  10 万（或 `--wide-columns` 指定的）列表上依次跑
+
+  | 形态 | 说明 |
+  | --- | --- |
+  | primary group | 不冻结，滚主组（基线） |
+  | one frozen column | 冻结 1 列后滚主组 |
+  | second scroll group | 显式 pane 列表里的第二个滚动组，滚那一组 |
+  | many frozen columns | 冻结一半的列（冻结 pane 比视口宽），滚主组 |
+  | sparse pane {0, half, last} | 显式 pane 的三列在全局视觉顺序里跨整张表 |
+
+  每种形态都装 native 与 Widget 两种表头，各滚 N 步，报告结构性 pass 的列访问数、可见列数、
+  per-step 耗时与 Widget 表头物化的 section 数，并自己断言"滚动访问数 < 100、物化 section
+  数 <= 64"；违反时以非 0 退出码结束，所以它进了 `scripts/validate.ps1` 的基准一步
+  （`--wide-columns 10000 --steps 100`，Debug 约 9 s）。Debug 实测每步：1 万列 0.12~2.03 ms、
+  10 万列 0.10~3.99 ms（native / Widget，视形态而定）—— 列数 ×10 而每步只涨几倍，说明表头与
+  pane 布局一样只跟可见窗口走。
+  **10 万列在 Debug 下整套要几分钟**，而且那几分钟几乎全在 native 表头的结构性整表同步上
+  （见 §4 的最后一条），主线程不处理事件 —— 手动跑这一档时别让它一直挂着（实测被 Windows 的
+  "无响应"判据终止过两次）。
 
 ### v1.0 基线（2026-09-25 实测）
 
@@ -267,6 +284,7 @@ CTest 目标**跑一遍（6.5 s，Debug 下约 25 s），所以"优化 + NDEBUG 
   实测（Debug / MSVC 2022 / Qt 6.11.2 / Cell Widget Mode，`setFrozenColumns()` 冷路径）：
   20,000 列约 1.5 s，100,000 列约 43 s。交互路径不受影响（滚动与 resize 走纯 offset / 粒度
   信号，dataChanged 只重绑被点名的区间），所以这是"重新配置一张 10 万列表的表头"的成本，
-  不是帧循环里的成本；`bench_listview --wide-header` 的三种 pane 形态测的也是滚动步进而非这条
-  冷路径。要拆掉它得绕开 QHeaderView 的逐 section API（或自己记住"上次写入的 section 状态"以
-  跳过无变化的写入），留给后续 wave。
+  不是帧循环里的成本；`bench_listview --wide-header` 的四种 pane 形态测的是滚动步进而非这条
+  冷路径（每一种形态各自要付一次这条冷路径，这也是 10 万列手动跑要几分钟的原因）。要拆掉它得
+  绕开 QHeaderView 的逐 section API（或自己记住"上次写入的 section 状态"以跳过无变化的写入），
+  留给后续 wave。

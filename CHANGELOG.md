@@ -282,6 +282,24 @@
   `tst_headerstructure::paneCacheIsUpToDateImmediatelyAfterAColumnInsert`（修复前 pane 的列集合
   仍是 `{0,1}`，正确的 `{0,2}` 要等下一次结构变化）。
 
+### Added（第三轮代码审查 Wave 4 准备：宽表基准覆盖四种 pane 形态，2026-09-26）
+
+第三轮审查 §6 指出 `bench_listview --wide-header` 只覆盖"1 个冻结列 + 主组滚动"，因此"非主组
+表头是否真的走了 O(1) 路径"没有被任何基准或测试看见。现在该场景生成**四种 pane 形态 x 两种
+表头渲染器**：
+
+* `primary group`（基线）、`one frozen column`、`second scroll group`（显式 pane 列表，滚第二个
+  组）、`many frozen columns`（冻结一半的列，冻结 pane 比视口宽）、`sparse pane {0, half, last}`
+  （三列在全局视觉顺序里跨整张表）。
+* 每种形态报告：结构性 pass 的列访问数、可见列数、实例化行数、per-step 耗时、Widget 表头物化的
+  section 数；并自带两条与机器无关的不变量 —— **滚动访问数 < 100**（窗口是二分 + 可见槽位，
+  不是整表扫描）与 **物化 section 数 <= 64**（pane 只物化自己窗口里的列），违反即非 0 退出码。
+* `scripts/validate.ps1` 的基准一步新增 `--wide-header --wide-columns 10000 --steps 100`
+  （Debug 约 9 s），于是这四个形态每次一键验证都会跑；10 万列仍是手动档。
+* `docs/performance.md` §3 写明这四种形态、自动档参数与实测每步耗时，§4 补充"10 万列手动档要
+  几分钟、且那段时间主线程不处理事件（native 表头的结构性整表同步），实测被 Windows 的
+  '无响应'判据终止过两次"。
+
 ### Changed（第三轮代码审查 Wave 3a：API 统一与文档同步，2026-09-26）
 
 第三轮审查的 Wave 3 里有两件不需要拍板的事先做掉，ABI 策略（PIMPL 化 vs 只承诺源码 API）
