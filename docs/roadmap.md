@@ -312,8 +312,21 @@ Gate A 的实测证据（修复前的失败形态，都是先还原旧实现再�
 * `setAdapter()` 交接 model：旧实现下自绘 section 在 `bindSection()` 里解引用空模型**直接崩溃**
   （`Exception code 0xc0000005`，栈顶就是 `ModelSectionAdapter::bindSection()`）。
 
-验证：`scripts/validate.ps1 -Library Both`（Qt 6.11.2 + Qt 5.15.2 x 静态/动态库：configure /
-全量构建 / 28 个 CTest / 12 个示例 / 4 档基准 / 安装 + 消费端）28 步全绿。
+最终 tag 前验证（审查 §11 要的"短的一轮"就是这份矩阵再跑一遍；Gate A 动了内核、Gate B 动了
+公开 adapter 接口，所以 sanitizer 这次尤其关键）：
+
+| 命令 | 覆盖 | 结果 |
+| --- | --- | --- |
+| `scripts/validate.ps1 -Library Both` | Qt 6.11.2 + 5.15.2 x 静态/动态（MSVC 19.50） | 28 步全绿 |
+| `scripts/validate.ps1 -Asan` | MSVC AddressSanitizer，两个 Qt 版本 x 静态/动态 | 16 步全绿，无报告 |
+| `scripts/validate.ps1 -Release -Library Static` | 两个 Qt 版本的 Release | 14 步全绿 |
+| `scripts/validate.ps1 -MinGW -Library Static` | GCC 13.1 / llvm-mingw Clang 17 / GCC 8.1 的 Debug | 21 步全绿 |
+| `scripts/validate.ps1 -MinGW -Library Static -Release` | 同样三个 kit 的 Release | 21 步全绿 |
+| `scripts/validate.ps1 -UBSan -Library Static` | llvm-mingw Clang 17 + `-fsanitize=undefined -fno-sanitize-recover` | 5 步全绿 |
+
+每一步都含全量构建 / 28 个 CTest / 12 个示例 / 4 档基准（Debug 档）/ 安装 + 消费端冒烟，
+`-Library Both` 一步还包含动态库形态。**至此第四轮审查的 Gate A/B/C 全部收口，唯一的禁区
+只剩"仓库主人手动打 tag"。**
 
 ## 7. 决策记录
 
