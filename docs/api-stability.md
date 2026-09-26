@@ -34,6 +34,12 @@
    所以签名里混用 `QList<T>` 会让同一份业务代码在两个 Qt 大版本下代入不同的类型集
    （`include/virtualitemviews/sizeindex.h` 里就有一处显式注释说明为什么写 `QVector`）。
    `onDataChanged()` 那种私有槽不受此约束。
+7. **私有成员布局不是源码契约**：公开类的 `private:` 成员（缓存、标志位、观察者槽位…）可以在
+   **次版本**里增删或改类型，这是 1.x 有意保留的演进空间 —— 上面 1~6 条约束的是名字、签名与
+   语义，不是类的 sizeof。代价写在 [abi.md](abi.md) §1：本项目**不承诺二进制 ABI**，升级版本
+   要重新编译（"同一套工具链 + 重编"是这个库的使用方式）。反过来，公开类里**按值出现**的类型
+   （`TablePane`、`ColumnGeometry`、`ItemPane`、`MaterializedItem`…）不享受这条，它们的成员
+   变化仍然只能进主版本。
 
 ## 3. 复核清单（2026-09-25，roadmap 3a）
 
@@ -94,7 +100,9 @@
 * [x] `find_package(VirtualItemViews)` 消费端实跑 —— 3c，`tests/install/consumer`；
 * [x] CHANGELOG 的维护节奏 —— 已建 `CHANGELOG.md`，从 v1.0 起按本文第 2 条维护。
 
-仍然已知、但按计划留到以后的两项（都不影响 1.x 的兼容承诺）：
+曾经列在这里的两项，一项已经结清、一项仍然外部受限：
 
-* Release 构建的性能基线未采集（[performance.md](performance.md) §4 末条）；
-* CI 未接入，`scripts/validate.ps1` 就是 CI 入口（[roadmap](roadmap.md) 的 3e 条目）。
+* [x] Release 构建的性能基线 —— 2026-09-26 采集（[performance.md](performance.md) §3 的 Release 表；
+  复跑 `pwsh -File scripts/validate.ps1 -Release -Library Static`），两个 Qt 版本各 14 步全绿；
+* [ ] CI 未接入：`scripts/validate.ps1` 就是 CI 入口，workflow 配置与踩坑在
+  [ci.md](ci.md)，等一台 runner（[roadmap](roadmap.md) 的 3e 条目）。

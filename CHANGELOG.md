@@ -227,8 +227,9 @@
   memmove，这才是大头），"在**末尾**展开"（没有尾部搬移）是 0.05 ms，稳态的 expand+collapse
   一对是 **2.9 ms**。**尾部搬移本身仍然存在**（1M 行 ≈ 8 MB ≈ 1.5 ms，这是扁平向量的固有代价）：
   去掉它要把可见行表换成 rope / 分块，而那会改变 `TreeVisibilityIndex`（公开的 B 层类）的成员
-  布局，按 [abi.md](docs/abi.md) §4 第 3 条属于 ABI 破坏 —— 所以审查说的"后续优化"实际是
-  **下一个主版本**的事（决定记在 roadmap 的决策表里），而不是 1.x。
+  布局 —— 当时的理由是 [abi.md](docs/abi.md) §4 把"改数据成员布局"列为 ABI 破坏，所以审查说的
+  "后续优化"被排到**下一个主版本**；同一天的发布策略定案（见本节上面的 Changed 段）改成只承诺
+  源码兼容之后，这条硬约束不再成立，推迟变成排期选择（决定记在 roadmap 的决策表里）。
 * **多滚动组的宽度分配不再"越排越窄"（P2-7）**：非主滚动 pane 的份额用"还在流动的剩余宽度"
   当分子，分母却始终是**全部**滚动组的 extent，于是每个 pane 都比前一个按比例小一点：900 px
   视口里三个等宽组得到 134 / 100 / 66，组再多尾巴会塌成 0（业务看到的是"第二个组几乎没法滚、
@@ -260,9 +261,10 @@
   仍返回悬空指针，随后在 `QList` 里触发 Qt 的 `ASSERT: size_t(d.size) <= MaxSize` 致命断言。
   回归测试：`tst_modellifetime::deletingTheModelBehindATreeIsSafe` /
   `deletingTheLabelModelBehindAWidgetHeaderIsSafe` / `deletingTheGeometryBehindAStandaloneHeaderIsSafe`。
-  **内部成员类型变化**（`TreeVisibilityIndex` 与两个表头渲染器的私有成员）：按
-  [docs/abi.md](docs/abi.md) §4 第 3 条属于 ABI 变化，因为 1.0 仍未打 tag，记在这里作为
-  1.0 定稿前的内部收口。
+  **内部成员类型变化**（`TreeVisibilityIndex` 与两个表头渲染器的私有成员）：按当时
+  [docs/abi.md](docs/abi.md) §4 的口径属于 ABI 变化；因为 1.0 仍未打 tag，记在这里作为
+  1.0 定稿前的内部收口（1.0 的发布策略定案后，这类**私有**成员变化在 1.x 的次版本里本来也是
+  允许的 —— 见本节上面的 Changed 段）。
 * **Widget Header 不会重新 bind 已存在的 section（P0-3）**：`headerDataChanged` / 列结构变化 /
   `modelReset` 都只是 `relayout()`，而 `relayout()` 只 bind **新 acquire** 的控件 —— 重命名一列后
   屏幕上的 section 仍显示旧标题，结构变化后 section 与逻辑列身份错位。
@@ -281,6 +283,31 @@
   `geometryChanged` 就是那次统一重建）。回归测试：
   `tst_headerstructure::paneCacheIsUpToDateImmediatelyAfterAColumnInsert`（修复前 pane 的列集合
   仍是 `{0,1}`，正确的 `{0,2}` 要等下一次结构变化）。
+
+### Changed（1.0 发布策略定案：1.x 只承诺源码 API，二进制 ABI 为 best effort，2026-09-26）
+
+第三轮代码审查的 §10 指出"现有的 ABI 承诺与无 PIMPL 设计冲突"：`docs/abi.md` 当时写着"1.x
+之间保证兼容；改变公开类数据成员布局算 ABI break"，而核心公开类（`VirtualItemView`、
+`VirtualTableView`、`VirtualHeaderView`、`NativeHeaderView`、`HeaderGeometry`、
+`TreeVisibilityIndex`、`TablePaneLayout`、`WidgetRecycler`、`BlockSizeIndex` 等）都把实现状态
+直接放在头文件里 —— 照那条写，打 tag 之后"给某个私有缓存加一个成员"也要升主版本，而 1.0
+收口前后三轮审查修的正是这类内部状态。审查给了两条路，**1.0 选定方案 B**：
+
+* **承诺**：1.x 的**源码 API 与语义**兼容（[api-stability.md](docs/api-stability.md) 的四级冻结
+  规则不变）；
+* **不承诺**：二进制 ABI。同一套工具链 + 重新编译是这个库的使用方式；跨编译器 / 跨运行库
+  复用同一个二进制不在支持范围；
+* **因此在 1.x 的次版本里允许**增删公开类的**私有**成员、改私有成员类型（使用者升级时重编即可）；
+  公开类里**按值出现**的类型（`TablePane`、`ColumnGeometry`、`ItemPane`、`MaterializedItem`…）
+  不享受这条，它们的成员变化仍然只能进主版本；
+* `SOVERSION` 与 `find_package` 的 `SameMajorVersion` 保留，但文档明确写出"**版本匹配策略不等于
+  ABI 承诺**"。
+
+被否决的另一条路（打 tag 前把上述 9 个类 PIMPL 化，换取真正的 1.x 二进制兼容）留作 2.0 的
+候选；决策记录与理由见 [roadmap.md](docs/roadmap.md) §7。配套改动：`docs/abi.md` §1 的承诺
+表格重写、§4 改成"源码层面 / 二进制层面"两列的对照表、§6 检查清单加第 0 条；`docs/api-stability.md`
+新增第 7 条冻结规则；`CMakeLists.txt` 里 `SameMajorVersion` 的注释同步。这是**策略文档**的变更，
+没有改任何公开签名或行为，四种构建组合（Qt 5.15/6.11 × 静态/动态）的 28 步验证仍全绿。
 
 ### Added（第三轮代码审查 Wave 4 准备：宽表基准覆盖四种 pane 形态，2026-09-26）
 

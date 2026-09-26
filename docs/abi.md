@@ -10,8 +10,22 @@
 | `project(VERSION)` | `1.0.0` |
 | `SOVERSION` | `1`（= `PROJECT_VERSION_MAJOR`） |
 | 共享库文件名 | Windows `VirtualItemViews.dll`；Linux/macOS `libVirtualItemViews.so.1.0.0`（`SONAME` 指向 `.so.1`） |
-| `find_package` 版本匹配 | `SameMajorVersion`（1.x 之间保证兼容） |
-| 规则 | 破坏 ABI 就动 `SOVERSION`（= 主版本），破坏源码 API 就动主版本；1.0 之前的内部收口不提供兼容层（那时没有打过 tag、没有下游），清单见 [CHANGELOG](../CHANGELOG.md) |
+| `find_package` 版本匹配 | `SameMajorVersion` —— 这只是 CMake 的**包版本匹配策略**，它本身不创造 ABI 兼容性 |
+| **1.x 的兼容承诺** | **源码 API / 语义兼容**（[api-stability.md](api-stability.md)）；**二进制 ABI = best effort**：换版本请重编，本项目不承诺"旧编译产物 + 新库"这种组合 |
+| 规则 | 破坏源码 API 就动主版本，并写进 CHANGELOG 的 `Breaking`；`SOVERSION` 跟着主版本涨，作用只是让不同主版本的共享库文件不互相覆盖（**不给跨主版本的二进制兼容背书**）；1.0 之前没有打过 tag、没有下游，内部收口不提供兼容层，清单见 [CHANGELOG](../CHANGELOG.md) |
+
+这条策略是 1.0 收口时**明确选定**的（2026-09-26，理由见 [roadmap.md](roadmap.md) §7 的决策记录）：
+库的核心类没有 PIMPL，实现状态直接放在公开头文件里（`VirtualItemView`、`VirtualTableView`、
+`VirtualHeaderView`、`NativeHeaderView`、`HeaderGeometry`、`TreeVisibilityIndex`、
+`TablePaneLayout`、`WidgetRecycler`、`BlockSizeIndex`…）。如果承诺 1.x 二进制兼容，那么"给某个
+缓存加一个 private 成员"就成了必须升主版本的改动 —— 而 1.0 收口前后几轮代码审查修的正是这类
+内部状态。所以：**源码兼容是承诺，二进制兼容是"同一套工具链 + 重编"**。这也意味着
+
+* 次版本里**允许**增删公开类的私有成员、改私有成员类型、给私有结构加字段（要求使用者重编）；
+* 公开类里**按值出现**的类型（`TablePane`、`ColumnGeometry`、`ItemPane`、`MaterializedItem`…）
+  不行 —— 它们是源码契约的一部分，改动仍然只能进主版本；
+* 发布二进制包（vcpkg/Conan/自带 DLL）的人应当把版本号固定到精确版本，或在升级时重编；
+  混搭不同主版本（乃至不同次版本的 Debug/Release 与不同 Qt）产生的链接错误不在支持范围。
 
 `SOVERSION` 只在共享库上有意义（`VIRTUALITEMVIEWS_BUILD_SHARED=ON`），静态库没有这回事：
 静态链接把 ABI 的账推给了使用者，所以静态用户必须用**同一套**编译器/Qt/运行库重编。
@@ -88,23 +102,26 @@ Qt 由 Config 里的 `find_dependency()` 找回，**但安装前缀按 Qt 大版
 `tests/install/consumer` 就是这个流程的常规检查：一个**独立**的 CMake 工程（独立 configure、
 独立 build），只用 `find_package()` + 公开头文件，跑 28 项运行期自检后按退出码报告结果。
 
-## 4. 什么算 ABI 破坏
+## 4. 什么算二进制破坏
 
-以下改动都要升 `SOVERSION`（v1.0 之后 = 升主版本），并写进 CHANGELOG 的 `Breaking`：
+下表是"二进制层面发生了什么"。因为 §1 选定的策略是"1.x 只承诺源码兼容"，所以每一行都要看
+**两列**：它是不是源码破坏（决定要不要升主版本），以及它对二进制使用者的实际后果。
 
-1. 删除或改名公开类/自由函数/信号（符号直接消失）；
-2. 增删虚函数，或改变虚函数顺序/签名（vtable 布局变化）；
-3. 改变类的数据成员布局（增删成员、改类型、改访问级别、改对齐）——包括纯内联的结构体，
-   因为它们按值出现在签名里（`TablePane`、`ColumnGeometry`、`ItemPane`…）；
-4. 改变枚举的**值**（`enum class` 底层类型与数值会进 ABI；追加在末尾是源码兼容但仍改变
-   `Q_ENUM` 元数据，需在 CHANGELOG 标注）；
-5. 改变内联函数体里"调用方会内联展开"的语义（例如某个 getter 突然开始做懒构造）；
-6. 改变公开类的基类列表（`QWidget`/`QHeaderView` 之类）；
-7. 改变最低 Qt 版本或构建选项组合（例如 "6.2+" 改成 "6.5+"）。
+| # | 改动 | 源码层面 | 二进制层面（1.x 内的做法） |
+| --- | --- | --- | --- |
+| 1 | 删除或改名公开类 / 自由函数 / 信号 | 破坏，只能进主版本 + CHANGELOG `Breaking` | 符号消失，旧产物必然链接失败 |
+| 2 | 增删虚函数，或改虚函数顺序 / 签名 | 破坏，进主版本 | vtable 布局变化；没有 PIMPL 时无法在次版本里悄悄加虚函数 |
+| 3 | 改公开类**私有数据成员**的布局（增删、改类型、改对齐） | 不破坏（私有成员不是源码契约） | **允许随次版本改**：`SOVERSION` 不变，使用者升级时必须重编 —— 这正是选方案 B 换来的空间 |
+| 4 | 改**按值出现**的公开结构体（`TablePane`、`ColumnGeometry`、`ItemPane`、`MaterializedItem`…）的成员 | 破坏，进主版本 | 即使只加私有成员也会改 sizeof/偏移，所以不区分公私一律进主版本 |
+| 5 | 改枚举的**值** | 破坏（数值 + `Q_ENUM` 元数据），进主版本 | 追加在末尾是源码兼容但仍改元数据，要在 CHANGELOG 标注 |
+| 6 | 改内联函数体里"调用方会内联展开"的语义（例如某 getter 突然开始懒构造） | 语义变化，按 [api-stability.md](api-stability.md) 第 2 条的"不改默认值语义"处理 | 允许随次版本改，要求重编 |
+| 7 | 改公开类的基类列表（`QWidget`/`QHeaderView` 之类） | 破坏，进主版本 | 对象布局变化 |
+| 8 | 改最低 Qt 版本或构建选项组合（例如 "6.2+" 改成 "6.5+"） | 破坏，进主版本 | 依赖的符号集合变化 |
 
 不算破坏（可以随次版本发）：新增非虚函数、新增信号、新增类、新增枚举值（追加在末尾）、
-改注释与文档、改内部实现（`src/**`）、修 bug。**注意"改默认值"属于源码语义变化**，
-按 [api-stability.md](api-stability.md) 第 2 条要当成破坏性变更处理。
+改注释与文档、改内部实现（`src/**`）、修 bug（包括上面第 3、6 类那种"要重编"的内部调整）。
+**注意"改默认值"属于源码语义变化**，按 [api-stability.md](api-stability.md) 第 2 条要当成
+破坏性变更处理。
 
 ### 跨边界的容器
 
@@ -117,7 +134,9 @@ Qt 由 Config 里的 `find_dependency()` 找回，**但安装前缀按 Qt 大版
 * MSVC 会对被 `dllexport` 的类里的这类成员报 C4251（本仓库实测 131 条）。`global.h` 在
   **库自身编译时**关闭 4251，并写明理由；消费端包含这些头文件不受影响（导入方向不触发）。
   这不是"把警告藏起来"：它对每个公开类都成立的前提正是上面这条"同一套工具链"约束，
-  真要做跨编译器 ABI 只能上 pimpl，那是 1.x 的议题。
+  换句话说，"没有 PIMPL"是刻意的选择而不是欠账（[roadmap.md](roadmap.md) §7 的决策记录）。
+  跨编译器 / 跨运行库的二进制复用（同一个 `.dll` 被 MSVC 2019 与 2022、或 GCC 与 Clang 的产物
+  共用）**不在承诺范围内**：真要做那件事只能给这些类上 PIMPL，而那属于 2.0 的议题。
 
 ## 5. 支持矩阵
 
@@ -150,6 +169,9 @@ MinGW 组合的复跑命令：`pwsh -File scripts/validate.ps1 -MinGW -Library S
 
 ## 6. 发布前检查清单（v1.0）
 
+0. [x] **发布策略定案**（2026-09-26）：1.x 只承诺**源码 API / 语义兼容**，二进制 ABI 是
+   best effort（§1 与 §4 按这条写）；`SameMajorVersion` 只当包版本匹配策略用，不写成 ABI 承诺。
+   理由与被否决的另一条路线（打 tag 前 PIMPL 化 9 个公开类）见 [roadmap.md](roadmap.md) §7；
 1. [x] `project(VERSION 1.0.0)`，`SOVERSION` = 1，`find_package` 兼容性 `SameMajorVersion`；
 2. [x] `pwsh -File scripts/validate.ps1` 全绿（四种组合 × 构建 / CTest / 12 个示例 / benchmark /
    安装 + 消费端共 28 个步骤，退出码 0）；
@@ -167,4 +189,5 @@ MinGW 组合的复跑命令：`pwsh -File scripts/validate.ps1 -MinGW -Library S
 4. [x] CHANGELOG 的破坏性变更段与 [api-stability.md](api-stability.md) §6 的欠账都清空。
 
 下一步是**打 tag**（由仓库主人手动执行）。打完之后再改动的第一件事应当是更新本文 §1 的表格与
-CHANGELOG —— 1.x 之间的兼容承诺从这一版开始生效。
+CHANGELOG —— 1.x 的**源码兼容**承诺从这一版开始生效；二进制层面按 §1：换版本请重编，
+私有成员的调整允许发生在次版本里。

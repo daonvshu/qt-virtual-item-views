@@ -29,7 +29,7 @@ v0.7 的逐项细节与实现决定记在 [spans.md](spans.md)、[accessibility.
 
 | 项 | 值 |
 | --- | --- |
-| 版本 | `1.0.0`（`SOVERSION 1`、`find_package` 兼容性 `SameMajorVersion`；tag 由仓库主人手动打） |
+| 版本 | `1.0.0`（`SOVERSION 1`、`find_package` 兼容性 `SameMajorVersion`；1.x 承诺**源码**兼容，二进制 ABI = best effort，见 §7；tag 由仓库主人手动打） |
 | Qt 6 | `D:\devlib\Qt\6.11.2\msvc2022_64` |
 | Qt 5 | `D:\devlib\Qt\5.15.2\msvc2019_64` |
 | 工具链 | MSVC 18 (14.50.35717) x64 + Ninja + CMake 4.3（CLion 自带） |
@@ -103,8 +103,10 @@ Wave 3（v1.0 工程化交付）。**
 ### Wave 3（v1.0）：工程化交付
 
 **Wave 3 已全部完成（2026-09-25），`PROJECT_VERSION` 收口到 `1.0.0`（`SOVERSION 1`、
-`find_package` 兼容性 `SameMajorVersion`）。** 剩下的动作只有仓库主人手动打 tag；打完之后的
-第一件事是更新 [abi.md](abi.md) §1 与 CHANGELOG，因为 1.x 之间的兼容承诺从这一版开始生效。
+`find_package` 兼容性 `SameMajorVersion`）。第三轮审查的 §10 在收口时又追问了一次"1.x 到底
+承诺什么"，于是 2026-09-26 定案：**1.x 只承诺源码 API / 语义兼容，二进制 ABI 是 best effort**
+（见本文 §6 Wave 3 与 §7 的决策记录）。**剩下的动作只有仓库主人手动打 tag；打完之后的第一件事
+是更新 [abi.md](abi.md) §1 与 CHANGELOG —— 1.x 的源码兼容承诺从这一版开始生效。
 
 - [x] **3a API 稳定性审查**（[api-stability.md](api-stability.md)）：23 个公开头文件逐个复核并按
       "应用 / 扩展 / 诊断 / 私有"四级冻结，规则写进文档（只加不删、不改默认值语义、不新增
@@ -121,8 +123,10 @@ Wave 3（v1.0 工程化交付）。**
       （静态消费者，`PUBLIC` 随导出目标传播）由 CMake 管理，业务代码不需要手工 define。
       产物布局统一成 `<build>/bin` + `<build>/lib`（Windows 只在自己所在目录找 DLL，同目录后
       CTest / 示例 / 基准都不需要 PATH 技巧）。版本号 `0.1.0 -> 0.9.0`，`find_package` 兼容性在
-      0.x 期间用 `SameMinorVersion`、1.0 起切 `SameMajorVersion`，SOVERSION 跟主版本。
-      文档写清"什么改动算 ABI 破坏"（7 条）、跨边界 Qt 容器的约束（同一套 Qt + 运行库设置）、
+      0.x 期间用 `SameMinorVersion`、1.0 起切 `SameMajorVersion`，SOVERSION 跟主版本
+      （版本匹配 ≠ ABI 承诺，这一点 2026-09-26 在 [abi.md](abi.md) §1 写明）。
+      文档写清"什么改动算二进制破坏"（当时 7 条；2026-09-26 的发布策略定案后重排成 §4 的
+      "源码层面 / 二进制层面"两列对照表）、跨边界 Qt 容器的约束（同一套 Qt + 运行库设置）、
       以及实测矩阵（Qt 5.15.2 / 6.11.2 × 静态 / 动态，MSVC 19.50 x64）与未实测组合。
       实测证据：共享构建产出 `VirtualItemViews.dll`（约 1000 个导出符号）+ 导入库，
       四种组合各自跑通 20 个 CTest 目标与 12 个示例。
@@ -175,6 +179,7 @@ Wave 3（v1.0 工程化交付）。**
 | **Wave 2 数据 / 状态正确性** | **已完成**：P1-1 列结构 remap（`tst_headerstructure`）、P1-2 动态高度锚点（`tst_dynamicanchor`）、P1-7 `RowSizePolicy` 与行号条一致（`tst_virtualtableview`）、P1-8 rootIndex 持久化 + 校验（`tst_virtuallistview`）、P1-9 选择语义统一（`tst_selection`）、P1-10 `scrollToColumn()` 的 pane 感知（`tst_tablepanes`）、P1-11 span 重叠校验与 `maximumSpan()` 重算（`tst_tablespan`）、P1-13 冻结行下的拖放坐标（`tst_dndfrozen`） | ✅ |
 | **Wave 3 虚拟化性能** | **已完成**：P1-3 列宽上下限语义 + 批量信号（`tst_headergeometry`）、P1-4 pane 局部前缀和 + 滚动只刷新窗口 + 表头 orderRevision 快路径（`tst_tablepanes::scrollingDoesNotWalkEveryColumn`）、P1-5 横向 64 位偏移与 extent（`tst_tablepanes`）、P1-12 `BlockSizeIndex` 分块上界（`tst_sizeindex`）、P2-1 relayout 队列合并、P2-7 多滚动组宽度按 extent 等比（`tst_tablepanes::scrollingPanesShareTheWidthProportionally`）、P2-8 纯横向滚动不跑纵向 pass（`tst_relayoutqueue`） | ✅ |
 | **Wave 4 API / 发布** | **已完成（除两项外部约束）**：P1-14 vertical widget header 明确拒绝 + P2-4 表头 orientation 校验 + P2-5 动态子控件的事件过滤（`tst_virtualheaderview`）、P2-6 `TablePaneSpec` 规范化与校验（`tst_tablepanes`）、P2-3 事务化 `restoreHeaderState` + P2-9 行号条状态拆成"请求 / 实际支持"（`tst_virtualtableview`）、P2-2 pin 离屏项即物化（`tst_virtualitemview`）、P2-10 树的 expand 原地 splice + memmove（`tst_treevisibilityindex`、`bench_listview --tree` 新场景）、sanitizer 的 MSVC ASan 一半（两个 kit 各 28 个 CTest + 12 个示例全绿，`scripts/validate.ps1 -Asan`）。**留下两项**：P2-10 的彻底解法（rope/分块会改公开类的成员布局 = ABI 破坏，只能进**主版本**，见决策表）、CI 接入 + Linux/GCC + UBSan（配置与踩坑见 [ci.md](ci.md)，等一个 runner 再落地） | ✅ / ⏳ |
+| **Wave 4 API / 发布** | **已完成（除两项外部约束）**：P1-14 vertical widget header 明确拒绝 + P2-4 表头 orientation 校验 + P2-5 动态子控件的事件过滤（`tst_virtualheaderview`）、P2-6 `TablePaneSpec` 规范化与校验（`tst_tablepanes`）、P2-3 事务化 `restoreHeaderState` + P2-9 行号条状态拆成"请求 / 实际支持"（`tst_virtualtableview`）、P2-2 pin 离屏项即物化（`tst_virtualitemview`）、P2-10 树的 expand 原地 splice + memmove（`tst_treevisibilityindex`、`bench_listview --tree` 新场景）、sanitizer 的 MSVC ASan 一半（两个 kit 各 28 个 CTest + 12 个示例全绿，`scripts/validate.ps1 -Asan`）。**留下两项**：P2-10 的彻底解法（rope/分块工作量大，当前 1.5 ms/次可接受 —— 原先"改成员布局 = ABI 破坏"的理由在 2026-09-26 的发布策略定案后已不成立，见决策表）、CI 接入 + Linux/GCC + UBSan（配置与踩坑见 [ci.md](ci.md)，等一个 runner 再落地） | ✅ / ⏳ |
 
 Wave 1 新增的回归测试：`tst_adapterreplacement`（8 例）、`tst_modellifetime`（6 例）、
 `tst_celllifecycle`（5 例）；四种组合（Qt 5.15.2 / 6.11.2 × 静态 / 动态）28 步验证全绿。
@@ -186,8 +191,10 @@ Wave 1 新增的回归测试：`tst_adapterreplacement`（8 例）、`tst_modell
 
 1. **P2-10（树的可视行向量）**：整表重建已经换成原地 splice + memmove（1M 可见行上从 9.0 ms
    降到 1.4 ms/次），剩下的尾部搬移（≈1.5 ms/次）要去掉就得换成 rope / 分块 / 隐式树 —— 那会改
-   公开类 `TreeVisibilityIndex` 的成员布局，按 [abi.md](abi.md) §4 第 3 条是 ABI 破坏，只能在
-   **主版本**里做。审查的原话是"不是 correctness bug……建议后续"，见决策表。
+   公开类 `TreeVisibilityIndex` 的成员布局。当时（2026-09-26 上半段）还按"承诺二进制 ABI"理解，
+   所以写在"只能在主版本里做"；当天晚些时候的发布策略定案（[abi.md](abi.md) §1，只承诺源码兼容）
+   取消了这条硬约束 —— 改**私有**成员布局在 1.x 里是允许的（要求使用者重编），所以它现在只是
+   "工作量大 + 当前数字可接受"的排期问题，仍然留到主版本，见决策表。
 2. **CI**：本机没有 runner / 账号 / 网络，见 [ci.md](ci.md)。这不是代码问题，是环境问题。
 
 于是"能不能打 v1.0 tag"不再由这批审查条目决定 —— 剩下的两项都不改变对外契约。tag 由用户手动
@@ -242,7 +249,7 @@ smoke。按审查的判据，这一版已经可以视为 1.0 候选（tag 由仓
 | --- | --- | --- |
 | **Wave 1 生命周期 / 身份** | P0-1 pane 渲染器跟随主表头 adapter 替换（复现即崩溃）、P1 列 0 结构变化后的 canonical 行身份、P1 `setGeometryModel()`/`setLabelModel()` 替换语义（含新的 `HeaderWidgetAdapter::setLabelModel()` 钩子）、P1 `restoreState()` 的 order/sort 通知（含 restore 期间的 sort guard） | ✅ |
 | **Wave 2 宽表收尾** | Native 表头 non-primary offset 走 O(1)（不再整表同步）、frozen pane 的 body 按 pane 窗口物化、sparse explicit pane 的 Widget 表头直接遍历 pane slots | ✅ |
-| **Wave 3 API / ABI 决策** | 隐藏 / 统一 `VirtualTableView::setAdapter()`（✅ 3a）、`setLayoutPolicy()` 明确成初始化期钩子（✅ 3a）、同步 `model-signals.md` / `ci.md` / `api-stability.md` 的 drift（✅ 3a）；**决定"PIMPL + binary ABI"还是"只承诺 source API"**（⏳ 待用户拍板） | 🟡 3a 已完成，ABI 策略待拍板 |
+| **Wave 3 API / ABI 决策** | 隐藏 / 统一 `VirtualTableView::setAdapter()`（✅ 3a）、`setLayoutPolicy()` 明确成初始化期钩子（✅ 3a）、同步 `model-signals.md` / `ci.md` / `api-stability.md` 的 drift（✅ 3a）；**发布策略定案：选方案 B —— 1.x 只承诺源码 API / 语义兼容，二进制 ABI = best effort**（✅ 3b，用户拍板） | ✅ |
 | **Wave 4 tag 前验证** | Debug + Release × Qt5/Qt6 × MSVC/MinGW GCC/llvm-mingw Clang + ASan/UBSan + 28 CTest + 12 示例 + 消费端 + wide-header benchmark 四种 pane 形态 | 🟡 wide-header 四种形态已进基准一步（含断言），收口时按清单重跑全矩阵 |
 
 Wave 1 的实测证据（修复前的失败形态）：
@@ -291,7 +298,7 @@ Wave 2 的验证：`scripts/validate.ps1 -Library Both`（Qt 6.11.2 + Qt 5.15.2 
 | 2026-09-25 | 验证脚本遇错不中止（跑完全部组合再汇总，退出码 = 失败步数） | 四种组合跑一轮要几分钟，第一处失败就退出会让人反复重跑；一次拿到全部失败信息更省时间 |
 | 2026-09-25 | 性能基线只固化 Debug + 本机工具链的数字，并显式标注"Release 未测" | 把 Debug 数字包装成"发布性能"比不写更糟；基线的价值是回归对比，不是横向吹牛，所以环境、命令、局限性都写在表旁边 |
 | 2026-09-25 | 切换 Adapter / 切换 Row-Cell 模式 / 替换 cell adapter 时**清空控件池**，而不是给池的 key 加 adapter 身份 | 池只按 `WidgetType` 分池，而业务默认都返回 0：跨 adapter 复用等于把 A 的控件交给 B 去 `static_cast`。清池是最小且绝对安全的解法（代价是配置级切换要重建控件），"adapter 身份 + type" 的池 key 留到确有性能诉求时再做 |
-| 2026-09-25 | v1.0 tag 暂缓，先修完代码审查的 Wave 1 + Wave 2 | 审查指出 Adapter/Recycler、Model 生命周期、列结构 remap 这三组问题若在 1.0 ABI 冻结后再修，会逼着改公开类的成员布局与 ownership 语义，与 1.x 的 `SameMajorVersion` 承诺冲突 |
+| 2026-09-25 | v1.0 tag 暂缓，先修完代码审查的 Wave 1 + Wave 2 | 审查指出 Adapter/Recycler、Model 生命周期、列结构 remap 这三组问题若在 1.0 冻结后再修，会逼着改公开类的成员布局与 ownership 语义，与 1.x 的"公开 API 不再变"承诺冲突（当时还按"承诺二进制 ABI"理解；2026-09-26 的策略定案把它改成只承诺源码兼容） |
 | 2026-09-25 | 视图会 reparent 应用传入的表头控件 | 顶层窗口的位置是屏幕坐标（带窗口边框偏移），表头会与 body 差几像素；reparent 后统一用视图坐标 |
 | 2026-09-25 | 行冻结里 `verticalOffset()` 的语义与范围保持不变（最大偏移仍 = 内容高 - 视口高） | 这正是"冻结不产生额外滚动空间"的算式：可滚动区少掉的像素数恰好等于冻结带高度；滚动到末尾时最后几行由底部冻结带绘制，内容仍然连续 |
 | 2026-09-25 | Cell Widget Mode 的裁剪容器改成"行 pane × 列 pane"交集，Row Widget Mode 不变（内核裁纵向、行内的列容器裁横向） | 两个方向的边界互相独立；Row 模式的行控件本身被内核容器裁一次，天然正交，不需要第二层容器 |
@@ -306,6 +313,8 @@ Wave 2 的验证：`scripts/validate.ps1 -Library Both`（Qt 6.11.2 + Qt 5.15.2 
 | 2026-09-25 | 表头过渡改成**按需触发**：程序化换序默认即时，只有显式 `MoveAnimation::Animate`（或渲染器自己的手势）才播 | 用户反馈"手动设置列顺序也被当成了拖动"；程序化/模型换序/状态恢复不该变出没人要求的动画。现有 `moveColumn()` 调用语义不变（默认即时），过渡从"任何顺序变化都播"收敛为"被请求才播" |
 | 2026-09-25 | 拖动重排重做成"拖动距离阈值 + 视觉预览 + 松手一次提交"，并把单次过渡接回松手 | 旧实现每越过一个邻居就提交一次：既不能连续拖（只能一格一格挪），又会把点击/抖动误判成拖动，且逐格动画让 section 跟不上光标。现在 committed 几何只在松手时变一次，拖动期间只动渲染器的视觉几何 |
 | 2026-09-25 | 拖动期间"邻居让位"也走缓动，并且与换序过渡**同一套曲线与时长**（OutCubic，默认 300 ms；关闭动画时即刻） | 瞬移的让位看起来像跳帧：拖动是被拖列跟随光标、其他列让出插入位的一次连续运动。让位与过渡用同一个旋钮，手感才会一致（要更快就整体调小时长） |
-| 2026-09-26 | 树的可见行表**这一个 1.x 版本内**保留扁平 `QVector`（expand 改成原地 splice + memmove），rope / 分块留到下一个主版本 | 审查的 P2-10 只说"每次 expand 都会整份拷贝"：拷贝本身已经消掉（原来两趟整表 `mid()` + 一次分配，现在一次 `resize` + 一次尾部 memmove），剩下的尾部搬移在 100 万可见行上是 ~1.5 ms / 次（`bench_listview --tree` 的新场景）。再往下只能换 rope / 分块 / 隐式树，而那会**改变 `TreeVisibilityIndex`（B 层公开类）的成员布局**，按 [abi.md](abi.md) §4 第 3 条就是 ABI 破坏 —— 换句话说它不能用 1.x 的次版本发布，只能进主版本。1.x 期间先接受这 1.5 ms |
+| 2026-09-26 | 树的可见行表**这一个 1.x 版本内**保留扁平 `QVector`（expand 改成原地 splice + memmove），rope / 分块留到下一个主版本 | 审查的 P2-10 只说"每次 expand 都会整份拷贝"：拷贝本身已经消掉（原来两趟整表 `mid()` + 一次分配，现在一次 `resize` + 一次尾部 memmove），剩下的尾部搬移在 100 万可见行上是 ~1.5 ms / 次（`bench_listview --tree` 的新场景）。再往下只能换 rope / 分块 / 隐式树，工作量大而当前数字可接受，所以先接受这 1.5 ms。**注**：本条最早的理由是"改 `TreeVisibilityIndex` 的成员布局属于 ABI 破坏，只能进主版本"；同一天的发布策略定案（见下一条）改成只承诺源码兼容后，这条硬约束不再成立 —— 私有成员布局可以随次版本改（要求使用者重编），留到主版本是排期选择而不是兼容性要求 |
 | 2026-09-26 | 审查提到的 CI 只提交**可复制配置**（[ci.md](ci.md)），不提交 `.github/workflows/` | 本机没有 runner / 账号 / 网络：写一个没跑过的 workflow 会给出一个假的"CI 通过"印象，而 `scripts/validate.ps1` 是本机真跑过的入口。拿到 runner 之后把 ci.md 里的 YAML 存成 workflow 即可，顺带把 abi.md 支持矩阵的"未实测"改成实测 |
 | 2026-09-26 | 第二轮审查的每条 P0/P1 都先用"会失败的回归测试"在本机复现，再改；审查方只做静态推演 | 三条 P0 里有两条在复现时**直接崩溃**（Table 析构 UAF、standalone 表头解引用已删几何），说明静态推演与真实运行之间仍有差距；把"复现 → 修 → 反向验证"固定成流程，比照着结论改代码可靠 |
+| 2026-09-26 | 第三轮审查 Wave 2 的三处宽表性能修复都补了"与机器无关的计数断言"（`fullSyncCount()` 不涨、`visibleColumnLogicalIndexes()` 有界、`materializationVisits()`），而不是只测耗时 | 耗时断言在 CI/别的机器上必然抖；而这次发现"只看物化数量看不出 sparse pane 的退化"（旧实现扫完 10 万个 visual 后仍被 pane 过滤集合挡掉，物化结果一直是 3 个），说明**可观测的计数**才是能守住的契约 |
+| 2026-09-26 | 1.0 的发布策略定案：**1.x 只承诺源码 API / 语义兼容，二进制 ABI = best effort**（选审查 §10 的方案 B，不做 PIMPL 重构） | 核心公开类都把实现状态放在头文件里（9 个高频演进的类没有 PIMPL）。承诺二进制兼容就等于"给私有缓存加一个成员也要升主版本"——而 1.0 收口前后三轮审查修的正是这类内部状态（本轮就加了 `m_columnChangeRows`、`m_materializationVisits` 等）。这个库的主要使用方式是源码 / CMake 集成，使用者跟随版本重编的成本远低于把 1.x 的实现演进空间锁死。配套改动：`abi.md` §1/§4/§6 把"1.x 二进制兼容"改写为"版本匹配 ≠ ABI 承诺"，`api-stability.md` 新增第 7 条（私有成员布局不是源码契约），CMake 的 `SameMajorVersion` 注释写明它只是包版本策略。被否决的另一条路（打 tag 前 PIMPL 化 9 个类）留作 2.0 的候选；真正需要跨编译器二进制复用只能走那条 |
