@@ -257,6 +257,18 @@
   （Clang 的 `-Wunused-const-variable`），删掉。
 * **Qt 6 弃用的 `QMouseEvent` 构造**（`tst_virtualheaderview`）：改用带全局坐标的六参构造，
   同时兼容 Qt 5（`QPointF::toPoint()`）。
+* **共享库没有导出公开常量的符号**（Qt 5 MinGW 组合**链接失败**才暴露）：`tst_virtualitemview`
+  的 `QCOMPARE(log.size(), VirtualItemView::kLifecycleLogCapacity)` 报
+  `undefined reference to __imp__ZN3viv15VirtualItemView21kLifecycleLogCapacityE`。原因是
+  `static constexpr` 成员在 C++17 里是隐式 `inline` 变量：库自己只把它当常量表达式读，于是
+  DLL 里**没有**任何定义，而消费者那侧看到的是 `dllimport` —— 一旦有人把常量绑到引用上
+  （`QCOMPARE` 的参数就是 `const T&`）就没有符号可解析。现在库在各自 `src/**` 里保留这些常量的
+  地址（`&Class::kConstant`），强制 DLL 发出并导出定义；覆盖七个公开常量
+  （`VirtualItemView::kLifecycleLogCapacity`、`ScrollMapper::kMaxScrollRange`、
+  `BlockSizeIndex::kDefaultBlockCapacity`、`WidgetRecycler::kDefaultMaxPoolSize`、
+  `HeaderGeometry::kStateMagic`/`kStateVersion`、`HeaderViewInterface::kFollowGeometryOffset`）。
+  回归测试：`tst_virtualitemview::publicConstantsAreAddressableFromAConsumer`（对全部七个取地址；
+  已确认去掉库内任意一个取地址后，Qt 5 MinGW 的 DLL 构建会在该用例处链接失败）。
 
 复跑：`pwsh -File scripts/validate.ps1 -MinGW -Library Static`（Debug 与 Release 各 21 步）。
 Linux / macOS 仍在未实测清单里（字体查找、D-Bus、X11/Wayland 都不属于 Windows MinGW 的覆盖范围）。

@@ -8,6 +8,14 @@
 
 namespace viv {
 
+// A shared build has to export these public constants (see virtualitemview.cpp).
+namespace {
+[[maybe_unused]] const void *const kExportedConstants[] = {
+    &HeaderGeometry::kStateMagic,
+    &HeaderGeometry::kStateVersion,
+};
+} // namespace
+
 namespace {
 /// How far outside the viewport a section x is still reported exactly. Anything
 /// further away is off screen anyway, and keeping the value bounded keeps the

@@ -11,6 +11,13 @@
 
 namespace viv {
 
+// A shared build has to export this public constant (see virtualitemview.cpp).
+namespace {
+[[maybe_unused]] const void *const kExportedConstants[] = {
+    &HeaderViewInterface::kFollowGeometryOffset,
+};
+} // namespace
+
 namespace {
 /// True when \a logicalIndex is part of the pane of an active filter.
 bool filterContains(const QVector<int> &filter, bool active, int logicalIndex)

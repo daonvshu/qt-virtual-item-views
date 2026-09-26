@@ -4,6 +4,13 @@
 
 namespace viv {
 
+// A shared build has to export this public constant (see virtualitemview.cpp).
+namespace {
+[[maybe_unused]] const void *const kExportedConstants[] = {
+    &WidgetRecycler::kDefaultMaxPoolSize,
+};
+} // namespace
+
 WidgetRecycler::WidgetRecycler(QObject *parent)
     : QObject(parent)
 {

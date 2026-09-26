@@ -168,15 +168,21 @@ pwsh -File scripts/validate.ps1 -MinGW -Library Static -Release   # Release
 
 | kit | Qt | 编译器 | 结果 |
 | --- | --- | --- | --- |
-| `gcc13-qt6` | 6.11.2 / `mingw_64` | GCC 13.1.0 | Debug 与 Release 各 7 步全绿（构建 / 28 CTest / 12 示例 / 3 基准 / 安装 / 消费端），`-Wall -Wextra -Wpedantic` 零警告 |
+| `gcc13-qt6` | 6.11.2 / `mingw_64` | GCC 13.1.0 | 静态 Debug 与 Release、动态 Debug 各 7 步全绿（构建 / 28 CTest / 12 示例 / 3 基准 / 安装 / 消费端），`-Wall -Wextra -Wpedantic` 零警告 |
 | `clang17-qt6` | 6.11.2 / `llvm-mingw_64` | Clang 17.0.6 | 同上，零警告 |
-| `gcc81-qt5` | 5.15.2 / `mingw81_64` | GCC 8.1.0 | 同上（本机最老的组合） |
+| `gcc81-qt5` | 5.15.2 / `mingw81_64` | GCC 8.1.0 | 同上（本机最老的组合；**动态库**这一格查出"公开常量没导出"） |
 
 这一轮 GCC/Clang 报出并修掉的问题都是 MSVC 看不见的：MSVC 专有的 `long long(x)` 函数式转换
 （30 处，改成 `static_cast`）、MinGW 8.1 头文件里只有 `GetProcessMemoryInfo`（`K32…` 别名需要
 `_WIN32_WINNT`，所以基准改为 `GetProcessMemoryInfo` + `psapi`）、3 处缺 `override`、1 处未用常量、
 1 处 Qt 6 弃用的 `QMouseEvent` 构造。**Linux 仍然未实测**（那需要一台 Linux 机器或 runner：
 平台相关的字体查找、D-Bus、X11/Wayland 坐标都不在 Windows MinGW 的覆盖范围内）。
+
+动态库（`-Library Shared`）在 GCC/Clang 下另有一个只有它才会暴露的问题：`static constexpr`
+成员是 C++17 的隐式 `inline` 变量，库自己把它当常量表达式读、DLL 里不产生定义，而消费者那侧是
+`dllimport` —— 一旦消费者把常量绑到引用（`QCOMPARE` 的参数就是 `const T&`）就会
+`undefined reference to __imp_...`。现在库在各自 `src/**` 里保留七个公开常量的地址强制导出，
+并有 `tst_virtualitemview::publicConstantsAreAddressableFromAConsumer` 守住。
 
 ### UBSan（llvm-mingw Clang，2026-09-26）
 

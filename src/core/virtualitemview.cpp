@@ -28,6 +28,25 @@
 
 namespace viv {
 
+// Out-of-line definition of a public constant: a *shared* build has to export a symbol
+// for it. A consumer that odr-uses the member (QTest's QCOMPARE binds it to a const&)
+// needs one, while an inline constexpr member that the library itself only reads as a
+// constant expression never gets a definition emitted - MinGW/GCC then fails to link
+// `__imp_...kLifecycleLogCapacity` in the consumer. Same pattern for the other public
+// constants of exported classes (ScrollMapper, BlockSizeIndex, WidgetRecycler,
+// HeaderGeometry, HeaderViewInterface).
+// A shared build has to export the public constants of exported classes: a consumer that
+// odr-uses one (QTest's QCOMPARE binds it to a const&) links against `__imp_...`, while
+// the consumer's TU sees the member as dllimport and emits nothing. MinGW/GCC only emits
+// the symbol in a TU that odr-uses it, so the library addresses it here. The same pattern
+// lives next to the other public constants (ScrollMapper, BlockSizeIndex, WidgetRecycler,
+// HeaderGeometry, HeaderViewInterface).
+namespace {
+[[maybe_unused]] const void *const kExportedConstants[] = {
+    &VirtualItemView::kLifecycleLogCapacity,
+};
+} // namespace
+
 namespace {
 /// Drop indicator of the kernel: a thin bar in the palette's highlight colour.
 /// It is painted by itself instead of relying on autoFillBackground(), which

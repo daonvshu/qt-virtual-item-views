@@ -1,5 +1,9 @@
 #include <virtualitemviews/widgetrecycler.h>
 #include <virtualitemviews/virtuallistview.h>
+#include <virtualitemviews/scrollmapper.h>
+#include <virtualitemviews/sizeindex.h>
+#include <virtualitemviews/headergeometry.h>
+#include <virtualitemviews/nativeheaderview.h>
 #include "vivtestfixtures.h"
 
 #include <QtTest>
@@ -7,6 +11,8 @@
 #include <QScrollBar>
 #include <QSortFilterProxyModel>
 #include <QStandardItemModel>
+
+#include <iterator>
 
 using namespace viv;
 using namespace vivtest;
@@ -50,6 +56,7 @@ private slots:
     void selectionModeControlsSelection();
     void selectionBehaviorSelectsWholeRows();
     void lifecycleLogIsBounded();
+    void publicConstantsAreAddressableFromAConsumer();
     void resizeUpdatesVisibleRange();
     void scrollToKeepsItemVisible();
 };
@@ -510,6 +517,29 @@ void TestVirtualItemView::pinWidgetKeepsTheOwningItemAlive()
     view.flushPendingRelayout();
     QCOMPARE(view.widgetForIndex(model.index(0, 0)), nullptr);
     QCOMPARE(view.stats().pinnedWidgets, qsizetype(0));
+}
+
+void TestVirtualItemView::publicConstantsAreAddressableFromAConsumer()
+{
+    // A shared build has to export a symbol for every public constant of an exported class:
+    // a consumer that odr-uses one - binding it to a reference, which QCOMPARE does - links
+    // against `__imp_<mangled name>`. MinGW/GCC only emits such a symbol in a TU that
+    // odr-uses it, so the library keeps their addresses in src/** (see virtualitemview.cpp,
+    // where the same pattern is spelled out). This is the consumer side of that contract:
+    // against the Qt 5 MinGW DLL a missing export shows up here as an undefined reference
+    // (measured: `__imp__ZN3viv15VirtualItemView21kLifecycleLogCapacityE`).
+    const void *constants[] = {
+        &VirtualItemView::kLifecycleLogCapacity,
+        &ScrollMapper::kMaxScrollRange,
+        &BlockSizeIndex::kDefaultBlockCapacity,
+        &WidgetRecycler::kDefaultMaxPoolSize,
+        &HeaderGeometry::kStateMagic,
+        &HeaderGeometry::kStateVersion,
+        &HeaderViewInterface::kFollowGeometryOffset,
+    };
+    QCOMPARE(int(std::size(constants)), 7);
+    for (const void *constant : constants)
+        QVERIFY(constant != nullptr);
 }
 
 void TestVirtualItemView::statsReportVirtualizationState()
