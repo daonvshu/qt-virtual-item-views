@@ -126,6 +126,10 @@ public:
     void clearPaneFilter() override;
     bool hasPaneFilter() const { return m_paneFilterActive; }
 
+    /// How often the header re-read the whole geometry. Diagnostics for the width-scroll
+    /// tests: a single section resize is applied granularly and must not bump it.
+    quint64 fullSyncCount() const { return m_fullSyncs; }
+
     /// Offset of the pane's own content (§43 "advanced panes"); see
     /// HeaderViewInterface::setPaneOffset(). A frozen pane keeps offset 0 even
     /// when the geometry scrolls.
@@ -175,6 +179,8 @@ private:
     /// True while the geometry is being applied to the header, so that the
     /// resulting QHeaderView signals do not write back into the geometry.
     bool m_applyingToHeader = false;
+    /// Times the whole geometry was re-read (diagnostics; see fullSyncCount()).
+    quint64 m_fullSyncs = 0;
     bool m_sortInteractionEnabled = false;
     /// Pane filter (§31): the logical sections this header shows.
     QVector<int> m_paneFilter;

@@ -22,6 +22,11 @@ namespace {
 /// Pixels at a section edge that start a resize instead of a click/move (§25).
 constexpr int kResizeMargin = 3;
 
+/// How far outside the viewport a section x is still reported exactly (same convention as
+/// the geometry and the pane layout): a widget position is int based, so a column of an
+/// explicitly scrolled pane must not turn into a huge (or overflowing) coordinate.
+constexpr qint64 kMaxOffscreenX = qint64(1) << 20;
+
 inline QPoint eventPosition(const QMouseEvent *event)
 {
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
@@ -110,7 +115,13 @@ void VirtualHeaderView::connectGeometry(HeaderGeometry *geometry, bool connectSi
         return;
     if (connectSignals) {
         // Any of these changes moves sections or changes which ones own a widget.
-        connect(geometry, &HeaderGeometry::geometryChanged, this, [this]() { relayout(); });
+        connect(geometry, &HeaderGeometry::geometryChanged, this, [this]() {
+            // Widths, visibility, order and the section set may all have changed: the pane
+            // cache (membership set, packing order, prefix sums) is invalidated here and
+            // rebuilt on the next pass - a pure scroll only emits offsetChanged.
+            m_paneCacheDirty = true;
+            relayout();
+        });
         connect(geometry, &HeaderGeometry::sectionCountChanged, this, [this](int) { relayout(); });
         connect(geometry, &HeaderGeometry::offsetChanged, this, [this](qint64) { relayout(); });
         // The sort indicator belongs to the geometry but is drawn by the section widget
@@ -189,8 +200,14 @@ void VirtualHeaderView::setSortInteractionEnabled(bool enabled)
 void VirtualHeaderView::setPaneFilter(const QVector<int> &logicalColumns, bool frozen)
 {
     Q_UNUSED(frozen);
+    // Pane headers are re-installed by the table on every pass (syncHeaderPanes()), so the
+    // equality fast path matters: an unchanged filter used to re-enter relayout() - and, in
+    // pane mode, rebuild the pane cache - on every scroll step (P1-8 of the second review).
+    if (m_paneFilterActive && m_paneFilter == logicalColumns)
+        return;
     m_paneFilter = logicalColumns;
     m_paneFilterActive = true;
+    m_paneCacheDirty = true;
     relayout();
 }
 
@@ -201,6 +218,7 @@ void VirtualHeaderView::clearPaneFilter()
     m_paneFilterActive = false;
     m_paneFilter.clear();
     m_paneOffset = kFollowGeometryOffset;
+    m_paneCacheDirty = true;
     relayout();
 }
 
@@ -277,7 +295,50 @@ void VirtualHeaderView::setSectionOverscan(int sections)
 
 bool VirtualHeaderView::isFiltered(int logicalIndex) const
 {
-    return m_paneFilterActive && !m_paneFilter.contains(logicalIndex);
+    return m_paneFilterActive && !m_paneFilterSet.contains(logicalIndex);
+}
+
+void VirtualHeaderView::rebuildPaneCacheIfNeeded() const
+{
+    if (!m_paneCacheDirty)
+        return;
+    m_paneCacheDirty = false;
+    ++m_paneCacheRebuilds;
+    m_paneOrder.clear();
+    m_panePrefixX.clear();
+    m_paneSlotByLogical.clear();
+    m_paneFilterSet.clear();
+    if (!m_geometry || !m_paneFilterActive)
+        return;
+
+    const int count = m_geometry->sectionCount();
+    m_paneFilterSet.reserve(m_paneFilter.size());
+    for (int logical : m_paneFilter) {
+        if (logical >= 0 && logical < count)
+            m_paneFilterSet.insert(logical);
+    }
+
+    // The pane shows its columns in the *committed* visual order, so the order has to be
+    // derived once per geometry change - not once per sectionX() call.
+    m_paneOrder.reserve(m_paneFilterSet.size());
+    for (int logical : m_paneFilterSet) {
+        if (!m_geometry->isSectionHidden(logical))
+            m_paneOrder.append(logical);
+    }
+    std::sort(m_paneOrder.begin(), m_paneOrder.end(), [this](int lhs, int rhs) {
+        return m_geometry->visualIndex(lhs) < m_geometry->visualIndex(rhs);
+    });
+
+    m_paneSlotByLogical.fill(-1, count);
+    m_panePrefixX.reserve(m_paneOrder.size() + 1);
+    m_panePrefixX.append(0);
+    qint64 x = 0;
+    for (int slot = 0; slot < m_paneOrder.size(); ++slot) {
+        const int logical = m_paneOrder.at(slot);
+        m_paneSlotByLogical[logical] = slot;
+        x += m_geometry->sectionSize(logical);
+        m_panePrefixX.append(x);
+    }
 }
 
 bool VirtualHeaderView::showsSection(int logicalIndex) const
@@ -299,28 +360,20 @@ int VirtualHeaderView::sectionX(int logicalIndex) const
         // Pane layout (§43 "advanced panes"): a pane packs *its own* columns from
         // its own left edge and shifts them by its own offset, so a frozen pane
         // and a scrolling pane of a non-primary group stay aligned with the body.
-        // The columns of a pane are not necessarily a contiguous slice of the
-        // committed order, so their widths are accumulated over the pane's list.
-        // That list is a set: the pane shows it in the *committed* visual order, not
-        // in whatever order the filter happens to enumerate it in.
-        QVector<int> paneColumns;
-        paneColumns.reserve(m_paneFilter.size());
-        for (int column : m_paneFilter) {
-            if (column >= 0 && column < m_geometry->sectionCount()
-                && !m_geometry->isSectionHidden(column)) {
-                paneColumns.append(column);
-            }
-        }
-        std::sort(paneColumns.begin(), paneColumns.end(), [this](int lhs, int rhs) {
-            return m_geometry->visualIndex(lhs) < m_geometry->visualIndex(rhs);
-        });
-        int localX = 0;
-        for (int column : paneColumns) {
-            if (column == logicalIndex)
-                break;
-            localX += m_geometry->sectionSize(column);
-        }
-        return localX - int(m_paneOffset);
+        // The pane's columns are not necessarily a contiguous slice of the committed
+        // order, so the packing comes from the pane cache (prefix sums over the pane's
+        // own columns) instead of being rebuilt here (P1-8 of the second review).
+        rebuildPaneCacheIfNeeded();
+        const int slot = logicalIndex < m_paneSlotByLogical.size()
+            ? m_paneSlotByLogical.at(logicalIndex)
+            : -1;
+        if (slot < 0)
+            return kSectionNotShown;
+        const qint64 localX = m_panePrefixX.at(slot);
+        // A pane of an explicit list may be scrolled arbitrarily far, so the value is
+        // clamped like the off-screen column x of the geometry (QWidget/QRect arithmetic is
+        // int based).
+        return int(qBound<qint64>(-kMaxOffscreenX, localX - m_paneOffset, kMaxOffscreenX));
     }
     // HeaderGeometry is in viewport coordinates and this widget is placed inside the
     // view (normally on a pane rect), so its own origin has to be subtracted.
@@ -339,6 +392,10 @@ void VirtualHeaderView::relayout()
         update();
         return;
     }
+
+    // The pane cache backs isFiltered() and sectionX(); it is rebuilt once per filter or
+    // geometry change here, never inside those calls (P1-8 of the second review).
+    rebuildPaneCacheIfNeeded();
 
     const int count = qMin(m_geometry->sectionCount(),
                            m_labelModel ? m_labelModel->columnCount() : m_geometry->sectionCount());
@@ -388,23 +445,40 @@ void VirtualHeaderView::relayout()
             firstVisual = candidates.first;
             lastVisual = candidates.last;
         }
+    } else if (m_paneOffset == kFollowGeometryOffset) {
+        // A pane that follows the committed geometry reads the same mapping as the body,
+        // only shifted by its own rect inside the viewport (the table's scrolling pane
+        // starts to the right of the frozen columns). The window is still a binary search
+        // over the geometry's prefix sums - scanning every column here was the other half
+        // of the O(N^2) pane-header path (P1-8 of the second review).
+        const qint64 ownOriginX = m_viewportOriginSet ? x() : 0;
+        const qint64 paneStart = m_geometry->viewportOffset() + ownOriginX - m_viewportOrigin.x();
+        const VisibleRange candidates = m_geometry->visibleVisualRangeFor(paneStart, this->width());
+        if (candidates.isValid()) {
+            firstVisual = candidates.first;
+            lastVisual = candidates.last;
+        }
     } else {
-        // A pane header packs its own columns from its own origin, so the range has
-        // to be derived from this widget's coordinates (bounded by the pane's
-        // columns, not by the whole table).
-        for (int visual = 0; visual < count; ++visual) {
-            const int logical = m_geometry->logicalIndex(visual);
-            if (logical < 0 || m_geometry->isSectionHidden(logical) || isFiltered(logical))
-                continue;
-            const int left = sectionX(logical);
-            const int width = m_geometry->sectionSize(logical);
-            if (left == kSectionNotShown || width <= 0)
-                continue;
-            if (left < this->width() && left + width > 0) {
-                if (firstVisual < 0)
-                    firstVisual = visual;
-                lastVisual = visual;
-            }
+        // An explicitly offset pane (a frozen pane or a non-primary scroll group) packs its
+        // own columns from its own left edge: the visible window is a range of *slots* in the
+        // pane cache, found with two binary searches over the pane's prefix sums.
+        rebuildPaneCacheIfNeeded();
+        if (!m_paneOrder.isEmpty()) {
+            const qint64 windowStart = m_paneOffset;
+            const qint64 windowEnd = m_paneOffset + qMax(0, this->width());
+            // First slot whose right edge lies past the window start.
+            qsizetype firstSlot = qsizetype(std::lower_bound(m_panePrefixX.cbegin(), m_panePrefixX.cend(),
+                                                             windowStart)
+                                            - m_panePrefixX.cbegin())
+                - 1;
+            firstSlot = qBound<qsizetype>(0, firstSlot, m_paneOrder.size() - 1);
+            qsizetype lastSlot = qsizetype(std::lower_bound(m_panePrefixX.cbegin(), m_panePrefixX.cend(),
+                                                            windowEnd)
+                                           - m_panePrefixX.cbegin())
+                - 1;
+            lastSlot = qBound<qsizetype>(firstSlot, lastSlot, m_paneOrder.size() - 1);
+            firstVisual = m_geometry->visualIndex(m_paneOrder.at(firstSlot));
+            lastVisual = m_geometry->visualIndex(m_paneOrder.at(lastSlot));
         }
     }
 

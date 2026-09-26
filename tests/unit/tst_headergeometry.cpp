@@ -29,6 +29,7 @@ private slots:
     void orderRevisionOnlyMovesWhenTheOrderCanChange();
     void insertedSectionsTakeTheSuccessorVisualSlot();
     void structuralRemapsReportTheSortIndicator();
+    void granularChangesDoNotEmitTheBulkSignal();
 };
 
 void TestHeaderGeometry::defaultSectionGeometry()
@@ -278,6 +279,49 @@ void TestHeaderGeometry::structuralRemapsReportTheSortIndicator()
     QCOMPARE(geometry.sortIndicatorSection(), 2);
     QCOMPARE(spy.count(), 1);
     QCOMPARE(spy.at(0).at(0).toInt(), 2);
+}
+
+void TestHeaderGeometry::granularChangesDoNotEmitTheBulkSignal()
+{
+    // P1-10 of the second review: HeaderGeometry notified "something changed" through
+    // geometryChanged() for *every* change, so a renderer that applied sectionResized()
+    // granularly still ran its O(sections) full sync. The bulk signal is now reserved for
+    // the changes that have no granular counterpart.
+    HeaderGeometry geometry;
+    geometry.setSectionCount(20);
+    QSignalSpy bulkSpy(&geometry, &HeaderGeometry::bulkGeometryChanged);
+    QSignalSpy resizedSpy(&geometry, &HeaderGeometry::sectionResized);
+    QSignalSpy geometrySpy(&geometry, &HeaderGeometry::geometryChanged);
+    QVERIFY(bulkSpy.isValid());
+
+    // A resize: granular, no bulk.
+    geometry.resizeSection(3, 150);
+    QCOMPARE(resizedSpy.count(), 1);
+    QCOMPARE(bulkSpy.count(), 0);
+    QCOMPARE(geometrySpy.count(), 1);   // the generic signal is unchanged for everyone else
+
+    // Visibility and the sort indicator are granular as well.
+    geometry.setSectionHidden(4, true);
+    geometry.setSortIndicator(5, Qt::AscendingOrder);
+    QCOMPARE(bulkSpy.count(), 0);
+
+    // The size range, the default size, the stretch flag and a restored state are bulk.
+    geometry.setMinimumSectionSize(30);
+    QCOMPARE(bulkSpy.count(), 1);
+    geometry.setDefaultSectionSize(90);
+    QCOMPARE(bulkSpy.count(), 2);
+    geometry.setStretchLastSection(true);
+    QCOMPARE(bulkSpy.count(), 3);
+    const QByteArray state = geometry.saveState();
+    geometry.setSectionCount(5);
+    geometry.setSectionCount(20);
+    geometry.restoreState(state);
+    QVERIFY(bulkSpy.count() >= 4);
+
+    // A model-side move renames many sections at once: bulk.
+    const int before = bulkSpy.count();
+    geometry.moveLogicalSections(0, 1, 6);
+    QCOMPARE(bulkSpy.count(), before + 1);
 }
 
 void TestHeaderGeometry::insertedSectionsTakeTheSuccessorVisualSlot()

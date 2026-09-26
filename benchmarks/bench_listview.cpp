@@ -15,12 +15,15 @@
 #include <virtualitemviews/virtualtableview.h>
 #include <virtualitemviews/virtualtreeview.h>
 #include <virtualitemviews/treevisibilityindex.h>
+#include <virtualitemviews/virtualheaderview.h>
+#include <virtualitemviews/headerwidgetadapter.h>
 #include <virtualitemviews/widgetrecycler.h>
 
 #include <QApplication>
 #include <QCommandLineParser>
 #include <QElapsedTimer>
 #include <QLabel>
+#include <QPainter>
 #include <QListWidget>
 #include <QListView>
 #include <QPersistentModelIndex>
@@ -236,6 +239,44 @@ public:
 
 private:
     QLabel *m_label = nullptr;
+};
+
+/// Section widgets of the wide-header scenario: one label per section.
+class BenchSectionWidget : public QWidget
+{
+public:
+    explicit BenchSectionWidget(QWidget *parent = nullptr)
+        : QWidget(parent)
+    {
+    }
+
+    void setText(const QString &text) { m_text = text; update(); }
+
+private:
+    void paintEvent(QPaintEvent *) override
+    {
+        QPainter painter(this);
+        painter.drawText(rect().adjusted(4, 0, -4, 0), Qt::AlignVCenter | Qt::AlignLeft, m_text);
+    }
+
+    QString m_text;
+};
+
+class BenchTableHeaderAdapter : public viv::HeaderWidgetAdapter
+{
+public:
+    QWidget *createSection(viv::WidgetType, QWidget *parent) override
+    {
+        ++created;
+        return new BenchSectionWidget(parent);
+    }
+
+    void bindSection(QWidget *widget, int logicalIndex) override
+    {
+        static_cast<BenchSectionWidget *>(widget)->setText(QStringLiteral("Column %1").arg(logicalIndex));
+    }
+
+    int created = 0;
 };
 
 class BenchTableAdapter : public viv::TableWidgetAdapter
@@ -529,6 +570,52 @@ private:
 
     QVector<BenchTreeNode *> m_roots;
 };
+
+/// Very wide table + one frozen column, scrolled horizontally: the scenario behind P1-8/P1-9
+/// of the second review. It compares the two header renderers, because the body/pane layout
+/// was already window-bounded while the *header* used to walk every column per scroll.
+bool runWideHeaderScenario(int columns, int steps)
+{
+    TableModel model(20, columns, 0);
+    BenchTableAdapter rowAdapter;
+    BenchTableHeaderAdapter headerAdapter;
+
+    const auto runOne = [&](bool widgetHeader) {
+        viv::VirtualTableView view;
+        view.setTableAdapter(&rowAdapter);
+        view.setUniformItemHeight(24);
+        view.setDefaultColumnWidth(40);
+        view.setModel(&model);
+        if (widgetHeader) {
+            auto *header = new viv::VirtualHeaderView(Qt::Horizontal);
+            header->setAdapter(&headerAdapter);
+            view.setHorizontalHeader(header);
+        }
+        view.setFrozenColumns(QVector<int>({0}));
+        view.resize(1000, 600);
+        view.show();
+        QApplication::processEvents();
+        view.flushPendingRelayout();
+
+        QElapsedTimer timer;
+        timer.start();
+        for (int step = 1; step <= steps; ++step) {
+            view.setHorizontalOffset(qint64(step) * 97);
+            view.flushPendingRelayout();
+        }
+        const double ms = timer.nsecsElapsed() / 1.0e6;
+        reportCount("  materialized rows", static_cast<long long>(view.materializedItemCount()));
+        return ms;
+    };
+
+    std::printf("\nTable: very wide table, %d columns, 1 frozen, %d horizontal steps\n",
+                columns, steps);
+    const double nativeMs = runOne(false);
+    report("native header, per step", nativeMs / steps);
+    const double widgetMs = runOne(true);
+    report("widget header, per step", widgetMs / steps);
+    return nativeMs > 0 && widgetMs > 0;
+}
 
 bool runTableScenario(const char *name, viv::VirtualTableView::MaterializationMode mode,
                       TableModel &model, int steps, int columnCount)
@@ -976,6 +1063,13 @@ int main(int argc, char **argv)
                                           QStringLiteral("count"), QStringLiteral("100"));
     QCommandLineOption treeOption(QStringLiteral("tree"),
                                   QStringLiteral("Measure the tree (wide tree and mutation scenarios)"));
+    QCommandLineOption wideHeaderOption(
+        QStringLiteral("wide-header"),
+        QStringLiteral("Measure a very wide table (100k columns, frozen column) with the "
+                       "native and the widget header"));
+    QCommandLineOption wideColumnsOption(QStringLiteral("wide-columns"),
+                                         QStringLiteral("Column count of the wide-header scenario"),
+                                         QStringLiteral("count"), QStringLiteral("100000"));
     QCommandLineOption treeRootsOption(QStringLiteral("tree-roots"),
                                        QStringLiteral("Top level node count of the wide tree"),
                                        QStringLiteral("count"), QStringLiteral("1000000"));
@@ -992,6 +1086,8 @@ int main(int argc, char **argv)
     parser.addOption(tableOption);
     parser.addOption(tableColumnsOption);
     parser.addOption(treeOption);
+    parser.addOption(wideHeaderOption);
+    parser.addOption(wideColumnsOption);
     parser.addOption(treeRootsOption);
     parser.addOption(treeBranchingOption);
     parser.addOption(treeDepthOption);
@@ -1190,6 +1286,17 @@ int main(int argc, char **argv)
             result = 1;
         } else {
             std::printf("\nOK (table)\n");
+        }
+    }
+
+    if (parser.isSet(wideHeaderOption)) {
+        const int wideColumns = qMax(100, parser.value(wideColumnsOption).toInt());
+        const bool wideOk = runWideHeaderScenario(wideColumns, qMin(steps, 400));
+        if (!wideOk) {
+            std::printf("\nFAILED: wide-header invariants were violated.\n");
+            result = 1;
+        } else {
+            std::printf("\nOK (wide header)\n");
         }
     }
 

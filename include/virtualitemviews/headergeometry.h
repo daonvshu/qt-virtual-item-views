@@ -117,6 +117,12 @@ public:
     /// Visible sections for a viewport extent, as *visual* indices: the range
     /// may contain hidden sections, which callers skip.
     VisibleRange visibleVisualRange(int viewportExtent) const;
+    /// Visible visual range of an arbitrary window: content x \a windowStart, extent
+    /// \a viewportExtent (both in viewport coordinates, i.e. content minus the offset).
+    /// A pane header uses it with its own rect, since a pane that follows the committed
+    /// geometry starts at its own x inside the viewport (the table's scrolling pane begins
+    /// right of the frozen columns).
+    VisibleRange visibleVisualRangeFor(qint64 windowStart, int viewportExtent) const;
     /// Logical indices of the visible sections, in visual order.
     QVector<int> visibleSectionsInVisualOrder() const;
     /// Bumped whenever the visual order of the visible sections may have changed
@@ -155,6 +161,13 @@ signals:
     void offsetChanged(qint64 offset);
     /// Emitted once per change, after the granular signals.
     void geometryChanged();
+    /// Emitted when the change is *not* described by a granular signal: the size range, the
+    /// default size, the stretch flag, a restored state, or a remap that renames many
+    /// sections at once (a model-side move). A renderer that applies sectionResized /
+    /// sectionVisibilityChanged / offsetChanged / sortIndicatorChanged itself only has to
+    /// re-read the whole geometry on this signal - and thus does not pay an O(sections) pass
+    /// for a single column resize (P1-10 of the second review).
+    void bulkGeometryChanged();
 
 private:
     struct Section

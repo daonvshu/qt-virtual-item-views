@@ -1582,7 +1582,11 @@ void VirtualTableView::setHorizontalOffset(int scrollGroup, qint64 offset)
     if (m_panes.groupOffset(scrollGroup) == clamped)
         return;
     m_panes.setGroupOffset(scrollGroup, clamped);
-    updatePaneLayout();
+    // Only the offset of that group changed, so the cheap path applies: refresh each pane's
+    // visible window with a binary search over the cached prefix sums instead of rebuilding
+    // the whole pane/column cache (P1-9 of the second review - a scrolling group that is not
+    // the primary one used to pay a full O(total columns) pass per step).
+    updatePaneLayoutForScroll();
     emit horizontalOffsetChanged(clamped);
 }
 

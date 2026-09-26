@@ -8,6 +8,7 @@
 #include <QList>
 #include <QPoint>
 #include <QPointer>
+#include <QSet>
 #include <QVector>
 #include <QWidget>
 
@@ -110,6 +111,9 @@ public:
     QWidget *sectionWidget(int logicalIndex) const;
     qsizetype materializedSectionCount() const { return m_sectionWidgets.size(); }
     qsizetype pooledSectionCount() const;
+    /// How often the pane cache (membership set, committed visual order, prefix sums) was
+    /// rebuilt. Diagnostics for the width-scroll tests: a scroll must not rebuild it.
+    quint64 paneCacheRebuildCount() const { return m_paneCacheRebuilds; }
 
     /// Views in front of/behind the viewport that are kept materialized.
     void setSectionOverscan(int sections);
@@ -126,6 +130,10 @@ protected:
 
 private:
     void connectGeometry(HeaderGeometry *geometry, bool connectSignals);
+    /// Rebuilds the pane cache when it was invalidated (filter / geometry / visibility /
+    /// order change) - never on a pure offset change. The cache is mutable, so the const
+    /// query path (sectionX) can fill it lazily like the derived caches of the layout do.
+    void rebuildPaneCacheIfNeeded() const;
     /// Re-binds the materialized sections in the logical range [first, last] so a widget
     /// that is already on screen picks up a changed label or state.
     void rebindMaterializedSections(int first, int last);
@@ -196,6 +204,16 @@ private:
     QVector<int> m_paneFilter;
     bool m_paneFilterActive = false;
     qint64 m_paneOffset = kFollowGeometryOffset;
+    /// Pane cache (§31/§43, P1-8 of the second review): the pane's columns in committed
+    /// visual order, the prefix sums of their widths, a logical → slot map and the
+    /// membership set. Without it every sectionX() rebuilt and sorted the pane's list and
+    /// every isFiltered() scanned it, which made a pane-filtered header O(N^2) per pass.
+    mutable QVector<int> m_paneOrder;
+    mutable QVector<qint64> m_panePrefixX;
+    mutable QVector<int> m_paneSlotByLogical;
+    mutable QSet<int> m_paneFilterSet;
+    mutable bool m_paneCacheDirty = true;
+    mutable quint64 m_paneCacheRebuilds = 0;
     /// Visual geometry (§23): visual x a section slides away from, and the
     /// progress of the transition (1 = committed geometry).
     QHash<int, int> m_slideFrom;

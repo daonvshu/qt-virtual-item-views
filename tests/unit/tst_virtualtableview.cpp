@@ -409,6 +409,7 @@ private slots:
     void rowWidgetModeCreatesNoCellWidgets();
     void headerAndRowsAgreeOnColumnBoundaries();
     void nativeHeaderFollowsLimitChangesImmediately();
+    void nativeHeaderStaysInSyncWithEveryGeometryChange();
     void columnStructureChangesRebindTheRowWidgets();
     void columnResizeTouchesMaterializedRowsOnly();
     void geometryIsTheSingleAuthority();
@@ -530,7 +531,7 @@ void TestVirtualTableView::nativeHeaderFollowsLimitChangesImmediately()
     // range and only re-reads it when the geometry notifies. Changing the range *without*
     // clamping any section used to skip that notification, so header and geometry disagreed
     // about the allowed widths until the next unrelated change.
-    auto *native = qobject_cast<QHeaderView *>(m_view->horizontalHeader()->headerWidget());
+    auto *native = qobject_cast<NativeHeaderView *>(m_view->horizontalHeader()->headerWidget());
     QVERIFY(native != nullptr);
     HeaderGeometry *geometry = m_view->horizontalHeaderGeometry();
     QCOMPARE(geometry->sectionSize(0), kColumnWidth);
@@ -601,6 +602,54 @@ void TestVirtualTableView::columnStructureChangesRebindTheRowWidgets()
         QVERIFY(host != nullptr);
         QCOMPARE(host->width(), view.columnGeometry(column).width);
     }
+}
+
+void TestVirtualTableView::nativeHeaderStaysInSyncWithEveryGeometryChange()
+{
+    // P1-10 of the second review: the native renderer no longer does a full sync for the
+    // granular changes (a resize, a visibility toggle, the sort indicator), so every kind of
+    // geometry change is checked here - a missing notification would show up as a header
+    // that disagrees with the geometry.
+    auto *native = qobject_cast<NativeHeaderView *>(m_view->horizontalHeader()->headerWidget());
+    QVERIFY(native != nullptr);
+    HeaderGeometry *geometry = m_view->horizontalHeaderGeometry();
+
+    // The resize is applied granularly: the section follows, the whole geometry is not
+    // re-read (P1-10).
+    const quint64 fullSyncsBefore = native->fullSyncCount();
+    m_view->setColumnWidth(2, 180);                  // sectionResized
+    QCOMPARE(native->sectionSize(2), 180);
+    QCOMPARE(geometry->sectionSize(2), 180);
+    QCOMPARE(native->fullSyncCount(), fullSyncsBefore);
+
+    m_view->setColumnHidden(1, true);                // sectionVisibilityChanged
+    QVERIFY(native->isSectionHidden(1));
+    QVERIFY(geometry->isSectionHidden(1));
+    m_view->setColumnHidden(1, false);
+
+    m_view->setDefaultColumnWidth(90);               // bulk (default size)
+    QCOMPARE(native->defaultSectionSize(), 90);
+
+    geometry->setMinimumSectionSize(40);             // bulk (size range)
+    QCOMPARE(native->minimumSectionSize(), 40);
+    geometry->setMaximumSectionSize(777);
+    QCOMPARE(native->maximumSectionSize(), 777);
+
+    geometry->setStretchLastSection(true);           // bulk (stretch)
+    QVERIFY(native->stretchLastSection());
+    geometry->setStretchLastSection(false);
+
+    m_view->setSortIndicator(3, Qt::DescendingOrder); // sortIndicatorChanged
+    QCOMPARE(native->sortIndicatorSection(), 3);
+    QCOMPARE(native->sortIndicatorOrder(), Qt::DescendingOrder);
+
+    m_view->moveColumn(0, 3);                        // sectionMoved / structure
+    for (int logical = 0; logical < m_view->columnCount(); ++logical)
+        QCOMPARE(native->visualIndex(logical), geometry->visualIndex(logical));
+
+    m_model->insertColumn(2);                        // sectionCountChanged
+    QCOMPARE(native->count(), m_model->columnCount());
+    QCOMPARE(geometry->sectionCount(), m_model->columnCount());
 }
 
 void TestVirtualTableView::columnResizeTouchesMaterializedRowsOnly()

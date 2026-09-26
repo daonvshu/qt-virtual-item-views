@@ -1,5 +1,6 @@
 #include <virtualitemviews/tablepane.h>
 #include <virtualitemviews/virtualtableview.h>
+#include <virtualitemviews/virtualheaderview.h>
 #include "vivtestfixtures.h"
 
 #include <QtTest>
@@ -74,6 +75,26 @@ TablePaneSpec scrollablePane(const QVector<int> &columns, int group = 0)
     return spec;
 }
 
+/// Section adapter of the header pane-cache test: one label per section.
+class HeaderSectionAdapter : public HeaderWidgetAdapter
+{
+public:
+    QWidget *createSection(WidgetType, QWidget *parent) override
+    {
+        auto *label = new QLabel(parent);
+        label->setText(QStringLiteral("section"));
+        return label;
+    }
+    void bindSection(QWidget *widget, int logicalIndex) override
+    {
+        static_cast<QLabel *>(widget)->setText(QStringLiteral("s%1").arg(logicalIndex));
+    }
+    void unbindSection(QWidget *widget, int) override
+    {
+        static_cast<QLabel *>(widget)->clear();
+    }
+};
+
 /// Two scroll groups with a frozen column on each side: the primary group (group
 /// 0) sits in the middle, the second group scrolls on its own (§43).
 QVector<TablePaneSpec> twoGroupPanes()
@@ -137,6 +158,8 @@ private slots:
     void scrollingDoesNotWalkEveryColumn();
     void invalidPaneSpecsAreNormalizedWithOneWarningEach();
     void scrollingPanesShareTheWidthProportionally();
+    void nonPrimaryGroupScrollDoesNotRunTheStructuralPass();
+    void headerPaneCacheIsNotRebuiltWhileScrolling();
 };
 
 void TestTablePanes::defaultLayoutIsStillTheThreePanes()
@@ -810,6 +833,91 @@ void TestTablePanes::scrollingPanesShareTheWidthProportionally()
     QCOMPARE(ratioPanes.at(0).viewportRect.width() + ratioPanes.at(1).viewportRect.width()
                  + ratioPanes.at(2).viewportRect.width(),
              total);
+}
+
+void TestTablePanes::nonPrimaryGroupScrollDoesNotRunTheStructuralPass()
+{
+    // P1-9 of the second review: the primary group scrolls through the fast path
+    // (refreshScrollWindows), a second group through a full structural pass - O(total
+    // columns) per step. Both take the same path now.
+    constexpr int kManyColumns = 20000;
+    auto *model = new QStandardItemModel(20, kManyColumns, this);
+    PaneTableAdapter adapter;
+    VirtualTableView view;
+    view.setTableAdapter(&adapter);
+    view.setUniformItemHeight(kRowHeight);
+    view.setDefaultColumnWidth(kColumnWidth);
+    view.setModel(model);
+    showView(&view, QSize(kViewWidth, kViewHeight));
+    QVector<int> secondGroup;
+    for (int column = 5; column < kManyColumns; ++column)
+        secondGroup.append(column);
+    view.setPanes({frozenPane({0}), scrollablePane({1, 2, 3}, 0), frozenPane({4}),
+                   scrollablePane(secondGroup, 1)});
+    view.flushPendingRelayout();
+    QVERIFY(view.maximumHorizontalOffset(1) > 0);
+    const qsizetype structuralVisits = view.horizontalLayoutColumnVisits();
+    QVERIFY(structuralVisits >= qsizetype(kManyColumns));
+
+    // One step of the non-primary group must not walk every column.
+    view.setHorizontalOffset(1, kColumnWidth);
+    const qsizetype scrollVisits = view.horizontalLayoutColumnVisits();
+    QVERIFY(scrollVisits < 100);
+    QVERIFY(scrollVisits * 100 < structuralVisits);
+
+    // ... and it really moved that group's window.
+    QCOMPARE(view.horizontalOffset(1), qint64(kColumnWidth));
+    const QRect paneRect = view.panes().at(view.paneIndexOfColumn(5)).viewportRect;
+    const ColumnGeometry geometry = view.columnGeometry(5);
+    QVERIFY(geometry.viewportX < paneRect.x());
+}
+
+void TestTablePanes::headerPaneCacheIsNotRebuiltWhileScrolling()
+{
+    // P1-8 of the second review: a pane-filtered header rebuilt (and sorted) its pane's
+    // column list inside every sectionX() call and scanned the filter in every
+    // isFiltered() - O(N^2) per pass for a 100k column pane. The cache is now rebuilt only
+    // when the filter or the geometry changed, so scrolling must not touch it.
+    constexpr int kWideColumns = 20000;
+    auto *model = new QStandardItemModel(5, kWideColumns, this);
+    PaneTableAdapter adapter;               // rows of the body (not the header)
+    HeaderSectionAdapter sectionAdapter;    // one label per header section
+    VirtualTableView view;
+    view.setTableAdapter(&adapter);
+    view.setUniformItemHeight(kRowHeight);
+    view.setDefaultColumnWidth(kColumnWidth);
+    view.setModel(model);
+    auto *header = new VirtualHeaderView(Qt::Horizontal);
+    header->setAdapter(&sectionAdapter);
+    view.setHorizontalHeader(header);
+    showView(&view, QSize(kViewWidth, kViewHeight));
+    view.setFrozenColumns({0});            // the primary pane gets a filter + follows geometry
+    view.flushPendingRelayout();
+
+    const quint64 rebuildsAfterStructure = header->paneCacheRebuildCount();
+    QVERIFY(rebuildsAfterStructure > 0);   // the pane cache had to be built once
+    QVERIFY(!header->materializedSections().isEmpty());
+
+    for (int step = 1; step <= 50; ++step) {
+        // A remainder keeps the first visible column partially scrolled out.
+        view.setHorizontalOffset(kColumnWidth / 2 + step * kColumnWidth);
+        view.flushPendingRelayout();
+    }
+    QCOMPARE(header->paneCacheRebuildCount(), rebuildsAfterStructure);
+
+    // The sections still follow the new offset (the cheap path is not "skip the layout"):
+    // the column at the pane's left edge is partially scrolled out, so its x is negative.
+    bool partiallyScrolled = false;
+    for (int logical : header->materializedSections()) {
+        if (QWidget *widget = header->sectionWidget(logical))
+            partiallyScrolled = partiallyScrolled || widget->x() < 0;
+    }
+    QVERIFY(partiallyScrolled);
+
+    // A real structure change does rebuild it.
+    view.setFrozenColumns({0, 1});
+    view.flushPendingRelayout();
+    QVERIFY(header->paneCacheRebuildCount() > rebuildsAfterStructure);
 }
 
 QTEST_MAIN(TestTablePanes)

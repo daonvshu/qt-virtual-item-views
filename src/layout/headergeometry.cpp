@@ -286,6 +286,7 @@ void HeaderGeometry::setDefaultSectionSize(int size)
             section.size = clamped;
     }
     invalidateCaches();
+    emit bulkGeometryChanged();
     emitGeometryChanged();
 }
 
@@ -338,6 +339,7 @@ void HeaderGeometry::clampSectionsToTheSizeRange()
     invalidateCaches();
     for (const QPair<int, QPair<int, int>> &entry : resized)
         emit sectionResized(entry.first, entry.second.first, entry.second.second);
+    emit bulkGeometryChanged();
     emitGeometryChanged();
 }
 
@@ -503,6 +505,9 @@ void HeaderGeometry::moveLogicalSections(int start, int count, int destination)
     rebuildIndexMaps();
 
     invalidateCaches();
+    // A model-side move renames many sections at once and has no granular signal of its own
+    // (unlike a resize or a visibility toggle), so renderers are told to re-read everything.
+    emit bulkGeometryChanged();
     emitGeometryChanged();
 }
 
@@ -590,11 +595,17 @@ ColumnGeometry HeaderGeometry::columnGeometry(int logicalIndex) const
 
 VisibleRange HeaderGeometry::visibleVisualRange(int viewportExtent) const
 {
+    return visibleVisualRangeFor(m_viewportOffset, viewportExtent);
+}
+
+VisibleRange HeaderGeometry::visibleVisualRangeFor(qint64 windowStart, int viewportExtent) const
+{
     VisibleRange range;
     if (sectionCount() == 0 || viewportExtent <= 0)
         return range;
-    const int first = visualSectionAtOffset(m_viewportOffset);
-    const int last = visualSectionAtOffset(m_viewportOffset + qMax<qint64>(0, viewportExtent - 1));
+    const qint64 start = qMax<qint64>(0, windowStart);
+    const int first = visualSectionAtOffset(start);
+    const int last = visualSectionAtOffset(start + qMax<qint64>(0, viewportExtent - 1));
     if (first < 0 || last < 0)
         return range;
     range.first = qMin(first, last);
@@ -630,6 +641,7 @@ void HeaderGeometry::setStretchLastSection(bool stretch)
         return;
     m_stretchLastSection = stretch;
     emit stretchLastSectionChanged(stretch);
+    emit bulkGeometryChanged();
     emitGeometryChanged();
 }
 
@@ -726,6 +738,7 @@ bool HeaderGeometry::restoreState(const QByteArray &state)
     m_stretchLastSection = stretch != 0;
 
     invalidateCaches();
+    emit bulkGeometryChanged();
     emitGeometryChanged();
     return true;
 }

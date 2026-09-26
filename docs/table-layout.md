@@ -41,6 +41,12 @@ NativeHeaderView          VirtualHeaderView
 * Widget 模式使用 `VirtualHeaderView + HeaderWidgetAdapter + Recycler`，只 materialize
   `visible columns + overscan + pinned`，不随总列数线性增长。
 * `VirtualTableView` 不关心 Header 用 painter 还是 QWidget 呈现。
+* **极宽表格要用 Widget 表头**：body、`HeaderGeometry`、滚动条与 `columnGeometry()` 都是 64 位
+  像素空间（`docs/abi.md` 的 `ScrollMapper`），但 **`QHeaderView` 自己的 section 空间是 int**
+  —— 当可见内容宽度超过 `INT_MAX` 时，native 渲染器无法完整镜像几何，`NativeHeaderView` 会
+  跳过镜像并 `qWarning()` 一次（横向上会与 body 失步）。这个边界来自 Qt，不是框架可以消除的：
+  超过 int 几何范围的表格请用 `VirtualHeaderView`（它按 `HeaderGeometry` 自己摆放 section，
+  没有这个限制）。
 
 ## 3. Resize 与动画的两种几何
 

@@ -53,6 +53,7 @@ bench_listview --rows 1000000 --steps 2000
 bench_listview --rows 100000 --steps 500 --compare
 bench_listview --table --table-columns 100
 bench_listview --tree
+bench_listview --wide-header --wide-columns 100000 --steps 200
 ```
 
 `--compare` 会追加 `QListView` + 默认委托（绘制基线）与 `QListWidget + setItemWidget`（极端参考，
@@ -86,6 +87,9 @@ bench_listview --tree
 * **只看索引的 splice**（P2-10）：不带视图，直接量 `TreeVisibilityIndex` 在 100 万可见行上的
   expand/collapse —— "在**末尾**展开"（纯追加）与"在**开头**展开"（要搬尾部）的差值就是扁平
   向量的那次 memmove；场景自带"可见行数恢复、首/末行不变"的不变量检查。
+* **极宽表的表头**（P1-8/P1-9）：10 万列 + 1 个冻结列，分别装 native 与 Widget 表头各滚 N 步，
+  报告每步耗时。Debug 实测（200 步）：1 万列 0.52 / 0.92 ms、10 万列 1.17 / 1.48 ms
+  —— 列数 ×10 而每步只涨 1.3~2.2 倍，说明表头与 pane 布局一样只跟可见窗口走。
 
 ### v1.0 基线（2026-09-25 实测）
 

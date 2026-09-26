@@ -76,9 +76,12 @@ void NativeHeaderView::connectGeometry(HeaderGeometry *geometry, bool connectSig
     if (!geometry)
         return;
     if (connectSignals) {
-        connect(geometry, &HeaderGeometry::geometryChanged, this, &NativeHeaderView::onGeometryChanged);
-        // Granular signals carry the section index, so only that section is
-        // re-applied (a full sync would be O(sections) per change).
+        // Only the *bulk* signal needs the full sync: the granular signals below carry the
+        // section index, so only that section is re-applied. Connecting the generic
+        // geometryChanged() here as well undid the granular fast path - every pixel of a
+        // column drag re-applied every section (P1-10 of the second review).
+        connect(geometry, &HeaderGeometry::bulkGeometryChanged, this,
+                &NativeHeaderView::onGeometryChanged);
         connect(geometry, &HeaderGeometry::sectionResized, this,
                 [this](int logicalIndex, int, int) { applySection(logicalIndex); });
         connect(geometry, &HeaderGeometry::offsetChanged, this, [this](qint64 offset) {
@@ -93,11 +96,19 @@ void NativeHeaderView::connectGeometry(HeaderGeometry *geometry, bool connectSig
         connect(geometry, &HeaderGeometry::sectionCountChanged, this, [this](int) {
             syncHeaderFromGeometry();
         });
-        connect(geometry, &HeaderGeometry::sortIndicatorChanged, this, [this](int, Qt::SortOrder) {
-            syncHeaderFromGeometry();
-        });
+        // The sort indicator is a single section's state: applying it per signal is O(1)
+        // instead of a full sync (the arrow and the "shown" flag are what change).
+        connect(geometry, &HeaderGeometry::sortIndicatorChanged, this,
+                [this](int logicalIndex, Qt::SortOrder order) {
+                    if (m_applyingToHeader || !m_geometry)
+                        return;
+                    setSortIndicatorShown(logicalIndex >= 0);
+                    if (logicalIndex >= 0)
+                        setSortIndicator(logicalIndex, order);
+                });
         connect(geometry, &HeaderGeometry::stretchLastSectionChanged, this, [this](bool) {
-            syncHeaderFromGeometry();
+            if (!m_applyingToHeader && m_geometry)
+                setStretchLastSection(m_geometry->stretchLastSection());
         });
     } else {
         disconnect(geometry, nullptr, this, nullptr);
@@ -175,6 +186,7 @@ void NativeHeaderView::syncHeaderFromGeometry()
 {
     if (!m_geometry || m_applyingToHeader)
         return;
+    ++m_fullSyncs;
 
     // QHeaderView keeps its section positions in (checked) int arithmetic, so a
     // content extent beyond the int range cannot be mirrored into it at all: touch

@@ -282,6 +282,40 @@
   `tst_headerstructure::paneCacheIsUpToDateImmediatelyAfterAColumnInsert`（修复前 pane 的列集合
   仍是 `{0,1}`，正确的 `{0,2}` 要等下一次结构变化）。
 
+### Fixed（第二轮代码审查 Wave C：超宽表性能，2026-09-26）
+
+* **pane 过滤表头不再 O(N²)（P1-8）**：`VirtualHeaderView` 在 pane 模式下每次 `isFiltered()` 都线性
+  扫 `m_paneFilter`、每次 `sectionX()` 都重建并按视觉顺序**排序**该 pane 的列列表再逐列累加宽度；
+  `relayout()` 又对每个可见候选调用它们 —— 10 万列的 pane 就是每趟 O(N·k)。现在渲染器持有 pane
+  缓存：成员集合（`QSet` 判成员）、pane 内 committed 视觉顺序、每列宽度的前缀和与 logical→槽位表，
+  只在 filter / 几何变化时重建（`geometryChanged` 才置脏，纯滚动只发 `offsetChanged`）；
+  `sectionX()` 变成一次槽位查表，可见范围变成"对前缀和两次二分"。`setPaneFilter()` 也加了
+  等值快路径（表格每趟都会重新下发同一个 filter）。诊断接口 `paneCacheRebuildCount()` 供测试
+  断言"滚动期间不重建"。回归测试：`tst_tablepanes::headerPaneCacheIsNotRebuiltWhileScrolling`
+  （2 万列 + 冻结列 + Widget 表头，50 次滚动后重建次数不变，且 section 确实跟着偏移走）。
+* **非主滚动组走快路径（P1-9）**：`setHorizontalOffset(group, offset)` 以前调 `updatePaneLayout()`
+  （整表结构重建，O(总列数)）；现在与主组一致走 `updatePaneLayoutForScroll()`（每个 pane 二分刷新
+  窗口）。回归测试：`tst_tablepanes::nonPrimaryGroupScrollDoesNotRunTheStructuralPass`（2 万列、
+  第二组滚一步的列访问数 < 100，而结构 pass ≥ 2 万；已确认还原旧实现时用例失败）。
+* **Native 表头的粒度通知不再被整表同步吞掉（P1-10）**：`HeaderGeometry` 以前对**每一种**变化都发
+  `geometryChanged()`，而 `NativeHeaderView` 把该信号接到整表 `syncHeaderFromGeometry()`——于是
+  "拖一像素列宽"除了 O(1) 的 `applySection()` 之外还要 O(列数) 重读整份几何。现在几何多了一个
+  `bulkGeometryChanged()`（只在"没有粒度信号对应"的变化上发：尺寸范围 / 默认尺寸 / stretch /
+  恢复状态 / 模型侧换序），native 渲染器改为：bulk、sectionCountChanged、sectionMoved → 整表同步；
+  sectionResized、sectionVisibilityChanged、sortIndicatorChanged（新增粒度处理）、
+  stretchLastSectionChanged、offsetChanged → 只改对应的一点。`geometryChanged()` 对其它使用者
+  （表格自身、Widget 表头、测试）语义不变。诊断接口 `NativeHeaderView::fullSyncCount()`。回归测试：
+  `tst_headergeometry::granularChangesDoNotEmitTheBulkSignal`、
+  `tst_virtualtableview::nativeHeaderStaysInSyncWithEveryGeometryChange`（每次列宽变化都断言整表
+  同步次数没有增加，同时逐项校验 native 表头与几何仍然一致）。
+* **宽表基准（审查建议的 smoke）**：`bench_listview --wide-header`（默认 10 万列 × 1 冻结列 × N 次
+  横向滚动，分别用 native 与 widget 表头）。Debug 实测（200 步）：1 万列时 native 0.52 ms/步、
+  widget 0.92 ms/步；10 万列时 1.17 / 1.48 ms/步 —— 列数 ×10 而每步耗时只涨 1.3~2.2 倍，说明
+  每趟成本由可见窗口决定，不再跟着总列数走。
+* **Native 表头的 int 几何边界写进文档（P2-4）**：`docs/table-layout.md` 明确"内容宽度超过
+  `INT_MAX` 的极宽表格要用 `VirtualHeaderView`"（`QHeaderView` 自己的 section 空间是 int，
+  native 渲染器在那种情况下会跳过镜像并 `qWarning()`）。
+
 ### Fixed（第二轮代码审查 Wave B：HeaderGeometry 语义与业务行 schema，2026-09-26）
 
 * **中间插入的新列放到后继列的视觉槽位（P1-4）**：`insertLogicalSections()` 把新 section 无条件
