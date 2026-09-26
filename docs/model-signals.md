@@ -56,6 +56,9 @@ List 与 Tree 的**显示身份**是 `(row, 0)`（`viewIndex()` 就是取第 0 �
 * Tree 另外需要重建可见行映射：`TreeVisibilityIndex` 存的是 `QModelIndex` 值，列变化会让它们
   指向的 cell 改名（删掉 column 0 时甚至失效），所以 Tree 在列结构信号上会重新推导可见行
   （`onColumnStructureChanged()`：只重建映射，**不**重置实测行高与滚动锚点）。
+  **代价**：展开状态是按 **cell** 记的持久索引，列变化会让这些 cell 改名 / 失效（Qt 的模型可能
+  把它们指向移动后的列），所以 column 0 的 insert / remove / move 之后展开状态可能丢失 ——
+  需要保留就重新 `expand()`。列方向不是 Tree 的契约，这条与"只读 column 0"是一回事。
 
 换句话说：**列方向的完整契约是 Table 的**（多列、列宽、列序、冻结 / 多滚动组都在那里）；
 List / Tree 承诺的是行方向的完整性，"往 List 的模型里插一列"只是把第 0 列换了内容，不会

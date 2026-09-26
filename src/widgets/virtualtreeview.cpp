@@ -121,7 +121,10 @@ void VirtualTreeView::onColumnStructureChanged()
 {
     // Same reason as onStructureChanged(), minus the layout reset: the visible rows are
     // (row, 0) indexes, so a column change re-derives them - but the rows themselves did not
-    // move, and their measured heights must survive.
+    // move, and their measured heights must survive. The expansion state names cells, not rows,
+    // so a column change that renames column 0 can collapse it (see docs/model-signals.md:
+    // column mutation is not part of the List / Tree contract); what this path guarantees is
+    // that the mapping is re-derived instead of handing out stale cells.
     m_visibility->handleModelChanged();
     relayout();
 }

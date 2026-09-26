@@ -328,6 +328,13 @@ Gate A 的实测证据（修复前的失败形态，都是先还原旧实现再�
 `-Library Both` 一步还包含动态库形态。**至此第四轮审查的 Gate A/B/C 全部收口，唯一的禁区
 只剩"仓库主人手动打 tag"。**
 
+Tree 侧补的那条用例（`tst_virtualtreeview::columnChangesRebuildTheVisibleRowMapping`）要说清楚
+性质：它锁的是"列变化后不再交出过期 cell"这条不变量（身份仍是 `(row, 0)`、控件不显示旧列内容、
+`indexAt()` 与模型当前的 cell 相等），但**它不是一条反向可验的用例** —— 本机实测里
+`QStandardItemModel` 对"用旧指针取 (row, 0) cell"这件事自己是宽容的（`itemFromIndex()` 发现指针
+与列不匹配就返回空），把 Tree 的列信号连接摘掉之后用例仍然是绿的。`onColumnStructureChanged()`
+因此是**防御性**的：它保护的是"模型按指针取数据、不做这层校验"的实现与后续其它模型。
+
 ## 7. 决策记录
 
 | 日期 | 决定 | 理由 |

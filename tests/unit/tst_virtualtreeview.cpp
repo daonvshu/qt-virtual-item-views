@@ -217,6 +217,7 @@ private slots:
     void rowsInsertedKeepsExpansionAndOrder();
     void rowsRemovedRecyclesTheSubtree();
     void modelResetCollapsesEverything();
+    void columnChangesRebuildTheVisibleRowMapping();
     void anchorKeepsTheTopItemWhileExpandingAbove();
     void rootIndexRestrictsVisibleRows();
     void scrollingIsAllocationFree();
@@ -654,6 +655,37 @@ void TestVirtualTreeView::modelResetCollapsesEverything()
     m_view->flushPendingRelayout();
     QCOMPARE(m_view->visibleRowCount(), qsizetype(0));
     QCOMPARE(m_view->materializedItemCount(), qsizetype(0));
+}
+
+void TestVirtualTreeView::columnChangesRebuildTheVisibleRowMapping()
+{
+    // P2 of the fourth review: TreeVisibilityIndex stores QModelIndex *values*, and a column
+    // change renames (or, for a removed column 0, invalidates) the cells they name. The tree
+    // therefore re-derives the mapping instead of drawing rows through stale cells. Column
+    // mutation is not part of the List / Tree contract (docs/model-signals.md), so the check is
+    // "no stale content, canonical identity" - not "the expansion state survives".
+    const QStringList textsBefore = visibleTexts(*m_view);
+    QCOMPARE(textsBefore, QStringList({QStringLiteral("A"), QStringLiteral("B"), QStringLiteral("C")}));
+
+    // Insert an *empty* column before column 0: the canonical (row, 0) cell of every row is now a
+    // fresh cell, so a mapping that was not re-derived would keep showing the old text (with a
+    // pointer that no longer belongs to that cell).
+    m_model->insertColumn(0);
+    m_view->flushPendingRelayout();
+    QCoreApplication::processEvents();
+
+    const QStringList textsAfter = visibleTexts(*m_view);
+    QCOMPARE(textsAfter.size(), textsBefore.size());
+    for (const QString &text : textsAfter) {
+        QVERIFY2(text.isEmpty(),
+                 qPrintable(QStringLiteral("still bound to the old column 0: '%1'").arg(text)));
+    }
+    for (const MaterializedItem &item : m_view->materializedItems())
+        QCOMPARE(item.index.column(), 0);              // still the canonical identity
+    // ...and the mapping hands out the *model's current* cell for that row, not the value the
+    // index had before the column change (QModelIndex equality includes the internal pointer).
+    QCOMPARE(m_view->indexAt(QPoint(10, kRowHeight / 2)), m_model->index(0, 0));
+    QCOMPARE(m_view->indexAt(QPoint(10, kRowHeight * 2 + 5)), m_model->index(2, 0));
 }
 
 void TestVirtualTreeView::anchorKeepsTheTopItemWhileExpandingAbove()
