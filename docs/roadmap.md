@@ -250,7 +250,7 @@ smoke。按审查的判据，这一版已经可以视为 1.0 候选（tag 由仓
 | **Wave 1 生命周期 / 身份** | P0-1 pane 渲染器跟随主表头 adapter 替换（复现即崩溃）、P1 列 0 结构变化后的 canonical 行身份、P1 `setGeometryModel()`/`setLabelModel()` 替换语义（含新的 `HeaderWidgetAdapter::setLabelModel()` 钩子）、P1 `restoreState()` 的 order/sort 通知（含 restore 期间的 sort guard） | ✅ |
 | **Wave 2 宽表收尾** | Native 表头 non-primary offset 走 O(1)（不再整表同步）、frozen pane 的 body 按 pane 窗口物化、sparse explicit pane 的 Widget 表头直接遍历 pane slots | ✅ |
 | **Wave 3 API / ABI 决策** | 隐藏 / 统一 `VirtualTableView::setAdapter()`（✅ 3a）、`setLayoutPolicy()` 明确成初始化期钩子（✅ 3a）、同步 `model-signals.md` / `ci.md` / `api-stability.md` 的 drift（✅ 3a）；**发布策略定案：选方案 B —— 1.x 只承诺源码 API / 语义兼容，二进制 ABI = best effort**（✅ 3b，用户拍板） | ✅ |
-| **Wave 4 tag 前验证** | Debug + Release × Qt5/Qt6 × MSVC/MinGW GCC/llvm-mingw Clang + ASan/UBSan + 28 CTest + 12 示例 + 消费端 + wide-header benchmark 四种 pane 形态 | 🟡 wide-header 四种形态已进基准一步（含断言），收口时按清单重跑全矩阵 |
+| **Wave 4 tag 前验证** | Debug + Release × Qt5/Qt6 × MSVC/MinGW GCC/llvm-mingw Clang + ASan/UBSan + 28 CTest + 12 示例 + 消费端 + wide-header benchmark 四种 pane 形态 | ✅ 全矩阵已重跑（见下面的证据表）；wide-header 四种形态已进基准一步并带断言 |
 
 Wave 1 的实测证据（修复前的失败形态）：
 
@@ -274,6 +274,23 @@ Wave 2 的实测证据（修复前的失败形态）：
 
 Wave 2 的验证：`scripts/validate.ps1 -Library Both`（Qt 6.11.2 + Qt 5.15.2 x 静态/动态库，共
 28 步：configure / 全量构建 / 28 个 CTest / 12 个示例 / 3 档基准 / 安装 + 消费端）全绿。
+
+Wave 4 的 tag 前验证（2026-09-26，第三轮全部改动 + 方案 B 落定之后重跑一遍；每一步都是
+configure / 构建 / CTest / 示例 / 基准 / 安装 + 消费端）：
+
+| 命令 | 覆盖 | 结果 |
+| --- | --- | --- |
+| `scripts/validate.ps1 -Library Both` | Qt 6.11.2 + 5.15.2 x 静态/动态（MSVC 19.50） | 28 步全绿 |
+| `scripts/validate.ps1 -Release -Library Static` | 同上两个 Qt 版本的 Release | 14 步全绿 |
+| `scripts/validate.ps1 -Asan` | MSVC AddressSanitizer，Qt 6.11.2 + 5.15.2 x 静态/动态 | 16 步全绿，无 ASan 报告 |
+| `scripts/validate.ps1 -UBSan -Library Static` | llvm-mingw Clang 17.0.6 + `-fsanitize=undefined -fno-sanitize-recover` | 5 步全绿 |
+| `scripts/validate.ps1 -MinGW -Library Static` | GCC 13.1 / llvm-mingw Clang 17 / GCC 8.1 三个 kit 的 Debug | 21 步全绿 |
+| `scripts/validate.ps1 -MinGW -Library Static -Release` | 同样三个 kit 的 Release | 21 步全绿 |
+
+基准一步现在含 4 档：1M 行列表、20 万行 x 100 列表、30 万顶层节点树，以及 wide-header 的
+**四种 pane 形态 x 两种表头渲染器**（`--wide-columns 10000 --steps 100`，自带"滚动访问数 < 100、
+物化 section 数 <= 64"的断言）。10 万列那一档仍是手动运行，数字与注意事项见
+[performance.md](performance.md) §3/§4。
 
 ## 7. 决策记录
 

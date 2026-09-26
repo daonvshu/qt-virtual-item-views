@@ -11,6 +11,8 @@ configure → 构建 → CTest → 示例 → 基准不变量 → 安装 + 消�
 > llvm-mingw Clang 17.0.6** 三个 kit（Debug + Release），以及 **MSVC ASan** 与
 > **llvm-mingw UBSan**（见 §5 与 [abi.md](abi.md) §5 的支持矩阵）。
 > **Linux / macOS 未实测** —— 那需要一台 runner；下表里的 `ubuntu-*` job 就是为此准备的。
+> 第三轮审查收口时（2026-09-26）这六条命令又整体重跑过一遍，每一步全绿，汇总见
+> [roadmap.md](roadmap.md) §6 的 Wave 4 证据表。
 
 ## 1. 该跑的 job
 
