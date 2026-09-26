@@ -666,20 +666,18 @@ QVector<int> TablePaneLayout::columnsForLayout(int overscan) const
     if (m_geometry->sectionCount() <= 0)
         return columns;
 
-    // Every pane contributes, and only its own window: a frozen pane always, a
-    // scrolling pane inside its window widened by \a overscan columns. Walking the
-    // panes keeps this proportional to the window instead of the column count.
+    // Every pane contributes, and only its own window: the visible slots widened by
+    // \a overscan columns. That holds for a frozen pane too - its offset is 0, so its
+    // window is what the pane's width shows. Materializing a frozen pane in full made
+    // the body (and Cell Widget Mode) walk every frozen column on each pass: 50,000
+    // frozen columns cost 50,000 cells per visible row even though a viewport shows a
+    // few dozen (P1 of the third review).
     const int extra = qMax(0, overscan);
     for (int paneIndex = 0; paneIndex < m_panes.size(); ++paneIndex) {
         const TablePane &pane = m_panes.at(paneIndex);
         const int slotCount = pane.logicalColumns.size();
         if (slotCount <= 0)
             continue;
-        if (pane.type != TablePane::Type::Scrollable) {
-            for (int slot = 0; slot < slotCount; ++slot)
-                columns.append(pane.logicalColumns.at(slot));
-            continue;
-        }
         const QPair<int, int> window = m_paneSlotWindows.value(paneIndex, {-1, -1});
         if (window.first < 0)
             continue;

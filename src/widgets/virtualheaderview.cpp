@@ -462,6 +462,9 @@ void VirtualHeaderView::relayout()
     // 1) Visual range of the sections that intersect this widget.
     int firstVisual = -1;
     int lastVisual = -1;
+    /// Slot window of a pane that packs its own columns (see below); -1 = not applicable.
+    int firstPaneSlot = -1;
+    int lastPaneSlot = -1;
     if (!m_paneFilterActive) {
         // A whole-table header shares the geometry's viewport offset, so the
         // geometry can answer this with a binary search over its prefix sums
@@ -503,17 +506,29 @@ void VirtualHeaderView::relayout()
                                            - m_panePrefixX.cbegin())
                 - 1;
             lastSlot = qBound<qsizetype>(firstSlot, lastSlot, m_paneOrder.size() - 1);
-            firstVisual = m_geometry->visualIndex(m_paneOrder.at(firstSlot));
-            lastVisual = m_geometry->visualIndex(m_paneOrder.at(lastSlot));
+            firstPaneSlot = int(firstSlot);
+            lastPaneSlot = int(lastSlot);
         }
     }
 
     // 2) Wanted sections: the visible ones widened by the overscan (§19), plus
     //    every pinned section wherever it is (§36).
+    m_materializationVisits = 0;
     QSet<int> wanted;
-    if (firstVisual >= 0) {
+    if (firstPaneSlot >= 0) {
+        // A pane with its own offset packs its own columns, and they may be spread over the
+        // whole visual order: walking the pane's *slots* keeps the pass bounded by the pane
+        // window instead of by the global visual range (P2 of the third review - a pane of
+        // {0, 50000, 99999} used to scan 100,000 sections per relayout).
+        const int from = qMax(0, firstPaneSlot - m_overscan);
+        const int to = qMin(int(m_paneOrder.size()) - 1, lastPaneSlot + m_overscan);
+        m_materializationVisits += to - from + 1;
+        for (int slot = from; slot <= to; ++slot)
+            wanted.insert(m_paneOrder.at(slot));
+    } else if (firstVisual >= 0) {
         const int from = qMax(0, firstVisual - m_overscan);
         const int to = qMin(count - 1, lastVisual + m_overscan);
+        m_materializationVisits += to - from + 1;
         for (int visual = from; visual <= to; ++visual) {
             const int logical = m_geometry->logicalIndex(visual);
             if (logical >= 0 && !m_geometry->isSectionHidden(logical) && !isFiltered(logical))

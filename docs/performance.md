@@ -14,6 +14,8 @@
 | `TreeVisibilityIndex::expand` / `collapse` | O(被展开子树) + O(可见行) | 只遍历被展开的子树，**不重走整棵树**；可见行数组的插入/删除是 O(可见行) |
 | `relayout()` | O(W) | W = 可见 + overscan + pin |
 | 稳态滚动 | O(进入窗口的项数) | 以复用为主，通常 1~2 项 rebind |
+| Table 横向滚动（含多个滚动组 / 冻结列） | O(log 总列数 + 可见列) | pane 前缀和二分刷新窗口；主组走 `HeaderGeometry`，非主组走 `TablePaneLayout`，两边的表头都只改 offset |
+| Table 列结构变更（insert/remove/move/hide） | O(总列数) 的冷路径 | 重建 pane 缓存（成员集合 / 顺序 / 前缀和）并让 native 表头整表同步一次；不在滚动或 resize 路径上 |
 
 其中 B 为块数（约 N / 1024），capacity 为块容量（1024），E_b 为该行所在的块里排在该行之前的例外
 数（`BlockSizeIndex` 只保存"实测过、且与估计值不同"的行，见 §4）。一百万行时前缀重建约 10^3 次
@@ -39,7 +41,9 @@
 | Tree 稳态滚动 | 与 List 相同：不 new/delete，实例化集合只随视口变化 | `tst_virtualtreeview::scrollingIsAllocationFree`、`bench_listview --tree` |
 | Tree 结构变更 | 保留展开状态、保持滚动锚点、按身份回收被删子树 | `tst_virtualtreeview::rowsInsertedKeepsExpansionAndOrder` / `rowsRemovedRecyclesTheSubtree` / `anchorKeepsTheTopItemWhileExpandingAbove` |
 | Tree 分支装饰 | 只按可见行的层级数绘制：一格 = 一次渲染器调用 + 少量 `rowCount()` 查询；失效区域只到"最深层可见行"的缩进宽度 | `tst_virtualtreeview::customRendererOwnsTheBranchDecoration` / `indicatorsFollowScrolling` |
-| Table 冻结列（v0.7） | pane 布局只缓存"列 -> x"，几何/resize/偏移变化各重算一次 O(可见 section)；Row Mode 不增加控件，Cell Mode 只多实例化冻结列 | `tst_virtualtableview::frozenColumnsStayWhileTheScrollablePaneScrolls` / `frozenPanesDoNotAddScrollSpace`、`tst_tablecellmode::frozenColumnsStayMaterializedAndOnTop` |
+| Table 冻结列（v0.7） | pane 布局只缓存"列 -> x"，几何/resize/偏移变化各重算一次 O(可见 section)；Row Mode 不增加控件，Cell Mode 只多实例化**窗口内**的冻结列（第三轮审查 Wave 2：冻结 pane 与滚动 pane 用同一套窗口语义，冻结 pane 比视口宽时多出来的列既不显示也不物化） | `tst_virtualtableview::frozenColumnsStayWhileTheScrollablePaneScrolls` / `frozenPanesDoNotAddScrollSpace`、`tst_tablecellmode::frozenColumnsStayMaterializedAndOnTop`、`tst_tablepanes::frozenColumnsFollowThePaneWindow` |
+| 极宽表的表头 pane 跟随偏移（第三轮审查 Wave 2） | O(1)：`setPaneOffset()` 只改 `QHeaderView::setOffset()`，不再整表同步 | `tst_tablepanes::nativePaneHeaderKeepsItsOffsetCheap`（`NativeHeaderView::fullSyncCount()` 在 100 步里不变） |
+| 极宽表的 pane 表头物化（第三轮审查 Wave 2） | O(log paneColumns + 可见 paneColumns)：显式 offset pane 直接遍历自己的 slot 窗口，不换算成全局视觉区间 | `tst_tablepanes::sparseExplicitPaneMaterializesOnlyItsWindow`（`VirtualHeaderView::materializationVisits()`） |
 
 最后一列是守住该性质的用例，它们都在 `scripts/validate.ps1` 的 CTest 一步里每次验证都会重跑；
 基准里的"零分配滚动 / 实例化集合有界"断言在同脚本的第 4 步（见 §3）。
@@ -255,3 +259,14 @@ CTest 目标**跑一遍（6.5 s，Debug 下约 25 s），所以"优化 + NDEBUG 
   展开/折叠/再展开后逐一校验）。
 * 单元测试与基准运行在 offscreen 平台，不能替代真实合成器下的绘制耗时测量；本库的目标也不是
   击败 `QStyledItemDelegate` 的纯绘制性能（见 README 的定位）。
+* **native 表头的"结构性整表同步"在极宽表上是超线性的（第三轮审查 Wave 2 时实测，尚未修）**：
+  一次列结构变更（insert/remove/move/hide、`setFrozenColumns()` 这类冷路径）会让
+  `syncHeaderFromGeometry()` 对着 `QHeaderView` 逐个 section 调用 `sectionSize()` /
+  `isSectionHidden()` / `resizeSection()` / `visualIndex()`，而 Qt 的这些查询在 `QHeaderView`
+  内部是按 visual 顺序**线性查找** `sectionItems` 的 —— 于是这一趟是 O(总列数^2)。
+  实测（Debug / MSVC 2022 / Qt 6.11.2 / Cell Widget Mode，`setFrozenColumns()` 冷路径）：
+  20,000 列约 1.5 s，100,000 列约 43 s。交互路径不受影响（滚动与 resize 走纯 offset / 粒度
+  信号，dataChanged 只重绑被点名的区间），所以这是"重新配置一张 10 万列表的表头"的成本，
+  不是帧循环里的成本；`bench_listview --wide-header` 的三种 pane 形态测的也是滚动步进而非这条
+  冷路径。要拆掉它得绕开 QHeaderView 的逐 section API（或自己记住"上次写入的 section 状态"以
+  跳过无变化的写入），留给后续 wave。

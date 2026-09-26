@@ -176,8 +176,9 @@ table->setHorizontalHeader(header);     // 传给 nullptr 回到 native 表头
 * **滚动范围不变**：可滚动内容减少的宽度正好等于冻结宽度，`maximumHorizontalOffset()` 仍是
   `总可见宽度 - 视口宽度`。冻结不会凭空制造滚动空间，也不会让某些列永远滚不到。
 * **body 与 pane 的关系**：Row Widget Mode 下仍是一行一个业务控件，冻结列的 `ColumnHost`
-  被 `raise()` 到兄弟之上以遮住滚到它下面的列；Cell Widget Mode 下冻结 cell 总是实例化
-  （`columnsForLayout()` = 冻结列 + 可见窗口 ± overscan），并同样 `raise()`。
+  被 `raise()` 到兄弟之上以遮住滚到它下面的列；Cell Widget Mode 下冻结 cell 里**窗口内**的那些
+  实例化（`columnsForLayout()` 对冻结 pane 也用同一个窗口：冻结 pane 的 offset 固定 0，
+  所以窗口就是"从该 pane 第一列起、宽度等于 pane 宽度的那些列" + overscan），并同样 `raise()`。
   自定义 `layoutRowWidget()` 的业务可以用 `TableRowLayoutContext::isColumnFrozen()` /
   `paneRect()` 自己处理裁剪与叠放。
 * **用裁剪，不用遮盖**：可滚动列由框架放进一个"pane 裁剪容器"（`PaneClipHost`，本身不画任何东西），
@@ -194,6 +195,7 @@ table->setHorizontalHeader(header);     // 传给 nullptr 回到 native 表头
     `TableRowLayoutContext::scrollablePaneHost()` 返回的容器里（空表示没有冻结列），
     否则它们仍会出现在冻结 pane 下面。
 * **代价**：pane 布局是派生缓存，几何变化、resize、偏移变化后各重算一次 O(可见 section)；
-  body 不因为冻结而增加控件（Cell Mode 除外：冻结列在任何滚动位置都会被实例化，
+  body 不因为冻结而增加控件（Cell Mode 除外：窗口内的冻结列在任何滚动位置都会被实例化，
   所以实例化上限从 `visibleRows x visibleColumns` 变成
-  `visibleRows x (frozenColumns + visibleColumns)`）。
+  `visibleRows x (窗口内冻结列 + visibleColumns)` —— 冻结 pane 比视口宽时，多出来的列既不显示
+  也不物化，见 §43 与第三轮审查 Wave 2）。

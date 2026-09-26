@@ -114,6 +114,10 @@ public:
     /// How often the pane cache (membership set, committed visual order, prefix sums) was
     /// rebuilt. Diagnostics for the width-scroll tests: a scroll must not rebuild it.
     quint64 paneCacheRebuildCount() const { return m_paneCacheRebuilds; }
+    /// Sections the materialization pass of the last relayout() looked at. Diagnostics for
+    /// the wide-table tests: a pane has to be bounded by its own window, never by the width
+    /// of the whole table (a pane of {0, 50000, 99999} must not scan 100,000 sections).
+    qsizetype materializationVisits() const { return m_materializationVisits; }
 
     /// Views in front of/behind the viewport that are kept materialized.
     void setSectionOverscan(int sections);
@@ -223,6 +227,9 @@ private:
     mutable QSet<int> m_paneFilterSet;
     mutable bool m_paneCacheDirty = true;
     mutable quint64 m_paneCacheRebuilds = 0;
+    /// Sections the last materialization pass looked at (diagnostics; see
+    /// materializationVisits()).
+    qsizetype m_materializationVisits = 0;
     /// Visual geometry (§23): visual x a section slides away from, and the
     /// progress of the transition (1 = committed geometry).
     QHash<int, int> m_slideFrom;

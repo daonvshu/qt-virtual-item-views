@@ -298,7 +298,12 @@ void NativeHeaderView::setPaneOffset(qint64 offset)
     if (m_paneOffset == offset)
         return;
     m_paneOffset = offset;
-    syncHeaderFromGeometry();
+    // An offset change only shifts the sections: QHeaderView's own offset is the whole update,
+    // the same O(1) path the primary header takes for HeaderGeometry::offsetChanged. A full
+    // sync would re-read every section - for a non-primary scroll group that turned every
+    // scroll step into an O(total sections) pass (P1 of the third review).
+    setOffset(int(qBound<qint64>(qint64(0), effectivePaneOffset(),
+                                 qint64(std::numeric_limits<int>::max()))));
 }
 
 void NativeHeaderView::setPaneFilter(const QVector<int> &logicalColumns, bool frozen)

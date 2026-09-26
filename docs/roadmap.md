@@ -241,7 +241,7 @@ smoke。按审查的判据，这一版已经可以视为 1.0 候选（tag 由仓
 | 批次 | 内容 | 状态 |
 | --- | --- | --- |
 | **Wave 1 生命周期 / 身份** | P0-1 pane 渲染器跟随主表头 adapter 替换（复现即崩溃）、P1 列 0 结构变化后的 canonical 行身份、P1 `setGeometryModel()`/`setLabelModel()` 替换语义（含新的 `HeaderWidgetAdapter::setLabelModel()` 钩子）、P1 `restoreState()` 的 order/sort 通知（含 restore 期间的 sort guard） | ✅ |
-| **Wave 2 宽表收尾** | Native 表头 non-primary offset 走 O(1)（不再整表同步）、frozen pane 的 body 按 pane 窗口物化、sparse explicit pane 的 Widget 表头直接遍历 pane slots | 待做 |
+| **Wave 2 宽表收尾** | Native 表头 non-primary offset 走 O(1)（不再整表同步）、frozen pane 的 body 按 pane 窗口物化、sparse explicit pane 的 Widget 表头直接遍历 pane slots | ✅ |
 | **Wave 3 API / ABI 决策** | 隐藏 / 统一 `VirtualTableView::setAdapter()`、决定"PIMPL + binary ABI"还是"只承诺 source API"、同步 `api-stability.md` / `abi.md` / `model-signals.md` / `ci.md` 的 drift | 待做（其中 ABI 策略需要用户拍板） |
 | **Wave 4 tag 前验证** | Debug + Release × Qt5/Qt6 × MSVC/MinGW GCC/llvm-mingw Clang + ASan/UBSan + 28 CTest + 12 示例 + 消费端 + wide-header benchmark 四种 pane 形态 | 大部分已常态化，收口时重跑 |
 
@@ -251,6 +251,22 @@ Wave 1 的实测证据（修复前的失败形态）：
   上 unbind），并且 pane 克隆的 `adapter()` 仍指向旧 A。
 * P1 行身份：insert@0 后 12 次 `bindWidget()` 收到 `column() == 1` 的索引，
   `indexForWidget()` 返回 `(1, 1)` 而不是 `(1, 0)`。
+
+Wave 2 的实测证据（修复前的失败形态）：
+
+* P1 非主组表头：`tst_tablepanes::nativePaneHeaderKeepsItsOffsetCheap` 在还原
+  `syncHeaderFromGeometry()` 后失败（100 步里 `fullSyncCount()` 每步 +1）。同一改动下"body 快、
+  表头慢"也能直接从步进耗时看出来：20,000 列、第二个滚动组、100 步在旧实现下约 59 s，修复后
+  该用例整条 < 1 s。
+* P1 冻结 pane body：`tst_tablepanes::frozenColumnsFollowThePaneWindow` 在还原"冻结 pane 全量
+  materialize"后失败 —— 20,000 列里冻结 10,000 列时 `visibleColumnLogicalIndexes()` 返回 10,000
+  个列（视口只能显示 9~13 个），Cell Mode 的 `materializedCellCount()` 同比例膨胀。
+* P2 sparse pane：旧实现下 `materializationVisits()` 是 100,000（三个 slot 之间的全局视觉区间），
+  修复后是 5（3 个 slot + overscan）。这条只能靠计数看出来：旧实现扫完 10 万个 visual 后仍被
+  pane 过滤集合挡掉，**物化出来的 section 数一直是 3**。
+
+Wave 2 的验证：`scripts/validate.ps1 -Library Both`（Qt 6.11.2 + Qt 5.15.2 x 静态/动态库，共
+28 步：configure / 全量构建 / 28 个 CTest / 12 个示例 / 3 档基准 / 安装 + 消费端）全绿。
 
 ## 7. 决策记录
 

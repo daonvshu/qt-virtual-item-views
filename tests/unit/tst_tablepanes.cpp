@@ -1,6 +1,7 @@
 #include <virtualitemviews/tablepane.h>
 #include <virtualitemviews/virtualtableview.h>
 #include <virtualitemviews/virtualheaderview.h>
+#include <virtualitemviews/nativeheaderview.h>
 #include "vivtestfixtures.h"
 
 #include <QtTest>
@@ -160,6 +161,9 @@ private slots:
     void scrollingPanesShareTheWidthProportionally();
     void nonPrimaryGroupScrollDoesNotRunTheStructuralPass();
     void headerPaneCacheIsNotRebuiltWhileScrolling();
+    void nativePaneHeaderKeepsItsOffsetCheap();
+    void frozenColumnsFollowThePaneWindow();
+    void sparseExplicitPaneMaterializesOnlyItsWindow();
 };
 
 void TestTablePanes::defaultLayoutIsStillTheThreePanes()
@@ -918,6 +922,153 @@ void TestTablePanes::headerPaneCacheIsNotRebuiltWhileScrolling()
     view.setFrozenColumns({0, 1});
     view.flushPendingRelayout();
     QVERIFY(header->paneCacheRebuildCount() > rebuildsAfterStructure);
+}
+
+void TestTablePanes::nativePaneHeaderKeepsItsOffsetCheap()
+{
+    // P1 of the third review: the *body* of a non-primary group scrolled through the
+    // window fast path, but its native header pane re-read the whole geometry on every
+    // single step - so one wheel step still cost O(total sections). A pane offset only
+    // shifts the sections (QHeaderView::setOffset), it never changes width, order or
+    // visibility, so the full sync must not run here.
+    constexpr int kManyColumns = 20000;
+    auto *model = new QStandardItemModel(20, kManyColumns, this);
+    PaneTableAdapter adapter;
+    VirtualTableView view;
+    view.setTableAdapter(&adapter);
+    view.setUniformItemHeight(kRowHeight);
+    view.setDefaultColumnWidth(kColumnWidth);
+    view.setModel(model);
+    showView(&view, QSize(kViewWidth, kViewHeight));
+    QVector<int> secondGroup;
+    for (int column = 5; column < kManyColumns; ++column)
+        secondGroup.append(column);
+    view.setPanes({frozenPane({0}), scrollablePane({1, 2, 3}, 0), frozenPane({4}),
+                   scrollablePane(secondGroup, 1)});
+    view.flushPendingRelayout();
+    QVERIFY(view.maximumHorizontalOffset(1) > 0);
+
+    // The pane renderer of the second group is a native header on the pane's rectangle.
+    const QRect paneRect = view.panes().at(view.paneIndexOfColumn(5)).viewportRect;
+    const int paneX = view.viewport()->geometry().x() + paneRect.x();
+    NativeHeaderView *paneHeader = nullptr;
+    for (NativeHeaderView *candidate : view.findChildren<NativeHeaderView *>()) {
+        if (candidate->orientation() != Qt::Horizontal || !candidate->isVisible())
+            continue;
+        if (candidate->geometry().x() == paneX
+            && candidate->geometry().width() == paneRect.width()) {
+            paneHeader = candidate;
+            break;
+        }
+    }
+    QVERIFY(paneHeader);
+
+    const quint64 syncsBefore = paneHeader->fullSyncCount();
+    for (int step = 1; step <= 100; ++step)
+        view.setHorizontalOffset(1, qint64(step) * kColumnWidth);
+
+    // The offset really moved: the group's first visible column is 100 slots to the
+    // right (column 5 leads the group, the columns are 100 px wide).
+    QCOMPARE(view.horizontalOffset(1), qint64(100) * kColumnWidth);
+    QCOMPARE(view.columnAtViewportX(paneRect.x() + 5), 105);
+    // ... without a single full re-read of the geometry.
+    QCOMPARE(paneHeader->fullSyncCount(), syncsBefore);
+}
+
+void TestTablePanes::frozenColumnsFollowThePaneWindow()
+{
+    // P1 of the third review: the cell pass materialized *every* frozen column, so a
+    // 50,000 column frozen pane cost 50,000 cells per visible row even though the pane
+    // shows a few dozen. The frozen pane has the same window machinery as a scrolling
+    // one (offset 0), so the body is bounded by the viewport like the header.
+    constexpr int kManyColumns = 20000;
+    constexpr int kFrozen = 10000;
+    constexpr int kRows = 3;
+    auto *model = new QStandardItemModel(kRows, kManyColumns, this);
+    PaneCellAdapter adapter;
+    VirtualTableView view;
+    view.setCellAdapter(&adapter);
+    view.setUniformItemHeight(kRowHeight);
+    view.setDefaultColumnWidth(kColumnWidth);
+    view.setModel(model);
+    view.setMaterializationMode(VirtualTableView::MaterializationMode::CellWidgets);
+    showView(&view, QSize(kViewWidth, kViewHeight));
+
+    // (a) A frozen pane that fits: the frozen prefix plus the scrolling window.
+    view.setFrozenColumns({0, 1, 2});
+    view.flushPendingRelayout();
+    const QVector<int> narrow = view.visibleColumnLogicalIndexes();
+    QVERIFY(narrow.contains(0) && narrow.contains(1) && narrow.contains(2));
+    QVERIFY(narrow.size() <= 3 + kViewWidth / kColumnWidth + 2);
+
+    // (b) A frozen pane with thousands of columns: the pane takes the whole viewport
+    //     (that is the pane width rule), and only what it can show is materialized.
+    QVector<int> frozen;
+    frozen.reserve(kFrozen);
+    for (int column = 0; column < kFrozen; ++column)
+        frozen.append(column);
+    view.setFrozenColumns(frozen);
+    view.flushPendingRelayout();
+
+    const QVector<int> wide = view.visibleColumnLogicalIndexes();
+    const qsizetype bound = qsizetype(kViewWidth / kColumnWidth + 4);
+    QVERIFY(!wide.isEmpty());
+    QVERIFY(wide.size() <= bound);
+    QCOMPARE(wide.first(), 0);
+    // Only the leading columns fit into the pane: 10,000 of them would be 1,000,000 px.
+    QVERIFY(wide.last() < 100);
+    // The cell pass follows the same window, per visible row - not per frozen column.
+    QVERIFY(view.materializedCellCount() <= bound * kRows);
+
+    // And a scroll still takes the window fast path (no walk over the frozen columns).
+    view.setHorizontalOffset(1, kColumnWidth);           // the frozen pane ignores it
+    view.setHorizontalOffset(kColumnWidth * 5);
+    QVERIFY(view.horizontalLayoutColumnVisits() < 100);
+}
+
+void TestTablePanes::sparseExplicitPaneMaterializesOnlyItsWindow()
+{
+    // P2 of the third review: the columns of one pane are adjacent *slots*, but their
+    // global visual order may span the whole table. A pane of {0, 50000, 99999} used to
+    // turn the header pass into a walk over 100,000 visuals; the pane's own slot window
+    // is the right measure.
+    constexpr int kManyColumns = 100000;
+    auto *model = new QStandardItemModel(5, kManyColumns, this);
+    PaneTableAdapter adapter;               // rows of the body (not the header)
+    HeaderSectionAdapter sectionAdapter;    // one label per header section
+    VirtualTableView view;
+    view.setTableAdapter(&adapter);
+    view.setUniformItemHeight(kRowHeight);
+    view.setDefaultColumnWidth(kColumnWidth);
+    view.setModel(model);
+    auto *header = new VirtualHeaderView(Qt::Horizontal);
+    header->setAdapter(&sectionAdapter);
+    view.setHorizontalHeader(header);
+    showView(&view, QSize(kViewWidth, kViewHeight));
+
+    QVector<int> scrollable;
+    for (int column = 1; column < kManyColumns; ++column) {
+        if (column != 50000 && column != 99999)
+            scrollable.append(column);
+    }
+    view.setPanes({frozenPane({0, 50000, 99999}), scrollablePane(scrollable, 0)});
+    view.flushPendingRelayout();
+    QCoreApplication::processEvents();
+
+    // The sparse pane has its own renderer (the primary pane keeps the installed one).
+    VirtualHeaderView *paneHeader = nullptr;
+    for (VirtualHeaderView *candidate : view.findChildren<VirtualHeaderView *>()) {
+        if (candidate != header && candidate->orientation() == Qt::Horizontal) {
+            paneHeader = candidate;
+            break;
+        }
+    }
+    QVERIFY(paneHeader);
+    // Three columns, three sections - and a pass that looked at three slots, not at the
+    // 100,000 visuals between the first and the last of them.
+    QCOMPARE(paneHeader->materializedSections().size(), 3);
+    QVERIFY(paneHeader->materializationVisits() <= 16);
+    QVERIFY(paneHeader->paneCacheRebuildCount() > 0);
 }
 
 QTEST_MAIN(TestTablePanes)

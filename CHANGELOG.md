@@ -282,6 +282,42 @@
   `tst_headerstructure::paneCacheIsUpToDateImmediatelyAfterAColumnInsert`（修复前 pane 的列集合
   仍是 `{0,1}`，正确的 `{0,2}` 要等下一次结构变化）。
 
+### Fixed（第三轮代码审查 Wave 2：超宽表收尾，2026-09-26）
+
+第二轮审查把"结构性 pass 与滚动 pass"分开之后，第三轮又指出三处仍然按**总列数**付费的地方
+（`VirtualItemViews_Third_Full_Code_Review.md` §6/§7/§8）：
+
+* **Native 表头 pane 的 offset 走 O(1)（P1）**：`TablePaneLayout::setGroupOffset()` →
+  `refreshScrollWindows()` 已经是"二分 + 窗口"的，但 `syncHeaderPanes()` 随后调用的
+  `NativeHeaderView::setPaneOffset()` 仍然 `syncHeaderFromGeometry()` —— 一次完整的
+  section 遍历（宽度 / 顺序 / 隐藏 / 排序全都重读一遍）。于是"body 快、pane 表头慢"：20,000 列
+  的非主滚动组每走一格就是一次 O(总列数) 的 pass。现在 `setPaneOffset()` 只 `setOffset(clamp(偏移))`，
+  和主表头跟随 `HeaderGeometry::offsetChanged` 的快路径一致：偏移不改变任何 section 的宽度、
+  顺序或可见性，整表同步在这里从来就不是必需的。回归测试：
+  `tst_tablepanes::nativePaneHeaderKeepsItsOffsetCheap`（20,000 列、第二个滚动组、100 步，断言
+  `NativeHeaderView::fullSyncCount()` **一步都没涨**，同时断言偏移真的生效、pane 首列已滚出）；
+  还原旧实现时该用例失败。
+* **frozen pane 的 body 也按 pane 窗口物化（P1）**：`columnsForLayout()` 对非滚动 pane 特判成
+  "把该 pane 的所有列都 append" —— `refreshScrollWindowsImpl()` 明明已经为**每个** pane（含冻结
+  pane，其 offset 固定 0）算好 `firstSlot/lastSlot`。于是 5 万冻结列会变成"每个可见行 5 万次
+  cell 尝试"（Cell Widget Mode）或"`columnsToLayout()` 返回 5 万列"（Row Widget Mode）。现在
+  冻结 pane 与滚动 pane 用同一套窗口语义（冻结 = offset 0 + 视口宽度），body 的上限与表头对称：
+  `visibleRows x (可见冻结列 + 可见滚动列 ± overscan)`。回归测试：
+  `tst_tablepanes::frozenColumnsFollowThePaneWindow`（一条 3 冻结列的常规表 + 一条
+  "20,000 列里冻结 10,000 列"的极端表，断言 `visibleColumnLogicalIndexes()` /
+  `materializedCellCount()` 都受视口约束，且滚动仍走窗口快路径）；还原旧实现时用例失败
+  （返回 10,000 列）。
+* **sparse explicit pane 的 Widget 表头直接遍历 pane slots（P2）**：显式 offset pane 已经用 pane
+  前缀和二分得到 `firstSlot/lastSlot`，但随后又换算成**全局视觉区间**
+  `visualIndex(paneOrder[firstSlot]) … visualIndex(paneOrder[lastSlot])` 并逐 visual 扫一遍 ——
+  pane 的列在全局顺序里可以稀疏到 `{0, 50000, 99999}`，三个 slot 之间隔着 10 万个 section。
+  现在该路径直接把 `firstSlot - overscan … lastSlot + overscan` 映射回 `m_paneOrder[slot]`，
+  真正做到 `O(log paneColumns + 可见 paneColumns)`。为了让这条性质可测（而不是只看物化数量 ——
+  旧实现靠 pane 过滤集合过滤掉了扫描结果，物化数量看不出差别），`VirtualHeaderView` 新增
+  诊断计数 `materializationVisits()`：上一次 materialization pass 实际看过的 section 数。
+  回归测试：`tst_tablepanes::sparseExplicitPaneMaterializesOnlyItsWindow`（100,000 列、
+  `{0, 50000, 99999}`、断言物化 3 个 section 且 pass 访问数 <= 16）；还原旧实现时该用例失败。
+
 ### Fixed（第三轮代码审查 Wave 1：生命周期与身份边界，2026-09-26）
 
 第三轮全量审查（`VirtualItemViews_Third_Full_Code_Review.md`，本地保留、不入库）在"上一轮
