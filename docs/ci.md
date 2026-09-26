@@ -18,7 +18,7 @@ configure → 构建 → CTest → 示例 → 基准不变量 → 安装 + 消�
 | `windows-msvc-release` | Release 构建 + Release 基准（审查要求的 "Release benchmark smoke"） | `scripts/validate.ps1 -Release -Library Static`，本机已实跑：两个 Qt 版本 14 步全绿 |
 | `windows-mingw-gcc` / `-clang` | Windows 上的 GCC / Clang（审查要求的 GNU 工具链覆盖） | `scripts/validate.ps1 -MinGW -Library Static`，本机已实跑：三个 kit（GCC 13.1 / Clang 17.0.6 / GCC 8.1）Debug + Release 各 21 步全绿 |
 | `ubuntu-gcc-qt6` | 开源常见组合 | Qt 6 走 apt（`qt6-base-dev`），只有 Core/Gui/Widgets/Test |
-| `ubuntu-gcc-qt6-asan` | ASan + UBSan | `-fsanitize=address,undefined`，Debug。**ASan 部分本机已在 MSVC 上实跑**（见 §5），UBSan 需要 GCC/Clang |
+| `ubuntu-gcc-qt6-asan` | ASan + UBSan（Linux 侧） | `-fsanitize=address,undefined`，Debug。**两者的 Windows 版本本机都已实跑**：ASan 走 MSVC（`-Asan`），UBSan 走 llvm-mingw 的 Clang（`-UBSan`），见 §5 |
 | `ubuntu-gcc-qt5` | 老版本回归 | 只在 runner 能稳定拿到 Qt 5.15 时加；拿不到就先不写 |
 
 ## 2. 可直接复制的 workflow
@@ -177,3 +177,17 @@ pwsh -File scripts/validate.ps1 -MinGW -Library Static -Release   # Release
 `_WIN32_WINNT`，所以基准改为 `GetProcessMemoryInfo` + `psapi`）、3 处缺 `override`、1 处未用常量、
 1 处 Qt 6 弃用的 `QMouseEvent` 构造。**Linux 仍然未实测**（那需要一台 Linux 机器或 runner：
 平台相关的字体查找、D-Bus、X11/Wayland 坐标都不在 Windows MinGW 的覆盖范围内）。
+
+### UBSan（llvm-mingw Clang，2026-09-26）
+
+MSVC 既没有 UBSan 也没法混编，但 llvm-mingw 的 Clang 可以：
+
+```powershell
+pwsh -File scripts/validate.ps1 -UBSan -Library Static      # = clang17-qt6 + UBSan
+```
+
+它在 `cmake-build-debug-mingw-clang17-qt6-ubsan` 里用
+`-fsanitize=undefined -fno-sanitize-recover=undefined`（任何一处 UB 直接 abort，而不是只打印
+一行警告）跑 configure → `all` → 28 个 CTest 目标 → 12 个示例 → 3 档基准，实测 5 步全绿。
+插桩确实生效：`llvm-nm libVirtualItemViews.a` 里能看到 `__ubsan_handle_*` 引用。安装消费端在
+这一模式下跳过（独立 CMake 工程，得自己带上同样的 flag）。

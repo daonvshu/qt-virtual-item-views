@@ -144,7 +144,8 @@ MinGW 组合的复跑命令：`pwsh -File scripts/validate.ps1 -MinGW -Library S
 * Qt 6.2–6.10 的任意中间版本；
 * 多配置生成器（VS solution、Xcode）与 `MSVC_RUNTIME_LIBRARY`（`/MT` 之类）的组合；
 * 与 Qt 的 `QT_DISABLE_DEPRECATED_*`、`QT_NO_*` 裁剪宏的组合；
-* **UBSan**（MSVC 只有 ASan，没有 UBSan）与 Linux/GCC/Clang 下的 ASan，见 [ci.md](ci.md) §5。
+* Linux 下的 ASan/UBSan（Windows 侧已经两样都跑过：MSVC ASan 与 llvm-mingw Clang UBSan，
+  见 [ci.md](ci.md) §5）。
 
 ## 6. 发布前检查清单（v1.0）
 
@@ -158,6 +159,9 @@ MinGW 组合的复跑命令：`pwsh -File scripts/validate.ps1 -MinGW -Library S
    [performance.md](performance.md) §3；
 2d. [x] `pwsh -File scripts/validate.ps1 -MinGW -Library Static`（GCC 13.1 / Clang 17.0.6 /
    GCC 8.1）Debug 与 Release 各 21 步全绿，两个编译器在最高警告级别下零警告；
+2e. [x] `pwsh -File scripts/validate.ps1 -UBSan -Library Static`（llvm-mingw Clang 的
+   `-fsanitize=undefined -fno-sanitize-recover=undefined`）28 个 CTest + 12 个示例 + 3 档基准
+   全绿，插桩有 `__ubsan_handle_*` 符号为证；
 3. [x] 性能基线数字固化进 [performance.md](performance.md)（roadmap 3d）；
 4. [x] CHANGELOG 的破坏性变更段与 [api-stability.md](api-stability.md) §6 的欠账都清空。
 

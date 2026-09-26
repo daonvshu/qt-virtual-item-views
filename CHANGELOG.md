@@ -49,6 +49,9 @@
   还有 `-MinGW` 开关：Windows 上的 GCC / Clang 覆盖（Qt 安装器的 `mingw_64` +
   `mingw1310_64`、`llvm-mingw_64` + `llvm-mingw1706_64`、`mingw81_64` + `mingw810_64`），
   三个 kit 各建 `cmake-build-{debug,release}-mingw-<kit>`，Debug 与 Release 各 21 步全绿。
+  以及 `-UBSan` 开关：llvm-mingw Clang 加
+  `-fsanitize=undefined -fno-sanitize-recover=undefined`（MSVC 没有 UBSan），
+  28 个 CTest + 12 个示例 + 3 档基准全绿，插桩由 `__ubsan_handle_*` 符号确认。
 * [docs/performance.md](docs/performance.md) §3 的 v1.0 基线：列表 1M 行、表格 20 万行 x 100 列
   （Row/Cell 两种模式）、树 1M 顶层节点的实测数字与确切命令，供后续回归对比。
   **Release 基线**（2026-09-26 补）：同一台机器的 Debug/Release 对照表（打开快 3~35 倍、稳态滚动

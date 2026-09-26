@@ -60,6 +60,12 @@ param(
     # trees (cmake-build-mingw-<name>), which is how GCC and Clang coverage is obtained
     # on a machine without Linux.
     [switch]$MinGW,
+    # UndefinedBehaviorSanitizer. MSVC has neither UBSan nor a way to mix it in, so this
+    # runs the llvm-mingw (Clang) kit named by -UBSanKit with
+    # -fsanitize=undefined -fno-sanitize-recover=undefined. The installed consumer is
+    # skipped: it is a separate CMake project and would have to be given the flags too.
+    [switch]$UBSan,
+    [string]$UBSanKit = 'clang17-qt6',
     # Qt "bin" + compiler "bin" + compiler names of the MinGW kits. The defaults match
     # the Qt online installer layout used for the v1.0 verification (Qt 6.11.2 mingw and
     # llvm-mingw, Qt 5.15.2 mingw81).
@@ -80,6 +86,13 @@ if ($Asan -and $Release) {
     throw "-Asan and -Release are separate runs: pick one (Release + ASan would need its own tree and numbers)."
 }
 $configuration = if ($Release) { 'Release' } else { 'Debug' }
+if ($UBSan) {
+    $MinGW = $true
+    $SkipConsumer = $true
+    if (-not $PSBoundParameters.ContainsKey('QtBin')) {
+        $QtBin = @()
+    }
+}
 if ($MinGW -and -not $PSBoundParameters.ContainsKey('QtBin')) {
     # -MinGW alone means "just the MinGW kits": the MSVC combos run when the caller asks
     # for them explicitly (a -QtBin value, or no -MinGW at all).
@@ -391,6 +404,14 @@ if ($MinGW) {
             }
             $extraConfigure = @("-DCMAKE_CXX_COMPILER=$(Join-Path $compilerBin $kit.Cxx)",
                                 "-DCMAKE_C_COMPILER=$(Join-Path $compilerBin $kit.Cc)")
+            $sanitizerSuffix = ''
+            if ($UBSan) {
+                if ($kit.Name -ne $UBSanKit) {
+                    continue
+                }
+                $extraConfigure += '-DCMAKE_CXX_FLAGS=-fsanitize=undefined -fno-sanitize-recover=undefined'
+                $sanitizerSuffix = '-ubsan'
+            }
 
             $flavours = switch ($Library) {
                 'Static' { @('static') }
@@ -402,8 +423,8 @@ if ($MinGW) {
                 # The configuration is part of the tree name, like it is for the MSVC
                 # combos: a single-config generator cannot hold Debug and Release in one
                 # tree, and switching CMAKE_BUILD_TYPE would silently replace the other.
-                $treeName = "cmake-build-{0}-mingw-{1}{2}" -f $configuration.ToLower(), $kit.Name, $(if ($isShared) { '-shared' } else { '' })
-                $combo = "Qt$major/mingw $($kit.Name)/$flavour" + $(if ($Release) { ' release' } else { '' })
+                $treeName = "cmake-build-{0}-mingw-{1}{2}{3}" -f $configuration.ToLower(), $kit.Name, $(if ($isShared) { '-shared' } else { '' }), $sanitizerSuffix
+                $combo = "Qt$major/mingw $($kit.Name)/$flavour" + $(if ($UBSan) { ' ubsan' } else { '' }) + $(if ($Release) { ' release' } else { '' })
                 Invoke-Kit -Combo $combo -Tree (Join-Path $repo $treeName) -QtRoot $qtRoot -QtBin $qt `
                            -Configuration $configuration -ExtraConfigure $extraConfigure `
                            -PathPrefix $pathPrefix `
