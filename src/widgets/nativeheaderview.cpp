@@ -179,9 +179,6 @@ void NativeHeaderView::syncGeometryFromHeaderSectionSize(int logicalIndex, int s
         return;
     if (m_geometry->storedSectionSize(logicalIndex) == size)
         return;
-    qWarning("DEBUG header->geometry: logical=%d size=%d stored=%d columns=%d width=%d widget=%p",
-             logicalIndex, size, m_geometry->storedSectionSize(logicalIndex),
-             m_geometry->sectionCount(), this->width(), this);
     // The user resized the section: the geometry is updated and stays the
     // authority, the body re-queries it.
     m_geometry->resizeSection(logicalIndex, size);

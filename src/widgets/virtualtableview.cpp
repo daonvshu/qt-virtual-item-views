@@ -1507,6 +1507,30 @@ bool VirtualTableView::restoreHeaderState(const QByteArray &state)
 // Adapter
 // ---------------------------------------------------------------------------
 
+QRect VirtualTableView::dragPixmapRect(const QModelIndex &index) const
+{
+    // Per-cell drags preview the dragged cell; a row drag (SelectionBehavior::SelectRows) keeps the
+    // whole row, which is exactly what Row Widget Mode materializes. Cell Widget Mode has no row
+    // widget to cut down, so it keeps the "no preview" behaviour.
+    if (!index.isValid() || m_materializationMode != MaterializationMode::RowWidgets
+        || selectionBehavior() != SelectionBehavior::SelectItems) {
+        return QRect();
+    }
+    const qsizetype item = viewItemForIndex(index);
+    QWidget *row = item >= 0 ? widgetForIndex(viewIndex(item, 0)) : nullptr;
+    if (!row)
+        return QRect();
+    // The column geometry is viewport relative and the row widget covers the viewport: the cell's
+    // rectangle inside the row widget differs from the geometry by the row widget's own origin.
+    // (The same mapping the framework uses to place the column hosts, so it also holds for a row
+    // widget that lays its cells out itself.)
+    const ColumnGeometry column = columnGeometry(index.column());
+    if (!column.isValid() || column.hidden || column.width <= 0)
+        return QRect();
+    const QPoint rowOrigin = row->geometry().topLeft();   // viewport coordinates
+    return QRect(column.viewportX - rowOrigin.x(), 0, column.width, row->height());
+}
+
 void VirtualTableView::setAdapter(WidgetAdapter *adapter, bool takeOwnership)
 {
     // Both entry points (the typed one below and a call through a VirtualItemView *) end up

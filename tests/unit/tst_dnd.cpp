@@ -379,6 +379,26 @@ void sendDrop(VirtualItemView *view, const QPoint &pos, const QMimeData *data,
 ///
 /// Not covered here: the guard against dropping a dragged item onto itself needs
 /// a real platform drag (QDrag::exec), which has no offscreen behaviour.
+///
+/// The same reason keeps the *end* of a drag out of the event path: the cleanup of
+/// setMoveRemovesSourceRows() runs right after QDrag::exec() returns. Its kernel hook is exposed
+/// here so the removal rules (runs, deepest parent first, skip what the model removed itself) can
+/// still be tested.
+class MoveCleanupProbe : public VirtualListView
+{
+public:
+    using VirtualItemView::removeDraggedSourceRows;
+};
+
+/// Same idea for the drag *start*: the payload handed to the model and the preview rectangle.
+class DragGranularityProbe : public VirtualTableView
+{
+public:
+    using VirtualItemView::dragPixmapRect;
+    using VirtualItemView::dragSourceIndexes;
+    using VirtualItemView::removeDraggedSourceRows;
+};
+
 class TestDnd : public QObject
 {
     Q_OBJECT
@@ -392,6 +412,8 @@ private slots:
     void dragEnterIgnoresAnUnsupportedAction();
     void dropIndicatorFollowsTheScrollAndModelChange();
     void canStartDragFollowsTheModelFlags();
+    void moveCleanupRemovesTheDraggedRowsOnce();
+    void dragGranularityDecidesThePayloadAndThePreview();
 
     void treeTargetDropsBetweenSiblings();
     void treeTargetDropsIntoAnItem();
@@ -619,6 +641,141 @@ void TestDnd::canStartDragFollowsTheModelFlags()
     QCOMPARE(view.dragDropActions(), Qt::MoveAction | Qt::CopyAction);
     view.setDragDropActions(Qt::LinkAction);
     QCOMPARE(view.dragDropActions(), Qt::LinkAction);
+}
+
+void TestDnd::moveCleanupRemovesTheDraggedRowsOnce()
+{
+    // A drag that ends as a move has moved the item: with setMoveRemovesSourceRows(true) the view
+    // that started the drag removes its rows (QAbstractItemView::clearOrRemove() in Qt). The
+    // removal is the view's, so it has to be positional-safe and idempotent: skip the indexes the
+    // model already removed when it performed the move itself (remove + insert).
+    QStringListModel model(QStringList({QStringLiteral("row0"), QStringLiteral("row1"),
+                                        QStringLiteral("row2"), QStringLiteral("row3"),
+                                        QStringLiteral("row4"), QStringLiteral("row5")}));
+    RowAdapter adapter;
+    MoveCleanupProbe view;
+    view.setAdapter(&adapter);
+    view.setUniformItemHeight(kRowHeight);
+    view.setModel(&model);
+    showView(&view, QSize(kViewWidth, kViewHeight));
+    QVERIFY(!view.moveRemovesSourceRows());          // the library's default stays "model owns it"
+    view.setMoveRemovesSourceRows(true);
+    QVERIFY(view.moveRemovesSourceRows());
+
+    // (a) Three dragged rows, one of them contiguous with another: everything goes, exactly once.
+    const QList<QPersistentModelIndex> dragged{model.index(1, 0), model.index(2, 0),
+                                               model.index(4, 0)};
+    view.removeDraggedSourceRows(dragged);
+    QCOMPARE(model.stringList(), QStringList({QStringLiteral("row0"), QStringLiteral("row3"),
+                                              QStringLiteral("row5")}));
+
+    // (b) A model that moved the row itself (removed it) must not be touched twice.
+    QStringListModel otherModel(QStringList({QStringLiteral("keep0"), QStringLiteral("keep1"),
+                                             QStringLiteral("keep2"), QStringLiteral("keep3")}));
+    MoveCleanupProbe otherView;
+    RowAdapter otherAdapter;
+    otherView.setAdapter(&otherAdapter);
+    otherView.setUniformItemHeight(kRowHeight);
+    otherView.setModel(&otherModel);
+    otherView.setMoveRemovesSourceRows(true);
+    showView(&otherView, QSize(kViewWidth, kViewHeight));
+
+    const QPersistentModelIndex moved = otherModel.index(1, 0);
+    QVERIFY(otherModel.removeRows(1, 1));            // the model performed the move itself
+    otherView.removeDraggedSourceRows({moved});      // nothing left to remove
+    QCOMPARE(otherModel.stringList(), QStringList({QStringLiteral("keep0"), QStringLiteral("keep2"),
+                                                   QStringLiteral("keep3")}));
+    QVERIFY(!moved.isValid());
+
+    // (c) A tree drag that covers a node and one of its children: the child's rows go first
+    // (deepest parent), then the node - so no removal shifts an index that is still to come.
+    QStandardItemModel treeModel;
+    auto *node = new QStandardItem(QStringLiteral("node"));
+    node->appendRow(new QStandardItem(QStringLiteral("child0")));
+    node->appendRow(new QStandardItem(QStringLiteral("child1")));
+    treeModel.appendRow(node);
+    treeModel.appendRow(new QStandardItem(QStringLiteral("tail")));
+    MoveCleanupProbe treeView;
+    RowAdapter treeAdapter;
+    treeView.setAdapter(&treeAdapter);
+    treeView.setUniformItemHeight(kRowHeight);
+    treeView.setModel(&treeModel);
+    treeView.setMoveRemovesSourceRows(true);
+    showView(&treeView, QSize(kViewWidth, kViewHeight));
+
+    treeView.removeDraggedSourceRows({treeModel.index(0, 0, node->index()),
+                                      node->index()});
+    // The model owns its items: the dragged node (and its child) are gone now.
+    QCOMPARE(treeModel.rowCount(), 1);
+    QCOMPARE(treeModel.index(0, 0).data().toString(), QStringLiteral("tail"));
+}
+
+void TestDnd::dragGranularityDecidesThePayloadAndThePreview()
+{
+    // Row drag (SelectionBehavior::SelectRows) and cell drag (SelectItems) have to differ in
+    // everything the user sees: the payload the model gets, the drop target, and the preview under
+    // the cursor. A row drag used to hand over only its (row, 0) cell - the materialized identity -
+    // so the dropped row lost every other column, and the preview was the row widget in *both*
+    // modes.
+    auto *model = new QStandardItemModel(20, 4, this);
+    for (int row = 0; row < 20; ++row) {
+        for (int column = 0; column < 4; ++column)
+            model->setItem(row, column, new QStandardItem(QStringLiteral("r%1c%2").arg(row).arg(column)));
+    }
+    TableRowAdapter adapter;
+    DragGranularityProbe view;
+    view.setTableAdapter(&adapter);
+    view.setUniformItemHeight(kRowHeight);
+    view.setDefaultColumnWidth(kColumnWidth);
+    view.setModel(model);
+    showView(&view, QSize(kViewWidth, kViewHeight));
+
+    // (a) Row granularity: the payload is the whole row, column for column; the preview and the
+    // drop target cover the whole row.
+    setSelectionUnit(view, VirtualItemView::SelectionBehavior::SelectRows);
+    view.selectionModel()->select(QItemSelection(model->index(3, 0), model->index(3, 3)),
+                                  QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+    const QModelIndexList rowPayload = view.dragSourceIndexes(model->index(3, 2));
+    QCOMPARE(rowPayload.size(), 4);
+    for (int column = 0; column < 4; ++column) {
+        QCOMPARE(rowPayload.at(column).row(), 3);
+        QCOMPARE(rowPayload.at(column).column(), column);
+    }
+    QVERIFY(view.dragPixmapRect(model->index(3, 2)).isEmpty());      // the whole row widget
+    QCOMPARE(view.dropTargetAt(QPoint(2 * kColumnWidth + 10, kRowHeight + 2)).column, -1);
+    // (b) Cell granularity: the payload is the dragged cell, the preview just that cell, and the
+    // drop keeps resolving the column under the cursor.
+    setSelectionUnit(view, VirtualItemView::SelectionBehavior::SelectItems);
+    view.selectionModel()->select(QItemSelection(model->index(3, 2), model->index(3, 2)),
+                                  QItemSelectionModel::ClearAndSelect);
+    const QModelIndexList cellPayload = view.dragSourceIndexes(model->index(3, 2));
+    QCOMPARE(cellPayload.size(), 1);
+    QCOMPARE(cellPayload.first(), model->index(3, 2));
+
+    const QRect cellRect = view.dragPixmapRect(model->index(3, 2));
+    QVERIFY(!cellRect.isEmpty());
+    QCOMPARE(cellRect.width(), view.columnWidth(2));
+    QCOMPARE(cellRect.x(), view.columnGeometry(2).viewportX);
+    QCOMPARE(view.dragPixmapRect(model->index(3, 3)).x(),
+             view.columnGeometry(3).viewportX);
+    QCOMPARE(view.dropTargetAt(QPoint(2 * kColumnWidth + 10, kRowHeight + 2)).column, 2);
+
+    // (c) A drag that is not part of the selection still carries the dragged index itself.
+    view.selectionModel()->clearSelection();
+    const QModelIndexList single = view.dragSourceIndexes(model->index(5, 1));
+    QCOMPARE(single.size(), 1);
+    QCOMPARE(single.first(), model->index(5, 1));
+
+    // (d) End to end: the row payload really fills a new row column for column (the model decides
+    // how; the view only has to hand the row over instead of its (row, 0) cell). Done last, since
+    // it changes the model the view shows.
+    QScopedPointer<QMimeData> rowData(model->mimeData(rowPayload));
+    QVERIFY(rowData != nullptr);
+    QVERIFY(model->dropMimeData(rowData.data(), Qt::CopyAction, 1, -1, QModelIndex()));
+    for (int column = 0; column < 4; ++column) {
+        QCOMPARE(model->index(1, column).data().toString(),
+                 QStringLiteral("r3c%1").arg(column));
+    }
 }
 
 void TestDnd::treeTargetDropsBetweenSiblings()

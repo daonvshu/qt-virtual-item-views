@@ -2037,6 +2037,11 @@ void VirtualItemView::setDefaultDropAction(Qt::DropAction action)
     m_defaultDropAction = action;
 }
 
+void VirtualItemView::setMoveRemovesSourceRows(bool enabled)
+{
+    m_moveRemovesSourceRows = enabled;
+}
+
 Qt::DropAction VirtualItemView::startDrag(const QModelIndex &index)
 {
     if (!m_model)
@@ -2051,25 +2056,24 @@ Qt::DropAction VirtualItemView::startDrag(const QModelIndex &index)
     if (!canStartDrag(dragIndex))
         return Qt::IgnoreAction;
 
-    // The selection is the payload when the dragged item is part of it.
-    QModelIndexList indexes;
-    if (m_selectionModel && m_selectionModel->isSelected(dragIndex)) {
-        const QModelIndexList selected = m_selectionModel->selectedIndexes();
-        for (const QModelIndex &candidate : selected) {
-            if (candidate.column() == 0 && (m_model->flags(candidate) & Qt::ItemIsDragEnabled))
-                indexes.append(candidate);
-        }
-    }
-    if (indexes.isEmpty())
-        indexes.append(dragIndex);
+    // The selection is the payload when the dragged item is part of it - and it is handed over
+    // column for column, like Qt does: a *row* selection (SelectionBehavior::SelectRows) carries
+    // every column of those rows, so a drop can fill the new row 1:1, while a cell selection
+    // carries just the dragged cell. Filtering the payload down to column 0 (the materialized row
+    // identity) used to lose every other column of a row drag.
+    QModelIndexList indexes = dragSourceIndexes(dragIndex);
 
     QMimeData *mime = m_model->mimeData(indexes);
     if (!mime)
         return Qt::IgnoreAction;
 
     // §36/§38: the widget of the dragged item must survive the drag, otherwise a
-    // scroll-induced recycle would destroy the drag source mid-gesture.
-    m_dragSourceWidget = widgetForIndex(dragIndex);
+    // scroll-induced recycle would destroy the drag source mid-gesture. The materialized unit of
+    // a row is its canonical (row, 0) cell (see viewIndex()), while a drag may start on any
+    // column of it - looking the widget up by the dragged cell's own index would find nothing,
+    // so a table drag started on column 1 or later had no drag pixmap at all.
+    const qsizetype dragItem = viewItemForIndex(dragIndex);
+    m_dragSourceWidget = dragItem >= 0 ? widgetForIndex(viewIndex(dragItem, 0)) : nullptr;
     if (m_dragSourceWidget)
         pinWidget(m_dragSourceWidget);
     // The sources are remembered so the drag can refuse to drop onto itself.
@@ -2080,14 +2084,95 @@ Qt::DropAction VirtualItemView::startDrag(const QModelIndex &index)
     QDrag drag(this);
     drag.setMimeData(mime);
     if (m_dragSourceWidget) {
-        const QPixmap pixmap = m_dragSourceWidget->grab();
+        // The preview is what the drop moves: a row widget (list / tree / a table row drag), or
+        // just the dragged cell when the table works per cell - dragPixmapRect() names the part of
+        // the widget that belongs to the dragged index.
+        const QRect part = dragPixmapRect(dragIndex);
+        const QPixmap pixmap = part.isEmpty() ? m_dragSourceWidget->grab()
+                                              : m_dragSourceWidget->grab(part);
         drag.setPixmap(pixmap);
-        drag.setHotSpot(QPoint(pixmap.width() / 2, pixmap.height() / 2));
+        drag.setHotSpot(pixmap.rect().center());
     }
     const Qt::DropAction action = drag.exec(dragDropActions(), m_defaultDropAction);
 
+    // A drag that ended in a *move* moved the item somewhere else: if the application asked this
+    // view to own that cleanup (setMoveRemovesSourceRows()), the dragged rows go now - exactly
+    // when QAbstractItemView does it (after QDrag::exec(), before the drag state is released).
+    const QList<QPersistentModelIndex> sources = m_dragSourceIndexes;
     finishDrag();
+    if (action == Qt::MoveAction && m_moveRemovesSourceRows)
+        removeDraggedSourceRows(sources);
     return action;
+}
+
+QModelIndexList VirtualItemView::dragSourceIndexes(const QModelIndex &dragIndex) const
+{
+    QModelIndexList indexes;
+    if (!m_model || !dragIndex.isValid())
+        return indexes;
+    if (m_selectionModel && m_selectionModel->isSelected(dragIndex)) {
+        const QModelIndexList selected = m_selectionModel->selectedIndexes();
+        for (const QModelIndex &candidate : selected) {
+            if (m_model->flags(candidate) & Qt::ItemIsDragEnabled)
+                indexes.append(candidate);
+        }
+    }
+    if (indexes.isEmpty())
+        indexes.append(dragIndex);
+    return indexes;
+}
+
+QRect VirtualItemView::dragPixmapRect(const QModelIndex &index) const
+{
+    Q_UNUSED(index);
+    return QRect();   // the whole item widget is the preview
+}
+
+void VirtualItemView::removeDraggedSourceRows(const QList<QPersistentModelIndex> &sources)
+{
+    if (!m_model || sources.isEmpty())
+        return;
+
+    // Group the dragged rows by parent: a tree drag can span several parents, and a dragged
+    // parent already covers the dragged children below it (they are removed with it).
+    QHash<QPersistentModelIndex, QList<qsizetype>> rowsPerParent;
+    for (const QPersistentModelIndex &source : sources) {
+        if (!source.isValid())
+            continue;   // the model removed it already (it performed the move itself)
+        rowsPerParent[QPersistentModelIndex(source.parent())].append(source.row());
+    }
+    if (rowsPerParent.isEmpty())
+        return;
+
+    const auto depthOf = [](const QModelIndex &index) {
+        int depth = 0;
+        for (QModelIndex ancestor = index; ancestor.isValid(); ancestor = ancestor.parent())
+            ++depth;
+        return depth;
+    };
+    QList<QPersistentModelIndex> parents = rowsPerParent.keys();
+    // Deepest parents first: removing a child's rows first keeps the parent's own row valid,
+    // and a parent that is dragged as well takes its (now empty) children with it.
+    std::sort(parents.begin(), parents.end(),
+              [&depthOf](const QPersistentModelIndex &lhs, const QPersistentModelIndex &rhs) {
+                  return depthOf(lhs) > depthOf(rhs);
+              });
+
+    for (const QPersistentModelIndex &parent : parents) {
+        QList<qsizetype> rows = rowsPerParent.value(parent);
+        std::sort(rows.begin(), rows.end());
+        rows.erase(std::unique(rows.begin(), rows.end()), rows.end());
+        // Walk the runs from the last one upwards so the earlier rows keep their positions.
+        qsizetype runEnd = rows.size() - 1;
+        while (runEnd >= 0) {
+            qsizetype runStart = runEnd;
+            while (runStart > 0 && rows.at(runStart - 1) + 1 == rows.at(runStart))
+                --runStart;
+            const qsizetype count = runEnd - runStart + 1;
+            m_model->removeRows(int(rows.at(runStart)), int(count), QModelIndex(parent));
+            runEnd = runStart - 1;
+        }
+    }
 }
 
 void VirtualItemView::finishDrag()

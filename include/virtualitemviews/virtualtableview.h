@@ -450,6 +450,10 @@ private:
     /// Re-applies the heights the user set (m_explicitRowHeights, keyed by row identity) after a
     /// layout change rebuilt every derived size from the estimate.
     void reapplyExplicitRowHeights();
+    /// Cell granularity (SelectionBehavior::SelectItems) previews only the dragged cell: the
+    /// materialized widget is the whole row, so the host the framework placed for that column is
+    /// what the pixmap is cut down to.
+    QRect dragPixmapRect(const QModelIndex &index) const override;
     void scrollToColumn(int logicalIndex);
     void onSortIndicatorChanged(int logicalIndex, Qt::SortOrder order);
 

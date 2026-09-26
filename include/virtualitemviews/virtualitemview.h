@@ -191,6 +191,20 @@ public:
     /// Action used for drags started by this view (CopyAction by default).
     void setDefaultDropAction(Qt::DropAction action);
     Qt::DropAction defaultDropAction() const { return m_defaultDropAction; }
+    /// Whether a drag that ends in `Qt::MoveAction` removes the rows this view dragged.
+    ///
+    /// Off by default: the library's contract is "the model owns the semantics" (§38), so a model
+    /// that implements the move itself (remove + insert, like the example's list model) already
+    /// produces a move. A *cross-view* move cannot be expressed that way - the source model never
+    /// learns that a foreign view accepted the drop - and Qt's own item views solve it in the
+    /// view (`QAbstractItemView` removes the dragged rows after a successful move drop). Turn this
+    /// on for that Qt behaviour: the view then removes its dragged rows whenever the drag ends as
+    /// a move, skipping any row the model has already removed (so a model that moves by
+    /// remove + insert is not touched twice). A model that implements a move while *keeping* the
+    /// row identities (e.g. `moveRows()`) must keep this off - it would look like an untouched,
+    /// still-present source row and be removed a second time.
+    void setMoveRemovesSourceRows(bool enabled);
+    bool moveRemovesSourceRows() const { return m_moveRemovesSourceRows; }
     /// Actions a drop from this view offers; by default the model's
     /// supportedDragActions() (or Move|Copy).
     void setDragDropActions(Qt::DropActions actions);
@@ -439,6 +453,16 @@ protected:
     /// does that after a column insert / remove / move, so a business row widget that
     /// builds its column hosts in bindWidget() can rebuild them.
     void rebindItemsInModelRange(const QModelIndex &parent, int first, int last);
+    /// Indexes a drag started on \a dragIndex hands to the model's `mimeData()`: the selected,
+    /// drag-enabled indexes when the dragged item is part of the selection (column for column -
+    /// a row selection carries the whole row, like Qt), otherwise just \a dragIndex. Kernel API:
+    /// a real drag (QDrag::exec) cannot run offscreen, so subclasses and tests use this.
+    QModelIndexList dragSourceIndexes(const QModelIndex &dragIndex) const;
+    /// Part of the drag source widget that shows \a index, empty for "the whole widget". A
+    /// subclass with a finer drag granularity than its materialized widget overrides this (the
+    /// table cuts the row widget down to the dragged cell), so the drag preview shows what the
+    /// drop would move.
+    virtual QRect dragPixmapRect(const QModelIndex &index) const;
     /// Rows that were pinned when a column change started, plus whether a restore is pending.
     QVector<qsizetype> m_columnChangePinnedRows;
     bool m_columnChangePending = false;
@@ -572,6 +596,10 @@ private:
     bool isDropOnItself(const DropTarget &target, Qt::DropAction action) const;
     /// Releases the state of a finished drag (source pin, autoscroll, indicator).
     void finishDrag();
+    /// Removes the rows a finished drag dragged (see setMoveRemovesSourceRows()). Parents are
+    /// handled deepest first and rows from the last one upwards, so no removal shifts an index
+    /// that is still to come; rows the model already removed are skipped.
+    void removeDraggedSourceRows(const QList<QPersistentModelIndex> &sources);
 
     /// Qt 5 declares the roles argument of
     /// QAbstractItemModel::dataChanged() as QVector<int>, Qt 6 as QList<int>.
@@ -638,6 +666,7 @@ private:
     bool m_dropIndicatorShown = true;
     Qt::DropAction m_defaultDropAction = Qt::CopyAction;
     Qt::DropActions m_dragDropActions = Qt::IgnoreAction; // IgnoreAction = derive
+    bool m_moveRemovesSourceRows = false;
     QPoint m_dragStartPos;
     /// Sources of the drag in flight (empty for drags started elsewhere).
     QList<QPersistentModelIndex> m_dragSourceIndexes;
