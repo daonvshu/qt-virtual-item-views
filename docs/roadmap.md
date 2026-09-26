@@ -215,6 +215,12 @@ Wave A 的实测证据（修复前的失败形态）：
 * P0-3：`headerDataChanged` 后 section 仍显示旧标题；结构变化后 section 文本与逻辑列身份错位。
 * P1-1：插入一列后 pane 的列集合仍是 `{0,1}`（应为 `{0,2}`），要等下一次结构变化才对。
 
+**第二轮收口状态**：审查建议的"先修 Wave A + Wave B，跑 28 个 CTest + ASan/UBSan，再加一个
+100k columns + frozen + WidgetHeader 的 benchmark smoke"已经全部落地 —— Wave A/B/C 各自带
+回归测试（每条都先在**旧代码**上复现失败：P0-1/P0-2 复现时直接是崩溃或 Qt 致命断言），
+`-Asan` / `-UBSan` 两种组合在上一轮已跑通，`bench_listview --wide-header` 补上了极宽表的
+smoke。按审查的判据，这一版已经可以视为 1.0 候选（tag 由仓库主人手动打）。
+
 ## 5. 每一步的完成定义
 
 沿用既有节奏，走完才算完成：
