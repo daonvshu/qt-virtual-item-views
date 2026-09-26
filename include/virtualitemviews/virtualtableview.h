@@ -278,16 +278,18 @@ public:
     bool restoreHeaderState(const QByteArray &state);
 
     // -- adapter -------------------------------------------------------------
-    /// Typed entry point, and the reason it exists: the table *hides* the inherited
-    /// `setAdapter(WidgetAdapter *)`. The inherited setter only stored the base adapter,
-    /// while every row materialization reads the table adapter - so
-    /// `table.setAdapter(&tableAdapter)` compiled, reported a non-null `adapter()` and
-    /// still created no row widget at all (P1 of the third review). A derived overload
-    /// with the same name hides the base one, so `setAdapter(TableWidgetAdapter *)`
-    /// configures the table exactly like setTableAdapter(). List and Tree keep their
-    /// own `setAdapter()`; the three views now read the same call.
-    void setAdapter(TableWidgetAdapter *adapter, bool takeOwnership = false);
-    /// Alias of setAdapter(); kept because the examples and the docs use it.
+    /// Polymorphic override of the adapter entry point. The table needs both pointers to name
+    /// the same object: the recycler factory, `createItem()` and every row layout read the
+    /// *table* adapter, while the base kernel reads `m_adapter`. Letting them differ is not a
+    /// "does nothing" bug - adapter B then binds the QWidgets adapter A created, which is UB
+    /// as soon as their `WidgetType` namespaces disagree (P1 of the fourth review).
+    ///
+    /// A plain `WidgetAdapter` is therefore rejected with a warning (the installed adapter
+    /// stays), and `nullptr` clears the adapter like the base setter does. `takeOwnership`
+    /// is only taken for an adapter the call accepts.
+    void setAdapter(WidgetAdapter *adapter, bool takeOwnership = false) override;
+    /// Typed convenience entry point: same as setAdapter() for a caller that already holds a
+    /// TableWidgetAdapter (kept because the examples and the docs use this name).
     void setTableAdapter(TableWidgetAdapter *adapter, bool takeOwnership = false);
     TableWidgetAdapter *tableAdapter() const;
 

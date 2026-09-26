@@ -94,6 +94,20 @@ void VirtualTreeView::connectModelSignals(QAbstractItemModel *model)
         m_visibility->handleModelReset();
         refreshVisibility(false);
     });
+    // The visibility index stores QModelIndex values (see TreeVisibilityIndex), and a column
+    // change renames - or, for a removed column 0, invalidates - the cells they name, so the
+    // mapping is re-derived. It is *not* onStructureChanged(): the row structure did not
+    // change, so the measured heights and the anchor stay valid (P2 of the fourth review).
+    // The base kernel releases the row widgets before the change, which is what keeps the
+    // unbind/rebind pair honest.
+    connect(model, &QAbstractItemModel::columnsInserted, this,
+            [this]() { onColumnStructureChanged(); });
+    connect(model, &QAbstractItemModel::columnsRemoved, this,
+            [this]() { onColumnStructureChanged(); });
+    connect(model, &QAbstractItemModel::columnsMoved, this,
+            [this](const QModelIndex &, int, int, const QModelIndex &, int) {
+                onColumnStructureChanged();
+            });
 }
 
 void VirtualTreeView::onStructureChanged()
@@ -101,6 +115,15 @@ void VirtualTreeView::onStructureChanged()
     // Visible rows, expansion state and item identity all live in the index.
     m_visibility->handleModelChanged();
     refreshVisibility(false);
+}
+
+void VirtualTreeView::onColumnStructureChanged()
+{
+    // Same reason as onStructureChanged(), minus the layout reset: the visible rows are
+    // (row, 0) indexes, so a column change re-derives them - but the rows themselves did not
+    // move, and their measured heights must survive.
+    m_visibility->handleModelChanged();
+    relayout();
 }
 
 void VirtualTreeView::refreshVisibility(bool keepAnchor)

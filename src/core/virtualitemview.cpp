@@ -290,37 +290,40 @@ void VirtualItemView::connectModel(QAbstractItemModel *model)
     connect(model, &QAbstractItemModel::modelAboutToBeReset,
             this, &VirtualItemView::onModelAboutToBeReset);
     connect(model, &QAbstractItemModel::modelReset, this, &VirtualItemView::onModelReset);
-    // The materialized identity of a table row is the (row, 0) cell (see viewIndex()), and a
-    // column change that touches column 0 renames or invalidates exactly that cell. The rows
-    // are captured while the old identity is still valid and rebuilt afterwards, so the
-    // adapter keeps receiving a canonical row index (P1 of the third review). A change that
-    // does not touch column 0 cannot affect any row identity and is ignored.
+    // The materialized identity of a row is the (row, 0) cell (see viewIndex()), and a column
+    // change that touches column 0 renames or invalidates exactly that cell. Every materialized
+    // widget is released *before* the change, while the index it was bound to is still valid -
+    // the adapter sees the unbind it is promised, and the widget goes back into the pool
+    // instead of staying bound to a cell that no longer exists. The next pass materializes the
+    // canonical (row, 0) cells again and recomputes WidgetType for them (P1 of the fourth
+    // review; the earlier "re-key the live items" route skipped the unbind, the type and the
+    // index lookup). A change that does not touch column 0 cannot affect any row identity.
     connect(model, &QAbstractItemModel::columnsAboutToBeInserted, this,
             [this](const QModelIndex &parent, int first, int) {
                 if (!parent.isValid() && first == 0)
-                    captureRowIdentityForColumnChange();
+                    recycleItemsForColumnChange();
             });
     connect(model, &QAbstractItemModel::columnsAboutToBeRemoved, this,
             [this](const QModelIndex &parent, int first, int) {
                 if (!parent.isValid() && first == 0)
-                    captureRowIdentityForColumnChange();
+                    recycleItemsForColumnChange();
             });
     connect(model, &QAbstractItemModel::columnsAboutToBeMoved, this,
             [this](const QModelIndex &parent, int start, int, const QModelIndex &destination,
                    int destinationColumn) {
                 if (!parent.isValid() && !destination.isValid()
                     && (start == 0 || destinationColumn == 0)) {
-                    captureRowIdentityForColumnChange();
+                    recycleItemsForColumnChange();
                 }
             });
     const auto restoreIdentity = [this](const QModelIndex &) {
-        restoreRowIdentityAfterColumnChange();
+        restoreItemsAfterColumnChange();
     };
     connect(model, &QAbstractItemModel::columnsInserted, this, restoreIdentity);
     connect(model, &QAbstractItemModel::columnsRemoved, this, restoreIdentity);
     connect(model, &QAbstractItemModel::columnsMoved, this,
             [this](const QModelIndex &, int, int, const QModelIndex &, int) {
-                restoreRowIdentityAfterColumnChange();
+                restoreItemsAfterColumnChange();
             });
 }
 
@@ -1742,15 +1745,12 @@ void VirtualItemView::rebindItemsInModelRange(const QModelIndex &parent, int fir
     }
 }
 
-void VirtualItemView::captureRowIdentityForColumnChange()
+void VirtualItemView::recycleItemsForColumnChange()
 {
-    // The item's row is what survives a column change; the identity cell (row, 0) may not.
-    m_columnChangeRows.clear();
-    m_columnChangeRows.reserve(m_items.size());
-    for (const MaterializedItem &item : m_items) {
-        const qsizetype row = viewItemForIndex(item.index);
-        m_columnChangeRows.append(row);   // -1: nothing to restore for that item
-    }
+    // An explicit pin names a row, not a cell: remember which rows were pinned while the pin
+    // still resolves (a removed column 0 would leave an invalid persistent index behind), then
+    // hand every widget back through the adapter - unbindWidget() sees the index the widget was
+    // really bound to, because the model has not changed yet.
     m_columnChangePinnedRows.clear();
     m_columnChangePinnedRows.reserve(m_explicitPinned.size());
     for (const QPersistentModelIndex &pinned : m_explicitPinned) {
@@ -1759,24 +1759,17 @@ void VirtualItemView::captureRowIdentityForColumnChange()
             m_columnChangePinnedRows.append(row);
     }
     m_columnChangePending = true;
+    recycleAllItems();
 }
 
-void VirtualItemView::restoreRowIdentityAfterColumnChange()
+void VirtualItemView::restoreItemsAfterColumnChange()
 {
     if (!m_columnChangePending)
         return;
     m_columnChangePending = false;
-    for (int index = 0; index < m_items.size() && index < m_columnChangeRows.size(); ++index) {
-        const qsizetype row = m_columnChangeRows.at(index);
-        if (row < 0)
-            continue;
-        const QModelIndex canonical = viewIndex(row);
-        if (canonical.isValid())
-            m_items[index].index = QPersistentModelIndex(canonical);
-    }
     if (!m_columnChangePinnedRows.isEmpty()) {
-        // The pins name rows as well, so they are re-keyed to the canonical index instead of
-        // pointing at a cell of a column that moved away (or no longer exists).
+        // The pins name rows, so they are re-keyed to the canonical (row, 0) cell instead of
+        // pointing at a column that moved away or no longer exists.
         QSet<QPersistentModelIndex> repinned;
         for (qsizetype row : m_columnChangePinnedRows) {
             const QModelIndex canonical = viewIndex(row);
@@ -1785,8 +1778,10 @@ void VirtualItemView::restoreRowIdentityAfterColumnChange()
         }
         m_explicitPinned = repinned;
     }
-    m_columnChangeRows.clear();
     m_columnChangePinnedRows.clear();
+    // The rows were released before the change: the next pass materializes them again, bound
+    // to their canonical identity and with the WidgetType recomputed for it.
+    markDirty();
 }
 
 void VirtualItemView::recycleItemsInModelRange(const QModelIndex &parent, int first, int last)

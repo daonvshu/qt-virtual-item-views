@@ -456,6 +456,18 @@ void VirtualTableView::setModel(QAbstractItemModel *model)
         m_horizontalHeader->setLabelModel(model);
     if (m_verticalHeader)
         m_verticalHeader->setLabelModel(model);
+    // The derived renderers cache the label model as well (they are another renderer of the
+    // same geometry, one per pane / frozen row band), and they are usually already
+    // materialized: without this they would keep the *old* model - and its old titles - after
+    // a model switch that happens to have the same column count (P1 of the fourth review).
+    for (HeaderViewInterface *paneHeader : m_paneHeaders) {
+        if (paneHeader)
+            paneHeader->setLabelModel(model);
+    }
+    if (m_frozenTopRowsHeader)
+        m_frozenTopRowsHeader->setLabelModel(model);
+    if (m_frozenBottomRowsHeader)
+        m_frozenBottomRowsHeader->setLabelModel(model);
 
     m_columns->setSectionCount(model ? model->columnCount() : 0);
     m_rowHeaders->setDefaultSectionSize(uniformItemHeight() > 0 ? uniformItemHeight()
@@ -1472,11 +1484,19 @@ bool VirtualTableView::restoreHeaderState(const QByteArray &state)
 // Adapter
 // ---------------------------------------------------------------------------
 
-void VirtualTableView::setAdapter(TableWidgetAdapter *adapter, bool takeOwnership)
+void VirtualTableView::setAdapter(WidgetAdapter *adapter, bool takeOwnership)
 {
-    // The inherited VirtualItemView::setAdapter(WidgetAdapter *) is hidden by this
-    // overload on purpose (P1 of the third review); setTableAdapter() is the real one.
-    setTableAdapter(adapter, takeOwnership);
+    // Both entry points (the typed one below and a call through a VirtualItemView *) end up
+    // here, so the table invariant "the kernel adapter and the table adapter are the same
+    // object" holds no matter how the call was written (P1 of the fourth review).
+    auto *tableAdapter = dynamic_cast<TableWidgetAdapter *>(adapter);
+    if (adapter && !tableAdapter) {
+        qWarning("VirtualTableView::setAdapter(): the adapter is not a TableWidgetAdapter; the "
+                 "installed adapter is kept (a table creates and lays out its rows through "
+                 "TableWidgetAdapter)");
+        return;
+    }
+    setTableAdapter(tableAdapter, takeOwnership);
 }
 
 void VirtualTableView::setTableAdapter(TableWidgetAdapter *adapter, bool takeOwnership)
@@ -1493,8 +1513,8 @@ void VirtualTableView::setTableAdapter(TableWidgetAdapter *adapter, bool takeOwn
         previous = nullptr;
     m_ownTableAdapter = false;
     m_tableAdapter = adapter;
-    // Qualified on purpose: the unqualified name would find this class's typed overload
-    // above and recurse into setTableAdapter(). The kernel reads the base adapter.
+    // Qualified on purpose: this is the base implementation of the (now virtual) entry point,
+    // not this class's override above - the unqualified name would recurse into setTableAdapter().
     VirtualItemView::setAdapter(adapter, false);
     delete previous;
     m_ownTableAdapter = takeOwnership;

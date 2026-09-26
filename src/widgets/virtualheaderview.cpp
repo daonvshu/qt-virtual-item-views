@@ -302,6 +302,12 @@ void VirtualHeaderView::setAdapter(HeaderWidgetAdapter *adapter, bool takeOwners
     }
     m_adapter = adapter;
     m_ownAdapter = adapter && takeOwnership;
+    // The label model is part of the section binding contract (see setLabelModel()): an
+    // adapter that captured the model - the README example does - has to be told the current
+    // one here as well, otherwise "setLabelModel() then setAdapter()" and
+    // "setAdapter() then setLabelModel()" would behave differently (P1.1 of the fourth review).
+    if (m_adapter)
+        m_adapter->setLabelModel(m_labelModel.data());
     relayout();
     emit adapterChanged();
 }

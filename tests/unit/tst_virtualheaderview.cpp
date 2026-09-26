@@ -175,6 +175,7 @@ private slots:
     void modelChangesRebindTheMaterializedSections();
     void sortIndicatorChangesRebindTheSections();
     void switchingTheLabelModelRebindsTheSections();
+    void installingAnAdapterHandsOverTheCurrentLabelModel();
     void switchingTheGeometryInvalidatesThePaneCache();
     void restoringASortStateRebindsTheSections();
     void tableForwardsTheAnimationSettings();
@@ -900,6 +901,32 @@ void TestVirtualHeaderView::switchingTheLabelModelRebindsTheSections()
     QCOMPARE(adapter->labelModel(), static_cast<QAbstractItemModel *>(&otherModel));
     QCOMPARE(adapter->textOf(m_header, 1), QStringLiteral("other1"));
     QCOMPARE(adapter->textOf(m_header, 0), QStringLiteral("other0"));
+}
+
+void TestVirtualHeaderView::installingAnAdapterHandsOverTheCurrentLabelModel()
+{
+    // P1.1 of the fourth review: setAdapter() installed the new collaborator without telling it
+    // about the label model the header already had, so the two call orders behaved differently:
+    //     setLabelModel(model); setAdapter(adapter);   // adapter never heard about the model
+    //     setAdapter(adapter); setLabelModel(model);   // worked
+    // A header that is set up like the first order (model first) is the natural one for a
+    // business that builds the header once and swaps adapters.
+    auto *adapter = new ModelSectionAdapter(nullptr, m_geometry);
+    QCOMPARE(adapter->labelModel(), nullptr);
+
+    m_header->setLabelModel(m_model);
+    m_header->setAdapter(adapter, true);
+    QApplication::processEvents();
+
+    QCOMPARE(adapter->labelModel(), static_cast<QAbstractItemModel *>(m_model));
+    QCOMPARE(adapter->textOf(m_header, 1), QStringLiteral("c1"));
+
+    // The other order keeps working, and a second replacement sees the model as well.
+    auto *second = new ModelSectionAdapter(nullptr, m_geometry);
+    m_header->setAdapter(second, true);   // owns (and deletes) the first adapter
+    QApplication::processEvents();
+    QCOMPARE(second->labelModel(), static_cast<QAbstractItemModel *>(m_model));
+    QCOMPARE(second->textOf(m_header, 2), QStringLiteral("c2"));
 }
 
 void TestVirtualHeaderView::switchingTheGeometryInvalidatesThePaneCache()

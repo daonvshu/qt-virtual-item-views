@@ -202,7 +202,12 @@ public:
     DropIndicatorStyle dropIndicatorStyle(const DropTarget &target) const;
 
     // -- adapter / recycler --------------------------------------------------
-    void setAdapter(WidgetAdapter *adapter, bool takeOwnership = false);
+    /// Installs the widget adapter. **Virtual on purpose**: a subclass whose materialization
+    /// is typed (`VirtualTableView`) has to keep its own adapter in sync with this one, and a
+    /// call through a `VirtualItemView *` must reach that override - otherwise the base
+    /// pointer and the subclass pointer could name two different adapters, and one adapter
+    /// would bind the QWidgets the other created (P1 of the fourth review).
+    virtual void setAdapter(WidgetAdapter *adapter, bool takeOwnership = false);
     WidgetAdapter *adapter() const { return m_adapter; }
     WidgetRecycler *recycler() const { return m_recycler; }
 
@@ -419,20 +424,22 @@ protected:
     /// Recycles the materialized items whose index lies in the model range
     /// (identity based, so it also works for a tree).
     void recycleItemsInModelRange(const QModelIndex &parent, int first, int last);
-    /// Column structure changes that touch column 0 rename (or invalidate) the (row, 0) cell
-    /// the kernel uses as the materialized row identity. These snapshot the row numbers while
-    /// the old identity is still valid and rebuild the canonical index afterwards.
-    void captureRowIdentityForColumnChange();
-    void restoreRowIdentityAfterColumnChange();
+    /// A column structure change that touches column 0 renames (or invalidates) the (row, 0)
+    /// cell the kernel uses as the materialized row identity. The first hook runs *before*
+    /// the change and releases every row widget while the old identity is still valid (so
+    /// `unbindWidget()` gets the index the widget was really bound to); the second runs
+    /// afterwards, re-keys the explicit pins to the canonical cell and schedules the pass
+    /// that materializes the canonical (row, 0) cells again - recomputing `WidgetType` on the
+    /// way (P1 of the fourth review).
+    void recycleItemsForColumnChange();
+    void restoreItemsAfterColumnChange();
     /// Re-binds the materialized items whose index lies in the model range (identity
     /// based). The kernel uses it for dataChanged(); a subclass uses it when the
     /// *schema* of its item widget changed without the identity changing - the table
     /// does that after a column insert / remove / move, so a business row widget that
     /// builds its column hosts in bindWidget() can rebuild them.
     void rebindItemsInModelRange(const QModelIndex &parent, int first, int last);
-    /// Captured rows of the materialized items (parallel to m_items, -1 = nothing to
-    /// restore) and of the pinned items, plus whether a restore is pending.
-    QVector<qsizetype> m_columnChangeRows;
+    /// Rows that were pinned when a column change started, plus whether a restore is pending.
     QVector<qsizetype> m_columnChangePinnedRows;
     bool m_columnChangePending = false;
     /// Moves the current item to view row \a item and ensures it is visible.

@@ -113,6 +113,9 @@ protected:
 private:
     void connectModelSignals(QAbstractItemModel *model);
     void onStructureChanged();
+    /// A column change only invalidates the cells the visible-row index points at (the row
+    /// structure - and therefore the measured heights and the anchor - stay valid).
+    void onColumnStructureChanged();
     void refreshVisibility(bool keepAnchor);
     void toggleIfBranchClicked(const QPoint &viewportPos, bool *handled);
     /// Invalidates the strip that can contain branch indicators (the previously

@@ -238,6 +238,16 @@ int virtualHeaderCount(QWidget *root)
     return count;
 }
 
+/// Counts the library warnings of one scope, so "rejected with a warning" is testable
+/// (the same pattern the pane-spec tests use).
+int g_adapterWarnings = 0;
+
+void countAdapterWarnings(QtMsgType type, const QMessageLogContext &, const QString &message)
+{
+    if (type == QtWarningMsg && message.contains(QStringLiteral("VirtualTableView::setAdapter")))
+        ++g_adapterWarnings;
+}
+
 } // namespace
 
 /// P0-1: the pool is a recycler concern, not an adapter concern. Widgets of the
@@ -256,6 +266,7 @@ private slots:
     void replacingAWidgetHeaderDestroysItsPaneRenderers();
     void replacingThePaneHeaderAdapterRebuildsItsClones();
     void destroyingTheViewUnbindsEveryMaterializedRow();
+    void thePolymorphicSetAdapterKeepsTheTableInvariant();
 };
 
 void TestAdapterReplacement::listAdapterReplacementNeverCrossesWidgetClasses()
@@ -490,6 +501,52 @@ void TestAdapterReplacement::destroyingTheViewUnbindsEveryMaterializedRow()
                             .arg(adapter.boundWidgetCount())
                             .arg(adapter.bound)
                             .arg(adapter.unbound)));
+}
+
+void TestAdapterReplacement::thePolymorphicSetAdapterKeepsTheTableInvariant()
+{
+    // P1 of the fourth review: the typed overload only fixed the *direct* call. Through a
+    // VirtualItemView * the base setter used to install a second adapter, so m_tableAdapter
+    // stayed A while m_adapter became B - A's recycler kept creating widgets (its factory
+    // reads m_tableAdapter) and B bound them, which is UB as soon as the two adapters name
+    // different QWidget classes for the same WidgetType.
+    QStandardItemModel model(50, 3);
+    VirtualTableView table;
+    table.setUniformItemHeight(30);
+    OwnedTableAdapter adapterA;            // creates OwnedRowWidget
+    table.setTableAdapter(&adapterA);
+    table.setModel(&model);
+    showView(&table);
+    QVERIFY(adapterA.bound > 0);
+
+    OtherTableAdapter adapterB;            // creates plain QWidget, counts foreign ones
+    VirtualItemView *base = &table;
+    base->setAdapter(&adapterB);           // the polymorphic call of the review
+    settle();
+
+    QCOMPARE(table.tableAdapter(), &adapterB);
+    QCOMPARE(table.adapter(), &adapterB);  // both pointers name the same adapter
+    QVERIFY(adapterB.bound > 0);
+    QCOMPARE(adapterB.foreignWidgets, 0);  // no widget of A's class reached B
+
+    // A plain WidgetAdapter cannot be installed: the table warns and keeps its adapter, so
+    // "reject" cannot leave the two pointers disagreeing either.
+    ListAdapterA plainAdapter;
+    g_adapterWarnings = 0;
+    QtMessageHandler defaultHandler = qInstallMessageHandler(countAdapterWarnings);
+    base->setAdapter(&plainAdapter);
+    qInstallMessageHandler(defaultHandler);
+    QCOMPARE(g_adapterWarnings, 1);
+    QCOMPARE(table.tableAdapter(), &adapterB);
+    QCOMPARE(table.adapter(), &adapterB);
+    settle();
+    QCOMPARE(adapterB.foreignWidgets, 0);
+
+    // Clearing the adapter is what nullptr means, through either entry point.
+    base->setAdapter(nullptr);
+    settle();
+    QCOMPARE(table.tableAdapter(), nullptr);
+    QCOMPARE(table.adapter(), nullptr);
 }
 
 QTEST_MAIN(TestAdapterReplacement)

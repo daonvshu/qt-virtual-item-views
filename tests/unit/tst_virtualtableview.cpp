@@ -1,5 +1,7 @@
 #include <virtualitemviews/nativeheaderview.h>
 #include <virtualitemviews/virtualtableview.h>
+#include <virtualitemviews/virtualheaderview.h>
+#include <virtualitemviews/headerwidgetadapter.h>
 #include "vivtestfixtures.h"
 
 #include <QtTest>
@@ -348,6 +350,175 @@ QWidget *rowWidgetFor(VirtualTableView &view, int row)
     return nullptr;
 }
 
+// ---------------------------------------------------------------------------
+// Row kind that follows the column structure (P1 of the fourth review).
+// ---------------------------------------------------------------------------
+
+/// Row widget of kind A / kind B: two different classes for two WidgetTypes, exactly like a
+/// business that draws "order rows" and "group rows" with different widgets.
+class KindARow : public QWidget
+{
+public:
+    explicit KindARow(QWidget *parent = nullptr) : QWidget(parent) {}
+};
+
+class KindBRow : public QWidget
+{
+public:
+    explicit KindBRow(QWidget *parent = nullptr) : QWidget(parent) {}
+};
+
+/// Model whose column-0 cell content (and therefore the row's WidgetType) is decided by the
+/// *current* column structure: inserting a column before column 0 renames the canonical
+/// (row, 0) cell, so the same row becomes another kind.
+class KindColumnModel : public QAbstractTableModel
+{
+public:
+    explicit KindColumnModel(int rows, QObject *parent = nullptr)
+        : QAbstractTableModel(parent)
+        , m_rows(rows)
+        , m_kinds({QStringLiteral("A"), QStringLiteral("A"), QStringLiteral("A")})
+    {
+    }
+
+    int rowCount(const QModelIndex &parent = QModelIndex()) const override
+    {
+        return parent.isValid() ? 0 : m_rows;
+    }
+
+    int columnCount(const QModelIndex &parent = QModelIndex()) const override
+    {
+        return parent.isValid() ? 0 : m_kinds.size();
+    }
+
+    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override
+    {
+        if (!index.isValid() || role != Qt::DisplayRole)
+            return QVariant();
+        return QStringLiteral("%1%2").arg(m_kinds.value(index.column())).arg(index.row());
+    }
+
+    void insertKindColumn(int at, const QString &kind)
+    {
+        beginInsertColumns(QModelIndex(), at, at);
+        m_kinds.insert(at, kind);
+        endInsertColumns();
+    }
+
+    void removeKindColumn(int at)
+    {
+        beginRemoveColumns(QModelIndex(), at, at);
+        m_kinds.removeAt(at);
+        endRemoveColumns();
+    }
+
+    void moveKindColumn(int from, int to)
+    {
+        const int destination = to > from ? to + 1 : to;
+        if (!beginMoveColumns(QModelIndex(), from, from, QModelIndex(), destination))
+            return;
+        m_kinds.move(from, to);
+        endMoveColumns();
+    }
+
+private:
+    int m_rows = 0;
+    QVector<QString> m_kinds;
+};
+
+/// Adapter that records the exact unbind/bind pairs, checks the widget class against the type
+/// the framework asked for, and refuses non-canonical (column != 0) row indexes.
+class KindRowAdapter : public TableWidgetAdapter
+{
+public:
+    QWidget *createWidget(WidgetType type, QWidget *parent) override
+    {
+        auto *widget = type == 0 ? static_cast<QWidget *>(new KindARow(parent))
+                                 : static_cast<QWidget *>(new KindBRow(parent));
+        m_typeOf.insert(widget, type);
+        ++created;
+        return widget;
+    }
+
+    WidgetType widgetType(const QModelIndex &index) const override
+    {
+        return index.isValid() && index.data(Qt::DisplayRole).toString().startsWith(QLatin1Char('A'))
+            ? WidgetType(0)
+            : WidgetType(1);
+    }
+
+    void bindWidget(QWidget *widget, const QModelIndex &index) override
+    {
+        ++bound;
+        lastBoundWidget = widget;
+        lastBoundIndex = index;
+        if (!index.isValid() || index.column() != 0)
+            ++nonCanonicalBinds;
+        if (m_typeOf.value(widget, -1) != widgetType(index))
+            ++typeMismatches;
+    }
+
+    void unbindWidget(QWidget *widget, const QModelIndex &index) override
+    {
+        ++unbound;
+        lastUnboundWidget = widget;
+        lastUnboundIndex = index;
+        if (!index.isValid() || index.column() != 0)
+            ++nonCanonicalUnbinds;
+    }
+
+    QSize estimatedSize(const QModelIndex &) const override { return QSize(400, kRowHeight); }
+
+    int created = 0;
+    int bound = 0;
+    int unbound = 0;
+    int typeMismatches = 0;
+    int nonCanonicalBinds = 0;
+    int nonCanonicalUnbinds = 0;
+    QPointer<QWidget> lastBoundWidget;
+    QPointer<QWidget> lastUnboundWidget;
+    QModelIndex lastBoundIndex;
+    QModelIndex lastUnboundIndex;
+
+private:
+    QHash<const QWidget *, WidgetType> m_typeOf;
+};
+
+/// Header adapter that renders the header data of the model it was told about - the pattern
+/// the README teaches, with the `setLabelModel()` hook and a QPointer.
+class LabelHeaderAdapter : public HeaderWidgetAdapter
+{
+public:
+    QWidget *createSection(WidgetType, QWidget *parent) override
+    {
+        auto *label = new QLabel(parent);
+        label->setObjectName(QStringLiteral("headerSectionLabel"));
+        return label;
+    }
+
+    void bindSection(QWidget *widget, int logicalIndex) override
+    {
+        const QString text = m_model
+            ? m_model->headerData(logicalIndex, m_orientation, Qt::DisplayRole).toString()
+            : QString();
+        static_cast<QLabel *>(widget)->setText(text);
+    }
+
+    void unbindSection(QWidget *widget, int) override
+    {
+        static_cast<QLabel *>(widget)->clear();
+    }
+
+    void setLabelModel(QAbstractItemModel *model) override { m_model = model; }
+
+    void setOrientation(Qt::Orientation orientation) { m_orientation = orientation; }
+    QAbstractItemModel *labelModel() const { return m_model.data(); }
+
+private:
+    QPointer<QAbstractItemModel> m_model;
+    Qt::Orientation m_orientation = Qt::Horizontal;
+};
+
 /// Counts the "the row-number strip is hidden" diagnostic: it belongs to the
 /// transition, not to every relayout (P2-9).
 int g_rowHeaderWarnings = 0;
@@ -461,7 +632,9 @@ private slots:
     void nativeHeaderStaysInSyncWithEveryGeometryChange();
     void columnStructureChangesRebindTheRowWidgets();
     void columnZeroChangesKeepTheRowIdentityCanonical();
+    void columnZeroChangesReleaseTheRowWidgetsFirst();
     void setAdapterConfiguresTheTableNotJustTheBase();
+    void switchingTheModelRebindsEveryPaneHeader();
     void columnResizeTouchesMaterializedRowsOnly();
     void geometryIsTheSingleAuthority();
     void columnMoveFollowsTheGeometry();
@@ -767,6 +940,170 @@ void TestVirtualTableView::columnZeroChangesKeepTheRowIdentityCanonical()
     view.flushPendingRelayout();
     checkCanonical("move from 0");
     QCOMPARE(identityOf(1), model.index(1, 0));
+}
+
+void TestVirtualTableView::columnZeroChangesReleaseTheRowWidgetsFirst()
+{
+    // P1 of the fourth review: the third-round fix re-keyed the *live* MaterializedItem, which
+    // silently skipped three parts of the adapter contract - unbindWidget() never saw the old
+    // index (so business code kept its subscriptions to a cell that no longer exists),
+    // WidgetType was not recomputed, and the index -> widget lookup still pointed at the old
+    // identity. The kernel now releases every row *before* the change (old index still valid,
+    // honest unbind) and materializes the canonical (row, 0) cell afterwards.
+    KindColumnModel model(6, this);
+    KindRowAdapter adapter;
+    VirtualTableView view;
+    view.setTableAdapter(&adapter);
+    view.setUniformItemHeight(kRowHeight);
+    view.setDefaultColumnWidth(kColumnWidth);
+    view.setModel(&model);
+    showView(&view, QSize(kViewWidth, kViewHeight));
+    view.flushPendingRelayout();
+    QVERIFY(adapter.bound > 0);
+    QVERIFY(rowWidgetFor(view, 1) != nullptr);
+    QVERIFY(dynamic_cast<KindARow *>(rowWidgetFor(view, 1)) != nullptr);
+
+    const auto checkContract = [&](const char *phase) {
+        QVERIFY2(adapter.typeMismatches == 0,
+                 qPrintable(QStringLiteral("%1: bindWidget() got %2 widgets of the wrong class")
+                                .arg(QString::fromLatin1(phase))
+                                .arg(adapter.typeMismatches)));
+        QCOMPARE(adapter.nonCanonicalBinds, 0);
+        QCOMPARE(adapter.nonCanonicalUnbinds, 0);
+    };
+    const auto resetCounters = [&]() {
+        adapter.bound = 0;
+        adapter.unbound = 0;
+        adapter.nonCanonicalBinds = 0;
+        adapter.nonCanonicalUnbinds = 0;
+        adapter.typeMismatches = 0;
+        adapter.lastBoundWidget = nullptr;
+        adapter.lastUnboundWidget = nullptr;
+        adapter.lastBoundIndex = QModelIndex();
+        adapter.lastUnboundIndex = QModelIndex();
+    };
+    const auto rowIsSymmetric = [&](const char *phase) {
+        QWidget *row = rowWidgetFor(view, 1);
+        QVERIFY2(row != nullptr, phase);
+        QCOMPARE(view.indexForWidget(row), model.index(1, 0));
+        QCOMPARE(view.widgetForIndex(model.index(1, 0)), row);
+    };
+
+    // (a) Insert a column before column 0: the canonical cell (and with it the row's
+    // WidgetType) changes from kind A to kind B.
+    resetCounters();
+    model.insertKindColumn(0, QStringLiteral("B"));
+    view.flushPendingRelayout();
+    QVERIFY(adapter.unbound > 0);                    // released ...
+    QVERIFY(adapter.lastUnboundIndex.isValid());
+    QCOMPARE(adapter.lastUnboundIndex.column(), 0);  // ... through its canonical identity
+    QVERIFY(adapter.bound > 0);                      // and materialized again
+    checkContract("insert at 0");
+    QVERIFY(dynamic_cast<KindBRow *>(rowWidgetFor(view, 1)) != nullptr);
+    rowIsSymmetric("insert at 0");
+
+    // (b) Remove column 0 again: back to kind A.
+    resetCounters();
+    model.removeKindColumn(0);
+    view.flushPendingRelayout();
+    QVERIFY(adapter.unbound > 0);
+    QCOMPARE(adapter.lastUnboundIndex.column(), 0);
+    checkContract("remove at 0");
+    QVERIFY(dynamic_cast<KindARow *>(rowWidgetFor(view, 1)) != nullptr);
+    rowIsSymmetric("remove at 0");
+
+    // (c) Move column 0 away: the kind moves to whatever column is first afterwards.
+    resetCounters();
+    model.moveKindColumn(0, 2);
+    view.flushPendingRelayout();
+    QVERIFY(adapter.unbound > 0);
+    QCOMPARE(adapter.lastUnboundIndex.column(), 0);
+    checkContract("move from 0");
+    rowIsSymmetric("move from 0");
+
+    // (d) A column change that does not touch column 0 keeps the row identity: the widgets
+    // are only re-bound (the table's schema rebind), never recycled through the adapter.
+    resetCounters();
+    model.insertKindColumn(2, QStringLiteral("A"));
+    view.flushPendingRelayout();
+    QCOMPARE(adapter.unbound, 0);
+    QVERIFY(adapter.bound > 0);
+    checkContract("insert at 2");
+    rowIsSymmetric("insert at 2");
+}
+
+void TestVirtualTableView::switchingTheModelRebindsEveryPaneHeader()
+{
+    // P1 of the fourth review: setModel() updated the primary horizontal/vertical headers, but
+    // an already materialized *derived* renderer kept the old label model. With two models of
+    // the same column count nothing else rebuilds those clones, so the frozen pane and the
+    // frozen row strips kept drawing A's titles - and, for widget headers, kept listening to
+    // A's signals while binding through B's adapter.
+    QStandardItemModel modelA(20, 3, this);
+    QStandardItemModel modelB(20, 3, this);
+    for (int column = 0; column < 3; ++column) {
+        modelA.setHeaderData(column, Qt::Horizontal, QStringLiteral("A%1").arg(column));
+        modelB.setHeaderData(column, Qt::Horizontal, QStringLiteral("B%1").arg(column));
+    }
+    for (int row = 0; row < 20; ++row) {
+        modelA.setHeaderData(row, Qt::Vertical, QStringLiteral("A row %1").arg(row));
+        modelB.setHeaderData(row, Qt::Vertical, QStringLiteral("B row %1").arg(row));
+    }
+
+    TableTestAdapter rowAdapter(3);
+    LabelHeaderAdapter headerAdapter;
+    VirtualTableView view;
+    view.setTableAdapter(&rowAdapter);
+    view.setUniformItemHeight(kRowHeight);
+    view.setDefaultColumnWidth(kColumnWidth);
+    auto *header = new VirtualHeaderView(Qt::Horizontal);
+    header->setAdapter(&headerAdapter);
+    view.setHorizontalHeader(header);
+    view.setModel(&modelA);
+    showView(&view, QSize(kViewWidth, kViewHeight));
+    view.setFrozenColumns({0});   // a horizontal pane renderer
+    view.setFrozenRows(2);        // frozen row strips
+    view.flushPendingRelayout();
+    QCoreApplication::processEvents();
+
+    const auto paneHeaderClone = [&]() -> VirtualHeaderView * {
+        VirtualHeaderView *clone = nullptr;
+        for (VirtualHeaderView *candidate : view.findChildren<VirtualHeaderView *>()) {
+            if (candidate != header)
+                clone = candidate;
+        }
+        return clone;
+    };
+    const auto sectionText = [&](VirtualHeaderView *pane, int logicalColumn) -> QString {
+        QWidget *section = pane ? pane->sectionWidget(logicalColumn) : nullptr;
+        auto *label = dynamic_cast<QLabel *>(section);
+        return label ? label->text() : QString();
+    };
+
+    VirtualHeaderView *paneHeader = paneHeaderClone();
+    QVERIFY(paneHeader != nullptr);
+    QCOMPARE(paneHeader->labelModel(), &modelA);
+    QCOMPARE(sectionText(paneHeader, 0), QStringLiteral("A0"));
+
+    QList<NativeHeaderView *> strips;
+    for (NativeHeaderView *candidate : view.findChildren<NativeHeaderView *>()) {
+        if (candidate->orientation() == Qt::Vertical && candidate->model() == &modelA)
+            strips.append(candidate);
+    }
+    QVERIFY(!strips.isEmpty());            // the frozen row bands have their own strips
+
+    view.setModel(&modelB);
+    view.flushPendingRelayout();
+    QCoreApplication::processEvents();
+
+    paneHeader = paneHeaderClone();
+    QVERIFY(paneHeader != nullptr);
+    QCOMPARE(header->labelModel(), &modelB);
+    QCOMPARE(paneHeader->labelModel(), &modelB);
+    QCOMPARE(sectionText(paneHeader, 0), QStringLiteral("B0"));
+    QCOMPARE(sectionText(header, 1), QStringLiteral("B1"));   // the primary pane too
+    for (NativeHeaderView *strip : strips)
+        QCOMPARE(strip->model(), &modelB);
 }
 
 void TestVirtualTableView::setAdapterConfiguresTheTableNotJustTheBase()
