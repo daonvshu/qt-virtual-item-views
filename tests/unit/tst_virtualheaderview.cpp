@@ -82,6 +82,58 @@ public:
     QSize estimatedSize(const QModelIndex &) const override { return QSize(640, 24); }
 };
 
+/// Row adapter that gives every column a framework-managed ColumnHost, so the *body*
+/// side of a header animation is observable (the hosts are the widgets the framework
+/// positions from the committed column geometry).
+class HostRowAdapter : public TableWidgetAdapter
+{
+public:
+    explicit HostRowAdapter(int columns)
+        : m_columns(columns)
+    {
+    }
+
+    QWidget *createWidget(WidgetType, QWidget *parent) override
+    {
+        auto *row = new QWidget(parent);
+        for (int column = 0; column < m_columns; ++column)
+            new ColumnHost(column, row);
+        return row;
+    }
+
+    void bindWidget(QWidget *, const QModelIndex &) override {}
+    void unbindWidget(QWidget *, const QModelIndex &) override {}
+    QSize estimatedSize(const QModelIndex &) const override { return QSize(640, 24); }
+
+    /// x of one column host inside \a rowWidget. The row widget covers the viewport, so
+    /// this is the same x space the header sections report.
+    static int hostX(QWidget *rowWidget, int column)
+    {
+        if (!rowWidget)
+            return std::numeric_limits<int>::min();
+        for (ColumnHost *host : rowWidget->findChildren<ColumnHost *>()) {
+            if (host->logicalColumn() == column)
+                return host->x();
+        }
+        return std::numeric_limits<int>::min();
+    }
+
+private:
+    int m_columns = 0;
+};
+
+/// Minimal cell adapter: the framework positions the cells, business code only fills
+/// them (Cell Widget Mode of the table body).
+class PlainCellAdapter : public CellWidgetAdapter
+{
+public:
+    QWidget *createCellWidget(WidgetType, QWidget *parent) override { return new QLabel(parent); }
+    void bindCellWidget(QWidget *widget, const QModelIndex &index) override
+    {
+        static_cast<QLabel *>(widget)->setText(index.data(Qt::DisplayRole).toString());
+    }
+};
+
 /// Section adapter of the "model changed" tests: binds the text from the model's
 /// headerData() (that is what the README example does) and appends the sort marker of
 /// the geometry, so both sources are observable on the widget.
@@ -194,6 +246,12 @@ private slots:
     void switchingTheGeometryInvalidatesThePaneCache();
     void restoringASortStateRebindsTheSections();
     void tableForwardsTheAnimationSettings();
+    void bodyFollowsTheSectionsWhileAMoveAnimates();
+    void bodyFollowsTheDragPreviewAndTheCommit();
+    void bodyFollowCanBeTurnedOff();
+    void bodyFollowsAFrozenPaneDrag();
+    void cellsFollowTheHeaderWhileTheBodyDoes();
+    void frozenPaneHeaderKeepsItsColumnsAfterAReorder();
 
 private:
     QStandardItemModel *m_model = nullptr;
@@ -1064,6 +1122,334 @@ void TestVirtualHeaderView::tableForwardsTheAnimationSettings()
     QVERIFY(moved->x() < 3 * kSectionWidth);
     QTest::qWait(300);
     QCOMPARE(moved->x(), 3 * kSectionWidth);
+}
+
+// ---------------------------------------------------------------------------
+// The body follows the header's visual section geometry (§23/§24)
+// ---------------------------------------------------------------------------
+
+namespace {
+
+/// Table with a widget header and one ColumnHost per column: the header/body pair the
+/// three tests below need. The view, the model and the adapters are members so the
+/// fixture reads as a single statement per test.
+struct HeaderBody
+{
+    QStandardItemModel model;
+    SectionAdapter adapter;
+    HostRowAdapter rowAdapter;
+    VirtualTableView view;
+    VirtualHeaderView *header = nullptr;
+
+    HeaderBody()
+        : model(20, 20)
+        , rowAdapter(20)
+    {
+        header = new VirtualHeaderView(Qt::Horizontal);
+        header->setAdapter(&adapter);
+        view.setHorizontalHeader(header);
+        view.setTableAdapter(&rowAdapter);
+        view.setUniformItemHeight(24);
+        view.setDefaultColumnWidth(kSectionWidth);
+        view.setModel(&model);
+        vivtest::showView(&view, QSize(400, 200));
+    }
+
+    /// First materialized row widget - the framework's container of the column hosts.
+    QWidget *rowWidget() const
+    {
+        const QList<MaterializedItem> rows = view.materializedItems();
+        return rows.isEmpty() ? nullptr : rows.first().widget;
+    }
+    int committedX(int column) const { return view.columnGeometry(column).viewportX; }
+    int bodyX(int column) const { return HostRowAdapter::hostX(rowWidget(), column); }
+    int sectionX(int column) const
+    {
+        QWidget *section = header->sectionWidget(column);
+        return section ? section->x() : std::numeric_limits<int>::min();
+    }
+    /// Viewport x of a materialized section of \a renderer (the section's x is relative
+    /// to its renderer, which sits on its pane rect, not on the viewport origin).
+    int viewportXOf(const VirtualHeaderView *renderer, int column) const
+    {
+        QWidget *section = renderer->sectionWidget(column);
+        return section ? section->x() + renderer->x() - view.viewport()->x()
+                       : std::numeric_limits<int>::min();
+    }
+};
+
+} // namespace
+
+void TestVirtualHeaderView::bodyFollowsTheSectionsWhileAMoveAnimates()
+{
+    HeaderBody fixture;
+    fixture.view.setHeaderAnimationDuration(300);
+
+    // Default: on. Without it the body would wait for the commit.
+    QVERIFY(fixture.view.columnFollowsHeaderVisual());
+    QVERIFY(fixture.rowWidget() != nullptr);
+    // The row widget covers the viewport and the header is placed on it, so the two
+    // x spaces coincide - which is what lets the test compare them directly.
+    QCOMPARE(fixture.bodyX(0), fixture.committedX(0));
+    QCOMPARE(fixture.bodyX(0), fixture.sectionX(0));
+
+    QWidget *moved = fixture.header->sectionWidget(0);
+    QVERIFY(moved != nullptr);
+    fixture.view.moveColumn(0, 3, VirtualTableView::MoveAnimation::Animate);
+    QApplication::processEvents();
+
+    // Committed geometry (columnGeometry(), hit testing, the scroll bar): final at once.
+    QCOMPARE(fixture.committedX(0), 3 * kSectionWidth);
+    // Visual geometry: the section is on its way, and the body's column is drawn where
+    // the section is - not where the commit says.
+    QVERIFY(moved->x() < 3 * kSectionWidth);
+    QCOMPARE(fixture.bodyX(0), moved->x());
+    QVERIFY(fixture.bodyX(0) != 3 * kSectionWidth);
+    QCOMPARE(fixture.bodyX(1), fixture.sectionX(1));
+
+    // Mid-flight, still glued together.
+    QTest::qWait(150);
+    QCOMPARE(fixture.bodyX(0), moved->x());
+    QCOMPARE(fixture.bodyX(0), fixture.sectionX(0));
+    QVERIFY(fixture.bodyX(0) > 0);
+
+    // A layout pass of the *view* during the transition (a resize re-lays out every
+    // row) must not tear the body back onto the committed geometry.
+    fixture.view.resize(fixture.view.width(), fixture.view.height() - 20);
+    QApplication::processEvents();
+    QCOMPARE(fixture.bodyX(0), fixture.sectionX(0));
+
+    QTest::qWait(400);
+    QCOMPARE(moved->x(), 3 * kSectionWidth);
+    QCOMPARE(fixture.bodyX(0), 3 * kSectionWidth);
+    QCOMPARE(fixture.bodyX(1), fixture.committedX(1));
+}
+
+void TestVirtualHeaderView::bodyFollowsTheDragPreviewAndTheCommit()
+{
+    HeaderBody fixture;
+    fixture.view.setHeaderAnimationDuration(200);
+    QWidget *headerWidget = fixture.view.horizontalHeader()->headerWidget();
+    QVERIFY(fixture.rowWidget() != nullptr);
+
+    // Pick column 0 up in its middle and pull it past column 2.
+    sendMouse(headerWidget, QEvent::MouseButtonPress,
+              QPoint(kSectionWidth / 2, kHeaderHeight / 2), Qt::LeftButton, Qt::LeftButton);
+    sendMouse(headerWidget, QEvent::MouseMove,
+              QPoint(kSectionWidth / 2 + 2, kHeaderHeight / 2), Qt::NoButton, Qt::LeftButton);
+    sendMouse(headerWidget, QEvent::MouseMove, QPoint(2 * kSectionWidth + 60, kHeaderHeight / 2),
+              Qt::NoButton, Qt::LeftButton);
+    QApplication::processEvents();
+
+    // The committed geometry is untouched while the drag is in flight, but the body has
+    // already left it: the dragged column follows the pointer, like its section.
+    QCOMPARE(fixture.committedX(0), 0);
+    QVERIFY(fixture.bodyX(0) > 2 * kSectionWidth);
+    QCOMPARE(fixture.bodyX(0), fixture.sectionX(0));
+
+    // The sections making room tween to their slot, and the columns come along.
+    QTest::qWait(250);
+    QCOMPARE(fixture.bodyX(1), 0);
+    QCOMPARE(fixture.bodyX(2), kSectionWidth);
+    QCOMPARE(fixture.bodyX(1), fixture.sectionX(1));
+
+    // Escape drops the preview: header *and* body return to the committed geometry.
+    QKeyEvent escape(QEvent::KeyPress, Qt::Key_Escape, Qt::NoModifier);
+    QApplication::sendEvent(headerWidget, &escape);
+    QApplication::processEvents();
+    QCOMPARE(fixture.committedX(0), 0);
+    QCOMPARE(fixture.bodyX(0), 0);
+    QCOMPARE(fixture.bodyX(1), kSectionWidth);
+    QCOMPARE(fixture.bodyX(2), 2 * kSectionWidth);
+
+    // Now the same gesture, but committing: the column converges from the position the
+    // preview left it at, together with the section.
+    sendMouse(headerWidget, QEvent::MouseButtonPress,
+              QPoint(kSectionWidth / 2, kHeaderHeight / 2), Qt::LeftButton, Qt::LeftButton);
+    sendMouse(headerWidget, QEvent::MouseMove,
+              QPoint(kSectionWidth / 2 + 2, kHeaderHeight / 2), Qt::NoButton, Qt::LeftButton);
+    sendMouse(headerWidget, QEvent::MouseMove, QPoint(2 * kSectionWidth + 60, kHeaderHeight / 2),
+              Qt::NoButton, Qt::LeftButton);
+    QApplication::processEvents();
+    sendMouse(headerWidget, QEvent::MouseButtonRelease,
+              QPoint(2 * kSectionWidth + 60, kHeaderHeight / 2), Qt::LeftButton, Qt::NoButton);
+    QApplication::processEvents();
+
+    // One commit, and the body is still where the preview left it - no jump.
+    QCOMPARE(fixture.committedX(0), 2 * kSectionWidth);
+    QVERIFY(fixture.bodyX(0) > 2 * kSectionWidth);
+    QCOMPARE(fixture.bodyX(0), fixture.sectionX(0));
+
+    QTest::qWait(350);
+    QCOMPARE(fixture.bodyX(0), 2 * kSectionWidth);
+    QCOMPARE(fixture.bodyX(0), fixture.sectionX(0));
+    QCOMPARE(fixture.bodyX(1), fixture.committedX(1));
+}
+
+void TestVirtualHeaderView::bodyFollowCanBeTurnedOff()
+{
+    HeaderBody fixture;
+    fixture.view.setHeaderAnimationDuration(300);
+    fixture.view.setColumnFollowsHeaderVisual(false);
+    QVERIFY(!fixture.view.columnFollowsHeaderVisual());
+
+    QWidget *moved = fixture.header->sectionWidget(0);
+    QVERIFY(moved != nullptr);
+    fixture.view.moveColumn(0, 3, VirtualTableView::MoveAnimation::Animate);
+    QApplication::processEvents();
+
+    // The header still slides, the body is on the committed geometry at once - the
+    // behaviour of the library before the setting existed.
+    QVERIFY(moved->x() < 3 * kSectionWidth);
+    QCOMPARE(fixture.committedX(0), 3 * kSectionWidth);
+    QCOMPARE(fixture.bodyX(0), 3 * kSectionWidth);
+    QTest::qWait(400);
+    QCOMPARE(moved->x(), 3 * kSectionWidth);
+    QCOMPARE(fixture.bodyX(0), 3 * kSectionWidth);
+}
+
+void TestVirtualHeaderView::bodyFollowsAFrozenPaneDrag()
+{
+    HeaderBody fixture;
+    fixture.view.setHeaderAnimationDuration(200);
+    // Two frozen columns: they get their own renderer (§31/§43), and a drag inside that
+    // pane is a gesture the primary header never sees.
+    fixture.view.setFrozenColumns(QVector<int>({0, 1}));
+    QApplication::processEvents();
+
+    VirtualHeaderView *frozenPane = nullptr;
+    for (VirtualHeaderView *candidate : fixture.view.findChildren<VirtualHeaderView *>()) {
+        if (candidate != fixture.header)
+            frozenPane = candidate;
+    }
+    QVERIFY(frozenPane != nullptr);
+    QWidget *frozenSection = frozenPane->sectionWidget(0);
+    QVERIFY(frozenSection != nullptr);
+    QVERIFY(fixture.rowWidget() != nullptr);
+    QCOMPARE(fixture.committedX(0), 0);
+    QCOMPARE(fixture.bodyX(0), 0);
+
+    QWidget *paneWidget = frozenPane->headerWidget();
+    sendMouse(paneWidget, QEvent::MouseButtonPress,
+              QPoint(kSectionWidth / 2, kHeaderHeight / 2), Qt::LeftButton, Qt::LeftButton);
+    sendMouse(paneWidget, QEvent::MouseMove, QPoint(kSectionWidth / 2 + 2, kHeaderHeight / 2),
+              Qt::NoButton, Qt::LeftButton);
+    sendMouse(paneWidget, QEvent::MouseMove, QPoint(2 * kSectionWidth - 5, kHeaderHeight / 2),
+              Qt::NoButton, Qt::LeftButton);
+    QApplication::processEvents();
+
+    // The frozen column of the body follows the section of *its* pane, even though the
+    // primary header is not the one being dragged.
+    QCOMPARE(fixture.committedX(0), 0);
+    QVERIFY(fixture.bodyX(0) > 0);
+    QCOMPARE(fixture.bodyX(0), frozenSection->x());
+
+    sendMouse(paneWidget, QEvent::MouseButtonRelease, QPoint(2 * kSectionWidth - 5, kHeaderHeight / 2),
+              Qt::LeftButton, Qt::NoButton);
+    QApplication::processEvents();
+
+    // Committed inside the pane: column 1 first, column 0 after it. The body converges
+    // from the preview position with the section.
+    QCOMPARE(fixture.committedX(0), kSectionWidth);
+    QCOMPARE(fixture.committedX(1), 0);
+    QCOMPARE(fixture.bodyX(0), frozenSection->x());
+    QTest::qWait(350);
+    QCOMPARE(fixture.bodyX(0), kSectionWidth);
+    QCOMPARE(fixture.bodyX(1), 0);
+    QCOMPARE(frozenSection->x(), kSectionWidth);
+}
+
+void TestVirtualHeaderView::cellsFollowTheHeaderWhileTheBodyDoes()
+{
+    // Cell Widget Mode has its own geometry pass (one widget per cell instead of one
+    // ColumnHost per column), so the follow has to work there too.
+    QStandardItemModel model(20, 20);
+    SectionAdapter sectionAdapter;
+    PlainCellAdapter cellAdapter;
+    VirtualTableView view;
+    auto *header = new VirtualHeaderView(Qt::Horizontal);
+    header->setAdapter(&sectionAdapter);
+    view.setHorizontalHeader(header);
+    view.setCellAdapter(&cellAdapter);
+    view.setMaterializationMode(VirtualTableView::MaterializationMode::CellWidgets);
+    view.setUniformItemHeight(24);
+    view.setDefaultColumnWidth(kSectionWidth);
+    view.setModel(&model);
+    vivtest::showView(&view, QSize(400, 200));
+    view.setHeaderAnimationDuration(300);
+
+    QWidget *cell = view.cellWidget(model.index(0, 0));
+    QVERIFY(cell != nullptr);
+    QCOMPARE(cell->x(), view.columnGeometry(0).viewportX);
+    QCOMPARE(cell->x(), header->sectionWidget(0)->x());
+
+    view.moveColumn(0, 3, VirtualTableView::MoveAnimation::Animate);
+    QApplication::processEvents();
+    QCOMPARE(view.columnGeometry(0).viewportX, 3 * kSectionWidth);
+    QTest::qWait(150);
+    // The cell is drawn where its section is - the committed geometry never moved.
+    QCOMPARE(cell->x(), header->sectionWidget(0)->x());
+    QVERIFY(cell->x() < 3 * kSectionWidth);
+    QTest::qWait(400);
+    QCOMPARE(cell->x(), 3 * kSectionWidth);
+}
+
+void TestVirtualHeaderView::frozenPaneHeaderKeepsItsColumnsAfterAReorder()
+{
+    // 冻结列是**集合**而不是视觉序的前缀（§31/§43）：把冻结列拖到可滚动列后面之后，
+    // 可滚动 pane 自己的打包顺序就不再等于 flat committed 几何的顺序。pane 表头必须按
+    // 自己那一组列来打包与物化，否则 section 会落在错的 x 上、甚至整列不再被物化
+    // （用户看到的现象：固定之后表头消失，随便再拖一下才回来）。
+    HeaderBody fixture;
+    // 每一块物化出来的 section 都正好压在自己那一列的 committed x 上，而且左端这几个
+    // 列都必须真的被物化（"表头消失"就是这里没有 section）。
+    const auto checkSectionsMatchTheBody = [&fixture]() {
+        const QList<VirtualHeaderView *> renderers
+            = fixture.view.findChildren<VirtualHeaderView *>();
+        QVERIFY(renderers.size() >= 2); // 主表头 + 冻结 pane 的克隆
+        const auto showsAnywhere = [&renderers](int column) {
+            for (VirtualHeaderView *renderer : renderers) {
+                if (renderer->sectionWidget(column))
+                    return true;
+            }
+            return false;
+        };
+        for (int column = 0; column <= 4; ++column)
+            QVERIFY(showsAnywhere(column));
+        for (VirtualHeaderView *renderer : renderers) {
+            for (int column : renderer->materializedSections()) {
+                QVERIFY(renderer->sectionWidget(column) != nullptr);
+                QCOMPARE(fixture.viewportXOf(renderer, column),
+                         fixture.view.columnGeometry(column).viewportX);
+            }
+        }
+    };
+
+    // 顺序 A：先冻结，再把两列冻结列挪到列 2、3 后面
+    // （committed 视觉序 = 2, 0, 3, 1, 4, ...）。
+    fixture.view.setFrozenColumns(QVector<int>({0, 1}));
+    QApplication::processEvents();
+    fixture.view.moveColumn(0, 2);
+    fixture.view.moveColumn(1, 3);
+    QApplication::processEvents();
+    // body 的 committed 几何：冻结 pane 在左（0、80），可滚动 pane 从 160 开始。
+    QCOMPARE(fixture.view.columnGeometry(0).viewportX, 0);
+    QCOMPARE(fixture.view.columnGeometry(1).viewportX, kSectionWidth);
+    QCOMPARE(fixture.view.columnGeometry(2).viewportX, 2 * kSectionWidth);
+    QCOMPARE(fixture.view.columnGeometry(3).viewportX, 3 * kSectionWidth);
+    QCOMPARE(fixture.view.columnGeometry(4).viewportX, 4 * kSectionWidth);
+    checkSectionsMatchTheBody();
+
+    // 顺序 B（用户报的那条）：先换序，再冻结点到的两列 —— 结果状态一样，
+    // 冻结那一次就得把表头摆对，不能等下一次拖动才"刷新"出来。
+    fixture.view.setFrozenColumns(QVector<int>());
+    QApplication::processEvents();
+    fixture.view.moveColumn(0, 2);
+    fixture.view.moveColumn(1, 3);
+    QApplication::processEvents();
+    fixture.view.setFrozenColumns(QVector<int>({0, 1}));
+    QApplication::processEvents();
+    checkSectionsMatchTheBody();
 }
 
 QTEST_MAIN(TestVirtualHeaderView)

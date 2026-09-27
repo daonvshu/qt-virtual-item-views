@@ -227,6 +227,22 @@ public:
     /// Duration of the visual transition in milliseconds; 0 turns it off.
     void setHeaderAnimationDuration(int ms);
     int headerAnimationDuration() const { return m_headerAnimationDuration; }
+    /// Whether the body's column widgets follow the header's *visual* section
+    /// positions (§23/§24) - the dragged column and the columns making room for it
+    /// during a header drag, and the sliding column of a committed move - instead of
+    /// waiting for the commit and jumping there.
+    ///
+    /// Only widget headers that can report a visual position take part
+    /// (VirtualHeaderView, see HeaderViewInterface::sectionVisualX()); the native
+    /// adapter paints its sections itself, so there the header and the body change
+    /// together at the commit whatever this is set to. The committed geometry stays
+    /// authoritative throughout: columnGeometry(), hit testing, spans, the scroll
+    /// bar and every query keep reading it, and only x is taken from the header -
+    /// the body never drives a header animation back into the geometry.
+    ///
+    /// Default: enabled, which is what makes a header drag read as one movement.
+    void setColumnFollowsHeaderVisual(bool follows);
+    bool columnFollowsHeaderVisual() const { return m_columnFollowsHeaderVisual; }
 
     // -- row heights ---------------------------------------------------------
     void setRowSizePolicy(RowSizePolicy policy);
@@ -407,6 +423,19 @@ private:
     /// Asks every header renderer for a visual transition (or clears the request)
     /// around a programmatic section move (§23).
     void requestSectionMoveAnimation(bool animated);
+    /// Lets \a header report its visual placements (see setVisualGeometryCallback()).
+    /// Called for the installed header and for every derived pane renderer.
+    void watchHeaderVisualGeometry(HeaderViewInterface *header);
+    /// Visual x of \a logicalIndex while a horizontal renderer draws it away from
+    /// its committed position; false when every renderer is on the committed
+    /// geometry (or has no visual state for that section).
+    bool columnVisualX(int logicalIndex, int *viewportX) const;
+    /// The renderer placed its sections: move the body's columns in the same frame.
+    void onHeaderVisualGeometryFrame();
+    /// Geometry-only refresh while the body follows a header animation: re-positions
+    /// the framework-managed column hosts / cells, without running an adapter hook,
+    /// creating or recycling widgets (only x changes).
+    void updateVisualColumnGeometry();
     /// Lifts the body lines above the (re)materialized items.
     void raisePaneSeparatorLines();
     /// Column hosts of a row widget (direct children plus the clip host's).
@@ -436,7 +465,10 @@ private:
     /// frozen rows the cells are clipped in both directions, so the container is an
     /// intersection of a row pane and a column pane (§31).
     static quint64 cellClipKey(ItemPane::Type rowPane, int columnPaneIndex);
-    void applyColumnLayout(const MaterializedItem &item);
+    /// Places the framework-managed column hosts of \a item and then hands the row
+    /// to the adapter hook. \a notifyAdapter is false for the geometry-only refresh
+    /// that follows a header animation frame (see updateVisualColumnGeometry()).
+    void applyColumnLayout(const MaterializedItem &item, bool notifyAdapter = true);
     /// Layout context of one row. \a rowIndex is the row being laid out; it is
     /// what makes the span decisions of that row available to the adapter
     /// (§43 "spans"). Without a row index the span context stays empty.
@@ -492,6 +524,10 @@ private:
     PaneSeparatorStyle m_paneSeparatorStyle;
     bool m_headerAnimationEnabled = true;
     int m_headerAnimationDuration = 300;
+    /// Body follows the header's visual section geometry (§23/§24).
+    bool m_columnFollowsHeaderVisual = true;
+    /// Re-entrancy guard: a visual frame must not start another one.
+    bool m_visualGeometryFrameActive = false;
     // The clip containers of a row widget are its children, tagged with their pane
     // index (see PaneClipHost): a recycled row widget can never leave a stale
     // pointer behind.

@@ -9,6 +9,18 @@
 // 运行：
 //   table_custom_header --exit-after 2000            # 无人值守
 //   table_custom_header --widget-header --sections 200
+//   table_custom_header --widget-header --move-demo shot.png        # 换序过渡 + 途中截图
+//   table_custom_header --widget-header --drag-demo shot.png        # 拖动预览（Esc 取消）+ 截图
+//   table_custom_header --widget-header --drag-commit-demo shot.png # 拖动并松手提交 + 途中截图
+//
+// 表头动画（§23/§24）只有 Widget 表头支持，而且"整列一起动"是**库能力**：
+// setColumnFollowsHeaderVisual()（默认开）让 body 的列控件跟着表头 section 的视觉位置走 ——
+// 拖动期间整列跟着指针走、邻居平滑让位，松手提交后一起从预览位置收敛；committed 几何始终是
+// 唯一事实来源（columnGeometry()、命中测试、滚动条都不受动画影响）。工具条上的复选框切换它，
+// `--no-body-animation` 是无人值守的对照。
+//   * 关掉它 = 以前的样子：表头在飞，body 在提交时一次到位。
+// 演示里 `--move-demo` / `--drag-commit-demo` 的截图时刻是固定延时（按默认 60 列调过）；
+// 宽表首屏可能花几百毫秒，想让截图落在过渡中途，把 `--animation` 调大一些即可。
 
 #include <virtualitemviews/virtualheaderview.h>
 #include <virtualitemviews/virtualtableview.h>
@@ -29,7 +41,6 @@
 #include <QStatusBar>
 #include <QTimer>
 #include <QToolBar>
-
 #include <cstdio>
 
 namespace {
@@ -244,6 +255,13 @@ int main(int argc, char **argv)
     QCommandLineOption dragDemoOption(QStringLiteral("drag-demo"),
                                       QStringLiteral("无人值守拖动演示：合成一次拖动并在途中截图"),
                                       QStringLiteral("path"));
+    QCommandLineOption dragCommitDemoOption(
+        QStringLiteral("drag-commit-demo"),
+        QStringLiteral("无人值守拖动演示：合成一次拖动并松手提交，在过渡途中截图"),
+        QStringLiteral("path"));
+    QCommandLineOption noBodyAnimationOption(
+        QStringLiteral("no-body-animation"),
+        QStringLiteral("关掉库的“整列一起动”（对照：body 像以前一样在提交时一次到位）"));
     QCommandLineOption animationOption(QStringLiteral("animation"),
                                        QStringLiteral("section 移动动画时长（ms，0 = 关闭）"),
                                        QStringLiteral("ms"), QStringLiteral("300"));
@@ -254,6 +272,8 @@ int main(int argc, char **argv)
     parser.addOption(exitOption);
     parser.addOption(moveDemoOption);
     parser.addOption(dragDemoOption);
+    parser.addOption(dragCommitDemoOption);
+    parser.addOption(noBodyAnimationOption);
     parser.addOption(animationOption);
     parser.process(app);
 
@@ -276,6 +296,9 @@ int main(int argc, char **argv)
     window.setWindowTitle(QStringLiteral("VirtualItemViews · custom header"));
     window.resize(1000, 600);
 
+    // 库能力："整列一起动"——拖动与换序过渡期间，body 的整列跟着表头的 section 走。
+    view->setColumnFollowsHeaderVisual(!parser.isSet(noBodyAnimationOption));
+
     const auto useWidgetHeader = [view, &headerAdapter, &model](bool widget) {
         if (widget) {
             auto *header = new viv::VirtualHeaderView(Qt::Horizontal);
@@ -292,6 +315,14 @@ int main(int argc, char **argv)
     auto *toolbar = window.addToolBar(QStringLiteral("表头"));
     auto *widgetHeader = new QCheckBox(QStringLiteral("Widget 表头"), &window);
     toolbar->addWidget(widgetHeader);
+    auto *bodyCheck = new QCheckBox(QStringLiteral("整列一起动"), &window);
+    bodyCheck->setChecked(view->columnFollowsHeaderVisual());
+    bodyCheck->setToolTip(QStringLiteral(
+        "库能力 setColumnFollowsHeaderVisual()：拖动时整列跟着表头的 section 一起走，\n"
+        "松手提交后也从预览位置收敛；关掉它就是以前的样子（body 提交时一次到位）"));
+    toolbar->addWidget(bodyCheck);
+    QObject::connect(bodyCheck, &QCheckBox::toggled, view,
+                     &viv::VirtualTableView::setColumnFollowsHeaderVisual);
     toolbar->addWidget(new QLabel(QStringLiteral("  冻结: "), &window));
     auto *frozen = new QCheckBox(QStringLiteral("前 2 列"), &window);
     toolbar->addWidget(frozen);
@@ -350,13 +381,62 @@ int main(int argc, char **argv)
 
     const QString moveDemoPath = parser.value(moveDemoOption);
     const QString dragDemoPath = parser.value(dragDemoOption);
+    const QString dragCommitDemoPath = parser.value(dragCommitDemoOption);
     const int exitAfter = parser.value(exitOption).toInt();
+
+    // 无人值守截图 + 报告：把"整列一起动"这一帧的状态打出来 —— 第 0..4 列的 committed x、
+    // 第一行里这些列的 ColumnHost x、以及表头 section 的 x。跟帧时 body 与 header 两行相等。
+    const auto reportShot = [&](const QString &path, const char *kind) {
+        const QPixmap shot = window.grab();
+        const bool saved = shot.save(path);
+        QStringList committedX;
+        QStringList bodyX;   // 第 0..4 列 host 的 x（viewport 坐标）
+        QStringList headerX; // 第 0..4 列 section 控件的 x（换算到 viewport 坐标）
+        for (int column = 0; column <= 4; ++column)
+            committedX << QString::number(view->columnGeometry(column).viewportX);
+        const QList<viv::MaterializedItem> rows = view->materializedItems();
+        if (!rows.isEmpty()) {
+            QHash<int, int> byColumn;
+            for (viv::ColumnHost *host : rows.first().widget->findChildren<viv::ColumnHost *>()) {
+                const int x = host->mapTo(rows.first().widget, QPoint(0, 0)).x();
+                byColumn.insert(host->logicalColumn(), x);
+            }
+            for (int column = 0; column <= 4; ++column)
+                bodyX << QString::number(byColumn.value(column, -999));
+        }
+        // 主表头画滚动 pane，冻结 pane 由克隆的渲染器画（§43）：两边的 section 都要看，
+        // 否则冻结列会误报成"没有 section"。
+        // viewport 坐标：section 的局部 x 加上"表头控件到 viewport"的偏移，用 global 换算最稳。
+        const QPoint viewportOrigin = view->viewport()->mapToGlobal(QPoint(0, 0));
+        QHash<int, int> sectionXByColumn;
+        for (viv::VirtualHeaderView *renderer : view->findChildren<viv::VirtualHeaderView *>()) {
+            for (int column : renderer->materializedSections()) {
+                if (sectionXByColumn.contains(column))
+                    continue;
+                QWidget *section = renderer->sectionWidget(column);
+                if (section)
+                    sectionXByColumn.insert(
+                        column, section->mapToGlobal(QPoint(0, 0)).x() - viewportOrigin.x());
+            }
+        }
+        for (int column = 0; column <= 4; ++column)
+            headerX << QString::number(sectionXByColumn.value(column, -999));
+        std::printf("table_custom_header: %s %s (%dx%d)%s bodyFollowsHeader=%d "
+                    "committed0-4=[%s] body0-4=[%s] header0-4=[%s]\n",
+                    kind, qPrintable(path), shot.width(), shot.height(), saved ? "" : " FAILED",
+                    int(view->columnFollowsHeaderVisual()),
+                    qUtf8Printable(committedX.join(QLatin1Char(','))),
+                    qUtf8Printable(bodyX.join(QLatin1Char(','))),
+                    qUtf8Printable(headerX.join(QLatin1Char(','))));
+        std::fflush(stdout);
+    };
+
     if (!dragDemoPath.isEmpty()) {
         // §22/§23 的拖动：按下 → 越过阈值后只动"视觉几何"（被拖的列跟随光标、邻居让出插入位），
         // committed 几何在松手前一个字节都不动。这里在拖动途中截图，然后按 Esc 取消。
         if (!widgetHeader->isChecked())
             widgetHeader->setChecked(true);
-        QTimer::singleShot(0, &window, [view, &window, dragDemoPath]() {
+        QTimer::singleShot(0, &window, [view, &window, reportShot, dragDemoPath]() {
             QWidget *header = view->horizontalHeader()->headerWidget();
             const int rowY = qMax(2, header->height() / 2);
             const int pressX = view->columnGeometry(1).viewportX + view->columnWidth(1) / 2;
@@ -366,21 +446,36 @@ int main(int argc, char **argv)
             sendMouse(header, QEvent::MouseMove, QPoint(moveX, rowY), Qt::NoButton, Qt::LeftButton);
             QApplication::processEvents();
 
-            const QPixmap shot = window.grab();
-            const bool saved = shot.save(dragDemoPath);
-            std::printf("table_custom_header: drag-demo %s (%dx%d)%s committedOrder0=%d "
-                        "committedOrder4=%d\n",
-                        qPrintable(dragDemoPath), shot.width(), shot.height(),
-                        saved ? "" : " FAILED", view->columnGeometry(0).viewportX,
-                        view->columnGeometry(4).viewportX);
-            std::fflush(stdout);
+            reportShot(dragDemoPath, "drag-demo");
 
             QKeyEvent escape(QEvent::KeyPress, Qt::Key_Escape, Qt::NoModifier);
             QApplication::sendEvent(header, &escape);
             QCoreApplication::quit();
         });
+    } else if (!dragCommitDemoPath.isEmpty()) {
+        // 拖动并**提交**（松手）：表头与 body 的整列一起从预览位置收敛到 committed —— 与
+        // "移动一列"按钮走的是同一条提交路径，区别只是这次 committed 几何是拖动松手改的。
+        if (!widgetHeader->isChecked())
+            widgetHeader->setChecked(true);
+        view->setHeaderAnimationDuration(1200);
+        QTimer::singleShot(0, &window, [view, &window]() {
+            QWidget *header = view->horizontalHeader()->headerWidget();
+            const int rowY = qMax(2, header->height() / 2);
+            const int pressX = view->columnGeometry(1).viewportX + view->columnWidth(1) / 2;
+            const int moveX = view->columnGeometry(4).viewportX + view->columnWidth(4) / 2;
+            sendMouse(header, QEvent::MouseButtonPress, QPoint(pressX, rowY), Qt::LeftButton,
+                      Qt::LeftButton);
+            sendMouse(header, QEvent::MouseMove, QPoint(moveX, rowY), Qt::NoButton, Qt::LeftButton);
+            sendMouse(header, QEvent::MouseButtonRelease, QPoint(moveX, rowY), Qt::LeftButton,
+                      Qt::NoButton);
+        });
+        QTimer::singleShot(300, &app, [reportShot, dragCommitDemoPath]() {
+            reportShot(dragCommitDemoPath, "drag-commit-demo");
+            QCoreApplication::quit();
+        });
     } else if (!moveDemoPath.isEmpty()) {
-        // 慢速动画 + 途中截图：能直接看到 section 在飞、而 body 已经在终点位置。
+        // 慢速动画 + 途中截图：能直接看到 section 与整列一起在飞（"整列一起动"关掉时只有 section）。
+        // 截图时刻是固定延时，按默认 60 列调过；宽表首屏更慢，需要把 --animation 调大。
         if (!widgetHeader->isChecked())
             widgetHeader->setChecked(true); // 只有 widget 表头能做视觉过渡
         view->setHeaderAnimationDuration(1200);
@@ -388,15 +483,8 @@ int main(int argc, char **argv)
             view->moveColumn(1, qMin(columnCount - 1, 4),
                              viv::VirtualTableView::MoveAnimation::Animate);
         });
-        QTimer::singleShot(500, &app, [&window, view, moveDemoPath]() {
-            const QPixmap shot = window.grab();
-            const bool saved = shot.save(moveDemoPath);
-            std::printf("table_custom_header: move-demo %s (%dx%d)%s committedX1=%d "
-                        "committedX4=%d\n",
-                        qPrintable(moveDemoPath), shot.width(), shot.height(),
-                        saved ? "" : " FAILED", view->columnGeometry(1).viewportX,
-                        view->columnGeometry(4).viewportX);
-            std::fflush(stdout);
+        QTimer::singleShot(500, &app, [reportShot, moveDemoPath]() {
+            reportShot(moveDemoPath, "move-demo");
             QCoreApplication::quit();
         });
     } else if (exitAfter > 0) {

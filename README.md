@@ -390,8 +390,10 @@ header->setSortInteractionEnabled(true);
 header->setSectionOverscan(1);
 table->setHorizontalHeader(header);      // 表格接管所有权；传 nullptr 回到默认 native 表头
 
-// 换序动画：只有"换序"需要过渡（提交后 body 立刻到位，表头滑过去）
+// 换序动画：只有"换序"需要过渡（提交后 body 的几何立刻到位，表头滑过去；
+// 拖动/过渡期间整列跟着 section 一起走，只跟 x，committed 几何始终权威）
 table->setHeaderAnimationDuration(300);  // 0 = 关闭
+table->setColumnFollowsHeaderVisual(true);  // 默认开；false = body 在提交时一次到位
 table->moveColumn(2, 0, viv::VirtualTableView::MoveAnimation::Animate);
 // 程序化换序默认即时（MoveAnimation::Immediate）；resize 与滚动保持逐帧同步，不做动画
 ```

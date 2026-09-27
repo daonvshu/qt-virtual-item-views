@@ -632,6 +632,7 @@ void VirtualHeaderView::positionSections()
         return;
     if (m_dragging) {
         positionDraggedSections();
+        notifyVisualGeometry();
         return;
     }
     for (auto it = m_sectionWidgets.constBegin(); it != m_sectionWidgets.constEnd(); ++it) {
@@ -657,6 +658,49 @@ void VirtualHeaderView::positionSections()
         widget->setGeometry(visual, 0, width, height());
         widget->show();
     }
+    notifyVisualGeometry();
+}
+
+bool VirtualHeaderView::hasVisualSectionGeometry() const
+{
+    // The two gestures/transitions that move a section away from the committed
+    // geometry: the drag preview (dragged section + the sections making room for
+    // it) and the transition that settles a moved section (§22/§23).
+    return m_dragging || m_slideProgress < 1.0 || m_previewProgress < 1.0;
+}
+
+bool VirtualHeaderView::sectionVisualX(int logicalIndex, int *viewportX) const
+{
+    if (!viewportX || !hasVisualSectionGeometry())
+        return false;
+    const QWidget *widget = m_sectionWidgets.value(logicalIndex, nullptr);
+    if (!widget || !widget->isVisible())
+        return false;
+    // The widget's x is relative to this renderer, the answer is a viewport
+    // coordinate: the difference is where this widget sits inside the viewport
+    // (a pane renderer is placed on its pane rect, not on the viewport origin).
+    const int ownOffset = m_viewportOriginSet ? x() - m_viewportOrigin.x() : 0;
+    *viewportX = widget->x() + ownOffset;
+    return true;
+}
+
+void VirtualHeaderView::setVisualGeometryCallback(std::function<void()> callback)
+{
+    m_visualGeometryCallback = std::move(callback);
+    // A fresh listener has seen nothing yet, so the next placement is always
+    // reported - even the one that settles onto the committed geometry.
+    m_visualGeometryNotified = false;
+}
+
+void VirtualHeaderView::notifyVisualGeometry()
+{
+    if (!m_visualGeometryCallback)
+        return;
+    const bool active = hasVisualSectionGeometry();
+    if (!active && !m_visualGeometryNotified)
+        return; // idle to idle: the sections did not move
+    m_visualGeometryNotified = active;
+    m_visualGeometryCallback();
 }
 
 int VirtualHeaderView::dragTargetIndex() const

@@ -111,6 +111,13 @@ Table 新增的只有：行/列两级几何、`HeaderGeometry`、二维可见区
   列宽、顺序、隐藏、排序仍然只存在 `HeaderGeometry` 里。冻结 pane 的表头是
   `NativeHeaderView` 的另一个实例 + `setPaneFilter()`（只显示本 pane 的 section，冻结 pane
   忽略 offset），因此冻结表头同样没有独立列宽副本，拖动列宽会经 geometry 同时影响三个 pane。
+* **pane 表头按自己那组列打包**：冻结列是**集合**，不保证落在视觉序的最前面 —— 先把冻结列拖到
+  别的列后面、或者先把几列拖到最前再冻结它们（用户实际这么用），pane 的列就会散落在 committed
+  视觉序里。所以每个 pane 的表头都按**自己那份列清单**（committed 视觉序过滤后）从自己的左边缘
+  打包，并且只物化自己 pane 的 section；主表头（滚动 pane）也一样，它带的 offset 就是自己滚动组
+  的偏移。判据是"flat committed x 只在冻结列正好排在视觉序最前时才等于 pane 自己的打包"：
+  一旦不相等，section 会落到别的列的槽位上，物化窗口也会按 flat x 算错 —— 表现就是表头里整列
+  "消失"，随便再拖一下（触发一次重排）才回来。
   **pane 交界的分割线**：`QHeaderView` 只在 section **之间**画分隔线、不在控件边缘画，
   所以冻结 pane 表头用 `setPaneSeparatorEdge()` 在朝向滚动区的一侧（左 pane 画右边、
   右 pane 画左边）自己补 1px 分隔线，否则冻结/滚动交界处会少一条线。
@@ -160,7 +167,8 @@ table->setHorizontalHeader(header);     // 传给 nullptr 回到 native 表头
   adapter 都要比表头活得久；几何与标签模型是 `QPointer` 观察的，业务先删它们不会造成悬空解引用
   （表头会当作"没有几何 / 没有模型"处理），但 adapter 不是 QObject，删早了就是未定义行为。
 * **交互**：离 section 边缘 ±3 px 按住拖动 = 改列宽（§21/§25）；按住 section 拖过拖动距离阈值 =
-  重排（§22，拖动期间只有视觉预览，松手才提交一次，详见 [header-animation.md](header-animation.md)）；
+  重排（§22，拖动期间只有视觉预览 —— 整列跟着 section 一起走，松手才提交一次，详见
+  [header-animation.md](header-animation.md)）；
   单击 = 排序（§33）；子控件获得焦点或打开 popup 的 section 会被 pin，不回收（§36）。
 * **命中与光标（§25）**：section 是真控件、铺满整个表头，所以鼠标事件大多落在它们（以及业务塞进去
   的子控件）身上，而不是表头本身。渲染器在绑定 section 时对整棵子树打开鼠标跟踪并安装事件过滤器，
@@ -171,7 +179,8 @@ table->setHorizontalHeader(header);     // 传给 nullptr 回到 native 表头
   光标换算。
 * **冻结列**：`setPaneFilter(columns, frozen)` 让同一个类也能当冻结 pane 的表头
   （只 materialize 本 pane 的 section），表格会自动用同类渲染器创建 pane 表头（§31）。
-* 表头动画（§23/§24）：已按"committed vs visual 两层几何 + 按需过渡"实现，见
+* 表头动画（§23/§24）：已按"committed vs visual 两层几何 + 按需过渡"实现，并且拖动/过渡期间
+  **整列跟着 section 一起走**（`setColumnFollowsHeaderVisual()`，只跟 x），见
   [header-animation.md](header-animation.md)。
 * **滚动范围不变**：可滚动内容减少的宽度正好等于冻结宽度，`maximumHorizontalOffset()` 仍是
   `总可见宽度 - 视口宽度`。冻结不会凭空制造滚动空间，也不会让某些列永远滚不到。

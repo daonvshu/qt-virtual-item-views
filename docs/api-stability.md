@@ -54,7 +54,7 @@
 | `widgetadapter.h` | A | 冻结。4 个虚函数是最小契约 |
 | `tablewidgetadapter.h` | A | 冻结。`TableWidgetAdapter`/`CellWidgetAdapter`/`ColumnHost`/`TableRowLayoutContext`/`TableSpanContext`；`layoutRowWidget()` 有默认空实现（可选项，不是"接受但忽略"） |
 | `headergeometry.h` | A | 冻结。列宽/顺序/隐藏/排序/偏移的唯一事实来源 + `saveState()/restoreState()` |
-| `nativeheaderview.h` | A（`HeaderViewInterface` 为 B） | 冻结。`HeaderViewInterface` 里带默认实现的可选钩子（`setPaneFilter()`/`setPaneOffset()`/动画三件套）**允许被渲染器忽略**，这是刻意的渲染器能力约定，已在文档写明；`fullSyncCount()` 是 C 层诊断 |
+| `nativeheaderview.h` | A（`HeaderViewInterface` 为 B） | 冻结。`HeaderViewInterface` 里带默认实现的可选钩子（`setPaneFilter()`/`setPaneOffset()`/动画三件套/视觉几何三件套 `sectionVisualX()`、`hasVisualSectionGeometry()`、`setVisualGeometryCallback()`）**允许被渲染器忽略**，这是刻意的渲染器能力约定，已在文档写明；`fullSyncCount()` 是 C 层诊断 |
 | `virtualheaderview.h` | B | 冻结。section 动画与拖动重排的视觉几何是公开契约（[header-animation.md](header-animation.md)）；`paneCacheRebuildCount()` / `materializationVisits()` 是 C 层诊断 |
 | `headerwidgetadapter.h` | B | 冻结。`sectionType()` / `createSection()` / `bindSection()` / `unbindSection()` 是 4 个核心虚函数；`setLabelModel()` / `setGeometryModel()` 是带默认实现的**可选协作者钩子**（第三、第四轮审查加的，默认什么都不做），属于规则 1 说的"加法" |
 | `accessibility.h` | A（节点类为 C） | `installAccessibilityFactory()`/`removeAccessibilityFactory()` 冻结；`AccessibleVirtualItem`/`AccessibleVirtualItemView` 是实现细节（C 层），只通过 Qt 的 `QAccessibleInterface` 暴露 |

@@ -12,6 +12,7 @@
 #include <QVector>
 #include <QWidget>
 
+#include <functional>
 #include <limits>
 
 class QAbstractItemModel;
@@ -100,6 +101,13 @@ public:
     /// Origin of the viewport inside the view; the table sets it so section x
     /// positions can be derived from HeaderGeometry (viewport coordinates).
     void setViewportOrigin(const QPoint &origin) override;
+    /// Visual section geometry (§23/§24): the x a section is *drawn* at while a
+    /// drag preview or a transition is running, in viewport coordinates. False
+    /// when the renderer is idle or the section owns no widget, so the caller
+    /// falls back to the committed geometry - see the base class.
+    bool sectionVisualX(int logicalIndex, int *viewportX) const override;
+    bool hasVisualSectionGeometry() const override;
+    void setVisualGeometryCallback(std::function<void()> callback) override;
 
     // -- adapter / diagnostics ----------------------------------------------
     void setAdapter(HeaderWidgetAdapter *adapter, bool takeOwnership = false);
@@ -163,6 +171,10 @@ private:
     /// Places every materialized section, honouring the visual geometry (§23 while
     /// an animation runs, the committed geometry otherwise).
     void positionSections();
+    /// Reports the placement above to the installed visual geometry callback: every
+    /// frame that differs from the committed geometry, and once more on the frame
+    /// that settles back onto it (an idle renderer says nothing).
+    void notifyVisualGeometry();
     /// Places the sections while a drag preview is active: the dragged section
     /// follows the pointer, the others open / close the gap - all of it visual
     /// geometry, the committed order is not touched before the release (§22/§23).
@@ -265,6 +277,11 @@ private:
     QVariantAnimation *m_previewAnimation = nullptr;
     /// Insertion slot the running tween belongs to (-1 = none).
     int m_previewSlot = -1;
+    /// Told about every visual placement frame (§23/§24); see the base class.
+    std::function<void()> m_visualGeometryCallback;
+    /// Whether the callback was last told "visual geometry is on screen"; lets the
+    /// settling frame be reported without a report on every idle relayout.
+    bool m_visualGeometryNotified = false;
     int m_overscan = 1;
     bool m_sortInteractionEnabled = false;
 

@@ -6,6 +6,8 @@
 #include <QHeaderView>
 #include <QPointer>
 
+#include <functional>
+
 class QAbstractItemModel;
 
 namespace viv {
@@ -90,6 +92,44 @@ public:
     /// gesture itself - the widget header's drag - sets it after its single commit.
     /// The flag is one-shot: the renderer consumes it with the next relayout.
     virtual void setSectionMoveAnimated(bool animated) { Q_UNUSED(animated); }
+
+    // -- visual section geometry (§23/§24) ------------------------------------
+    /// Where a section is *drawn* while the renderer is showing a position other
+    /// than the committed one: the dragged section of a preview, or a section
+    /// sliding to the order that was just committed.
+    ///
+    /// HeaderGeometry stays the single source of truth - the body, the scroll bar,
+    /// hit testing and every query read it and only it - so a renderer that moves
+    /// its own sections has to be able to *report* the visual position. That is
+    /// what these three hooks are for, and they are what lets a view put the body's
+    /// column widgets on the same frame instead of jumping at the commit
+    /// (VirtualTableView::setColumnFollowsHeaderVisual()).
+    ///
+    /// Fills \a viewportX with the x the section is drawn at, in viewport
+    /// coordinates (the space of ColumnGeometry::viewportX), and returns true.
+    /// Returns false - "ask the committed geometry" - for a section that is hidden,
+    /// not materialized, or when the renderer has no visual state at all (idle, or
+    /// a renderer whose placement belongs to Qt, like the native adapter).
+    virtual bool sectionVisualX(int logicalIndex, int *viewportX) const
+    {
+        Q_UNUSED(logicalIndex);
+        Q_UNUSED(viewportX);
+        return false;
+    }
+    /// True while this renderer draws at least one section away from its committed
+    /// position (a drag preview or a running transition). A view only mirrors the
+    /// sections while this is true, so an idle header costs nothing.
+    virtual bool hasVisualSectionGeometry() const { return false; }
+    /// Installs the callback the renderer invokes every time it places its sections
+    /// on a visual position - every animation frame, plus the frame that settles
+    /// back onto the committed geometry. It runs while the layout is still being
+    /// applied, so a listener that moves widgets does not flicker.
+    ///
+    /// Pass an empty function to detach. Renderers without visual state ignore it.
+    virtual void setVisualGeometryCallback(std::function<void()> callback)
+    {
+        Q_UNUSED(callback);
+    }
 };
 
 /// QHeaderView driven by HeaderGeometry.

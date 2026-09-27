@@ -267,6 +267,7 @@ void VirtualTableView::setHorizontalHeader(HeaderViewInterface *header)
     }
     m_horizontalHeader->setGeometryModel(m_columns);
     m_horizontalHeader->setLabelModel(model());
+    watchHeaderVisualGeometry(m_horizontalHeader);
     // The header is part of the view, so the pane rects and the viewport origin mean
     // the same thing for it as for the body. A renderer created by the application
     // is usually parentless - a top level window - and would then be placed in
@@ -860,6 +861,71 @@ void VirtualTableView::requestSectionMoveAnimation(bool animated)
     }
 }
 
+void VirtualTableView::setColumnFollowsHeaderVisual(bool follows)
+{
+    if (m_columnFollowsHeaderVisual == follows)
+        return;
+    m_columnFollowsHeaderVisual = follows;
+    // Turning it off has to put the body back on the committed geometry *now*: a
+    // running header animation sends frames that are simply ignored, so nothing
+    // else would ever correct the column hosts left on an intermediate position.
+    if (!follows)
+        updateColumnLayout();
+}
+
+void VirtualTableView::watchHeaderVisualGeometry(HeaderViewInterface *header)
+{
+    if (!header)
+        return;
+    // A renderer without visual state (the native adapter) ignores the callback, so
+    // this is one line on every header and nothing happens until a widget header
+    // actually moves its sections. The renderer is a child of this view and dies
+    // with it, so capturing `this` cannot outlive the view.
+    header->setVisualGeometryCallback([this]() { onHeaderVisualGeometryFrame(); });
+}
+
+bool VirtualTableView::columnVisualX(int logicalIndex, int *viewportX) const
+{
+    if (!m_columnFollowsHeaderVisual)
+        return false;
+    // The installed header renders the primary pane, the derived renderers the
+    // frozen / extra scroll panes (§43). A column belongs to exactly one of them, so
+    // the first renderer that has a visual state for it decides.
+    if (m_horizontalHeader && m_horizontalHeader->hasVisualSectionGeometry()
+        && m_horizontalHeader->sectionVisualX(logicalIndex, viewportX))
+        return true;
+    for (HeaderViewInterface *header : m_paneHeaders) {
+        if (header && header->hasVisualSectionGeometry()
+            && header->sectionVisualX(logicalIndex, viewportX))
+            return true;
+    }
+    return false;
+}
+
+void VirtualTableView::onHeaderVisualGeometryFrame()
+{
+    if (!m_columnFollowsHeaderVisual || m_visualGeometryFrameActive)
+        return;
+    m_visualGeometryFrameActive = true;
+    updateVisualColumnGeometry();
+    m_visualGeometryFrameActive = false;
+}
+
+void VirtualTableView::updateVisualColumnGeometry()
+{
+    // Deliberately *not* updateColumnLayout(): the committed geometry did not
+    // change and the headings already exist, so only x has to be corrected. An
+    // application's layoutRowWidget() is a per-change hook, not a per-frame one, so
+    // it is not re-run here (the framework-managed column hosts are moved directly).
+    if (m_materializationMode == MaterializationMode::CellWidgets) {
+        updateCellGeometry();
+        return;
+    }
+    const QList<MaterializedItem> items = materializedItems();
+    for (const MaterializedItem &item : items)
+        applyColumnLayout(item, false);
+}
+
 void VirtualTableView::updatePaneLayout()
 {
     const bool changed = m_panes.update(viewport()->width(), viewport()->height());
@@ -943,6 +1009,9 @@ void VirtualTableView::syncHeaderPanes()
             header->setGeometryModel(m_columns);
             header->setLabelModel(model());
             header->setSortInteractionEnabled(m_sortingEnabled);
+            // A drag inside a frozen pane previews on *that* renderer, so the body
+            // has to follow its sections just like the primary header's.
+            watchHeaderVisualGeometry(header);
         }
         // A frozen pane is pinned (offset 0); a scrolling pane of a group other
         // than the primary one follows its own group offset (§43 "advanced
@@ -953,10 +1022,22 @@ void VirtualTableView::syncHeaderPanes()
     }
     if (!m_horizontalHeader)
         return;
-    if (primaryIndex >= 0 && anyOtherPane)
+    if (primaryIndex >= 0 && anyOtherPane) {
         m_horizontalHeader->setPaneFilter(panes.at(primaryIndex).logicalColumns, false);
-    else
+        // ... and it packs its own columns too, exactly like the pane clones above. A
+        // pane's columns are not necessarily a contiguous slice of the committed order
+        // (a frozen column set is a set, so it can sit behind scrollable columns), and
+        // only the "own packing" path derives the x and the materialization window from
+        // the pane's own column list. Without this the primary header reads the flat
+        // committed x: a section then lands on the slot of another column and whole
+        // columns stop being materialized at all.
+        m_horizontalHeader->setPaneOffset(
+            panes.at(primaryIndex).isFrozen()
+                ? 0
+                : m_panes.groupOffset(panes.at(primaryIndex).scrollGroup));
+    } else {
         m_horizontalHeader->clearPaneFilter();
+    }
     applyHeaderAnimationSettings();
 }
 
@@ -2099,7 +2180,12 @@ void VirtualTableView::updateCellGeometry()
             continue;
         }
         // Span aware: an anchor cell widget covers its whole merged area.
-        const QRect rect = cellRect(index);
+        QRect rect = cellRect(index);
+        // ... and follows its column while the header draws it away from the
+        // committed position (§23/§24), like the row widget mode hosts do.
+        int visualX = 0;
+        if (columnVisualX(index.column(), &visualX))
+            rect.translate(visualX - m_columns->columnGeometry(index.column()).viewportX, 0);
         const int paneIndex = m_panes.paneIndexOfColumn(index.column());
         const ItemPane::Type rowPane = itemPaneForRow(viewItemForIndex(index));
         const bool frozen = m_panes.isFrozenColumn(index.column());
@@ -2361,7 +2447,7 @@ void VirtualTableView::dropStaleRowPaneClipHosts(QWidget *rowWidget, const QSet<
     }
 }
 
-void VirtualTableView::applyColumnLayout(const MaterializedItem &item)
+void VirtualTableView::applyColumnLayout(const MaterializedItem &item, bool notifyAdapter)
 {
     if (!item.widget)
         return;
@@ -2427,10 +2513,20 @@ void VirtualTableView::applyColumnLayout(const MaterializedItem &item)
             if (host->parentWidget() != parent)
                 host->setParent(parent);
 
-            QRect hostRect(context.columnX(geometry.logicalIndex), 0, geometry.width,
-                           context.viewportRect().height());
+            // The header may be drawing this column away from its committed position
+            // (§23/§24: a drag preview, or a transition settling a move). Only x is
+            // taken from the renderer - width, pane, span and clipping keep coming
+            // from the committed geometry, which stays authoritative.
+            const int committedX = context.columnX(geometry.logicalIndex);
+            int columnX = committedX;
+            int visualX = 0;
+            if (columnVisualX(geometry.logicalIndex, &visualX))
+                columnX = visualX - context.viewportRect().x();
+            QRect hostRect(columnX, 0, geometry.width, context.viewportRect().height());
             if (context.spans().spanOf(logicalColumn).isMerged()) {
-                const QRect merged = context.spans().rect(logicalColumn);
+                // A merged area follows the column that owns it (§43).
+                const QRect merged
+                    = context.spans().rect(logicalColumn).translated(columnX - committedX, 0);
                 if (!merged.isEmpty())
                     hostRect = merged;
             }
@@ -2450,7 +2546,7 @@ void VirtualTableView::applyColumnLayout(const MaterializedItem &item)
         }
     }
 
-    if (m_tableAdapter)
+    if (notifyAdapter && m_tableAdapter)
         m_tableAdapter->layoutRowWidget(item.widget, QModelIndex(item.index), context);
 }
 
