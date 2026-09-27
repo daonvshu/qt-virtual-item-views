@@ -44,7 +44,9 @@ NativeHeaderView          VirtualHeaderView
   `visible columns + overscan + pinned`，不随总列数线性增长。
 * **表格默认装的是 Widget 表头**：`LabelHeaderView`（`VirtualHeaderView` + 库里自带的
   `LabelHeaderAdapter`，每个 section 一个只画 label 的控件，用当前样式把 section/排序箭头画成
-  原生样子）。所以拖动换序、section 过渡、"整列一起动"、pane 克隆在默认配置下就有；
+  原生样子）。所以 section 过渡、"整列一起动"、pane 克隆在默认配置下就有，而**拖动换序是
+  选项**（1.0 起默认关闭）：列方向 `setColumnDragEnabled(true)`，行方向
+  `setVerticalHeaderDragEnabled(true)`（见 §6/§8）；
   `setHorizontalHeader(nullptr)` 回到它，`setHorizontalHeaderVisible(false)` 隐藏表头，
   `setHorizontalHeader(new NativeHeaderView(Qt::Horizontal))` 才是 QStyle 绘制的那个。
 * `VirtualTableView` 不关心 Header 用 painter 还是 QWidget 呈现。
@@ -94,16 +96,22 @@ Table 新增的只有：行/列两级几何、`HeaderGeometry`、二维可见区
   （v0.5 的 Widget Header 会解除这个上限）。
 * **拖动 = 显式行高**：拖动行号条分隔线写入 `setRowHeight()`；uniform 表会自动切换为
   variable（其余行保持原高度），`RowSizePolicy::ExplicitWins` 保证测量不会覆盖它。
-* **拖动换行序 = 请求模型**（1.0）：行号条拖动期间只有视觉预览（整行跟着行号走），松手后
-  渲染器发 `sectionMoveRequested(fromVisual, toVisual)`，表格转成
+* **拖动换行序 = 请求模型**（1.0，**默认关闭**：`setVerticalHeaderDragEnabled(true)`）：打开后
+  行号条拖动期间只有视觉预览（整行跟着行号走），松手后渲染器发
+  `sectionMoveRequested(fromVisual, toVisual)`，表格转成
   `VirtualTableView::rowMoveRequested()` 再调用
   `model()->moveRows(QModelIndex(), from, 1, QModelIndex(), destination)` —— 行序是模型的，
   行号条不自己改。**模型没实现 `moveRows()`**（`QAbstractTableModel` 的默认实现直接返回
   false）时这次移动会被拒绝：预览回弹、行序与所有 section 位置保持原样。所以"行号条能拖但
-  落不到新位置"通常不是表头的默认值问题，而是模型侧少了 `moveRows()`；示例里
-  `examples/table_stretch_columns` 的 `OrderModel` 与 `examples/table_custom_header` 的
-  `WideModel` 都实现了它（把视图行映射到稳定的数据行，整行内容一起换位）。列的顺序正相反：
-  它属于 `HeaderGeometry`，拖动列松手就写进几何，不需要模型配合。
+  落不到新位置"通常不是表头的默认值问题，而是模型侧少了 `moveRows()`。库为此提供了
+  `ReorderableTableModel`（`rowCount`/`columnCount` + "视图行 → 数据行"的顺序记录 +
+  `moveRows()`），示例 `examples/table_stretch_columns` 的 `OrderModel` 与
+  `examples/table_custom_header` 的 `WideModel` 都直接继承它；不继承的话就自己实现
+  `moveRows()`，并像它们一样用稳定身份读数据（整行内容一起换位，而不是原地换号）。
+  **打开开关时视图若还没有模型**，`VirtualTableView` 会自己实例化一个
+  `ReorderableTableModel`（视图持有，0 行 0 列），这样手势至少是可用的；应用自己的模型
+  ——无论先给还是后给——永远优先，那时不再实例化。列的顺序正相反：它属于 `HeaderGeometry`，
+  拖动列松手就写进几何，不需要模型配合（只需要 `setColumnDragEnabled(true)`）。
 * **单 section 应用**：`sectionResized` / `sectionVisibilityChanged` 只更新对应 section
   （O(1)），因此滚动与拖动列/行分隔线都不会退化成 O(总列数/总行数)。
 * **表头顺序同步**：列顺序的每次变化（`moveColumn()`、模型 `columnsMoved`、`restoreHeaderState()`、
@@ -188,9 +196,11 @@ section 显什么"而不用写 section 控件。
   表头不保存任何列状态；拖动分隔线、拖动 section 重排、点击排序都是把结果写回 geometry。
 * **两个方向同一个渲染器**：`VirtualHeaderView` 按轴摆放 section（横向沿 x、纵向沿 y），
   `VirtualTableView` 的两个默认表头都是它 + 只画 label 的 adapter（列表头 `LabelHeaderView`、
-  行号条 `LabelHeaderView(Qt::Vertical)`），所以拖动换序、拖动改尺寸、section 过渡、整列/整行
-  跟帧与 pane 克隆在默认配置下都有。`setGeometryModel()` 仍然拒绝另一个方向的几何，表格侧也拒绝
-  方向不匹配的渲染器（`setHorizontalHeader()` / `setVerticalHeader()` 警告并保持原渲染器不变）。
+  行号条 `LabelHeaderView(Qt::Vertical)`），所以拖动改尺寸、section 过渡、整列/整行跟帧与 pane
+  克隆在默认配置下都有；**拖动换序要显式打开**（`setSectionDragEnabled(true)`，表格侧
+  `setColumnDragEnabled()` / `setVerticalHeaderDragEnabled()`）。`setGeometryModel()` 仍然拒绝
+  另一个方向的几何，表格侧也拒绝方向不匹配的渲染器（`setHorizontalHeader()` /
+  `setVerticalHeader()` 警告并保持原渲染器不变）。
 * **`bindSection()` 是唯一的"状态变了"钩子**：重命名一列（`headerDataChanged`）只会重绑被点名的
   logical 区间；列插入 / 删除 / 移动与 `modelReset` 会先把已物化 section 全部回收（在**旧身份**仍
   有效时 `unbindSection()`），随后整批重新 acquire + `bindSection()`；几何的排序指示器变化同样会
@@ -200,9 +210,10 @@ section 显什么"而不用写 section 控件。
   所有权（`HeaderWidgetAdapter` 可用 `takeOwnership` 交给渲染器，但默认不接管）。几何、标签模型与
   adapter 都要比表头活得久；几何与标签模型是 `QPointer` 观察的，业务先删它们不会造成悬空解引用
   （表头会当作"没有几何 / 没有模型"处理），但 adapter 不是 QObject，删早了就是未定义行为。
-* **交互**：离 section 边缘 ±3 px 按住拖动 = 改列宽（§21/§25）；按住 section 拖过拖动距离阈值 =
-  重排（§22，拖动期间只有视觉预览 —— 整列跟着 section 一起走，松手才提交一次，详见
-  [header-animation.md](header-animation.md)）；
+* **交互**：离 section 边缘 ±3 px 按住拖动 = 改列宽（§21/§25，默认就有）；按住 section 拖过
+  拖动距离阈值 = 重排（§22，**默认关闭**，`setSectionDragEnabled(true)` 或表格侧
+  `setColumnDragEnabled(true)` 打开；拖动期间只有视觉预览 —— 整列跟着 section 一起走，松手才
+  提交一次，详见 [header-animation.md](header-animation.md)）；
   单击 = 排序（§33）；子控件获得焦点或打开 popup 的 section 会被 pin，不回收（§36）。
 * **命中与光标（§25）**：section 是真控件、铺满整个表头，所以鼠标事件大多落在它们（以及业务塞进去
   的子控件）身上，而不是表头本身。渲染器在绑定 section 时对整棵子树打开鼠标跟踪并安装事件过滤器，

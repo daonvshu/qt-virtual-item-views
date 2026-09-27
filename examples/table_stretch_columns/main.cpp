@@ -16,6 +16,7 @@
 //   --exit-after <ms>    毫秒后退出
 
 #include <virtualitemviews/tablewidgetadapter.h>
+#include <virtualitemviews/reorderabletablemodel.h>
 #include <virtualitemviews/virtualtableview.h>
 
 #include <QAbstractTableModel>
@@ -41,12 +42,10 @@ constexpr int kPlainWidth = 120;     // 不参与分配的列的固定宽度
 
 /// 5 列的小表：第 0 列（行号）固定，其余 4 列按比例分剩余宽度。
 ///
-/// 行序由模型持有（`m_order`：视图行 → 数据行），因为行号条拖动是"请求模型移动"：
-/// 渲染器只发 `sectionMoveRequested`，表格转成 `rowMoveRequested()` 再调 `moveRows()`。
-/// `data()` / `headerData()` 都按数据行取值，所以拖动行号条以后整行内容（连同行号标识）
-/// 一起换位，一眼就能看出移动真的生效了——`QAbstractTableModel` 的默认 `moveRows()`
-/// 只返回 false，什么都不会发生（那样拖动就只是预览一下然后回弹）。
-class OrderModel : public QAbstractTableModel
+/// 行序交给 `viv::ReorderableTableModel` 记录（视图行 → 数据行的顺序表 + `moveRows()`）：
+/// 行号条拖动是"请求模型移动"，模型不记录就没法生效。`data()` / `headerData()` 都按
+/// `sourceRow()` 取值，所以拖动行号条以后整行内容（连同行号标识）一起换位。
+class OrderModel : public viv::ReorderableTableModel
 {
 public:
     enum Column {
@@ -59,19 +58,8 @@ public:
     };
 
     explicit OrderModel(int rowCount, QObject *parent = nullptr)
-        : QAbstractTableModel(parent)
+        : viv::ReorderableTableModel(rowCount, int(ColumnCount), parent)
     {
-        for (int row = 0; row < qMax(1, rowCount); ++row)
-            m_order.append(row);
-    }
-
-    int rowCount(const QModelIndex &parent = QModelIndex()) const override
-    {
-        return parent.isValid() ? 0 : int(m_order.size());
-    }
-    int columnCount(const QModelIndex &parent = QModelIndex()) const override
-    {
-        return parent.isValid() ? 0 : int(ColumnCount);
     }
 
     QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override
@@ -121,7 +109,7 @@ public:
 
     QVariant headerData(int section, Qt::Orientation orientation, int role) const override
     {
-        if (role != Qt::DisplayRole || section < 0 || section >= m_order.size())
+        if (role != Qt::DisplayRole || section < 0 || section >= rowCount())
             return QVariant();
         if (orientation == Qt::Vertical)
             return QStringLiteral("R%1").arg(sourceRow(section) + 1);
@@ -141,40 +129,8 @@ public:
         }
     }
 
-    /// 行号条拖动的落点：库先发 `rowMoveRequested()`，再调用这里。
-    ///
-    /// `destinationChild` 是 Qt 的"插到这一行之前"语义；往后面移时目的行要 +1，
-    /// 视图侧（`VirtualTableView::moveRowsForStripDrag()`）已经换算好了。
-    bool moveRows(const QModelIndex &sourceParent, int sourceRow, int count,
-                  const QModelIndex &destinationParent, int destinationChild) override
-    {
-        if (sourceParent.isValid() || destinationParent.isValid() || count <= 0 || sourceRow < 0
-            || sourceRow + count > m_order.size())
-            return false;
-        if (destinationChild < 0 || destinationChild > m_order.size())
-            return false;
-        if (destinationChild >= sourceRow && destinationChild <= sourceRow + count)
-            return false;   // 移到自己身上 = 没移动（Qt 的约定）
-        if (!beginMoveRows(sourceParent, sourceRow, sourceRow + count - 1, destinationParent,
-                           destinationChild))
-            return false;
-        QVector<int> moved;
-        for (int index = 0; index < count; ++index)
-            moved.append(m_order.at(sourceRow + index));
-        m_order.remove(sourceRow, count);
-        const int target =
-            destinationChild > sourceRow ? destinationChild - count : destinationChild;
-        for (int index = 0; index < count; ++index)
-            m_order.insert(target + index, moved.at(index));
-        endMoveRows();
-        return true;
-    }
-
-    /// 数据行（稳定身份）of a view row.
-    int sourceRow(int viewRow) const { return m_order.value(viewRow, viewRow); }
-
-private:
-    QVector<int> m_order;
+    // 其余全部来自 viv::ReorderableTableModel：rowCount() / columnCount() / 顺序表 /
+    // moveRows()（行号条拖动最终调用的就是它）。
 };
 
 /// 一行：每列一个 ColumnHost，框架负责定位（列宽来自 HeaderGeometry，业务不自己算 x）。
@@ -471,6 +427,10 @@ int main(int argc, char **argv)
     view->setUniformItemHeight(kRowHeight);
     view->setDefaultColumnWidth(kPlainWidth);
     view->setModel(&model);
+    // 表头拖动默认关闭（1.0 起）：本示例把两个方向都打开——列拖动看"拖列不改比例"，
+    // 行号条拖动看换行序（模型继承了 viv::ReorderableTableModel，所以真的能换）。
+    view->setColumnDragEnabled(true);
+    view->setVerticalHeaderDragEnabled(true);
     window.setCentralWidget(view);
     window.setWindowTitle(QStringLiteral("VirtualItemViews · stretch columns"));
     window.resize(760, 560);

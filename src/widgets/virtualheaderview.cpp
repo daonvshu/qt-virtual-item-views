@@ -1199,7 +1199,8 @@ void VirtualHeaderView::mouseMoveEvent(QMouseEvent *event)
         event->accept();
         return;
     }
-    if (m_pressedSection >= 0 && (event->buttons() & Qt::LeftButton)) {
+    if (m_sectionDragEnabled && m_pressedSection >= 0
+        && (event->buttons() & Qt::LeftButton)) {
         // §22/§23: a drag is one gesture with one commit. Until the pointer passes the
         // drag distance it is still a click; after that the sections only move in the
         // *visual* geometry (a preview), and the committed order changes on the release.

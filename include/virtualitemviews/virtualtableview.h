@@ -95,6 +95,36 @@ public:
     void setVerticalHeaderWidth(int width);
     int verticalHeaderWidth() const { return m_verticalHeaderWidth; }
 
+    // -- header drag gestures ------------------------------------------------
+    /// Drag a column to a new position (the column header's reorder gesture). **Off by
+    /// default**: the drag changes the column order, so an application opts in.
+    ///
+    /// The order it writes lives in HeaderGeometry, so the body follows either way; the
+    /// renderer that gets the gesture is the installed header *and* every pane clone (a
+    /// drag inside a frozen pane reorders like one in the scrolling pane). Column reordering
+    /// never needs a model.
+    void setColumnDragEnabled(bool enabled);
+    bool isColumnDragEnabled() const { return m_columnDragEnabled; }
+
+    /// Drag a row number to a new position (the row-number strip's reorder gesture). **Off
+    /// by default**, and - unlike the column side - it needs a model that records the move:
+    /// a committed drag is reported through rowMoveRequested() and then applied with
+    /// `model()->moveRows()`, and the default `QAbstractItemModel::moveRows()` implementation
+    /// simply refuses it (the preview snaps back, the order stays).
+    ///
+    /// **So a model of your own has to either derive from viv::ReorderableTableModel, which
+    /// records the order and implements moveRows(), or implement moveRows() itself** (and
+    /// read its data through the recorded order, see that class). Without one of the two,
+    /// turning this on changes nothing but the preview.
+    ///
+    /// Turning it on while the view has **no** model instantiates a
+    /// `ReorderableTableModel` (owned by the view, 0 rows x 0 columns until the application
+    /// fills it) and installs it, so the gesture is usable without a model of your own.
+    /// Setting a model - before or after - always wins: no further model is instantiated
+    /// then, and the one that was installed stays alive as a child of the view.
+    void setVerticalHeaderDragEnabled(bool enabled);
+    bool isVerticalHeaderDragEnabled() const { return m_verticalHeaderDragEnabled; }
+
     // -- geometry ------------------------------------------------------------
     int columnCount() const;
     ColumnGeometry columnGeometry(int logicalIndex) const;
@@ -463,6 +493,11 @@ private:
     void watchRowStrip(HeaderViewInterface *strip);
     /// Row move of a strip drag: report it, then ask the model to move the rows.
     void moveRowsForStripDrag(int fromRow, int toRow);
+    /// Forwards the two drag switches to the installed renderers - the installed headers,
+    /// the pane clones and the frozen-row bands. A renderer that is not a
+    /// VirtualHeaderView (a business' own HeaderViewInterface) has no such switch and
+    /// keeps its own behaviour.
+    void applyHeaderDragSettings();
     /// Row-number strip of a frozen row pane (§31 row direction): same kind as the
     /// installed vertical header. Null when the installed one cannot be cloned (a custom
     /// renderer that is not a native header), in which case the strip stays single.
@@ -630,6 +665,15 @@ private:
     bool m_paneLayoutActive = false;
     bool m_rowHeaderUpdateActive = false;
     bool m_headersLaidOut = false;
+    /// Opt-in drag gestures (see setColumnDragEnabled() / setVerticalHeaderDragEnabled()).
+    bool m_columnDragEnabled = false;
+    bool m_verticalHeaderDragEnabled = false;
+    /// Set once the application installed a model of its own: from then on the view never
+    /// instantiates the row-drag model, whatever the switch does.
+    bool m_applicationModelSeen = false;
+    /// The ReorderableTableModel the view instantiated for the row drag (null while the
+    /// application provided a model). Owned through its QObject parent.
+    QPointer<QAbstractItemModel> m_internalModel;
 };
 
 } // namespace viv

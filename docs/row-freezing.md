@@ -162,7 +162,10 @@ struct ItemPane
 4. **命中 / 键盘 / 滚动 API**：`indexAt()`、`scrollTo()`、`ensureVisible()`、`PageUp/PageDown`、
    冻结集合与重叠规则。
 5. **纵向表头**：行号条按同样的 pane 切分（冻结部分不动、可滚动部分跟着偏移）；
-   拖动行号条改行高只在可滚动行上生效。
+   拖动行号条改行高只在可滚动行上生效。拖动行号**换行序**是选项
+   （`setVerticalHeaderDragEnabled(true)`，1.0 起默认关闭），并且需要模型记录顺序
+   （`viv::ReorderableTableModel` 或自己实现 `moveRows()`），见
+   [table-layout.md](table-layout.md) §6。
 6. **表状态持久化**（§32）：把冻结行数写进表格级状态（版本号 +1，旧格式仍可恢复）。
 7. **示例与文档** ✓：`examples/table_frozen_rows`（顶部/底部冻结行 + 冻结列组合、可切换、
    `--check` 自检、`--snapshot` 截图）、[features.md](features.md) 能力表与 roadmap 同步。

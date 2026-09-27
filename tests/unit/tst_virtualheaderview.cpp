@@ -256,6 +256,7 @@ private slots:
     void cellsFollowTheHeaderWhileTheBodyDoes();
     void frozenPaneHeaderKeepsItsColumnsAfterAReorder();
     void standaloneHeaderStretchesItsSectionsToItsWidth();
+    void sectionDragIsOffByDefault();
 
 private:
     QStandardItemModel *m_model = nullptr;
@@ -281,6 +282,9 @@ void TestVirtualHeaderView::init()
     m_header->setGeometryModel(m_geometry);
     m_header->setLabelModel(m_model);
     m_header->setSortInteractionEnabled(true);
+    // The reorder gesture is opt-in (1.0): the suite exercises it, so the fixture turns it
+    // on - sectionDragIsOffByDefault() checks the default on a header of its own.
+    m_header->setSectionDragEnabled(true);
     m_header->show();
     QApplication::processEvents();
 }
@@ -539,6 +543,7 @@ void TestVirtualHeaderView::verticalWidgetHeaderPacksAlongY()
     strip.setAdapter(&adapter);
     strip.setGeometryModel(&rows);
     strip.setLabelModel(m_model);   // headerData(row, Qt::Vertical)
+    strip.setSectionDragEnabled(true);   // the reorder gesture is opt-in (1.0)
     strip.show();
     QApplication::processEvents();
 
@@ -1191,6 +1196,8 @@ struct HeaderBody
         view.setUniformItemHeight(24);
         view.setDefaultColumnWidth(kSectionWidth);
         view.setModel(&model);
+        // The column drag is opt-in (1.0); this fixture exists to exercise it.
+        view.setColumnDragEnabled(true);
         vivtest::showView(&view, QSize(400, 200));
     }
 
@@ -1452,6 +1459,7 @@ void TestVirtualHeaderView::uniformGeometryDragsWithoutBuildingTheOrder()
     strip.setGeometryModel(&rows);
     strip.setLabelModel(&model);
     strip.setSectionOrderExternal(true);
+    strip.setSectionDragEnabled(true);   // the reorder gesture is opt-in (1.0)
     QSignalSpy requestSpy(&strip, &VirtualHeaderView::sectionMoveRequested);
     strip.show();
     QApplication::processEvents();
@@ -1495,6 +1503,7 @@ void TestVirtualHeaderView::externalRowOrderDropsThePreviewWhenNobodyMovesTheRow
     strip.setGeometryModel(&rows);
     strip.setLabelModel(m_model);
     strip.setSectionOrderExternal(true);
+    strip.setSectionDragEnabled(true);   // the reorder gesture is opt-in (1.0)
     QSignalSpy requestSpy(&strip, &VirtualHeaderView::sectionMoveRequested);
     strip.show();
     QApplication::processEvents();
@@ -1672,6 +1681,61 @@ void TestVirtualHeaderView::standaloneHeaderStretchesItsSectionsToItsWidth()
     const qint64 wider = m_header->width() - 2 * qint64(kSectionWidth);
     QCOMPARE(m_geometry->sectionSize(1), int(wider / 3));
     QCOMPARE(m_geometry->sectionSize(2), int(wider - wider / 3));
+}
+
+void TestVirtualHeaderView::sectionDragIsOffByDefault()
+{
+    // 1.0: the reorder gesture is opt-in. A fresh renderer does not drag - while the other
+    // two gestures (the edge resize, the sort click) keep working, they are separate.
+    VirtualHeaderView header(Qt::Horizontal);
+    header.resize(400, kHeaderHeight);
+    HeaderGeometry geometry(Qt::Horizontal, this);
+    geometry.setSectionCount(8);
+    geometry.setDefaultSectionSize(kSectionWidth);
+    SectionAdapter adapter;
+    header.setAdapter(&adapter);
+    header.setGeometryModel(&geometry);
+    header.setLabelModel(m_model);
+    header.setSortInteractionEnabled(true);
+    header.show();
+    QApplication::processEvents();
+    QVERIFY(!header.isSectionDragEnabled());
+
+    QWidget *first = header.sectionWidget(0);
+    QVERIFY(first != nullptr);
+    const auto dragFirstSection = [&header]() {
+        sendMouse(&header, QEvent::MouseButtonPress, QPoint(kSectionWidth / 2, kHeaderHeight / 2),
+                  Qt::LeftButton, Qt::LeftButton);
+        sendMouse(&header, QEvent::MouseMove, QPoint(3 * kSectionWidth, kHeaderHeight / 2),
+                  Qt::NoButton, Qt::LeftButton);
+        sendMouse(&header, QEvent::MouseButtonRelease, QPoint(3 * kSectionWidth, kHeaderHeight / 2),
+                  Qt::LeftButton, Qt::NoButton);
+        QApplication::processEvents();
+    };
+
+    dragFirstSection();
+    QCOMPARE(geometry.visualIndex(0), 0);      // neither preview nor commit happened
+    QCOMPARE(first->x(), 0);
+
+    // The same gesture works once the switch is on.
+    header.setSectionDragEnabled(true);
+    QVERIFY(header.isSectionDragEnabled());
+    dragFirstSection();
+    // The drop slot is the packed slot whose centre is still left of the dragged centre
+    // (the same rule the other drag tests assert): the pointer at 240 px leaves the
+    // section behind the one at slot 2.
+    QCOMPARE(geometry.visualIndex(0), 2);
+
+    // The resize gesture is not gated by it: an edge drag still changes the size.
+    header.setSectionDragEnabled(false);
+    const int before = geometry.sectionSize(1);
+    sendMouse(&header, QEvent::MouseButtonPress, QPoint(kSectionWidth, kHeaderHeight / 2),
+              Qt::LeftButton, Qt::LeftButton);
+    sendMouse(&header, QEvent::MouseMove, QPoint(kSectionWidth + 30, kHeaderHeight / 2),
+              Qt::NoButton, Qt::LeftButton);
+    sendMouse(&header, QEvent::MouseButtonRelease, QPoint(kSectionWidth + 30, kHeaderHeight / 2),
+              Qt::LeftButton, Qt::NoButton);
+    QCOMPARE(geometry.sectionSize(1), before + 30);
 }
 
 QTEST_MAIN(TestVirtualHeaderView)

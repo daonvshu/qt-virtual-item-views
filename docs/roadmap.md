@@ -34,7 +34,7 @@ v0.7 的逐项细节与实现决定记在 [spans.md](spans.md)、[accessibility.
 | Qt 5 | `D:\devlib\Qt\5.15.2\msvc2019_64` |
 | 工具链 | MSVC 18 (14.50.35717) x64 + Ninja + CMake 4.3（CLion 自带） |
 | 构建树 | `cmake-build-debug-qt6` / `cmake-build-debug-qt5`（静态）与 `cmake-build-debug-qt6-shared` / `cmake-build-debug-qt5-shared`（动态） |
-| 验证 | 一条命令：`pwsh -File scripts/validate.ps1` —— MSVC 四种组合（Qt 6.11.2 / Qt 5.15.2 × 静态 / 动态）共 28 个步骤全绿：`all` 构建、28 个 CTest 目标（单元 + 变异 + GUI 交互）、12 个示例退出码 0、`bench_listview` 不变量自检、`cmake --install` + 消费端冒烟测试。另有四个开关：`-Asan`（MSVC AddressSanitizer，8 步）、`-UBSan`（llvm-mingw Clang 的 `-fsanitize=undefined -fno-sanitize-recover`，5 步）、`-Release`（Release 构建 + 基准，14 步）、`-MinGW`（Windows 上的 GCC 13.1 / Clang 17.0.6 / GCC 8.1 三个 kit，Debug 与 Release 各 21 步）—— 见 [abi.md](abi.md) §5/§6 与 [ci.md](ci.md) §5 |
+| 验证 | 一条命令：`pwsh -File scripts/validate.ps1` —— MSVC 四种组合（Qt 6.11.2 / Qt 5.15.2 × 静态 / 动态）共 28 个步骤全绿：`all` 构建、29 个 CTest 目标（单元 + 变异 + GUI 交互，合计 439 个用例）、13 个示例退出码 0、`bench_listview` 不变量自检、`cmake --install` + 消费端冒烟测试。另有四个开关：`-Asan`（MSVC AddressSanitizer，8 步）、`-UBSan`（llvm-mingw Clang 的 `-fsanitize=undefined -fno-sanitize-recover`，5 步）、`-Release`（Release 构建 + 基准，14 步）、`-MinGW`（Windows 上的 GCC 13.1 / Clang 17.0.6 / GCC 8.1 三个 kit，Debug 与 Release 各 42 步）—— 见 [abi.md](abi.md) §5/§6 与 [ci.md](ci.md) §5 |
 
 注意：构建与测试必须在沙箱外运行。沙箱内 ninja 无法派生编译器子进程，构建会永久挂起
 （已用最小 ninja 工程复现）。
@@ -339,6 +339,7 @@ Tree 侧补的那条用例（`tst_virtualtreeview::columnChangesRebuildTheVisibl
 
 | 日期 | 决定 | 理由 |
 | --- | --- | --- |
+| 2026-09-27 | 表头拖动换序改成 **opt-in**（默认关闭），并新增行顺序模型基类 `ReorderableTableModel`；`setVerticalHeaderDragEnabled(true)` 在视图没有模型时内部实例化一个它 | 用户拍板：拖动换序会改数据/列序，属于业务要显式选择的行为（改尺寸与点击排序不受影响，仍是默认）。行方向的换序必须由模型记录（`QAbstractItemModel::moveRows()` 默认返回 false，拖动只会预览回弹），所以把示例里那套"视图行 → 数据行"的顺序表 + `moveRows()` 提成基类，函数注释里写明"启用垂直表头拖动要继承它或自己实现 `moveRows()`"。视图没有模型时内部实例化一个（视图持有），应用自己的模型无论先给后给都优先、之后不再实例化 |
 | 2026-09-27 | 列宽的"剩余宽度"做成几何级比例：`setColumnStretchFactor()`（1 : 2 : 1 这样的权重，`setStretchLastColumn()` 退化成"最后一列吃全部"），`stretchExtent` 由视图给出、不进持久化 | 在这之前 `stretchLastSection` 是个被存下来却没人读的标志（native 表头退场后彻底失效），而"均分"也表达不了"序号列固定、名称 2 份、备注 1 份"这类布局。比例写在 `HeaderGeometry` 里、算出的宽度也写回 `sectionSize()`，所以表头/body/pane 克隆/accessibility 自动一致；拖动列边界清掉该列的 factor（QHeaderView 的 Stretch → Interactive），恢复状态时按当前视图重新量一遍。用户要求单独做个示例而不是塞进 `table_custom_header`：`examples/table_stretch_columns`（列少、总宽正好等于视口宽，不出现横向滚动，`--check` 自检） |
 | 2026-09-27 | 删除 `NativeHeaderView`（含 `nativeheaderview.h`），`HeaderViewInterface` 搬到新头 `headerview.h` | 列表头与行号条都是 widget 渲染器之后，原生适配器只剩"参照物"的角色；删前先做了 parity 验证（同一 `HeaderGeometry` 上两边逐个 section 比对 `sectionSize`/`isSectionHidden`/`sectionViewportPosition`/`visualIndex`，并在 resize、hide+offset、move+sort、`saveState`+`restoreState` 四类状态后各比一次，全部一致），确认 widget 渲染器是等价替代后才移除。`accessibility.h`/`accessibility.cpp` 的 `QT_CONFIG(accessibility)` 双 guard 一并去掉（Qt 的 accessibility 类型在无该 feature 的构建里也只是运行期不启用，编译期不需要这个 guard） |
 | 2026-09-27 | `VirtualItemView::removeDraggedSourceRows()` 从 `private` 移到 `protected` | 文档一直把它和 `dragSourceIndexes()`/`dragPixmapRect()` 并列写成"protected 内核钩子"（QDrag::exec 在 offscreen 下不可用，子类/测试要直接驱动），但它被放在了 private 段；MSVC 宽容地接受派生类里的 `using Base::member;`，GCC/Clang 按标准拒绝 —— MinGW 矩阵因此暴露出来 |

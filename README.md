@@ -42,8 +42,9 @@ VirtualItemViews 走第三条路：**只创建看得见的行，且这些行是�
   `WidgetType` 分池；滚动只做 bind / recycle，稳态滚动不 new / delete。
 * **表格**在内核之上加 `HeaderGeometry`（列宽、顺序、隐藏、排序、横向偏移的唯一事实来源）与表头
   渲染器。默认是 widget 表头 `LabelHeaderView`（每个可见 section 一个只画 label 的控件，用当前
-  样式画成原生样子；拖动换序、section 过渡、整列跟着动、冻结 pane 克隆都在默认配置下可用），
-  也可以用 `VirtualHeaderView` 换成自己的 section 控件，或自己实现 `HeaderViewInterface`。
+  样式画成原生样子；section 过渡、整列跟着动、冻结 pane 克隆默认就有，拖动换序要显式打开
+  `setColumnDragEnabled()` / `setVerticalHeaderDragEnabled()`，见"怎么用"），也可以用
+  `VirtualHeaderView` 换成自己的 section 控件，或自己实现 `HeaderViewInterface`。
 * **树**用 `TreeVisibilityIndex` 把模型树压平成"可见行"，再喂给同一个 list 内核实现。
 
 核心不变量：物化控件 = 可见 + overscan + pinned；池里的控件没有身份；一个 QModelIndex 同时最多
@@ -400,7 +401,14 @@ header->setAdapter(&headerAdapter);
 header->setLabelModel(&model);
 header->setSortInteractionEnabled(true);
 header->setSectionOverscan(1);
-table->setHorizontalHeader(header);      // 表格接管所有权；传 nullptr 回到默认 native 表头
+table->setHorizontalHeader(header);      // 表格接管所有权；传 nullptr 回到默认 label 表头
+
+// 拖动换序是选项（默认关闭，1.0 起）：按住 section 拖到新位置
+table->setColumnDragEnabled(true);       // 列：写进 HeaderGeometry，body 跟着走
+// 行号条拖动换行序还要一个记录顺序的模型：继承 ReorderableTableModel 或自己实现 moveRows()，
+// 并按 sourceRow() 取数据（整行内容才会跟着移动，而不是原地换号）。视图没有模型时，
+// 打开开关会内部实例化一个 ReorderableTableModel（应用自己的模型优先，之后不再实例化）。
+table->setVerticalHeaderDragEnabled(true);
 
 // 换序动画：只有"换序"需要过渡（提交后 body 的几何立刻到位，表头滑过去；
 // 拖动/过渡期间整列跟着 section 一起走，只跟 x，committed 几何始终权威）

@@ -77,6 +77,7 @@ set(VIRTUALITEMVIEWS_PUBLIC_HEADERS
     include/virtualitemviews/layoutpolicy.h
     include/virtualitemviews/listlayout.h
     include/virtualitemviews/materializeditem.h
+    include/virtualitemviews/reorderabletablemodel.h
     include/virtualitemviews/scrollmapper.h
     include/virtualitemviews/sizeindex.h
     include/virtualitemviews/tablewidgetadapter.h
@@ -95,6 +96,7 @@ set(VIRTUALITEMVIEWS_PUBLIC_HEADERS
 set(VIRTUALITEMVIEWS_SOURCES
     ${VIRTUALITEMVIEWS_PUBLIC_HEADERS}
     src/core/scrollmapper.cpp
+    src/core/reorderabletablemodel.cpp
     src/core/virtualitemview.cpp
     src/layout/headergeometry.cpp
     src/index/sizeindex.cpp

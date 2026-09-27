@@ -1,6 +1,7 @@
 #include <virtualitemviews/headerview.h>
 #include <virtualitemviews/labelheaderview.h>
 #include <virtualitemviews/labelheaderview.h>
+#include <virtualitemviews/reorderabletablemodel.h>
 #include <virtualitemviews/virtualtableview.h>
 #include <virtualitemviews/virtualheaderview.h>
 #include <virtualitemviews/headerwidgetadapter.h>
@@ -741,6 +742,8 @@ private slots:
     void headerStateRestoresFrozenColumns();
     void aBrokenStateLeavesTheViewUntouched();
     void columnsShareTheLeftoverWidthByStretchFactor();
+    void headerDragsAreOffByDefault();
+    void theRowDragInstantiatesAModelOnlyWithoutOne();
 
 private:
     void sendMouseTo(QWidget *widget, QEvent::Type type, const QPoint &pos,
@@ -1272,6 +1275,10 @@ void TestVirtualTableView::draggingAHeaderSectionSwapsTheOrderInBothAxes()
     view.setUniformItemHeight(kRowHeight);
     view.setDefaultColumnWidth(kColumnWidth);
     view.setModel(&model);
+    // Both drag gestures are opt-in (1.0); the model is set *before* the switch, so the
+    // view never instantiates the internal reorderable model here.
+    view.setColumnDragEnabled(true);
+    view.setVerticalHeaderDragEnabled(true);
     showView(&view, QSize(kViewWidth, kViewHeight));
 
     // -- rows: drag the row-number strip -----------------------------------------------
@@ -1329,6 +1336,7 @@ void TestVirtualTableView::rowStripDragTakesTheRowsWithIt()
     view.setUniformItemHeight(kRowHeight);
     view.setDefaultColumnWidth(kColumnWidth);
     view.setModel(&model);
+    view.setVerticalHeaderDragEnabled(true);
     showView(&view, QSize(kViewWidth, kViewHeight));
     QVERIFY(view.rowFollowsHeaderVisual());
 
@@ -1407,6 +1415,7 @@ void TestVirtualTableView::rowStripDragReportsAMoveTheModelMayRefuse()
     view.setUniformItemHeight(kRowHeight);
     view.setDefaultColumnWidth(kColumnWidth);
     view.setModel(&model);
+    view.setVerticalHeaderDragEnabled(true);
     showView(&view, QSize(kViewWidth, kViewHeight));
     QSignalSpy moveSpy(&view, &VirtualTableView::rowMoveRequested);
     QVERIFY(moveSpy.isValid());
@@ -2480,6 +2489,100 @@ void TestVirtualTableView::columnsShareTheLeftoverWidthByStretchFactor()
     QCOMPARE(paneWidths, m_view->viewport()->width());
     QCOMPARE(panes.first().viewportRect.width(), 80);
     QCOMPARE(m_view->horizontalContentExtent(), qint64(m_view->viewport()->width()));
+}
+
+void TestVirtualTableView::headerDragsAreOffByDefault()
+{
+    // 1.0: both reorder gestures are opt-in. The fixture's view has a model and no switch
+    // turned on, so a drag must do nothing at all - no preview, no committed change, no
+    // row-move request.
+    QVERIFY(!m_view->isColumnDragEnabled());
+    QVERIFY(!m_view->isVerticalHeaderDragEnabled());
+
+    auto *header = dynamic_cast<VirtualHeaderView *>(m_view->horizontalHeader());
+    QVERIFY(header != nullptr);
+    QVERIFY(!header->isSectionDragEnabled());
+
+    QSignalSpy moveSpy(m_view, &VirtualTableView::rowMoveRequested);
+    const int firstLogical = m_view->horizontalHeaderGeometry()->logicalIndex(0);
+    const int secondLogical = m_view->horizontalHeaderGeometry()->logicalIndex(1);
+    QWidget *headerWidget = header->headerWidget();
+    const int headerY = headerWidget->height() / 2;
+    sendMouseTo(headerWidget, QEvent::MouseButtonPress,
+                QPoint(m_view->columnWidth(firstLogical) / 2, headerY), Qt::LeftButton,
+                Qt::LeftButton);
+    sendMouseTo(headerWidget, QEvent::MouseMove,
+                QPoint(m_view->columnWidth(firstLogical) + m_view->columnWidth(secondLogical), headerY),
+                Qt::NoButton, Qt::LeftButton);
+    sendMouseTo(headerWidget, QEvent::MouseButtonRelease,
+                QPoint(m_view->columnWidth(firstLogical) + m_view->columnWidth(secondLogical), headerY),
+                Qt::LeftButton, Qt::NoButton);
+    QApplication::processEvents();
+    QCOMPARE(m_view->horizontalHeaderGeometry()->logicalIndex(0), firstLogical);
+    QCOMPARE(m_view->horizontalHeaderGeometry()->logicalIndex(1), secondLogical);
+
+    auto *strip = dynamic_cast<VirtualHeaderView *>(m_view->verticalHeader());
+    QVERIFY(strip != nullptr);
+    QVERIFY(!strip->isSectionDragEnabled());
+    QWidget *stripWidget = strip->headerWidget();
+    const int rowY = m_view->visualRect(m_model->index(1, 0)).center().y();
+    sendMouseTo(stripWidget, QEvent::MouseButtonPress, QPoint(4, rowY), Qt::LeftButton,
+                Qt::LeftButton);
+    sendMouseTo(stripWidget, QEvent::MouseMove, QPoint(4, rowY + 3 * kRowHeight), Qt::NoButton,
+                Qt::LeftButton);
+    sendMouseTo(stripWidget, QEvent::MouseButtonRelease, QPoint(4, rowY + 3 * kRowHeight),
+                Qt::LeftButton, Qt::NoButton);
+    QApplication::processEvents();
+    QCOMPARE(moveSpy.count(), 0);            // the strip never asked for a move
+
+    // Turning the switches on makes the very same gestures work - the flags are the only
+    // difference (see rowStripDragTakesTheRowsWithIt() and
+    // draggingAHeaderSectionSwapsTheOrderInBothAxes() for the enabled behaviour).
+    m_view->setColumnDragEnabled(true);
+    m_view->setVerticalHeaderDragEnabled(true);
+    QVERIFY(header->isSectionDragEnabled());
+    QVERIFY(strip->isSectionDragEnabled());
+    QVERIFY(m_view->model() == m_model);     // a model was set first: nothing was replaced
+}
+
+void TestVirtualTableView::theRowDragInstantiatesAModelOnlyWithoutOne()
+{
+    // The row drag needs a model that records the order. When the view has none, enabling
+    // it installs a ReorderableTableModel of the view's own; an application model - before
+    // or after - always wins and is never replaced.
+    {
+        VirtualTableView view;
+        QVERIFY(view.model() == nullptr);
+        view.setVerticalHeaderDragEnabled(true);
+        auto *internal = dynamic_cast<ReorderableTableModel *>(view.model());
+        QVERIFY(internal != nullptr);
+        QCOMPARE(internal->rowCount(), 0);
+        QCOMPARE(internal->columnCount(), 0);
+        QVERIFY(view.isVerticalHeaderDragEnabled());
+
+        // A model set *after* the switch replaces the internal one and stays.
+        ReorderableModel mine(5, 2);
+        view.setModel(&mine);
+        QVERIFY(view.model() == &mine);
+        QVERIFY(internal != nullptr);              // still alive, just not installed
+        view.setVerticalHeaderDragEnabled(false);
+        view.setVerticalHeaderDragEnabled(true);
+        QVERIFY(view.model() == &mine);            // no second instantiation
+    }
+    {
+        // A model set *before* the switch: enabling never instantiates anything.
+        ReorderableModel mine(5, 2);
+        VirtualTableView view;
+        view.setModel(&mine);
+        view.setVerticalHeaderDragEnabled(true);
+        QVERIFY(view.model() == &mine);
+    }
+    {
+        // The column drag needs no model at all: no model, no instantiation.
+        VirtualTableView view;
+        view.setColumnDragEnabled(true);
+        QVERIFY(view.model() == nullptr);
+    }
 }
 
 QTEST_MAIN(TestVirtualTableView)

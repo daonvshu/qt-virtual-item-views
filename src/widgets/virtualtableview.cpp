@@ -2,6 +2,7 @@
 
 #include <virtualitemviews/virtualheaderview.h>
 #include <virtualitemviews/labelheaderview.h>
+#include <virtualitemviews/reorderabletablemodel.h>
 
 #include <virtualitemviews/listlayout.h>
 #include <virtualitemviews/sizeindex.h>
@@ -249,6 +250,7 @@ void VirtualTableView::ensureHeaders()
         m_verticalHeader->headerWidget()->setParent(this);
         watchRowStrip(m_verticalHeader);
     }
+    applyHeaderDragSettings();
 }
 
 void VirtualTableView::setHorizontalHeader(HeaderViewInterface *header)
@@ -297,6 +299,7 @@ void VirtualTableView::setHorizontalHeader(HeaderViewInterface *header)
     m_horizontalHeader->headerWidget()->setParent(this);
     m_horizontalHeader->setViewportOrigin(viewport()->geometry().topLeft());
     applyHeaderAnimationSettings();
+    applyHeaderDragSettings();
     layoutHeaderWidgets();
     syncHeaderPanes();
 }
@@ -324,6 +327,7 @@ void VirtualTableView::setVerticalHeader(HeaderViewInterface *header)
     m_verticalHeader->setLabelModel(model());
     m_verticalHeader->headerWidget()->setParent(this);
     watchRowStrip(m_verticalHeader);
+    applyHeaderDragSettings();
     syncVerticalPaneHeaders();
     layoutHeaderWidgets();
 }
@@ -468,6 +472,11 @@ void VirtualTableView::setModel(QAbstractItemModel *model)
     QAbstractItemModel *previous = VirtualItemView::model();
     if (previous == model)
         return;
+    // A model the application installed - not the one this view instantiated for the row
+    // drag - latches "the application owns the model": from then on the view never
+    // instantiates one, whether it was set before or after the drag was switched on.
+    if (model && model != m_internalModel)
+        m_applicationModelSeen = true;
     if (previous)
         disconnect(previous, nullptr, this, nullptr);
 
@@ -777,6 +786,48 @@ void VirtualTableView::setColumnStretchFactor(int logicalIndex, qreal factor)
 qreal VirtualTableView::columnStretchFactor(int logicalIndex) const
 {
     return m_columns->sectionStretchFactor(logicalIndex);
+}
+
+void VirtualTableView::setColumnDragEnabled(bool enabled)
+{
+    if (m_columnDragEnabled == enabled)
+        return;
+    m_columnDragEnabled = enabled;
+    applyHeaderDragSettings();
+}
+
+void VirtualTableView::setVerticalHeaderDragEnabled(bool enabled)
+{
+    if (m_verticalHeaderDragEnabled == enabled)
+        return;
+    m_verticalHeaderDragEnabled = enabled;
+    // The row side needs a model that records the order (see the header's doc comment).
+    // Without one - and without the application ever having installed one - the view
+    // instantiates the base class so the gesture is usable at all; an application model
+    // always wins, whenever it arrives.
+    if (enabled && !model() && !m_applicationModelSeen) {
+        auto *internal = new ReorderableTableModel(this);
+        m_internalModel = internal;
+        setModel(internal);
+    }
+    applyHeaderDragSettings();
+}
+
+void VirtualTableView::applyHeaderDragSettings()
+{
+    const auto apply = [](HeaderViewInterface *header, bool enabled) {
+        if (auto *widgetHeader = dynamic_cast<VirtualHeaderView *>(header))
+            widgetHeader->setSectionDragEnabled(enabled);
+    };
+    // The column side: the installed header and every pane clone (a drag inside a frozen
+    // pane reorders like one in the scrolling pane).
+    apply(m_horizontalHeader, m_columnDragEnabled);
+    for (HeaderViewInterface *paneHeader : m_paneHeaders)
+        apply(paneHeader, m_columnDragEnabled);
+    // The row side: the strip and the frozen-row bands, which are strips of their own.
+    apply(m_verticalHeader, m_verticalHeaderDragEnabled);
+    apply(m_frozenTopRowsHeader, m_verticalHeaderDragEnabled);
+    apply(m_frozenBottomRowsHeader, m_verticalHeaderDragEnabled);
 }
 
 // ---------------------------------------------------------------------------
@@ -1167,6 +1218,7 @@ void VirtualTableView::syncHeaderPanes()
         m_horizontalHeader->clearPaneFilter();
     }
     applyHeaderAnimationSettings();
+    applyHeaderDragSettings();
 }
 
 void VirtualTableView::dropDerivedPaneHeaders()
@@ -1300,6 +1352,7 @@ void VirtualTableView::syncVerticalPaneHeaders()
         if (qobject_cast<QHeaderView *>(m_verticalHeader->headerWidget()))
             m_verticalHeader->setPaneOffset(HeaderViewInterface::kFollowGeometryOffset);
     }
+    applyHeaderDragSettings();
 }
 
 void VirtualTableView::syncPaneSeparatorLines()

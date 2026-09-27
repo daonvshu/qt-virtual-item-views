@@ -146,9 +146,9 @@ Qt 由 Config 里的 `find_dependency()` 找回，**但安装前缀按 Qt 大版
 
 | Qt | 编译器 | 静态 | 动态 | 验证方式 |
 | --- | --- | --- | --- | --- |
-| 6.11.2 / msvc2022_64 | MSVC 19.50 x64（VS 18 Community） | 通过 | 通过 | Debug 与 Release 各：`all` 构建 + 28 个 CTest 目标 + 12 个示例退出码 0 + 三档基准 + 安装消费端；另有一个 AddressSanitizer 静态构建（`scripts/validate.ps1 -Asan`）同样全绿 |
+| 6.11.2 / msvc2022_64 | MSVC 19.50 x64（VS 18 Community） | 通过 | 通过 | Debug 与 Release 各：`all` 构建 + 29 个 CTest 目标 + 13 个示例退出码 0 + 三档基准 + 安装消费端；另有一个 AddressSanitizer 静态构建（`scripts/validate.ps1 -Asan`）同样全绿 |
 | 5.15.2 / msvc2019_64 | 同上 | 通过 | 通过 | 同上（含 Release 与 ASan） |
-| 6.11.2 / mingw_64 | **GCC 13.1.0**（Qt 在线安装器的 `mingw1310_64`） | 通过 | 通过 | `scripts/validate.ps1 -MinGW`：Debug 与 Release 各 `all` 构建 + 28 个 CTest 目标 + 12 个示例 + 三档基准 + 安装消费端；`-Wall -Wextra -Wpedantic` 下**零警告** |
+| 6.11.2 / mingw_64 | **GCC 13.1.0**（Qt 在线安装器的 `mingw1310_64`） | 通过 | 通过 | `scripts/validate.ps1 -MinGW`：Debug 与 Release 各 `all` 构建 + 29 个 CTest 目标 + 13 个示例 + 三档基准 + 安装消费端；`-Wall -Wextra -Wpedantic` 下**零警告** |
 | 6.11.2 / llvm-mingw_64 | **Clang 17.0.6**（`llvm-mingw1706_64`） | 通过 | 通过 | 同上；默认警告级别下零警告（修掉 3 处 `override` 缺失、1 处未用常量、1 处 Qt 6 弃用构造） |
 | 5.15.2 / mingw81_64 | **GCC 8.1.0**（Qt 安装器的 `mingw810_64`） | 通过 | 通过 | 同上（本机最老的组合：Qt 5.15 + GCC 8.1；动态库这一格就是这样查出"公开常量没导出"的） |
 

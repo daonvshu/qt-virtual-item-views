@@ -116,6 +116,19 @@ public:
     /// setViewportOrigin() and leaves the target to the table).
     void setSectionStretchFactor(int logicalIndex, qreal factor);
     qreal sectionStretchFactor(int logicalIndex) const;
+    /// Drag a section to a new position (both axes). **Off by default**: a drag changes
+    /// the section order, so an application opts in.
+    ///
+    /// A *column* header writes the committed order into HeaderGeometry itself
+    /// (`moveSection()`), so nothing else is needed; the row-number strip reports the move
+    /// instead - the rows belong to the model (see
+    /// VirtualTableView::setVerticalHeaderDragEnabled(), which also names the model half of
+    /// that contract).
+    ///
+    /// The resize gesture (dragging a section edge) and a section click (sort) are separate
+    /// gestures and are not affected by this switch.
+    void setSectionDragEnabled(bool enabled) { m_sectionDragEnabled = enabled; }
+    bool isSectionDragEnabled() const { return m_sectionDragEnabled; }
     /// Tells the renderer that the section order does **not** belong to it: a committed
     /// drag then reports where the section would land (sectionMoveRequested()) instead
     /// of moving HeaderGeometry.
@@ -384,6 +397,8 @@ private:
     bool m_visualGeometryNotified = false;
     int m_overscan = 1;
     bool m_sortInteractionEnabled = false;
+    /// See setSectionDragEnabled(): the reorder gesture is opt-in.
+    bool m_sectionDragEnabled = false;
 
     int m_resizeSection = -1;
     int m_resizeStartSize = 0;

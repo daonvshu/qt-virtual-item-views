@@ -24,6 +24,7 @@
 // 宽表首屏可能花几百毫秒，想让截图落在过渡中途，把 `--animation` 调大一些即可。
 
 #include <virtualitemviews/labelheaderview.h>
+#include <virtualitemviews/reorderabletablemodel.h>
 #include <virtualitemviews/virtualheaderview.h>
 #include <virtualitemviews/virtualtableview.h>
 
@@ -58,28 +59,14 @@ void sendMouse(QWidget *widget, QEvent::Type type, const QPoint &pos, Qt::MouseB
 
 constexpr int kRowHeight = 28;
 
-/// 轻量宽表模型：数据按需生成。
-class WideModel : public QAbstractTableModel
+/// 轻量宽表模型：数据按需生成，行序交给 `viv::ReorderableTableModel`（"拖拽排序基类"：
+/// 视图行 → 数据行的顺序表 + `moveRows()`），所以行号条拖动能真的换行序。
+class WideModel : public viv::ReorderableTableModel
 {
 public:
     WideModel(int rows, int columns, QObject *parent = nullptr)
-        : QAbstractTableModel(parent)
-        , m_rows(qMax(1, rows))
-        , m_columns(qMax(1, columns))
+        : viv::ReorderableTableModel(qMax(1, rows), qMax(1, columns), parent)
     {
-        m_order.reserve(m_rows);
-        for (int row = 0; row < m_rows; ++row)
-            m_order.append(row);
-    }
-
-    int rowCount(const QModelIndex &parent = QModelIndex()) const override
-    {
-        return parent.isValid() ? 0 : m_rows;
-    }
-
-    int columnCount(const QModelIndex &parent = QModelIndex()) const override
-    {
-        return parent.isValid() ? 0 : m_columns;
     }
 
     QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override
@@ -99,50 +86,8 @@ public:
                                              : QStringLiteral("R%1").arg(sourceRow(section) + 1);
     }
 
-    /// 行号条拖动的落点：示例模型真的把行移到新位置（应用模型通常在这里移动自己的数据）。
-    /// 视图只负责"请求" - `rowMoveRequested(from, to)` 之后由模型决定移动成不成立。
-    bool moveRows(const QModelIndex &sourceParent, int sourceRow, int count,
-                  const QModelIndex &destinationParent, int destinationChild) override
-    {
-        if (sourceParent.isValid() || destinationParent.isValid() || count <= 0)
-            return false;
-        if (sourceRow < 0 || sourceRow + count > m_order.size())
-            return false;
-        if (destinationChild < 0 || destinationChild > m_order.size())
-            return false;
-        if (destinationChild >= sourceRow && destinationChild <= sourceRow + count)
-            return false;   // Qt 的"原地移动"规则：落在自己（或紧邻）之间不算移动
-        if (!beginMoveRows(sourceParent, sourceRow, sourceRow + count - 1, destinationParent,
-                           destinationChild))
-            return false;
-        QVector<int> moved;
-        moved.reserve(count);
-        for (int index = 0; index < count; ++index)
-            moved.append(m_order.at(sourceRow + index));
-        m_order.remove(sourceRow, count);
-        const int target = destinationChild > sourceRow ? destinationChild - count
-                                                       : destinationChild;
-        for (int index = 0; index < count; ++index)
-            m_order.insert(target + index, moved.at(index));
-        endMoveRows();
-        return true;
-    }
-
     /// 模拟"每列有个待处理数量"，给 widget 表头的 badge 用。
     int pendingCount(int column) const { return (column * 7) % 23; }
-
-private:
-    /// 显示行 -> 数据行。示例的数据是生成的，所以"移动一行"就是移动这个映射；应用模型
-    /// 会把真实数据搬过去。
-    int sourceRow(int displayRow) const
-    {
-        return displayRow >= 0 && displayRow < m_order.size() ? m_order.at(displayRow)
-                                                             : displayRow;
-    }
-
-    int m_rows = 0;
-    int m_columns = 0;
-    QVector<int> m_order;
 };
 
 /// 行控件：每列一个 ColumnHost + 一个 label（与其它表格示例一致）。
@@ -339,6 +284,10 @@ int main(int argc, char **argv)
     view->setColumnOverscan(1);
     view->setSortingEnabled(true);
     view->setModel(&model);
+    // 表头拖动默认关闭（1.0 起）：本示例是表头交互的演示，两个方向都打开——列拖动换序
+    // 与行号条拖动换行序（WideModel 继承 viv::ReorderableTableModel，所以行序真的会变）。
+    view->setColumnDragEnabled(true);
+    view->setVerticalHeaderDragEnabled(true);
     window.setCentralWidget(view);
     window.setWindowTitle(QStringLiteral("VirtualItemViews · custom header"));
     window.resize(1000, 600);
