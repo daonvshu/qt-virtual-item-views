@@ -229,10 +229,13 @@ private:
 
 int virtualHeaderCount(QWidget *root)
 {
+    // The *column* renderers: the view also owns the row-number strip, which is the same
+    // renderer class on the other axis but never borrows the column header's adapter.
     int count = 0;
     const QList<QWidget *> children = root->findChildren<QWidget *>();
     for (QWidget *child : children) {
-        if (dynamic_cast<VirtualHeaderView *>(child))
+        auto *header = dynamic_cast<VirtualHeaderView *>(child);
+        if (header && header->orientation() == Qt::Horizontal)
             ++count;
     }
     return count;
@@ -414,13 +417,17 @@ void TestAdapterReplacement::replacingAWidgetHeaderDestroysItsPaneRenderers()
     table.setFrozenColumns({0});                // one frozen pane -> pane renderer
     showView(&table);
     QVERIFY(virtualHeaderCount(&table) >= 1);
+    QPointer<VirtualHeaderView> installed(header);
 
     // Replacing the primary header has to destroy the derived pane renderers in
     // the same call (deferred deleteLater() would leave them pointing at the
     // adapter of the header that is being replaced).
     table.setHorizontalHeader(nullptr);
     settle();
-    QCOMPARE(virtualHeaderCount(&table), 0);
+    QVERIFY(installed.isNull());
+    // `nullptr` installs the view's own default header - a LabelHeaderView, which is a
+    // widget header too - so what is left is exactly that one plus its pane clone.
+    QCOMPARE(virtualHeaderCount(&table), 2);
 }
 
 void TestAdapterReplacement::replacingThePaneHeaderAdapterRebuildsItsClones()
@@ -446,6 +453,8 @@ void TestAdapterReplacement::replacingThePaneHeaderAdapterRebuildsItsClones()
     const auto clonedHeaders = [&table]() {
         QList<VirtualHeaderView *> headers;
         for (VirtualHeaderView *candidate : table.findChildren<VirtualHeaderView *>()) {
+            if (candidate->orientation() != Qt::Horizontal)
+                continue;   // the row-number strip is not a clone of the column header
             if (candidate != table.horizontalHeader()->headerWidget())
                 headers.append(candidate);
         }

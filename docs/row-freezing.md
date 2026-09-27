@@ -125,14 +125,19 @@ struct ItemPane
 ### 第 5 步的落地方式（纵向表头按 pane 切分）
 
 * **每个行 pane 一条行号条**：装的那条（`verticalHeader()`）覆盖可滚动带，冻结的上下两带各有
-  一个同类型渲染器（`NativeHeaderView`；应用装的自定义渲染器无法克隆，此时按文档退化为单条，
-  不猜测它的语义）。三条都放在自己的 pane 矩形上（`x = 视口左边界 - 行号条宽`）。
+  一个同类型渲染器。默认的条子是 `LabelHeaderView(Qt::Vertical)`（和列表头同一个渲染器类，只是
+  另一个轴），所以它能被克隆；应用装的**自定义**渲染器无法克隆，此时按文档退化为单条，不猜测
+  它的语义。三条都放在自己的 pane 矩形上（`x = 视口左边界 - 行号条宽`），并且各自持有自己的
+  pane offset：section 的位置 = 行几何的 content y − 自己的 offset，物化窗口也按自己的 offset
+  算，所以千万行也只 materialize 窗口内的行。
 * **每条持有自己的偏移**：pane 的矩形是"视口相对"的，而条子是视图的子控件，所以位置要加上视口
   自身的 y（有横向表头时它不是 0 —— 这一点在实现时被测试抓到过一次）。偏移 = "这条带子顶边显示
   的内容 y"：顶部 0、可滚动 `verticalOffset() + 冻结顶高`、底部 `内容高 - 冻结底高`。
-* **`NativeHeaderView::setPaneOffset()` 的优先级**：显式偏移现在**优先于** `HeaderGeometry` 的
-  offset（不再要求同时有一个 pane filter）。这样三条带子各自持有偏移，共享的行几何在滚动、
-  改行高、换模型时都不会把它们冲掉；没有冻结行时那条又会退回"跟随几何"。
+* **`HeaderViewInterface::setPaneOffset()` 的优先级**：显式偏移**优先于** `HeaderGeometry` 的
+  offset（不要求同时有 pane filter）。这样三条带子各自持有偏移，共享的行几何在滚动、改行高、
+  换模型时都不会把它们冲掉；没有冻结行时那条又会退回"跟随几何"。widget 条子的相应路径是
+  "无 filter 的显式 offset"：section 位置 = 行几何 content y − 自己的 offset，窗口也是
+  `visibleVisualRangeFor(offset, extent)`（O(1)/O(log N)，不建 pane cache、不建 per-row 列表）。
 * **顺带修掉两个既有缺陷**（都由这次的对齐测试暴露）：
   1. **均匀行高下行的行号与行错位**：行几何在均匀模式下刻意保持空（只有 default size），于是
      native 表头的镜像循环一个 section 都不遍历，条子沿用 Qt 自己的默认行高（24）——行高不是 24
@@ -140,8 +145,10 @@ struct ItemPane
      几何里没有的 section 取几何的 default size。
   2. **行几何的最小 section 尺寸是 24**（列几何的默认值），于是 `resizeSection(20)` 被夹到 24 ✗。
      现在行几何的最小值跟随内核的限制（1 px，`setRowHeight()` 也是这么夹的）。
-* **超限的变高模型会让行号条"临时让步"**：native 表头要在 100 万行以上逐行镜像行高，代价是
-  O(行数) 的结构，所以变高模型超过上限时行号条会被隐藏（`qWarning()` 一次，只在状态切换时发，
+* **超限的变高模型会让行号条"临时让步"**：真正需要"每行一份状态"的是**被测量**成不同高度的行。
+  `HeaderGeometry` 的表示分三层（uniform / uniform + 稀疏尺寸覆盖 / indexed），所以*均匀*高度在
+  任意行数下都只存 count + default（O(1)），用户拖过的少数行是稀疏覆盖（k 条）。只有变高模型超过
+  上限、或显式行高多到超过稀疏上限（4096）时条子才隐藏（`qWarning()` 一次，只在状态切换时发，
   不是每次 relayout）。这是**模型的属性**，不是用户设置：`setVerticalHeaderVisible()` 记录的是
   "应用的请求"（`isVerticalHeaderVisible()`），实际是否上屏看 `isVerticalHeaderShown()`。
   模型变小、或切回均匀行高时条子自己回来，不需要应用再调一次；反过来，"请求为 true 但当前模型

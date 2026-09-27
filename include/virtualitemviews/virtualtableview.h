@@ -2,7 +2,7 @@
 
 #include <virtualitemviews/global.h>
 #include <virtualitemviews/headergeometry.h>
-#include <virtualitemviews/nativeheaderview.h>
+#include <virtualitemviews/headerview.h>
 #include <virtualitemviews/scrollmapper.h>
 #include <virtualitemviews/tablespan.h>
 #include <virtualitemviews/tablewidgetadapter.h>
@@ -14,12 +14,15 @@
 #include <QVector>
 
 class QAbstractItemModel;
+class QPainter;
 class QKeyEvent;
 class QResizeEvent;
 class QShowEvent;
 class QWheelEvent;
 
 namespace viv {
+
+class VirtualHeaderView;
 
 class ListLayout;
 
@@ -211,6 +214,19 @@ public:
     /// (0 hides the line) or a pen style applies to both.
     void setPaneSeparatorStyle(const PaneSeparatorStyle &style);
     PaneSeparatorStyle paneSeparatorStyle() const { return m_paneSeparatorStyle; }
+    /// Colour the current style paints a header section separator with (probed by
+    /// rendering a section and reading its edge pixel). Both pane boundary lines - the
+    /// header edge and the body line - use it, so they match the separators between the
+    /// other columns instead of a guessed palette role.
+    ///
+    /// This is pane composition, not a renderer's business (§17 of the vertical-header
+    /// decision): it used to live on the native QHeaderView adapter.
+    static QColor sectionSeparatorColor(const QWidget *context);
+    /// Paints a pane boundary line into \a rect (its layout is defined by the style; solid
+    /// lines fill the rect, dashed ones are centred on it).
+    static void drawPaneSeparator(QPainter *painter, const QRect &rect,
+                                  const PaneSeparatorStyle &style,
+                                  const QColor &styleSeparatorColor);
     /// Columns the last horizontal layout pass looked at (diagnostics/tests): the
     /// structural pass is O(total columns), a pure scroll is O(panes x log columns).
     qsizetype horizontalLayoutColumnVisits() const { return m_panes.columnVisitsInLastUpdate(); }
@@ -243,6 +259,17 @@ public:
     /// Default: enabled, which is what makes a header drag read as one movement.
     void setColumnFollowsHeaderVisual(bool follows);
     bool columnFollowsHeaderVisual() const { return m_columnFollowsHeaderVisual; }
+    /// The row analogue of the setting above: while the row-number strip is dragged, the
+    /// body's rows follow the *visual* position of their section (the dragged row follows
+    /// the pointer, the rows making room slide along), instead of waiting for the commit.
+    ///
+    /// Only the rows of the band being dragged follow; a frozen row pane keeps its rows
+    /// pinned (they are pinned at the edge by definition, and a drag never crosses a band).
+    /// The committed layout stays authoritative for everything else - `visualRect()`,
+    /// hit testing, the scroll bars and the model order never see an intermediate frame -
+    /// and only the framework-managed row widgets move. Default: enabled.
+    void setRowFollowsHeaderVisual(bool follows);
+    bool rowFollowsHeaderVisual() const { return m_rowFollowsHeaderVisual; }
 
     // -- row heights ---------------------------------------------------------
     void setRowSizePolicy(RowSizePolicy policy);
@@ -328,6 +355,11 @@ public:
 
 signals:
     void sortIndicatorRequested(int logicalIndex, Qt::SortOrder order);
+    /// A drag on the row-number strip wants the rows at \a fromRow..\a fromRow moved to
+    /// \a toRow (both are view rows). The view then asks the model
+    /// (`moveRows()`); a model that cannot move rows leaves the order alone, and an
+    /// application that implements the move itself can ignore this signal.
+    void rowMoveRequested(int fromRow, int toRow);
     void horizontalOffsetChanged(qint64 offset);
     void columnGeometryChanged();
     void rowHeightChanged(qsizetype row, int height);
@@ -389,8 +421,6 @@ private:
                         const QModelIndex &destinationParent, int destinationColumn);
     void onHeaderGeometryChanged();
     void onVerticalSectionResized(int logicalIndex, int oldSize, int newSize);
-    /// A user drag on the row-number strip: the row height becomes explicit.
-    void onVerticalHeaderUserResized(int row, int oldSize, int newSize);
     /// Keeps the row-number strip aligned with the body while scrolling.
     void updateRowHeaderOffset();
     void syncHorizontalScrollBar();
@@ -407,6 +437,19 @@ private:
     void syncPaneSeparatorLines();
     /// Pane header of the same kind as the installed horizontal header.
     HeaderViewInterface *createHorizontalPaneHeader();
+    /// Renderer the view installs for the horizontal header when the application
+    /// does not install one: a LabelHeaderView (a widget header with the built-in
+    /// label-only adapter). See the class comment of LabelHeaderView.
+    HeaderViewInterface *createDefaultHorizontalHeader();
+    /// Same for the row-number strip: a LabelHeaderView(Qt::Vertical) - the same widget
+    /// renderer as the column header, other axis, so it virtualizes (a ten-million-row
+    /// uniform table materializes only its window) and supports the same gestures.
+    HeaderViewInterface *createDefaultVerticalHeader();
+    /// Lets \a strip report a row move instead of reordering its geometry, and wires
+    /// that request to rowMoveRequested() + moveRows().
+    void watchRowStrip(HeaderViewInterface *strip);
+    /// Row move of a strip drag: report it, then ask the model to move the rows.
+    void moveRowsForStripDrag(int fromRow, int toRow);
     /// Row-number strip of a frozen row pane (§31 row direction): same kind as the
     /// installed vertical header. Null when the installed one cannot be cloned (a custom
     /// renderer that is not a native header), in which case the strip stays single.
@@ -436,6 +479,12 @@ private:
     /// the framework-managed column hosts / cells, without running an adapter hook,
     /// creating or recycling widgets (only x changes).
     void updateVisualColumnGeometry();
+    /// Row-number strip that is currently drawing a visual (preview) geometry, or null.
+    /// The frozen band strips are deliberately not asked: their rows stay pinned.
+    VirtualHeaderView *visualRowStrip() const;
+    /// Puts every materialized row widget on its visual y - the committed one while no
+    /// strip is dragging, which is also how the rows come back after a commit/cancel.
+    void updateVisualRowGeometry();
     /// Lifts the body lines above the (re)materialized items.
     void raisePaneSeparatorLines();
     /// Column hosts of a row widget (direct children plus the clip host's).
@@ -526,6 +575,10 @@ private:
     int m_headerAnimationDuration = 300;
     /// Body follows the header's visual section geometry (§23/§24).
     bool m_columnFollowsHeaderVisual = true;
+    /// Rows follow the row-number strip's visual section geometry (§8).
+    bool m_rowFollowsHeaderVisual = true;
+    /// True while the rows carry a preview offset (see updateVisualRowGeometry()).
+    bool m_rowVisualOffsetsActive = false;
     /// Re-entrancy guard: a visual frame must not start another one.
     bool m_visualGeometryFrameActive = false;
     // The clip containers of a row widget are its children, tagged with their pane

@@ -16,7 +16,7 @@
 
 这条策略是 1.0 收口时**明确选定**的（2026-09-26，理由见 [roadmap.md](roadmap.md) §7 的决策记录）：
 库的核心类没有 PIMPL，实现状态直接放在公开头文件里（`VirtualItemView`、`VirtualTableView`、
-`VirtualHeaderView`、`NativeHeaderView`、`HeaderGeometry`、`TreeVisibilityIndex`、
+`VirtualHeaderView`、`LabelHeaderView`、`HeaderGeometry`、`TreeVisibilityIndex`、
 `TablePaneLayout`、`WidgetRecycler`、`BlockSizeIndex`…）。如果承诺 1.x 二进制兼容，那么"给某个
 缓存加一个 private 成员"就成了必须升主版本的改动 —— 而 1.0 收口前后几轮代码审查修的正是这类
 内部状态。所以：**源码兼容是承诺，二进制兼容是"同一套工具链 + 重编"**。这也意味着
@@ -78,7 +78,7 @@ build/bin/VirtualItemViews.dll           # 共享构建时（Windows）
 `cmake --install <build> --prefix <dir>` 之后（[README 安装与消费](../README.md) 有完整命令）：
 
 ```
-<prefix>/include/virtualitemviews/*.h     # 24 个公开头文件（含 global.h）
+<prefix>/include/virtualitemviews/*.h     # 25 个公开头文件（含 global.h）
 <prefix>/lib/VirtualItemViews.lib         # 静态库；共享构建是导入库
 <prefix>/lib/VirtualItemViews.so.<ver>    # 共享构建（Windows: <prefix>/bin/VirtualItemViews.dll）
 <prefix>/lib/cmake/VirtualItemViews/

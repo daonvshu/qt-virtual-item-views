@@ -41,7 +41,9 @@ VirtualItemViews 走第三条路：**只创建看得见的行，且这些行是�
 * **控件**：`WidgetAdapter` 定义"建控件 / 灌数据 / 解绑"三个函数，`WidgetRecycler` 按
   `WidgetType` 分池；滚动只做 bind / recycle，稳态滚动不 new / delete。
 * **表格**在内核之上加 `HeaderGeometry`（列宽、顺序、隐藏、排序、横向偏移的唯一事实来源）与表头
-  渲染器（`NativeHeaderView`，或每个可见 section 一个真实控件的 `VirtualHeaderView`）。
+  渲染器。默认是 widget 表头 `LabelHeaderView`（每个可见 section 一个只画 label 的控件，用当前
+  样式画成原生样子；拖动换序、section 过渡、整列跟着动、冻结 pane 克隆都在默认配置下可用），
+  也可以用 `VirtualHeaderView` 换成自己的 section 控件，或自己实现 `HeaderViewInterface`。
 * **树**用 `TreeVisibilityIndex` 把模型树压平成"可见行"，再喂给同一个 list 内核实现。
 
 核心不变量：物化控件 = 可见 + overscan + pinned；池里的控件没有身份；一个 QModelIndex 同时最多

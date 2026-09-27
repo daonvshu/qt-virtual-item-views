@@ -30,8 +30,9 @@ ListLayout / SizeIndex    createWidget / bindWidget / unbindWidget
 
 * `VirtualListView`：view row == 模型 row（在 `rootIndex()` 之下）。
 * `VirtualTableView`（v0.4）：行仍由同一个 list kernel 虚拟化，列几何与列状态由
-  `HeaderGeometry` 唯一持有；`HeaderGeometry` 是 `NativeHeaderView`（QHeaderView 适配器）与
-  行控件（`ColumnHost` / `TableRowLayoutContext`）共同消费的 committed geometry。
+  `HeaderGeometry` 唯一持有；`HeaderGeometry` 是表头渲染器（默认 `LabelHeaderView`，也可以
+  换成 `LabelHeaderView`/`VirtualHeaderView`，或应用自己实现 `HeaderViewInterface`）与行控件
+  （`ColumnHost` / `TableRowLayoutContext`）共同消费的 committed geometry。
 * `VirtualTableView`（v0.5，可选）：`MaterializationMode::CellWidgets` 时每个可见 cell 一个
   QWidget，二维虚拟化 `visibleRows x visibleColumns`；此时内核只负责区间/滚动/锚点
   （`usesItemWidgets() == false` + `materializeItems()` 钩子），控件由表格的
@@ -39,7 +40,7 @@ ListLayout / SizeIndex    createWidget / bindWidget / unbindWidget
 * `VirtualTableView` 的 pane 层（v0.7，§31）：`TablePaneLayout` 把同一份 `HeaderGeometry`
   投影成 FrozenLeft / Scrollable / FrozenRight 三个 pane（列 -> 视口 x、pane 矩形、
   可滚动 pane 的偏移范围）。冻结 pane 不消费水平偏移，也没有独立的列宽/顺序
-  （表头同样是 `NativeHeaderView` + `setPaneFilter()` 的另一个实例）。
+  （表头是同类渲染器的另一个实例 + `setPaneFilter()`）。
 * `VirtualTreeView`（v0.6）：`TreeVisibilityIndex` + 同一个 list kernel。树只替换身份映射：
 
   ```

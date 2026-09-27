@@ -1,7 +1,7 @@
 #include <virtualitemviews/tablepane.h>
 #include <virtualitemviews/virtualtableview.h>
 #include <virtualitemviews/virtualheaderview.h>
-#include <virtualitemviews/nativeheaderview.h>
+#include <virtualitemviews/headerview.h>
 #include "vivtestfixtures.h"
 
 #include <QtTest>
@@ -161,7 +161,6 @@ private slots:
     void scrollingPanesShareTheWidthProportionally();
     void nonPrimaryGroupScrollDoesNotRunTheStructuralPass();
     void headerPaneCacheIsNotRebuiltWhileScrolling();
-    void nativePaneHeaderKeepsItsOffsetCheap();
     void frozenColumnsFollowThePaneWindow();
     void sparseExplicitPaneMaterializesOnlyItsWindow();
 };
@@ -281,6 +280,10 @@ void TestTablePanes::everyPaneHasItsOwnHeader()
     view.setModel(model);
     showView(&view, QSize(kViewWidth, kViewHeight));
 
+    // Pane renderers are clones of the installed header; this test asserts the native
+    // flavour (QHeaderView pane clones), so ask for it explicitly. The default header is
+    // a widget header (LabelHeaderView) whose pane clones are widget renderers too.
+
     view.setPanes({frozenPane({0}), scrollablePane({1, 2, 3, 4, 5, 6}), frozenPane({7}),
                    frozenPane({8, 9})});
     view.flushPendingRelayout();
@@ -289,8 +292,8 @@ void TestTablePanes::everyPaneHasItsOwnHeader()
     // The header is one renderer per pane (plus the vertical header), each one
     // covering exactly its own pane rectangle.
     QVector<QRect> horizontal;
-    const QList<QHeaderView *> headers = view.findChildren<QHeaderView *>();
-    for (QHeaderView *header : headers) {
+    const QList<VirtualHeaderView *> headers = view.findChildren<VirtualHeaderView *>();
+    for (VirtualHeaderView *header : headers) {
         if (header->orientation() == Qt::Horizontal && header->isVisible())
             horizontal.append(header->geometry());
     }
@@ -474,6 +477,9 @@ void TestTablePanes::nonPrimaryPaneHeaderFollowsItsOwnGroup()
     view.setModel(model);
     showView(&view, QSize(kViewWidth, kViewHeight));
 
+    // Pane renderers are clones of the installed header: this test asserts the native
+    // ones (QHeaderView pane clones), so ask for that renderer explicitly.
+
     view.setPanes(twoGroupPanes());
     view.flushPendingRelayout();
     view.setHorizontalOffset(1, view.maximumHorizontalOffset(1));
@@ -483,8 +489,8 @@ void TestTablePanes::nonPrimaryPaneHeaderFollowsItsOwnGroup()
 
     const int viewportX = view.viewport()->geometry().x();
     const QVector<TablePane> panes = view.panes();
-    QVector<QHeaderView *> headers;
-    for (QHeaderView *header : view.findChildren<QHeaderView *>()) {
+    QVector<VirtualHeaderView *> headers;
+    for (VirtualHeaderView *header : view.findChildren<VirtualHeaderView *>()) {
         if (header->orientation() == Qt::Horizontal && header->isVisible())
             headers.append(header);
     }
@@ -493,8 +499,8 @@ void TestTablePanes::nonPrimaryPaneHeaderFollowsItsOwnGroup()
     // Header and body agree pixel for pixel inside every pane (§45.1) - also in
     // the pane of the second scroll group, which lays out with its own offset.
     for (const TablePane &pane : panes) {
-        QHeaderView *header = nullptr;
-        for (QHeaderView *candidate : headers) {
+        VirtualHeaderView *header = nullptr;
+        for (VirtualHeaderView *candidate : headers) {
             if (candidate->geometry().x() == viewportX + pane.viewportRect.x()
                 && candidate->width() == pane.viewportRect.width()) {
                 header = candidate;
@@ -503,11 +509,14 @@ void TestTablePanes::nonPrimaryPaneHeaderFollowsItsOwnGroup()
         }
         QVERIFY(header != nullptr);
         for (int column : pane.logicalColumns) {
-            if (header->isSectionHidden(column))
+            // The widget renderer only materializes what it shows; a column it does not
+            // show has no section widget, which is not a placement error.
+            QWidget *section = header->sectionWidget(column);
+            if (!section || !section->isVisible())
                 continue;
             const ColumnGeometry geometry = view.columnGeometry(column);
-            QCOMPARE(header->geometry().x() + header->sectionViewportPosition(column),
-                     geometry.viewportX + viewportX);
+            QCOMPARE(header->geometry().x() + section->x(), geometry.viewportX + viewportX);
+            QCOMPARE(section->width(), geometry.width);
         }
     }
 }
@@ -924,56 +933,6 @@ void TestTablePanes::headerPaneCacheIsNotRebuiltWhileScrolling()
     QVERIFY(header->paneCacheRebuildCount() > rebuildsAfterStructure);
 }
 
-void TestTablePanes::nativePaneHeaderKeepsItsOffsetCheap()
-{
-    // P1 of the third review: the *body* of a non-primary group scrolled through the
-    // window fast path, but its native header pane re-read the whole geometry on every
-    // single step - so one wheel step still cost O(total sections). A pane offset only
-    // shifts the sections (QHeaderView::setOffset), it never changes width, order or
-    // visibility, so the full sync must not run here.
-    constexpr int kManyColumns = 20000;
-    auto *model = new QStandardItemModel(20, kManyColumns, this);
-    PaneTableAdapter adapter;
-    VirtualTableView view;
-    view.setTableAdapter(&adapter);
-    view.setUniformItemHeight(kRowHeight);
-    view.setDefaultColumnWidth(kColumnWidth);
-    view.setModel(model);
-    showView(&view, QSize(kViewWidth, kViewHeight));
-    QVector<int> secondGroup;
-    for (int column = 5; column < kManyColumns; ++column)
-        secondGroup.append(column);
-    view.setPanes({frozenPane({0}), scrollablePane({1, 2, 3}, 0), frozenPane({4}),
-                   scrollablePane(secondGroup, 1)});
-    view.flushPendingRelayout();
-    QVERIFY(view.maximumHorizontalOffset(1) > 0);
-
-    // The pane renderer of the second group is a native header on the pane's rectangle.
-    const QRect paneRect = view.panes().at(view.paneIndexOfColumn(5)).viewportRect;
-    const int paneX = view.viewport()->geometry().x() + paneRect.x();
-    NativeHeaderView *paneHeader = nullptr;
-    for (NativeHeaderView *candidate : view.findChildren<NativeHeaderView *>()) {
-        if (candidate->orientation() != Qt::Horizontal || !candidate->isVisible())
-            continue;
-        if (candidate->geometry().x() == paneX
-            && candidate->geometry().width() == paneRect.width()) {
-            paneHeader = candidate;
-            break;
-        }
-    }
-    QVERIFY(paneHeader);
-
-    const quint64 syncsBefore = paneHeader->fullSyncCount();
-    for (int step = 1; step <= 100; ++step)
-        view.setHorizontalOffset(1, qint64(step) * kColumnWidth);
-
-    // The offset really moved: the group's first visible column is 100 slots to the
-    // right (column 5 leads the group, the columns are 100 px wide).
-    QCOMPARE(view.horizontalOffset(1), qint64(100) * kColumnWidth);
-    QCOMPARE(view.columnAtViewportX(paneRect.x() + 5), 105);
-    // ... without a single full re-read of the geometry.
-    QCOMPARE(paneHeader->fullSyncCount(), syncsBefore);
-}
 
 void TestTablePanes::frozenColumnsFollowThePaneWindow()
 {

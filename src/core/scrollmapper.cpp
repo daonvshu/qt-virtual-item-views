@@ -8,7 +8,7 @@ namespace viv {
 
 // A shared build has to export this public constant (see virtualitemview.cpp).
 namespace {
-[[maybe_unused]] const void *const kExportedConstants[] = {
+[[maybe_unused]] const void *const volatile kExportedConstants[] = {
     &ScrollMapper::kMaxScrollRange,
 };
 } // namespace

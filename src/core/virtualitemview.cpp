@@ -42,7 +42,7 @@ namespace viv {
 // lives next to the other public constants (ScrollMapper, BlockSizeIndex, WidgetRecycler,
 // HeaderGeometry, HeaderViewInterface).
 namespace {
-[[maybe_unused]] const void *const kExportedConstants[] = {
+[[maybe_unused]] const void *const volatile kExportedConstants[] = {
     &VirtualItemView::kLifecycleLogCapacity,
 };
 } // namespace

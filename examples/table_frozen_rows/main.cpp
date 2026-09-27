@@ -13,6 +13,7 @@
 
 #include <virtualitemviews/itempane.h>
 #include <virtualitemviews/tablewidgetadapter.h>
+#include <virtualitemviews/virtualheaderview.h>
 #include <virtualitemviews/virtualtableview.h>
 
 #include <QAbstractTableModel>
@@ -144,11 +145,11 @@ private:
 };
 
 /// 可见的垂直表头 = 每个行 pane 一条。
-QList<QHeaderView *> rowStrips(viv::VirtualTableView &view)
+QList<viv::VirtualHeaderView *> rowStrips(viv::VirtualTableView &view)
 {
-    QList<QHeaderView *> strips;
-    for (QHeaderView *header :
-         view.findChildren<QHeaderView *>(QString(), Qt::FindDirectChildrenOnly)) {
+    QList<viv::VirtualHeaderView *> strips;
+    for (viv::VirtualHeaderView *header : view.findChildren<viv::VirtualHeaderView *>(
+             QString(), Qt::FindDirectChildrenOnly)) {
         if (header->orientation() == Qt::Vertical && header->isVisible())
             strips.append(header);
     }
@@ -216,7 +217,7 @@ bool runCheck(viv::VirtualTableView &view, QAbstractItemModel *model)
     view.flushPendingRelayout();
 
     // 3) 行号条：每个行 pane 一条，且贴着自己的行。
-    const QList<QHeaderView *> strips = rowStrips(view);
+    const QList<viv::VirtualHeaderView *> strips = rowStrips(view);
     if (strips.size() != panes.size()) {
         std::printf("table_frozen_rows: check FAILED %d row strips for %d panes\n",
                     int(strips.size()), int(panes.size()));
@@ -225,8 +226,8 @@ bool runCheck(viv::VirtualTableView &view, QAbstractItemModel *model)
     const QRect viewportRect = view.viewport()->geometry();
     for (const viv::ItemPane &pane : panes) {
         const int paneTop = viewportRect.y() + pane.viewportRect.y();
-        QHeaderView *strip = nullptr;
-        for (QHeaderView *candidate : strips) {
+        viv::VirtualHeaderView *strip = nullptr;
+        for (viv::VirtualHeaderView *candidate : strips) {
             if (candidate->geometry().y() == paneTop
                 && candidate->geometry().height() == pane.viewportRect.height()) {
                 strip = candidate;
@@ -243,8 +244,9 @@ bool runCheck(viv::VirtualTableView &view, QAbstractItemModel *model)
             const QRect rowRect = view.visualRect(model->index(row, 0));
             if (rowRect.y() < pane.viewportRect.y() || rowRect.bottom() > pane.viewportRect.bottom())
                 continue; // the row is scrolled out of this band
-            if (strip->geometry().y() + strip->sectionViewportPosition(row)
-                != viewportRect.y() + rowRect.y()) {
+            QWidget *stripSection = strip->sectionWidget(row);
+            if (!stripSection
+                || strip->geometry().y() + stripSection->y() != viewportRect.y() + rowRect.y()) {
                 std::printf("table_frozen_rows: check FAILED row %d number not glued to its row "
                             "(strip y=%d pos=%d row y=%d)\n",
                             row, strip->geometry().y(), row, rowRect.y());

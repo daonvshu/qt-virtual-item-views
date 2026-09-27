@@ -5,7 +5,8 @@
 > **v0.5 Cell Widget Mode / 二维虚拟化已实现**（`CellWidgetAdapter`，只 materialize
 > `visibleRows x visibleColumns`）；**v0.7 起 `VirtualHeaderView` + `HeaderWidgetAdapter` 已实现**
 > （§15/§17–§19），换序的 committed/visual 两层几何与按需过渡见
-> [header-animation.md](header-animation.md)。
+> [header-animation.md](header-animation.md)；**1.0 起列方向的默认渲染器是 widget 表头
+> `LabelHeaderView`**（只画 label 的 section，见 §8），native 渲染器仍可显式安装。
 
 本文记录 `VirtualTableView` 尚未实现、但必须从第一天遵守的边界。方案文档把它列为项目级
 architecture invariant：**Header owns geometry; VirtualTableView owns virtualization;
@@ -37,9 +38,15 @@ NativeHeaderView          VirtualHeaderView
  (QHeaderView, 轻量)        (QWidget, 复杂业务)
 ```
 
-* Native 模式保留 QHeaderView 的轻量优势（文本、sort indicator、标准 resize/move）。
+* Native 模式保留 QHeaderView 的轻量优势（文本、sort indicator、标准 resize/move），仍是
+  可替换的渲染器之一。
 * Widget 模式使用 `VirtualHeaderView + HeaderWidgetAdapter + Recycler`，只 materialize
   `visible columns + overscan + pinned`，不随总列数线性增长。
+* **表格默认装的是 Widget 表头**：`LabelHeaderView`（`VirtualHeaderView` + 库里自带的
+  `LabelHeaderAdapter`，每个 section 一个只画 label 的控件，用当前样式把 section/排序箭头画成
+  原生样子）。所以拖动换序、section 过渡、"整列一起动"、pane 克隆在默认配置下就有；
+  `setHorizontalHeader(nullptr)` 回到它，`setHorizontalHeaderVisible(false)` 隐藏表头，
+  `setHorizontalHeader(new NativeHeaderView(Qt::Horizontal))` 才是 QStyle 绘制的那个。
 * `VirtualTableView` 不关心 Header 用 painter 还是 QWidget 呈现。
 * **极宽表格要用 Widget 表头**：body、`HeaderGeometry`、滚动条与 `columnGeometry()` 都是 64 位
   像素空间（`docs/abi.md` 的 `ScrollMapper`），但 **`QHeaderView` 自己的 section 空间是 int**
@@ -108,9 +115,10 @@ Table 新增的只有：行/列两级几何、`HeaderGeometry`、二维可见区
   同一列同时出现在两侧时留在左侧；隐藏的冻结列不属于任何 pane（`isColumnFrozen()` 变 false），
   取消隐藏后自动回到 pane。
 * **单一事实来源**：`TablePaneLayout`（`tablepane.h`）只缓存"列 -> 视口 x"和 pane 矩形，
-  列宽、顺序、隐藏、排序仍然只存在 `HeaderGeometry` 里。冻结 pane 的表头是
-  `NativeHeaderView` 的另一个实例 + `setPaneFilter()`（只显示本 pane 的 section，冻结 pane
-  忽略 offset），因此冻结表头同样没有独立列宽副本，拖动列宽会经 geometry 同时影响三个 pane。
+  列宽、顺序、隐藏、排序仍然只存在 `HeaderGeometry` 里。冻结 pane 的表头是**同类型渲染器的
+  另一个实例** + `setPaneFilter()`（widget 表头交给 `createHorizontalPaneHeader()` 克隆，
+  只显示本 pane 的 section；冻结 pane 忽略 offset，非主滚动组带自己的组偏移），因此冻结表头
+  同样没有独立列宽副本，拖动列宽会经 geometry 同时影响三个 pane。
 * **pane 表头按自己那组列打包**：冻结列是**集合**，不保证落在视觉序的最前面 —— 先把冻结列拖到
   别的列后面、或者先把几列拖到最前再冻结它们（用户实际这么用），pane 的列就会散落在 committed
   视觉序里。所以每个 pane 的表头都按**自己那份列清单**（committed 视觉序过滤后）从自己的左边缘
@@ -120,11 +128,12 @@ Table 新增的只有：行/列两级几何、`HeaderGeometry`、二维可见区
   "消失"，随便再拖一下（触发一次重排）才回来。
   **pane 交界的分割线**：`QHeaderView` 只在 section **之间**画分隔线、不在控件边缘画，
   所以冻结 pane 表头用 `setPaneSeparatorEdge()` 在朝向滚动区的一侧（左 pane 画右边、
-  右 pane 画左边）自己补 1px 分隔线，否则冻结/滚动交界处会少一条线。
+  右 pane 画左边）自己补 1px 分隔线，否则冻结/滚动交界处会少一条线（这条对 widget 表头的
+  pane 克隆同样成立——它也是同一个渲染器类）。
   body 里同一条线由框架的 1 px 覆盖控件（`vivPaneSeparatorLine`）画在**所有 item 之上**
   （viewport 自己画的线会被行控件/单元格盖住；该控件 `WA_TransparentForMouseEvents`，
   不挡输入，每次 materialization 之后重新 `raise()`）。两条线的颜色都不靠调色板猜，而是
-  `NativeHeaderView::sectionSeparatorColor()` —— 让当前样式渲染一小段 section，取它右边缘像素，
+  `VirtualTableView::sectionSeparatorColor()` —— 让当前样式渲染一小段 section，取它右边缘像素，
   所以和"其它列之间的分隔线"完全一致；没有冻结列时这些线和裁剪容器都不存在。
   **可定制**：`setPaneSeparatorStyle(PaneSeparatorStyle)`，字段为 `width`（像素，0 = 隐藏）、
   `color`（invalid = 用上面的样式色）与 `lineStyle`；表头线与 body 线共用同一份样式，
@@ -137,12 +146,27 @@ Table 新增的只有：行/列两级几何、`HeaderGeometry`、二维可见区
 `QStyle` 绘制：
 
 ```cpp
+// 默认就是 Widget 表头：LabelHeaderView = VirtualHeaderView + 只画 label 的 adapter
+auto *labels = new viv::LabelHeaderView(Qt::Horizontal);
+table->setHorizontalHeader(labels);
+
+// 换成自己的 section（badge、过滤按钮、搜索框……）
 auto *header = new viv::VirtualHeaderView(Qt::Horizontal);
 header->setAdapter(&myHeaderAdapter);   // HeaderWidgetAdapter
 header->setLabelModel(model);
 header->setSortInteractionEnabled(true);
-table->setHorizontalHeader(header);     // 传给 nullptr 回到 native 表头
+table->setHorizontalHeader(header);     // 传给 nullptr 回到默认的 label 表头
 ```
+
+**默认渲染器**：`setHorizontalHeader(nullptr)`（以及视图自己 `ensureHeaders()` 时）装的就是
+`LabelHeaderView`。它把每个 section 交给一个只画 label 的控件，用当前样式（`CE_Header`）画出
+原生样式的 section 与排序箭头——实测与 `NativeHeaderView` 的 section **逐像素一致**，唯一差别是
+最后一节的宽度：`QHeaderView` 会把最后一节拉伸填满表头，而 widget 表头按 committed 几何画，
+所以表头与 body 的最后一列严格一致（想两者都填满就 `setStretchLastColumn(true)`，那是写进
+几何的、表头与 body 共用的伸缩）。
+
+`LabelHeaderAdapter` 也直接可用/可继承：覆写 `labelText()` / `sortOrderFor()` 就能只改"每个
+section 显什么"而不用写 section 控件。
 
 * **与 native 完全可替换**：`HeaderViewInterface` 是唯一的接缝（§15）。表格只通过
   `headerWidget()`/`setGeometryModel()`/`setLabelModel()`/`setSortInteractionEnabled()`/
@@ -152,11 +176,11 @@ table->setHorizontalHeader(header);     // 传给 nullptr 回到 native 表头
   实测：200 列、1000 px 宽的表格只创建 9 个 section 控件（`table_custom_header` 示例输出）。
 * **几何仍只来自 `HeaderGeometry`**：section 的位置/宽度/顺序/隐藏/偏移全部读 geometry，
   表头不保存任何列状态；拖动分隔线、拖动 section 重排、点击排序都是把结果写回 geometry。
-* **只支持横向**：渲染器把每个 section 的 x 都从表头几何推出来、沿 x 排布，所以竖着构造
-  （`VirtualHeaderView(Qt::Vertical)`）只会得到一个永远空的条子 —— 构造函数对这种用法
-  `qWarning()`，`setGeometryModel()` 也拒绝另一个方向的几何。行号条用
-  `NativeHeaderView(Qt::Vertical)` 或自己实现 `HeaderViewInterface`。表格侧同样会拒绝方向不匹配的
-  渲染器（`setHorizontalHeader()` / `setVerticalHeader()` 警告并保持原渲染器不变）。
+* **两个方向同一个渲染器**：`VirtualHeaderView` 按轴摆放 section（横向沿 x、纵向沿 y），
+  `VirtualTableView` 的两个默认表头都是它 + 只画 label 的 adapter（列表头 `LabelHeaderView`、
+  行号条 `LabelHeaderView(Qt::Vertical)`），所以拖动换序、拖动改尺寸、section 过渡、整列/整行
+  跟帧与 pane 克隆在默认配置下都有。`setGeometryModel()` 仍然拒绝另一个方向的几何，表格侧也拒绝
+  方向不匹配的渲染器（`setHorizontalHeader()` / `setVerticalHeader()` 警告并保持原渲染器不变）。
 * **`bindSection()` 是唯一的"状态变了"钩子**：重命名一列（`headerDataChanged`）只会重绑被点名的
   logical 区间；列插入 / 删除 / 移动与 `modelReset` 会先把已物化 section 全部回收（在**旧身份**仍
   有效时 `unbindSection()`），随后整批重新 acquire + `bindSection()`；几何的排序指示器变化同样会

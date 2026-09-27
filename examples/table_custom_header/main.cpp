@@ -1,7 +1,8 @@
 // 自定义表头示例（§15/§17-§19）：同一个 VirtualTableView 可以在
-//   * NativeHeaderView（QHeaderView + QStyle 绘制）与
-//   * VirtualHeaderView（每个可见 section 一个真实 QWidget）
+//   * 默认的 label 表头（LabelHeaderView：Widget 表头 + 库里自带的、只画 label 的 adapter）、
+//   * 本示例的自定义表头（VirtualHeaderView + badge/过滤按钮的 section 控件）与
 // 之间切换，表格主体完全不用改——列几何始终只有 HeaderGeometry 一份。
+// 默认表头就是 Widget 表头，所以拖动换序、section 过渡、"整列一起动"在默认配置下也有。
 //
 // Widget 表头只 materialize「可见列 + 横向 overscan + pinned section」，
 // 所以 200 列也只创建个位数个 section 控件。
@@ -22,6 +23,7 @@
 // 演示里 `--move-demo` / `--drag-commit-demo` 的截图时刻是固定延时（按默认 60 列调过）；
 // 宽表首屏可能花几百毫秒，想让截图落在过渡中途，把 `--animation` 调大一些即可。
 
+#include <virtualitemviews/labelheaderview.h>
 #include <virtualitemviews/virtualheaderview.h>
 #include <virtualitemviews/virtualtableview.h>
 
@@ -29,6 +31,7 @@
 #include <QApplication>
 #include <QCheckBox>
 #include <QCommandLineParser>
+#include <QComboBox>
 #include <QHBoxLayout>
 #include <QKeyEvent>
 #include <QLabel>
@@ -64,6 +67,9 @@ public:
         , m_rows(qMax(1, rows))
         , m_columns(qMax(1, columns))
     {
+        m_order.reserve(m_rows);
+        for (int row = 0; row < m_rows; ++row)
+            m_order.append(row);
     }
 
     int rowCount(const QModelIndex &parent = QModelIndex()) const override
@@ -80,7 +86,7 @@ public:
     {
         if (!index.isValid() || role != Qt::DisplayRole)
             return QVariant();
-        return QStringLiteral("r%1c%2").arg(index.row()).arg(index.column() + 1);
+        return QStringLiteral("r%1c%2").arg(sourceRow(index.row())).arg(index.column() + 1);
     }
 
     QVariant headerData(int section, Qt::Orientation orientation, int role) const override
@@ -88,15 +94,55 @@ public:
         if (role != Qt::DisplayRole)
             return QVariant();
         return orientation == Qt::Horizontal ? QStringLiteral("列 %1").arg(section + 1)
-                                             : QString::number(section + 1);
+                                             // 行号是这一行的稳定标识（`R7`），拖动换序后不会
+                                             // 重新编号：行跟着它的标号一起走，一眼能看出移动生效。
+                                             : QStringLiteral("R%1").arg(sourceRow(section) + 1);
+    }
+
+    /// 行号条拖动的落点：示例模型真的把行移到新位置（应用模型通常在这里移动自己的数据）。
+    /// 视图只负责"请求" - `rowMoveRequested(from, to)` 之后由模型决定移动成不成立。
+    bool moveRows(const QModelIndex &sourceParent, int sourceRow, int count,
+                  const QModelIndex &destinationParent, int destinationChild) override
+    {
+        if (sourceParent.isValid() || destinationParent.isValid() || count <= 0)
+            return false;
+        if (sourceRow < 0 || sourceRow + count > m_order.size())
+            return false;
+        if (destinationChild < 0 || destinationChild > m_order.size())
+            return false;
+        if (destinationChild >= sourceRow && destinationChild <= sourceRow + count)
+            return false;   // Qt 的"原地移动"规则：落在自己（或紧邻）之间不算移动
+        if (!beginMoveRows(sourceParent, sourceRow, sourceRow + count - 1, destinationParent,
+                           destinationChild))
+            return false;
+        QVector<int> moved;
+        moved.reserve(count);
+        for (int index = 0; index < count; ++index)
+            moved.append(m_order.at(sourceRow + index));
+        m_order.remove(sourceRow, count);
+        const int target = destinationChild > sourceRow ? destinationChild - count
+                                                       : destinationChild;
+        for (int index = 0; index < count; ++index)
+            m_order.insert(target + index, moved.at(index));
+        endMoveRows();
+        return true;
     }
 
     /// 模拟"每列有个待处理数量"，给 widget 表头的 badge 用。
     int pendingCount(int column) const { return (column * 7) % 23; }
 
 private:
+    /// 显示行 -> 数据行。示例的数据是生成的，所以"移动一行"就是移动这个映射；应用模型
+    /// 会把真实数据搬过去。
+    int sourceRow(int displayRow) const
+    {
+        return displayRow >= 0 && displayRow < m_order.size() ? m_order.at(displayRow)
+                                                             : displayRow;
+    }
+
     int m_rows = 0;
     int m_columns = 0;
+    QVector<int> m_order;
 };
 
 /// 行控件：每列一个 ColumnHost + 一个 label（与其它表格示例一致）。
@@ -243,7 +289,8 @@ int main(int argc, char **argv)
     QCommandLineOption sectionsOption(QStringLiteral("sections"), QStringLiteral("列数"),
                                       QStringLiteral("count"), QStringLiteral("60"));
     QCommandLineOption widgetOption(QStringLiteral("widget-header"),
-                                    QStringLiteral("启动时使用 QWidget 版表头"));
+                                    QStringLiteral("启动时使用本示例的自定义表头"
+                                                   "（不带 = 库里默认的 label 表头）"));
     QCommandLineOption frozenOption(QStringLiteral("frozen"), QStringLiteral("左侧冻结列数（§31）"),
                                     QStringLiteral("count"), QStringLiteral("0"));
     QCommandLineOption exitOption(QStringLiteral("exit-after"),
@@ -299,22 +346,31 @@ int main(int argc, char **argv)
     // 库能力："整列一起动"——拖动与换序过渡期间，body 的整列跟着表头的 section 走。
     view->setColumnFollowsHeaderVisual(!parser.isSet(noBodyAnimationOption));
 
-    const auto useWidgetHeader = [view, &headerAdapter, &model](bool widget) {
-        if (widget) {
+    // 三种表头：默认的 label 表头（Widget 表头，库里自带）、本示例的自定义表头
+    // 两种表头：库里自带的 label 表头，以及本示例的自定义表头（badge + 过滤按钮）。
+    const auto useHeader = [view, &headerAdapter, &model](int kind) {
+        switch (kind) {
+        case 1: {   // 自定义 section 控件
             auto *header = new viv::VirtualHeaderView(Qt::Horizontal);
             header->setAdapter(&headerAdapter);
             header->setLabelModel(&model);
             header->setSortInteractionEnabled(true);
             header->setSectionOverscan(1);
             view->setHorizontalHeader(header);   // 表格会自动按需销毁/接替
-        } else {
-            view->setHorizontalHeader(nullptr);  // nullptr = 回到 native 表头
+            break;
+        }
+        default:    // 回到库里自带的 label 表头（也是 Widget 表头）
+            view->setHorizontalHeader(nullptr);
+            break;
         }
     };
 
     auto *toolbar = window.addToolBar(QStringLiteral("表头"));
-    auto *widgetHeader = new QCheckBox(QStringLiteral("Widget 表头"), &window);
-    toolbar->addWidget(widgetHeader);
+    auto *headerKind = new QComboBox(&window);
+    headerKind->addItem(QStringLiteral("默认 label 表头"));
+    headerKind->addItem(QStringLiteral("自定义表头"));
+    toolbar->addWidget(new QLabel(QStringLiteral("表头: "), &window));
+    toolbar->addWidget(headerKind);
     auto *bodyCheck = new QCheckBox(QStringLiteral("整列一起动"), &window);
     bodyCheck->setChecked(view->columnFollowsHeaderVisual());
     bodyCheck->setToolTip(QStringLiteral(
@@ -326,12 +382,14 @@ int main(int argc, char **argv)
     toolbar->addWidget(new QLabel(QStringLiteral("  冻结: "), &window));
     auto *frozen = new QCheckBox(QStringLiteral("前 2 列"), &window);
     toolbar->addWidget(frozen);
-    QObject::connect(widgetHeader, &QCheckBox::toggled, view, useWidgetHeader);
+    // qOverload: Qt 5 的 currentIndexChanged 还有 (const QString &) 重载。
+    QObject::connect(headerKind, qOverload<int>(&QComboBox::currentIndexChanged), view,
+                     useHeader);
     QObject::connect(frozen, &QCheckBox::toggled, view, [view, columnCount](bool on) {
         view->setFrozenColumns(on ? QVector<int>({0, qMin(1, columnCount - 1)}) : QVector<int>());
     });
     if (parser.isSet(widgetOption))
-        widgetHeader->setChecked(true);
+        headerKind->setCurrentIndex(1);
     const int frozenCount = qBound(0, parser.value(frozenOption).toInt(), columnCount - 1);
     if (frozenCount > 0) {
         QVector<int> columns;
@@ -355,7 +413,7 @@ int main(int argc, char **argv)
                             .arg(view->columnCount())
                             .arg(stats.materializedItems)
                             .arg(sectionWidgets < 0
-                                     ? QStringLiteral("native（不支持过渡）")
+                                     ? QStringLiteral("native（QHeaderView，不做过渡）")
                                      : QString::number(sectionWidgets))
                             .arg(stats.createCount)
                             .arg(headerAdapter.created));
@@ -410,6 +468,8 @@ int main(int argc, char **argv)
         const QPoint viewportOrigin = view->viewport()->mapToGlobal(QPoint(0, 0));
         QHash<int, int> sectionXByColumn;
         for (viv::VirtualHeaderView *renderer : view->findChildren<viv::VirtualHeaderView *>()) {
+            if (renderer->orientation() != Qt::Horizontal)
+                continue;   // 纵向行号条不参与"列的 x"报告
             for (int column : renderer->materializedSections()) {
                 if (sectionXByColumn.contains(column))
                     continue;
@@ -434,8 +494,8 @@ int main(int argc, char **argv)
     if (!dragDemoPath.isEmpty()) {
         // §22/§23 的拖动：按下 → 越过阈值后只动"视觉几何"（被拖的列跟随光标、邻居让出插入位），
         // committed 几何在松手前一个字节都不动。这里在拖动途中截图，然后按 Esc 取消。
-        if (!widgetHeader->isChecked())
-            widgetHeader->setChecked(true);
+        if (headerKind->currentIndex() != 1)
+        headerKind->setCurrentIndex(1);
         QTimer::singleShot(0, &window, [view, &window, reportShot, dragDemoPath]() {
             QWidget *header = view->horizontalHeader()->headerWidget();
             const int rowY = qMax(2, header->height() / 2);
@@ -455,8 +515,8 @@ int main(int argc, char **argv)
     } else if (!dragCommitDemoPath.isEmpty()) {
         // 拖动并**提交**（松手）：表头与 body 的整列一起从预览位置收敛到 committed —— 与
         // "移动一列"按钮走的是同一条提交路径，区别只是这次 committed 几何是拖动松手改的。
-        if (!widgetHeader->isChecked())
-            widgetHeader->setChecked(true);
+        if (headerKind->currentIndex() != 1)
+        headerKind->setCurrentIndex(1);
         view->setHeaderAnimationDuration(1200);
         QTimer::singleShot(0, &window, [view, &window]() {
             QWidget *header = view->horizontalHeader()->headerWidget();
@@ -476,8 +536,8 @@ int main(int argc, char **argv)
     } else if (!moveDemoPath.isEmpty()) {
         // 慢速动画 + 途中截图：能直接看到 section 与整列一起在飞（"整列一起动"关掉时只有 section）。
         // 截图时刻是固定延时，按默认 60 列调过；宽表首屏更慢，需要把 --animation 调大。
-        if (!widgetHeader->isChecked())
-            widgetHeader->setChecked(true); // 只有 widget 表头能做视觉过渡
+        if (headerKind->currentIndex() != 1)
+        headerKind->setCurrentIndex(1); // 只有 widget 表头能做视觉过渡
         view->setHeaderAnimationDuration(1200);
         QTimer::singleShot(0, view, [view, columnCount]() {
             view->moveColumn(1, qMin(columnCount - 1, 4),

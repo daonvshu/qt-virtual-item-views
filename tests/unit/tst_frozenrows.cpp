@@ -1,8 +1,9 @@
 #include <virtualitemviews/itempane.h>
-#include <virtualitemviews/nativeheaderview.h>
+#include <virtualitemviews/headerview.h>
 #include <virtualitemviews/tablewidgetadapter.h>
 #include <virtualitemviews/virtuallistview.h>
 #include <virtualitemviews/virtualtableview.h>
+#include <virtualitemviews/virtualheaderview.h>
 
 #include "vivtestfixtures.h"
 
@@ -74,10 +75,10 @@ QStandardItemModel *tableModel(QObject *parent)
 }
 
 /// 行号条：可见的垂直表头就是当前每个行 pane 一条。
-QList<QHeaderView *> verticalStrips(VirtualTableView &view)
+QList<VirtualHeaderView *> verticalStrips(VirtualTableView &view)
 {
-    QList<QHeaderView *> strips;
-    for (QHeaderView *header : view.findChildren<QHeaderView *>(QString(), Qt::FindDirectChildrenOnly)) {
+    QList<VirtualHeaderView *> strips;
+    for (VirtualHeaderView *header : view.findChildren<VirtualHeaderView *>(QString(), Qt::FindDirectChildrenOnly)) {
         if (header->orientation() == Qt::Vertical && header->isVisible())
             strips.append(header);
     }
@@ -103,12 +104,12 @@ void verifyRowStripsAreGlued(VirtualTableView &view, QAbstractItemModel *model)
     // own origin is the bridge between the two.
     const QRect viewportRect = view.viewport()->geometry();
     const QVector<ItemPane> panes = view.itemPanes();
-    const QList<QHeaderView *> strips = verticalStrips(view);
+    const QList<VirtualHeaderView *> strips = verticalStrips(view);
     QCOMPARE(strips.size(), panes.size());
     for (const ItemPane &pane : panes) {
         const int paneTop = viewportRect.y() + pane.viewportRect.y();
-        QHeaderView *strip = nullptr;
-        for (QHeaderView *candidate : strips) {
+        VirtualHeaderView *strip = nullptr;
+        for (VirtualHeaderView *candidate : strips) {
             const QRect rect = candidate->geometry();
             if (rect.y() == paneTop && rect.height() == pane.viewportRect.height())
                 strip = candidate;
@@ -117,8 +118,10 @@ void verifyRowStripsAreGlued(VirtualTableView &view, QAbstractItemModel *model)
         const int row = firstRowInside(view, model, pane);
         QVERIFY(row >= 0);
         const QRect rowRect = view.visualRect(model->index(row, 0));
-        QCOMPARE(strip->geometry().y() + strip->sectionViewportPosition(row),
+        QVERIFY(strip->sectionWidget(row) != nullptr);
+        QCOMPARE(strip->geometry().y() + strip->sectionWidget(row)->y(),
                  viewportRect.y() + rowRect.y());
+        QCOMPARE(strip->sectionWidget(row)->height(), rowRect.height());
     }
 }
 } // namespace
@@ -621,11 +624,11 @@ void TestFrozenRows::rowBoundaryLooksLikeTheColumnBoundary()
 
     // Same colour as the column boundary: what the current style paints a section separator
     // with (the table probes it once and both directions use it).
-    QCOMPARE(view.itemPaneSeparatorColor(), NativeHeaderView::sectionSeparatorColor(&view));
+    QCOMPARE(view.itemPaneSeparatorColor(), VirtualTableView::sectionSeparatorColor(&view));
 
     // The row boundary line crosses the row-number strip, exactly like the column boundary
     // line crosses the header strip.
-    const QList<QHeaderView *> strips = verticalStrips(view);
+    const QList<VirtualHeaderView *> strips = verticalStrips(view);
     QVERIFY(!strips.isEmpty());
     const QVector<QRect> rowLines = view.itemPaneSeparatorRects();
     QCOMPARE(rowLines.size(), view.itemPanes().size() - 1);

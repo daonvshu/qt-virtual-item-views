@@ -2,7 +2,7 @@
 #include <virtualitemviews/virtuallistview.h>
 #include <virtualitemviews/virtualtreeview.h>
 #include <virtualitemviews/virtualheaderview.h>
-#include <virtualitemviews/nativeheaderview.h>
+#include <virtualitemviews/headerview.h>
 
 #include "vivtestfixtures.h"
 
@@ -258,16 +258,20 @@ void TestModelLifetime::deletingTheGeometryBehindAStandaloneHeaderIsSafe()
     settle();
     QCOMPARE(header.materializedSectionCount(), 0);
 
-    auto *nativeGeometry = new HeaderGeometry(Qt::Horizontal);
-    nativeGeometry->setSectionCount(6);
-    NativeHeaderView native(Qt::Horizontal);
-    native.setGeometryModel(nativeGeometry);
-    native.show();
+    // The same lifetime rule for the widget renderer: a geometry the application deletes
+    // under a live header leaves the renderer empty instead of dangling.
+    auto *widgetGeometry = new HeaderGeometry(Qt::Horizontal);
+    widgetGeometry->setSectionCount(6);
+    VirtualHeaderView widgetHeader(Qt::Horizontal);
+    widgetHeader.setGeometryModel(widgetGeometry);
+    widgetHeader.resize(320, 30);
+    widgetHeader.show();
     settle();
-    delete nativeGeometry;
-    QVERIFY(native.geometryModel() == nullptr);
-    native.resize(200, 30);
+    delete widgetGeometry;
+    QVERIFY(widgetHeader.geometryModel() == nullptr);
+    widgetHeader.resize(200, 30);
     settle();
+    QCOMPARE(widgetHeader.materializedSectionCount(), 0);
 }
 
 QTEST_MAIN(TestModelLifetime)

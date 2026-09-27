@@ -72,10 +72,11 @@ set(VIRTUALITEMVIEWS_PUBLIC_HEADERS
     include/virtualitemviews/headergeometry.h
     include/virtualitemviews/headerwidgetadapter.h
     include/virtualitemviews/itempane.h
+    include/virtualitemviews/labelheaderview.h
+    include/virtualitemviews/headerview.h
     include/virtualitemviews/layoutpolicy.h
     include/virtualitemviews/listlayout.h
     include/virtualitemviews/materializeditem.h
-    include/virtualitemviews/nativeheaderview.h
     include/virtualitemviews/scrollmapper.h
     include/virtualitemviews/sizeindex.h
     include/virtualitemviews/tablewidgetadapter.h
@@ -105,7 +106,7 @@ set(VIRTUALITEMVIEWS_SOURCES
     src/widgets/accessibility.cpp
     src/widgets/branchindicator.cpp
     src/widgets/columnhost.cpp
-    src/widgets/nativeheaderview.cpp
+    src/widgets/labelheaderview.cpp
     src/widgets/virtuallistview.cpp
     src/widgets/virtualtreeview.cpp
     src/widgets/virtualheaderview.cpp

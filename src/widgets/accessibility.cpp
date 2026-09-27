@@ -15,7 +15,6 @@
 
 namespace viv {
 
-#if QT_CONFIG(accessibility)
 
 namespace {
 /// Pixels one "scroll up/down/left/right" action moves the view.
@@ -1139,7 +1138,5 @@ void removeAccessibilityFactory()
     QAccessible::removeFactory(&createAccessibleItemViewInterface);
     g_accessibilityFactoryInstalled = false;
 }
-
-#endif // QT_CONFIG(accessibility)
 
 } // namespace viv

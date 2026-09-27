@@ -3,7 +3,7 @@
 #include <virtualitemviews/scrollmapper.h>
 #include <virtualitemviews/sizeindex.h>
 #include <virtualitemviews/headergeometry.h>
-#include <virtualitemviews/nativeheaderview.h>
+#include <virtualitemviews/headerview.h>
 #include "vivtestfixtures.h"
 
 #include <QtTest>

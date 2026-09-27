@@ -31,6 +31,9 @@ private slots:
     void structuralRemapsReportTheSortIndicator();
     void granularChangesDoNotEmitTheBulkSignal();
     void restoringAStateBumpsTheOrderRevision();
+    void uniformLargeCountStoresNothingPerSection();
+    void perSectionEditMaterialisesTheStoredState();
+    void sparseSizeOverridesKeepTheLargeCountCompact();
 };
 
 void TestHeaderGeometry::defaultSectionGeometry()
@@ -564,21 +567,50 @@ void TestHeaderGeometry::changingLimitsClampsTheDefaultSize()
 
 void TestHeaderGeometry::changingLimitsEmitsOneBulkGeometryChange()
 {
+    // A geometry whose sections are all default-sized is *uniform*: it stores nothing per
+    // section, so a limit change is one bulk change - a renderer re-reads the geometry on
+    // bulkGeometryChanged() (that is what its documented purpose is). The per-section
+    // signals belong to the stored representation: a geometry that owns per-section state
+    // reports each clamped section, because there each section can differ.
     HeaderGeometry geometry;
     geometry.setDefaultSectionSize(100);
     geometry.setSectionCount(500);
     QSignalSpy geometrySpy(&geometry, &HeaderGeometry::geometryChanged);
     QSignalSpy resizeSpy(&geometry, &HeaderGeometry::sectionResized);
 
-    // One pass, one bulk signal - not one full renderer sync per section.
+    // Uniform: one pass, one bulk signal, no per-section signal at all.
     geometry.setMinimumSectionSize(150);
     QCOMPARE(geometrySpy.count(), 1);
-    QCOMPARE(resizeSpy.count(), 500);
+    QCOMPARE(resizeSpy.count(), 0);
     QCOMPARE(geometry.sectionSize(499), 150);
+    QCOMPARE(geometry.storedSectionStateCount(), 0);
+
+    // A size edit stays in the sparse tier (one entry), so the clamping is still a bulk
+    // change - and the one section that *has* stored state is reported individually.
+    geometry.resizeSection(3, 300);
+    QCOMPARE(geometry.storedSectionStateCount(), 1);
+    geometrySpy.clear();
+    resizeSpy.clear();
+    geometry.setMinimumSectionSize(400);
+    QCOMPARE(geometrySpy.count(), 1);
+    QCOMPARE(resizeSpy.count(), 1);
+    QCOMPARE(geometry.sectionSize(3), 400);
+    QCOMPARE(geometry.defaultSectionSize(), 400);
+
+    // Structural state (an order or visibility change) is the indexed representation: the
+    // clamping then reports every stored section.
+    geometry.setSectionHidden(5, true);
+    QCOMPARE(geometry.storedSectionStateCount(), 500);
+    geometrySpy.clear();
+    resizeSpy.clear();
+    geometry.setMinimumSectionSize(500);
+    QCOMPARE(geometrySpy.count(), 1);
+    QCOMPARE(resizeSpy.count(), 500);
+    QCOMPARE(geometry.defaultSectionSize(), 500);
 
     geometrySpy.clear();
     resizeSpy.clear();
-    geometry.setMinimumSectionSize(150);              // no-op: nothing changes at all
+    geometry.setMinimumSectionSize(500);              // no-op: nothing changes at all
     QCOMPARE(geometrySpy.count(), 0);
     QCOMPARE(resizeSpy.count(), 0);
 }
@@ -643,6 +675,153 @@ void TestHeaderGeometry::orderRevisionOnlyMovesWhenTheOrderCanChange()
     QVERIFY(geometry.orderRevision() != afterAppend);
 }
 
+void TestHeaderGeometry::uniformLargeCountStoresNothingPerSection()
+{
+    // The point of the uniform representation: the logical section count is no longer
+    // bound to the number of stored per-section states. A 10M-row strip needs
+    // "count + default size" and nothing per row - that is what keeps a uniform
+    // ten-million-row table from being densified just to draw row numbers.
+    constexpr int kSections = 10'000'000;
+    constexpr int kSize = 24;
+    HeaderGeometry geometry(Qt::Vertical);
+    geometry.setSectionCount(kSections);
+    geometry.setDefaultSectionSize(kSize);
+
+    QCOMPARE(geometry.sectionCount(), kSections);
+    QCOMPARE(geometry.storedSectionStateCount(), 0);
+    QVERIFY(geometry.isUniform());
+
+    // Sizes, order and positions: all implied, all in constant time, all exact in 64 bit.
+    QCOMPARE(geometry.sectionSize(0), kSize);
+    QCOMPARE(geometry.sectionSize(kSections - 1), kSize);
+    QCOMPARE(geometry.visualIndex(12'345), 12'345);
+    QCOMPARE(geometry.logicalIndex(12'345), 12'345);
+    QCOMPARE(geometry.sectionPosition(0), qint64(0));
+    QCOMPARE(geometry.sectionPosition(kSections - 1), qint64(kSections - 1) * kSize);
+    QCOMPARE(geometry.totalExtent(), qint64(kSections) * kSize);
+    QCOMPARE(geometry.columnGeometry(kSections - 1).width, kSize);
+    QVERIFY(!geometry.columnGeometry(kSections - 1).hidden);
+
+    // Offset lookup: beginning, middle, near the end, the last section.
+    QCOMPARE(geometry.sectionAtOffset(0), 0);
+    QCOMPARE(geometry.sectionAtOffset(kSize * 5 + 3), 5);
+    const qint64 middle = qint64(kSections / 2) * kSize;
+    QCOMPARE(geometry.sectionAtOffset(middle), kSections / 2);
+    QCOMPARE(geometry.sectionAtOffset(geometry.totalExtent() - 1), kSections - 1);
+
+    // Visible windows: a scroll must resolve in O(1), not by walking the sections.
+    for (qint64 offset : {qint64(0), middle - 3 * kSize, geometry.totalExtent() - 1000}) {
+        geometry.setViewportOffset(offset);
+        const VisibleRange range = geometry.visibleVisualRange(800);
+        QVERIFY(range.isValid());
+        QCOMPARE(range.first, int(offset / kSize));
+        QCOMPARE(range.count(), qsizetype(800 / kSize + 1));
+    }
+
+    // A count change on a uniform geometry is still O(1) and still stores nothing.
+    geometry.setSectionCount(kSections + 4096);
+    QCOMPARE(geometry.storedSectionStateCount(), 0);
+    QCOMPARE(geometry.totalExtent(), qint64(kSections + 4096) * kSize);
+
+    // State round trip: the serialised form is per-section, so it is generated from the
+    // implied state. (Done on a small count - writing 10M sections is an explicit O(N)
+    // operation, not something the suite should pay for.)
+    constexpr int kSmall = 5000;
+    HeaderGeometry small(Qt::Vertical);
+    small.setSectionCount(kSmall);
+    small.setDefaultSectionSize(kSize);
+    QCOMPARE(small.storedSectionStateCount(), 0);
+    const QByteArray state = small.saveState();
+    HeaderGeometry restored(Qt::Vertical);
+    restored.setSectionCount(kSmall);
+    QVERIFY(restored.restoreState(state));
+    QCOMPARE(restored.sectionSize(1234), kSize);
+    QCOMPARE(restored.storedSectionStateCount(), kSmall);
+    QCOMPARE(restored.totalExtent(), small.totalExtent());
+}
+
+void TestHeaderGeometry::perSectionEditMaterialisesTheStoredState()
+{
+    // A *size* edit is the sparse case: it stays uniform and stores one entry, whatever
+    // the section count is (the row-boundary drag at ten million rows, §5/§12 of the
+    // vertical-header decision).
+    constexpr int kSections = 100'000;
+    HeaderGeometry geometry(Qt::Vertical);
+    geometry.setSectionCount(kSections);
+    QCOMPARE(geometry.storedSectionStateCount(), 0);
+
+    geometry.resizeSection(3, 40);
+    QCOMPARE(geometry.storedSectionStateCount(), 1);
+    QCOMPARE(geometry.sectionSize(3), 40);
+    QCOMPARE(geometry.sectionSize(4), geometry.defaultSectionSize());
+    QVERIFY(geometry.isSectionSizeExplicit(3));
+    QCOMPARE(geometry.sectionPosition(4), qint64(3) * geometry.defaultSectionSize() + 40);
+    QCOMPARE(geometry.totalExtent(),
+             qint64(kSections) * geometry.defaultSectionSize() + (40 - geometry.defaultSectionSize()));
+
+    // Clearing it returns to the fully compact state - still nothing per section.
+    geometry.clearExplicitSectionSize(3);
+    QCOMPARE(geometry.storedSectionStateCount(), 0);
+    QCOMPARE(geometry.totalExtent(), qint64(kSections) * geometry.defaultSectionSize());
+
+    // A *structural* edit (order or visibility) is the indexed case: it materialises the
+    // per-section state once, and the sparse overrides become ordinary state.
+    HeaderGeometry structural(Qt::Vertical);
+    structural.setSectionCount(kSections);
+    structural.resizeSection(3, 40);
+    structural.setSectionHidden(7, true);
+    QCOMPARE(structural.storedSectionStateCount(), kSections);
+    QVERIFY(!structural.isUniform());
+    QCOMPARE(structural.sectionSize(3), 40);
+    QVERIFY(structural.isSectionSizeExplicit(3));
+
+    // ... and a per-section edit that changes nothing keeps the compact representation.
+    HeaderGeometry untouched(Qt::Vertical);
+    untouched.setSectionCount(kSections);
+    untouched.resizeSection(3, untouched.defaultSectionSize());
+    untouched.setSectionHidden(3, false);
+    untouched.clearExplicitSectionSize(9);
+    QCOMPARE(untouched.storedSectionStateCount(), 0);
+    QVERIFY(untouched.isUniform());
+}
+
+void TestHeaderGeometry::sparseSizeOverridesKeepTheLargeCountCompact()
+{
+    // Ten million uniform rows, one of them resized: one stored entry, and every
+    // position/extent/lookup still accounts for it exactly.
+    constexpr int kSections = 10'000'000;
+    constexpr int kSize = 24;
+    HeaderGeometry geometry(Qt::Vertical);
+    geometry.setSectionCount(kSections);
+    geometry.setDefaultSectionSize(kSize);
+    geometry.resizeSection(123, 48);
+
+    QCOMPARE(geometry.storedSectionStateCount(), 1);
+    QVERIFY(geometry.isUniform());
+    QCOMPARE(geometry.sectionSize(123), 48);
+    QCOMPARE(geometry.sectionSize(124), kSize);
+    QVERIFY(geometry.isSectionSizeExplicit(123));
+    QVERIFY(!geometry.isSectionSizeExplicit(124));
+    QCOMPARE(geometry.sectionPosition(123), qint64(123) * kSize);
+    QCOMPARE(geometry.sectionPosition(124), qint64(123) * kSize + 48);
+    QCOMPARE(geometry.sectionPosition(kSections - 1), qint64(kSections) * kSize + 24 - kSize);
+    QCOMPARE(geometry.totalExtent(), qint64(kSections) * kSize + 24);
+
+    // Offset lookup around the override, and far away from it.
+    QCOMPARE(geometry.sectionAtOffset(qint64(123) * kSize), 123);
+    QCOMPARE(geometry.sectionAtOffset(qint64(123) * kSize + 47), 123);
+    QCOMPARE(geometry.sectionAtOffset(qint64(123) * kSize + 48), 124);
+    QCOMPARE(geometry.sectionAtOffset(geometry.totalExtent() - 1), kSections - 1);
+    QCOMPARE(geometry.columnGeometry(124).contentX, qint64(123) * kSize + 48);
+    QCOMPARE(geometry.columnGeometry(124).width, kSize);
+
+    // A second override on the other side of the set stays exact too.
+    geometry.resizeSection(kSections - 1, 60);
+    QCOMPARE(geometry.storedSectionStateCount(), 2);
+    QCOMPARE(geometry.totalExtent(), qint64(kSections) * kSize + 24 + 36);
+    QCOMPARE(geometry.sectionPosition(kSections - 1), qint64(kSections - 1) * kSize + 24);
+    QCOMPARE(geometry.sectionAtOffset(geometry.totalExtent() - 1), kSections - 1);
+}
 QTEST_APPLESS_MAIN(TestHeaderGeometry)
 
 #include "tst_headergeometry.moc"

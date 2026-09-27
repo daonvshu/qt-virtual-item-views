@@ -1,17 +1,21 @@
 #include <virtualitemviews/virtualtableview.h>
 
 #include <virtualitemviews/virtualheaderview.h>
+#include <virtualitemviews/labelheaderview.h>
 
 #include <virtualitemviews/listlayout.h>
 #include <virtualitemviews/sizeindex.h>
 #include <virtualitemviews/widgetrecycler.h>
 
 #include <QAbstractItemModel>
+#include <QApplication>
+#include <QStyleOptionHeader>
 #include <QKeyEvent>
 #include <QResizeEvent>
 #include <QPainter>
 #include <QScrollBar>
 #include <QSet>
+#include <QHeaderView>
 #include <QShowEvent>
 #include <QWheelEvent>
 #include <QDebug>
@@ -19,6 +23,16 @@
 #include <limits>
 
 namespace viv {
+
+// A shared build has to export this public constant (see virtualitemview.cpp): a consumer
+// that odr-uses it links against `__imp_...`, and MinGW/GCC only emits the symbol in a TU
+// that odr-uses it. The pane-offset sentinel used to be addressed by the removed
+// nativeheader implementation.
+namespace {
+[[maybe_unused]] const void *const volatile kExportedConstants[] = {
+    &HeaderViewInterface::kFollowGeometryOffset,
+};
+} // namespace
 
 namespace {
 
@@ -43,6 +57,11 @@ qint64 rowStripOffset(const ItemPane &pane, qint64 verticalOffset, qint64 conten
 /// here), so per-row mirroring is disabled; the widget header (v0.5) removes the
 /// limit. One million rows cost about 8 MB of mirror state.
 constexpr qsizetype kRowHeaderMirrorLimit = 1000000;
+/// Above kRowHeaderMirrorLimit a table without measured per-row heights still keeps its
+/// row-number strip as long as the only per-row states are the handful of explicit heights
+/// the user set: those are sparse size overrides, not one state per row (§12 of the
+/// vertical-header decision).
+constexpr int kMaxSparseRowHeights = 4096;
 
 /// Magic/version of the table level header state (HeaderGeometry state plus the
 /// frozen pane sets, §31/§32).
@@ -108,7 +127,7 @@ protected:
     void paintEvent(QPaintEvent *) override
     {
         QPainter painter(this);
-        NativeHeaderView::drawPaneSeparator(&painter, rect(), m_style, m_resolvedColor);
+        VirtualTableView::drawPaneSeparator(&painter, rect(), m_style, m_resolvedColor);
     }
 
 private:
@@ -209,33 +228,31 @@ void VirtualTableView::deleteHeader(HeaderViewInterface *&header)
 void VirtualTableView::ensureHeaders()
 {
     if (!m_horizontalHeader) {
-        m_horizontalHeader = new NativeHeaderView(Qt::Horizontal, this);
+        m_horizontalHeader = createDefaultHorizontalHeader();
         m_ownHorizontalHeader = true;
         m_horizontalHeader->setGeometryModel(m_columns);
         m_horizontalHeader->setLabelModel(model());
         m_horizontalHeader->setSortInteractionEnabled(m_sortingEnabled);
         applyHeaderAnimationSettings();
+        watchHeaderVisualGeometry(m_horizontalHeader);
     }
     if (!m_verticalHeader) {
-        m_verticalHeader = new NativeHeaderView(Qt::Vertical, this);
+        m_verticalHeader = createDefaultVerticalHeader();
         m_ownVerticalHeader = true;
         m_verticalHeader->setGeometryModel(m_rowHeaders);
         m_verticalHeader->setLabelModel(model());
-    }
-    if (auto *native = qobject_cast<QHeaderView *>(m_verticalHeader->headerWidget())) {
-        // A user drag on the row-number strip writes an explicit row height.
-        connect(native, &QHeaderView::sectionResized, this,
-                &VirtualTableView::onVerticalHeaderUserResized, Qt::UniqueConnection);
+        m_verticalHeader->headerWidget()->setParent(this);
+        watchRowStrip(m_verticalHeader);
     }
 }
 
 void VirtualTableView::setHorizontalHeader(HeaderViewInterface *header)
 {
     if (!header) {
-        auto *native = new NativeHeaderView(Qt::Horizontal, this);
-        native->setGeometryModel(m_columns);
-        native->setLabelModel(model());
-        header = native;
+        auto *defaultHeader = createDefaultHorizontalHeader();
+        defaultHeader->setGeometryModel(m_columns);
+        defaultHeader->setLabelModel(model());
+        header = defaultHeader;
     } else if (header->orientation() != Qt::Horizontal) {
         // A renderer of the wrong orientation would be laid out against the other
         // axis' geometry (P2-4): refuse it instead of showing a broken header.
@@ -281,10 +298,10 @@ void VirtualTableView::setHorizontalHeader(HeaderViewInterface *header)
 void VirtualTableView::setVerticalHeader(HeaderViewInterface *header)
 {
     if (!header) {
-        auto *native = new NativeHeaderView(Qt::Vertical, this);
-        native->setGeometryModel(m_rowHeaders);
-        native->setLabelModel(model());
-        header = native;
+        auto *defaultStrip = createDefaultVerticalHeader();
+        defaultStrip->setGeometryModel(m_rowHeaders);
+        defaultStrip->setLabelModel(model());
+        header = defaultStrip;
     } else if (header->orientation() != Qt::Vertical) {
         qWarning("VirtualTableView::setVerticalHeader(): the renderer is not vertical; ignored");
         return;
@@ -300,6 +317,7 @@ void VirtualTableView::setVerticalHeader(HeaderViewInterface *header)
     m_verticalHeader->setGeometryModel(m_rowHeaders);
     m_verticalHeader->setLabelModel(model());
     m_verticalHeader->headerWidget()->setParent(this);
+    watchRowStrip(m_verticalHeader);
     syncVerticalPaneHeaders();
     layoutHeaderWidgets();
 }
@@ -422,6 +440,10 @@ void VirtualTableView::layoutVerticalHeaderStrips()
         strip->setGeometry(viewportRect.x() - rowHeaderWidth, viewportRect.y() + rect.y(),
                            rowHeaderWidth, rect.height());
         strip->setVisible(rowHeaderWidth > 0 && rect.height() > 0);
+        // A widget strip derives its section positions from the geometry, so it needs to
+        // know where the viewport starts inside the view - exactly like the column header
+        // (a pane strip with an explicit offset ignores it).
+        header->setViewportOrigin(viewportRect.topLeft());
         if (header != m_verticalHeader)
             strip->raise();
     }
@@ -488,6 +510,21 @@ void VirtualTableView::connectColumnSignals(QAbstractItemModel *model)
     connect(model, &QAbstractItemModel::modelReset, this, [this]() {
         m_columns->setSectionCount(columnCount());
     });
+    // A row move/insert/remove changes which *item* a row-number section shows without
+    // touching the row section set, so the strip has to re-read its labels - otherwise the
+    // numbers keep the text of the row that used to sit there (a row drag then looks like it
+    // did nothing).
+    const auto refreshRowStrips = [this]() {
+        if (m_verticalHeader)
+            m_verticalHeader->refreshSectionLabels();
+        for (HeaderViewInterface *strip : {m_frozenTopRowsHeader, m_frozenBottomRowsHeader}) {
+            if (strip)
+                strip->refreshSectionLabels();
+        }
+    };
+    connect(model, &QAbstractItemModel::rowsMoved, this, refreshRowStrips);
+    connect(model, &QAbstractItemModel::rowsInserted, this, refreshRowStrips);
+    connect(model, &QAbstractItemModel::rowsRemoved, this, refreshRowStrips);
     // A layout change rebuilds every row size from the estimate (the kernel's contract: sizes
     // keyed by row cannot be trusted after a reorder - see docs/model-signals.md). The heights
     // the *user* set are not those derived sizes: they are attached to their row through
@@ -904,10 +941,13 @@ bool VirtualTableView::columnVisualX(int logicalIndex, int *viewportX) const
 
 void VirtualTableView::onHeaderVisualGeometryFrame()
 {
-    if (!m_columnFollowsHeaderVisual || m_visualGeometryFrameActive)
+    if (m_visualGeometryFrameActive)
         return;
     m_visualGeometryFrameActive = true;
-    updateVisualColumnGeometry();
+    if (m_columnFollowsHeaderVisual)
+        updateVisualColumnGeometry();
+    if (m_rowFollowsHeaderVisual)
+        updateVisualRowGeometry();
     m_visualGeometryFrameActive = false;
 }
 
@@ -924,6 +964,58 @@ void VirtualTableView::updateVisualColumnGeometry()
     const QList<MaterializedItem> items = materializedItems();
     for (const MaterializedItem &item : items)
         applyColumnLayout(item, false);
+}
+
+void VirtualTableView::setRowFollowsHeaderVisual(bool follows)
+{
+    if (m_rowFollowsHeaderVisual == follows)
+        return;
+    m_rowFollowsHeaderVisual = follows;
+    // Turning it off has to put the rows back on the committed layout *now*: the running
+    // strip will not send another frame.
+    if (!follows)
+        updateVisualRowGeometry();
+}
+
+VirtualHeaderView *VirtualTableView::visualRowStrip() const
+{
+    // Only the installed strip (the scrolling band) drives the rows: a frozen band's rows
+    // are pinned at the edge, so letting them follow a preview would move them off it.
+    auto *strip = dynamic_cast<VirtualHeaderView *>(m_verticalHeader);
+    if (!strip || !strip->hasVisualSectionGeometry())
+        return nullptr;
+    if (strip->headerWidget()->isHidden())
+        return nullptr;
+    return strip;
+}
+
+void VirtualTableView::updateVisualRowGeometry()
+{
+    VirtualHeaderView *strip = visualRowStrip();
+    if (!strip && !m_rowVisualOffsetsActive)
+        return;                       // nothing is dragging and nothing was offset
+    m_rowVisualOffsetsActive = strip != nullptr;
+
+    for (const MaterializedItem &item : materializedItems()) {
+        QWidget *widget = item.widget;
+        const qsizetype row = item.index.row();
+        if (!widget || row < 0 || isRowFrozen(row))
+            continue;                 // frozen rows stay where the layout pinned them
+        // The kernel puts the widget at `geometry - the pane's origin`; the parent is the
+        // scrolling pane's clip container (or the viewport when nothing is clipped).
+        QWidget *parent = widget->parentWidget();
+        const int parentY = parent && parent != viewport() ? parent->y() : 0;
+        int visualY = item.geometry.y();
+        if (strip) {
+            // The strip reports the y its section is *drawn* at, in viewport coordinates
+            // (the interface's report hook is axis aware).
+            int reported = 0;
+            if (strip->sectionVisualX(int(row), &reported))
+                visualY = reported;
+        }
+        widget->move(widget->x(), visualY - parentY);
+
+    }
 }
 
 void VirtualTableView::updatePaneLayout()
@@ -1006,6 +1098,8 @@ void VirtualTableView::syncHeaderPanes()
             // and it is of the same kind as the installed horizontal header so a
             // widget based header can render every pane as well.
             header = createHorizontalPaneHeader();
+            if (!header)
+                continue;   // a renderer we cannot reproduce (see createHorizontalPaneHeader())
             header->setGeometryModel(m_columns);
             header->setLabelModel(model());
             header->setSortInteractionEnabled(m_sortingEnabled);
@@ -1067,23 +1161,80 @@ HeaderViewInterface *VirtualTableView::createHorizontalPaneHeader()
         header->setSectionOverscan(widgetHeader->sectionOverscan());
         return header;
     }
-    return new NativeHeaderView(Qt::Horizontal, this);
+    // A renderer this table cannot reproduce (an application's own HeaderViewInterface
+    // that is not a VirtualHeaderView) leaves the panes without their own renderer: the
+    // installed one keeps showing its own pane, honestly, instead of a look-alike.
+    return nullptr;
+}
+
+HeaderViewInterface *VirtualTableView::createDefaultHorizontalHeader()
+{
+    // The default renderer is a widget header with a label-only adapter (so the
+    // out-of-the-box header looks like the style-painted one but supports
+    // everything a widget header supports: the resize cursor, drag reordering, the
+    // section transition and the body following it, and pane clones).
+    return new LabelHeaderView(Qt::Horizontal, this);
 }
 
 HeaderViewInterface *VirtualTableView::createVerticalPaneHeader()
 {
     if (!m_verticalHeader)
         return nullptr;
-    // Only a native strip can be cloned; a custom renderer cannot be asked to reproduce
-    // itself, so the strip then stays single (documented in docs/row-freezing.md).
-    if (!qobject_cast<QHeaderView *>(m_verticalHeader->headerWidget()))
-        return nullptr;
-    auto *header = new NativeHeaderView(Qt::Vertical, this);
-    header->setGeometryModel(m_rowHeaders);
-    header->setLabelModel(model());
-    connect(header, &QHeaderView::sectionResized, this,
-            &VirtualTableView::onVerticalHeaderUserResized, Qt::UniqueConnection);
-    return header;
+    // A widget strip is cloned the same way the column header clones its panes: the
+    // band gets another renderer of the same kind, borrowing the installed adapter.
+    if (auto *widgetStrip = dynamic_cast<VirtualHeaderView *>(m_verticalHeader)) {
+        auto *header = new VirtualHeaderView(Qt::Vertical, this);
+        header->setAdapter(widgetStrip->adapter());
+        header->setSectionOverscan(widgetStrip->sectionOverscan());
+        header->setGeometryModel(m_rowHeaders);
+        header->setLabelModel(model());
+        watchRowStrip(header);
+        return header;
+    }
+    // A renderer this table cannot reproduce (an application's own HeaderViewInterface)
+    // leaves the strip single - documented in docs/row-freezing.md.
+    return nullptr;
+}
+
+HeaderViewInterface *VirtualTableView::createDefaultVerticalHeader()
+{
+    // Same renderer as the column header, other axis: a label-only widget strip. Only the
+    // rows its window shows own a widget, so a ten-million-row uniform table costs
+    // O(visible + overscan) - and the strip supports the same gestures as the column
+    // header: drag a row boundary to set the row height, drag a row number to move the row
+    // (reported through rowMoveRequested() and applied with model()->moveRows()).
+    return new LabelHeaderView(Qt::Vertical, this);
+}
+void VirtualTableView::watchRowStrip(HeaderViewInterface *strip)
+{
+    auto *widgetStrip = dynamic_cast<VirtualHeaderView *>(strip);
+    if (!widgetStrip)
+        return;
+    // The order of the rows is the model's, not the strip's: a committed drag reports
+    // where the row should land instead of moving the row geometry (which only mirrors
+    // the model).
+    widgetStrip->setSectionOrderExternal(true);
+    connect(widgetStrip, &VirtualHeaderView::sectionMoveRequested, this,
+            &VirtualTableView::moveRowsForStripDrag, Qt::UniqueConnection);
+    // ... and its preview frames keep the body's rows in step with the numbers
+    // (setRowFollowsHeaderVisual(), on by default).
+    widgetStrip->setVisualGeometryCallback([this]() { onHeaderVisualGeometryFrame(); });
+}
+
+void VirtualTableView::moveRowsForStripDrag(int fromRow, int toRow)
+{
+    const qsizetype count = viewItemCount();
+    if (fromRow < 0 || toRow < 0 || fromRow >= count || toRow >= count || fromRow == toRow)
+        return;
+    emit rowMoveRequested(fromRow, toRow);
+    QAbstractItemModel *m = model();
+    if (!m)
+        return;
+    // moveRows() inserts *before* the destination child, so a move towards the end has
+    // to name the row after the target (same convention as beginMoveRows()).
+    const int destination = toRow > fromRow ? toRow + 1 : toRow;
+    // The table's rows are the model's top-level rows (the table has no root index).
+    m->moveRows(QModelIndex(), fromRow, 1, QModelIndex(), destination);
 }
 
 void VirtualTableView::syncVerticalPaneHeaders()
@@ -1149,7 +1300,7 @@ void VirtualTableView::syncPaneSeparatorLines()
 
     const QColor styleColor = boundaries.isEmpty()
         ? QColor()
-        : NativeHeaderView::sectionSeparatorColor(this);
+        : VirtualTableView::sectionSeparatorColor(this);
     // The line covers the header strip *and* the body, so it works for every
     // header renderer (native or widget based) and looks continuous.
     const int headerTop = viewport()->geometry().y()
@@ -1308,22 +1459,6 @@ void VirtualTableView::onVerticalSectionResized(int logicalIndex, int oldSize, i
     setRowHeight(logicalIndex, newSize);
 }
 
-void VirtualTableView::onVerticalHeaderUserResized(int row, int oldSize, int newSize)
-{
-    Q_UNUSED(oldSize);
-    if (m_rowHeaderUpdateActive)
-        return; // programmatic mirroring, not a user gesture
-    if (m_verticalHeader) {
-        if (auto *native = dynamic_cast<NativeHeaderView *>(m_verticalHeader->headerWidget())) {
-            if (native->isApplyingGeometry())
-                return; // the geometry is being pushed into the header
-        }
-    }
-    if (row < 0 || qsizetype(row) >= viewItemCount())
-        return;
-    setRowHeight(row, newSize);
-}
-
 void VirtualTableView::updateRowHeaderOffset()
 {
     if (!m_rowHeaders)
@@ -1342,7 +1477,7 @@ void VirtualTableView::updateRowHeaderOffset()
     }
     // Frozen rows: every band shows a different content range, and one geometry offset
     // cannot express three. Each strip therefore owns its offset (an explicit pane
-    // offset wins over the geometry, see NativeHeaderView::setPaneOffset()), while the
+    // offset wins over the geometry, see setPaneOffset()), while the
     // geometry keeps the scrolling band's mapping for custom renderers.
     m_rowHeaders->setViewportOffset(verticalOffset() + frozenTopExtent());
     for (const ItemPane &pane : panes) {
@@ -1367,7 +1502,14 @@ void VirtualTableView::updateRowHeaderGeometry()
 
     const qsizetype count = viewItemCount();
     const bool variable = itemHeightMode() == ItemHeightMode::Variable;
-    const bool supported = !(variable && count > kRowHeaderMirrorLimit);
+    // Beyond the mirror limit the strip survives as long as the per-row state stays a
+    // handful of *explicit* heights: those are sparse size overrides at any scale. What
+    // the limit really protects against is a state per row, i.e. a model whose rows were
+    // *measured* into different heights - that stays unsupported and is documented.
+    const bool sparseSizes = count > kRowHeaderMirrorLimit
+        && !m_explicitRowHeights.isEmpty()
+        && m_explicitRowHeights.size() <= kMaxSparseRowHeights;
+    const bool supported = sparseSizes || !(variable && count > kRowHeaderMirrorLimit);
     if (supported != m_verticalHeaderSupported) {
         m_verticalHeaderSupported = supported;
         if (!supported) {
@@ -1384,6 +1526,12 @@ void VirtualTableView::updateRowHeaderGeometry()
         relayout();
     }
     if (!supported) {
+        // The strip is hidden, but the row geometry stays truthful: a uniform count with no
+        // stale sparse override (the pass that turns the support off must not leave the
+        // state of the last supported pass behind).
+        if (m_rowHeaders->sectionCount() != int(count))
+            m_rowHeaders->setSectionCount(int(count));
+        m_rowHeaders->clearExplicitSectionSizes();
         m_rowHeaderUpdateActive = false;
         return;
     }
@@ -1399,16 +1547,34 @@ void VirtualTableView::updateRowHeaderGeometry()
         m_rowHeaders->setMinimumSectionSize(1);
 
     // Mirror per-row heights only when they are needed: variable-height rows, or
-    // rows the user resized explicitly. A uniform table keeps an empty geometry
-    // (default section size = row height) and costs no memory.
+    // rows the user resized explicitly. A uniform table keeps "count + default size"
+    // (HeaderGeometry's uniform representation: O(1) whatever the row count is) and the
+    // few explicitly resized rows are sparse size overrides - which is what lets a
+    // ten-million-row uniform table keep a row-number strip (§5/§12 of the
+    // vertical-header decision) instead of materialising one Section per row.
+    //
+    // A *variable* height model is the case that still needs per-row states for every
+    // measured row, so it keeps the mirror limit.
     const bool mirror = count > 0 && count <= kRowHeaderMirrorLimit
         && (variable || !m_explicitRowHeights.isEmpty());
     if (!mirror) {
-        // Uniform heights: the default section size is exact and cheap, so no
-        // per-row mirroring is needed (the header keeps the sections it gets
-        // from the model).
-        if (m_rowHeaders->sectionCount() != 0)
-            m_rowHeaders->setSectionCount(0);
+        // Uniform heights: "count + default size" is the whole geometry, and the rows the
+        // user resized are sparse overrides. Starting from a clean slate keeps an override
+        // that is no longer backed by an explicit height from staying behind.
+        if (m_rowHeaders->sectionCount() != int(count))
+            m_rowHeaders->setSectionCount(int(count));
+        m_rowHeaders->clearExplicitSectionSizes();
+        for (auto it = m_explicitRowHeights.constBegin(); it != m_explicitRowHeights.constEnd();
+             ++it) {
+            const qsizetype row = viewItemForIndex(it.key());
+            if (row < 0 || row >= count)
+                continue;
+            // The committed height, not the stored request: under
+            // RowSizePolicy::MeasuredWins a measurement may win over it.
+            const int size = rowHeight(row);
+            if (size > 0)
+                m_rowHeaders->resizeSection(int(row), size);
+        }
         m_rowHeaderUpdateActive = false;
         return;
     }
@@ -1737,9 +1903,68 @@ QColor VirtualTableView::itemPaneSeparatorColor() const
     // Exactly what the column boundary uses: the colour the current style paints a section
     // separator with (probed by rendering one). A custom style therefore keeps both
     // directions in step, and an explicit colour in the separator style still wins.
-    return NativeHeaderView::sectionSeparatorColor(this);
+    return VirtualTableView::sectionSeparatorColor(this);
 }
 
+QColor headerSectionSeparatorColor(const QWidget *context)
+{
+    // Render a small section with the current style and read the pixel of its right edge:
+    // that is exactly the separator the style draws between two sections.
+    static constexpr int kProbeWidth = 8;
+    static constexpr int kProbeHeight = 8;
+    QImage probe(kProbeWidth, kProbeHeight, QImage::Format_ARGB32_Premultiplied);
+    probe.fill(Qt::transparent);
+    {
+        QPainter painter(&probe);
+        painter.setRenderHint(QPainter::Antialiasing, false);
+        QStyleOptionHeader option;
+        if (context)
+            option.initFrom(context);
+        option.state |= QStyle::State_Horizontal | QStyle::State_Enabled;
+        option.orientation = Qt::Horizontal;
+        option.position = QStyleOptionHeader::Middle; // draws the separator
+        option.rect = QRect(0, 0, kProbeWidth, kProbeHeight);
+        const QWidget *styleSource = context;
+        const_cast<QStyle *>(styleSource ? styleSource->style() : QApplication::style())
+            ->drawControl(QStyle::CE_HeaderSection, &option, &painter,
+                          const_cast<QWidget *>(styleSource));
+    }
+
+    const QColor separator = probe.pixelColor(kProbeWidth - 1, kProbeHeight / 2);
+    if (separator.isValid() && separator.alpha() > 0)
+        return separator;
+    // Fall back to a palette role when the style draws nothing there.
+    return context ? context->palette().color(QPalette::Mid) : QColor(160, 160, 160);
+}
+
+void VirtualTableView::drawPaneSeparator(QPainter *painter, const QRect &rect,
+                                         const PaneSeparatorStyle &style,
+                                         const QColor &styleSeparatorColor)
+{
+    if (!painter || rect.isEmpty() || !style.isVisible())
+        return;
+    const QColor color = style.effectiveColor(styleSeparatorColor);
+    if (!color.isValid())
+        return;
+    if (style.lineStyle == Qt::SolidLine) {
+        painter->fillRect(rect, color);
+        return;
+    }
+    QPen pen(color, qMax(1, style.width), style.lineStyle);
+    painter->save();
+    painter->setPen(pen);
+    const int x = rect.center().x();
+    painter->drawLine(x, rect.top(), x, rect.bottom());
+    painter->restore();
+}
+
+QColor VirtualTableView::sectionSeparatorColor(const QWidget *context)
+{
+    // The pane lines and the default section widgets share this one probe
+    // (headerSectionSeparatorColor()); the view keeps the static entry point it has always
+    // exported.
+    return headerSectionSeparatorColor(context);
+}
 void VirtualTableView::setPanes(const QVector<TablePaneSpec> &panes)
 {
     // The layout normalizes the list (a column belongs to one pane, a scroll group

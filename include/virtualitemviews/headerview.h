@@ -1,32 +1,37 @@
 #pragma once
 
 #include <virtualitemviews/global.h>
-#include <virtualitemviews/tablepane.h>
 
-#include <QHeaderView>
-#include <QPointer>
+#include <QPoint>
+#include <QVector>
+#include <QWidget>
 
+#include <QAbstractItemModel>
+#include <QColor>
 #include <functional>
-
-class QAbstractItemModel;
 
 namespace viv {
 
 class HeaderGeometry;
 
+/// Colour the current style paints a header section separator with (probed by rendering a
+/// small section and reading its edge pixel). The pane boundary lines and the built-in
+/// section widgets use it, so every line that separates two sections - in either axis and
+/// in the body - is the style's line instead of a guessed palette role.
+///
+/// \a context supplies the style and the palette (pass the view or a widget in it).
+VIRTUALITEMVIEWS_EXPORT QColor headerSectionSeparatorColor(const QWidget *context);
+
 /// Renderer abstraction of a table header (architecture document §15/§16/§17).
 ///
-/// Two implementations are foreseen:
-///  - NativeHeaderView (this file): a QHeaderView adapter driven by
-///    HeaderGeometry, and
-///  - VirtualHeaderView (v0.5): QWidget based sections with
-///    HeaderWidgetAdapter + recycler.
+/// The implementation is `LabelHeaderView` (the default: a `VirtualHeaderView` plus the
+/// built-in label adapter) or any renderer the application installs - `VirtualHeaderView`
+/// with its own section widgets, or a custom implementation of this interface.
 ///
-/// Both consume the same HeaderGeometry, so the table body never depends on how
-/// the header is rendered. The interface is intentionally not a QWidget: the
-/// native implementation is already a QHeaderView (a QWidget).
-class VIRTUALITEMVIEWS_EXPORT HeaderViewInterface
-{
+/// Every renderer consumes the same HeaderGeometry, so the table body never depends on how
+/// the header is rendered. The interface is intentionally not a QWidget: an implementation
+/// may be one (VirtualHeaderView is), but the table only talks to this contract.
+class VIRTUALITEMVIEWS_EXPORT HeaderViewInterface {
 public:
     virtual ~HeaderViewInterface() = default;
 
@@ -130,106 +135,15 @@ public:
     {
         Q_UNUSED(callback);
     }
-};
 
-/// QHeaderView driven by HeaderGeometry.
-///
-/// The geometry is the single source of truth: user gestures (resize, move,
-/// sort click) are written into it and every geometry change is reflected back
-/// into the header. Syncing compares before writing, so it neither invalidates
-/// QHeaderView's caches needlessly nor recurses.
-class VIRTUALITEMVIEWS_EXPORT NativeHeaderView : public QHeaderView, public HeaderViewInterface
-{
-    Q_OBJECT
-
-public:
-    explicit NativeHeaderView(Qt::Orientation orientation, QWidget *parent = nullptr);
-    ~NativeHeaderView() override;
-
-    void setGeometryModel(HeaderGeometry *geometry) override;
-    HeaderGeometry *geometryModel() const override { return m_geometry; }
-    QWidget *headerWidget() override { return this; }
-    Qt::Orientation orientation() const override { return QHeaderView::orientation(); }
-    void setLabelModel(QAbstractItemModel *model) override;
-    void setSortInteractionEnabled(bool enabled) override;
-
-    /// Horizontal offset of the header's viewport; the table sets this so that
-    /// header and body never drift apart.
-    void setViewportOffset(int offset);
-
-    /// Restricts the header to one pane (§31): only \a logicalColumns are shown
-    /// (sizes, visibility and order still come from HeaderGeometry, a filter is
-    /// never a width copy). When \a frozen the header ignores the geometry's
-    /// offset, because a frozen pane never scrolls; user section moves are
-    /// disabled while a filter is active.
-    void setPaneFilter(const QVector<int> &logicalColumns, bool frozen) override;
-    void clearPaneFilter() override;
-    bool hasPaneFilter() const { return m_paneFilterActive; }
-
-    /// How often the header re-read the whole geometry. Diagnostics for the width-scroll
-    /// tests: a single section resize is applied granularly and must not bump it.
-    quint64 fullSyncCount() const { return m_fullSyncs; }
-
-    /// Offset of the pane's own content (§43 "advanced panes"); see
-    /// HeaderViewInterface::setPaneOffset(). A frozen pane keeps offset 0 even
-    /// when the geometry scrolls.
+    /// The model's *items* changed identity without changing the section set: a row (or
+    /// column) was moved, inserted or removed, so the label a materialized section shows
+    /// belongs to a different item now. A renderer that caches what the label model said -
+    /// the default label adapter does - has to re-read it here; a renderer that lays its
+    /// sections out from the geometry alone ignores this.
     ///
-    /// An explicit offset wins over the geometry's viewport offset with or without a
-    /// pane filter, so a renderer that is placed on one band of a split header (the
-    /// vertical strip of a frozen row pane, for example) keeps its own offset even when
-    /// the shared geometry scrolls or its sections change size.
-    void setPaneOffset(qint64 offset) override;
-
-    /// Colour the current style paints a header section separator with (probed by
-    /// rendering a section and reading its edge pixel). The pane boundary line -
-    /// header edge and the body line - uses it, so it matches the separators
-    /// between the other columns instead of a guessed palette role.
-    static QColor sectionSeparatorColor(const QWidget *context);
-
-    /// Paints a pane boundary line into \a rect (its layout is defined by the
-    /// style; solid lines fill the rect, dashed ones are centred on it).
-    static void drawPaneSeparator(QPainter *painter, const QRect &rect,
-                                  const PaneSeparatorStyle &style,
-                                  const QColor &styleSeparatorColor);
-
-    /// True while the geometry is being applied to this header (the resulting
-    /// QHeaderView signals must not be written back into the geometry).
-    bool isApplyingGeometry() const { return m_applyingToHeader; }
-
-private:
-    void connectGeometry(HeaderGeometry *geometry, bool connectSignals);
-    void syncHeaderFromGeometry();
-    /// Applies the geometry's visual order to this header (a section move that
-    /// did not come from a user drag on this header would otherwise leave the
-    /// header and the body out of sync).
-    void applyVisualOrder();
-    void syncGeometryFromHeaderSectionSize(int logicalIndex, int size);
-    void syncGeometryFromHeaderMove(int logicalIndex, int oldVisualIndex, int newVisualIndex);
-    void onHeaderSectionResized(int logicalIndex, int oldSize, int newSize);
-    void onHeaderSectionMoved(int logicalIndex, int oldVisualIndex, int newVisualIndex);
-    void onGeometryChanged();
-    void applySection(int logicalIndex);
-    /// Offset this header lays its sections out with: its own pane offset, or the
-    /// geometry's viewport offset when it follows the committed geometry.
-    qint64 effectivePaneOffset() const;
-
-    /// Non-owning collaborator of a public standalone header: watched, so a geometry the
-    /// business deletes first cannot be dereferenced (P0-2 of the second review).
-    QPointer<HeaderGeometry> m_geometry;
-    /// True while the geometry is being applied to the header, so that the
-    /// resulting QHeaderView signals do not write back into the geometry.
-    bool m_applyingToHeader = false;
-    /// Times the whole geometry was re-read (diagnostics; see fullSyncCount()).
-    quint64 m_fullSyncs = 0;
-    bool m_sortInteractionEnabled = false;
-    /// Pane filter (§31): the logical sections this header shows.
-    QVector<int> m_paneFilter;
-    bool m_paneFilterActive = false;
-    bool m_frozenPane = false;
-    qint64 m_paneOffset = kFollowGeometryOffset;
-    /// Set once when the geometry's extent does not fit into QHeaderView's int
-    /// range (diagnostics; see syncHeaderFromGeometry()).
-    bool m_extentOverflowWarned = false;
+    /// The section *count* changes go through setGeometryModel()/the geometry's own
+    /// signals, so this is only about the text/state of the sections that already exist.
+    virtual void refreshSectionLabels() {}
 };
-
 } // namespace viv

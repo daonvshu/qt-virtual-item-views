@@ -339,6 +339,13 @@ Tree 侧补的那条用例（`tst_virtualtreeview::columnChangesRebuildTheVisibl
 
 | 日期 | 决定 | 理由 |
 | --- | --- | --- |
+| 2026-09-27 | 删除 `NativeHeaderView`（含 `nativeheaderview.h`），`HeaderViewInterface` 搬到新头 `headerview.h` | 列表头与行号条都是 widget 渲染器之后，原生适配器只剩"参照物"的角色；删前先做了 parity 验证（同一 `HeaderGeometry` 上两边逐个 section 比对 `sectionSize`/`isSectionHidden`/`sectionViewportPosition`/`visualIndex`，并在 resize、hide+offset、move+sort、`saveState`+`restoreState` 四类状态后各比一次，全部一致），确认 widget 渲染器是等价替代后才移除。`accessibility.h`/`accessibility.cpp` 的 `QT_CONFIG(accessibility)` 双 guard 一并去掉（Qt 的 accessibility 类型在无该 feature 的构建里也只是运行期不启用，编译期不需要这个 guard） |
+| 2026-09-27 | `VirtualItemView::removeDraggedSourceRows()` 从 `private` 移到 `protected` | 文档一直把它和 `dragSourceIndexes()`/`dragPixmapRect()` 并列写成"protected 内核钩子"（QDrag::exec 在 offscreen 下不可用，子类/测试要直接驱动），但它被放在了 private 段；MSVC 宽容地接受派生类里的 `using Base::member;`，GCC/Clang 按标准拒绝 —— MinGW 矩阵因此暴露出来 |
+| 2026-09-27 | `HeaderGeometry` 把 logical section count 与 per-section 存储解耦：uniform（count + default，O(1)）→ uniform + 稀疏尺寸覆盖（行边界拖拽，k 条）→ indexed（顺序/可见性/增删） | 千万行均匀表既要有 section count（widget 行号条才能物化窗口）又不能有每行状态；稀疏层是"用户只改了一行"的最小代价，避免决策文档 §5 禁止的 10M dense allocation |
+| 2026-09-27 | 行号条默认换成 `LabelHeaderView(Qt::Vertical)`；只有"被测量成不同高度"的变高模型（或显式行高超过 4096）才隐藏条子 | 均匀高度在任意行数下都只存 count + default，所以之前"清空几何换内存"的做法不再需要；条子因此能真正虚拟化（10M 行只物化窗口 + overscan 约 34 行） |
+| 2026-09-27 | pane 分割线的 `sectionSeparatorColor()` / `drawPaneSeparator()` 从 `NativeHeaderView` 搬到 `VirtualTableView` | 它们是 pane 合成（表头边缘线与 body 线共用一个颜色），不是某个渲染器的职责（决策文档 §17） |
+| 2026-09-27 | 列方向的默认表头改成 widget 表头 `LabelHeaderView`（库里自带只画 label 的 adapter），`NativeHeaderView` 退成可显式安装的对照渲染器 | 用户的判断：维护两套表头不划算。默认这套用当前样式（`CE_Header`）画 section，实测与 `QHeaderView` 的 section **逐像素一致**，却顺带拿到拖动换序、section 过渡、"整列一起动"、pane 克隆；`setHorizontalHeaderVisible(false)` 仍是隐藏表头的开关。行号条（纵向）暂时还是 native |
+| 2026-09-27 | 默认表头的最后一节按 committed 几何画，不复制 `QHeaderView` 的"最后一节拉伸填满" | 那个拉伸只发生在表头、body 的最后一列并没有跟着变宽（表头与 body 会差一截）；要两边都填满就 `setStretchLastColumn(true)`，那是写进 `HeaderGeometry` 的、两边共用的伸缩 |
 | 2026-09-27 | pane 表头（含主表头）一律按"自己那组列"打包与物化，不再读 flat committed x | 冻结列是集合，可以散落在视觉序里；flat x 只在冻结列排在最前时等于 pane 自己的打包，否则 section 落到别人的槽位、物化窗口算错（用户报的"冻结后表头消失，再拖一下才出来"）。主表头过去只拿 `setPaneFilter()` 没拿 `setPaneOffset()`，恰好是漏掉的那一半 |
 | 2026-09-27 | "整列跟着表头一起动"做进库（`setColumnFollowsHeaderVisual()`，默认开），不再留给应用层 | 示例里先做了一版应用侧 PoC（事件过滤器 + adapter 自己插值），效果确认后回收到库里：渲染器只需报告视觉几何（`sectionVisualX()` + 逐帧回调），视图在定位时覆盖列 x。应用侧要复刻这套东西得写 300 行，而且看不到 pane 表头克隆的几何（冻结 pane 内的拖动镜像不了） |
 | 2026-09-27 | 跟帧只改 x，且**不重跑** adapter 的 `layoutRowWidget()` | 一帧一次业务布局的代价不可控；几何只有 x 变（宽/pane/span/裁剪都不变），所以只重排框架管理的控件。代价与横向滚动一步同阶（100 列 x 26 行 Debug ≈0.2 ms/帧） |

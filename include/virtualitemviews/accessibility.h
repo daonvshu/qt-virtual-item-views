@@ -12,8 +12,6 @@
 
 class QObject;
 
-#if QT_CONFIG(accessibility)
-
 namespace viv {
 
 class VirtualItemView;
@@ -221,5 +219,3 @@ VIRTUALITEMVIEWS_EXPORT void installAccessibilityFactory();
 VIRTUALITEMVIEWS_EXPORT void removeAccessibilityFactory();
 
 } // namespace viv
-
-#endif // QT_CONFIG(accessibility)

@@ -716,6 +716,65 @@ bool runWideHeaderScenario(int columns, int steps)
     return ok;
 }
 
+/// The vertical counterpart of the wide-header scenario (§7/§11/§12 of the vertical-header
+/// decision): ten million *uniform* rows must cost O(1) storage in the row geometry and
+/// O(visible) materialized section widgets - a scroll must never walk the rows, and one
+/// resized row must stay a sparse override instead of densifying the geometry.
+bool runTallHeaderScenario(int rows, int steps)
+{
+    constexpr int kRowHeight = 24;
+    constexpr int kStripExtent = 800;
+    viv::HeaderGeometry geometry(Qt::Vertical);
+    geometry.setSectionCount(rows);
+    geometry.setDefaultSectionSize(kRowHeight);
+
+    BenchTableHeaderAdapter adapter;
+    viv::VirtualHeaderView strip(Qt::Vertical);
+    strip.setAdapter(&adapter);
+    strip.setGeometryModel(&geometry);
+    strip.resize(48, kStripExtent);
+    strip.show();
+    QApplication::processEvents();
+
+    bool ok = true;
+    char label[160];
+    const qint64 extent = geometry.totalExtent();
+    std::snprintf(label, sizeof(label), "tall header: geometry section state");
+    reportCount(label, geometry.storedSectionStateCount());
+    ok = ok && geometry.storedSectionStateCount() == 0;
+    std::snprintf(label, sizeof(label), "tall header: content extent (px)");
+    reportCount(label, static_cast<long long>(extent));
+    std::snprintf(label, sizeof(label), "tall header: materialized section widgets");
+    reportCount(label, static_cast<long long>(strip.materializedSectionCount()));
+    ok = ok && strip.materializedSectionCount() <= 64;
+
+    // Walk the whole extent in `steps` jumps: every jump has to stay bounded and must not
+    // create per-row state (that is the "work is window-bounded, not rowCount-bounded" claim).
+    QElapsedTimer timer;
+    timer.start();
+    for (int step = 0; step < steps; ++step) {
+        geometry.setViewportOffset(steps > 0 ? (extent * step) / steps : 0);
+        QApplication::processEvents();
+        ok = ok && strip.materializedSectionCount() <= 64;
+        ok = ok && geometry.storedSectionStateCount() == 0;
+    }
+    const double ms = timer.nsecsElapsed() / 1.0e6;
+    std::snprintf(label, sizeof(label), "tall header: per scroll step");
+    report(label, steps > 0 ? ms / steps : ms);
+    std::snprintf(label, sizeof(label), "tall header: widgets after the jumps");
+    reportCount(label, static_cast<long long>(strip.materializedSectionCount()));
+
+    // One resized row: a sparse override, not one state per row.
+    const int middle = rows / 2;
+    geometry.resizeSection(middle, kRowHeight * 2);
+    std::snprintf(label, sizeof(label), "tall header: state after one row resize");
+    reportCount(label, geometry.storedSectionStateCount());
+    ok = ok && geometry.storedSectionStateCount() == 1;
+    ok = ok && geometry.sectionSize(middle) == kRowHeight * 2;
+    ok = ok && geometry.sectionPosition(middle + 1)
+            == qint64(middle) * kRowHeight + kRowHeight * 2;
+    return ok;
+}
 bool runTableScenario(const char *name, viv::VirtualTableView::MaterializationMode mode,
                       TableModel &model, int steps, int columnCount)
 {
@@ -1166,7 +1225,13 @@ int main(int argc, char **argv)
         QStringLiteral("wide-header"),
         QStringLiteral("Measure a very wide table (100k columns, frozen column) with the "
                        "native and the widget header"));
-    QCommandLineOption wideColumnsOption(QStringLiteral("wide-columns"),
+    QCommandLineOption tallHeaderOption(
+        QStringLiteral("tall-header"),
+        QStringLiteral("Measure a ten-million-row uniform row-number strip (vertical "
+                       "virtualization: O(1) geometry state, O(visible) widgets)"));
+    QCommandLineOption tallRowsOption(QStringLiteral("tall-rows"),
+                                      QStringLiteral("Row count of the tall-header scenario"),
+                                      QStringLiteral("count"), QStringLiteral("10000000"));    QCommandLineOption wideColumnsOption(QStringLiteral("wide-columns"),
                                          QStringLiteral("Column count of the wide-header scenario"),
                                          QStringLiteral("count"), QStringLiteral("100000"));
     QCommandLineOption treeRootsOption(QStringLiteral("tree-roots"),
@@ -1187,6 +1252,8 @@ int main(int argc, char **argv)
     parser.addOption(treeOption);
     parser.addOption(wideHeaderOption);
     parser.addOption(wideColumnsOption);
+    parser.addOption(tallHeaderOption);
+    parser.addOption(tallRowsOption);
     parser.addOption(treeRootsOption);
     parser.addOption(treeBranchingOption);
     parser.addOption(treeDepthOption);
@@ -1399,6 +1466,16 @@ int main(int argc, char **argv)
         }
     }
 
+    if (parser.isSet(tallHeaderOption)) {
+        const int tallRows = qMax(1000, parser.value(tallRowsOption).toInt());
+        std::printf("\n=== Tall header benchmark (%d uniform rows) ===\n", tallRows);
+        if (!runTallHeaderScenario(tallRows, qMax(1, qMin(steps, 400)))) {
+            std::printf("\nFAILED: tall-header invariants were violated.\n");
+            result = 1;
+        } else {
+            std::printf("\nOK (tall header)\n");
+        }
+    }
     if (parser.isSet(treeOption)) {
         const int treeRoots = qMax(1, parser.value(treeRootsOption).toInt());
         const int treeBranching = qMax(1, parser.value(treeBranchingOption).toInt());

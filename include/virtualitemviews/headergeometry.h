@@ -47,7 +47,25 @@ public:
     Qt::Orientation orientation() const { return m_orientation; }
 
     // -- section set ---------------------------------------------------------
-    int sectionCount() const { return int(m_sections.size()); }
+    /// How many sections the geometry *has*.
+    ///
+    /// This is deliberately independent of how many per-section states are stored: a
+    /// geometry whose sections are all at the default size, visible and in logical order
+    /// is **uniform** and keeps O(1) state whatever the count is (a `setSectionCount()`
+    /// plus a `setDefaultSectionSize()` needs no per-section storage). A per-section edit
+    /// (a resize, a hide, a move, an insert/remove) materialises the stored state once -
+    /// see storedSectionStateCount() and densify().
+    int sectionCount() const { return m_uniformCount > 0 ? m_uniformCount : int(m_sections.size()); }
+    /// Diagnostics: per-section states actually stored. 0 for a uniform geometry, and a
+    /// per-section edit makes it `sectionCount()` - the large-count paths (a 10M-row
+    /// uniform table) must keep it 0.
+    int storedSectionStateCount() const
+    {
+        return m_uniformCount > 0 ? int(m_sparseKeys.size()) : int(m_sections.size());
+    }
+    /// True while every section carries the default size, is visible and sits in logical
+    /// order, so no per-section state is stored (see sectionCount()).
+    bool isUniform() const { return m_uniformCount > 0; }
     /// Grows/shrinks the section set at the end. Model structure changes should
     /// use the logical insert/remove/move calls below instead: they keep the
     /// per-section state (width, visibility, explicit size) with the item it
@@ -75,6 +93,11 @@ public:
     /// True when the size was set explicitly (user resize or restoreState).
     bool isSectionSizeExplicit(int logicalIndex) const;
     void clearExplicitSectionSize(int logicalIndex);
+    /// Forgets every explicitly set size (the sections go back to the default). Used by a
+    /// view that mirrors its own row heights and has to start from a clean slate: with the
+    /// sparse representation the overrides that are no longer backed by an explicit height
+    /// would otherwise stay behind.
+    void clearExplicitSectionSizes();
 
     int defaultSectionSize() const { return m_defaultSectionSize; }
     void setDefaultSectionSize(int size);
@@ -180,6 +203,18 @@ private:
     void rebuildCaches() const;
     /// Rebuilds logicalIndex -> visualIndex from the visual order.
     void rebuildIndexMaps();
+    /// Gives the stored section state of a uniform geometry its O(count) representation
+    /// (default size, visible, identity order) so a per-section edit has somewhere to go.
+    void densify();
+    /// Index of \a logicalIndex in the sparse override list, or -1.
+    int sparseIndexOf(int logicalIndex) const;
+    /// Adds/updates/removes the size override of \a logicalIndex (a size equal to the
+    /// default removes it) and rebuilds the delta prefix. O(k log k) with k overrides.
+    void setSparseSize(int logicalIndex, int size);
+    /// Sum of the size deltas of every override *before* \a logicalIndex.
+    qint64 sparseDeltaBefore(int logicalIndex) const;
+    /// Rebuilds the delta prefix of the override list (positions and the extent).
+    void rebuildSparsePrefix();
     /// Clamps every section (and the default size) into the current minimum /
     /// maximum range in one pass, emitting at most one geometryChanged().
     void clampSectionsToTheSizeRange();
@@ -193,6 +228,21 @@ private:
 
     Qt::Orientation m_orientation = Qt::Horizontal;
     QVector<Section> m_sections;    ///< indexed by logical index
+    /// Sections of a *uniform* geometry: the count, with every section implied to be
+    /// default-sized, visible and in logical order - no per-section storage at all.
+    /// 0 means "not uniform" (m_sections is authoritative).
+    int m_uniformCount = 0;
+    /// Size overrides of a uniform geometry (sorted by logical index): "ten million rows,
+    /// one of them 48 px" is k overrides, not ten million Sections - which is what makes
+    /// the row-boundary drag usable at that scale (§5/§12 of the vertical-header
+    /// decision). An override never changes the order or the visibility: those still
+    /// materialise the indexed representation.
+    QVector<int> m_sparseKeys;
+    QVector<int> m_sparseSizes;
+    /// Delta prefix of the overrides: entry j is the sum of the deltas of the keys before
+    /// key j, so the position of key j is `key*default + m_sparseDeltaPrefix[j]` and the
+    /// last entry is the total delta of the geometry.
+    QVector<qint64> m_sparseDeltaPrefix;
     QVector<int> m_visualToLogical; ///< visual index -> logical index
     QVector<int> m_logicalToVisual; ///< logical index -> visual index
 

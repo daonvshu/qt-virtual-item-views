@@ -1,5 +1,6 @@
-#include <virtualitemviews/nativeheaderview.h>
+#include <virtualitemviews/headerview.h>
 #include <virtualitemviews/virtualtableview.h>
+#include <virtualitemviews/virtualheaderview.h>
 #include "vivtestfixtures.h"
 
 #include <QtTest>
@@ -302,9 +303,13 @@ void TestTableCellMode::cellWidgetsFollowBothAxes()
 
     // Horizontal scroll: every materialized cell follows its column, and the
     // header agrees with it.
-    auto *header = qobject_cast<QHeaderView *>(m_view->horizontalHeader()->headerWidget());
+    // (The default header is a widget header, so its sections are real widgets.)
+    auto *header = dynamic_cast<VirtualHeaderView *>(m_view->horizontalHeader());
     QVERIFY(header != nullptr);
     m_view->setHorizontalOffset(kColumnWidth * 2);
+    // Cell Widget Mode materializes its window lazily: without the pass, the cells are
+    // still the ones of the old window while the header has already moved.
+    m_view->flushPendingRelayout();
     const QList<QModelIndex> cells = m_view->materializedCellIndexes();
     QVERIFY(!cells.isEmpty());
     for (const QModelIndex &index : cells) {
@@ -313,7 +318,12 @@ void TestTableCellMode::cellWidgetsFollowBothAxes()
         const ColumnGeometry column = m_view->columnGeometry(index.column());
         QCOMPARE(widget->x(), column.viewportX);
         QCOMPARE(widget->width(), column.width);
-        QCOMPARE(header->sectionViewportPosition(index.column()), column.viewportX);
+        QWidget *section = header->sectionWidget(index.column());
+        QVERIFY(section != nullptr);
+        if (section->isVisible()) {
+            QCOMPARE(section->x() + header->x() - m_view->viewport()->x(), column.viewportX);
+            QCOMPARE(section->width(), column.width);
+        }
     }
 }
 

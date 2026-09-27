@@ -44,7 +44,8 @@
 
 ## 3. 复核清单（2026-09-25，roadmap 3a）
 
-23 个公开头文件全部过了一遍，逐项结论如下。
+24 个公开头文件全部过了一遍，逐项结论如下（`labelheaderview.h` 是 1.0 加的默认表头，
+按同一套规则复核）。
 
 | 头文件 | 层 | 结论 |
 | --- | --- | --- |
@@ -54,8 +55,9 @@
 | `widgetadapter.h` | A | 冻结。4 个虚函数是最小契约 |
 | `tablewidgetadapter.h` | A | 冻结。`TableWidgetAdapter`/`CellWidgetAdapter`/`ColumnHost`/`TableRowLayoutContext`/`TableSpanContext`；`layoutRowWidget()` 有默认空实现（可选项，不是"接受但忽略"） |
 | `headergeometry.h` | A | 冻结。列宽/顺序/隐藏/排序/偏移的唯一事实来源 + `saveState()/restoreState()` |
-| `nativeheaderview.h` | A（`HeaderViewInterface` 为 B） | 冻结。`HeaderViewInterface` 里带默认实现的可选钩子（`setPaneFilter()`/`setPaneOffset()`/动画三件套/视觉几何三件套 `sectionVisualX()`、`hasVisualSectionGeometry()`、`setVisualGeometryCallback()`）**允许被渲染器忽略**，这是刻意的渲染器能力约定，已在文档写明；`fullSyncCount()` 是 C 层诊断 |
+| `headerview.h` | A（`HeaderViewInterface` 为 B） | 冻结。`HeaderViewInterface` 现在住在这里（1.0 起；它的旧家 `nativeheaderview.h` 随原生渲染器一起退场，见 roadmap 决策记录）。带默认实现的可选钩子（`setPaneFilter()`/`setPaneOffset()`/动画三件套/视觉几何三件套 `sectionVisualX()`、`hasVisualSectionGeometry()`、`setVisualGeometryCallback()`）**允许被渲染器忽略**，这是刻意的渲染器能力约定，已在文档写明 |
 | `virtualheaderview.h` | B | 冻结。section 动画与拖动重排的视觉几何是公开契约（[header-animation.md](header-animation.md)）；`paneCacheRebuildCount()` / `materializationVisits()` 是 C 层诊断 |
+| `labelheaderview.h` | A（`LabelHeaderSection` / `LabelHeaderAdapter`）| 冻结。默认表头：`LabelHeaderView` = `VirtualHeaderView` + 只画 label 的 adapter；`labelText()` / `sortOrderFor()` 是带默认实现、可覆写的"改文字/改箭头来源"钩子，属于规则 1 的加法 |
 | `headerwidgetadapter.h` | B | 冻结。`sectionType()` / `createSection()` / `bindSection()` / `unbindSection()` 是 4 个核心虚函数；`setLabelModel()` / `setGeometryModel()` 是带默认实现的**可选协作者钩子**（第三、第四轮审查加的，默认什么都不做），属于规则 1 说的"加法" |
 | `accessibility.h` | A（节点类为 C） | `installAccessibilityFactory()`/`removeAccessibilityFactory()` 冻结；`AccessibleVirtualItem`/`AccessibleVirtualItemView` 是实现细节（C 层），只通过 Qt 的 `QAccessibleInterface` 暴露 |
 | `tablespan.h` | A | 冻结。`TableSpanProvider` 的锚点契约（只有锚点报 span）是语义契约 |
@@ -91,7 +93,7 @@
 | 2 | `ListLayout::setOwnsSizeIndex(bool)`：没有任何调用者，唯一用途是测试脚手架；所有权已由 `setSizeIndex(index, takeOwnership)` 表达 | 公开 API 与其实现一起删除 |
 | 3 | `ScrollMapper::toScrollbar()` / `toLogical()` 与 `toScrollBarValue()` / `toLogicalOffset()` 完全重复（只为迁就架构文档的旧名字） | 删除别名，改在类注释里注明"架构文档的旧名对应哪个 API" |
 | 4 | `SelectionBehavior` 的注释写着"SelectColumns 会随 VirtualTableView 到来"，但行是物化单位、不存在列选择 | 注释改为明确"刻意没有 SelectColumns" |
-| 5 | `CMakeLists.txt` 的 `VIRTUALITEMVIEWS_PUBLIC_HEADERS` 漏了 `itempane.h`（安装规则按目录复制，所以没漏装，但 target 源列表与 IDE 里缺一个公开头文件） | 补上；现在列表与 `include/virtualitemviews/` 的 23 个文件一一对应 |
+| 5 | `CMakeLists.txt` 的 `VIRTUALITEMVIEWS_PUBLIC_HEADERS` 漏了 `itempane.h`（安装规则按目录复制，所以没漏装，但 target 源列表与 IDE 里缺一个公开头文件） | 补上；现在列表与 `include/virtualitemviews/` 的 24 个文件一一对应 |
 
 ## 6. 已知欠账（交接给后续步骤）
 

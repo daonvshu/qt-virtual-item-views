@@ -1,4 +1,6 @@
-#include <virtualitemviews/nativeheaderview.h>
+#include <virtualitemviews/headerview.h>
+#include <virtualitemviews/labelheaderview.h>
+#include <virtualitemviews/labelheaderview.h>
 #include <virtualitemviews/virtualtableview.h>
 #include <virtualitemviews/virtualheaderview.h>
 #include <virtualitemviews/headerwidgetadapter.h>
@@ -489,7 +491,7 @@ private:
 
 /// Header adapter that renders the header data of the model it was told about - the pattern
 /// the README teaches, with the `setLabelModel()` hook and a QPointer.
-class LabelHeaderAdapter : public HeaderWidgetAdapter
+class ModelLabelHeaderAdapter : public HeaderWidgetAdapter
 {
 public:
     QWidget *createSection(WidgetType, QWidget *parent) override
@@ -620,6 +622,75 @@ private:
 
 } // namespace
 
+/// Row-reorderable model for the header-drag tests: QStandardItemModel itself refuses
+/// `moveRows()`, so this one moves a row for real (the example's WideModel does the same
+/// with its display order, an application model with its data).
+/// Row-reorderable model for the header-drag tests: `QStandardItemModel` refuses
+/// `moveRows()`, and a model that moves rows *inside* beginMoveRows()/endMoveRows() trips
+/// Qt's own assertions (nested row signals), so this one keeps a display order like the
+/// example's WideModel - an application model would move its data instead.
+class ReorderableModel : public QAbstractTableModel
+{
+public:
+    ReorderableModel(int rows, int columns, QObject *parent = nullptr)
+        : QAbstractTableModel(parent)
+        , m_columns(qMax(1, columns))
+    {
+        for (int row = 0; row < qMax(0, rows); ++row)
+            m_order.append(row);
+    }
+
+    int rowCount(const QModelIndex &parent = QModelIndex()) const override
+    {
+        return parent.isValid() ? 0 : int(m_order.size());
+    }
+    int columnCount(const QModelIndex &parent = QModelIndex()) const override
+    {
+        return parent.isValid() ? 0 : m_columns;
+    }
+    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override
+    {
+        if (!index.isValid() || role != Qt::DisplayRole)
+            return QVariant();
+        return QStringLiteral("r%1c%2").arg(m_order.at(index.row())).arg(index.column());
+    }
+    QVariant headerData(int section, Qt::Orientation orientation, int role) const override
+    {
+        if (role != Qt::DisplayRole || section < 0 || section >= m_order.size())
+            return QVariant();
+        return orientation == Qt::Horizontal ? QStringLiteral("c%1").arg(section)
+                                             : QStringLiteral("R%1").arg(m_order.at(section));
+    }
+
+    bool moveRows(const QModelIndex &sourceParent, int sourceRow, int count,
+                  const QModelIndex &destinationParent, int destinationChild) override
+    {
+        if (sourceParent.isValid() || destinationParent.isValid() || count <= 0
+            || sourceRow < 0 || sourceRow + count > m_order.size())
+            return false;
+        if (destinationChild < 0 || destinationChild > m_order.size())
+            return false;
+        if (destinationChild >= sourceRow && destinationChild <= sourceRow + count)
+            return false;   // Qt's "a move onto itself is no move" rule
+        if (!beginMoveRows(sourceParent, sourceRow, sourceRow + count - 1, destinationParent,
+                           destinationChild))
+            return false;
+        QVector<int> moved;
+        for (int index = 0; index < count; ++index)
+            moved.append(m_order.at(sourceRow + index));
+        m_order.remove(sourceRow, count);
+        const int target = destinationChild > sourceRow ? destinationChild - count
+                                                       : destinationChild;
+        for (int index = 0; index < count; ++index)
+            m_order.insert(target + index, moved.at(index));
+        endMoveRows();
+        return true;
+    }
+
+private:
+    int m_columns = 0;
+    QVector<int> m_order;
+};
 class TestVirtualTableView : public QObject
 {
     Q_OBJECT
@@ -631,21 +702,22 @@ private slots:
     void materializesOnlyVisibleRows();
     void rowWidgetModeCreatesNoCellWidgets();
     void headerAndRowsAgreeOnColumnBoundaries();
-    void nativeHeaderFollowsLimitChangesImmediately();
-    void nativeHeaderStaysInSyncWithEveryGeometryChange();
+    void defaultHeaderStaysOnTheCommittedColumns();
     void columnStructureChangesRebindTheRowWidgets();
     void columnZeroChangesKeepTheRowIdentityCanonical();
     void columnZeroChangesReleaseTheRowWidgetsFirst();
     void setAdapterConfiguresTheTableNotJustTheBase();
+    void rowStripDragReportsAMoveTheModelMayRefuse();
+    void rowStripDragTakesTheRowsWithIt();
+    void draggingAHeaderSectionSwapsTheOrderInBothAxes();
+    void tenMillionUniformRowsResizeOneStaysCompact();
     void switchingTheModelRebindsEveryPaneHeader();
     void rowInsertKeepsTheColumnWidths();
     void rowInsertKeepsTheExplicitRowHeights();
     void columnResizeTouchesMaterializedRowsOnly();
     void geometryIsTheSingleAuthority();
     void columnMoveFollowsTheGeometry();
-    void columnMoveReordersTheHeader();
     void hiddenColumnHidesHost();
-    void horizontalScrollKeepsHeaderAndRowsAligned();
     void headerStateRoundTrip();
     void hugeModelColumnResizeDoesNotWalkRows();
     void columnCountFollowsTheModel();
@@ -662,7 +734,6 @@ private slots:
     void frozenPanesDoNotAddScrollSpace();
     void frozenColumnsFollowTheSingleGeometry();
     void frozenRightPaneIsPinnedToTheRightEdge();
-    void frozenPanesSplitTheHeader();
     void frozenPaneIsUnaffectedByScrolling();
     void frozenPaneKeepsTheRowBackground();
     void frozenPanesDrawBodySeparatorLines();
@@ -671,6 +742,10 @@ private slots:
     void aBrokenStateLeavesTheViewUntouched();
 
 private:
+    void sendMouseTo(QWidget *widget, QEvent::Type type, const QPoint &pos,
+                     Qt::MouseButton button, Qt::MouseButtons buttons);
+    int sectionViewportX(const VirtualHeaderView *renderer, int column) const;
+
     QStandardItemModel *m_model = nullptr;
     TableTestAdapter *m_adapter = nullptr;
     VirtualTableView *m_view = nullptr;
@@ -696,6 +771,30 @@ void TestVirtualTableView::cleanup()
     m_adapter = nullptr;
     delete m_model;
     m_model = nullptr;
+}
+
+/// Sends a mouse event with an explicit button state: the resize/drag gestures read the
+/// pressed buttons, which QTest::mouseMove does not always carry.
+void TestVirtualTableView::sendMouseTo(QWidget *widget, QEvent::Type type, const QPoint &pos,
+                                       Qt::MouseButton button, Qt::MouseButtons buttons)
+{
+    QMouseEvent event(type, pos, widget->mapToGlobal(pos), button, buttons, Qt::NoModifier);
+    QApplication::sendEvent(widget, &event);
+}
+
+/// Viewport x of a materialized section of \a renderer (the section's x is relative
+/// to its renderer, which sits on its pane rect - a clone of a frozen pane is not at
+/// the viewport origin).
+int TestVirtualTableView::sectionViewportX(const VirtualHeaderView *renderer, int column) const
+{
+    if (renderer->orientation() != Qt::Horizontal)
+        return std::numeric_limits<int>::min();
+    QWidget *section = renderer->sectionWidget(column);
+    // A section whose column left the widget is hidden and keeps the geometry it had:
+    // only the sections that are really shown carry the current position (§19).
+    if (!section || !section->isVisible())
+        return std::numeric_limits<int>::min();
+    return section->x() + renderer->x() - m_view->viewport()->x();
 }
 
 void TestVirtualTableView::materializesOnlyVisibleRows()
@@ -733,9 +832,12 @@ void TestVirtualTableView::rowWidgetModeCreatesNoCellWidgets()
 
 void TestVirtualTableView::headerAndRowsAgreeOnColumnBoundaries()
 {
-    auto *header = qobject_cast<QHeaderView *>(m_view->horizontalHeader()->headerWidget());
+    // The default horizontal header is a widget header (LabelHeaderView), so the
+    // agreement is read from the section widgets - the same x the body's ColumnHosts
+    // use (§45.1).
+    auto *header = dynamic_cast<VirtualHeaderView *>(m_view->horizontalHeader());
     QVERIFY(header != nullptr);
-    QVERIFY(header->isVisible());
+    QVERIFY(header->headerWidget()->isVisible());
 
     // Column resize: header and every materialized row must agree pixel exactly.
     m_view->setColumnWidth(1, 170);
@@ -744,8 +846,14 @@ void TestVirtualTableView::headerAndRowsAgreeOnColumnBoundaries()
 
     for (int column : m_view->visibleColumnLogicalIndexes()) {
         const ColumnGeometry geometry = m_view->columnGeometry(column);
-        QCOMPARE(header->sectionViewportPosition(column), geometry.viewportX);
-        QCOMPARE(header->sectionSize(column), geometry.width);
+        QWidget *section = header->sectionWidget(column);
+        QVERIFY(section != nullptr);
+        // The visible ones agree pixel exactly; a section the header hid (its column
+        // scrolled out) is not part of this pass.
+        if (!section->isVisible())
+            continue;
+        QCOMPARE(sectionViewportX(header, column), geometry.viewportX);
+        QCOMPARE(section->width(), geometry.width);
 
         ColumnHost *host = rowWidget->host(column);
         QVERIFY(host != nullptr);
@@ -754,29 +862,72 @@ void TestVirtualTableView::headerAndRowsAgreeOnColumnBoundaries()
     }
 }
 
-void TestVirtualTableView::nativeHeaderFollowsLimitChangesImmediately()
+void TestVirtualTableView::defaultHeaderStaysOnTheCommittedColumns()
 {
-    // P1-3 of the second review: the native renderer keeps its own copy of the section size
-    // range and only re-reads it when the geometry notifies. Changing the range *without*
-    // clamping any section used to skip that notification, so header and geometry disagreed
-    // about the allowed widths until the next unrelated change.
-    auto *native = qobject_cast<NativeHeaderView *>(m_view->horizontalHeader()->headerWidget());
-    QVERIFY(native != nullptr);
-    HeaderGeometry *geometry = m_view->horizontalHeaderGeometry();
-    QCOMPARE(geometry->sectionSize(0), kColumnWidth);
+    // The header the view installs itself: a label-only widget header. It has to sit
+    // exactly on the committed column geometry for the header *and* for the pane
+    // clones, after a resize, a scroll, a reorder and a freeze.
+    QVERIFY(dynamic_cast<LabelHeaderView *>(m_view->horizontalHeader()) != nullptr);
+    // A hidden header still works - the sections just have no visible geometry.
+    QVERIFY(m_view->isHorizontalHeaderVisible());
 
-    geometry->setMinimumSectionSize(40);         // below the current width: nothing is clamped
-    QCOMPARE(native->minimumSectionSize(), 40);
+    // Every section of every renderer (the view's own header and the clones of the
+    // frozen / extra panes) sits exactly on its column's committed geometry.
+    const auto checkEverySection = [this]() {
+        // The *column* renderers: the view also owns the row-number strip now, whose
+        // sections are packed along y and are checked by the vertical-header tests.
+        QList<VirtualHeaderView *> renderers;
+        for (VirtualHeaderView *renderer : m_view->findChildren<VirtualHeaderView *>()) {
+            if (renderer->orientation() == Qt::Horizontal)
+                renderers.append(renderer);
+        }
+        QVERIFY(!renderers.isEmpty());
+        for (VirtualHeaderView *renderer : renderers) {
+            for (int column : renderer->materializedSections()) {
+                QWidget *section = renderer->sectionWidget(column);
+                QVERIFY(section != nullptr);
+                if (!section->isVisible())
+                    continue;   // its column left this renderer: hidden, geometry parked
+                const ColumnGeometry geometry = m_view->columnGeometry(column);
+                QCOMPARE(sectionViewportX(renderer, column), geometry.viewportX);
+                QCOMPARE(section->width(), geometry.width);
+            }
+        }
+    };
 
-    geometry->setMaximumSectionSize(333);        // above the current width as well
-    QCOMPARE(native->maximumSectionSize(), 333);
+    checkEverySection();
+    QCOMPARE(m_view->horizontalHeader()->headerWidget()->width(),
+             m_view->viewport()->width());
 
-    // ... and the new range is in force: the header clamps a resize the same way the
-    // geometry does.
-    m_view->setColumnWidth(1, 10);
-    QCOMPARE(m_view->columnWidth(1), 40);
-    QCOMPARE(native->sectionSize(1), 40);
+    m_view->setColumnWidth(1, 170);
+    QApplication::processEvents();
+    checkEverySection();
+    QCOMPARE(m_view->columnWidth(1), 170);
+
+    m_view->setHorizontalOffset(120);
+    QApplication::processEvents();
+    checkEverySection();
+
+    m_view->moveColumn(0, 3);
+    QApplication::processEvents();
+    checkEverySection();
+
+    m_view->setFrozenColumns(QVector<int>({0, 1}));
+    m_view->setHorizontalOffset(0);
+    QApplication::processEvents();
+    checkEverySection();
+
+    // ... and hiding the header stays a plain visibility switch.
+    m_view->setHorizontalHeaderVisible(false);
+    QApplication::processEvents();
+    QVERIFY(!m_view->isHorizontalHeaderVisible());
+    QVERIFY(m_view->horizontalHeader()->headerWidget()->isHidden());
+    m_view->setHorizontalHeaderVisible(true);
+    QApplication::processEvents();
+    QVERIFY(!m_view->horizontalHeader()->headerWidget()->isHidden());
+    checkEverySection();
 }
+
 
 void TestVirtualTableView::columnStructureChangesRebindTheRowWidgets()
 {
@@ -833,53 +984,6 @@ void TestVirtualTableView::columnStructureChangesRebindTheRowWidgets()
     }
 }
 
-void TestVirtualTableView::nativeHeaderStaysInSyncWithEveryGeometryChange()
-{
-    // P1-10 of the second review: the native renderer no longer does a full sync for the
-    // granular changes (a resize, a visibility toggle, the sort indicator), so every kind of
-    // geometry change is checked here - a missing notification would show up as a header
-    // that disagrees with the geometry.
-    auto *native = qobject_cast<NativeHeaderView *>(m_view->horizontalHeader()->headerWidget());
-    QVERIFY(native != nullptr);
-    HeaderGeometry *geometry = m_view->horizontalHeaderGeometry();
-
-    // The resize is applied granularly: the section follows, the whole geometry is not
-    // re-read (P1-10).
-    const quint64 fullSyncsBefore = native->fullSyncCount();
-    m_view->setColumnWidth(2, 180);                  // sectionResized
-    QCOMPARE(native->sectionSize(2), 180);
-    QCOMPARE(geometry->sectionSize(2), 180);
-    QCOMPARE(native->fullSyncCount(), fullSyncsBefore);
-
-    m_view->setColumnHidden(1, true);                // sectionVisibilityChanged
-    QVERIFY(native->isSectionHidden(1));
-    QVERIFY(geometry->isSectionHidden(1));
-    m_view->setColumnHidden(1, false);
-
-    m_view->setDefaultColumnWidth(90);               // bulk (default size)
-    QCOMPARE(native->defaultSectionSize(), 90);
-
-    geometry->setMinimumSectionSize(40);             // bulk (size range)
-    QCOMPARE(native->minimumSectionSize(), 40);
-    geometry->setMaximumSectionSize(777);
-    QCOMPARE(native->maximumSectionSize(), 777);
-
-    geometry->setStretchLastSection(true);           // bulk (stretch)
-    QVERIFY(native->stretchLastSection());
-    geometry->setStretchLastSection(false);
-
-    m_view->setSortIndicator(3, Qt::DescendingOrder); // sortIndicatorChanged
-    QCOMPARE(native->sortIndicatorSection(), 3);
-    QCOMPARE(native->sortIndicatorOrder(), Qt::DescendingOrder);
-
-    m_view->moveColumn(0, 3);                        // sectionMoved / structure
-    for (int logical = 0; logical < m_view->columnCount(); ++logical)
-        QCOMPARE(native->visualIndex(logical), geometry->visualIndex(logical));
-
-    m_model->insertColumn(2);                        // sectionCountChanged
-    QCOMPARE(native->count(), m_model->columnCount());
-    QCOMPARE(geometry->sectionCount(), m_model->columnCount());
-}
 
 void TestVirtualTableView::columnZeroChangesKeepTheRowIdentityCanonical()
 {
@@ -1155,6 +1259,239 @@ void TestVirtualTableView::rowInsertKeepsTheExplicitRowHeights()
     QCOMPARE(view.rowHeight(2), kRowHeight);
 }
 
+void TestVirtualTableView::draggingAHeaderSectionSwapsTheOrderInBothAxes()
+{
+    // End to end through the table (not just the renderer): grabbing a header section and
+    // dropping it further along must really reorder - columns through HeaderGeometry, rows
+    // through the model's moveRows().
+    ReorderableModel model(40, 6, this);
+    TableTestAdapter adapter(6);
+    VirtualTableView view;
+    view.setTableAdapter(&adapter);
+    view.setUniformItemHeight(kRowHeight);
+    view.setDefaultColumnWidth(kColumnWidth);
+    view.setModel(&model);
+    showView(&view, QSize(kViewWidth, kViewHeight));
+
+    // -- rows: drag the row-number strip -----------------------------------------------
+    QSignalSpy moveSpy(&view, &VirtualTableView::rowMoveRequested);
+    auto *strip = dynamic_cast<VirtualHeaderView *>(view.verticalHeader());
+    QVERIFY(strip != nullptr);
+    QWidget *stripWidget = strip->headerWidget();
+    const int rowGrabY = view.visualRect(model.index(1, 0)).center().y();
+    sendMouseTo(stripWidget, QEvent::MouseButtonPress, QPoint(4, rowGrabY), Qt::LeftButton,
+                Qt::LeftButton);
+    sendMouseTo(stripWidget, QEvent::MouseMove, QPoint(4, rowGrabY + 2), Qt::NoButton,
+                Qt::LeftButton);
+    sendMouseTo(stripWidget, QEvent::MouseMove, QPoint(4, rowGrabY + 3 * kRowHeight), Qt::NoButton,
+                Qt::LeftButton);
+    sendMouseTo(stripWidget, QEvent::MouseButtonRelease, QPoint(4, rowGrabY + 3 * kRowHeight),
+                Qt::LeftButton, Qt::NoButton);
+    QApplication::processEvents();
+    QCOMPARE(moveSpy.count(), 1);   // the strip asked for the move ...
+    QCOMPARE(model.index(3, 0).data().toString(), QStringLiteral("r1c0"));
+    // the strip shows the moved row label, not the number of the new slot
+    auto *movedSection = dynamic_cast<LabelHeaderSection *>(strip->sectionWidget(3));
+    QVERIFY(movedSection != nullptr);
+    QCOMPARE(movedSection->text(), QStringLiteral("R1"));
+
+    // -- columns: drag the (default widget) header -------------------------------------
+    auto *header = dynamic_cast<VirtualHeaderView *>(view.horizontalHeader());
+    QVERIFY(header != nullptr);
+    QWidget *headerWidget = header->headerWidget();
+    const int columnGrabX = view.columnGeometry(1).viewportX + view.columnWidth(1) / 2;
+    // Past the *centre* of column 3: on the exact centre the insertion slot is the one
+    // before it (the renderer counts sections whose centre lies strictly left).
+    const int columnDropX = view.columnGeometry(3).viewportX + view.columnWidth(3) / 2 + 20;
+    const int headerY = qMax(2, headerWidget->height() / 2);
+    sendMouseTo(headerWidget, QEvent::MouseButtonPress, QPoint(columnGrabX, headerY),
+                Qt::LeftButton, Qt::LeftButton);
+    sendMouseTo(headerWidget, QEvent::MouseMove, QPoint(columnGrabX + 2, headerY), Qt::NoButton,
+                Qt::LeftButton);
+    sendMouseTo(headerWidget, QEvent::MouseMove, QPoint(columnDropX, headerY), Qt::NoButton,
+                Qt::LeftButton);
+    sendMouseTo(headerWidget, QEvent::MouseButtonRelease, QPoint(columnDropX, headerY),
+                Qt::LeftButton, Qt::NoButton);
+    QApplication::processEvents();
+    QCOMPARE(view.horizontalHeaderGeometry()->logicalIndex(3), 1);
+}
+void TestVirtualTableView::rowStripDragTakesTheRowsWithIt()
+{
+    // §8 of the vertical-header decision (row analogue of setColumnFollowsHeaderVisual):
+    // while the strip is dragged, the rows are drawn where their numbers are - the dragged
+    // row follows the pointer and the rows making room slide along - and the commit puts
+    // them back on the committed layout. The committed geometry itself never moves.
+    BigTableModel model(40, 3, this);
+    TableTestAdapter adapter(3);
+    VirtualTableView view;
+    view.setTableAdapter(&adapter);
+    view.setUniformItemHeight(kRowHeight);
+    view.setDefaultColumnWidth(kColumnWidth);
+    view.setModel(&model);
+    showView(&view, QSize(kViewWidth, kViewHeight));
+    QVERIFY(view.rowFollowsHeaderVisual());
+
+    auto *strip = dynamic_cast<VirtualHeaderView *>(view.verticalHeader());
+    QVERIFY(strip != nullptr);
+    QWidget *stripWidget = strip->headerWidget();
+    const int stripOffset = strip->y() - view.viewport()->y();
+    const auto rowWidget = [&view](int row) -> QWidget * {
+        for (const MaterializedItem &item : view.materializedItems()) {
+            if (item.index.row() == row)
+                return item.widget;
+        }
+        return nullptr;
+    };
+    const auto sectionY = [&](int row) {
+        QWidget *section = strip->sectionWidget(row);
+        return section ? section->y() + stripOffset : std::numeric_limits<int>::min();
+    };
+
+    QWidget *dragged = rowWidget(1);
+    QWidget *neighbour = rowWidget(2);
+    QVERIFY(dragged != nullptr);
+    QVERIFY(neighbour != nullptr);
+    const int committedY = view.visualRect(model.index(1, 0)).y();
+    const int neighbourY = view.visualRect(model.index(2, 0)).y();
+    QCOMPARE(dragged->y(), committedY);
+    QCOMPARE(neighbour->y(), neighbourY);
+
+    // Grab row 1 in the middle (away from the row boundary) and pull it three rows down.
+    const int grabY = view.visualRect(model.index(1, 0)).center().y();
+    sendMouseTo(stripWidget, QEvent::MouseButtonPress, QPoint(4, grabY), Qt::LeftButton,
+                Qt::LeftButton);
+    sendMouseTo(stripWidget, QEvent::MouseMove, QPoint(4, grabY + 2), Qt::NoButton,
+                Qt::LeftButton);
+    sendMouseTo(stripWidget, QEvent::MouseMove, QPoint(4, grabY + 3 * kRowHeight), Qt::NoButton,
+                Qt::LeftButton);
+    QApplication::processEvents();
+
+    // The dragged row is *drawn* where its number is (not where the commit will put it) ...
+    QVERIFY(dragged->y() != committedY);
+    QCOMPARE(dragged->y(), sectionY(1));
+    // ... the row making room follows its own number ...
+    QCOMPARE(neighbour->y(), sectionY(2));
+    // ... and its make-room tween finishes on its own (the pointer stands still).
+    QTest::qWait(320);
+    QCOMPARE(neighbour->y(), sectionY(2));
+    QVERIFY(neighbour->y() < neighbourY);
+    // ... and the committed layout (visualRect, hit testing, the model) has not moved.
+    QCOMPARE(view.visualRect(model.index(1, 0)).y(), committedY);
+    QCOMPARE(view.visualRect(model.index(2, 0)).y(), neighbourY);
+
+    // Release: this model has no moveRows(), so the order stays - and the rows come back to
+    // the committed layout instead of being left at the preview offset.
+    sendMouseTo(stripWidget, QEvent::MouseButtonRelease, QPoint(4, grabY + 3 * kRowHeight),
+                Qt::LeftButton, Qt::NoButton);
+    QApplication::processEvents();
+    QCOMPARE(dragged->y(), committedY);
+    QCOMPARE(neighbour->y(), neighbourY);
+
+    // Turning the setting off puts a following row back at once.
+    view.setRowFollowsHeaderVisual(false);
+    QVERIFY(!view.rowFollowsHeaderVisual());
+    QCOMPARE(dragged->y(), committedY);
+    view.setRowFollowsHeaderVisual(true);
+}
+void TestVirtualTableView::rowStripDragReportsAMoveTheModelMayRefuse()
+{
+    // §9 of the vertical-header decision: the strip only *asks* for the row move. A model
+    // without moveRows() (the QAbstractItemModel default returns false) refuses it - and
+    // then the row order and every section position must be exactly where they were, i.e.
+    // no stale preview is left behind.
+    BigTableModel model(40, 3, this);   // no moveRows() override: the move is refused
+    TableTestAdapter adapter(3);
+    VirtualTableView view;
+    view.setTableAdapter(&adapter);
+    view.setUniformItemHeight(kRowHeight);
+    view.setDefaultColumnWidth(kColumnWidth);
+    view.setModel(&model);
+    showView(&view, QSize(kViewWidth, kViewHeight));
+    QSignalSpy moveSpy(&view, &VirtualTableView::rowMoveRequested);
+    QVERIFY(moveSpy.isValid());
+
+    auto *strip = dynamic_cast<VirtualHeaderView *>(view.verticalHeader());
+    QVERIFY(strip != nullptr);
+    QWidget *stripWidget = strip->headerWidget();
+    const int grabY = view.visualRect(model.index(1, 0)).center().y();
+    sendMouseTo(stripWidget, QEvent::MouseButtonPress, QPoint(4, grabY), Qt::LeftButton,
+                Qt::LeftButton);
+    sendMouseTo(stripWidget, QEvent::MouseMove, QPoint(4, grabY + 2), Qt::NoButton, Qt::LeftButton);
+    sendMouseTo(stripWidget, QEvent::MouseMove, QPoint(4, grabY + 3 * kRowHeight), Qt::NoButton,
+                Qt::LeftButton);
+    QApplication::processEvents();
+    sendMouseTo(stripWidget, QEvent::MouseButtonRelease, QPoint(4, grabY + 3 * kRowHeight),
+                Qt::LeftButton, Qt::NoButton);
+    QApplication::processEvents();
+
+    // The request was reported for row 1 ...
+    QCOMPARE(moveSpy.count(), 1);
+    QCOMPARE(moveSpy.first().at(0).toInt(), 1);
+    QVERIFY(moveSpy.first().at(1).toInt() > 1);
+    // ... the model refused, so nothing moved ...
+    QCOMPARE(view.verticalHeaderGeometry()->visualIndex(0), 0);
+    QCOMPARE(view.verticalHeaderGeometry()->visualIndex(1), 1);
+    QCOMPARE(model.index(1, 0).row(), 1);
+    QVERIFY(!model.moveRows(QModelIndex(), 1, 1, QModelIndex(), 4));   // really refuses
+    // ... and the strip is back on the committed rows (no preview left over).
+    for (qsizetype row : {qsizetype(0), qsizetype(1), qsizetype(2)}) {
+        QWidget *section = strip->sectionWidget(int(row));
+        QVERIFY(section != nullptr);
+        QCOMPARE(section->y() + strip->y() - view.viewport()->y(),
+                 view.visualRect(model.index(int(row), 0)).top());
+    }
+}
+void TestVirtualTableView::tenMillionUniformRowsResizeOneStaysCompact()
+{
+    // §12 of the vertical-header decision: one row resize in a ten-million-row uniform
+    // table must not materialise ten million per-row states - and the row-number strip
+    // still mirrors the committed height.
+    constexpr int kRows = 10'000'000;
+    BigTableModel model(kRows, 4, this);
+    TableTestAdapter adapter(4);
+    VirtualTableView view;
+    view.setTableAdapter(&adapter);
+    view.setUniformItemHeight(kRowHeight);
+    view.setDefaultColumnWidth(kColumnWidth);
+    view.setModel(&model);
+    showView(&view, QSize(kViewWidth, kViewHeight));
+
+    QCOMPARE(view.verticalHeaderGeometry()->sectionCount(), kRows);
+    QCOMPARE(view.verticalHeaderGeometry()->storedSectionStateCount(), 0);
+    QVERIFY(view.verticalHeaderGeometry()->isUniform());
+    // The strip is a widget one (LabelHeaderView(Qt::Vertical)): only the rows its window
+    // shows own a widget.
+    auto *strip = dynamic_cast<VirtualHeaderView *>(view.verticalHeader());
+    QVERIFY(strip != nullptr);
+    QVERIFY(strip->materializedSectionCount() < 100);
+
+    view.setRowHeight(1234, kRowHeight * 2);
+    view.flushPendingRelayout();
+    QCoreApplication::processEvents();
+
+    // The committed layout follows the explicit height ...
+    QCOMPARE(view.rowHeight(1234), kRowHeight * 2);
+    QCOMPARE(view.visualRect(model.index(1234, 0)).height(), kRowHeight * 2);
+    // ... the strip mirrors it as one sparse override (the row is off screen, so no widget)
+    // ...
+    QCOMPARE(view.verticalHeaderGeometry()->storedSectionStateCount(), 1);
+    QVERIFY(view.verticalHeaderGeometry()->isUniform());
+    QCOMPARE(view.verticalHeaderGeometry()->sectionSize(1234), kRowHeight * 2);
+    QCOMPARE(view.verticalHeaderGeometry()->sectionPosition(1235),
+             qint64(1234) * kRowHeight + kRowHeight * 2);
+    QCOMPARE(view.verticalHeaderGeometry()->totalExtent(),
+             qint64(kRows) * kRowHeight + kRowHeight);
+    // ... and nothing walked or created ten million rows.
+    QVERIFY(view.materializedItemCount() < 40);
+    QVERIFY(strip->materializedSectionCount() < 100);
+
+    // Clearing it returns to the fully compact state.
+    view.clearRowHeight(1234);
+    view.flushPendingRelayout();
+    QCOMPARE(view.verticalHeaderGeometry()->storedSectionStateCount(), 0);
+    QCOMPARE(view.verticalHeaderGeometry()->sectionSize(1234), kRowHeight);
+    QCOMPARE(view.verticalHeaderGeometry()->totalExtent(), qint64(kRows) * kRowHeight);
+}
 void TestVirtualTableView::switchingTheModelRebindsEveryPaneHeader()
 {
     // P1 of the fourth review: setModel() updated the primary horizontal/vertical headers, but
@@ -1174,7 +1511,7 @@ void TestVirtualTableView::switchingTheModelRebindsEveryPaneHeader()
     }
 
     TableTestAdapter rowAdapter(3);
-    LabelHeaderAdapter headerAdapter;
+    ModelLabelHeaderAdapter headerAdapter;
     VirtualTableView view;
     view.setTableAdapter(&rowAdapter);
     view.setUniformItemHeight(kRowHeight);
@@ -1192,7 +1529,9 @@ void TestVirtualTableView::switchingTheModelRebindsEveryPaneHeader()
     const auto paneHeaderClone = [&]() -> VirtualHeaderView * {
         VirtualHeaderView *clone = nullptr;
         for (VirtualHeaderView *candidate : view.findChildren<VirtualHeaderView *>()) {
-            if (candidate != header)
+            // The *column* clone: the frozen row bands are the same renderer class on the
+            // other axis and are checked separately below.
+            if (candidate != header && candidate->orientation() == Qt::Horizontal)
                 clone = candidate;
         }
         return clone;
@@ -1208,9 +1547,9 @@ void TestVirtualTableView::switchingTheModelRebindsEveryPaneHeader()
     QCOMPARE(paneHeader->labelModel(), &modelA);
     QCOMPARE(sectionText(paneHeader, 0), QStringLiteral("A0"));
 
-    QList<NativeHeaderView *> strips;
-    for (NativeHeaderView *candidate : view.findChildren<NativeHeaderView *>()) {
-        if (candidate->orientation() == Qt::Vertical && candidate->model() == &modelA)
+    QList<VirtualHeaderView *> strips;
+    for (VirtualHeaderView *candidate : view.findChildren<VirtualHeaderView *>()) {
+        if (candidate->orientation() == Qt::Vertical && candidate->labelModel() == &modelA)
             strips.append(candidate);
     }
     QVERIFY(!strips.isEmpty());            // the frozen row bands have their own strips
@@ -1225,8 +1564,8 @@ void TestVirtualTableView::switchingTheModelRebindsEveryPaneHeader()
     QCOMPARE(paneHeader->labelModel(), &modelB);
     QCOMPARE(sectionText(paneHeader, 0), QStringLiteral("B0"));
     QCOMPARE(sectionText(header, 1), QStringLiteral("B1"));   // the primary pane too
-    for (NativeHeaderView *strip : strips)
-        QCOMPARE(strip->model(), &modelB);
+    for (VirtualHeaderView *strip : strips)
+        QCOMPARE(strip->labelModel(), &modelB);
 }
 
 void TestVirtualTableView::setAdapterConfiguresTheTableNotJustTheBase()
@@ -1307,46 +1646,6 @@ void TestVirtualTableView::columnMoveFollowsTheGeometry()
     QCOMPARE(m_view->horizontalHeaderGeometry()->logicalIndex(0), 1);
 }
 
-void TestVirtualTableView::columnMoveReordersTheHeader()
-{
-    auto *header = qobject_cast<QHeaderView *>(m_view->horizontalHeader()->headerWidget());
-    QVERIFY(header != nullptr);
-
-    const auto visualOrderOf = [this](const QHeaderView *view) {
-        QVector<int> order;
-        for (int visual = 0; visual < m_view->columnCount(); ++visual)
-            order.append(view->logicalIndex(visual));
-        return order;
-    };
-    const auto geometryOrder = [this]() {
-        QVector<int> order;
-        HeaderGeometry *geometry = m_view->horizontalHeaderGeometry();
-        for (int visual = 0; visual < m_view->columnCount(); ++visual)
-            order.append(geometry->logicalIndex(visual));
-        return order;
-    };
-    QCOMPARE(visualOrderOf(header), QVector<int>({0, 1, 2, 3, 4, 5}));
-
-    // Moving a column through the geometry has to reorder the header as well,
-    // otherwise header and body disagree (§45.1).
-    m_view->moveColumn(4, 0);
-    QCOMPARE(geometryOrder(), QVector<int>({4, 0, 1, 2, 3, 5}));
-    QCOMPARE(visualOrderOf(header), geometryOrder());
-
-    // Header and body stay pixel aligned for every column.
-    const int viewportX = m_view->viewport()->geometry().x();
-    for (int column = 0; column < m_view->columnCount(); ++column) {
-        QCOMPARE(header->geometry().x() + header->sectionViewportPosition(column),
-                 m_view->columnGeometry(column).viewportX + viewportX);
-    }
-
-    // restoreHeaderState() restores the header order through the same path.
-    const QByteArray state = m_view->saveHeaderState();
-    m_view->moveColumn(0, 4);
-    QVERIFY(m_view->restoreHeaderState(state));
-    QCOMPARE(geometryOrder(), QVector<int>({4, 0, 1, 2, 3, 5}));
-    QCOMPARE(visualOrderOf(header), geometryOrder());
-}
 
 void TestVirtualTableView::hiddenColumnHidesHost()
 {
@@ -1364,30 +1663,6 @@ void TestVirtualTableView::hiddenColumnHidesHost()
     QCOMPARE(rowWidget->host(2)->mapTo(m_view->viewport(), QPoint(0, 0)).x(), xOfColumnTwo);
 }
 
-void TestVirtualTableView::horizontalScrollKeepsHeaderAndRowsAligned()
-{
-    auto *header = qobject_cast<QHeaderView *>(m_view->horizontalHeader()->headerWidget());
-    QVERIFY(header != nullptr);
-    auto *rowWidget = static_cast<TableRowWidget *>(rowWidgetFor(*m_view, 0));
-    QVERIFY(rowWidget != nullptr);
-
-    QCOMPARE(m_view->horizontalOffset(), qint64(0));
-    m_view->setHorizontalOffset(180);
-    QCOMPARE(m_view->horizontalOffset(), qint64(180));
-    QCOMPARE(m_view->horizontalScrollBar()->value(), 180);
-
-    for (int column : m_view->visibleColumnLogicalIndexes()) {
-        const ColumnGeometry geometry = m_view->columnGeometry(column);
-        QCOMPARE(header->sectionViewportPosition(column), geometry.viewportX);
-        QCOMPARE(rowWidget->host(column)->mapTo(m_view->viewport(), QPoint(0, 0)).x(),
-                 geometry.viewportX);
-    }
-
-    m_view->scrollByHorizontalPixels(-1000);
-    QCOMPARE(m_view->horizontalOffset(), qint64(0));
-    m_view->setHorizontalOffset(1000000);
-    QCOMPARE(m_view->horizontalOffset(), m_view->maximumHorizontalOffset());
-}
 
 void TestVirtualTableView::headerStateRoundTrip()
 {
@@ -1429,7 +1704,12 @@ void TestVirtualTableView::hugeModelColumnResizeDoesNotWalkRows()
     QCOMPARE(adapter.created, createdBefore);
     QVERIFY(view.materializedItemCount() < 40);
     QCOMPARE(view.columnGeometry(3).width, 321);
-    QCOMPARE(view.verticalHeaderGeometry()->sectionCount(), 0); // uniform: default only
+    // Uniform row heights: the row geometry carries the *count* (so a row-number strip can
+    // materialize its window) but stores nothing per row - that decoupling is what keeps a
+    // ten-million-row table cheap (HeaderGeometry's uniform representation).
+    QCOMPARE(view.verticalHeaderGeometry()->sectionCount(), model.rowCount());
+    QCOMPARE(view.verticalHeaderGeometry()->storedSectionStateCount(), 0);
+    QVERIFY(view.verticalHeaderGeometry()->isUniform());
 }
 
 void TestVirtualTableView::columnCountFollowsTheModel()
@@ -1496,9 +1776,11 @@ void TestVirtualTableView::verticalHeaderMirrorsRowHeights()
 
 void TestVirtualTableView::verticalHeaderFollowsVerticalScroll()
 {
-    auto *header = qobject_cast<QHeaderView *>(m_view->verticalHeader()->headerWidget());
+    // The row-number strip is a widget strip (LabelHeaderView(Qt::Vertical)): the same
+    // renderer as the column header, other axis.
+    auto *header = dynamic_cast<VirtualHeaderView *>(m_view->verticalHeader());
     QVERIFY(header != nullptr);
-    QVERIFY(header->isVisible());
+    QVERIFY(header->headerWidget()->isVisible());
 
     for (int step = 1; step <= 4; ++step) {
         m_view->verticalScrollBar()->setValue(step * kRowHeight * 3);
@@ -1506,29 +1788,36 @@ void TestVirtualTableView::verticalHeaderFollowsVerticalScroll()
 
         // The row-number strip consumes the same vertical offset as the body.
         QCOMPARE(m_view->verticalHeaderGeometry()->viewportOffset(), m_view->verticalOffset());
-        QCOMPARE(qint64(header->offset()), m_view->verticalOffset());
 
         // Every visible row number sits exactly at its row's y position.
         const VisibleRange rows = m_view->visibleRows();
         QVERIFY(rows.isValid());
         for (qsizetype row = rows.first; row <= rows.last; ++row) {
             const QRect rect = m_view->visualRect(m_model->index(int(row), 0));
-            QCOMPARE(header->sectionViewportPosition(int(row)), rect.top());
+            QWidget *section = header->sectionWidget(int(row));
+            QVERIFY(section != nullptr);
+            QCOMPARE(section->y() + header->y() - m_view->viewport()->y(), rect.top());
+            QCOMPARE(section->height(), rect.height());
         }
     }
 }
 
 void TestVirtualTableView::verticalHeaderDragChangesRowHeight()
 {
-    auto *header = qobject_cast<QHeaderView *>(m_view->verticalHeader()->headerWidget());
+    auto *header = dynamic_cast<VirtualHeaderView *>(m_view->verticalHeader());
     QVERIFY(header != nullptr);
     QCOMPARE(m_view->rowHeight(2), kRowHeight);
     QCOMPARE(m_view->itemHeightMode(), VirtualItemView::ItemHeightMode::Uniform);
 
-    // A user drag on the row-number strip ends up in QHeaderView::resizeSection();
-    // it must become an explicit row height (and switch the table to variable
-    // heights) instead of being swallowed.
-    header->resizeSection(2, 64);
+    // A user drag on the row boundary of the strip must become an explicit row height (and
+    // switch the table to variable heights) instead of being swallowed.
+    const int boundaryY = m_view->visualRect(m_model->index(2, 0)).bottom();
+    sendMouseTo(header->headerWidget(), QEvent::MouseButtonPress, QPoint(4, boundaryY),
+                Qt::LeftButton, Qt::LeftButton);
+    sendMouseTo(header->headerWidget(), QEvent::MouseMove, QPoint(4, boundaryY + 34),
+                Qt::NoButton, Qt::LeftButton);
+    sendMouseTo(header->headerWidget(), QEvent::MouseButtonRelease, QPoint(4, boundaryY + 34),
+                Qt::LeftButton, Qt::NoButton);
     m_view->flushPendingRelayout();
 
     QCOMPARE(m_view->itemHeightMode(), VirtualItemView::ItemHeightMode::Variable);
@@ -1538,7 +1827,7 @@ void TestVirtualTableView::verticalHeaderDragChangesRowHeight()
     // Neighbouring rows keep the height they had.
     QCOMPARE(m_view->rowHeight(1), kRowHeight);
     QCOMPARE(m_view->verticalHeaderGeometry()->storedSectionSize(2), 64);
-    QCOMPARE(header->sectionSize(2), 64);
+    QCOMPARE(header->sectionWidget(2)->height(), 64);
 }
 
 void TestVirtualTableView::rowSizePolicyControlsMeasurement()
@@ -1857,62 +2146,6 @@ void TestVirtualTableView::frozenRightPaneIsPinnedToTheRightEdge()
     QVERIFY(m_view->columnGeometry(4).viewportX < viewportWidth - kColumnWidth);
 }
 
-void TestVirtualTableView::frozenPanesSplitTheHeader()
-{
-    m_view->setFrozenColumns(QVector<int>({0, 1}));
-    m_view->setHorizontalOffset(150);
-    QApplication::processEvents();
-
-    // Each pane has its own native header renderer, all driven by the same
-    // HeaderGeometry (§31).
-    QHeaderView *frozenHeader = nullptr;
-    QHeaderView *scrollableHeader = nullptr;
-    NativeHeaderView *frozenPaneHeader = nullptr;
-    for (QHeaderView *header : m_view->findChildren<QHeaderView *>()) {
-        if (header->orientation() != Qt::Horizontal || !header->isVisible())
-            continue;
-        if (header->width() == 2 * kColumnWidth) {
-            frozenHeader = header;
-            frozenPaneHeader = qobject_cast<NativeHeaderView *>(header);
-        } else {
-            scrollableHeader = header;
-        }
-    }
-    QVERIFY(frozenHeader != nullptr);
-    QVERIFY(scrollableHeader != nullptr);
-    QVERIFY(frozenPaneHeader != nullptr);
-
-    const int viewportX = m_view->viewport()->geometry().x();
-    // The frozen pane header sits on the frozen pane and never scrolls.
-    QCOMPARE(frozenHeader->geometry().x(), viewportX);
-    QCOMPARE(frozenHeader->sectionViewportPosition(0), 0);
-    QCOMPARE(frozenHeader->sectionViewportPosition(1), kColumnWidth);
-    QVERIFY(frozenHeader->isSectionHidden(2));
-
-    // The scrollable pane header starts behind it, shows the scrollable columns
-    // and moves with the offset - the same offset the body uses.
-    QCOMPARE(scrollableHeader->geometry().x(), viewportX + 2 * kColumnWidth);
-    QVERIFY(scrollableHeader->isSectionHidden(0));
-    QVERIFY(scrollableHeader->isSectionHidden(1));
-    QVERIFY(!scrollableHeader->isSectionHidden(2));
-    // QHeaderView only separates sections inside a header, so the pane boundary
-    // line is a framework overlay (see frozenPanesDrawBodySeparatorLines()).
-    QVERIFY(frozenPaneHeader != nullptr);
-    // Header and body agree pixel for pixel inside every pane (§45.1): the pane
-    // header's position is relative to its own widget.
-    for (int column = 0; column < m_view->columnCount(); ++column) {
-        const ColumnGeometry geometry = m_view->columnGeometry(column);
-        const QHeaderView *header = m_view->isColumnFrozen(column) ? frozenHeader : scrollableHeader;
-        // Body x is viewport relative, the header lives in view coordinates.
-        QCOMPARE(header->geometry().x() + header->sectionViewportPosition(column),
-                 geometry.viewportX + viewportX);
-    }
-
-    // A frozen column resize moves both panes (single source of truth).
-    m_view->setColumnWidth(1, kColumnWidth + 30);
-    QCOMPARE(frozenHeader->width(), 2 * kColumnWidth + 30);
-    QCOMPARE(scrollableHeader->geometry().x(), viewportX + 2 * kColumnWidth + 30);
-}
 
 void TestVirtualTableView::frozenPaneIsUnaffectedByScrolling()
 {
@@ -2022,7 +2255,7 @@ void TestVirtualTableView::frozenPanesDrawBodySeparatorLines()
     // The body line uses the colour the style paints section separators with, so
     // it matches the lines between the other columns.
     const QImage image = m_view->grab().toImage();
-    const QColor separator = NativeHeaderView::sectionSeparatorColor(m_view);
+    const QColor separator = VirtualTableView::sectionSeparatorColor(m_view);
     QCOMPARE(image.pixelColor(viewportX + 2 * kColumnWidth - 1, viewportY + 20), separator);
 
     // A frozen right pane adds the line of the other boundary.

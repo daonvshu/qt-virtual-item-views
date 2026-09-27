@@ -2,7 +2,7 @@
 
 #include <virtualitemviews/global.h>
 #include <virtualitemviews/headerwidgetadapter.h>
-#include <virtualitemviews/nativeheaderview.h>
+#include <virtualitemviews/headerview.h>
 
 #include <QHash>
 #include <QList>
@@ -24,13 +24,19 @@ namespace viv {
 class HeaderGeometry;
 class WidgetRecycler;
 
-/// QWidget based header (architecture document §17-§19).
+/// QWidget based header (architecture document §17-§19), for both axes.
 ///
 /// Instead of letting QStyle paint sections, every *materialized* section is a
 /// real QWidget produced by a HeaderWidgetAdapter, so a header can carry badges,
 /// progress, filter buttons, search fields or animated sort arrows. It
 /// deliberately does not inherit QHeaderView: the paint/cache machinery of
 /// QHeaderView and a child widget tree do not mix well.
+///
+/// The same class renders the column header (Qt::Horizontal, sections packed along
+/// x) and the row-number strip (Qt::Vertical, sections packed along y): everything
+/// axis dependent goes through the small helpers below, so the resize gesture, the
+/// drag reorder with its preview, the transition and the pane packing are written
+/// once.
 ///
 /// Invariants (§19):
 ///  - only visible sections (+ overscan) and pinned sections own a widget, so the
@@ -45,9 +51,9 @@ class VIRTUALITEMVIEWS_EXPORT VirtualHeaderView : public QWidget, public HeaderV
     Q_OBJECT
 
 public:
-    /// \a orientation must be Qt::Horizontal: the renderer packs its sections along x
-    /// from a horizontal HeaderGeometry. A vertical instance warns and stays empty;
-    /// use NativeHeaderView(Qt::Vertical) for the row-number strip.
+    /// \a orientation must match the HeaderGeometry it is bound to: a horizontal
+    /// renderer packs its sections along x, a vertical one along y. Binding the other
+    /// axis' geometry is refused (see setGeometryModel()).
     explicit VirtualHeaderView(Qt::Orientation orientation = Qt::Horizontal,
                                QWidget *parent = nullptr);
     ~VirtualHeaderView() override;
@@ -98,6 +104,16 @@ public:
     /// it an order change is applied at once, so a programmatic reorder never animates
     /// unless the application asks for it.
     void setSectionMoveAnimated(bool animated) override { m_animateOrderChange = animated; }
+    /// Tells the renderer that the section order does **not** belong to it: a committed
+    /// drag then reports where the section would land (sectionMoveRequested()) instead
+    /// of moving HeaderGeometry.
+    ///
+    /// The column header owns its order - HeaderGeometry is the single source of truth
+    /// for it - so this stays off there. A row-number strip is the case it exists for:
+    /// the order of the rows is the model's, and the strip can only ask for the move
+    /// (the table turns the request into moveRows()).
+    void setSectionOrderExternal(bool external) { m_externalSectionOrder = external; }
+    bool hasExternalSectionOrder() const { return m_externalSectionOrder; }
     /// Origin of the viewport inside the view; the table sets it so section x
     /// positions can be derived from HeaderGeometry (viewport coordinates).
     void setViewportOrigin(const QPoint &origin) override;
@@ -108,6 +124,10 @@ public:
     bool sectionVisualX(int logicalIndex, int *viewportX) const override;
     bool hasVisualSectionGeometry() const override;
     void setVisualGeometryCallback(std::function<void()> callback) override;
+    /// Re-reads the label of every materialized section (see the base class): a model-side
+    /// row/column move leaves the section set alone, so the sections would otherwise keep
+    /// the text of the item that used to sit there.
+    void refreshSectionLabels() override;
 
     // -- adapter / diagnostics ----------------------------------------------
     void setAdapter(HeaderWidgetAdapter *adapter, bool takeOwnership = false);
@@ -139,6 +159,11 @@ signals:
     /// Emitted after the new adapter is installed, so a collaborator can borrow it and
     /// rebuild what it dropped.
     void adapterChanged();
+    /// A committed drag would put the section at visual index \a toVisual, but the
+    /// order is not this renderer's to change (setSectionOrderExternal()): the drag is
+    /// dropped back to the committed geometry and the request is reported instead.
+    /// \a fromVisual / \a toVisual are visual indices - row numbers, for a row strip.
+    void sectionMoveRequested(int fromVisual, int toVisual);
 
 protected:
     void resizeEvent(QResizeEvent *event) override;
@@ -150,24 +175,51 @@ protected:
     bool eventFilter(QObject *watched, QEvent *event) override;
 
 private:
+    // -- axis helpers (§45: one renderer, two axes) ---------------------------
+    bool isHorizontal() const { return m_orientation == Qt::Horizontal; }
+    /// Component of \a point the sections are packed along.
+    int axisOf(const QPoint &point) const
+    {
+        return isHorizontal() ? point.x() : point.y();
+    }
+    /// Position/size of \a widget along the axis (x/width, or y/height).
+    int axisPosOf(const QWidget *widget) const
+    {
+        return isHorizontal() ? widget->x() : widget->y();
+    }
+    int axisSizeOf(const QWidget *widget) const
+    {
+        return isHorizontal() ? widget->width() : widget->height();
+    }
+    /// Extent of this renderer along its axis: the pack window and the section
+    /// visibility test both use it.
+    int axisExtent() const { return isHorizontal() ? width() : height(); }
+    /// Places \a widget at \a pos/\a size along the axis, filling the cross axis.
+    void placeSection(QWidget *widget, int pos, int size);
+    /// Cursor of the resize gesture on this axis.
+    Qt::CursorShape resizeCursor() const
+    {
+        return isHorizontal() ? Qt::SplitHCursor : Qt::SplitVCursor;
+    }
+
     void connectGeometry(HeaderGeometry *geometry, bool connectSignals);
     /// Rebuilds the pane cache when it was invalidated (filter / geometry / visibility /
     /// order change) - never on a pure offset change. The cache is mutable, so the const
-    /// query path (sectionX) can fill it lazily like the derived caches of the layout do.
+    /// query path (sectionPos) can fill it lazily like the derived caches of the layout do.
     void rebuildPaneCacheIfNeeded() const;
     /// Re-binds the materialized sections in the logical range [first, last] so a widget
     /// that is already on screen picks up a changed label or state.
     void rebindMaterializedSections(int first, int last);
     void relayout();
     void recycleAllSections();
-    /// Value sectionX() returns for a section this widget does not show. A pane
+    /// Value sectionPos() returns for a section this widget does not show. A pane
     /// offset may legitimately place a shown section at a negative x (a frozen
     /// pane shifted left, or a scrolling pane scrolled to its end), so the
     /// position itself cannot double as the "not shown" marker.
     static constexpr int kSectionNotShown = std::numeric_limits<int>::min();
-    /// x of \a logicalIndex inside this widget (kSectionNotShown when hidden,
-    /// filtered or unknown).
-    int sectionX(int logicalIndex) const;
+    /// Position of \a logicalIndex along the renderer's axis, inside this widget
+    /// (kSectionNotShown when hidden, filtered or unknown).
+    int sectionPos(int logicalIndex) const;
     /// Places every materialized section, honouring the visual geometry (§23 while
     /// an animation runs, the committed geometry otherwise).
     void positionSections();
@@ -189,8 +241,8 @@ private:
     /// Drag-reorder (§22): the press picks a section up, a threshold decides whether it
     /// is a drag or a click, and the release commits *once* so the visual transition can
     /// settle from the preview position.
-    void beginSectionDrag(int logicalIndex, int x);
-    void updateSectionDrag(int x);
+    void beginSectionDrag(int logicalIndex, int pos);
+    void updateSectionDrag(int pos);
     void finishSectionDrag(bool commit);
     /// The index the dragged section would land on, in final-order terms - that is the
     /// `to` argument of moveSection().
@@ -206,6 +258,32 @@ private:
     void watchMouse(QWidget *root);
     /// Logical columns in visual order, ignoring hidden and filtered ones.
     QVector<int> visualOrder() const;
+    /// Read-only view of the packed order (visible sections in visual order). For a
+    /// *uniform* geometry the order is the identity, so nothing is materialised: a drag on
+    /// a ten-million-row strip must not build a ten-million-entry vector per mouse move
+    /// (§7 of the vertical-header decision).
+    struct PackedOrder
+    {
+        /// Empty for an identity order (a uniform geometry): the packed slot *is* the
+        /// logical index then, and nothing was built.
+        QVector<int> storage;
+        int count = 0;
+        bool isEmpty() const { return count <= 0; }
+        int size() const { return count; }
+        int at(int slot) const
+        {
+            if (slot < 0 || slot >= count)
+                return -1;
+            return storage.isEmpty() ? slot : storage.at(slot);
+        }
+        int indexOf(int logical) const
+        {
+            if (logical < 0 || logical >= count)
+                return -1;
+            return storage.isEmpty() ? logical : storage.indexOf(logical);
+        }
+    };
+    PackedOrder packedOrder() const;
     /// True when this widget shows \a logicalIndex at all.
     bool showsSection(int logicalIndex) const;
     int sectionAt(const QPoint &pos) const;
@@ -231,10 +309,10 @@ private:
     qint64 m_paneOffset = kFollowGeometryOffset;
     /// Pane cache (§31/§43, P1-8 of the second review): the pane's columns in committed
     /// visual order, the prefix sums of their widths, a logical → slot map and the
-    /// membership set. Without it every sectionX() rebuilt and sorted the pane's list and
+    /// membership set. Without it every sectionPos() rebuilt and sorted the pane's list and
     /// every isFiltered() scanned it, which made a pane-filtered header O(N^2) per pass.
     mutable QVector<int> m_paneOrder;
-    mutable QVector<qint64> m_panePrefixX;
+    mutable QVector<qint64> m_panePrefix;
     mutable QVector<int> m_paneSlotByLogical;
     mutable QSet<int> m_paneFilterSet;
     mutable bool m_paneCacheDirty = true;
@@ -255,18 +333,25 @@ private:
     /// Visual order of the last pass, to tell a section move (animate) from a
     /// resize or an offset change (immediate).
     QVector<int> m_lastVisualOrder;
+    /// The last pass ran on a *uniform* geometry, whose order is the identity: kept as a
+    /// flag plus the count instead of a vector, so a ten-million-row strip never
+    /// materialises an order it does not have (see relayout()).
+    bool m_lastOrderWasIdentity = false;
+    int m_lastOrderCount = 0;
     /// HeaderGeometry::orderRevision() of the last pass: the order above is only
     /// re-derived when the geometry says it may have changed.
     quint32 m_lastOrderRevision = 0;
     /// True once a table told this renderer where its viewport starts; without that
     /// (a standalone header) its own client origin is the reference.
     bool m_viewportOriginSet = false;
+    /// The section order belongs to somebody else (see setSectionOrderExternal()).
+    bool m_externalSectionOrder = false;
     /// Drag-reorder state (§22/§23): the section the press picked up and where the
     /// pointer is. All of it is visual geometry - the committed order only changes on
     /// the release.
     int m_dragSection = -1;
-    int m_dragStartX = 0;
-    int m_dragCurrentX = 0;
+    int m_dragStartPos = 0;
+    int m_dragCurrentPos = 0;
     bool m_dragging = false;
     /// Preview easing (§22/§23): the sections that make room tween to their slot instead
     /// of teleporting. Same curve (OutCubic) and duration as the other header
@@ -287,9 +372,9 @@ private:
 
     int m_resizeSection = -1;
     int m_resizeStartSize = 0;
-    int m_resizeStartX = 0;
+    int m_resizeStartPos = 0;
     int m_pressedSection = -1;
-    int m_pressedX = 0;
+    int m_pressedPos = 0;
     bool m_moved = false;
 };
 

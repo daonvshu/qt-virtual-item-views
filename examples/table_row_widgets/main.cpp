@@ -4,7 +4,7 @@
 // 演示：原生 QHeaderView（水平 + 行号）、拖动列宽、点击表头排序、隐藏/恢复列、
 // 移动列、保存/恢复列状态、横向像素滚动、百万级行只实例化可见行。
 
-#include <virtualitemviews/nativeheaderview.h>
+#include <virtualitemviews/headerview.h>
 #include <virtualitemviews/tablewidgetadapter.h>
 #include <virtualitemviews/virtualtableview.h>
 

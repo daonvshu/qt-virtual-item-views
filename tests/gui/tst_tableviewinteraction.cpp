@@ -1,5 +1,6 @@
-#include <virtualitemviews/nativeheaderview.h>
+#include <virtualitemviews/headerview.h>
 #include <virtualitemviews/virtualtableview.h>
+#include <virtualitemviews/virtualheaderview.h>
 #include "vivtestfixtures.h"
 
 #include <QtTest>
@@ -185,14 +186,18 @@ void TestTableViewInteraction::cleanup()
 
 void TestTableViewInteraction::headerClickSortsRows()
 {
-    auto *header = qobject_cast<QHeaderView *>(m_view->horizontalHeader()->headerWidget());
+    // The default header is a widget header: the gesture goes to the header widget
+    // itself (there is no QHeaderView viewport in between).
+    auto *header = dynamic_cast<VirtualHeaderView *>(m_view->horizontalHeader());
     QVERIFY(header != nullptr);
     m_view->setSortingEnabled(true);
 
-    const int sectionCenterX = header->sectionViewportPosition(1) + header->sectionSize(1) / 2;
-    // Header interactions arrive on its viewport, like any QAbstractItemView.
-    QTest::mouseClick(header->viewport(), Qt::LeftButton, Qt::NoModifier,
-                      QPoint(sectionCenterX, header->viewport()->height() / 2));
+    // No frozen columns in this fixture, so the column's viewport x is also the x
+    // inside the header widget.
+    QWidget *headerWidget = header->headerWidget();
+    const int sectionCenterX = m_view->columnGeometry(1).viewportX + m_view->columnWidth(1) / 2;
+    const int y = headerWidget->height() / 2;
+    QTest::mouseClick(headerWidget, Qt::LeftButton, Qt::NoModifier, QPoint(sectionCenterX, y));
     QCoreApplication::processEvents();
 
     QCOMPARE(m_view->horizontalHeaderGeometry()->sortIndicatorSection(), 1);
@@ -203,8 +208,7 @@ void TestTableViewInteraction::headerClickSortsRows()
     QCOMPARE(m_model->data(m_model->index(0, 1)).toString(), values.first());
 
     // A second click toggles the order.
-    QTest::mouseClick(header->viewport(), Qt::LeftButton, Qt::NoModifier,
-                      QPoint(sectionCenterX, header->viewport()->height() / 2));
+    QTest::mouseClick(headerWidget, Qt::LeftButton, Qt::NoModifier, QPoint(sectionCenterX, y));
     QCoreApplication::processEvents();
     QCOMPARE(m_view->horizontalHeaderGeometry()->sortIndicatorOrder(), Qt::DescendingOrder);
     QCOMPARE(m_model->data(m_model->index(0, 1)).toString(), values.last());
@@ -212,7 +216,7 @@ void TestTableViewInteraction::headerClickSortsRows()
 
 void TestTableViewInteraction::horizontalWheelScrollsBodyAndHeader()
 {
-    auto *header = qobject_cast<QHeaderView *>(m_view->horizontalHeader()->headerWidget());
+    auto *header = dynamic_cast<VirtualHeaderView *>(m_view->horizontalHeader());
     QVERIFY(header != nullptr);
     QCOMPARE(m_view->horizontalOffset(), qint64(0));
 
@@ -226,7 +230,10 @@ void TestTableViewInteraction::horizontalWheelScrollsBodyAndHeader()
     QVERIFY2(offset > 0, qPrintable(QStringLiteral("offset=%1").arg(offset)));
     for (int column : m_view->visibleColumnLogicalIndexes()) {
         const ColumnGeometry geometry = m_view->columnGeometry(column);
-        QCOMPARE(header->sectionViewportPosition(column), geometry.viewportX);
+        QWidget *section = header->sectionWidget(column);
+        QVERIFY(section != nullptr);
+        if (section->isVisible())
+            QCOMPARE(section->x(), geometry.viewportX);
     }
 
     // A horizontal wheel delta pans by the same pixel step.
@@ -239,16 +246,18 @@ void TestTableViewInteraction::horizontalWheelScrollsBodyAndHeader()
 
 void TestTableViewInteraction::headerDragResizesColumn()
 {
-    auto *header = qobject_cast<QHeaderView *>(m_view->horizontalHeader()->headerWidget());
+    auto *header = dynamic_cast<VirtualHeaderView *>(m_view->horizontalHeader());
     QVERIFY(header != nullptr);
 
+    QWidget *headerWidget = header->headerWidget();
     const int widthBefore = m_view->columnWidth(0);
-    const int boundaryX = header->sectionViewportPosition(0) + header->sectionSize(0) - 1;
-    const int y = header->viewport()->height() / 2;
+    // The trailing edge of a section is its resize handle (§21/§25).
+    const int boundaryX = m_view->columnGeometry(0).viewportX + widthBefore - 1;
+    const int y = headerWidget->height() / 2;
 
-    QTest::mousePress(header->viewport(), Qt::LeftButton, Qt::NoModifier, QPoint(boundaryX, y));
-    QTest::mouseMove(header->viewport(), QPoint(boundaryX + 40, y), 20);
-    QTest::mouseRelease(header->viewport(), Qt::LeftButton, Qt::NoModifier,
+    QTest::mousePress(headerWidget, Qt::LeftButton, Qt::NoModifier, QPoint(boundaryX, y));
+    QTest::mouseMove(headerWidget, QPoint(boundaryX + 40, y), 20);
+    QTest::mouseRelease(headerWidget, Qt::LeftButton, Qt::NoModifier,
                         QPoint(boundaryX + 40, y));
     QCoreApplication::processEvents();
 
@@ -261,18 +270,22 @@ void TestTableViewInteraction::headerDragResizesColumn()
 
 void TestTableViewInteraction::verticalHeaderDragResizesRow()
 {
-    auto *rowHeader = qobject_cast<QHeaderView *>(m_view->verticalHeader()->headerWidget());
+    // The row-number strip is the same widget renderer as the column header, other axis:
+    // the drag goes to the strip and writes the new row height into the row geometry.
+    auto *rowStrip = dynamic_cast<VirtualHeaderView *>(m_view->verticalHeader());
+    QVERIFY(rowStrip != nullptr);
+    QWidget *rowHeader = rowStrip->headerWidget();
     QVERIFY(rowHeader != nullptr);
     QVERIFY(rowHeader->isVisible());
 
     const int heightBefore = m_view->rowHeight(0);
     // The trailing edge of the first row number is its resize handle.
-    const int boundaryY = rowHeader->sectionViewportPosition(0) + rowHeader->sectionSize(0) - 1;
-    const int x = rowHeader->viewport()->width() / 2;
+    const int boundaryY = m_view->visualRect(m_model->index(0, 0)).bottom();
+    const int x = rowHeader->width() / 2;
 
-    QTest::mousePress(rowHeader->viewport(), Qt::LeftButton, Qt::NoModifier, QPoint(x, boundaryY));
-    QTest::mouseMove(rowHeader->viewport(), QPoint(x, boundaryY + 20), 20);
-    QTest::mouseRelease(rowHeader->viewport(), Qt::LeftButton, Qt::NoModifier,
+    QTest::mousePress(rowHeader, Qt::LeftButton, Qt::NoModifier, QPoint(x, boundaryY));
+    QTest::mouseMove(rowHeader, QPoint(x, boundaryY + 20), 20);
+    QTest::mouseRelease(rowHeader, Qt::LeftButton, Qt::NoModifier,
                         QPoint(x, boundaryY + 20));
     QCoreApplication::processEvents();
 
@@ -287,7 +300,9 @@ void TestTableViewInteraction::verticalHeaderDragResizesRow()
     for (qsizetype row : m_view->visibleRows().isValid()
              ? QList<qsizetype>{m_view->visibleRows().first, m_view->visibleRows().last}
              : QList<qsizetype>{}) {
-        QCOMPARE(rowHeader->sectionViewportPosition(int(row)),
+        QWidget *section = rowStrip->sectionWidget(int(row));
+        QVERIFY(section != nullptr);
+        QCOMPARE(section->y() + rowStrip->y() - m_view->viewport()->y(),
                  m_view->visualRect(m_model->index(int(row), 0)).top());
     }
 }

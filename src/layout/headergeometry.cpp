@@ -10,7 +10,7 @@ namespace viv {
 
 // A shared build has to export these public constants (see virtualitemview.cpp).
 namespace {
-[[maybe_unused]] const void *const kExportedConstants[] = {
+[[maybe_unused]] const void *const volatile kExportedConstants[] = {
     &HeaderGeometry::kStateMagic,
     &HeaderGeometry::kStateVersion,
 };
@@ -40,6 +40,39 @@ void HeaderGeometry::setSectionCount(int count)
     const int clamped = qMax(0, count);
     if (clamped == sectionCount())
         return;
+
+    if (m_uniformCount > 0) {
+        // Uniform: every section is default-sized, visible and in logical order, so a
+        // count change is O(1) - apart from dropping the sparse overrides that fell off
+        // the end.
+        while (!m_sparseKeys.isEmpty() && m_sparseKeys.last() >= clamped) {
+            m_sparseKeys.removeLast();
+            m_sparseSizes.removeLast();
+        }
+        rebuildSparsePrefix();
+        m_uniformCount = clamped;
+        ++m_orderRevision;              // the visible order changed either way
+        if (m_sortIndicatorSection >= clamped) {
+            m_sortIndicatorSection = -1;
+            emit sortIndicatorChanged(m_sortIndicatorSection, m_sortIndicatorOrder);
+        }
+        invalidateCaches();
+        emit sectionCountChanged(clamped);
+        emitGeometryChanged();
+        return;
+    }
+
+    if (m_sections.isEmpty() && clamped > 0) {
+        // A growing geometry with nothing to preserve becomes uniform: "count + default
+        // size" is the whole state, so a 10M-row table costs O(1) until it edits a single
+        // row (which is what makes the row-number strip usable at that scale).
+        m_uniformCount = clamped;
+        ++m_orderRevision;
+        invalidateCaches();
+        emit sectionCountChanged(clamped);
+        emitGeometryChanged();
+        return;
+    }
 
     if (clamped < sectionCount()) {
         const int removedFrom = clamped;
@@ -73,6 +106,85 @@ void HeaderGeometry::setSectionCount(int count)
     emitGeometryChanged();
 }
 
+void HeaderGeometry::densify()
+{
+    if (m_uniformCount <= 0)
+        return;
+    const int count = m_uniformCount;
+    m_uniformCount = 0;
+    m_sections.resize(count);
+    for (Section &section : m_sections)
+        section.size = m_defaultSectionSize;
+    // The sparse size overrides become ordinary per-section state.
+    for (int index = 0; index < m_sparseKeys.size(); ++index) {
+        const int logical = m_sparseKeys.at(index);
+        if (logical >= 0 && logical < count) {
+            m_sections[logical].size = m_sparseSizes.at(index);
+            m_sections[logical].explicitSize = true;
+        }
+    }
+    m_sparseKeys.clear();
+    m_sparseSizes.clear();
+    m_sparseDeltaPrefix.clear();
+    m_visualToLogical.resize(count);
+    for (int visual = 0; visual < count; ++visual)
+        m_visualToLogical[visual] = visual;
+    rebuildIndexMaps();
+    invalidateCaches();
+}
+
+int HeaderGeometry::sparseIndexOf(int logicalIndex) const
+{
+    if (m_sparseKeys.isEmpty() || logicalIndex < m_sparseKeys.first()
+        || logicalIndex > m_sparseKeys.last()) {
+        return -1;
+    }
+    const auto found = std::lower_bound(m_sparseKeys.cbegin(), m_sparseKeys.cend(), logicalIndex);
+    if (found == m_sparseKeys.cend() || *found != logicalIndex)
+        return -1;
+    return int(found - m_sparseKeys.cbegin());
+}
+
+void HeaderGeometry::rebuildSparsePrefix()
+{
+    m_sparseDeltaPrefix.resize(m_sparseKeys.size() + 1);
+    m_sparseDeltaPrefix[0] = 0;
+    for (int index = 0; index < m_sparseKeys.size(); ++index) {
+        const qint64 delta = qint64(m_sparseSizes.at(index)) - qint64(m_defaultSectionSize);
+        m_sparseDeltaPrefix[index + 1] = m_sparseDeltaPrefix.at(index) + delta;
+    }
+}
+
+qint64 HeaderGeometry::sparseDeltaBefore(int logicalIndex) const
+{
+    if (m_sparseKeys.isEmpty() || logicalIndex <= m_sparseKeys.first())
+        return 0;
+    const auto found = std::lower_bound(m_sparseKeys.cbegin(), m_sparseKeys.cend(), logicalIndex);
+    const int before = int(found - m_sparseKeys.cbegin());
+    return m_sparseDeltaPrefix.at(before);
+}
+
+void HeaderGeometry::setSparseSize(int logicalIndex, int size)
+{
+    const int index = sparseIndexOf(logicalIndex);
+    if (size == m_defaultSectionSize) {
+        if (index < 0)
+            return;                     // already the default: nothing is stored
+        m_sparseKeys.remove(index);
+        m_sparseSizes.remove(index);
+    } else if (index >= 0) {
+        if (m_sparseSizes.at(index) == size)
+            return;
+        m_sparseSizes[index] = size;
+    } else {
+        const auto at = std::lower_bound(m_sparseKeys.cbegin(), m_sparseKeys.cend(), logicalIndex);
+        const int slot = int(at - m_sparseKeys.cbegin());
+        m_sparseKeys.insert(slot, logicalIndex);
+        m_sparseSizes.insert(slot, size);
+    }
+    rebuildSparsePrefix();
+}
+
 void HeaderGeometry::rebuildIndexMaps()
 {
     m_logicalToVisual.resize(sectionCount());
@@ -84,6 +196,7 @@ void HeaderGeometry::insertLogicalSections(int first, int count)
 {
     if (count <= 0)
         return;
+    densify();   // an insert gives sections state to keep
     const int total = sectionCount();
     const int at = qBound(0, first, total);
 
@@ -142,6 +255,7 @@ void HeaderGeometry::removeLogicalSections(int first, int count)
 {
     if (count <= 0)
         return;
+    densify();   // dropping sections needs the stored state
     const int total = sectionCount();
     const int at = qBound(0, first, total);
     const int removed = qMin(count, total - at);
@@ -186,6 +300,8 @@ void HeaderGeometry::removeLogicalSections(int first, int count)
 
 int HeaderGeometry::visibleSectionCount() const
 {
+    if (m_uniformCount > 0)
+        return m_uniformCount;   // every implied section is visible
     int visible = 0;
     for (const Section &section : m_sections) {
         if (!section.hidden && section.size > 0)
@@ -196,6 +312,8 @@ int HeaderGeometry::visibleSectionCount() const
 
 int HeaderGeometry::hiddenSectionCount() const
 {
+    if (m_uniformCount > 0)
+        return 0;
     int hidden = 0;
     for (const Section &section : m_sections) {
         if (section.hidden)
@@ -210,8 +328,8 @@ int HeaderGeometry::hiddenSectionCount() const
 
 const HeaderGeometry::Section *HeaderGeometry::sectionAt(int logicalIndex) const
 {
-    if (!isValidLogical(logicalIndex))
-        return nullptr;
+    if (!isValidLogical(logicalIndex) || m_uniformCount > 0)
+        return nullptr;   // uniform: the state is implied, nothing is stored
     return &m_sections.at(logicalIndex);
 }
 
@@ -222,7 +340,9 @@ bool HeaderGeometry::isValidLogical(int logicalIndex) const
 
 bool HeaderGeometry::isValidVisual(int visualIndex) const
 {
-    return visualIndex >= 0 && visualIndex < m_visualToLogical.size();
+    // sectionCount() covers the uniform representation too (where no map is stored).
+    return visualIndex >= 0 && visualIndex < sectionCount()
+        && (m_uniformCount > 0 || m_visualToLogical.size() == sectionCount());
 }
 
 int HeaderGeometry::clampedSize(int size) const
@@ -234,6 +354,12 @@ int HeaderGeometry::clampedSize(int size) const
 
 int HeaderGeometry::sectionSize(int logicalIndex) const
 {
+    if (m_uniformCount > 0) {
+        if (!isValidLogical(logicalIndex))
+            return 0;
+        const int index = sparseIndexOf(logicalIndex);
+        return index >= 0 ? m_sparseSizes.at(index) : m_defaultSectionSize;
+    }
     const Section *section = sectionAt(logicalIndex);
     if (!section || section->hidden)
         return 0;
@@ -242,6 +368,8 @@ int HeaderGeometry::sectionSize(int logicalIndex) const
 
 int HeaderGeometry::storedSectionSize(int logicalIndex) const
 {
+    if (m_uniformCount > 0)
+        return sectionSize(logicalIndex);
     const Section *section = sectionAt(logicalIndex);
     return section ? section->size : 0;
 }
@@ -251,6 +379,20 @@ void HeaderGeometry::resizeSection(int logicalIndex, int size)
     if (!isValidLogical(logicalIndex))
         return;
     const int clamped = clampedSize(size);
+    if (m_uniformCount > 0) {
+        // Uniform: a size override is k entries in the sparse list, not the whole section
+        // set - this is the row-boundary drag at ten million rows (§5/§12).
+        const int index = sparseIndexOf(logicalIndex);
+        const int previous = index >= 0 ? m_sparseSizes.at(index) : m_defaultSectionSize;
+        if (previous == clamped)
+            return;
+        setSparseSize(logicalIndex, clamped);
+        invalidateCaches();
+        emit sectionResized(logicalIndex, previous, clamped);
+        emitGeometryChanged();
+        return;
+    }
+    densify();
     Section &section = m_sections[logicalIndex];
     const int previous = section.size;
     section.explicitSize = true;
@@ -264,6 +406,8 @@ void HeaderGeometry::resizeSection(int logicalIndex, int size)
 
 bool HeaderGeometry::isSectionSizeExplicit(int logicalIndex) const
 {
+    if (m_uniformCount > 0)
+        return sparseIndexOf(logicalIndex) >= 0;
     const Section *section = sectionAt(logicalIndex);
     return section && section->explicitSize;
 }
@@ -272,15 +416,60 @@ void HeaderGeometry::clearExplicitSectionSize(int logicalIndex)
 {
     if (!isValidLogical(logicalIndex))
         return;
+    if (m_uniformCount > 0) {
+        // Back to the implied size, which *is* a size change here (the indexed path only
+        // drops the flag and keeps the size).
+        const int index = sparseIndexOf(logicalIndex);
+        if (index < 0)
+            return;
+        const int previous = m_sparseSizes.at(index);
+        setSparseSize(logicalIndex, m_defaultSectionSize);
+        invalidateCaches();
+        emit sectionResized(logicalIndex, previous, m_defaultSectionSize);
+        emitGeometryChanged();
+        return;
+    }
     m_sections[logicalIndex].explicitSize = false;
 }
 
+void HeaderGeometry::clearExplicitSectionSizes()
+{
+    if (m_uniformCount > 0) {
+        if (m_sparseKeys.isEmpty())
+            return;
+        m_sparseKeys.clear();
+        m_sparseSizes.clear();
+        m_sparseDeltaPrefix.clear();
+        invalidateCaches();
+        emit bulkGeometryChanged();
+        emitGeometryChanged();
+        return;
+    }
+    bool changed = false;
+    for (Section &section : m_sections) {
+        if (!section.explicitSize)
+            continue;
+        section.explicitSize = false;
+        changed = true;
+    }
+    if (changed)
+        emit bulkGeometryChanged();
+}
 void HeaderGeometry::setDefaultSectionSize(int size)
 {
     const int clamped = clampedSize(size);
     if (m_defaultSectionSize == clamped)
         return;
     m_defaultSectionSize = clamped;
+    if (m_uniformCount > 0) {
+        // Every non-overridden section follows the default (the overrides keep the size
+        // the user gave them, and their deltas are relative to the default).
+        rebuildSparsePrefix();
+        invalidateCaches();
+        emit bulkGeometryChanged();
+        emitGeometryChanged();
+        return;
+    }
     for (Section &section : m_sections) {
         if (!section.explicitSize)
             section.size = clamped;
@@ -317,6 +506,29 @@ void HeaderGeometry::clampSectionsToTheSizeRange()
     // emits a full geometryChanged() per section, which turns "change the minimum
     // width" into O(N) renderer syncs. Here the whole bulk change is one pass and,
     // at most, one geometryChanged().
+    if (m_uniformCount > 0) {
+        // Uniform: the sections follow the default size, so clamping the range is one
+        // assignment - plus the (few) explicit sizes - and the range change still has to
+        // be reported (a renderer keeps its own copy of it).
+        m_defaultSectionSize = clampedSize(m_defaultSectionSize);
+        QVector<QPair<int, QPair<int, int>>> clampedOverrides;
+        for (int index = 0; index < m_sparseSizes.size(); ++index) {
+            const int clamped = clampedSize(m_sparseSizes.at(index));
+            if (clamped == m_sparseSizes.at(index))
+                continue;
+            clampedOverrides.append({m_sparseKeys.at(index),
+                                     {m_sparseSizes.at(index), clamped}});
+            m_sparseSizes[index] = clamped;
+        }
+        rebuildSparsePrefix();
+        invalidateCaches();
+        for (const QPair<int, QPair<int, int>> &entry : clampedOverrides)
+            emit sectionResized(entry.first, entry.second.first, entry.second.second);
+        emit bulkGeometryChanged();
+        emitGeometryChanged();
+        return;
+    }
+
     QVector<QPair<int, QPair<int, int>>> resized;   // logical, old -> new
     resized.reserve(m_sections.size());
     for (int logical = 0; logical < sectionCount(); ++logical) {
@@ -354,6 +566,17 @@ void HeaderGeometry::invalidateCaches()
 
 void HeaderGeometry::rebuildCaches() const
 {
+    if (m_uniformCount > 0) {
+        // A uniform geometry must not build a per-section cache at all: the extent is
+        // one multiplication and the position of a section is one too (see below). The
+        // identity order means no lookup table is needed either.
+        m_contentXByLogical.clear();
+        m_visibleLogicalOrder.clear();
+        m_totalExtent = qint64(m_uniformCount) * qint64(m_defaultSectionSize)
+            + m_sparseDeltaPrefix.value(m_sparseKeys.size(), 0);
+        m_cacheDirty = false;
+        return;
+    }
     const int count = int(m_sections.size());
     m_contentXByLogical.resize(count);
     m_visibleLogicalOrder.clear();
@@ -385,6 +608,10 @@ qint64 HeaderGeometry::sectionPosition(int logicalIndex) const
 {
     if (!isValidLogical(logicalIndex))
         return 0;
+    if (m_uniformCount > 0) {
+        return qint64(logicalIndex) * qint64(m_defaultSectionSize)
+            + sparseDeltaBefore(logicalIndex);
+    }
     if (m_cacheDirty)
         rebuildCaches();
     return m_contentXByLogical.at(logicalIndex);
@@ -399,6 +626,30 @@ int HeaderGeometry::sectionViewportPosition(int logicalIndex) const
 
 int HeaderGeometry::visualSectionAtOffset(qint64 contentOffset) const
 {
+    if (m_uniformCount > 0) {
+        // Identity order and one uniform size: the section is one division away - but the
+        // sparse size overrides shift the positions, so the (short) override list decides
+        // which region the offset falls into.
+        if (contentOffset <= 0)
+            return 0;
+        int index = 0;
+        qint64 position = 0;
+        for (int slot = 0; slot < m_sparseKeys.size(); ++slot) {
+            const int key = m_sparseKeys.at(slot);
+            const qint64 keyStart = qint64(key) * qint64(m_defaultSectionSize)
+                + m_sparseDeltaPrefix.at(slot);
+            if (keyStart > contentOffset)
+                break;
+            if (contentOffset < keyStart + m_sparseSizes.at(slot))
+                return key;
+            index = key + 1;
+            position = keyStart + m_sparseSizes.at(slot);
+        }
+        if (index >= m_uniformCount)
+            return m_uniformCount - 1;
+        const qint64 ahead = (contentOffset - position) / qint64(m_defaultSectionSize);
+        return int(qBound<qint64>(qint64(index), qint64(index) + ahead, qint64(m_uniformCount) - 1));
+    }
     if (m_cacheDirty)
         rebuildCaches();
     if (m_visibleLogicalOrder.isEmpty())
@@ -434,11 +685,15 @@ int HeaderGeometry::sectionAtOffset(qint64 contentOffset) const
 
 int HeaderGeometry::logicalIndex(int visualIndex) const
 {
+    if (m_uniformCount > 0)
+        return isValidVisual(visualIndex) ? visualIndex : -1;
     return isValidVisual(visualIndex) ? m_visualToLogical.at(visualIndex) : -1;
 }
 
 int HeaderGeometry::visualIndex(int logicalIndex) const
 {
+    if (m_uniformCount > 0)
+        return isValidLogical(logicalIndex) ? logicalIndex : -1;
     if (!isValidLogical(logicalIndex) || m_logicalToVisual.size() != sectionCount())
         return -1;
     return m_logicalToVisual.at(logicalIndex);
@@ -449,6 +704,7 @@ void HeaderGeometry::moveSection(int fromVisualIndex, int toVisualIndex)
     if (!isValidVisual(fromVisualIndex) || !isValidVisual(toVisualIndex)
         || fromVisualIndex == toVisualIndex)
         return;
+    densify();   // a reorder is per-section state
 
     const int logical = m_visualToLogical.at(fromVisualIndex);
     m_visualToLogical.move(fromVisualIndex, toVisualIndex);
@@ -463,6 +719,7 @@ void HeaderGeometry::moveSection(int fromVisualIndex, int toVisualIndex)
 
 void HeaderGeometry::moveLogicalSections(int start, int count, int destination)
 {
+    densify();   // a remap is per-section state
     const int total = sectionCount();
     if (count <= 0 || start < 0 || start + count > total)
         return;
@@ -513,6 +770,8 @@ void HeaderGeometry::moveLogicalSections(int start, int count, int destination)
 
 bool HeaderGeometry::isSectionHidden(int logicalIndex) const
 {
+    if (m_uniformCount > 0)
+        return false;   // a uniform geometry stores no hidden section
     const Section *section = sectionAt(logicalIndex);
     return section && section->hidden;
 }
@@ -521,6 +780,9 @@ void HeaderGeometry::setSectionHidden(int logicalIndex, bool hidden)
 {
     if (!isValidLogical(logicalIndex))
         return;
+    if (m_uniformCount > 0 && !hidden)
+        return;   // already visible
+    densify();
     Section &section = m_sections[logicalIndex];
     if (section.hidden == hidden)
         return;
@@ -533,6 +795,9 @@ void HeaderGeometry::setSectionHidden(int logicalIndex, bool hidden)
 
 void HeaderGeometry::setAllSectionsHidden(bool hidden)
 {
+    if (m_uniformCount > 0 && !hidden)
+        return;   // already visible
+    densify();
     bool changed = false;
     for (int logical = 0; logical < sectionCount(); ++logical) {
         Section &section = m_sections[logical];
@@ -576,6 +841,18 @@ qint64 HeaderGeometry::maximumViewportOffset(int viewportExtent) const
 ColumnGeometry HeaderGeometry::columnGeometry(int logicalIndex) const
 {
     ColumnGeometry geometry;
+    if (m_uniformCount > 0) {
+        if (!isValidLogical(logicalIndex))
+            return geometry;
+        // Uniform: default size, visible, identity order - all implied.
+        geometry.logicalIndex = logicalIndex;
+        geometry.visualIndex = logicalIndex;
+        geometry.width = sectionSize(logicalIndex);
+        geometry.contentX = sectionPosition(logicalIndex);
+        const qint64 viewportX = geometry.contentX - m_viewportOffset;
+        geometry.viewportX = int(qBound<qint64>(-kMaxOffscreenX, viewportX, kMaxOffscreenX));
+        return geometry;
+    }
     const Section *section = sectionAt(logicalIndex);
     if (!section)
         return geometry;
@@ -615,6 +892,15 @@ VisibleRange HeaderGeometry::visibleVisualRangeFor(qint64 windowStart, int viewp
 
 QVector<int> HeaderGeometry::visibleSectionsInVisualOrder() const
 {
+    if (m_uniformCount > 0) {
+        // Every section is visible and in logical order. The vector is the query, so a
+        // huge uniform geometry pays for it here - the renderers never call this.
+        QVector<int> order;
+        order.reserve(m_uniformCount);
+        for (int logical = 0; logical < m_uniformCount; ++logical)
+            order.append(logical);
+        return order;
+    }
     if (m_cacheDirty)
         rebuildCaches();
     return m_visibleLogicalOrder;
@@ -651,6 +937,9 @@ void HeaderGeometry::setStretchLastSection(bool stretch)
 
 QByteArray HeaderGeometry::saveState() const
 {
+    // The serialised form is per-section: a uniform geometry writes each section's
+    // implied state (default size, visible, logical order) without materialising it.
+    // Saving a 10M-row geometry is an explicit O(N) stream, not a second copy in memory.
     QByteArray state;
     QDataStream stream(&state, QIODevice::WriteOnly);
     stream.setVersion(QDataStream::Qt_5_15);
@@ -659,19 +948,30 @@ QByteArray HeaderGeometry::saveState() const
     stream << qint32(sectionCount());
 
     QVector<qint32> visualOrder;
-    visualOrder.reserve(m_visualToLogical.size());
-    for (int visual = 0; visual < m_visualToLogical.size(); ++visual)
-        visualOrder.append(qint32(m_visualToLogical.at(visual)));
-    stream << visualOrder;
-
     QVector<qint32> sizes;
-    sizes.reserve(sectionCount());
     QVector<quint8> hidden;
-    hidden.reserve(sectionCount());
-    for (const Section &section : m_sections) {
-        sizes.append(qint32(section.size));
-        hidden.append(section.hidden ? quint8(1) : quint8(0));
+    if (m_uniformCount > 0) {
+        const int count = m_uniformCount;
+        visualOrder.reserve(count);
+        sizes.reserve(count);
+        hidden.reserve(count);
+        for (int logical = 0; logical < count; ++logical) {
+            visualOrder.append(qint32(logical));
+            sizes.append(qint32(sectionSize(logical)));   // the sparse overrides included
+            hidden.append(quint8(0));
+        }
+    } else {
+        visualOrder.reserve(m_visualToLogical.size());
+        for (int visual = 0; visual < m_visualToLogical.size(); ++visual)
+            visualOrder.append(qint32(m_visualToLogical.at(visual)));
+        sizes.reserve(sectionCount());
+        hidden.reserve(sectionCount());
+        for (const Section &section : m_sections) {
+            sizes.append(qint32(section.size));
+            hidden.append(section.hidden ? quint8(1) : quint8(0));
+        }
     }
+    stream << visualOrder;
     stream << sizes << hidden;
 
     stream << qint32(m_defaultSectionSize) << qint32(m_minimumSectionSize)
@@ -720,6 +1020,9 @@ bool HeaderGeometry::restoreState(const QByteArray &state)
         || !isValidVisualOrder(visualOrder))
         return false;
 
+    // The restored state is per-section: a uniform geometry gets its stored state now
+    // (the count matches, so this is the representation the state describes).
+    densify();
     m_defaultSectionSize = qMax(1, int(defaultSize));
     m_minimumSectionSize = qMax(1, int(minimumSize));
     m_maximumSectionSize = qMax(m_minimumSectionSize, int(maximumSize));

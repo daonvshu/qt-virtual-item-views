@@ -227,7 +227,10 @@ private slots:
     void sectionMoveAnimatesWhileTheCommittedGeometryStaysAuthoritative();
     void resizeAndDisabledAnimationStayImmediate();
     void programmaticReorderIsImmediateUnlessRequested();
-    void verticalWidgetHeaderIsRefusedLoudly();
+    void verticalWidgetHeaderPacksAlongY();
+    void externalRowOrderDropsThePreviewWhenNobodyMovesTheRow();
+    void uniformGeometryDragsWithoutBuildingTheOrder();
+    void verticalWidgetHeaderHandlesTenMillionUniformRows();
     void mismatchedHeaderOrientationsAreRefused();
     void tableAnimationIsOptInPerMove();
     void smallJitterIsStillAClick();
@@ -519,34 +522,70 @@ void TestVirtualHeaderView::programmaticReorderIsImmediateUnlessRequested()
     QCOMPARE(moved->x(), kSectionWidth);
 }
 
-void TestVirtualHeaderView::verticalWidgetHeaderIsRefusedLoudly()
+void TestVirtualHeaderView::verticalWidgetHeaderPacksAlongY()
 {
-    // P1-14: the renderer derives every x from a horizontal HeaderGeometry and packs its
-    // sections along x, so a vertical instance can only ever show an empty strip. The
-    // constructor is public, so it now says so instead of producing a silent blank.
-    QTest::ignoreMessage(QtWarningMsg, QRegularExpression(QStringLiteral("only Qt::Horizontal")));
-    VirtualHeaderView vertical(Qt::Vertical);
-    vertical.resize(120, 400);
+    // One renderer, two axes: a vertical instance is the row-number strip - sections
+    // packed along y, sized by the row heights, resized at the row boundary and
+    // reordered by dragging along the axis.
+    VirtualHeaderView strip(Qt::Vertical);
+    QCOMPARE(strip.orientation(), Qt::Vertical);
+    strip.resize(48, 220);
 
     HeaderGeometry rows(Qt::Vertical, this);
-    rows.setSectionCount(6);
-    rows.setDefaultSectionSize(24);
+    rows.setSectionCount(4);
+    rows.setDefaultSectionSize(24);   // the geometry minimum is 24
     SectionAdapter adapter;
-    vertical.setAdapter(&adapter);
-    vertical.setGeometryModel(&rows);
-    vertical.show();
+    strip.setAdapter(&adapter);
+    strip.setGeometryModel(&rows);
+    strip.setLabelModel(m_model);   // headerData(row, Qt::Vertical)
+    strip.show();
     QApplication::processEvents();
 
-    QVERIFY(vertical.materializedSections().isEmpty());
-    QCOMPARE(adapter.created, 0);
+    QCOMPARE(strip.materializedSections(), QList<int>({0, 1, 2, 3}));
+    for (int row = 0; row < 4; ++row) {
+        QWidget *section = strip.sectionWidget(row);
+        QVERIFY(section != nullptr);
+        QCOMPARE(section->y(), row * 24);
+        QCOMPARE(section->height(), 24);
+        QCOMPARE(section->width(), strip.width());   // the cross axis spans the strip
+    }
 
-    // Binding a geometry of the other axis is refused too: the header keeps the geometry
-    // it was laid out against instead of dropping it and going blank.
+    // Dragging the boundary between two rows resizes the row (the gesture is the same
+    // one the column header uses, just along the other axis).
+    sendMouse(&strip, QEvent::MouseButtonPress, QPoint(24, 23), Qt::LeftButton, Qt::LeftButton);
+    sendMouse(&strip, QEvent::MouseMove, QPoint(24, 43), Qt::NoButton, Qt::LeftButton);
+    sendMouse(&strip, QEvent::MouseButtonRelease, QPoint(24, 43), Qt::LeftButton, Qt::NoButton);
+    QApplication::processEvents();
+    QCOMPARE(rows.sectionSize(0), 44);
+    QCOMPARE(strip.sectionWidget(0)->height(), 44);
+    QCOMPARE(strip.sectionWidget(1)->y(), 44);
+
+    // A drag along the axis is the row equivalent of a column drag: the dragged section
+    // follows the pointer, the others make room, and the release commits once.
+    QWidget *dragged = strip.sectionWidget(1);
+    QVERIFY(dragged != nullptr);
+    sendMouse(&strip, QEvent::MouseButtonPress, QPoint(24, 56), Qt::LeftButton, Qt::LeftButton);
+    sendMouse(&strip, QEvent::MouseMove, QPoint(24, 58), Qt::NoButton, Qt::LeftButton);
+    sendMouse(&strip, QEvent::MouseMove, QPoint(24, 130), Qt::NoButton, Qt::LeftButton);
+    QApplication::processEvents();
+    // Preview only: the committed order is untouched while the drag is in flight.
+    QCOMPARE(rows.visualIndex(1), 1);
+    QVERIFY(dragged->y() > 44);
+    sendMouse(&strip, QEvent::MouseButtonRelease, QPoint(24, 130), Qt::LeftButton, Qt::NoButton);
+    QApplication::processEvents();
+    QCOMPARE(rows.visualIndex(1), 3);   // row 1 landed behind the last row
+    QTest::qWait(300);
+    QCOMPARE(dragged->y(), 44 + 24 + 24);   // its committed slot
+
+    // Binding a geometry of the other axis is still refused: the header keeps the
+    // geometry it was laid out against instead of dropping it and going blank.
+    HeaderGeometry columns(Qt::Horizontal, this);
+    columns.setSectionCount(3);
     QTest::ignoreMessage(QtWarningMsg, QRegularExpression(QStringLiteral("other orientation")));
-    m_header->setGeometryModel(&rows);
+    strip.setGeometryModel(&columns);
     QApplication::processEvents();
-    QVERIFY(m_header->geometryModel() == m_geometry);
-    QVERIFY(!m_header->materializedSections().isEmpty());
+    QVERIFY(strip.geometryModel() == &rows);
+    QVERIFY(!strip.materializedSections().isEmpty());
 }
 
 void TestVirtualHeaderView::mismatchedHeaderOrientationsAreRefused()
@@ -570,7 +609,6 @@ void TestVirtualHeaderView::mismatchedHeaderOrientationsAreRefused()
     QVERIFY(verticalInPlace != nullptr);
     QVERIFY(horizontalInPlace->headerWidget()->width() > 0);
 
-    QTest::ignoreMessage(QtWarningMsg, QRegularExpression(QStringLiteral("only Qt::Horizontal")));
     auto *verticalRenderer = new VirtualHeaderView(Qt::Vertical);
     QTest::ignoreMessage(QtWarningMsg, QRegularExpression(QStringLiteral("not horizontal")));
     view.setHorizontalHeader(verticalRenderer);
@@ -1394,6 +1432,145 @@ void TestVirtualHeaderView::cellsFollowTheHeaderWhileTheBodyDoes()
     QCOMPARE(cell->x(), 3 * kSectionWidth);
 }
 
+void TestVirtualHeaderView::uniformGeometryDragsWithoutBuildingTheOrder()
+{
+    // §7/§3 of the vertical-header decision: on a ten-million-row *uniform* strip the drag
+    // path must not build the packed order (that vector would be 40 MB and rebuilt per
+    // mouse move). The identity order answers every lookup directly.
+    constexpr int kRows = 10'000'000;
+    constexpr int kRowHeight = 24;
+    vivtest::NumericListModel model(kRows);
+    HeaderGeometry rows(Qt::Vertical, this);
+    rows.setSectionCount(kRows);
+    rows.setDefaultSectionSize(kRowHeight);
+
+    VirtualHeaderView strip(Qt::Vertical);
+    strip.resize(48, 800);
+    SectionAdapter adapter;
+    strip.setAdapter(&adapter);
+    strip.setGeometryModel(&rows);
+    strip.setLabelModel(&model);
+    strip.setSectionOrderExternal(true);
+    QSignalSpy requestSpy(&strip, &VirtualHeaderView::sectionMoveRequested);
+    strip.show();
+    QApplication::processEvents();
+
+    // Start a drag on the first visible row and pull it far down: the preview must resolve
+    // through the identity order (no order vector), and the commit must report the packed
+    // target index.
+    sendMouse(&strip, QEvent::MouseButtonPress, QPoint(24, 10), Qt::LeftButton, Qt::LeftButton);
+    sendMouse(&strip, QEvent::MouseMove, QPoint(24, 12), Qt::NoButton, Qt::LeftButton);
+    sendMouse(&strip, QEvent::MouseMove, QPoint(24, 300), Qt::NoButton, Qt::LeftButton);
+    QApplication::processEvents();
+    QVERIFY(rows.storedSectionStateCount() == 0);   // still the compact representation
+    QCOMPARE(rows.visualIndex(0), 0);               // preview only
+    sendMouse(&strip, QEvent::MouseButtonRelease, QPoint(24, 300), Qt::LeftButton, Qt::NoButton);
+    QApplication::processEvents();
+
+    QCOMPARE(requestSpy.count(), 1);
+    const int from = requestSpy.first().at(0).toInt();
+    const int to = requestSpy.first().at(1).toInt();
+    QCOMPARE(from, 0);
+    // The pointer travelled 290 px from the grab point at row 0's centre: the target is the
+    // packed slot whose centre is still left of the dragged centre.
+    QCOMPARE(to, (290 + 12) / kRowHeight);
+    // Nothing was reordered here (external order), and nothing was materialised per row.
+    QCOMPARE(rows.storedSectionStateCount(), 0);
+    QVERIFY(strip.materializedSectionCount() < 100);
+}
+void TestVirtualHeaderView::externalRowOrderDropsThePreviewWhenNobodyMovesTheRow()
+{
+    // §9: with an external order the strip only *asks* for the move. Nothing has moved
+    // here (a model that refuses moveRows, or an application that ignored the request), so
+    // the drag must not leave a preview behind: the sections are back on the committed
+    // order and the geometry was never reordered.
+    VirtualHeaderView strip(Qt::Vertical);
+    strip.resize(48, 200);
+    HeaderGeometry rows(Qt::Vertical, this);
+    rows.setSectionCount(4);
+    rows.setDefaultSectionSize(24);
+    SectionAdapter adapter;
+    strip.setAdapter(&adapter);
+    strip.setGeometryModel(&rows);
+    strip.setLabelModel(m_model);
+    strip.setSectionOrderExternal(true);
+    QSignalSpy requestSpy(&strip, &VirtualHeaderView::sectionMoveRequested);
+    strip.show();
+    QApplication::processEvents();
+
+    sendMouse(&strip, QEvent::MouseButtonPress, QPoint(24, 30), Qt::LeftButton, Qt::LeftButton);
+    sendMouse(&strip, QEvent::MouseMove, QPoint(24, 32), Qt::NoButton, Qt::LeftButton);
+    sendMouse(&strip, QEvent::MouseMove, QPoint(24, 130), Qt::NoButton, Qt::LeftButton);
+    sendMouse(&strip, QEvent::MouseButtonRelease, QPoint(24, 130), Qt::LeftButton, Qt::NoButton);
+    QApplication::processEvents();
+
+    QCOMPARE(requestSpy.count(), 1);
+    QCOMPARE(requestSpy.first().at(0).toInt(), 1);
+    QCOMPARE(requestSpy.first().at(1).toInt(), 3);
+    for (int row = 0; row < 4; ++row) {
+        QCOMPARE(rows.visualIndex(row), row);          // nobody moved the row
+        QCOMPARE(strip.sectionWidget(row)->y(), row * 24);   // no stale preview
+    }
+}
+void TestVirtualHeaderView::verticalWidgetHeaderHandlesTenMillionUniformRows()
+{
+    // §7/§11 of the vertical-header decision: a uniform geometry stores nothing per row,
+    // so the strip materializes only the window it shows - and scrolling near the
+    // beginning, the middle and the end stays O(visible + overscan), never O(rowCount).
+    constexpr int kRows = 10'000'000;
+    constexpr int kRowHeight = 24;
+    constexpr int kStripExtent = 800;
+    vivtest::NumericListModel model(kRows);   // O(1) rows, no per-row storage
+
+    HeaderGeometry rows(Qt::Vertical, this);
+    rows.setSectionCount(kRows);
+    rows.setDefaultSectionSize(kRowHeight);
+    QCOMPARE(rows.sectionCount(), kRows);
+    QCOMPARE(rows.storedSectionStateCount(), 0);
+
+    VirtualHeaderView strip(Qt::Vertical);
+    strip.resize(48, kStripExtent);
+    SectionAdapter adapter;
+    strip.setAdapter(&adapter);
+    strip.setGeometryModel(&rows);
+    strip.setLabelModel(&model);
+    strip.show();
+    QApplication::processEvents();
+
+    // A window is 800/24 = 34 rows; the strip keeps the visible ones plus overscan.
+    const auto checkWindow = [&](int firstRow) {
+        QVERIFY(strip.materializedSectionCount() <= 100);
+        QVERIFY(adapter.created <= 300);   // pooled widgets, never one per row
+        QWidget *first = strip.sectionWidget(firstRow);
+        QVERIFY(first != nullptr);
+        QVERIFY(first->isVisible());
+        QCOMPARE(first->y(), 0);          // the window starts at the top of the strip
+        QCOMPARE(first->width(), strip.width());
+        QCOMPARE(first->height(), kRowHeight);
+        QVERIFY(strip.materializedSections().contains(firstRow));
+    };
+
+    checkWindow(0);
+
+    // Middle: 5,000,000 rows away from the origin.
+    const qint64 middle = qint64(kRows / 2) * kRowHeight;
+    rows.setViewportOffset(middle);
+    QApplication::processEvents();
+    checkWindow(kRows / 2);
+
+    // End: the last row owns a widget at its place in the window.
+    rows.setViewportOffset(rows.totalExtent() - kStripExtent);
+    QApplication::processEvents();
+    QVERIFY(strip.sectionWidget(kRows - 1) != nullptr);
+    QVERIFY(strip.sectionWidget(kRows - 1)->isVisible());
+    QCOMPARE(strip.sectionWidget(kRows - 1)->y(), kStripExtent - kRowHeight);
+    QVERIFY(strip.materializedSectionCount() <= 100);
+    QVERIFY(adapter.created <= 300);
+
+    // ... and the geometry is still the compact one after all that scrolling.
+    QCOMPARE(rows.storedSectionStateCount(), 0);
+}
+
 void TestVirtualHeaderView::frozenPaneHeaderKeepsItsColumnsAfterAReorder()
 {
     // 冻结列是**集合**而不是视觉序的前缀（§31/§43）：把冻结列拖到可滚动列后面之后，
@@ -1404,8 +1581,13 @@ void TestVirtualHeaderView::frozenPaneHeaderKeepsItsColumnsAfterAReorder()
     // 每一块物化出来的 section 都正好压在自己那一列的 committed x 上，而且左端这几个
     // 列都必须真的被物化（"表头消失"就是这里没有 section）。
     const auto checkSectionsMatchTheBody = [&fixture]() {
-        const QList<VirtualHeaderView *> renderers
-            = fixture.view.findChildren<VirtualHeaderView *>();
+        // The view also owns the row-number strip (the same renderer class on the other
+        // axis): this test is about the *column* renderers.
+        QList<VirtualHeaderView *> renderers;
+        for (VirtualHeaderView *candidate : fixture.view.findChildren<VirtualHeaderView *>()) {
+            if (candidate->orientation() == Qt::Horizontal)
+                renderers.append(candidate);
+        }
         QVERIFY(renderers.size() >= 2); // 主表头 + 冻结 pane 的克隆
         const auto showsAnywhere = [&renderers](int column) {
             for (VirtualHeaderView *renderer : renderers) {

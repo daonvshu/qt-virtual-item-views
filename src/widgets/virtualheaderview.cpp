@@ -41,14 +41,11 @@ VirtualHeaderView::VirtualHeaderView(Qt::Orientation orientation, QWidget *paren
     : QWidget(parent)
     , m_orientation(orientation)
 {
-    // The renderer packs its sections along the x axis: it derives every section's x
-    // from the (horizontal) HeaderGeometry. A vertical instance would silently stay
-    // empty, so it is refused loudly instead (P1-14). The row-number strip is either
-    // a native QHeaderView (NativeHeaderView) or a custom HeaderViewInterface.
-    if (orientation != Qt::Horizontal) {
-        qWarning("VirtualHeaderView: only Qt::Horizontal is supported; a vertical section "
-                 "renderer stays empty - use NativeHeaderView for the row-number strip");
-    }
+    // The renderer packs its sections along one axis: a horizontal instance derives
+    // every section's x from a horizontal HeaderGeometry, a vertical one every
+    // section's y from the row geometry. Everything axis dependent goes through the
+    // axis helpers, so both directions share the resize gesture, the drag preview,
+    // the transition and the pane packing (§45).
     m_recycler = new WidgetRecycler(this);
     m_recycler->setParentWidget(this);
     m_recycler->setFactory([this](WidgetType type, QWidget *parent) -> QWidget * {
@@ -57,7 +54,10 @@ VirtualHeaderView::VirtualHeaderView(Qt::Orientation orientation, QWidget *paren
     setMouseTracking(true);
     setAttribute(Qt::WA_OpaquePaintEvent, false);
     setFocusPolicy(Qt::NoFocus);
-    setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    // The renderer grows along its axis and keeps the cross axis at what the table
+    // gives it (a header strip is as tall/wide as the header band).
+    setSizePolicy(isHorizontal() ? QSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed)
+                                 : QSizePolicy(QSizePolicy::Fixed, QSizePolicy::Expanding));
 
     // "Making room" for the dragged section is a tween of its own: driven by mouse moves
     // plus this animation, so it also finishes while the pointer stands still, and it
@@ -110,6 +110,8 @@ void VirtualHeaderView::setGeometryModel(HeaderGeometry *geometry)
     // geometries through the public API).
     m_paneCacheDirty = true;
     m_lastVisualOrder.clear();
+    m_lastOrderWasIdentity = false;
+    m_lastOrderCount = 0;
     m_lastOrderRevision = 0;
     connectGeometry(m_geometry, true);
     // The geometry is a collaborator of the adapter too (a section widget that draws sort state
@@ -358,7 +360,7 @@ void VirtualHeaderView::rebuildPaneCacheIfNeeded() const
     m_paneCacheDirty = false;
     ++m_paneCacheRebuilds;
     m_paneOrder.clear();
-    m_panePrefixX.clear();
+    m_panePrefix.clear();
     m_paneSlotByLogical.clear();
     m_paneFilterSet.clear();
     if (!m_geometry || !m_paneFilterActive)
@@ -372,7 +374,7 @@ void VirtualHeaderView::rebuildPaneCacheIfNeeded() const
     }
 
     // The pane shows its columns in the *committed* visual order, so the order has to be
-    // derived once per geometry change - not once per sectionX() call.
+    // derived once per geometry change - not once per sectionPos() call.
     m_paneOrder.reserve(m_paneFilterSet.size());
     for (int logical : m_paneFilterSet) {
         if (!m_geometry->isSectionHidden(logical))
@@ -383,14 +385,14 @@ void VirtualHeaderView::rebuildPaneCacheIfNeeded() const
     });
 
     m_paneSlotByLogical.fill(-1, count);
-    m_panePrefixX.reserve(m_paneOrder.size() + 1);
-    m_panePrefixX.append(0);
+    m_panePrefix.reserve(m_paneOrder.size() + 1);
+    m_panePrefix.append(0);
     qint64 x = 0;
     for (int slot = 0; slot < m_paneOrder.size(); ++slot) {
         const int logical = m_paneOrder.at(slot);
         m_paneSlotByLogical[logical] = slot;
         x += m_geometry->sectionSize(logical);
-        m_panePrefixX.append(x);
+        m_panePrefix.append(x);
     }
 }
 
@@ -404,11 +406,20 @@ bool VirtualHeaderView::showsSection(int logicalIndex) const
     return true;
 }
 
-int VirtualHeaderView::sectionX(int logicalIndex) const
+int VirtualHeaderView::sectionPos(int logicalIndex) const
 {
     if (!showsSection(logicalIndex))
         return kSectionNotShown;
     const ColumnGeometry geometry = m_geometry->columnGeometry(logicalIndex);
+    if (m_paneOffset != kFollowGeometryOffset && !m_paneFilterActive) {
+        // An explicit pane offset without a filter: the renderer shows the *whole*
+        // committed order, shifted by its own offset. That is a row-number band (the
+        // frozen top / scrolling / frozen bottom strips: one geometry offset cannot
+        // express all three, so each band owns its own), and it must not build the pane
+        // cache - the band's content is the geometry's own content.
+        const qint64 local = geometry.contentX - m_paneOffset;
+        return int(qBound<qint64>(-kMaxOffscreenX, local, kMaxOffscreenX));
+    }
     if (m_paneFilterActive && m_paneOffset != kFollowGeometryOffset) {
         // Pane layout (§43 "advanced panes"): a pane packs *its own* columns from
         // its own left edge and shifts them by its own offset, so a frozen pane
@@ -422,39 +433,45 @@ int VirtualHeaderView::sectionX(int logicalIndex) const
             : -1;
         if (slot < 0)
             return kSectionNotShown;
-        const qint64 localX = m_panePrefixX.at(slot);
+        const qint64 localPos = m_panePrefix.at(slot);
         // A pane of an explicit list may be scrolled arbitrarily far, so the value is
-        // clamped like the off-screen column x of the geometry (QWidget/QRect arithmetic is
+        // clamped like the off-screen position of the geometry (QWidget/QRect arithmetic is
         // int based).
-        return int(qBound<qint64>(-kMaxOffscreenX, localX - m_paneOffset, kMaxOffscreenX));
+        return int(qBound<qint64>(-kMaxOffscreenX, localPos - m_paneOffset, kMaxOffscreenX));
     }
     // HeaderGeometry is in viewport coordinates and this widget is placed inside the
     // view (normally on a pane rect), so its own origin has to be subtracted.
     // Without a table (a standalone header) there is no view coordinate space: the
     // widget's own client origin is the reference, and nothing is subtracted.
-    const int ownOriginX = m_viewportOriginSet ? x() : 0;
-    return geometry.viewportX + m_viewportOrigin.x() - ownOriginX;
+    const int ownOrigin = m_viewportOriginSet ? (isHorizontal() ? x() : y()) : 0;
+    const int origin = isHorizontal() ? m_viewportOrigin.x() : m_viewportOrigin.y();
+    return geometry.viewportX + origin - ownOrigin;
 }
 
 void VirtualHeaderView::relayout()
 {
-    if (m_orientation != Qt::Horizontal || !m_geometry || !m_adapter
+    if (!m_geometry || !m_adapter
         || m_geometry->sectionCount() <= 0) {
         recycleAllSections();
         m_lastVisualOrder.clear();
+        m_lastOrderWasIdentity = false;
+        m_lastOrderCount = 0;
         update();
         return;
     }
 
-    // The pane cache backs isFiltered() and sectionX(); it is rebuilt once per filter or
+    // The pane cache backs isFiltered() and sectionPos(); it is rebuilt once per filter or
     // geometry change here, never inside those calls (P1-8 of the second review).
     rebuildPaneCacheIfNeeded();
 
     const int count = qMin(m_geometry->sectionCount(),
-                           m_labelModel ? m_labelModel->columnCount() : m_geometry->sectionCount());
+                           m_labelModel ? (isHorizontal() ? m_labelModel->columnCount() : m_labelModel->rowCount())
+                           : m_geometry->sectionCount());
     if (count <= 0) {
         recycleAllSections();
         m_lastVisualOrder.clear();
+        m_lastOrderWasIdentity = false;
+        m_lastOrderCount = 0;
         update();
         return;
     }
@@ -470,10 +487,25 @@ void VirtualHeaderView::relayout()
     // made a 20,000 column header walk 20,000 columns per wheel step.
     const quint32 orderRevision = m_geometry->orderRevision();
     bool sectionsReordered = false;
-    if (m_animateOrderChange || m_lastVisualOrder.isEmpty()
-        || orderRevision != m_lastOrderRevision) {
+    if (m_geometry->isUniform()) {
+        // A uniform geometry *is* the identity order (a reorder would have materialised
+        // the stored order), so there is nothing to derive - and nothing can have been
+        // reordered. Deriving it would walk every section: at ten million rows that is
+        // exactly the O(rowCount) pass the uniform representation exists to avoid.
+        m_lastVisualOrder.clear();
+        m_lastOrderWasIdentity = true;
+        m_lastOrderCount = m_geometry->sectionCount();
+    } else if (m_animateOrderChange || orderRevision != m_lastOrderRevision
+               || (m_lastVisualOrder.isEmpty() && !m_lastOrderWasIdentity)) {
         const QVector<int> order = visualOrder();
-        if (!m_lastVisualOrder.isEmpty() && m_lastVisualOrder.size() == order.size()) {
+        if (m_lastOrderWasIdentity && m_lastOrderCount == order.size()) {
+            // The previous pass was uniform: its order was the identity, so a reorder is
+            // exactly "this order is no longer the identity of that size".
+            bool identity = true;
+            for (int slot = 0; slot < order.size() && identity; ++slot)
+                identity = order.at(slot) == slot;
+            sectionsReordered = !identity;
+        } else if (!m_lastVisualOrder.isEmpty() && m_lastVisualOrder.size() == order.size()) {
             QVector<int> before = m_lastVisualOrder;
             QVector<int> after = order;
             std::sort(before.begin(), before.end());
@@ -481,6 +513,8 @@ void VirtualHeaderView::relayout()
             sectionsReordered = before == after && m_lastVisualOrder != order;
         }
         m_lastVisualOrder = order;
+        m_lastOrderWasIdentity = false;
+        m_lastOrderCount = order.size();
     }
     m_lastOrderRevision = orderRevision;
     const bool animateMove = sectionsReordered && m_animateOrderChange;
@@ -492,11 +526,23 @@ void VirtualHeaderView::relayout()
     /// Slot window of a pane that packs its own columns (see below); -1 = not applicable.
     int firstPaneSlot = -1;
     int lastPaneSlot = -1;
-    if (!m_paneFilterActive) {
+    if (m_paneOffset != kFollowGeometryOffset && !m_paneFilterActive) {
+        // An explicitly offset band without a filter (a row-number strip: frozen top /
+        // scrolling / frozen bottom): it shows the geometry's own content shifted by its
+        // own offset, so its window is the geometry's visible range for *that* window -
+        // O(1)/O(log N) whatever the row count is, and no pane cache (the band's content
+        // is the geometry's content, not a pack of its own list).
+        const VisibleRange candidates
+            = m_geometry->visibleVisualRangeFor(m_paneOffset, axisExtent());
+        if (candidates.isValid()) {
+            firstVisual = candidates.first;
+            lastVisual = candidates.last;
+        }
+    } else if (!m_paneFilterActive) {
         // A whole-table header shares the geometry's viewport offset, so the
         // geometry can answer this with a binary search over its prefix sums
         // instead of a scan over every column.
-        const VisibleRange candidates = m_geometry->visibleVisualRange(this->width());
+        const VisibleRange candidates = m_geometry->visibleVisualRange(axisExtent());
         if (candidates.isValid()) {
             firstVisual = candidates.first;
             lastVisual = candidates.last;
@@ -509,28 +555,40 @@ void VirtualHeaderView::relayout()
         // of the O(N^2) pane-header path (P1-8 of the second review).
         const qint64 ownOriginX = m_viewportOriginSet ? x() : 0;
         const qint64 paneStart = m_geometry->viewportOffset() + ownOriginX - m_viewportOrigin.x();
-        const VisibleRange candidates = m_geometry->visibleVisualRangeFor(paneStart, this->width());
+        const VisibleRange candidates = m_geometry->visibleVisualRangeFor(paneStart, axisExtent());
         if (candidates.isValid()) {
             firstVisual = candidates.first;
             lastVisual = candidates.last;
         }
     } else {
+        if (!m_paneFilterActive) {
+            // An explicitly offset band without a filter (a row-number strip): it shows the
+            // geometry's own content shifted by its own offset, so the window is the
+            // geometry's visible range for that window - O(1)/O(log N), no pane cache and
+            // no per-section list, whatever the row count is.
+            const VisibleRange candidates
+                = m_geometry->visibleVisualRangeFor(m_paneOffset, axisExtent());
+            if (candidates.isValid()) {
+                firstVisual = candidates.first;
+                lastVisual = candidates.last;
+            }
+        }
         // An explicitly offset pane (a frozen pane or a non-primary scroll group) packs its
         // own columns from its own left edge: the visible window is a range of *slots* in the
         // pane cache, found with two binary searches over the pane's prefix sums.
         rebuildPaneCacheIfNeeded();
         if (!m_paneOrder.isEmpty()) {
             const qint64 windowStart = m_paneOffset;
-            const qint64 windowEnd = m_paneOffset + qMax(0, this->width());
+            const qint64 windowEnd = m_paneOffset + qMax(0, axisExtent());
             // First slot whose right edge lies past the window start.
-            qsizetype firstSlot = qsizetype(std::lower_bound(m_panePrefixX.cbegin(), m_panePrefixX.cend(),
+            qsizetype firstSlot = qsizetype(std::lower_bound(m_panePrefix.cbegin(), m_panePrefix.cend(),
                                                              windowStart)
-                                            - m_panePrefixX.cbegin())
+                                            - m_panePrefix.cbegin())
                 - 1;
             firstSlot = qBound<qsizetype>(0, firstSlot, m_paneOrder.size() - 1);
-            qsizetype lastSlot = qsizetype(std::lower_bound(m_panePrefixX.cbegin(), m_panePrefixX.cend(),
+            qsizetype lastSlot = qsizetype(std::lower_bound(m_panePrefix.cbegin(), m_panePrefix.cend(),
                                                             windowEnd)
-                                           - m_panePrefixX.cbegin())
+                                           - m_panePrefix.cbegin())
                 - 1;
             lastSlot = qBound<qsizetype>(firstSlot, lastSlot, m_paneOrder.size() - 1);
             firstPaneSlot = int(firstSlot);
@@ -609,13 +667,41 @@ void VirtualHeaderView::relayout()
     update();
 }
 
+VirtualHeaderView::PackedOrder VirtualHeaderView::packedOrder() const
+{
+    PackedOrder packed;
+    if (!m_geometry)
+        return packed;
+    const int count = qMin(m_geometry->sectionCount(),
+                           m_labelModel ? (isHorizontal() ? m_labelModel->columnCount()
+                                                          : m_labelModel->rowCount())
+                                        : m_geometry->sectionCount());
+    if (count <= 0)
+        return packed;
+    if (m_geometry->isUniform() && !m_paneFilterActive) {
+        // The order *is* the identity: nothing to build, nothing to walk.
+        packed.count = count;
+        return packed;
+    }
+    packed.storage.reserve(count);
+    for (int visual = 0; visual < count; ++visual) {
+        const int logical = m_geometry->logicalIndex(visual);
+        if (logical < 0 || m_geometry->isSectionHidden(logical) || isFiltered(logical))
+            continue;
+        packed.storage.append(logical);
+    }
+    packed.count = int(packed.storage.size());
+    return packed;
+}
+
 QVector<int> VirtualHeaderView::visualOrder() const
 {
     QVector<int> order;
     if (!m_geometry)
         return order;
     const int count = qMin(m_geometry->sectionCount(),
-                           m_labelModel ? m_labelModel->columnCount() : m_geometry->sectionCount());
+                           m_labelModel ? (isHorizontal() ? m_labelModel->columnCount() : m_labelModel->rowCount())
+                           : m_geometry->sectionCount());
     order.reserve(count);
     for (int visual = 0; visual < count; ++visual) {
         const int logical = m_geometry->logicalIndex(visual);
@@ -635,30 +721,43 @@ void VirtualHeaderView::positionSections()
         notifyVisualGeometry();
         return;
     }
+    const int extent = axisExtent();
     for (auto it = m_sectionWidgets.constBegin(); it != m_sectionWidgets.constEnd(); ++it) {
         const int logical = it.key();
         QWidget *widget = it.value();
-        const int committed = sectionX(logical);
+        const int committed = sectionPos(logical);
         if (committed == kSectionNotShown) {
             widget->hide();
             continue;
         }
-        const int width = m_geometry->sectionSize(logical);
+        const int size = m_geometry->sectionSize(logical);
         int visual = committed;
         if (m_slideProgress < 1.0) {
             const auto from = m_slideFrom.constFind(logical);
             if (from != m_slideFrom.constEnd())
                 visual = from.value() + qRound(qreal(committed - from.value()) * m_slideProgress);
         }
-        const bool visible = width > 0 && visual < this->width() && visual + width > 0;
+        const bool visible = size > 0 && visual < extent && visual + size > 0;
         if (!visible && !isSectionPinned(logical)) {
             widget->hide();
             continue;
         }
-        widget->setGeometry(visual, 0, width, height());
+        placeSection(widget, visual, size);
         widget->show();
     }
     notifyVisualGeometry();
+}
+
+/// One renderer, two axes: a horizontal section is (x, 0, size, height), a vertical
+/// one (0, y, width, size) - the cross axis always spans the whole widget.
+void VirtualHeaderView::placeSection(QWidget *widget, int pos, int size)
+{
+    if (!widget)
+        return;
+    if (isHorizontal())
+        widget->setGeometry(pos, 0, size, height());
+    else
+        widget->setGeometry(0, pos, width(), size);
 }
 
 bool VirtualHeaderView::hasVisualSectionGeometry() const
@@ -676,14 +775,25 @@ bool VirtualHeaderView::sectionVisualX(int logicalIndex, int *viewportX) const
     const QWidget *widget = m_sectionWidgets.value(logicalIndex, nullptr);
     if (!widget || !widget->isVisible())
         return false;
-    // The widget's x is relative to this renderer, the answer is a viewport
-    // coordinate: the difference is where this widget sits inside the viewport
-    // (a pane renderer is placed on its pane rect, not on the viewport origin).
-    const int ownOffset = m_viewportOriginSet ? x() - m_viewportOrigin.x() : 0;
-    *viewportX = widget->x() + ownOffset;
+    // The widget's position is relative to this renderer, the answer is a viewport
+    // coordinate: the difference is where this widget sits inside the viewport (a pane
+    // renderer is placed on its pane rect, not on the viewport origin, and a vertical
+    // renderer is placed *left of* the viewport). Both the offset and the position follow
+    // the renderer's axis.
+    const int ownOffset = m_viewportOriginSet
+        ? (isHorizontal() ? x() - m_viewportOrigin.x() : y() - m_viewportOrigin.y())
+        : 0;
+    *viewportX = axisPosOf(widget) + ownOffset;
     return true;
 }
 
+void VirtualHeaderView::refreshSectionLabels()
+{
+    // Every materialized section, wherever its item sits: the label model answered for the
+    // *item* before the model moved it, and the section set did not change.
+    rebindMaterializedSections(std::numeric_limits<int>::min(),
+                               std::numeric_limits<int>::max());
+}
 void VirtualHeaderView::setVisualGeometryCallback(std::function<void()> callback)
 {
     m_visualGeometryCallback = std::move(callback);
@@ -707,21 +817,22 @@ int VirtualHeaderView::dragTargetIndex() const
 {
     if (m_dragSection < 0 || !m_geometry)
         return -1;
-    const QVector<int> shown = visualOrder();
+    const PackedOrder shown = packedOrder();
     const int from = shown.indexOf(m_dragSection);
     if (from < 0)
         return -1;
 
     // The dragged section's centre decides: every other section whose centre lies left
     // of it ends up before it, which is exactly the `to` index moveSection() expects.
-    const int width = m_geometry->sectionSize(m_dragSection);
-    const int centre = sectionX(m_dragSection) + (m_dragCurrentX - m_dragStartX) + width / 2;
+    const int draggedSize = m_geometry->sectionSize(m_dragSection);
+    const int centre
+        = sectionPos(m_dragSection) + (m_dragCurrentPos - m_dragStartPos) + draggedSize / 2;
     int to = 0;
     for (int packed = 0; packed < shown.size(); ++packed) {
         if (packed == from)
             continue;
         const int otherCentre =
-            sectionX(shown.at(packed)) + m_geometry->sectionSize(shown.at(packed)) / 2;
+            sectionPos(shown.at(packed)) + m_geometry->sectionSize(shown.at(packed)) / 2;
         if (otherCentre < centre)
             ++to;
     }
@@ -732,19 +843,19 @@ void VirtualHeaderView::positionDraggedSections()
 {
     if (!m_geometry || m_dragSection < 0)
         return;
-    const QVector<int> shown = visualOrder();
+    const PackedOrder shown = packedOrder();
     const int from = shown.indexOf(m_dragSection);
     if (from < 0)
         return;
     const int to = dragTargetIndex();
-    const int draggedWidth = m_geometry->sectionSize(m_dragSection);
+    const int draggedSize = m_geometry->sectionSize(m_dragSection);
     if (to != m_previewSlot)
         restartDragPreviewTween(to);
 
     for (auto it = m_sectionWidgets.constBegin(); it != m_sectionWidgets.constEnd(); ++it) {
         const int logical = it.key();
         QWidget *widget = it.value();
-        const int committed = sectionX(logical);
+        const int committed = sectionPos(logical);
         if (committed == kSectionNotShown) {
             widget->hide();
             continue;
@@ -753,14 +864,14 @@ void VirtualHeaderView::positionDraggedSections()
         int target = committed;
         if (logical == m_dragSection) {
             // The picked up section follows the pointer, keeping the grab offset.
-            target = committed + (m_dragCurrentX - m_dragStartX);
+            target = committed + (m_dragCurrentPos - m_dragStartPos);
         } else {
             const int packed = shown.indexOf(logical);
             if (packed >= 0 && to >= 0) {
                 if (from < to && packed > from && packed <= to)
-                    target = committed - draggedWidth; // the gap closes behind it
+                    target = committed - draggedSize; // the gap closes behind it
                 else if (from > to && packed >= to && packed < from)
-                    target = committed + draggedWidth; // the gap opens in front of it
+                    target = committed + draggedSize; // the gap opens in front of it
             }
         }
         // The dragged section tracks the pointer exactly; the others tween towards their
@@ -772,13 +883,18 @@ void VirtualHeaderView::positionDraggedSections()
                 visual = start.value()
                     + int(qRound(qreal(target - start.value()) * m_previewProgress));
         }
-        const bool visible = width > 0 && visual < this->width() && visual + width > 0;
+        const bool visible = width > 0 && visual < axisExtent() && visual + width > 0;
         if (!visible && !isSectionPinned(logical)) {
             widget->hide();
             continue;
         }
-        widget->setGeometry(visual, 0, width, height());
+        placeSection(widget, visual, width);
         widget->show();
+        // The dragged section overlaps its neighbours while it is being moved, so it has to
+        // be on top of them - otherwise the neighbour the user drags over paints over it
+        // (same for both axes, §22).
+        if (logical == m_dragSection)
+            widget->raise();
     }
 }
 
@@ -788,7 +904,7 @@ void VirtualHeaderView::restartDragPreviewTween(int packedSlot)
     m_previewFrom.clear();
     for (auto it = m_sectionWidgets.constBegin(); it != m_sectionWidgets.constEnd(); ++it) {
         if (it.value()->isVisible())
-            m_previewFrom.insert(it.key(), it.value()->x());
+            m_previewFrom.insert(it.key(), axisPosOf(it.value()));
     }
     if (!m_previewAnimation || !m_animationEnabled || m_animationDuration <= 0) {
         m_previewProgress = 1.0;
@@ -801,7 +917,7 @@ void VirtualHeaderView::restartDragPreviewTween(int packedSlot)
     m_previewAnimation->start();
 }
 
-void VirtualHeaderView::beginSectionDrag(int logicalIndex, int x)
+void VirtualHeaderView::beginSectionDrag(int logicalIndex, int pos)
 {
     // A running transition would fight the preview.
     if (m_slideAnimation)
@@ -810,24 +926,24 @@ void VirtualHeaderView::beginSectionDrag(int logicalIndex, int x)
     m_slideProgress = 1.0;
 
     m_dragSection = logicalIndex;
-    m_dragStartX = x;
-    m_dragCurrentX = x;
+    m_dragStartPos = pos;
+    m_dragCurrentPos = pos;
     m_dragging = true;
     m_moved = true; // a drag is never a sort click
     // Nothing to tween yet: the sections still sit on their committed positions, and the
     // tween starts as soon as the pointer asks for a different insertion slot.
-    m_previewSlot = visualOrder().indexOf(logicalIndex);
+    m_previewSlot = packedOrder().indexOf(logicalIndex);
     m_previewFrom.clear();
     m_previewProgress = 1.0;
     setCursor(Qt::ClosedHandCursor);
     positionSections();
 }
 
-void VirtualHeaderView::updateSectionDrag(int x)
+void VirtualHeaderView::updateSectionDrag(int pos)
 {
-    if (!m_dragging || x == m_dragCurrentX)
+    if (!m_dragging || pos == m_dragCurrentPos)
         return;
-    m_dragCurrentX = x;
+    m_dragCurrentPos = pos;
     positionSections();
 }
 
@@ -842,22 +958,24 @@ void VirtualHeaderView::finishSectionDrag(bool commit)
         // and filtered columns are not part of it), while moveSection() takes visual
         // indices - so the target is converted by asking where the section that should
         // precede the dragged one currently sits.
-        const QVector<int> shown = visualOrder();
+        const PackedOrder shown = packedOrder();
         const int packedFrom = shown.indexOf(dragged);
         const int packedTo = dragTargetIndex();
-        if (packedFrom >= 0 && packedTo >= 0 && packedTo != packedFrom) {
-            QVector<int> rest = shown;
-            rest.removeAt(packedFrom);
-            if (!rest.isEmpty()) {
-                fromVisual = m_geometry->visualIndex(dragged);
-                if (packedTo > 0) {
-                    const int anchor =
-                        m_geometry->visualIndex(rest.at(qMin(packedTo - 1, rest.size() - 1)));
-                    toVisual = anchor - (fromVisual < anchor ? 1 : 0) + 1;
-                } else {
-                    const int first = m_geometry->visualIndex(rest.first());
-                    toVisual = first - (fromVisual < first ? 1 : 0);
-                }
+        if (packedFrom >= 0 && packedTo >= 0 && packedTo != packedFrom && shown.size() > 1) {
+            // "The packed order without the dragged section", read by slot instead of copied:
+            // a ten-million-row strip must not copy its order to commit one row move.
+            const auto restAt = [&shown, packedFrom](int slot) {
+                return shown.at(slot < packedFrom ? slot : slot + 1);
+            };
+            const int restSize = shown.size() - 1;
+            fromVisual = m_geometry->visualIndex(dragged);
+            if (packedTo > 0) {
+                const int anchor =
+                    m_geometry->visualIndex(restAt(qMin(packedTo - 1, restSize - 1)));
+                toVisual = anchor - (fromVisual < anchor ? 1 : 0) + 1;
+            } else {
+                const int first = m_geometry->visualIndex(restAt(0));
+                toVisual = first - (fromVisual < first ? 1 : 0);
             }
         }
     }
@@ -872,6 +990,17 @@ void VirtualHeaderView::finishSectionDrag(bool commit)
     updateCursor(mapFromGlobal(QCursor::pos()));
 
     if (commit && fromVisual >= 0 && toVisual >= 0) {
+        if (m_externalSectionOrder) {
+            // The order is not ours (a row-number strip: the rows belong to the model).
+            // Drop the preview - the request below is what changes the order - and let
+            // the caller re-lay out when it has moved the sections itself.
+            m_slideFrom.clear();
+            m_slideProgress = 1.0;
+            positionSections();
+            update();
+            emit sectionMoveRequested(fromVisual, toVisual);
+            return;
+        }
         // §23: one commit, then the transition settles from where the preview left the
         // sections. The body relayouts once, on this commit.
         setSectionMoveAnimated(true);
@@ -892,7 +1021,7 @@ void VirtualHeaderView::animateSectionMove()
     m_slideFrom.clear();
     for (auto it = m_sectionWidgets.constBegin(); it != m_sectionWidgets.constEnd(); ++it) {
         if (it.value()->isVisible())
-            m_slideFrom.insert(it.key(), it.value()->x());
+            m_slideFrom.insert(it.key(), axisPosOf(it.value()));
     }
 
     if (!m_slideAnimation) {
@@ -977,10 +1106,10 @@ int VirtualHeaderView::sectionAt(const QPoint &pos) const
     if (!m_geometry)
         return -1;
     for (int logical : materializedSections()) {
-        const int left = sectionX(logical);
+        const int left = sectionPos(logical);
         if (left == kSectionNotShown)
             continue;
-        if (pos.x() >= left && pos.x() < left + m_geometry->sectionSize(logical))
+        if (axisOf(pos) >= left && axisOf(pos) < left + m_geometry->sectionSize(logical))
             return logical;
     }
     return -1;
@@ -991,13 +1120,13 @@ int VirtualHeaderView::resizeEdgeAt(const QPoint &pos) const
     if (!m_geometry)
         return -1;
     for (int logical : materializedSections()) {
-        const int left = sectionX(logical);
+        const int left = sectionPos(logical);
         if (left == kSectionNotShown)
             continue;
         const int right = left + m_geometry->sectionSize(logical);
-        if (qAbs(pos.x() - right) <= kResizeMargin)
+        if (qAbs(axisOf(pos) - right) <= kResizeMargin)
             return logical;
-        if (qAbs(pos.x() - left) <= kResizeMargin) {
+        if (qAbs(axisOf(pos) - left) <= kResizeMargin) {
             // The leading edge belongs to the previous section.
             const int visual = m_geometry->visualIndex(logical);
             if (visual > 0)
@@ -1020,14 +1149,14 @@ void VirtualHeaderView::mousePressEvent(QMouseEvent *event)
     m_resizeSection = resizeEdgeAt(pos);
     if (m_resizeSection >= 0) {
         m_resizeStartSize = m_geometry->storedSectionSize(m_resizeSection);
-        m_resizeStartX = pos.x();
+        m_resizeStartPos = axisOf(pos);
         m_pressedSection = -1;
-        setCursor(Qt::SplitHCursor); // the gesture owns the cursor until the release
+        setCursor(resizeCursor()); // the gesture owns the cursor until the release
         event->accept();
         return;
     }
     m_pressedSection = sectionAt(pos);
-    m_pressedX = pos.x();
+    m_pressedPos = axisOf(pos);
     event->accept();
 }
 
@@ -1040,7 +1169,7 @@ void VirtualHeaderView::mouseMoveEvent(QMouseEvent *event)
     const QPoint pos = eventPosition(event);
     if (m_resizeSection >= 0) {
         const int width = qMax(m_geometry->minimumSectionSize(),
-                               m_resizeStartSize + pos.x() - m_resizeStartX);
+                               m_resizeStartSize + axisOf(pos) - m_resizeStartPos);
         m_geometry->resizeSection(m_resizeSection, width);
         event->accept();
         return;
@@ -1050,13 +1179,13 @@ void VirtualHeaderView::mouseMoveEvent(QMouseEvent *event)
         // drag distance it is still a click; after that the sections only move in the
         // *visual* geometry (a preview), and the committed order changes on the release.
         if (!m_dragging) {
-            if (qAbs(pos.x() - m_pressedX) < QApplication::startDragDistance()) {
+            if (qAbs(axisOf(pos) - m_pressedPos) < QApplication::startDragDistance()) {
                 event->accept();
                 return;
             }
-            beginSectionDrag(m_pressedSection, m_pressedX);
+            beginSectionDrag(m_pressedSection, m_pressedPos);
         }
-        updateSectionDrag(pos.x());
+        updateSectionDrag(axisOf(pos));
         event->accept();
         return;
     }
@@ -1107,7 +1236,7 @@ void VirtualHeaderView::updateCursor(const QPoint &pos)
         setCursor(Qt::ArrowCursor);
         return;
     }
-    setCursor(resizeEdgeAt(pos) >= 0 ? Qt::SplitHCursor : Qt::ArrowCursor);
+    setCursor(resizeEdgeAt(pos) >= 0 ? resizeCursor() : Qt::ArrowCursor);
 }
 
 void VirtualHeaderView::watchMouse(QWidget *root)

@@ -463,6 +463,13 @@ protected:
     /// table cuts the row widget down to the dragged cell), so the drag preview shows what the
     /// drop would move.
     virtual QRect dragPixmapRect(const QModelIndex &index) const;
+    /// Removes the rows a finished drag dragged (see setMoveRemovesSourceRows()). Parents are
+    /// handled deepest first and rows from the last one upwards, so no removal shifts an index
+    /// that is still to come; rows the model already removed are skipped.
+    ///
+    /// Part of the drag-source contract (like dragSourceIndexes()/dragPixmapRect()): a subclass
+    /// or test drives it directly, because QDrag::exec() cannot run offscreen.
+    void removeDraggedSourceRows(const QList<QPersistentModelIndex> &sources);
     /// Rows that were pinned when a column change started, plus whether a restore is pending.
     QVector<qsizetype> m_columnChangePinnedRows;
     bool m_columnChangePending = false;
@@ -596,11 +603,6 @@ private:
     bool isDropOnItself(const DropTarget &target, Qt::DropAction action) const;
     /// Releases the state of a finished drag (source pin, autoscroll, indicator).
     void finishDrag();
-    /// Removes the rows a finished drag dragged (see setMoveRemovesSourceRows()). Parents are
-    /// handled deepest first and rows from the last one upwards, so no removal shifts an index
-    /// that is still to come; rows the model already removed are skipped.
-    void removeDraggedSourceRows(const QList<QPersistentModelIndex> &sources);
-
     /// Qt 5 declares the roles argument of
     /// QAbstractItemModel::dataChanged() as QVector<int>, Qt 6 as QList<int>.
     /// QVector is an alias of QList in Qt 6, so this signature matches both.
