@@ -199,26 +199,32 @@ public:
 /// 一种分配方式：4 个可分配列的权重，0 = 这一列保持自己的固定宽度。
 struct RatioPreset
 {
-    const char *name;
+    /// 中文名直接存 QString：源码是 UTF-8，用 fromLatin1() 解码会得到乱码。
+    QString name;
     double factors[int(OrderModel::ColumnCount) - 1];
 };
 
-constexpr RatioPreset kPresets[] = {
-    {"等分 1 : 1 : 1 : 1", {1.0, 1.0, 1.0, 1.0}},
-    {"商品优先 2 : 4 : 1 : 1", {2.0, 4.0, 1.0, 1.0}},
-    {"只拉伸商品列 0 : 1 : 0 : 0", {0.0, 1.0, 0.0, 0.0}},
+const RatioPreset kPresets[] = {
+    {QStringLiteral("等分 1 : 1 : 1 : 1"), {1.0, 1.0, 1.0, 1.0}},
+    {QStringLiteral("商品优先 2 : 4 : 1 : 1"), {2.0, 4.0, 1.0, 1.0}},
+    {QStringLiteral("只拉伸商品列 0 : 1 : 0 : 0"), {0.0, 1.0, 0.0, 0.0}},
 };
 constexpr int kPresetCount = int(sizeof(kPresets) / sizeof(kPresets[0]));
 constexpr int kDefaultPreset = 1;
 
 /// 应用一种分配方式：参与分配的列写 factor，其余列回到固定宽度。
-void applyPreset(viv::VirtualTableView &view, const RatioPreset &preset)
+///
+/// \a fixLastTwoColumns 是"固定最后两列"（状态/金额）：它们退出分配、保持自己的宽度，
+/// 于是剩余宽度落到中间的列上——固定列在两端都可以，比例只描述还在流动的那些列。
+void applyPreset(viv::VirtualTableView &view, const RatioPreset &preset,
+                 bool fixLastTwoColumns)
 {
-    view.setStretchLastColumn(false);
     view.setColumnWidth(OrderModel::ColumnIndex, kIndexWidth);
+    const int tailStart = int(OrderModel::ColumnCount) - 2;
     for (int offset = 0; offset < int(OrderModel::ColumnCount) - 1; ++offset) {
         const int column = OrderModel::ColumnOrder + offset;
-        const double factor = preset.factors[offset];
+        const bool fixed = fixLastTwoColumns && column >= tailStart;
+        const double factor = fixed ? 0.0 : preset.factors[offset];
         view.setColumnStretchFactor(column, factor);
         if (factor <= 0.0)
             view.setColumnWidth(column, kPlainWidth);
@@ -245,7 +251,7 @@ bool runCheck(viv::VirtualTableView &view)
     };
 
     view.setFrozenColumns(QVector<int>());
-    applyPreset(view, kPresets[kDefaultPreset]);
+    applyPreset(view, kPresets[kDefaultPreset], false);
     QApplication::processEvents();
     view.flushPendingRelayout();
 
@@ -337,11 +343,21 @@ bool runCheck(viv::VirtualTableView &view)
     checkFillsTheViewport("after a resize gesture");
     checkRatios("after a resize gesture");
 
-    // 5) "最后一列吃掉剩余宽度"：同一个机制的退化形式。
-    applyPreset(view, kPresets[kDefaultPreset]);
-    view.setStretchLastColumn(true);
+    // 5) "固定最后两列"：固定列也可以在末尾，比例只描述还在流动的列——后两列退出分配、
+    //    保持自己的宽度，剩下的正好被中间的列填满。
+    applyPreset(view, kPresets[kDefaultPreset], true);
     view.flushPendingRelayout();
-    checkFillsTheViewport("stretch last column");
+    checkFillsTheViewport("fixed tail columns");
+    checkRatios("fixed tail columns");
+    for (int column = int(OrderModel::ColumnCount) - 2; column < int(OrderModel::ColumnCount);
+         ++column) {
+        if (view.columnStretchFactor(column) != 0.0 || view.columnWidth(column) != kPlainWidth) {
+            fail(QStringLiteral("column %1 is not fixed at the tail (factor %2, width %3)")
+                     .arg(column)
+                     .arg(view.columnStretchFactor(column))
+                     .arg(view.columnWidth(column)));
+        }
+    }
 
     std::printf("table_stretch_columns: check %s (viewport=%d widths=[%s] extent=%lld maxOffset=%lld)\n",
                 ok ? "PASSED" : "FAILED", view.viewport()->width(),
@@ -392,22 +408,30 @@ int main(int argc, char **argv)
     window.resize(760, 560);
 
     // 比例写在几何里，表头与 body 读的是同一份，所以永远不会不一致。
-    applyPreset(*view, kPresets[kDefaultPreset]);
+    applyPreset(*view, kPresets[kDefaultPreset], false);
 
     auto *toolbar = window.addToolBar(QStringLiteral("列宽"));
+
+    // "固定后两列"先建好：分配比例的 lambda 要看它当前的状态（两个控件是同一份状态的
+    // 两个入口，改哪个都重新按比例量一遍）。
+    auto *fixTail = new QCheckBox(QStringLiteral("固定后两列"), &window);
+    fixTail->setToolTip(QStringLiteral(
+        "固定宽度可以在任何位置，包括末尾：勾上以后“状态/金额”退出分配、保持自己的宽度，\n"
+        "剩余宽度只落在还在流动的列上。比例描述的是“谁在分剩余宽度”，与列的先后顺序无关。"));
+
     toolbar->addWidget(new QLabel(QStringLiteral("分配比例: "), &window));
     auto *presetBox = new QComboBox(&window);
     for (const RatioPreset &preset : kPresets)
-        presetBox->addItem(QString::fromLatin1(preset.name));
+        presetBox->addItem(preset.name);
     presetBox->setCurrentIndex(kDefaultPreset);
     presetBox->setToolTip(QStringLiteral(
         "setColumnStretchFactor()：0 的列保持自己的固定宽度，> 0 的列按权重分剩余宽度。\n"
         "带 * 的列在状态栏里就是参与分配的列。"));
     toolbar->addWidget(presetBox);
     QObject::connect(presetBox, qOverload<int>(&QComboBox::currentIndexChanged), view,
-                     [view](int index) {
+                     [view, fixTail](int index) {
                          if (index >= 0 && index < kPresetCount)
-                             applyPreset(*view, kPresets[index]);
+                             applyPreset(*view, kPresets[index], fixTail->isChecked());
                      });
 
     toolbar->addWidget(new QLabel(QStringLiteral("  首列固定 "), &window));
@@ -421,13 +445,12 @@ int main(int argc, char **argv)
         view->setColumnWidth(OrderModel::ColumnIndex, width);
     });
 
-    auto *lastStretch = new QCheckBox(QStringLiteral("最后一列吃掉剩余宽度"), &window);
-    lastStretch->setToolTip(QStringLiteral(
-        "setStretchLastColumn(true)：线上一列（可见顺序的最后一列）作为唯一参与者吃掉全部剩余宽度。\n"
-        "它是 setColumnStretchFactor() 的退化形式——把因子设成 1 的只有它一个。"));
-    toolbar->addWidget(lastStretch);
-    QObject::connect(lastStretch, &QCheckBox::toggled, view,
-                     &viv::VirtualTableView::setStretchLastColumn);
+    toolbar->addWidget(fixTail);
+    QObject::connect(fixTail, &QCheckBox::toggled, view, [view, presetBox](bool on) {
+        const int index = presetBox->currentIndex();
+        if (index >= 0 && index < kPresetCount)
+            applyPreset(*view, kPresets[index], on);
+    });
 
     auto *freezeFirst = new QCheckBox(QStringLiteral("冻结第 1 列"), &window);
     freezeFirst->setToolTip(QStringLiteral(
@@ -476,9 +499,19 @@ int main(int argc, char **argv)
             QApplication::quit();
         });
     } else if (exitAfter > 0) {
-        QTimer::singleShot(exitAfter, &app, [view]() {
-            std::printf("table_stretch_columns: %d rows, widths=[%s], extent=%lld, maxOffset=%lld\n",
-                        view->model()->rowCount(), qPrintable(widthsText(*view)),
+        QTimer::singleShot(exitAfter, &app, [view, presetBox, fixTail]() {
+            // 日志行只用 ASCII：控制台/重定向的编码各不相同，中文会显示成乱码。
+            QString factors;
+            for (int column = 0; column < view->columnCount(); ++column) {
+                factors += QStringLiteral("%1%2")
+                               .arg(column == 0 ? QString() : QStringLiteral(","))
+                               .arg(view->columnStretchFactor(column), 0, 'g', 3);
+            }
+            std::printf("table_stretch_columns: %d rows, preset=%d, factors=[%s], fixTail=%d, "
+                        "widths=[%s], extent=%lld, maxOffset=%lld\n",
+                        view->model()->rowCount(), presetBox->currentIndex(),
+                        qPrintable(factors),
+                        fixTail->isChecked() ? 1 : 0, qPrintable(widthsText(*view)),
                         static_cast<long long>(view->horizontalContentExtent()),
                         static_cast<long long>(view->maximumHorizontalOffset()));
             std::fflush(stdout);
