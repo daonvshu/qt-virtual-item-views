@@ -740,6 +740,7 @@ private slots:
     void paneSeparatorStyleIsCustomizable();
     void headerStateRestoresFrozenColumns();
     void aBrokenStateLeavesTheViewUntouched();
+    void columnsShareTheLeftoverWidthByStretchFactor();
 
 private:
     void sendMouseTo(QWidget *widget, QEvent::Type type, const QPoint &pos,
@@ -2407,6 +2408,78 @@ void TestVirtualTableView::aBrokenStateLeavesTheViewUntouched()
     QCOMPARE(m_view->frozenColumns(), QVector<int>({0, 1}));
     QCOMPARE(m_view->frozenRows(), 2);
     QCOMPARE(m_view->columnWidth(1), kColumnWidth + 20);
+}
+
+void TestVirtualTableView::columnsShareTheLeftoverWidthByStretchFactor()
+{
+    // Columns 2/3/4 split the leftover 1 : 2 : 1, the ones with a factor of 0 keep their
+    // own width - header and body read the same HeaderGeometry, so they cannot disagree.
+    m_view->setColumnWidth(0, 80);
+    m_view->setColumnWidth(1, 60);
+    m_view->setColumnStretchFactor(2, 1.0);
+    m_view->setColumnStretchFactor(3, 2.0);
+    m_view->setColumnStretchFactor(4, 1.0);
+    QCOMPARE(m_view->columnStretchFactor(3), 2.0);
+    QCOMPARE(m_view->columnStretchFactor(5), 0.0);
+    QApplication::processEvents();
+
+    const int viewportWidth = m_view->viewport()->width();
+    const int fixed = 80 + 60 + m_view->columnWidth(5);
+    const int leftover = viewportWidth - fixed;
+    QVERIFY(leftover > 0);
+    const int quarter = leftover / 4;
+    QCOMPARE(m_view->columnWidth(0), 80);
+    QCOMPARE(m_view->columnWidth(1), 60);
+    QCOMPARE(m_view->columnWidth(2), quarter);
+    QCOMPARE(m_view->columnWidth(3), leftover / 2);
+    // The last participant absorbs the rounding, so the three shares add up exactly.
+    QCOMPARE(m_view->columnWidth(4), leftover - quarter - leftover / 2);
+    QCOMPARE(m_view->horizontalContentExtent(), qint64(viewportWidth));
+    QCOMPARE(m_view->maximumHorizontalOffset(), qint64(0));
+
+    // The header section and the body column agree pixel for pixel.
+    auto *header = dynamic_cast<VirtualHeaderView *>(m_view->horizontalHeader());
+    QVERIFY(header != nullptr);
+    const int thirdX = sectionViewportX(header, 3);
+    const int secondX = sectionViewportX(header, 2);
+    QVERIFY(thirdX != std::numeric_limits<int>::min());
+    QVERIFY(secondX != std::numeric_limits<int>::min());
+    QCOMPARE(thirdX - secondX, m_view->columnWidth(2));
+    QCOMPARE(m_view->columnGeometry(3).viewportX, thirdX);
+    // The last visible column ends exactly at the viewport edge: the stretched columns
+    // fill what the fixed ones leave, no gap and no overhang.
+    const ColumnGeometry last = m_view->columnGeometry(5);
+    QCOMPARE(last.viewportX + last.width, viewportWidth);
+
+    // A wider view moves the target: the same ratios, a bigger leftover.
+    showView(m_view, QSize(kViewWidth + 160, kViewHeight));
+    QApplication::processEvents();
+    const int widerLeftover = m_view->viewport()->width() - fixed;
+    QCOMPARE(m_view->columnWidth(3), widerLeftover / 2);
+    QCOMPARE(m_view->horizontalContentExtent(), qint64(m_view->viewport()->width()));
+    QCOMPARE(m_view->maximumHorizontalOffset(), qint64(0));
+
+    // Dragging a stretching column's edge fixes it (QHeaderView's Stretch -> Interactive):
+    // from then on it keeps the dragged width and the others share what is left.
+    m_view->setColumnWidth(3, 120);
+    QCOMPARE(m_view->columnStretchFactor(3), 0.0);
+    const int afterDrag = m_view->viewport()->width() - (80 + 60 + 120 + m_view->columnWidth(5));
+    QCOMPARE(m_view->columnWidth(2) + m_view->columnWidth(4), afterDrag);
+    QCOMPARE(m_view->horizontalContentExtent(), qint64(m_view->viewport()->width()));
+
+    // Frozen columns are part of the same geometry: they keep their width and the
+    // scrollable pane gets exactly what the stretched columns add up to.
+    m_view->setFrozenColumns(QVector<int>({0}));
+    QApplication::processEvents();
+    QCOMPARE(m_view->columnWidth(0), 80);
+    QCOMPARE(m_view->columnGeometry(0).viewportX, 0);
+    const QVector<TablePane> panes = m_view->panes();
+    int paneWidths = 0;
+    for (const TablePane &pane : panes)
+        paneWidths += pane.viewportRect.width();
+    QCOMPARE(paneWidths, m_view->viewport()->width());
+    QCOMPARE(panes.first().viewportRect.width(), 80);
+    QCOMPARE(m_view->horizontalContentExtent(), qint64(m_view->viewport()->width()));
 }
 
 QTEST_MAIN(TestVirtualTableView)

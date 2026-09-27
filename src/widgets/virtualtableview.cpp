@@ -235,6 +235,11 @@ void VirtualTableView::ensureHeaders()
         m_horizontalHeader->setSortInteractionEnabled(m_sortingEnabled);
         applyHeaderAnimationSettings();
         watchHeaderVisualGeometry(m_horizontalHeader);
+        // The table owns the stretch target (see updatePaneLayout()): telling the renderer
+        // where the viewport starts is what marks it as table driven, and it has to happen
+        // before the first layout pass resizes its widget - a renderer that does not know
+        // it is driven keeps the geometry's target on its own width instead.
+        m_horizontalHeader->setViewportOrigin(viewport()->geometry().topLeft());
     }
     if (!m_verticalHeader) {
         m_verticalHeader = createDefaultVerticalHeader();
@@ -290,6 +295,7 @@ void VirtualTableView::setHorizontalHeader(HeaderViewInterface *header)
     // is usually parentless - a top level window - and would then be placed in
     // screen coordinates (off by its frame margins, and not clipped by the view).
     m_horizontalHeader->headerWidget()->setParent(this);
+    m_horizontalHeader->setViewportOrigin(viewport()->geometry().topLeft());
     applyHeaderAnimationSettings();
     layoutHeaderWidgets();
     syncHeaderPanes();
@@ -407,6 +413,10 @@ void VirtualTableView::layoutHeaderWidgets()
         if (header)
             header->setViewportOrigin(origin);
     }
+    // Belt and braces for the stretch target: a renderer that was resized before it learned
+    // that the table drives it may have written its own width to the geometry, so the owner
+    // re-asserts it once the layout is settled (a no-op when it is already right).
+    m_columns->setStretchExtent(viewport()->width());
     if (m_verticalHeader) {
         layoutVerticalHeaderStrips();
     }
@@ -759,6 +769,16 @@ bool VirtualTableView::stretchLastColumn() const
     return m_columns->stretchLastSection();
 }
 
+void VirtualTableView::setColumnStretchFactor(int logicalIndex, qreal factor)
+{
+    m_columns->setSectionStretchFactor(logicalIndex, factor);
+}
+
+qreal VirtualTableView::columnStretchFactor(int logicalIndex) const
+{
+    return m_columns->sectionStretchFactor(logicalIndex);
+}
+
 // ---------------------------------------------------------------------------
 // Horizontal scrolling
 // ---------------------------------------------------------------------------
@@ -1020,6 +1040,15 @@ void VirtualTableView::updateVisualRowGeometry()
 
 void VirtualTableView::updatePaneLayout()
 {
+    // A stretching column is measured against the width the columns have to cover, so the
+    // geometry is told the viewport width *before* the pane split reads the section sizes
+    // (a pane's extent is the sum of its sections). Rewriting those sizes emits geometry
+    // signals, and a listener may come back here: the pass below is what the signal is
+    // about, so the re-entered call does nothing and the outer one finishes the job.
+    if (m_paneLayoutActive)
+        return;
+    m_paneLayoutActive = true;
+    m_columns->setStretchExtent(viewport()->width());
     const bool changed = m_panes.update(viewport()->width(), viewport()->height());
     syncHeaderPanes();
     syncPaneSeparatorLines();
@@ -1033,6 +1062,7 @@ void VirtualTableView::updatePaneLayout()
     // Every column x may have moved: rows, cells and the scroll bar follow.
     updateColumnLayout();
     syncHorizontalScrollBar();
+    m_paneLayoutActive = false;
 }
 
 void VirtualTableView::rebindMaterializedRows()
@@ -1103,6 +1133,10 @@ void VirtualTableView::syncHeaderPanes()
             header->setGeometryModel(m_columns);
             header->setLabelModel(model());
             header->setSortInteractionEnabled(m_sortingEnabled);
+            // Same contract as the installed header: the clone is table driven from the
+            // moment it exists, so it never puts the geometry's stretch target on its own
+            // (frozen) pane width.
+            header->setViewportOrigin(viewport()->geometry().topLeft());
             // A drag inside a frozen pane previews on *that* renderer, so the body
             // has to follow its sections just like the primary header's.
             watchHeaderVisualGeometry(header);

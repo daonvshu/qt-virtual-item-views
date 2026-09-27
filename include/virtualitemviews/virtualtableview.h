@@ -137,6 +137,19 @@ public:
     int defaultColumnWidth() const;
     void setColumnMinimumWidth(int width);
     void setColumnMaximumWidth(int width);
+    /// Share of the leftover width this column takes: the columns with a factor > 0 split
+    /// "viewport width - the widths the other visible columns keep" in proportion to their
+    /// factors, so 1 : 2 : 1 makes the third column twice as wide as the first. A factor of
+    /// 0 - the default - is a column that keeps its own width, and a column the user
+    /// drags to a new width becomes fixed again (see HeaderGeometry::
+    /// setSectionStretchFactor(), which is where the widths themselves live: the header
+    /// and the body both read them, so they can never disagree).
+    ///
+    /// The columns fill the viewport, so a table whose columns all stretch has nothing to
+    /// scroll horizontally. The factors are part of the saved header state; the viewport
+    /// width a restored state is measured against is the one of the view restoring it.
+    void setColumnStretchFactor(int logicalIndex, qreal factor);
+    qreal columnStretchFactor(int logicalIndex) const;
     void setStretchLastColumn(bool stretch);
     bool stretchLastColumn() const;
 
@@ -612,6 +625,9 @@ private:
     /// request), so the strip comes back when the reason is gone (P2-9).
     bool m_verticalHeaderSupported = true;
     bool m_columnUpdateActive = false;
+    /// A stretch pass can re-enter updatePaneLayout() through the geometry signals: the
+    /// outer call keeps laying the panes out, the inner one is a no-op.
+    bool m_paneLayoutActive = false;
     bool m_rowHeaderUpdateActive = false;
     bool m_headersLaidOut = false;
 };

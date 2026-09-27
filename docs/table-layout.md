@@ -232,3 +232,39 @@ section 显什么"而不用写 section 控件。
   所以实例化上限从 `visibleRows x visibleColumns` 变成
   `visibleRows x (窗口内冻结列 + visibleColumns)` —— 冻结 pane 比视口宽时，多出来的列既不显示
   也不物化，见 §43 与第三轮审查 Wave 2）。
+
+## 9. 固定列宽 + 剩余宽度按比例分配（1.0）
+
+默认行为是"每列一个自己的宽度"：`setDefaultColumnWidth()` 给没设置过的列一个宽度，
+`setColumnWidth()` 固定某一列，宽度加起来小于视口时右边留白。要让列去**填满视口**，
+用比例：
+
+```cpp
+table->setColumnWidth(0, 60);            // 固定：保持 60
+table->setColumnStretchFactor(1, 2.0);   // 参与分配，份额 2
+table->setColumnStretchFactor(2, 1.0);
+table->setColumnStretchFactor(3, 1.0);
+```
+
+* **只在几何里实现一次**：比例是 `HeaderGeometry::sectionStretchFactor()`，计算出的宽度也写回
+  `sectionSize()`，所以列表头、行号条、pane 克隆、Row Widget Mode 的 `ColumnHost`、Cell Widget
+  Mode 的 cell、`columnGeometry()`、`columnAtViewportX()`、accessibility 全都自动一致——它们本来
+  就只读这一份几何，没有第二套宽度。
+* **分配规则**：参与者（可见、factor > 0）平分
+  `stretchExtent - 其他可见 section 的宽度`，按 factor 比例取整，**最后一个参与者吃掉取整余数**，
+  所以几列相加正好等于目标宽度。`stretchExtent` 由视图给出：`VirtualTableView` 用视口宽度
+  （冻结列也在其中，它们通常固定），独立的 `VirtualHeaderView` 用自己的 `width()`。
+  `minimumSectionSize()/maximumSectionSize()` 仍然优先：碰到上下限时列会顶到限值，
+  这时总和可能不再等于视口宽度（和"固定列宽加起来超过视口"是同一种结果：出现横向滚动）。
+* **`stretchExtent` 不参与持久化**：比例属于列状态（`saveHeaderState()` 里存的是 factor），
+  目标宽度属于"当前这个视图有多宽"，所以恢复出来的状态按恢复它的视图重新量一遍。
+* **拖动即固定**：用户拖动某一列的边界就是"这一列以后按我拖的宽度"，和 `QHeaderView` 的
+  Stretch → Interactive 一致（`resizeSection()` 会清掉该列的 factor，其余参与者重新分）；
+  想要回比例就再 `setColumnStretchFactor()` 一次。
+* **`setStretchLastColumn(true)`** 是它的退化形式：最后一列（`stretchLastSection()`）作为唯一
+  参与者吃掉全部剩余宽度，可见性/顺序变化后"最后一列"自动跟着换。
+* **横向滚动**：全部列都在分配比例时，几何总宽 = 视口宽，`maximumHorizontalOffset()` 为 0，
+  横向滚动条自然失效；只要还有固定列超出视口，滚动的语义与以前一样。
+* **表示的代价**：比例走的是 sparse 层——`HeaderGeometry` 仍是 uniform（千万行的行号条不会被
+  物化），只有存了 factor 的那几列各占一条记录；`storedSectionStateCount()` 可以直接断言这一点
+  （`tst_headergeometry::sparseStretchKeepsTheLargeCountCompact`）。

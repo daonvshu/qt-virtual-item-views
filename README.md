@@ -223,6 +223,16 @@ table->moveColumn(2, 0);
 table->setSortingEnabled(true);
 table->setSortIndicator(0, Qt::AscendingOrder);
 
+// 固定宽度的列保持自己的宽度，其余按比例分掉剩下的宽度（这里是 2 : 1 : 1）。
+// 比例写在几何里，表头与 body 读的是同一份，所以永远一样宽；
+// 用户拖动某一列的边界后，这一列就变成固定宽度（QHeaderView 的 Stretch -> Interactive）。
+table->setColumnWidth(0, 60);
+table->setColumnStretchFactor(1, 2.0);
+table->setColumnStretchFactor(2, 1.0);
+table->setColumnStretchFactor(3, 1.0);
+// 只要"最后一列吃掉剩余宽度"的话：
+table->setStretchLastColumn(true);
+
 // 表头状态持久化：列宽 / 顺序 / 隐藏 / 排序 / 横向偏移
 const QByteArray state = table->saveHeaderState();
 table->restoreHeaderState(state);

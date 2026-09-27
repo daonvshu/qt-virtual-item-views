@@ -34,6 +34,12 @@ private slots:
     void uniformLargeCountStoresNothingPerSection();
     void perSectionEditMaterialisesTheStoredState();
     void sparseSizeOverridesKeepTheLargeCountCompact();
+    void stretchFactorsShareTheLeftoverExtent();
+    void stretchWithoutAnExtentChangesNothing();
+    void stretchFollowsVisibilityAndTheSizeRange();
+    void resizingAStretchingSectionFixesItsWidth();
+    void stretchFactorsSurviveTheStateRoundTrip();
+    void sparseStretchKeepsTheLargeCountCompact();
 };
 
 void TestHeaderGeometry::defaultSectionGeometry()
@@ -821,6 +827,281 @@ void TestHeaderGeometry::sparseSizeOverridesKeepTheLargeCountCompact()
     QCOMPARE(geometry.totalExtent(), qint64(kSections) * kSize + 24 + 36);
     QCOMPARE(geometry.sectionPosition(kSections - 1), qint64(kSections - 1) * kSize + 24);
     QCOMPARE(geometry.sectionAtOffset(geometry.totalExtent() - 1), kSections - 1);
+}
+
+void TestHeaderGeometry::stretchFactorsShareTheLeftoverExtent()
+{
+    // A table hands in the width its columns have to cover: the sections that keep their
+    // own size take theirs first, the ones with a factor split the rest - here 1 : 2 : 1.
+    HeaderGeometry geometry;
+    geometry.setDefaultSectionSize(100);
+    geometry.setSectionCount(5);
+    geometry.resizeSection(0, 60);
+    geometry.setSectionStretchFactor(2, 1.0);
+    geometry.setSectionStretchFactor(3, 2.0);
+    geometry.setSectionStretchFactor(4, 1.0);
+    QCOMPARE(geometry.sectionStretchFactor(3), 2.0);
+    QCOMPARE(geometry.sectionStretchFactor(1), 0.0);
+    // Without an extent nothing is distributed - and nothing claims to stretch: the columns
+    // keep their own sizes.
+    QVERIFY(!geometry.hasStretchSections());
+    QCOMPARE(geometry.totalExtent(), qint64(460));
+
+    geometry.setStretchExtent(1060);
+    QVERIFY(geometry.hasStretchSections());
+    QCOMPARE(geometry.stretchExtent(), qint64(1060));
+    QCOMPARE(geometry.sectionSize(0), 60);       // fixed
+    QCOMPARE(geometry.sectionSize(1), 100);      // fixed
+    QCOMPARE(geometry.sectionSize(2), 225);      // 900 * 1/4
+    QCOMPARE(geometry.sectionSize(3), 450);      // 900 * 2/4
+    QCOMPARE(geometry.sectionSize(4), 225);      // the leftover (rounding included)
+    QCOMPARE(geometry.totalExtent(), qint64(1060));
+    QVERIFY(!geometry.isSectionSizeExplicit(2)); // the width is derived, not set
+    QVERIFY(geometry.isSectionSizeExplicit(0));
+
+    // Positions and lookups follow the derived widths.
+    QCOMPARE(geometry.sectionPosition(3), qint64(385));
+    QCOMPARE(geometry.columnGeometry(4).contentX, qint64(835));
+    QCOMPARE(geometry.columnGeometry(4).width, 225);
+    QCOMPARE(geometry.sectionAtOffset(835), 4);
+    QCOMPARE(geometry.sectionAtOffset(834), 3);
+
+    // A narrower extent re-distributes the same ratios.
+    geometry.setStretchExtent(1000);
+    QCOMPARE(geometry.sectionSize(2), 210);
+    QCOMPARE(geometry.sectionSize(3), 420);
+    QCOMPARE(geometry.sectionSize(4), 210);
+    QCOMPARE(geometry.totalExtent(), qint64(1000));
+
+    // Fractional factors are allowed and still add up: 1 : 1.5 : 0.5.
+    geometry.setSectionStretchFactor(2, 1.0);
+    geometry.setSectionStretchFactor(3, 1.5);
+    geometry.setSectionStretchFactor(4, 0.5);
+    QCOMPARE(geometry.sectionSize(2) + geometry.sectionSize(3) + geometry.sectionSize(4),
+             840);
+    QVERIFY(geometry.sectionSize(3) > geometry.sectionSize(2));
+    QVERIFY(geometry.sectionSize(2) > geometry.sectionSize(4));
+
+    // Clearing every factor leaves the sections at the width they were stretched to, with
+    // no target in play any more.
+    for (int logical = 2; logical <= 4; ++logical)
+        geometry.setSectionStretchFactor(logical, 0.0);
+    QVERIFY(!geometry.hasStretchSections());
+    const qint64 frozen = geometry.totalExtent();
+    geometry.setStretchExtent(5000);
+    QCOMPARE(geometry.totalExtent(), frozen);
+}
+
+void TestHeaderGeometry::stretchWithoutAnExtentChangesNothing()
+{
+    // The default state: factors are remembered, but a geometry nobody measured against an
+    // extent behaves exactly like one without a stretch (this is what keeps every existing
+    // table - and the 10M-row strip - untouched by the feature).
+    HeaderGeometry geometry;
+    geometry.setDefaultSectionSize(100);
+    geometry.setSectionCount(3);
+    geometry.setSectionStretchFactor(0, 2.0);
+    QVERIFY(!geometry.hasStretchSections());
+    QCOMPARE(geometry.sectionStretchFactor(0), 2.0);
+    QCOMPARE(geometry.totalExtent(), qint64(300));
+    QCOMPARE(geometry.sectionSize(0), 100);
+
+    // stretchLastSection() is the one-line version of the same thing: whatever is left goes
+    // to the last visible section.
+    HeaderGeometry lastOnly;
+    lastOnly.setDefaultSectionSize(100);
+    lastOnly.setSectionCount(4);
+    lastOnly.setStretchLastSection(true);
+    QCOMPARE(lastOnly.totalExtent(), qint64(400));
+    lastOnly.setStretchExtent(700);
+    QCOMPARE(lastOnly.sectionSize(0), 100);
+    QCOMPARE(lastOnly.sectionSize(2), 100);
+    QCOMPARE(lastOnly.sectionSize(3), 400);
+    QCOMPARE(lastOnly.totalExtent(), qint64(700));
+    QVERIFY(lastOnly.hasStretchSections());
+
+    // A hidden last section hands the space to the one before it, and disabling the flag
+    // keeps the width it grew to.
+    lastOnly.setSectionHidden(3, true);
+    QCOMPARE(lastOnly.sectionSize(2), 500);
+    QCOMPARE(lastOnly.totalExtent(), qint64(700));
+    lastOnly.setStretchLastSection(false);
+    QVERIFY(!lastOnly.hasStretchSections());
+    lastOnly.setStretchExtent(900);
+    QCOMPARE(lastOnly.totalExtent(), qint64(700));
+
+    // An extent with no participant at all is inert as well.
+    lastOnly.setStretchExtent(900);
+    QCOMPARE(lastOnly.totalExtent(), qint64(700));
+}
+
+void TestHeaderGeometry::stretchFollowsVisibilityAndTheSizeRange()
+{
+    HeaderGeometry geometry;
+    geometry.setDefaultSectionSize(100);
+    geometry.setSectionCount(4);
+    geometry.setSectionStretchFactor(1, 1.0);
+    geometry.setSectionStretchFactor(2, 1.0);
+    geometry.setStretchExtent(600);
+    QCOMPARE(geometry.sectionSize(1), 200);      // 600 - 100 (col 0) - 100 (col 3), split 1:1
+    QCOMPARE(geometry.sectionSize(2), 200);
+
+    // A hidden participant leaves the pass: the other one takes the whole leftover.
+    geometry.setSectionHidden(1, true);
+    QCOMPARE(geometry.sectionSize(2), 400);
+    QCOMPARE(geometry.totalExtent(), qint64(600));
+
+    // Coming back joins again.
+    geometry.setSectionHidden(1, false);
+    QCOMPARE(geometry.sectionSize(1), 200);
+    QCOMPARE(geometry.sectionSize(2), 200);
+
+    // The minimum still wins over the computed share - then the columns do not fit and the
+    // extent stays below their sum (a scroll bar appears, exactly like fixed columns).
+    geometry.setMinimumSectionSize(150);
+    geometry.setStretchExtent(120);
+    QCOMPARE(geometry.sectionSize(1), 150);
+    QCOMPARE(geometry.sectionSize(2), 150);
+    QCOMPARE(geometry.totalExtent(), qint64(600));   // the minimum clamped every section
+
+    // A maximum caps the share the same way.
+    geometry.setStretchExtent(1200);
+    geometry.setMaximumSectionSize(200);
+    QCOMPARE(geometry.sectionSize(1), 200);
+    QCOMPARE(geometry.sectionSize(2), 200);
+    QCOMPARE(geometry.totalExtent(), qint64(700));
+
+    // The default size changes the sizes the fixed sections keep, so the leftover moves.
+    geometry.setMaximumSectionSize(100000);
+    geometry.setMinimumSectionSize(24);
+    geometry.setStretchExtent(600);
+    geometry.resizeSection(3, 100);              // pin the last column at its own width
+    geometry.setDefaultSectionSize(50);
+    QCOMPARE(geometry.sectionSize(0), 50);
+    QCOMPARE(geometry.sectionSize(1), 225);      // 600 - 50 - 100 (col 3 keeps its own)
+    QCOMPARE(geometry.sectionSize(3), 100);
+    QCOMPARE(geometry.totalExtent(), qint64(600));
+}
+
+void TestHeaderGeometry::resizingAStretchingSectionFixesItsWidth()
+{
+    // QHeaderView's "Stretch becomes Interactive": the user drags a section edge, and from
+    // then on that section keeps the dragged width while the others share the leftover.
+    HeaderGeometry geometry;
+    geometry.setDefaultSectionSize(100);
+    geometry.setSectionCount(3);
+    geometry.setSectionStretchFactor(1, 1.0);
+    geometry.setSectionStretchFactor(2, 1.0);
+    geometry.setStretchExtent(900);
+    QCOMPARE(geometry.sectionSize(1), 400);
+    QCOMPARE(geometry.sectionSize(2), 400);
+
+    QSignalSpy stretchSpy(&geometry, &HeaderGeometry::sectionStretchFactorChanged);
+    QSignalSpy resizeSpy(&geometry, &HeaderGeometry::sectionResized);
+    geometry.resizeSection(1, 300);
+    QCOMPARE(geometry.sectionStretchFactor(1), 0.0);
+    QCOMPARE(stretchSpy.count(), 0);             // a resize reports sizes, not factors
+    QVERIFY(resizeSpy.count() >= 1);
+    QVERIFY(geometry.isSectionSizeExplicit(1));
+    QCOMPARE(geometry.sectionSize(1), 300);
+    QCOMPARE(geometry.sectionSize(2), 500);      // the only participant takes the rest
+    QCOMPARE(geometry.totalExtent(), qint64(900));
+
+    // Dragging the same width again still leaves the pass (the factor is gone for good).
+    geometry.setSectionStretchFactor(1, 1.0);
+    QCOMPARE(geometry.sectionSize(1), 400);
+    QCOMPARE(geometry.sectionSize(2), 400);
+    geometry.resizeSection(1, geometry.sectionSize(1));
+    QCOMPARE(geometry.sectionStretchFactor(1), 0.0);
+    QCOMPARE(geometry.sectionSize(1), 400);
+
+    // The setter is the only way back in, and it is idempotent.
+    QSignalSpy factorSpy(&geometry, &HeaderGeometry::sectionStretchFactorChanged);
+    geometry.setSectionStretchFactor(1, 1.0);
+    QCOMPARE(factorSpy.count(), 1);
+    QCOMPARE(geometry.sectionSize(1), 400);
+    QCOMPARE(geometry.sectionSize(2), 400);
+    geometry.setSectionStretchFactor(1, 1.0);
+    QCOMPARE(factorSpy.count(), 1);
+}
+
+void TestHeaderGeometry::stretchFactorsSurviveTheStateRoundTrip()
+{
+    // The factors belong to the column state an application saves; the extent belongs to
+    // the view showing it, so a restored state is measured against the new view.
+    HeaderGeometry geometry;
+    geometry.setDefaultSectionSize(100);
+    geometry.setSectionCount(4);
+    geometry.resizeSection(0, 80);
+    geometry.setSectionStretchFactor(1, 1.0);
+    geometry.setSectionStretchFactor(3, 3.0);
+    geometry.setStretchExtent(1000);
+    const int sizeOfOne = geometry.sectionSize(1);
+    const int sizeOfThree = geometry.sectionSize(3);
+    QCOMPARE(sizeOfOne + sizeOfThree, 1000 - 80 - 100);
+
+    const QByteArray state = geometry.saveState();
+    HeaderGeometry restored;
+    restored.setSectionCount(4);
+    restored.setStretchExtent(2000);
+    QVERIFY(restored.restoreState(state));
+    QCOMPARE(restored.sectionStretchFactor(1), 1.0);
+    QCOMPARE(restored.sectionStretchFactor(3), 3.0);
+    QCOMPARE(restored.sectionStretchFactor(2), 0.0);
+    QCOMPARE(restored.sectionSize(0), 80);
+    QCOMPARE(restored.totalExtent(), qint64(2000));   // measured against *its* extent
+    QCOMPARE(restored.sectionSize(1) + restored.sectionSize(3), 2000 - 80 - 100);
+    QVERIFY(!restored.isSectionSizeExplicit(3));
+
+    // A state with a factor for a section that does not exist is refused, like every other
+    // tampered state.
+    HeaderGeometry small;
+    small.setSectionCount(2);
+    QVERIFY(!small.restoreState(state));
+}
+
+void TestHeaderGeometry::sparseStretchKeepsTheLargeCountCompact()
+{
+    // Ten million sections, two of them sharing the leftover: two sparse entries, no
+    // per-section state, and the exact positions a renderer needs.
+    constexpr int kSections = 10'000'000;
+    constexpr int kSize = 100;
+    HeaderGeometry geometry(Qt::Vertical);
+    geometry.setSectionCount(kSections);
+    geometry.setDefaultSectionSize(kSize);
+    geometry.setSectionStretchFactor(1, 1.0);
+    geometry.setSectionStretchFactor(2, 3.0);
+    QVERIFY(geometry.isUniform());
+    QCOMPARE(geometry.storedSectionStateCount(), 2);
+
+    // The target is the extent the sections have to cover: the two participants share the
+    // 800 px the other 9'999'998 sections leave, which is 200 + 600 (1 : 3).
+    geometry.setStretchExtent(qint64(kSections) * kSize + 600);
+    QCOMPARE(geometry.storedSectionStateCount(), 2);
+    QVERIFY(geometry.isUniform());
+    QCOMPARE(geometry.sectionSize(0), kSize);
+    QCOMPARE(geometry.sectionSize(1), 200);
+    QCOMPARE(geometry.sectionSize(2), 600);
+    QCOMPARE(geometry.sectionSize(3), kSize);
+    QCOMPARE(geometry.totalExtent(), qint64(kSections) * kSize + 600);
+    QCOMPARE(geometry.sectionPosition(3), qint64(3) * kSize + 100 + 500);
+    QCOMPARE(geometry.sectionAtOffset(qint64(3) * kSize + 599), 2);
+    QCOMPARE(geometry.sectionAtOffset(qint64(3) * kSize + 600), 3);
+    QCOMPARE(geometry.sectionAtOffset(geometry.totalExtent() - 1), kSections - 1);
+
+    // A structural edit materialises the per-section state (here on a small geometry - the
+    // 10M one would allocate ten million Sections for the same assertion) and keeps the
+    // factors with the columns.
+    HeaderGeometry structural;
+    structural.setSectionCount(6);
+    structural.setSectionStretchFactor(2, 2.0);
+    structural.setStretchExtent(600);
+    QCOMPARE(structural.sectionSize(2), 100);    // the extent is exactly the sum: no leftover
+    structural.setSectionHidden(0, true);
+    QCOMPARE(structural.storedSectionStateCount(), 6);
+    QCOMPARE(structural.sectionStretchFactor(2), 2.0);
+    QCOMPARE(structural.sectionSize(2), 200);    // the hidden column frees its 100 px
+    QCOMPARE(structural.totalExtent(), qint64(600));
 }
 QTEST_APPLESS_MAIN(TestHeaderGeometry)
 

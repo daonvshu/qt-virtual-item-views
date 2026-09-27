@@ -119,6 +119,7 @@ void VirtualHeaderView::setGeometryModel(HeaderGeometry *geometry)
     // like setLabelModel() does for the labels (P1.3 of the fourth review).
     if (m_adapter)
         m_adapter->setGeometryModel(m_geometry.data());
+    syncStretchExtent();
     relayout();
 }
 
@@ -270,6 +271,30 @@ void VirtualHeaderView::setPaneOffset(qint64 offset)
         return;
     m_paneOffset = offset;
     relayout();
+}
+
+void VirtualHeaderView::setSectionStretchFactor(int logicalIndex, qreal factor)
+{
+    if (!m_geometry) {
+        qWarning("VirtualHeaderView::setSectionStretchFactor(): no geometry model");
+        return;
+    }
+    m_geometry->setSectionStretchFactor(logicalIndex, factor);
+}
+
+qreal VirtualHeaderView::sectionStretchFactor(int logicalIndex) const
+{
+    return m_geometry ? m_geometry->sectionStretchFactor(logicalIndex) : 0.0;
+}
+
+void VirtualHeaderView::syncStretchExtent()
+{
+    // A table marks every renderer it drives with setViewportOrigin() and hands the
+    // stretch target to the geometry itself (it knows the pane width there); a header
+    // nobody drives *is* the extent.
+    if (m_viewportOriginSet || !m_geometry)
+        return;
+    m_geometry->setStretchExtent(axisExtent());
 }
 
 void VirtualHeaderView::setSectionAnimationEnabled(bool enabled)
@@ -1312,6 +1337,7 @@ void VirtualHeaderView::keyPressEvent(QKeyEvent *event)
 void VirtualHeaderView::resizeEvent(QResizeEvent *event)
 {
     QWidget::resizeEvent(event);
+    syncStretchExtent();
     relayout();
 }
 

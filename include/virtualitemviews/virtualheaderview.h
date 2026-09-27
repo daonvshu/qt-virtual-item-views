@@ -104,6 +104,18 @@ public:
     /// it an order change is applied at once, so a programmatic reorder never animates
     /// unless the application asks for it.
     void setSectionMoveAnimated(bool animated) override { m_animateOrderChange = animated; }
+
+    /// Share of the leftover extent a section takes (see
+    /// HeaderGeometry::setSectionStretchFactor()): 1 : 2 : 1 makes the third section twice
+    /// the width of the first, and 0 - the default - a section that keeps its own size.
+    ///
+    /// The renderer only forwards: the widths live in HeaderGeometry, so the body follows
+    /// every frame. Whoever owns the geometry still has to name the extent the sections
+    /// fill - a VirtualTableView does that for its columns, and a *standalone* renderer
+    /// keeps it equal to its own axis extent (a header inside a table is marked by
+    /// setViewportOrigin() and leaves the target to the table).
+    void setSectionStretchFactor(int logicalIndex, qreal factor);
+    qreal sectionStretchFactor(int logicalIndex) const;
     /// Tells the renderer that the section order does **not** belong to it: a committed
     /// drag then reports where the section would land (sectionMoveRequested()) instead
     /// of moving HeaderGeometry.
@@ -210,6 +222,9 @@ private:
     /// Re-binds the materialized sections in the logical range [first, last] so a widget
     /// that is already on screen picks up a changed label or state.
     void rebindMaterializedSections(int first, int last);
+    /// Keeps a standalone renderer's stretch target on its own axis extent (a table sets
+    /// the target itself - see setSectionStretchFactor()).
+    void syncStretchExtent();
     void relayout();
     void recycleAllSections();
     /// Value sectionPos() returns for a section this widget does not show. A pane

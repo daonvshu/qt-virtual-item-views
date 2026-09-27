@@ -13,8 +13,8 @@
 | `VirtualListView`：固定高度 + 动态高度（估计值 + 测量反馈） | 已实现 |
 | `VirtualTableView`（v0.4 Table MVP，Row Widget Mode） | 已实现 |
 | `HeaderGeometry`：列宽/顺序/隐藏/排序状态的唯一事实来源（§14/§45.10） | 已实现 |
-| `LabelHeaderView`（1.0 起的默认表头，**两个方向**）：Widget 表头 + 只画 label 的 `LabelHeaderAdapter`，用当前样式画成原生样子（section/箭头与 `NativeHeaderView` 逐像素一致）；列表头默认带拖动换序、section 过渡与"整列一起动"，行号条默认带拖动改行高与拖动换行（`rowMoveRequested` + `model()->moveRows()`） | 已实现 |
-| `NativeHeaderView`：QHeaderView 与 HeaderGeometry 双向同步（无信号回环）；不再是默认（列表头与行号条都是 widget 渲染器），可显式安装作对照 | 已实现 |
+| `LabelHeaderView`（1.0 起的默认表头，**两个方向**）：Widget 表头 + 只画 label 的 `LabelHeaderAdapter`，用当前样式画成原生样子（section/箭头与原生的 `QHeaderView` 逐像素一致，删掉 `NativeHeaderView` 前做过 parity 验证）；列表头默认带拖动换序、section 过渡与"整列一起动"，行号条默认带拖动改行高与拖动换行（`rowMoveRequested` + `model()->moveRows()`） | 已实现 |
+| `HeaderGeometry` 的比例分配（1.0）：`setColumnStretchFactor()` 让固定宽度之外的列按 1 : 2 : 1 这样的比例分掉剩余宽度（`setStretchLastColumn()` 是"最后一列吃掉剩余"的退化形式），比例与算出的宽度都写在几何里，表头/body/pane 克隆/accessibility 自动一致；拖动列边界即固定该列 | 已实现 |
 | `HeaderGeometry` 的三层表示（1.0）：uniform（count + default，O(1)）/ uniform + 稀疏尺寸覆盖（行边界拖拽）/ indexed（顺序、可见性、增删）；`storedSectionStateCount()` 让"千万行均匀表没有每行状态"可断言 | 已实现 |
 | `VirtualHeaderView` + `HeaderWidgetAdapter`（§17-§19）：每个可见 section 一个真实 QWidget，只 materialize 可见列 + 横向 overscan + pinned | 已实现 |
 | 表头动画（§23/§24）：committed geometry 与 visual geometry 分离 —— 拖动列（`VirtualHeaderView`：拖动距离阈值、被拖列跟随指针、**邻居同曲线平滑让位**、松手一次提交）、或显式请求的换序（`moveColumn(..., MoveAnimation::Animate)`）由渲染器滑到新位置（默认 300 ms、OutCubic，`setHeaderAnimationDuration()` 可调、0 关闭），**整列跟着 section 一起走**（`setColumnFollowsHeaderVisual()`，默认开；只跟 x，committed 几何始终是唯一事实来源）；程序化换序默认**即时**，resize / 滚动 / pane 变化保持逐帧同步，native 表头渲染器忽略该设置 | 已实现 |

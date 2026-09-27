@@ -48,6 +48,7 @@ void HeaderGeometry::setSectionCount(int count)
         while (!m_sparseKeys.isEmpty() && m_sparseKeys.last() >= clamped) {
             m_sparseKeys.removeLast();
             m_sparseSizes.removeLast();
+            m_sparseFactors.removeLast();
         }
         rebuildSparsePrefix();
         m_uniformCount = clamped;
@@ -58,6 +59,7 @@ void HeaderGeometry::setSectionCount(int count)
         }
         invalidateCaches();
         emit sectionCountChanged(clamped);
+        applyStretch();
         emitGeometryChanged();
         return;
     }
@@ -103,6 +105,7 @@ void HeaderGeometry::setSectionCount(int count)
 
     invalidateCaches();
     emit sectionCountChanged(clamped);
+    applyStretch();
     emitGeometryChanged();
 }
 
@@ -120,11 +123,15 @@ void HeaderGeometry::densify()
         const int logical = m_sparseKeys.at(index);
         if (logical >= 0 && logical < count) {
             m_sections[logical].size = m_sparseSizes.at(index);
-            m_sections[logical].explicitSize = true;
+            m_sections[logical].stretchFactor = m_sparseFactors.at(index);
+            // A stretching section's size is derived from the extent, not a size the user
+            // asked for, so it does not become an explicit one on the way.
+            m_sections[logical].explicitSize = m_sparseFactors.at(index) <= 0.0;
         }
     }
     m_sparseKeys.clear();
     m_sparseSizes.clear();
+    m_sparseFactors.clear();
     m_sparseDeltaPrefix.clear();
     m_visualToLogical.resize(count);
     for (int visual = 0; visual < count; ++visual)
@@ -167,11 +174,15 @@ qint64 HeaderGeometry::sparseDeltaBefore(int logicalIndex) const
 void HeaderGeometry::setSparseSize(int logicalIndex, int size)
 {
     const int index = sparseIndexOf(logicalIndex);
-    if (size == m_defaultSectionSize) {
+    // An entry has to stay while it carries a stretch factor: the factor belongs to the
+    // section even when the size it happens to have right now *is* the default.
+    const bool stretching = index >= 0 && m_sparseFactors.at(index) > 0.0;
+    if (size == m_defaultSectionSize && !stretching) {
         if (index < 0)
             return;                     // already the default: nothing is stored
         m_sparseKeys.remove(index);
         m_sparseSizes.remove(index);
+        m_sparseFactors.remove(index);
     } else if (index >= 0) {
         if (m_sparseSizes.at(index) == size)
             return;
@@ -181,8 +192,73 @@ void HeaderGeometry::setSparseSize(int logicalIndex, int size)
         const int slot = int(at - m_sparseKeys.cbegin());
         m_sparseKeys.insert(slot, logicalIndex);
         m_sparseSizes.insert(slot, size);
+        m_sparseFactors.insert(slot, 0.0);
     }
     rebuildSparsePrefix();
+}
+
+void HeaderGeometry::setSparseFactor(int logicalIndex, qreal factor)
+{
+    const int index = sparseIndexOf(logicalIndex);
+    if (factor <= 0.0) {
+        if (index < 0)
+            return;
+        m_sparseFactors[index] = 0.0;
+        if (m_sparseSizes.at(index) == m_defaultSectionSize) {
+            m_sparseKeys.remove(index);
+            m_sparseSizes.remove(index);
+            m_sparseFactors.remove(index);
+        }
+    } else if (index >= 0) {
+        if (m_sparseFactors.at(index) == factor)
+            return;
+        m_sparseFactors[index] = factor;
+    } else {
+        const auto at = std::lower_bound(m_sparseKeys.cbegin(), m_sparseKeys.cend(), logicalIndex);
+        const int slot = int(at - m_sparseKeys.cbegin());
+        m_sparseKeys.insert(slot, logicalIndex);
+        m_sparseSizes.insert(slot, m_defaultSectionSize);
+        m_sparseFactors.insert(slot, factor);
+    }
+    // Only sizes feed the delta prefix, and the factor itself never moves a position.
+    rebuildSparsePrefix();
+}
+
+int HeaderGeometry::sparseSlotFor(int logicalIndex)
+{
+    const int index = sparseIndexOf(logicalIndex);
+    if (index >= 0)
+        return index;
+    const auto at = std::lower_bound(m_sparseKeys.cbegin(), m_sparseKeys.cend(), logicalIndex);
+    const int slot = int(at - m_sparseKeys.cbegin());
+    m_sparseKeys.insert(slot, logicalIndex);
+    m_sparseSizes.insert(slot, m_defaultSectionSize);
+    m_sparseFactors.insert(slot, 0.0);
+    return slot;
+}
+
+void HeaderGeometry::pruneSparseList()
+{
+    QVector<int> keys;
+    QVector<int> sizes;
+    QVector<qreal> factors;
+    keys.reserve(m_sparseKeys.size());
+    sizes.reserve(m_sparseSizes.size());
+    factors.reserve(m_sparseFactors.size());
+    for (int index = 0; index < m_sparseKeys.size(); ++index) {
+        const bool exceptional = m_sparseSizes.at(index) != m_defaultSectionSize
+            || m_sparseFactors.at(index) > 0.0;
+        if (!exceptional)
+            continue;
+        keys.append(m_sparseKeys.at(index));
+        sizes.append(m_sparseSizes.at(index));
+        factors.append(m_sparseFactors.at(index));
+    }
+    if (keys.size() == m_sparseKeys.size())
+        return;
+    m_sparseKeys = keys;
+    m_sparseSizes = sizes;
+    m_sparseFactors = factors;
 }
 
 void HeaderGeometry::rebuildIndexMaps()
@@ -248,6 +324,7 @@ void HeaderGeometry::insertLogicalSections(int first, int count)
 
     invalidateCaches();
     emit sectionCountChanged(sectionCount());
+    applyStretch();
     emitGeometryChanged();
 }
 
@@ -295,6 +372,7 @@ void HeaderGeometry::removeLogicalSections(int first, int count)
 
     invalidateCaches();
     emit sectionCountChanged(sectionCount());
+    applyStretch();
     emitGeometryChanged();
 }
 
@@ -384,30 +462,55 @@ void HeaderGeometry::resizeSection(int logicalIndex, int size)
         // set - this is the row-boundary drag at ten million rows (§5/§12).
         const int index = sparseIndexOf(logicalIndex);
         const int previous = index >= 0 ? m_sparseSizes.at(index) : m_defaultSectionSize;
-        if (previous == clamped)
+        // Dragging a section's edge takes it out of the stretch pass: from now on its
+        // width is the one the user dragged (QHeaderView's Stretch -> Interactive).
+        const bool wasStretching = index >= 0 && m_sparseFactors.at(index) > 0.0;
+        if (wasStretching)
+            setSparseFactor(logicalIndex, 0.0);
+        if (previous == clamped) {
+            if (wasStretching) {
+                invalidateCaches();
+                applyStretch();      // the remaining participants share what it gave up
+                emitGeometryChanged();
+            }
             return;
+        }
         setSparseSize(logicalIndex, clamped);
         invalidateCaches();
         emit sectionResized(logicalIndex, previous, clamped);
+        applyStretch();
         emitGeometryChanged();
         return;
     }
     densify();
     Section &section = m_sections[logicalIndex];
     const int previous = section.size;
+    const bool wasStretching = section.stretchFactor > 0.0;
+    section.stretchFactor = 0.0;
     section.explicitSize = true;
-    if (previous == clamped)
+    if (previous == clamped) {
+        if (wasStretching) {
+            invalidateCaches();
+            applyStretch();
+            emitGeometryChanged();
+        }
         return;
+    }
     section.size = clamped;
     invalidateCaches();
     emit sectionResized(logicalIndex, previous, clamped);
+    applyStretch();
     emitGeometryChanged();
 }
 
 bool HeaderGeometry::isSectionSizeExplicit(int logicalIndex) const
 {
-    if (m_uniformCount > 0)
-        return sparseIndexOf(logicalIndex) >= 0;
+    if (m_uniformCount > 0) {
+        // A stretching entry keeps the section's size in the sparse list but the size is
+        // derived from the extent, so it is not an explicit one.
+        const int index = sparseIndexOf(logicalIndex);
+        return index >= 0 && m_sparseFactors.at(index) <= 0.0;
+    }
     const Section *section = sectionAt(logicalIndex);
     return section && section->explicitSize;
 }
@@ -426,6 +529,7 @@ void HeaderGeometry::clearExplicitSectionSize(int logicalIndex)
         setSparseSize(logicalIndex, m_defaultSectionSize);
         invalidateCaches();
         emit sectionResized(logicalIndex, previous, m_defaultSectionSize);
+        applyStretch();
         emitGeometryChanged();
         return;
     }
@@ -437,10 +541,15 @@ void HeaderGeometry::clearExplicitSectionSizes()
     if (m_uniformCount > 0) {
         if (m_sparseKeys.isEmpty())
             return;
+        // The sparse list *is* the explicit state, so forgetting it drops the stretch
+        // factors stored in it as well - the sections go back to the default size and to
+        // being fixed.
         m_sparseKeys.clear();
         m_sparseSizes.clear();
+        m_sparseFactors.clear();
         m_sparseDeltaPrefix.clear();
         invalidateCaches();
+        applyStretch();
         emit bulkGeometryChanged();
         emitGeometryChanged();
         return;
@@ -454,6 +563,7 @@ void HeaderGeometry::clearExplicitSectionSizes()
     }
     if (changed)
         emit bulkGeometryChanged();
+    applyStretch();
 }
 void HeaderGeometry::setDefaultSectionSize(int size)
 {
@@ -467,6 +577,7 @@ void HeaderGeometry::setDefaultSectionSize(int size)
         rebuildSparsePrefix();
         invalidateCaches();
         emit bulkGeometryChanged();
+        applyStretch();
         emitGeometryChanged();
         return;
     }
@@ -476,6 +587,7 @@ void HeaderGeometry::setDefaultSectionSize(int size)
     }
     invalidateCaches();
     emit bulkGeometryChanged();
+    applyStretch();
     emitGeometryChanged();
 }
 
@@ -525,6 +637,7 @@ void HeaderGeometry::clampSectionsToTheSizeRange()
         for (const QPair<int, QPair<int, int>> &entry : clampedOverrides)
             emit sectionResized(entry.first, entry.second.first, entry.second.second);
         emit bulkGeometryChanged();
+        applyStretch();
         emitGeometryChanged();
         return;
     }
@@ -552,6 +665,7 @@ void HeaderGeometry::clampSectionsToTheSizeRange()
     for (const QPair<int, QPair<int, int>> &entry : resized)
         emit sectionResized(entry.first, entry.second.first, entry.second.second);
     emit bulkGeometryChanged();
+    applyStretch();
     emitGeometryChanged();
 }
 
@@ -714,6 +828,7 @@ void HeaderGeometry::moveSection(int fromVisualIndex, int toVisualIndex)
 
     invalidateCaches();
     emit sectionMoved(logical, fromVisualIndex, toVisualIndex);
+    applyStretch();     // "the last visible section" may have become a different one
     emitGeometryChanged();
 }
 
@@ -765,6 +880,7 @@ void HeaderGeometry::moveLogicalSections(int start, int count, int destination)
     // A model-side move renames many sections at once and has no granular signal of its own
     // (unlike a resize or a visibility toggle), so renderers are told to re-read everything.
     emit bulkGeometryChanged();
+    applyStretch();
     emitGeometryChanged();
 }
 
@@ -790,6 +906,7 @@ void HeaderGeometry::setSectionHidden(int logicalIndex, bool hidden)
     ++m_orderRevision;
     invalidateCaches();
     emit sectionVisibilityChanged(logicalIndex, !hidden);
+    applyStretch();     // a hidden section leaves the pass and frees its share
     emitGeometryChanged();
 }
 
@@ -811,6 +928,7 @@ void HeaderGeometry::setAllSectionsHidden(bool hidden)
         return;
     ++m_orderRevision;
     invalidateCaches();
+    applyStretch();
     emitGeometryChanged();
 }
 
@@ -926,9 +1044,202 @@ void HeaderGeometry::setStretchLastSection(bool stretch)
     if (m_stretchLastSection == stretch)
         return;
     m_stretchLastSection = stretch;
+    applyStretch();
     emit stretchLastSectionChanged(stretch);
     emit bulkGeometryChanged();
     emitGeometryChanged();
+}
+
+void HeaderGeometry::setStretchExtent(qint64 extent)
+{
+    const qint64 clamped = qMax<qint64>(0, extent);
+    if (m_stretchExtent == clamped)
+        return;
+    m_stretchExtent = clamped;
+    // Resizing the view is the one change that only moves the target: the sections are
+    // re-measured against it, and a geometry without participants stays untouched.
+    if (applyStretch())
+        emitGeometryChanged();
+}
+
+qreal HeaderGeometry::sectionStretchFactor(int logicalIndex) const
+{
+    if (m_uniformCount > 0) {
+        const int index = sparseIndexOf(logicalIndex);
+        return index >= 0 ? m_sparseFactors.at(index) : 0.0;
+    }
+    const Section *section = sectionAt(logicalIndex);
+    return section ? section->stretchFactor : 0.0;
+}
+
+void HeaderGeometry::setSectionStretchFactor(int logicalIndex, qreal factor)
+{
+    if (!isValidLogical(logicalIndex))
+        return;
+    const qreal wanted = factor > 0.0 ? factor : 0.0;
+    if (qFuzzyCompare(sectionStretchFactor(logicalIndex) + 1.0, wanted + 1.0))
+        return;
+
+    if (m_uniformCount > 0) {
+        // One sparse entry per stretching section: "ten million rows, two of them share
+        // the leftover" costs two entries, not ten million Sections.
+        setSparseFactor(logicalIndex, wanted);
+    } else {
+        Section &section = m_sections[logicalIndex];
+        section.stretchFactor = wanted;
+        if (wanted > 0.0)
+            section.explicitSize = false;   // the size is derived from now on
+    }
+    invalidateCaches();
+    applyStretch();
+    emit sectionStretchFactorChanged(logicalIndex, wanted);
+    emitGeometryChanged();
+}
+
+bool HeaderGeometry::hasStretchSections() const
+{
+    // Without a target nothing stretches, whatever factors are configured: a caller can
+    // read this as "the stretch state can change a size right now".
+    if (m_stretchExtent <= 0)
+        return false;
+    if (m_stretchLastSection)
+        return visibleSectionCount() > 0;
+    if (m_uniformCount > 0) {
+        for (qreal factor : m_sparseFactors) {
+            if (factor > 0.0)
+                return true;
+        }
+        return false;
+    }
+    for (const Section &section : m_sections) {
+        if (!section.hidden && section.stretchFactor > 0.0)
+            return true;
+    }
+    return false;
+}
+
+bool HeaderGeometry::applyStretch()
+{
+    if (m_stretchExtent <= 0 || sectionCount() <= 0)
+        return false;
+
+    // 1. The participants, in visual order (that is what makes "the last one absorbs the
+    //    rounding" - and stretchLastSection()'s "last visible" - mean the same thing for
+    //    both representations), plus the extent the other visible sections keep.
+    QVector<int> participants;
+    QVector<qreal> factors;
+    QVector<int> sizes;
+    qint64 fixedTotal = 0;
+
+    if (m_uniformCount > 0) {
+        // Uniform: identity order and no hidden section, so the sparse list already is the
+        // list of exceptional sections and the pass never walks the section count.
+        for (int index = 0; index < m_sparseKeys.size(); ++index) {
+            if (m_sparseFactors.at(index) <= 0.0)
+                continue;
+            participants.append(m_sparseKeys.at(index));
+            factors.append(m_sparseFactors.at(index));
+            sizes.append(m_sparseSizes.at(index));
+        }
+        if (m_stretchLastSection) {
+            const int last = m_uniformCount - 1;
+            if (!participants.contains(last)) {
+                const int index = sparseIndexOf(last);
+                participants.append(last);
+                factors.append(1.0);
+                sizes.append(index >= 0 ? m_sparseSizes.at(index) : m_defaultSectionSize);
+            }
+        }
+        if (participants.isEmpty())
+            return false;
+        qint64 participantTotal = 0;
+        for (int size : sizes)
+            participantTotal += size;
+        fixedTotal = totalExtent() - participantTotal;
+    } else {
+        if (m_cacheDirty)
+            rebuildCaches();
+        for (int visual = 0; visual < m_visibleLogicalOrder.size(); ++visual) {
+            const int logical = m_visibleLogicalOrder.at(visual);
+            const Section &section = m_sections.at(logical);
+            if (section.stretchFactor <= 0.0)
+                continue;
+            participants.append(logical);
+            factors.append(section.stretchFactor);
+            sizes.append(section.size);
+        }
+        if (m_stretchLastSection && !m_visibleLogicalOrder.isEmpty()) {
+            const int last = m_visibleLogicalOrder.last();
+            if (!participants.contains(last)) {
+                participants.append(last);
+                factors.append(1.0);
+                sizes.append(m_sections.at(last).size);
+            }
+        }
+        if (participants.isEmpty())
+            return false;
+        qint64 participantTotal = 0;
+        for (int size : sizes)
+            participantTotal += size;
+        fixedTotal = totalExtent() - participantTotal;
+    }
+
+    qreal totalFactor = 0.0;
+    for (qreal factor : factors)
+        totalFactor += factor;
+    if (totalFactor <= 0.0)
+        return false;
+
+    // 2. Split the leftover. The last participant takes the remainder of the integer
+    //    division, so the stretched sections add up to the extent whenever the size range
+    //    allows it; the range itself still wins (a minimum can make them not fit).
+    const qint64 leftover = m_stretchExtent - fixedTotal;
+    const qint64 maxSize = qint64(std::numeric_limits<int>::max());
+    QVector<int> targets;
+    targets.resize(participants.size());
+    qint64 assigned = 0;
+    for (int index = 0; index + 1 < participants.size(); ++index) {
+        const qint64 share = leftover > 0
+            ? qint64(qreal(leftover) * factors.at(index) / totalFactor)
+            : 0;
+        targets[index] = clampedSize(int(qBound<qint64>(qint64(0), share, maxSize)));
+        assigned += targets.at(index);
+    }
+    targets[participants.size() - 1]
+        = clampedSize(int(qBound<qint64>(qint64(0), leftover - assigned, maxSize)));
+
+    // 3. Write the sizes that moved.
+    bool changed = false;
+    if (m_uniformCount > 0) {
+        for (int index = 0; index < participants.size(); ++index) {
+            if (targets.at(index) == sizes.at(index))
+                continue;
+            m_sparseSizes[sparseSlotFor(participants.at(index))] = targets.at(index);
+            changed = true;
+        }
+        if (changed) {
+            pruneSparseList();
+            rebuildSparsePrefix();
+        }
+    } else {
+        for (int index = 0; index < participants.size(); ++index) {
+            Section &section = m_sections[participants.at(index)];
+            if (section.size == targets.at(index))
+                continue;
+            section.size = targets.at(index);
+            changed = true;
+        }
+    }
+    if (!changed)
+        return false;
+
+    invalidateCaches();
+    for (int index = 0; index < participants.size(); ++index) {
+        if (targets.at(index) == sizes.at(index))
+            continue;
+        emit sectionResized(participants.at(index), sizes.at(index), targets.at(index));
+    }
+    return true;
 }
 
 // ---------------------------------------------------------------------------
@@ -973,6 +1284,27 @@ QByteArray HeaderGeometry::saveState() const
     }
     stream << visualOrder;
     stream << sizes << hidden;
+    // Stretch factors are stored sparsely (logical index -> factor): a uniform geometry
+    // with two stretching sections would otherwise write a factor per section.
+    QVector<qint32> stretchKeys;
+    QVector<qreal> stretchFactors;
+    if (m_uniformCount > 0) {
+        for (int index = 0; index < m_sparseKeys.size(); ++index) {
+            if (m_sparseFactors.at(index) <= 0.0)
+                continue;
+            stretchKeys.append(qint32(m_sparseKeys.at(index)));
+            stretchFactors.append(m_sparseFactors.at(index));
+        }
+    } else {
+        for (int logical = 0; logical < sectionCount(); ++logical) {
+            const qreal factor = m_sections.at(logical).stretchFactor;
+            if (factor <= 0.0)
+                continue;
+            stretchKeys.append(qint32(logical));
+            stretchFactors.append(factor);
+        }
+    }
+    stream << stretchKeys << stretchFactors;
 
     stream << qint32(m_defaultSectionSize) << qint32(m_minimumSectionSize)
            << qint32(m_maximumSectionSize);
@@ -1012,13 +1344,19 @@ bool HeaderGeometry::restoreState(const QByteArray &state)
     qint32 sortSection = -1;
     qint32 sortOrder = 0;
     quint8 stretch = 0;
-    stream >> visualOrder >> sizes >> hidden >> defaultSize >> minimumSize >> maximumSize
-           >> offset >> sortSection >> sortOrder >> stretch;
+    QVector<qint32> stretchKeys;
+    QVector<qreal> stretchFactors;
+    stream >> visualOrder >> sizes >> hidden >> stretchKeys >> stretchFactors >> defaultSize
+           >> minimumSize >> maximumSize >> offset >> sortSection >> sortOrder >> stretch;
     if (stream.status() != QDataStream::Ok)
         return false;
     if (visualOrder.size() != count || sizes.size() != count || hidden.size() != count
-        || !isValidVisualOrder(visualOrder))
+        || stretchKeys.size() != stretchFactors.size() || !isValidVisualOrder(visualOrder))
         return false;
+    for (qint32 logical : stretchKeys) {
+        if (!isValidLogical(int(logical)))
+            return false;
+    }
 
     // The restored state is per-section: a uniform geometry gets its stored state now
     // (the count matches, so this is the representation the state describes).
@@ -1032,6 +1370,13 @@ bool HeaderGeometry::restoreState(const QByteArray &state)
         section.size = clampedSize(int(sizes.at(logical)));
         section.hidden = hidden.at(logical) != 0;
         section.explicitSize = true;
+        section.stretchFactor = 0.0;
+    }
+    for (int index = 0; index < stretchKeys.size(); ++index) {
+        Section &section = m_sections[int(stretchKeys.at(index))];
+        section.stretchFactor = stretchFactors.at(index);
+        if (section.stretchFactor > 0.0)
+            section.explicitSize = false;
     }
     m_visualToLogical = visualOrder;
     for (int visual = 0; visual < m_visualToLogical.size(); ++visual)
@@ -1054,6 +1399,8 @@ bool HeaderGeometry::restoreState(const QByteArray &state)
         emit sortIndicatorChanged(m_sortIndicatorSection, m_sortIndicatorOrder);
     }
     emit bulkGeometryChanged();
+    // The restored sizes are measured against the extent of the view that restores them.
+    applyStretch();
     emitGeometryChanged();
     return true;
 }

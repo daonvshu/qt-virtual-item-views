@@ -160,12 +160,42 @@ public:
     void setSortIndicator(int logicalIndex, Qt::SortOrder order);
 
     // -- stretch -------------------------------------------------------------
+    /// Whether the last visible section absorbs what the other sections leave.
     bool stretchLastSection() const { return m_stretchLastSection; }
     void setStretchLastSection(bool stretch);
 
+    /// Extent the visible sections should fill, in content coordinates: a table hands in
+    /// the width its columns have to cover (the viewport, frozen columns included), a
+    /// standalone renderer its own axis extent. 0 - the default - means "no target", and
+    /// the whole stretch state below stays inert: every section keeps its own size, which
+    /// is what a geometry nobody configures for stretching does.
+    ///
+    /// Deliberately *not* part of saveState(): the extent belongs to the view showing the
+    /// sections, not to the column state an application saved, so a restored state is
+    /// measured against the view that restores it.
+    qint64 stretchExtent() const { return m_stretchExtent; }
+    void setStretchExtent(qint64 extent);
+
+    /// Share of the leftover extent: the visible sections with a factor > 0 split
+    /// `stretchExtent() - <the sizes the other visible sections keep>` in proportion to
+    /// their factors, so 1 : 2 : 1 gives the third section twice the width of the first.
+    /// 0 (the default) is a section that keeps its own size.
+    ///
+    /// The size of a stretching section is *derived*: isSectionSizeExplicit() stays false
+    /// for it and a user resize - the header's drag on a section edge, i.e.
+    /// resizeSection() - clears the factor, so the section becomes fixed at the dragged
+    /// width. That is QHeaderView's "Stretch becomes Interactive" rule, except that the
+    /// body follows the geometry here, so both stay the same width.
+    qreal sectionStretchFactor(int logicalIndex) const;
+    void setSectionStretchFactor(int logicalIndex, qreal factor);
+    /// True while at least one section stretches, i.e. while a stretch pass can change
+    /// anything (stretchLastSection() counts as one participant).
+    bool hasStretchSections() const;
+
     // -- persistence (§32) ---------------------------------------------------
     static constexpr quint32 kStateMagic = 0x56495648; // 'VIVH'
-    static constexpr quint32 kStateVersion = 1;
+    /// Version 2 added the per-section stretch factors at the end of the stream.
+    static constexpr quint32 kStateVersion = 2;
     QByteArray saveState() const;
     /// Restores sizes, order, visibility, sort state and offset. Returns false
     /// (and changes nothing) when the state is invalid or belongs to a different
@@ -179,6 +209,9 @@ signals:
     void sectionCountChanged(int count);
     void sortIndicatorChanged(int logicalIndex, Qt::SortOrder order);
     void stretchLastSectionChanged(bool stretch);
+    /// The stretch factor of \a logicalIndex changed (a resize that clears one is
+    /// reported through the size signals instead, not as a factor change).
+    void sectionStretchFactorChanged(int logicalIndex, qreal factor);
     /// The viewport offset changed; headers only have to shift, no per-section
     /// work is required (keeps scrolling O(1) instead of O(sections)).
     void offsetChanged(qint64 offset);
@@ -198,8 +231,15 @@ private:
         int size = 0;
         bool hidden = false;
         bool explicitSize = false;
+        /// Share of the leftover extent; 0 = the section keeps its own size.
+        qreal stretchFactor = 0.0;
     };
 
+    /// Recomputes the sizes of the stretching sections from m_stretchExtent and returns
+    /// true when at least one size changed (the caches are invalidated and the size
+    /// signals emitted here; the caller still reports its own geometry change). A no-op
+    /// while no extent is set or no section is a participant.
+    bool applyStretch();
     void rebuildCaches() const;
     /// Rebuilds logicalIndex -> visualIndex from the visual order.
     void rebuildIndexMaps();
@@ -209,8 +249,17 @@ private:
     /// Index of \a logicalIndex in the sparse override list, or -1.
     int sparseIndexOf(int logicalIndex) const;
     /// Adds/updates/removes the size override of \a logicalIndex (a size equal to the
-    /// default removes it) and rebuilds the delta prefix. O(k log k) with k overrides.
+    /// default removes it, unless a stretch factor keeps the entry alive) and rebuilds the
+    /// delta prefix. O(k log k) with k overrides.
     void setSparseSize(int logicalIndex, int size);
+    /// Adds/updates/removes the stretch factor of \a logicalIndex (like setSparseSize(),
+    /// an entry survives as long as either its size or its factor is exceptional).
+    void setSparseFactor(int logicalIndex, qreal factor);
+    /// Slot of a sparse entry, inserting one at the default size / without a factor when
+    /// the logical index has none yet. Used by the stretch pass, which writes sizes.
+    int sparseSlotFor(int logicalIndex);
+    /// Drops sparse entries that are neither a size override nor a stretch factor.
+    void pruneSparseList();
     /// Sum of the size deltas of every override *before* \a logicalIndex.
     qint64 sparseDeltaBefore(int logicalIndex) const;
     /// Rebuilds the delta prefix of the override list (positions and the extent).
@@ -239,6 +288,8 @@ private:
     /// materialise the indexed representation.
     QVector<int> m_sparseKeys;
     QVector<int> m_sparseSizes;
+    /// Stretch factors of the same entries (0 = the entry is only a size override).
+    QVector<qreal> m_sparseFactors;
     /// Delta prefix of the overrides: entry j is the sum of the deltas of the keys before
     /// key j, so the position of key j is `key*default + m_sparseDeltaPrefix[j]` and the
     /// last entry is the total delta of the geometry.
@@ -253,6 +304,8 @@ private:
     int m_sortIndicatorSection = -1;
     Qt::SortOrder m_sortIndicatorOrder = Qt::AscendingOrder;
     bool m_stretchLastSection = false;
+    /// Extent the visible sections should fill; 0 = no stretch target (see setStretchExtent()).
+    qint64 m_stretchExtent = 0;
     /// See orderRevision().
     quint32 m_orderRevision = 1;
 

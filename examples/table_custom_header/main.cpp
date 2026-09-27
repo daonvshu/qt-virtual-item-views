@@ -400,6 +400,26 @@ int main(int argc, char **argv)
         frozen->setChecked(true);
     }
 
+    // 库能力：固定列宽之外的列按比例分掉剩余宽度（§9 of docs/table-layout.md）。
+    auto *stretchCheck = new QCheckBox(QStringLiteral("比例分剩余宽度"), &window);
+    stretchCheck->setToolTip(QStringLiteral(
+        "setColumnStretchFactor()：第 0 列固定 80 px，其余列按 2 : 1 : 1 : … 分掉剩余宽度。\n"
+        "拖动某一列的边界后该列变成固定宽度（QHeaderView 的 Stretch -> Interactive），\n"
+        "取消勾选则回到每个列各自的固定宽度。"));
+    toolbar->addWidget(stretchCheck);
+    QObject::connect(stretchCheck, &QCheckBox::toggled, view, [view, columnCount](bool on) {
+        if (on) {
+            view->setColumnWidth(0, 80);
+            for (int column = 1; column < columnCount; ++column)
+                view->setColumnStretchFactor(column, column == 1 ? 2.0 : 1.0);
+            return;
+        }
+        for (int column = 0; column < columnCount; ++column) {
+            view->setColumnStretchFactor(column, 0.0);
+            view->setColumnWidth(column, view->defaultColumnWidth());
+        }
+    });
+
     auto *status = new QLabel(&window);
     window.statusBar()->addPermanentWidget(status);
     const auto updateStatus = [&]() {

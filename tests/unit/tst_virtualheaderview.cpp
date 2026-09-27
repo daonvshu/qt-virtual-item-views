@@ -255,6 +255,7 @@ private slots:
     void bodyFollowsAFrozenPaneDrag();
     void cellsFollowTheHeaderWhileTheBodyDoes();
     void frozenPaneHeaderKeepsItsColumnsAfterAReorder();
+    void standaloneHeaderStretchesItsSectionsToItsWidth();
 
 private:
     QStandardItemModel *m_model = nullptr;
@@ -1632,6 +1633,45 @@ void TestVirtualHeaderView::frozenPaneHeaderKeepsItsColumnsAfterAReorder()
     fixture.view.setFrozenColumns(QVector<int>({0, 1}));
     QApplication::processEvents();
     checkSectionsMatchTheBody();
+}
+
+void TestVirtualHeaderView::standaloneHeaderStretchesItsSectionsToItsWidth()
+{
+    // A standalone header has no table to name the extent, so it keeps the geometry's
+    // stretch target on its own width: the sections that keep their size take theirs first
+    // and the factors split the rest.
+    QCOMPARE(m_geometry->stretchExtent(), qint64(m_header->width()));
+
+    m_geometry->setSectionCount(4);
+    m_header->setSectionStretchFactor(1, 1.0);
+    m_header->setSectionStretchFactor(2, 2.0);
+    QCOMPARE(m_header->sectionStretchFactor(2), 2.0);
+    QCOMPARE(m_geometry->sectionStretchFactor(1), 1.0);
+    QApplication::processEvents();
+
+    const qint64 leftover = m_header->width() - 2 * qint64(kSectionWidth);
+    QVERIFY(leftover > 0);
+    QCOMPARE(m_geometry->sectionSize(0), kSectionWidth);
+    QCOMPARE(m_geometry->sectionSize(1), int(leftover / 3));
+    QCOMPARE(m_geometry->sectionSize(2), int(leftover - leftover / 3));
+    QCOMPARE(m_geometry->sectionSize(3), kSectionWidth);
+    QCOMPARE(m_geometry->totalExtent(), qint64(m_header->width()));
+
+    // The section widgets come from the geometry like everywhere else - the renderer keeps
+    // no width of its own, it just reads what the stretch pass committed.
+    QWidget *middle = m_header->sectionWidget(2);
+    QVERIFY(middle != nullptr);
+    QCOMPARE(middle->x(), m_geometry->sectionSize(0) + m_geometry->sectionSize(1));
+    QCOMPARE(middle->width(), m_geometry->sectionSize(2));
+
+    // A resize moves the target and re-distributes the same factors.
+    m_header->resize(m_header->width() + 300, kHeaderHeight);
+    QApplication::processEvents();
+    QCOMPARE(m_geometry->stretchExtent(), qint64(m_header->width()));
+    QCOMPARE(m_geometry->totalExtent(), qint64(m_header->width()));
+    const qint64 wider = m_header->width() - 2 * qint64(kSectionWidth);
+    QCOMPARE(m_geometry->sectionSize(1), int(wider / 3));
+    QCOMPARE(m_geometry->sectionSize(2), int(wider - wider / 3));
 }
 
 QTEST_MAIN(TestVirtualHeaderView)
