@@ -257,6 +257,7 @@ private slots:
     void frozenPaneHeaderKeepsItsColumnsAfterAReorder();
     void standaloneHeaderStretchesItsSectionsToItsWidth();
     void sectionDragIsOffByDefault();
+    void sectionResizeIsOnByDefaultAndCanBeTurnedOff();
 
 private:
     QStandardItemModel *m_model = nullptr;
@@ -1736,6 +1737,75 @@ void TestVirtualHeaderView::sectionDragIsOffByDefault()
     sendMouse(&header, QEvent::MouseButtonRelease, QPoint(kSectionWidth + 30, kHeaderHeight / 2),
               Qt::LeftButton, Qt::NoButton);
     QCOMPARE(geometry.sectionSize(1), before + 30);
+}
+
+void TestVirtualHeaderView::sectionResizeIsOnByDefaultAndCanBeTurnedOff()
+{
+    // Resizing a section is the gesture a header is expected to have, so it is on by
+    // default; switching it off only removes the gesture (and its cursor) - the size API
+    // keeps working, and the section edge stops being a handle.
+    VirtualHeaderView header(Qt::Horizontal);
+    header.resize(400, kHeaderHeight);
+    HeaderGeometry geometry(Qt::Horizontal, this);
+    geometry.setSectionCount(6);
+    geometry.setDefaultSectionSize(kSectionWidth);
+    SectionAdapter adapter;
+    header.setAdapter(&adapter);
+    header.setGeometryModel(&geometry);
+    header.setLabelModel(m_model);
+    header.show();
+    QApplication::processEvents();
+
+    QVERIFY(header.isSectionResizeEnabled());
+    // The trailing edge of section 1 (the boundary is the *previous* section's edge, so the
+    // handle is named by the section whose size it changes). Recomputed every time: the
+    // boundary moves with each resize.
+    const auto trailingEdge = [&geometry]() {
+        return int(geometry.sectionPosition(1)) + geometry.sectionSize(1) - 1;
+    };
+    const auto dragBoundary = [&header, &geometry](int delta) {
+        const int edge = int(geometry.sectionPosition(1)) + geometry.sectionSize(1) - 1;
+        sendMouse(&header, QEvent::MouseButtonPress, QPoint(edge, kHeaderHeight / 2),
+                  Qt::LeftButton, Qt::LeftButton);
+        sendMouse(&header, QEvent::MouseMove, QPoint(edge + delta, kHeaderHeight / 2),
+                  Qt::NoButton, Qt::LeftButton);
+        sendMouse(&header, QEvent::MouseButtonRelease, QPoint(edge + delta, kHeaderHeight / 2),
+                  Qt::LeftButton, Qt::NoButton);
+        QApplication::processEvents();
+    };
+
+    const int before = geometry.sectionSize(1);
+    dragBoundary(40);
+    QCOMPARE(geometry.sectionSize(1), before + 40);
+
+    // The cursor announces the gesture on an edge ...
+    const auto moveInto = [&header](const QPoint &local) {
+        QMouseEvent event(QEvent::MouseMove, local, header.mapToGlobal(local), Qt::NoButton,
+                          Qt::NoButton, Qt::NoModifier);
+        QApplication::sendEvent(&header, &event);
+    };
+    moveInto(QPoint(trailingEdge(), kHeaderHeight / 2));
+    QCOMPARE(header.cursor().shape(), Qt::SplitHCursor);
+
+    // ... and stops announcing it (and stops resizing) once the switch is off.
+    header.setSectionResizeEnabled(false);
+    QVERIFY(!header.isSectionResizeEnabled());
+    moveInto(QPoint(trailingEdge(), kHeaderHeight / 2));
+    QCOMPARE(header.cursor().shape(), Qt::ArrowCursor);
+    const int pinned = geometry.sectionSize(1);
+    dragBoundary(40);
+    QCOMPARE(geometry.sectionSize(1), pinned);
+
+    // The size API is not the gesture: it keeps working.
+    geometry.resizeSection(1, pinned + 12);
+    QCOMPARE(geometry.sectionSize(1), pinned + 12);
+
+    // ... and back on, the very same drag resizes again.
+    header.setSectionResizeEnabled(true);
+    moveInto(QPoint(trailingEdge(), kHeaderHeight / 2));
+    QCOMPARE(header.cursor().shape(), Qt::SplitHCursor);
+    dragBoundary(40);
+    QCOMPARE(geometry.sectionSize(1), pinned + 12 + 40);
 }
 
 QTEST_MAIN(TestVirtualHeaderView)

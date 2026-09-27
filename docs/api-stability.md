@@ -51,12 +51,12 @@
 | --- | --- | --- |
 | `virtuallistview.h` | A | 冻结。`setRootIndex()` + `ListLayout` 访问器；条目少、语义清楚 |
 | `virtualtreeview.h` | A | 冻结。展开/折叠、缩进、分支装饰、`expanded()`/`collapsed()` 信号 |
-| `virtualtableview.h` | A | 冻结。表头/列状态/冻结列与 pane/行高/span/排序/持久化/两种 materialization 模式；表头拖动换序是选项（`setColumnDragEnabled()` / `setVerticalHeaderDragEnabled()`，1.0 起默认关闭） |
+| `virtualtableview.h` | A | 冻结。表头/列状态/冻结列与 pane/行高/span/排序/持久化/两种 materialization 模式；表头手势四个开关：拖动换序 `setColumnDragEnabled()` / `setVerticalHeaderDragEnabled()`（1.0 起默认关闭），改尺寸 `setColumnResizeEnabled()` / `setVerticalHeaderResizeEnabled()`（默认开） |
 | `widgetadapter.h` | A | 冻结。4 个虚函数是最小契约 |
 | `tablewidgetadapter.h` | A | 冻结。`TableWidgetAdapter`/`CellWidgetAdapter`/`ColumnHost`/`TableRowLayoutContext`/`TableSpanContext`；`layoutRowWidget()` 有默认空实现（可选项，不是"接受但忽略"） |
 | `headergeometry.h` | A | 冻结。列宽/顺序/隐藏/排序/偏移的唯一事实来源 + `saveState()/restoreState()` |
 | `headerview.h` | A（`HeaderViewInterface` 为 B） | 冻结。`HeaderViewInterface` 现在住在这里（1.0 起；它的旧家 `nativeheaderview.h` 随原生渲染器一起退场，见 roadmap 决策记录）。带默认实现的可选钩子（`setPaneFilter()`/`setPaneOffset()`/动画三件套/视觉几何三件套 `sectionVisualX()`、`hasVisualSectionGeometry()`、`setVisualGeometryCallback()`）**允许被渲染器忽略**，这是刻意的渲染器能力约定，已在文档写明 |
-| `virtualheaderview.h` | B | 冻结。section 动画与拖动重排的视觉几何是公开契约（[header-animation.md](header-animation.md)），拖动本身是选项（`setSectionDragEnabled()`，默认关闭）；`paneCacheRebuildCount()` / `materializationVisits()` 是 C 层诊断 |
+| `virtualheaderview.h` | B | 冻结。section 动画与拖动重排的视觉几何是公开契约（[header-animation.md](header-animation.md)），手势可开关：`setSectionDragEnabled()`（默认关闭）与 `setSectionResizeEnabled()`（默认开）；`paneCacheRebuildCount()` / `materializationVisits()` 是 C 层诊断 |
 | `reorderabletablemodel.h` | A | 冻结（1.0 加）。行顺序可被拖动改写的模型基类：`sourceRow()` / `viewRow()` / `moveRows()` / `insertRows()` / `removeRows()` / `resetRowOrder()` / `rowOrderChanged()`；`data()` / `headerData()` 留给子类 |
 | `labelheaderview.h` | A（`LabelHeaderSection` / `LabelHeaderAdapter`）| 冻结。默认表头：`LabelHeaderView` = `VirtualHeaderView` + 只画 label 的 adapter；`labelText()` / `sortOrderFor()` 是带默认实现、可覆写的"改文字/改箭头来源"钩子，属于规则 1 的加法 |
 | `headerwidgetadapter.h` | B | 冻结。`sectionType()` / `createSection()` / `bindSection()` / `unbindSection()` 是 4 个核心虚函数；`setLabelModel()` / `setGeometryModel()` 是带默认实现的**可选协作者钩子**（第三、第四轮审查加的，默认什么都不做），属于规则 1 说的"加法" |

@@ -410,6 +410,11 @@ table->setColumnDragEnabled(true);       // 列：写进 HeaderGeometry，body �
 // 打开开关会内部实例化一个 ReorderableTableModel（应用自己的模型优先，之后不再实例化）。
 table->setVerticalHeaderDragEnabled(true);
 
+// 拖动 section 边界改列宽 / 行高（默认开，与 QHeaderView 的 Interactive 一致）：
+// 关掉只是去掉手势，setColumnWidth() / setRowHeight() 照常能用
+table->setColumnResizeEnabled(false);
+table->setVerticalHeaderResizeEnabled(false);
+
 // 换序动画：只有"换序"需要过渡（提交后 body 的几何立刻到位，表头滑过去；
 // 拖动/过渡期间整列跟着 section 一起走，只跟 x，committed 几何始终权威）
 table->setHeaderAnimationDuration(300);  // 0 = 关闭

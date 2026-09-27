@@ -743,6 +743,7 @@ private slots:
     void aBrokenStateLeavesTheViewUntouched();
     void columnsShareTheLeftoverWidthByStretchFactor();
     void headerDragsAreOffByDefault();
+    void headerResizeIsOnByDefaultAndCanBeTurnedOff();
     void theRowDragInstantiatesAModelOnlyWithoutOne();
 
 private:
@@ -2583,6 +2584,82 @@ void TestVirtualTableView::theRowDragInstantiatesAModelOnlyWithoutOne()
         view.setColumnDragEnabled(true);
         QVERIFY(view.model() == nullptr);
     }
+}
+
+void TestVirtualTableView::headerResizeIsOnByDefaultAndCanBeTurnedOff()
+{
+    // 列宽 / 行高调整默认开着（表头本来就该能调尺寸），两个开关只关掉手势。
+    QVERIFY(m_view->isColumnResizeEnabled());
+    QVERIFY(m_view->isVerticalHeaderResizeEnabled());
+    auto *header = dynamic_cast<VirtualHeaderView *>(m_view->horizontalHeader());
+    auto *strip = dynamic_cast<VirtualHeaderView *>(m_view->verticalHeader());
+    QVERIFY(header != nullptr);
+    QVERIFY(strip != nullptr);
+    QVERIFY(header->isSectionResizeEnabled());
+    QVERIFY(strip->isSectionResizeEnabled());
+
+    // 列：拖列 1 的**后边界**（-1 px 落在 ±3 px 判定里）→ 改列 1 的宽度。
+    const int column = 1;
+    const int columnBefore = m_view->columnWidth(column);
+    QWidget *headerWidget = header->headerWidget();
+    const int headerY = headerWidget->height() / 2;
+    const auto dragColumnEdge = [&](int delta) {
+        // The trailing edge: the boundary belongs to the section *before* it, so this is the
+        // handle of `column`. Recomputed per drag - it moves with every resize.
+        const int edge = m_view->columnGeometry(column).viewportX + m_view->columnWidth(column) - 1;
+        sendMouseTo(headerWidget, QEvent::MouseButtonPress, QPoint(edge, headerY),
+                    Qt::LeftButton, Qt::LeftButton);
+        sendMouseTo(headerWidget, QEvent::MouseMove, QPoint(edge + delta, headerY),
+                    Qt::NoButton, Qt::LeftButton);
+        sendMouseTo(headerWidget, QEvent::MouseButtonRelease, QPoint(edge + delta, headerY),
+                    Qt::LeftButton, Qt::NoButton);
+        QApplication::processEvents();
+    };
+    dragColumnEdge(30);
+    QCOMPARE(m_view->columnWidth(column), columnBefore + 30);
+
+    // 行：同一套手势在行号条上改行高。
+    const int row = 2;
+    const int rowBefore = m_view->rowHeight(row);
+    QWidget *stripWidget = strip->headerWidget();
+    const auto dragRowEdge = [&](int delta) {
+        const int edge = m_view->visualRect(m_model->index(row, 0)).bottom() - 1;
+        sendMouseTo(stripWidget, QEvent::MouseButtonPress, QPoint(4, edge), Qt::LeftButton,
+                    Qt::LeftButton);
+        sendMouseTo(stripWidget, QEvent::MouseMove, QPoint(4, edge + delta), Qt::NoButton,
+                    Qt::LeftButton);
+        sendMouseTo(stripWidget, QEvent::MouseButtonRelease, QPoint(4, edge + delta),
+                    Qt::LeftButton, Qt::NoButton);
+        QApplication::processEvents();
+    };
+    dragRowEdge(20);
+    QCOMPARE(m_view->rowHeight(row), rowBefore + 20);
+
+    // 关掉以后同一个手势不再改尺寸（光标也不再是"可调"），但尺寸 API 照常。
+    m_view->setColumnResizeEnabled(false);
+    m_view->setVerticalHeaderResizeEnabled(false);
+    QVERIFY(!header->isSectionResizeEnabled());
+    QVERIFY(!strip->isSectionResizeEnabled());
+    const int columnPinned = m_view->columnWidth(column);
+    const int rowPinned = m_view->rowHeight(row);
+    dragColumnEdge(40);
+    dragRowEdge(40);
+    QCOMPARE(m_view->columnWidth(column), columnPinned);
+    QCOMPARE(m_view->rowHeight(row), rowPinned);
+
+    m_view->setColumnWidth(column, 150);
+    QCOMPARE(m_view->columnWidth(column), 150);
+    m_view->setRowHeight(row, rowPinned + 6);
+    QCOMPARE(m_view->rowHeight(row), rowPinned + 6);
+
+    // 再打开，同一个手势又能调。
+    m_view->setColumnResizeEnabled(true);
+    m_view->setVerticalHeaderResizeEnabled(true);
+    QVERIFY(header->isSectionResizeEnabled());
+    QVERIFY(strip->isSectionResizeEnabled());
+    const int columnAgain = m_view->columnWidth(column);
+    dragColumnEdge(-10);
+    QCOMPARE(m_view->columnWidth(column), columnAgain - 10);
 }
 
 QTEST_MAIN(TestVirtualTableView)

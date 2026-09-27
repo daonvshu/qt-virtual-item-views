@@ -250,7 +250,7 @@ void VirtualTableView::ensureHeaders()
         m_verticalHeader->headerWidget()->setParent(this);
         watchRowStrip(m_verticalHeader);
     }
-    applyHeaderDragSettings();
+    applyHeaderGestureSettings();
 }
 
 void VirtualTableView::setHorizontalHeader(HeaderViewInterface *header)
@@ -299,7 +299,7 @@ void VirtualTableView::setHorizontalHeader(HeaderViewInterface *header)
     m_horizontalHeader->headerWidget()->setParent(this);
     m_horizontalHeader->setViewportOrigin(viewport()->geometry().topLeft());
     applyHeaderAnimationSettings();
-    applyHeaderDragSettings();
+    applyHeaderGestureSettings();
     layoutHeaderWidgets();
     syncHeaderPanes();
 }
@@ -327,7 +327,7 @@ void VirtualTableView::setVerticalHeader(HeaderViewInterface *header)
     m_verticalHeader->setLabelModel(model());
     m_verticalHeader->headerWidget()->setParent(this);
     watchRowStrip(m_verticalHeader);
-    applyHeaderDragSettings();
+    applyHeaderGestureSettings();
     syncVerticalPaneHeaders();
     layoutHeaderWidgets();
 }
@@ -793,7 +793,7 @@ void VirtualTableView::setColumnDragEnabled(bool enabled)
     if (m_columnDragEnabled == enabled)
         return;
     m_columnDragEnabled = enabled;
-    applyHeaderDragSettings();
+    applyHeaderGestureSettings();
 }
 
 void VirtualTableView::setVerticalHeaderDragEnabled(bool enabled)
@@ -810,24 +810,43 @@ void VirtualTableView::setVerticalHeaderDragEnabled(bool enabled)
         m_internalModel = internal;
         setModel(internal);
     }
-    applyHeaderDragSettings();
+    applyHeaderGestureSettings();
 }
 
-void VirtualTableView::applyHeaderDragSettings()
+void VirtualTableView::setColumnResizeEnabled(bool enabled)
 {
-    const auto apply = [](HeaderViewInterface *header, bool enabled) {
-        if (auto *widgetHeader = dynamic_cast<VirtualHeaderView *>(header))
-            widgetHeader->setSectionDragEnabled(enabled);
+    if (m_columnResizeEnabled == enabled)
+        return;
+    m_columnResizeEnabled = enabled;
+    applyHeaderGestureSettings();
+}
+
+void VirtualTableView::setVerticalHeaderResizeEnabled(bool enabled)
+{
+    if (m_verticalHeaderResizeEnabled == enabled)
+        return;
+    m_verticalHeaderResizeEnabled = enabled;
+    applyHeaderGestureSettings();
+}
+
+void VirtualTableView::applyHeaderGestureSettings()
+{
+    const auto apply = [](HeaderViewInterface *header, bool dragEnabled, bool resizeEnabled) {
+        auto *widgetHeader = dynamic_cast<VirtualHeaderView *>(header);
+        if (!widgetHeader)
+            return;
+        widgetHeader->setSectionDragEnabled(dragEnabled);
+        widgetHeader->setSectionResizeEnabled(resizeEnabled);
     };
     // The column side: the installed header and every pane clone (a drag inside a frozen
     // pane reorders like one in the scrolling pane).
-    apply(m_horizontalHeader, m_columnDragEnabled);
+    apply(m_horizontalHeader, m_columnDragEnabled, m_columnResizeEnabled);
     for (HeaderViewInterface *paneHeader : m_paneHeaders)
-        apply(paneHeader, m_columnDragEnabled);
+        apply(paneHeader, m_columnDragEnabled, m_columnResizeEnabled);
     // The row side: the strip and the frozen-row bands, which are strips of their own.
-    apply(m_verticalHeader, m_verticalHeaderDragEnabled);
-    apply(m_frozenTopRowsHeader, m_verticalHeaderDragEnabled);
-    apply(m_frozenBottomRowsHeader, m_verticalHeaderDragEnabled);
+    apply(m_verticalHeader, m_verticalHeaderDragEnabled, m_verticalHeaderResizeEnabled);
+    apply(m_frozenTopRowsHeader, m_verticalHeaderDragEnabled, m_verticalHeaderResizeEnabled);
+    apply(m_frozenBottomRowsHeader, m_verticalHeaderDragEnabled, m_verticalHeaderResizeEnabled);
 }
 
 // ---------------------------------------------------------------------------
@@ -1218,7 +1237,7 @@ void VirtualTableView::syncHeaderPanes()
         m_horizontalHeader->clearPaneFilter();
     }
     applyHeaderAnimationSettings();
-    applyHeaderDragSettings();
+    applyHeaderGestureSettings();
 }
 
 void VirtualTableView::dropDerivedPaneHeaders()
@@ -1352,7 +1371,7 @@ void VirtualTableView::syncVerticalPaneHeaders()
         if (qobject_cast<QHeaderView *>(m_verticalHeader->headerWidget()))
             m_verticalHeader->setPaneOffset(HeaderViewInterface::kFollowGeometryOffset);
     }
-    applyHeaderDragSettings();
+    applyHeaderGestureSettings();
 }
 
 void VirtualTableView::syncPaneSeparatorLines()

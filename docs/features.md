@@ -13,7 +13,7 @@
 | `VirtualListView`：固定高度 + 动态高度（估计值 + 测量反馈） | 已实现 |
 | `VirtualTableView`（v0.4 Table MVP，Row Widget Mode） | 已实现 |
 | `HeaderGeometry`：列宽/顺序/隐藏/排序状态的唯一事实来源（§14/§45.10） | 已实现 |
-| `LabelHeaderView`（1.0 起的默认表头，**两个方向**）：Widget 表头 + 只画 label 的 `LabelHeaderAdapter`，用当前样式画成原生样子（section/箭头与原生的 `QHeaderView` 逐像素一致，删掉 `NativeHeaderView` 前做过 parity 验证）；section 过渡、"整列一起动"、拖动改尺寸默认就有，**拖动换序默认关闭**（`setColumnDragEnabled()` / `setVerticalHeaderDragEnabled()`），行号条拖动换行序还需要一个记录顺序的模型（见下一行） | 已实现 |
+| `LabelHeaderView`（1.0 起的默认表头，**两个方向**）：Widget 表头 + 只画 label 的 `LabelHeaderAdapter`，用当前样式画成原生样子（section/箭头与原生的 `QHeaderView` 逐像素一致，删掉 `NativeHeaderView` 前做过 parity 验证）；section 过渡、"整列一起动"、拖动改尺寸默认就有（改尺寸可用 `setSectionResizeEnabled(false)` / `setColumnResizeEnabled(false)` / `setVerticalHeaderResizeEnabled(false)` 关掉），**拖动换序默认关闭**（`setColumnDragEnabled()` / `setVerticalHeaderDragEnabled()`），行号条拖动换行序还需要一个记录顺序的模型（见下一行） | 已实现 |
 | `ReorderableTableModel`（1.0）：行顺序可被视图改写的模型基类 —— "视图行 → 数据行"的顺序记录 + `moveRows()`/`insertRows()`/`removeRows()`/`resetRowOrder()`/`rowOrderChanged()`，子类只提供 `data()`/`headerData()` 并按 `sourceRow()` 取稳定身份。行号条拖动换行序（`setVerticalHeaderDragEnabled(true)`）需要它或自己实现 `moveRows()`；视图没有模型时开关会内部实例化一个（应用自己的模型优先，不再实例化） | 已实现 |
 | `HeaderGeometry` 的比例分配（1.0）：`setColumnStretchFactor()` 让固定宽度之外的列按 1 : 2 : 1 这样的比例分掉剩余宽度（`setStretchLastColumn()` 是"最后一列吃掉剩余"的退化形式），比例与算出的宽度都写在几何里，表头/body/pane 克隆/accessibility 自动一致；拖动列边界即固定该列 | 已实现 |
 | `HeaderGeometry` 的三层表示（1.0）：uniform（count + default，O(1)）/ uniform + 稀疏尺寸覆盖（行边界拖拽）/ indexed（顺序、可见性、增删）；`storedSectionStateCount()` 让"千万行均匀表没有每行状态"可断言 | 已实现 |

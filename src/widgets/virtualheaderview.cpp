@@ -1142,7 +1142,9 @@ int VirtualHeaderView::sectionAt(const QPoint &pos) const
 
 int VirtualHeaderView::resizeEdgeAt(const QPoint &pos) const
 {
-    if (!m_geometry)
+    // Switched off means the edge is not a handle at all: no resize gesture and no resize
+    // cursor (the press then behaves like one anywhere else in the section).
+    if (!m_geometry || !m_sectionResizeEnabled)
         return -1;
     for (int logical : materializedSections()) {
         const int left = sectionPos(logical);
@@ -1159,6 +1161,17 @@ int VirtualHeaderView::resizeEdgeAt(const QPoint &pos) const
         }
     }
     return -1;
+}
+
+void VirtualHeaderView::setSectionResizeEnabled(bool enabled)
+{
+    if (m_sectionResizeEnabled == enabled)
+        return;
+    m_sectionResizeEnabled = enabled;
+    // A hover that is already on an edge has to lose (or gain) the resize cursor right
+    // away - the cursor is what tells the user the gesture exists.
+    if (m_resizeSection < 0 && !m_dragging)
+        updateCursor(mapFromGlobal(QCursor::pos()));
 }
 
 void VirtualHeaderView::mousePressEvent(QMouseEvent *event)

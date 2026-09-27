@@ -125,6 +125,15 @@ public:
     void setVerticalHeaderDragEnabled(bool enabled);
     bool isVerticalHeaderDragEnabled() const { return m_verticalHeaderDragEnabled; }
 
+    /// Drag a section edge to resize it - the column width, or the row height when the
+    /// switch is about the row-number strip. **On by default** (a header is expected to be
+    /// resizable, like QHeaderView's Interactive mode); switching it off leaves the size
+    /// APIs untouched and only removes the gesture (and the resize cursor).
+    void setColumnResizeEnabled(bool enabled);
+    bool isColumnResizeEnabled() const { return m_columnResizeEnabled; }
+    void setVerticalHeaderResizeEnabled(bool enabled);
+    bool isVerticalHeaderResizeEnabled() const { return m_verticalHeaderResizeEnabled; }
+
     // -- geometry ------------------------------------------------------------
     int columnCount() const;
     ColumnGeometry columnGeometry(int logicalIndex) const;
@@ -493,11 +502,11 @@ private:
     void watchRowStrip(HeaderViewInterface *strip);
     /// Row move of a strip drag: report it, then ask the model to move the rows.
     void moveRowsForStripDrag(int fromRow, int toRow);
-    /// Forwards the two drag switches to the installed renderers - the installed headers,
-    /// the pane clones and the frozen-row bands. A renderer that is not a
-    /// VirtualHeaderView (a business' own HeaderViewInterface) has no such switch and
-    /// keeps its own behaviour.
-    void applyHeaderDragSettings();
+    /// Forwards the gesture switches (drag / resize, both axes) to the installed renderers
+    /// - the installed headers, the pane clones and the frozen-row bands. A renderer that
+    /// is not a VirtualHeaderView (a business' own HeaderViewInterface) has no such
+    /// switches and keeps its own behaviour.
+    void applyHeaderGestureSettings();
     /// Row-number strip of a frozen row pane (§31 row direction): same kind as the
     /// installed vertical header. Null when the installed one cannot be cloned (a custom
     /// renderer that is not a native header), in which case the strip stays single.
@@ -668,6 +677,9 @@ private:
     /// Opt-in drag gestures (see setColumnDragEnabled() / setVerticalHeaderDragEnabled()).
     bool m_columnDragEnabled = false;
     bool m_verticalHeaderDragEnabled = false;
+    /// Resize gestures, on unless switched off (see setColumnResizeEnabled()).
+    bool m_columnResizeEnabled = true;
+    bool m_verticalHeaderResizeEnabled = true;
     /// Set once the application installed a model of its own: from then on the view never
     /// instantiates the row-drag model, whatever the switch does.
     bool m_applicationModelSeen = false;

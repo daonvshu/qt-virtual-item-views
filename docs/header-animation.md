@@ -94,7 +94,9 @@ Cell Widget Mode 的 cell 控件与 span）。两点要知道：
 * **拖动（§22）**：按下只记录，指针越过 `QApplication::startDragDistance()` 才算拖动（所以"点一下"和一两个像素的抖动仍然是点击/排序，不是换序——这条曾经是缺陷：旧实现一滑进邻居就提交一次，既不能连续拖，也会把点击误判成拖动）。拖动期间 `HeaderGeometry` 一个字节都不动，只改渲染器的视觉几何；松手时**一次提交**，然后由上面的过渡从预览位置收敛到 committed 位置。拖动被限制在同一个 pane 的列内（pane 表头只显示自己那几列）。按 Esc 取消，不提交。
   **这个手势是选项**（1.0 起默认关闭）：`VirtualHeaderView::setSectionDragEnabled(true)`，表格侧是
   `setColumnDragEnabled(true)`（列）/ `setVerticalHeaderDragEnabled(true)`（行号条，另见
-  [table-layout.md](table-layout.md) §6 的模型约定）。改尺寸与点击排序不受它影响。
+  [table-layout.md](table-layout.md) §6 的模型约定）。改尺寸与点击排序不受它影响——改尺寸有
+  自己的开关（`setSectionResizeEnabled()` / `setColumnResizeEnabled()` /
+  `setVerticalHeaderResizeEnabled()`，默认开）。
 * **让位也是动画**：插入槽位变化时，被拖的列**精确**跟随指针，其他列用**同一套缓动**（OutCubic + 默认 300 ms）滑向自己的新槽位，而不是瞬移。让位由 `QVariantAnimation` 驱动，指针停住时照样走完；过渡中途槽位再变则以"当前所在位置"为起点重新开始，不会回跳。`setSectionAnimationEnabled(false)` 或时长为 0 时让位与其它过渡一样即刻生效。
 * **动画中再次换序**：从当前视觉位置继续滑向新的 committed 位置，不回跳。
 * **关闭动画**：当前正在飞行的 section 立刻落到 committed 位置（不会卡在中间）。

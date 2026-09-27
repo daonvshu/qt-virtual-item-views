@@ -210,10 +210,12 @@ section 显什么"而不用写 section 控件。
   所有权（`HeaderWidgetAdapter` 可用 `takeOwnership` 交给渲染器，但默认不接管）。几何、标签模型与
   adapter 都要比表头活得久；几何与标签模型是 `QPointer` 观察的，业务先删它们不会造成悬空解引用
   （表头会当作"没有几何 / 没有模型"处理），但 adapter 不是 QObject，删早了就是未定义行为。
-* **交互**：离 section 边缘 ±3 px 按住拖动 = 改列宽（§21/§25，默认就有）；按住 section 拖过
-  拖动距离阈值 = 重排（§22，**默认关闭**，`setSectionDragEnabled(true)` 或表格侧
-  `setColumnDragEnabled(true)` 打开；拖动期间只有视觉预览 —— 整列跟着 section 一起走，松手才
-  提交一次，详见 [header-animation.md](header-animation.md)）；
+* **交互**：离 section 边缘 ±3 px 按住拖动 = 改列宽（§21/§25，**默认开**，可用
+  `setSectionResizeEnabled(false)` / 表格侧 `setColumnResizeEnabled(false)`、
+  `setVerticalHeaderResizeEnabled(false)` 关掉——关掉后边界不再是把手，光标也不再提示）；
+  按住 section 拖过拖动距离阈值 = 重排（§22，**默认关闭**，`setSectionDragEnabled(true)` 或
+  表格侧 `setColumnDragEnabled(true)` 打开；拖动期间只有视觉预览 —— 整列跟着 section 一起走，
+  松手才提交一次，详见 [header-animation.md](header-animation.md)）；
   单击 = 排序（§33）；子控件获得焦点或打开 popup 的 section 会被 pin，不回收（§36）。
 * **命中与光标（§25）**：section 是真控件、铺满整个表头，所以鼠标事件大多落在它们（以及业务塞进去
   的子控件）身上，而不是表头本身。渲染器在绑定 section 时对整棵子树打开鼠标跟踪并安装事件过滤器，

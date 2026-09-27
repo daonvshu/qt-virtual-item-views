@@ -129,6 +129,13 @@ public:
     /// gestures and are not affected by this switch.
     void setSectionDragEnabled(bool enabled) { m_sectionDragEnabled = enabled; }
     bool isSectionDragEnabled() const { return m_sectionDragEnabled; }
+    /// Resize a section by dragging its leading/trailing edge (both axes: column width,
+    /// row height). **On by default** - that is the gesture a header is expected to have
+    /// (QHeaderView's Interactive mode) - and off means the edge is not special any more:
+    /// the press behaves like one anywhere else in the section, and the resize cursor is
+    /// not shown. The size APIs (`setColumnWidth()` / `setRowHeight()`) are unaffected.
+    void setSectionResizeEnabled(bool enabled);
+    bool isSectionResizeEnabled() const { return m_sectionResizeEnabled; }
     /// Tells the renderer that the section order does **not** belong to it: a committed
     /// drag then reports where the section would land (sectionMoveRequested()) instead
     /// of moving HeaderGeometry.
@@ -399,6 +406,8 @@ private:
     bool m_sortInteractionEnabled = false;
     /// See setSectionDragEnabled(): the reorder gesture is opt-in.
     bool m_sectionDragEnabled = false;
+    /// See setSectionResizeEnabled(): resizing stays on unless it is switched off.
+    bool m_sectionResizeEnabled = true;
 
     int m_resizeSection = -1;
     int m_resizeStartSize = 0;
