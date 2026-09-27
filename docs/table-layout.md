@@ -268,3 +268,7 @@ table->setColumnStretchFactor(3, 1.0);
 * **表示的代价**：比例走的是 sparse 层——`HeaderGeometry` 仍是 uniform（千万行的行号条不会被
   物化），只有存了 factor 的那几列各占一条记录；`storedSectionStateCount()` 可以直接断言这一点
   （`tst_headergeometry::sparseStretchKeepsTheLargeCountCompact`）。
+
+示例：`examples/table_stretch_columns`（5 列的小表：第 0 列固定、其余按 2 : 4 : 1 : 1 分，
+工具栏可以换分配方式、首列宽度、`setStretchLastColumn()` 与冻结首列；状态栏实时显示每一列的
+宽度与"合计 = 视口"，`--check` 自检"正好填满 + 没有横向滚动 + 比例正确 + 拖动即固定"）。

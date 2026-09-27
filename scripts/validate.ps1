@@ -165,7 +165,7 @@ if ($QtBin.Count -gt 0) {
 $examples = @('simple_list', 'order_cards', 'dynamic_height', 'million_rows',
               'table_row_widgets', 'table_many_columns', 'tree_view',
               'table_custom_header', 'drag_drop', 'table_spans', 'table_panes',
-              'table_frozen_rows')
+              'table_frozen_rows', 'table_stretch_columns')
 
 $benchmarks = @(
     [pscustomobject]@{ Name = 'list 1M rows';  Args = @('--rows', '1000000', '--steps', '200') },
