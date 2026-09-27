@@ -94,6 +94,16 @@ Table 新增的只有：行/列两级几何、`HeaderGeometry`、二维可见区
   （v0.5 的 Widget Header 会解除这个上限）。
 * **拖动 = 显式行高**：拖动行号条分隔线写入 `setRowHeight()`；uniform 表会自动切换为
   variable（其余行保持原高度），`RowSizePolicy::ExplicitWins` 保证测量不会覆盖它。
+* **拖动换行序 = 请求模型**（1.0）：行号条拖动期间只有视觉预览（整行跟着行号走），松手后
+  渲染器发 `sectionMoveRequested(fromVisual, toVisual)`，表格转成
+  `VirtualTableView::rowMoveRequested()` 再调用
+  `model()->moveRows(QModelIndex(), from, 1, QModelIndex(), destination)` —— 行序是模型的，
+  行号条不自己改。**模型没实现 `moveRows()`**（`QAbstractTableModel` 的默认实现直接返回
+  false）时这次移动会被拒绝：预览回弹、行序与所有 section 位置保持原样。所以"行号条能拖但
+  落不到新位置"通常不是表头的默认值问题，而是模型侧少了 `moveRows()`；示例里
+  `examples/table_stretch_columns` 的 `OrderModel` 与 `examples/table_custom_header` 的
+  `WideModel` 都实现了它（把视图行映射到稳定的数据行，整行内容一起换位）。列的顺序正相反：
+  它属于 `HeaderGeometry`，拖动列松手就写进几何，不需要模型配合。
 * **单 section 应用**：`sectionResized` / `sectionVisibilityChanged` 只更新对应 section
   （O(1)），因此滚动与拖动列/行分隔线都不会退化成 O(总列数/总行数)。
 * **表头顺序同步**：列顺序的每次变化（`moveColumn()`、模型 `columnsMoved`、`restoreHeaderState()`、

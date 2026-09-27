@@ -1,14 +1,17 @@
 // 列宽比例分配示例（§9 of docs/table-layout.md）：固定宽度的列保持自己的宽度，
 // 其余列按比例分掉剩余宽度。列数少、总宽正好等于视口宽度，所以不会出现横向滚动。
 //
-// 想直接看到的三件事：
+// 想直接看到的几件事：
 //   1. 拖窗口宽度：比例不变，参与分配的列一起变宽/变窄，表头与 body 逐像素同步；
 //   2. 拖动某一列的边界：这一列变成固定宽度（QHeaderView 的 Stretch -> Interactive），
 //      剩下的列立刻重新分；
-//   3. "最后一列吃掉剩余宽度"（setStretchLastColumn(true)）是同一套机制的退化形式。
+//   3. "固定后两列"：固定宽度放在末尾也一样，比例只描述还在流动的列；
+//   4. 拖动左侧行号条换行序——行序属于模型，库只发 rowMoveRequested()，真正移动由
+//      模型的 moveRows() 完成（本示例的 OrderModel 实现了它）。
 //
 // 无人值守：
-//   --check              自检（总宽 = 视口宽、没有横向滚动、比例正确、拖动即固定）后退出
+//   --check              自检（总宽 = 视口宽、没有横向滚动、比例正确、拖动即固定、
+//                        固定后两列、换行序）后退出
 //   --snapshot <path>    导出 PNG 后退出
 //   --exit-after <ms>    毫秒后退出
 
@@ -36,7 +39,13 @@ constexpr int kRowHeight = 28;
 constexpr int kIndexWidth = 56;      // 第 0 列的固定宽度
 constexpr int kPlainWidth = 120;     // 不参与分配的列的固定宽度
 
-/// 5 列的小表：第 0 列（序号）固定，其余 4 列按比例分剩余宽度。
+/// 5 列的小表：第 0 列（行号）固定，其余 4 列按比例分剩余宽度。
+///
+/// 行序由模型持有（`m_order`：视图行 → 数据行），因为行号条拖动是"请求模型移动"：
+/// 渲染器只发 `sectionMoveRequested`，表格转成 `rowMoveRequested()` 再调 `moveRows()`。
+/// `data()` / `headerData()` 都按数据行取值，所以拖动行号条以后整行内容（连同行号标识）
+/// 一起换位，一眼就能看出移动真的生效了——`QAbstractTableModel` 的默认 `moveRows()`
+/// 只返回 false，什么都不会发生（那样拖动就只是预览一下然后回弹）。
 class OrderModel : public QAbstractTableModel
 {
 public:
@@ -51,13 +60,14 @@ public:
 
     explicit OrderModel(int rowCount, QObject *parent = nullptr)
         : QAbstractTableModel(parent)
-        , m_rowCount(qMax(1, rowCount))
     {
+        for (int row = 0; row < qMax(1, rowCount); ++row)
+            m_order.append(row);
     }
 
     int rowCount(const QModelIndex &parent = QModelIndex()) const override
     {
-        return parent.isValid() ? 0 : m_rowCount;
+        return parent.isValid() ? 0 : int(m_order.size());
     }
     int columnCount(const QModelIndex &parent = QModelIndex()) const override
     {
@@ -81,7 +91,8 @@ public:
         }
         if (role != Qt::DisplayRole)
             return QVariant();
-        const int row = index.row();
+        // 数据行（稳定身份）：换行序以后 view row 与它不再相等。
+        const int row = sourceRow(index.row());
         switch (index.column()) {
         case ColumnIndex:
             return row + 1;
@@ -110,13 +121,13 @@ public:
 
     QVariant headerData(int section, Qt::Orientation orientation, int role) const override
     {
-        if (role != Qt::DisplayRole)
+        if (role != Qt::DisplayRole || section < 0 || section >= m_order.size())
             return QVariant();
         if (orientation == Qt::Vertical)
-            return section + 1;
+            return QStringLiteral("R%1").arg(sourceRow(section) + 1);
         switch (section) {
         case ColumnIndex:
-            return QStringLiteral("#");
+            return QStringLiteral("行号");
         case ColumnOrder:
             return QStringLiteral("订单号");
         case ColumnProduct:
@@ -130,8 +141,40 @@ public:
         }
     }
 
+    /// 行号条拖动的落点：库先发 `rowMoveRequested()`，再调用这里。
+    ///
+    /// `destinationChild` 是 Qt 的"插到这一行之前"语义；往后面移时目的行要 +1，
+    /// 视图侧（`VirtualTableView::moveRowsForStripDrag()`）已经换算好了。
+    bool moveRows(const QModelIndex &sourceParent, int sourceRow, int count,
+                  const QModelIndex &destinationParent, int destinationChild) override
+    {
+        if (sourceParent.isValid() || destinationParent.isValid() || count <= 0 || sourceRow < 0
+            || sourceRow + count > m_order.size())
+            return false;
+        if (destinationChild < 0 || destinationChild > m_order.size())
+            return false;
+        if (destinationChild >= sourceRow && destinationChild <= sourceRow + count)
+            return false;   // 移到自己身上 = 没移动（Qt 的约定）
+        if (!beginMoveRows(sourceParent, sourceRow, sourceRow + count - 1, destinationParent,
+                           destinationChild))
+            return false;
+        QVector<int> moved;
+        for (int index = 0; index < count; ++index)
+            moved.append(m_order.at(sourceRow + index));
+        m_order.remove(sourceRow, count);
+        const int target =
+            destinationChild > sourceRow ? destinationChild - count : destinationChild;
+        for (int index = 0; index < count; ++index)
+            m_order.insert(target + index, moved.at(index));
+        endMoveRows();
+        return true;
+    }
+
+    /// 数据行（稳定身份）of a view row.
+    int sourceRow(int viewRow) const { return m_order.value(viewRow, viewRow); }
+
 private:
-    int m_rowCount = 0;
+    QVector<int> m_order;
 };
 
 /// 一行：每列一个 ColumnHost，框架负责定位（列宽来自 HeaderGeometry，业务不自己算 x）。
@@ -359,6 +402,31 @@ bool runCheck(viv::VirtualTableView &view)
         }
     }
 
+    // 6) 行号条拖动 = 请求模型换行序：库调用的正是 moveRows()，模型不给它就没法生效。
+    const auto rowId = [&view](int viewRow) {
+        return view.model()->index(viewRow, OrderModel::ColumnIndex).data().toInt();
+    };
+    const int firstId = rowId(0);
+    const int thirdId = rowId(2);
+    if (!view.model()->moveRows(QModelIndex(), 2, 1, QModelIndex(), 0)) {
+        fail(QStringLiteral("the model refused to move a row: is moveRows() implemented?"));
+    } else {
+        view.flushPendingRelayout();
+        if (rowId(0) != thirdId || rowId(1) != firstId) {
+            fail(QStringLiteral("the rows did not change order after the model moved one"));
+        }
+        if (view.model()->headerData(0, Qt::Vertical, Qt::DisplayRole).toString()
+            != QStringLiteral("R%1").arg(thirdId)) {
+            fail(QStringLiteral("the row strip does not label the moved row"));
+        }
+        // 移回原处，后面的断言仍然从原始行序开始。
+        view.model()->moveRows(QModelIndex(), 0, 1, QModelIndex(), 3);
+        view.flushPendingRelayout();
+        if (rowId(0) != firstId) {
+            fail(QStringLiteral("the row order was not restored"));
+        }
+    }
+
     std::printf("table_stretch_columns: check %s (viewport=%d widths=[%s] extent=%lld maxOffset=%lld)\n",
                 ok ? "PASSED" : "FAILED", view.viewport()->width(),
                 qPrintable(widthsText(view)), static_cast<long long>(view.horizontalContentExtent()),
@@ -480,6 +548,14 @@ int main(int argc, char **argv)
     QTimer::singleShot(0, &window, updateStatus);
 
     window.show();
+
+    // 行号条的拖动是"请求模型移动"：示例的 OrderModel 实现了 moveRows()，所以能真的换行序
+    // （模型不给的话，拖动只有预览，松手回弹）。
+    if (view->verticalHeader()) {
+        view->verticalHeader()->headerWidget()->setToolTip(QStringLiteral(
+            "拖动行号可以换行序：行号条只发 rowMoveRequested()，真正的移动由模型的 "
+            "moveRows() 完成。"));
+    }
 
     const QString snapshotPath = parser.value(snapshotOption);
     const int exitAfter = parser.value(exitAfterOption).toInt();
