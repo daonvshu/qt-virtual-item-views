@@ -1,13 +1,13 @@
 # 变更记录
 
 格式：每个版本一节，破坏性变更单独列在 `Breaking`。稳定性分级与冻结规则见
-[docs/api-stability.md](docs/api-stability.md)。
+[docs/history/api-stability.md](docs/history/api-stability.md)。
 
 ## 1.0.0 — 2026-09-25
 
 首个发布版本：List / Table（Row 与 Cell 两种模式）/ Tree，冻结列、行冻结、span、多滚动组、
 表头动画、拖放、accessibility、静态与动态库、安装包与一键验证。公开 API 的分级与冻结规则见
-[docs/api-stability.md](docs/api-stability.md)，ABI 与工具链矩阵见 [docs/abi.md](docs/abi.md)。
+[docs/history/api-stability.md](docs/history/api-stability.md)，ABI 与工具链矩阵见 [docs/history/abi.md](docs/history/abi.md)。
 
 ### Breaking（1.0 定稿前的内部收口）
 
@@ -24,22 +24,22 @@
 
 ### Added
 
-* `docs/api-stability.md`：公开 API 的四级分类（应用/扩展/诊断/私有）、冻结规则与复核清单。
+* `docs/history/api-stability.md`：公开 API 的四级分类（应用/扩展/诊断/私有）、冻结规则与复核清单。
 * `VirtualTableView::isVerticalHeaderShown()`：行号条**实际**是否上屏。`isVerticalHeaderVisible()`
   仍然只表示应用的请求，于是"变高模型超过镜像上限而临时隐藏"不再把请求本身改掉
-  （见 [docs/row-freezing.md](docs/row-freezing.md) §8；旧行为是内部调用
+  （见 [docs/history/row-freezing.md](docs/history/row-freezing.md) §8；旧行为是内部调用
   `setVerticalHeaderVisible(false)`，请求被吃掉且模型变小后不会恢复）。
 * `include/virtualitemviews/global.h` + `VIRTUALITEMVIEWS_EXPORT`：**静态库与动态库都支持**。
   `-DVIRTUALITEMVIEWS_BUILD_SHARED=ON` 产出 `bin/VirtualItemViews.dll` + `lib/VirtualItemViews.lib`；
   `VIRTUALITEMVIEWS_LIBRARY` / `VIRTUALITEMVIEWS_STATIC` 由 CMake 目标自动传播，业务代码不必手工
-  define。ABI 规则、SOVERSION 与支持矩阵见 [docs/abi.md](docs/abi.md)。
+  define。ABI 规则、SOVERSION 与支持矩阵见 [docs/history/abi.md](docs/history/abi.md)。
 * `tests/install/consumer/`：安装包的消费端冒烟测试（独立 CMake 工程，`find_package(VirtualItemViews)`
-  之后跑 28 项运行期自检）。README 新增「安装与消费」一节，`docs/abi.md` 补上装出来的目录布局。
+  之后跑 28 项运行期自检）。README 新增「安装与消费」一节，`docs/history/abi.md` 补上装出来的目录布局。
 * `scripts/validate.ps1`：一键验证。对每个 Qt kit × 库形态组合做 configure → `all` 构建 → CTest →
   12 个示例退出码 → benchmark 不变量 → 安装 + 消费端冒烟测试，退出码 = 失败步数。新增 `-Asan`
   开关：为每个 kit 额外建一个 MSVC AddressSanitizer 构建树（`-DCMAKE_CXX_FLAGS=/fsanitize=address`，
   运行期 `ASAN_OPTIONS=detect_leaks=0`，跳过基准与安装消费端），实测 Qt 6.11.2 与 5.15.2 的
-  28 个 CTest 目标 + 12 个示例全绿、无 ASan 报告（见 [docs/ci.md](docs/ci.md) §5）。
+  28 个 CTest 目标 + 12 个示例全绿、无 ASan 报告（见 [docs/history/ci.md](docs/history/ci.md) §5）。
   示例一步现在还会捕获输出并拒绝**任何库诊断**（库的 `qWarning` 一定带类名，如
   `VirtualTableView::setHorizontalHeader(): …`）：审查建议的 `QT_FATAL_WARNINGS=1` 在
   offscreen 平台下不可用（Qt 自己的 offscreen 插件与缺失字体目录就会警告，实测 12 个示例全部
@@ -52,23 +52,23 @@
   以及 `-UBSan` 开关：llvm-mingw Clang 加
   `-fsanitize=undefined -fno-sanitize-recover=undefined`（MSVC 没有 UBSan），
   28 个 CTest + 12 个示例 + 3 档基准全绿，插桩由 `__ubsan_handle_*` 符号确认。
-* [docs/performance.md](docs/performance.md) §3 的 v1.0 基线：列表 1M 行、表格 20 万行 x 100 列
+* [docs/history/performance.md](docs/history/performance.md) §3 的 v1.0 基线：列表 1M 行、表格 20 万行 x 100 列
   （Row/Cell 两种模式）、树 1M 顶层节点的实测数字与确切命令，供后续回归对比。
   **Release 基线**（2026-09-26 补）：同一台机器的 Debug/Release 对照表（打开快 3~35 倍、稳态滚动
   0.03–0.05 ms/步），外加 Release 下 28 个 CTest 目标全绿（`scripts/validate.ps1 -Release`）。
 * README 重排成面向 GitHub 的首页：徽章 + 一句话定位 + 亮点 + 能力概览 + 示例截图
-  （`docs/images/`，由示例的 `--snapshot` 导出）+ 快速开始 + 安装/构建/验证；
-  逐条能力状态移到 [docs/features.md](docs/features.md)。
+  （`docs/history/images/`，由示例的 `--snapshot` 导出）+ 快速开始 + 安装/构建/验证；
+  逐条能力状态移到 [docs/history/features.md](docs/history/features.md)。
 * `BlockSizeIndex::explicitSizeCount()`（诊断）：当前"实测过且不等于基值"的行数。
 * `VirtualItemView::visibleItemRanges()` / 行 pane 查询族（v0.8 行冻结，见
-  [docs/row-freezing.md](docs/row-freezing.md)）。
+  [docs/history/row-freezing.md](docs/history/row-freezing.md)）。
 * `VirtualTableView::paneSpecs()`/`primaryScrollGroup()`/`horizontalOffset(group)` 等显式 pane
   与滚动组查询（v0.8 多滚动组）。
 
 ### Changed
 
 * `BlockSizeIndex` 改成"块基值 + 稀疏例外表"：没测量过的行不占存储，公开接口不变
-  （[docs/performance.md](docs/performance.md) §4）。
+  （[docs/history/performance.md](docs/history/performance.md) §4）。
 * `TreeVisibilityIndex` 的可见行映射改成"每个已展开父节点一棵 Fenwick 树"，
   expand/collapse 不再重建整表（公开接口不变）。
 * 表头动画的缓动与时长统一为 OutCubic + 300 ms（`setHeaderAnimationDuration()` 可调）。
@@ -148,7 +148,7 @@
   其它组走 `setHorizontalOffset(group, …)`。
   回归测试：`tst_tablepanes::keyboardNavigationScrollsTheGroupOfTheColumn`
   （已确认还原旧实现时用例会失败：第二组的偏移一直是 0）。
-* **span 重叠校验与上界维护**：`docs/spans.md` 一直写着"重叠的 span 视为非法，后者被忽略并
+* **span 重叠校验与上界维护**：`docs/history/spans.md` 一直写着"重叠的 span 视为非法，后者被忽略并
   `qWarning()` 一次"，但 `TableSpanMap::setSpan()` 是无条件 insert，视图里那个"只警告一次"的
   成员也从没被用过。现在 `setSpan()` 会检查与其它 span 的矩形是否相交（同一锚点重复设置算
   **替换**，不算重叠），重叠则忽略并只警告一次；`removeSpan()` 之后重新计算 `maximumSpan()`
@@ -227,7 +227,7 @@
   memmove，这才是大头），"在**末尾**展开"（没有尾部搬移）是 0.05 ms，稳态的 expand+collapse
   一对是 **2.9 ms**。**尾部搬移本身仍然存在**（1M 行 ≈ 8 MB ≈ 1.5 ms，这是扁平向量的固有代价）：
   去掉它要把可见行表换成 rope / 分块，而那会改变 `TreeVisibilityIndex`（公开的 B 层类）的成员
-  布局 —— 当时的理由是 [abi.md](docs/abi.md) §4 把"改数据成员布局"列为 ABI 破坏，所以审查说的
+  布局 —— 当时的理由是 [abi.md](docs/history/abi.md) §4 把"改数据成员布局"列为 ABI 破坏，所以审查说的
   "后续优化"被排到**下一个主版本**；同一天的发布策略定案（见本节上面的 Changed 段）改成只承诺
   源码兼容之后，这条硬约束不再成立，推迟变成排期选择（决定记在 roadmap 的决策表里）。
 * **多滚动组的宽度分配不再"越排越窄"（P2-7）**：非主滚动 pane 的份额用"还在流动的剩余宽度"
@@ -262,7 +262,7 @@
   回归测试：`tst_modellifetime::deletingTheModelBehindATreeIsSafe` /
   `deletingTheLabelModelBehindAWidgetHeaderIsSafe` / `deletingTheGeometryBehindAStandaloneHeaderIsSafe`。
   **内部成员类型变化**（`TreeVisibilityIndex` 与两个表头渲染器的私有成员）：按当时
-  [docs/abi.md](docs/abi.md) §4 的口径属于 ABI 变化；因为 1.0 仍未打 tag，记在这里作为
+  [docs/history/abi.md](docs/history/abi.md) §4 的口径属于 ABI 变化；因为 1.0 仍未打 tag，记在这里作为
   1.0 定稿前的内部收口（1.0 的发布策略定案后，这类**私有**成员变化在 1.x 的次版本里本来也是
   允许的 —— 见本节上面的 Changed 段）。
 * **Widget Header 不会重新 bind 已存在的 section（P0-3）**：`headerDataChanged` / 列结构变化 /
@@ -306,7 +306,7 @@
   （`m_explicitRowHeights` 存的是持久索引），不该跟着丢。现在 `layoutChanged` 之后会把这些行高
   重新应用到它们所在的行（`RowSizePolicy::MeasuredWins` 时测量仍然获胜）。回归测试：
   `tst_virtualtableview::rowInsertKeepsTheExplicitRowHeights`（修前 60/44 → 30/30，修后跟着行
-  一起下移）。文档同步：[model-signals.md](docs/model-signals.md) 的 `layoutChanged` 一行现在
+  一起下移）。文档同步：[model-signals.md](docs/history/model-signals.md) 的 `layoutChanged` 一行现在
   区分"测量尺寸"与"显式行高"。
 
 示例本身没有配置错误：它的表格用的是 `QStandardItemModel` 默认的拖放实现，那条路径本来就会发
@@ -359,14 +359,14 @@ v1.0 tag 前的 Release Gate：确认第三轮的问题都已修复，另外提�
 
 ### Changed（1.0 发布策略定案：1.x 只承诺源码 API，二进制 ABI 为 best effort，2026-09-26）
 
-第三轮代码审查的 §10 指出"现有的 ABI 承诺与无 PIMPL 设计冲突"：`docs/abi.md` 当时写着"1.x
+第三轮代码审查的 §10 指出"现有的 ABI 承诺与无 PIMPL 设计冲突"：`docs/history/abi.md` 当时写着"1.x
 之间保证兼容；改变公开类数据成员布局算 ABI break"，而核心公开类（`VirtualItemView`、
 `VirtualTableView`、`VirtualHeaderView`、`NativeHeaderView`、`HeaderGeometry`、
 `TreeVisibilityIndex`、`TablePaneLayout`、`WidgetRecycler`、`BlockSizeIndex` 等）都把实现状态
 直接放在头文件里 —— 照那条写，打 tag 之后"给某个私有缓存加一个成员"也要升主版本，而 1.0
 收口前后三轮审查修的正是这类内部状态。审查给了两条路，**1.0 选定方案 B**：
 
-* **承诺**：1.x 的**源码 API 与语义**兼容（[api-stability.md](docs/api-stability.md) 的四级冻结
+* **承诺**：1.x 的**源码 API 与语义**兼容（[api-stability.md](docs/history/api-stability.md) 的四级冻结
   规则不变）；
 * **不承诺**：二进制 ABI。同一套工具链 + 重新编译是这个库的使用方式；跨编译器 / 跨运行库
   复用同一个二进制不在支持范围；
@@ -377,8 +377,8 @@ v1.0 tag 前的 Release Gate：确认第三轮的问题都已修复，另外提�
   ABI 承诺**"。
 
 被否决的另一条路（打 tag 前把上述 9 个类 PIMPL 化，换取真正的 1.x 二进制兼容）留作 2.0 的
-候选；决策记录与理由见 [roadmap.md](docs/roadmap.md) §7。配套改动：`docs/abi.md` §1 的承诺
-表格重写、§4 改成"源码层面 / 二进制层面"两列的对照表、§6 检查清单加第 0 条；`docs/api-stability.md`
+候选；决策记录与理由见 [roadmap.md](docs/history/roadmap.md) §7。配套改动：`docs/history/abi.md` §1 的承诺
+表格重写、§4 改成"源码层面 / 二进制层面"两列的对照表、§6 检查清单加第 0 条；`docs/history/api-stability.md`
 新增第 7 条冻结规则；`CMakeLists.txt` 里 `SameMajorVersion` 的注释同步。这是**策略文档**的变更，
 没有改任何公开签名或行为，四种构建组合（Qt 5.15/6.11 × 静态/动态）的 28 步验证仍全绿。
 
@@ -396,14 +396,14 @@ v1.0 tag 前的 Release Gate：确认第三轮的问题都已修复，另外提�
   不是整表扫描）与 **物化 section 数 <= 64**（pane 只物化自己窗口里的列），违反即非 0 退出码。
 * `scripts/validate.ps1` 的基准一步新增 `--wide-header --wide-columns 10000 --steps 100`
   （Debug 约 9 s），于是这四个形态每次一键验证都会跑；10 万列仍是手动档。
-* `docs/performance.md` §3 写明这四种形态、自动档参数与实测每步耗时，§4 补充"10 万列手动档要
+* `docs/history/performance.md` §3 写明这四种形态、自动档参数与实测每步耗时，§4 补充"10 万列手动档要
   几分钟、且那段时间主线程不处理事件（native 表头的结构性整表同步），实测被 Windows 的
   '无响应'判据终止过两次"。
 
 ### Changed（第三轮代码审查 Wave 3a：API 统一与文档同步，2026-09-26）
 
 第三轮审查的 Wave 3 里有两件不需要拍板的事先做掉，ABI 策略（PIMPL 化 vs 只承诺源码 API）
-单独留待决定，见 [roadmap.md](roadmap.md) §6 与 [abi.md](abi.md)：
+单独留待决定，见 [roadmap.md](docs/history/roadmap.md) §6 与 [abi.md](docs/history/abi.md)：
 
 * **`VirtualTableView::setAdapter()` 不再是"编译得过但什么都不做"的入口（P1）**：表格公开继承
   `VirtualItemView::setAdapter(WidgetAdapter *)`，而它只写基类 `m_adapter`，行物化读的却是
@@ -531,7 +531,7 @@ Wave A/B/C 都已修"的基础上给出 1 个新 P0、若干 P1/P2 与一个发�
   横向滚动，分别用 native 与 widget 表头）。Debug 实测（200 步）：1 万列时 native 0.52 ms/步、
   widget 0.92 ms/步；10 万列时 1.17 / 1.48 ms/步 —— 列数 ×10 而每步耗时只涨 1.3~2.2 倍，说明
   每趟成本由可见窗口决定，不再跟着总列数走。
-* **Native 表头的 int 几何边界写进文档（P2-4）**：`docs/table-layout.md` 明确"内容宽度超过
+* **Native 表头的 int 几何边界写进文档（P2-4）**：`docs/history/table-layout.md` 明确"内容宽度超过
   `INT_MAX` 的极宽表格要用 `VirtualHeaderView`"（`QHeaderView` 自己的 section 空间是 int，
   native 渲染器在那种情况下会跳过镜像并 `qWarning()`）。
 

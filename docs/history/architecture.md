@@ -5,7 +5,7 @@
 
 ## 1. 分层
 
-库同时支持 Qt 6.2+ 与 Qt 5.15+（见 README「Qt 5 / Qt 6 兼容约定」）；内核与索引层的实现
+库同时支持 Qt 6.2+ 与 Qt 5.15+（见[快速开始](../getting-started.md)）；内核与索引层的实现
 不依赖具体 Qt 大版本，只在数组容器与少量事件 API 上做了兼容处理。
 
 ```
@@ -59,7 +59,7 @@ ListLayout / SizeIndex    createWidget / bindWidget / unbindWidget
   view row 是"可见压平行"，不是模型 row：`isLayoutParent()` 恒为 false，模型的
   insert/remove/move/layoutChanged 全部先交给 `TreeVisibilityIndex::handleModelChanged()`
   重建映射（保留展开状态），再由内核重排；`expand()`/`collapse()` 只遍历被展开的子树
-  （见 `docs/performance.md`）。
+  （见 `docs/history/performance.md`）。
 * 缩进与分支指示不进入业务控件：`geometryForViewRow()` 把行矩形内缩
   `indentation * (depth + 1)`，分支三角由视图在 `paintEvent()` 里画、在
   `mousePressEvent()` 里命中（行控件完全不知道自己在树里）。因为指示条是视图画的、不随行控件
@@ -75,7 +75,7 @@ ListLayout / SizeIndex    createWidget / bindWidget / unbindWidget
   closed），但由 C++ 结构体表达，不做样式表解析；渲染器一次调用只管一格，视图不假设它画什么。
 
 公开头文件位于 `include/virtualitemviews/`，实现位于 `src/<module>/`；消费者只使用
-`#include <virtualitemviews/...>`。诊断快照见 `VirtualViewStats`（`docs/focus-ime.md`）。
+`#include <virtualitemviews/...>`。诊断快照见 `VirtualViewStats`（`docs/history/focus-ime.md`）。
 每个公开头文件都包含 `global.h`，符号可见性由那里的 `VIRTUALITEMVIEWS_EXPORT` 统一决定：
 同一份代码可以构建成静态库或动态库（`-DVIRTUALITEMVIEWS_BUILD_SHARED=ON`），宏由 CMake 目标
 自动传播，业务代码不需要手工 define（[abi.md](abi.md)）。
@@ -97,7 +97,7 @@ ListLayout / SizeIndex    createWidget / bindWidget / unbindWidget
 3. **一个 QModelIndex 同时最多对应一个已实例化控件**（`m_items` 与 `m_itemLookup` 保证）。
 4. **身份只用 `QPersistentModelIndex`**（`MaterializedItem::index`、pin 集合、滚动锚点）。row 只允许
    作为一次布局过程中的短生命周期加速量；树的可见行查询表是按 index 值建立的派生结构，
-   每次结构变更后整体重建，因此它只缓存 row，不承担身份（细节见 `docs/performance.md`）。
+   每次结构变更后整体重建，因此它只缓存 row，不承担身份（细节见 `docs/history/performance.md`）。
 5. **复用前必须先 bind**：`acquire -> hide -> bind -> setGeometry -> show`，因此不会出现旧数据闪现。
 6. **unbind 后不得残留旧 item 语义**：`unbindWidget()` 是适配器的责任，必须停掉定时器、动画、
    订阅、异步请求，并清空可视内容。
@@ -141,13 +141,13 @@ ListLayout / SizeIndex    createWidget / bindWidget / unbindWidget
 
 ## 5. SizeIndex
 
-`SizeIndex` 是稳定接口，内部算法可替换（见 `docs/performance.md`）：
+`SizeIndex` 是稳定接口，内部算法可替换（见 `docs/history/performance.md`）：
 
 * `FixedSizeIndex`：固定高度，全部 O(1)。
 * `BlockSizeIndex`：动态高度，每个块存一个基值 + 稀疏例外表（只记"实测过且不等于基值"的行），
   外加懒重建的两张前缀表（块起始行、块起始像素）。`offsetOf/indexAt/setSize` 为
   O(log B + 该行之前的例外数)，`insert` O(log B + capacity)，`remove` O(B + capacity)。
-  B = 1024 时，一百万行的前缀重建约 10^3 次加法；没测量过的行不占存储（见 `docs/performance.md` §4）。
+  B = 1024 时，一百万行的前缀重建约 10^3 次加法；没测量过的行不占存储（见 `docs/history/performance.md` §4）。
 
 ## 6. 与业务层的边界
 

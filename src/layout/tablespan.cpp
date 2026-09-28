@@ -41,7 +41,7 @@ void TableSpanMap::setSpan(const QModelIndex &anchor, int rowSpan, int columnSpa
         removeSpan(anchor);
         return;
     }
-    // Overlapping spans are illegal (docs/spans.md §1): the later one is ignored
+    // Overlapping spans are illegal (docs/history/spans.md §1): the later one is ignored
     // instead of leaving two anchors fighting over the same cells.
     if (overlapsExisting(anchor, span)) {
         if (!m_overlapWarningShown) {

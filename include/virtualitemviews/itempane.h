@@ -8,7 +8,7 @@
 namespace viv {
 
 /// One horizontal band ("pane") of a view: the row direction of §31, specified in
-/// docs/row-freezing.md.
+/// docs/history/row-freezing.md.
 ///
 /// The frozen panes are pinned to the top/bottom edge and never scroll; the
 /// scrolling pane between them follows the vertical offset. A view without frozen

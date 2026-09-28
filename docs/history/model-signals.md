@@ -95,7 +95,7 @@ insert/remove 的实现细节（细节见 [drag-and-drop.md](drag-and-drop.md)�
 
 ## 辅助功能也走同一条模型路径（§37）
 
-`docs/accessibility.md` 里的桥接不缓存任何数据：节点被查询时才去读 model 的角色与视图的已提交
+`docs/history/accessibility.md` 里的桥接不缓存任何数据：节点被查询时才去读 model 的角色与视图的已提交
 几何。事件侧只有两个来源，都是"跟着模型本身走"：
 
 | 来源 | 事件 | 说明 |

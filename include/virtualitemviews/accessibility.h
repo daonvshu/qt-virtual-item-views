@@ -25,7 +25,7 @@ class AccessibleVirtualItemView;
 /// every node reads its text, state and geometry from the model/view when it is
 /// asked. A million-row model still costs zero nodes.
 ///
-/// Mapping (see docs/accessibility.md):
+/// Mapping (see docs/history/accessibility.md):
 ///  - a list item is a ListItem, a table row is a Row, a tree node is a TreeItem
 ///    (its children are its *visible* children, its parent is its parent node),
 ///  - a table cell is a Cell whose parent is the node of its row.
@@ -158,7 +158,7 @@ public:
     int selectedCellCount() const override;
     /// Selected cells of the current window: the count is exact, the list stays
     /// bounded by what is on screen (the library never materializes one node per
-    /// logical row - see docs/accessibility.md).
+    /// logical row - see docs/history/accessibility.md).
     QList<QAccessibleInterface *> selectedCells() const override;
     QString columnDescription(int column) const override;
     QString rowDescription(int row) const override;

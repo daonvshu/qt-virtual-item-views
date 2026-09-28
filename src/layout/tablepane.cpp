@@ -20,7 +20,7 @@ struct ValidatedPaneSpecs
 };
 
 /// A column may be claimed by one pane only, a scroll group is never negative and
-/// the panes of one group have to be neighbours (docs/spans.md §5). A broken
+/// the panes of one group have to be neighbours (docs/history/spans.md §5). A broken
 /// configuration would otherwise show one column twice in the header while the body
 /// ownership falls back to "whoever was written last".
 ValidatedPaneSpecs validated(const QVector<TablePaneSpec> &specs)

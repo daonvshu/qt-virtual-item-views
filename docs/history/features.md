@@ -55,9 +55,9 @@
 | 29 个 CTest 目标（单元测试 + 变异测试 + 两个 GUI 交互场景程序），合计 439 个用例（Debug 树实测） | 已实现 |
 | 13 个示例（simple list / order cards / dynamic height / million rows / table row widgets / table many columns / table custom header / tree / drag & drop / table spans / table panes / table frozen rows / table stretch columns） | 已实现 |
 | benchmark（1M 行、表格 row vs cell、树：宽树 + 变更 + 锚点，稳态滚动零分配校验）；v1.0 实测基线见 [performance.md](performance.md) §3 | 已实现 |
-| API 稳定性（v1.0，[api-stability.md](api-stability.md)）：24 个公开头文件按"应用 / 扩展 / 诊断 / 私有"四级冻结，只加不删、不改默认值语义、不新增"接受但忽略"的入口；变更记进 [CHANGELOG.md](../CHANGELOG.md) | 已实现 |
+| API 稳定性（v1.0，[api-stability.md](api-stability.md)）：24 个公开头文件按"应用 / 扩展 / 诊断 / 私有"四级冻结，只加不删、不改默认值语义、不新增"接受但忽略"的入口；变更记进 [CHANGELOG.md](../../CHANGELOG.md) | 已实现 |
 | 静态库与动态库（v1.0，[abi.md](abi.md)）：`VIRTUALITEMVIEWS_EXPORT` 统一符号可见性、宏由 CMake 目标自动传播；共享构建产出 `bin/VirtualItemViews.dll` + 导入库；Qt 5.15.2 / Qt 6.11.2 × 静态 / 动态四种组合都已构建并跑通全部测试 | 已实现 |
-| 安装与消费（v1.0）：`cmake --install` 导出标准 CMake 包（头文件 + 库 + `VirtualItemViewsConfig.cmake`，内含 `find_dependency(Qt…)`），消费端只写 `find_package(VirtualItemViews)` + `target_link_libraries(app PRIVATE VirtualItemViews::VirtualItemViews)`；[tests/install/consumer](../tests/install/consumer) 是只认安装包的冒烟测试（28 项自检），四种组合都已实跑通过 | 已实现 |
+| 安装与消费（v1.0）：`cmake --install` 导出标准 CMake 包（头文件 + 库 + `VirtualItemViewsConfig.cmake`，内含 `find_dependency(Qt…)`），消费端只写 `find_package(VirtualItemViews)` + `target_link_libraries(app PRIVATE VirtualItemViews::VirtualItemViews)`；[tests/install/consumer](../../tests/install/consumer) 是只认安装包的冒烟测试（28 项自检），四种组合都已实跑通过 | 已实现 |
 
 未实现（按 §43 路线图）：accessibility 还没有文本/编辑接口
 （`TextInterface`/`EditableTextInterface`，行内编辑器自己是真实控件会自己暴露）；

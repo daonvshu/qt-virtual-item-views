@@ -135,7 +135,7 @@ void countPaneSpecWarnings(QtMsgType type, const QMessageLogContext &, const QSt
 }
 } // namespace
 
-/// §43 "advanced panes" (see docs/spans.md): the pane layout is an ordered list
+/// §43 "advanced panes" (see docs/history/spans.md): the pane layout is an ordered list
 /// instead of the fixed three panes, while setFrozenColumns() stays the shorthand
 /// for the common case and behaves exactly as before.
 class TestTablePanes : public QObject
@@ -727,7 +727,7 @@ void TestTablePanes::scrollingDoesNotWalkEveryColumn()
 
 void TestTablePanes::invalidPaneSpecsAreNormalizedWithOneWarningEach()
 {
-    // docs/spans.md §5: one column belongs to one pane, a scroll group is never
+    // docs/history/spans.md §5: one column belongs to one pane, a scroll group is never
     // negative and the panes of one group have to be neighbours. Each broken
     // configuration is normalized (first wins / clamp / keep but warn) and reports
     // exactly one diagnostic per problem per call.

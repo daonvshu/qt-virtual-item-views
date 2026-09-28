@@ -126,7 +126,7 @@ void verifyRowStripsAreGlued(VirtualTableView &view, QAbstractItemModel *model)
 }
 } // namespace
 
-/// 行冻结（§31 行方向，docs/row-freezing.md）：冻结行钉在上下边缘、不产生额外滚动
+/// 行冻结（§31 行方向，docs/history/row-freezing.md）：冻结行钉在上下边缘、不产生额外滚动
 /// 空间，物化只多出冻结行本身。
 class TestFrozenRows : public QObject
 {

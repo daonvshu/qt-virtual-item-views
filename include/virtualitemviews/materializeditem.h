@@ -11,7 +11,7 @@ namespace viv {
 
 /// One item that currently owns a real QWidget.
 ///
-/// Invariants (see docs/architecture.md):
+/// Invariants (see docs/history/architecture.md):
 ///  - materialized widgets == visible + overscan + pinned items,
 ///  - a widget is never stored here without a valid persistent index,
 ///  - one QModelIndex maps to at most one MaterializedItem at any time.

@@ -55,7 +55,7 @@ public:
     /// Replaces the size model. An index based layout (ListLayout) takes
     /// ownership and uses it; a policy that has no size index at all - the
     /// default - releases what it was told to own, so handing a policy an index
-    /// can never leak it (see docs/api-stability.md: no "accepted but ignored"
+    /// can never leak it (see docs/history/api-stability.md: no "accepted but ignored"
     /// entry points).
     virtual void setSizeIndex(SizeIndex *index, bool takeOwnership = true);
 

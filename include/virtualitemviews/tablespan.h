@@ -9,7 +9,7 @@
 namespace viv {
 
 /// Span of one cell, in model coordinates (architecture document §43 "spans",
-/// see docs/spans.md).
+/// see docs/history/spans.md).
 ///
 /// A span is *projection information only*: it never carries a column width or a
 /// row height of its own. The merged rectangle is always derived from the
@@ -75,7 +75,7 @@ public:
 
 private:
     /// True when \a anchor's span would intersect any other registered span; the
-    /// spec (docs/spans.md §1) calls overlapping spans illegal.
+    /// spec (docs/history/spans.md §1) calls overlapping spans illegal.
     bool overlapsExisting(const QModelIndex &anchor, const TableSpan &span) const;
     void recomputeMaximum();
 

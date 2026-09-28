@@ -12,7 +12,7 @@
 | 共享库文件名 | Windows `VirtualItemViews.dll`；Linux/macOS `libVirtualItemViews.so.1.0.0`（`SONAME` 指向 `.so.1`） |
 | `find_package` 版本匹配 | `SameMajorVersion` —— 这只是 CMake 的**包版本匹配策略**，它本身不创造 ABI 兼容性 |
 | **1.x 的兼容承诺** | **源码 API / 语义兼容**（[api-stability.md](api-stability.md)）；**二进制 ABI = best effort**：换版本请重编，本项目不承诺"旧编译产物 + 新库"这种组合 |
-| 规则 | 破坏源码 API 就动主版本，并写进 CHANGELOG 的 `Breaking`；`SOVERSION` 跟着主版本涨，作用只是让不同主版本的共享库文件不互相覆盖（**不给跨主版本的二进制兼容背书**）；1.0 之前没有打过 tag、没有下游，内部收口不提供兼容层，清单见 [CHANGELOG](../CHANGELOG.md) |
+| 规则 | 破坏源码 API 就动主版本，并写进 CHANGELOG 的 `Breaking`；`SOVERSION` 跟着主版本涨，作用只是让不同主版本的共享库文件不互相覆盖（**不给跨主版本的二进制兼容背书**）；1.0 之前没有打过 tag、没有下游，内部收口不提供兼容层，清单见 [CHANGELOG](../../CHANGELOG.md) |
 
 这条策略是 1.0 收口时**明确选定**的（2026-09-26，理由见 [roadmap.md](roadmap.md) §7 的决策记录）：
 库的核心类没有 PIMPL，实现状态直接放在公开头文件里（`VirtualItemView`、`VirtualTableView`、
@@ -75,7 +75,7 @@ build/bin/VirtualItemViews.dll           # 共享构建时（Windows）
 
 ### 装出来的布局与消费方式
 
-`cmake --install <build> --prefix <dir>` 之后（[README 安装与消费](../README.md) 有完整命令）：
+`cmake --install <build> --prefix <dir>` 之后（[快速开始](../getting-started.md)有完整命令）：
 
 ```
 <prefix>/include/virtualitemviews/*.h     # 25 个公开头文件（含 global.h）

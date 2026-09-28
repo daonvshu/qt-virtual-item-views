@@ -134,7 +134,7 @@ QStandardItemModel *buildModel(int rows, int columns, QObject *parent)
 }
 } // namespace
 
-/// §43 "spans" (see docs/spans.md): a span is projection information only. The
+/// §43 "spans" (see docs/history/spans.md): a span is projection information only. The
 /// merged rectangle always comes from the committed column geometry and the row
 /// layout, hit testing folds to the anchor, and the cell mode only materializes
 /// anchors.
@@ -502,7 +502,7 @@ void TestTableSpan::rowWidgetModeFoldsTheColumnHosts()
     QCOMPARE(otherRow->host(2)->width(), kColumnWidth);
 
     // Row spans cannot extend a host below its own row in this mode: the merged
-    // rectangle is clipped to the row (docs/spans.md §3), the width still merges.
+    // rectangle is clipped to the row (docs/history/spans.md §3), the width still merges.
     view.setSpan(0, 1, 2, 2);
     view.flushPendingRelayout();
     row = static_cast<SpanRowWidget *>(view.widgetForIndex(model.index(0, 0)));
@@ -548,7 +548,7 @@ void TestTableSpan::overlappingSpansAreIgnoredWithOneWarning()
     QVERIFY(view.spanAt(model.index(0, 0)).isMerged());
     QVERIFY(view.isSpanCovered(model.index(1, 1)));
 
-    // Overlapping spans are illegal (docs/spans.md §1): the later one is ignored,
+    // Overlapping spans are illegal (docs/history/spans.md §1): the later one is ignored,
     // and the diagnostic is emitted once instead of per call.
     g_overlapWarnings = 0;
     const QtMessageHandler previousHandler = qInstallMessageHandler(countOverlapWarnings);

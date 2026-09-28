@@ -7,7 +7,7 @@ using namespace viv;
 
 namespace {
 /// Counts destructions so a test can prove that an index handed to a policy was
-/// released (docs/api-stability.md: no "accepted but ignored" entry points).
+/// released (docs/history/api-stability.md: no "accepted but ignored" entry points).
 class CountingSizeIndex : public BlockSizeIndex
 {
 public:

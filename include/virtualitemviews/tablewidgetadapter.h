@@ -13,7 +13,7 @@
 
 namespace viv {
 
-/// Span decisions the framework made for one row (§43 "spans", docs/spans.md).
+/// Span decisions the framework made for one row (§43 "spans", docs/history/spans.md).
 ///
 /// The framework fills this while it lays a row out, business code only reads
 /// it. Without spans it stays empty and every column keeps its own rectangle, so

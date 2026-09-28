@@ -1003,7 +1003,7 @@ QList<QAccessibleInterface *> AccessibleVirtualItemView::selectedCells() const
     auto *self = const_cast<AccessibleVirtualItemView *>(this);
     for (const QModelIndex &cell : selection->selectedIndexes()) {
         // Only the cells of the current window are handed out as nodes; the count
-        // above is exact, this list stays bounded (docs/accessibility.md).
+        // above is exact, this list stays bounded (docs/history/accessibility.md).
         if (visiblePosition(cell.siblingAtColumn(0)) < 0)
             continue;
         cells.append(self->itemFor(cell, cell.column()));

@@ -151,7 +151,7 @@ int main(int argc, char **argv)
                                          QStringLiteral("右侧冻结列数（§31）"),
                                          QStringLiteral("count"), QStringLiteral("0"));
     QCommandLineOption frozenRowsOption(QStringLiteral("frozen-rows"),
-                                        QStringLiteral("顶部冻结行数（§31 行方向，docs/row-freezing.md）"),
+                                        QStringLiteral("顶部冻结行数（§31 行方向，docs/history/row-freezing.md）"),
                                         QStringLiteral("count"), QStringLiteral("0"));
     QCommandLineOption snapshotOption(QStringLiteral("snapshot"),
                                       QStringLiteral("渲染视口到 PNG 后退出"), QStringLiteral("file"));

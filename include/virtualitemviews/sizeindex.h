@@ -12,7 +12,7 @@ namespace viv {
 ///
 /// The index owns the mapping between an item's logical position (row) and its
 /// pixel range along the scrolling axis. The public interface is stable; the
-/// data structure behind it is not (see docs/performance.md).
+/// data structure behind it is not (see docs/history/performance.md).
 ///
 /// All operations accept indices in [0, count()]; \c count() is a valid index
 /// for \c offsetOf() (it returns totalSize()) and for insert() (appending).

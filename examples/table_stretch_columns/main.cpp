@@ -1,4 +1,4 @@
-// 列宽比例分配示例（§9 of docs/table-layout.md）：固定宽度的列保持自己的宽度，
+// 列宽比例分配示例（§9 of docs/history/table-layout.md）：固定宽度的列保持自己的宽度，
 // 其余列按比例分掉剩余宽度。列数少、总宽正好等于视口宽度，所以不会出现横向滚动。
 //
 // 想直接看到的几件事：
@@ -399,7 +399,7 @@ int main(int argc, char **argv)
 
     QCommandLineParser parser;
     parser.setApplicationDescription(
-        QStringLiteral("VirtualItemViews: column stretch ratios (§9 of docs/table-layout.md)"));
+        QStringLiteral("VirtualItemViews: column stretch ratios (§9 of docs/history/table-layout.md)"));
     parser.addHelpOption();
     const QCommandLineOption rowsOption(QStringLiteral("rows"), QStringLiteral("逻辑行数"),
                                         QStringLiteral("count"), QStringLiteral("200"));

@@ -76,7 +76,7 @@ struct ScrollAnchor
 /// and the selection/current handling. Subclasses only supply the identity
 /// mapping (view row <-> QModelIndex) and a LayoutPolicy.
 ///
-/// Invariants (see docs/architecture.md):
+/// Invariants (see docs/history/architecture.md):
 ///  - materialized widgets == visible + overscan + pinned items,
 ///  - pooled widgets are unbound,
 ///  - one QModelIndex owns at most one widget at any time,
@@ -325,7 +325,7 @@ public:
     /// Visible item range without overscan.
     VisibleRange visibleItemRange() const;
 
-    // -- row panes (§31 row direction, see docs/row-freezing.md) -------------
+    // -- row panes (§31 row direction, see docs/history/row-freezing.md) -------------
     /// Freezes the first \a count rows at the top edge: they stay visible while the
     /// rows below scroll, and they add no scroll space of their own (the frozen
     /// height is not part of the scroll range, exactly like frozen columns).
@@ -359,7 +359,7 @@ public:
     /// How far the row pane boundary lines reach to the *left* of the viewport, in
     /// pixels. A table whose row-number strip lives outside the viewport returns its
     /// width here, so the line crosses the strip exactly like the column boundary lines
-    /// cross the header strip (see docs/row-freezing.md).
+    /// cross the header strip (see docs/history/row-freezing.md).
     virtual int itemPaneSeparatorLeftExtension() const { return 0; }
     /// Colour the row pane boundary is painted with when the separator style does not
     /// name one. A subclass that can probe what the current style paints separators with

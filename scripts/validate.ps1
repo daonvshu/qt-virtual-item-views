@@ -7,7 +7,7 @@
 
 .DESCRIPTION
     This is the entry point a CI job or a release checklist calls (see
-    docs/roadmap.md, Wave 3 / 3e). For each Qt kit x library flavour it:
+    docs/history/roadmap.md, Wave 3 / 3e). For each Qt kit x library flavour it:
       1. imports the MSVC environment from vcvars64.bat,
       2. configures and builds the `all` target,
       3. runs CTest (every test registered in that tree),
@@ -47,7 +47,7 @@ param(
     # Validates the Release configuration instead of Debug: separate trees
     # (<...>-release[ -shared]) and ctest -C Release. Debug stays the default, and the
     # two are independent runs - Release is where the optimised / NDEBUG code paths and
-    # the numbers quoted in docs/performance.md §3 come from.
+    # the numbers quoted in docs/history/performance.md §3 come from.
     [switch]$Release,
     # Adds a fifth step combination per Qt kit: the library + tests + examples built with
     # MSVC's AddressSanitizer (-DCMAKE_CXX_FLAGS=/fsanitize=address, tree <...>-asan).
@@ -174,7 +174,7 @@ $benchmarks = @(
     # The four wide-table pane shapes (primary / frozen / non-primary group / sparse pane) with
     # both header renderers, at the column count that keeps a Debug gate run short. The
     # benchmark asserts the window-bounded invariants itself; 100,000 columns is a manual run
-    # (its native header structural pass takes minutes in Debug - see docs/performance.md §4).
+    # (its native header structural pass takes minutes in Debug - see docs/history/performance.md §4).
     [pscustomobject]@{ Name = 'wide header 10k'; Args = @('--wide-header', '--wide-columns', '10000', '--steps', '100') }
 )
 
@@ -255,7 +255,7 @@ function Invoke-Kit {
     #    as the deny list. QT_FATAL_WARNINGS=1 would be the direct way, but it is not
     #    usable here: Qt's offscreen plugin ("does not support propagateSizeHints")
     #    and this Qt build's missing font directory warn on their own, and the unit
-    #    tests *deliberately* exercise warning paths (see docs/ci.md §3).
+    #    tests *deliberately* exercise warning paths (see docs/history/ci.md §3).
     if (-not $SkipExamples) {
         $libraryNames = @('VirtualItemView', 'VirtualListView', 'VirtualTableView',
                           'VirtualTreeView', 'VirtualHeaderView', 'NativeHeaderView',

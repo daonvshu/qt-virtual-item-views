@@ -793,7 +793,7 @@ QRect VirtualItemView::geometryForViewRow(qsizetype row) const
 }
 
 // ---------------------------------------------------------------------------
-// Row panes (§31 row direction, docs/row-freezing.md)
+// Row panes (§31 row direction, docs/history/row-freezing.md)
 // ---------------------------------------------------------------------------
 
 int VirtualItemView::frozenRows() const

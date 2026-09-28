@@ -662,7 +662,7 @@ void TestVirtualTreeView::columnChangesRebuildTheVisibleRowMapping()
     // P2 of the fourth review: TreeVisibilityIndex stores QModelIndex *values*, and a column
     // change renames (or, for a removed column 0, invalidates) the cells they name. The tree
     // therefore re-derives the mapping instead of drawing rows through stale cells. Column
-    // mutation is not part of the List / Tree contract (docs/model-signals.md), so the check is
+    // mutation is not part of the List / Tree contract (docs/history/model-signals.md), so the check is
     // "no stale content, canonical identity" - not "the expansion state survives".
     const QStringList textsBefore = visibleTexts(*m_view);
     QCOMPARE(textsBefore, QStringList({QStringLiteral("A"), QStringLiteral("B"), QStringLiteral("C")}));

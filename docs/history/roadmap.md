@@ -18,7 +18,7 @@
 | v0.7 | 冻结列（§31）、表头状态持久化（§32）、`VirtualHeaderView`+`HeaderWidgetAdapter`（§17–§19）、拖放（§38）、Accessibility（§37）、span + advanced panes（§43） | `d85d814` `edfb74e` `dfa9046` `f4bca16` `2ee729e` `257a086` `fbd6be3` `66e5509` |
 | v0.8 | 表格收口（Wave 1）：多滚动组、表头动画（committed/visual 两层几何 + 拖动重排）、行冻结（内核 + 行号条按 pane 切分 + 状态持久化 v2 + 独立示例） | `6c09cd9` `2de4c2a` `5dff417` `b6fbd99` `e7e3769` `c5a86aa` `e73cc29` `f52649f` `659f456` `052a520` `4c1c74c` |
 | v0.9 | 规模化与可访问性（Wave 2）：树的增量可见行映射（Fenwick 分块）、`QAccessibleTableInterface`/`QAccessibleTableCellInterface`、`BlockSizeIndex` 稀疏例外表 | `f9c7744` `0ba3ef0` `ab32e94` |
-| v1.0 | 工程化交付（Wave 3）：API 四级冻结与实验性入口清理、导出宏（静态/动态）、安装消费端实跑、性能基线、一键验证脚本；细节见 §2 Wave 3 与 [CHANGELOG](../CHANGELOG.md) | `ca61c92` `9ce0055` `43d9dcd` `958a47a` `58b5696` |
+| v1.0 | 工程化交付（Wave 3）：API 四级冻结与实验性入口清理、导出宏（静态/动态）、安装消费端实跑、性能基线、一键验证脚本；细节见 §2 Wave 3 与 [CHANGELOG](../../CHANGELOG.md) | `ca61c92` `9ce0055` `43d9dcd` `958a47a` `58b5696` |
 
 v0.7 的逐项细节与实现决定记在 [spans.md](spans.md)、[accessibility.md](accessibility.md)、
 [drag-and-drop.md](drag-and-drop.md)；v0.8 起逐项细节见本文 §2 的 Wave 段落与对应的
@@ -133,7 +133,7 @@ Wave 3（v1.0 工程化交付）。**
 - [x] **3c 文档齐全度 + 安装消费端实跑**：公开类/结构体的文档注释做了一次机械核查（23 个头文件里
       每个 `class`/`struct` 都有 `///` 说明）；README 新增「安装与消费」一节（构建 → `cmake --install`
       → 消费端 `find_package` 的完整命令、Qt 大版本各装一个前缀、动态安装的 DLL 查找注意事项）；
-      `docs/abi.md` 补上装出来的目录布局与消费端约定。新增
+      `docs/history/abi.md` 补上装出来的目录布局与消费端约定。新增
       `tests/install/consumer/`（**独立** CMake 工程，只认 `find_package(VirtualItemViews)`，不碰源码树
       或构建树），内含 28 项运行期自检：列表虚拟化与滚动、表格列几何/命中/隐藏列/表头状态往返、
       span 锚点与合并矩形、冻结列与显式 pane 列表（含两个滚动组）、树展开折叠、单元格模式、

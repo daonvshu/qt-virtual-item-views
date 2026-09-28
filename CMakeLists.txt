@@ -171,7 +171,7 @@ set(VIRTUALITEMVIEWS_INSTALL_CMAKEDIR "${CMAKE_INSTALL_LIBDIR}/cmake/VirtualItem
 # Pre-1.0 nothing was API stable, so a consumer asking for 0.9 must not be handed 0.10.
 # From 1.0 on the major version is the compatibility unit for the *source* API, which is
 # also what SOVERSION follows. This is a CMake package-version matching policy only: 1.x
-# promises source compatibility, not binary ABI (docs/abi.md §1), so a consumer that
+# promises source compatibility, not binary ABI (docs/history/abi.md §1), so a consumer that
 # links binaries has to recompile when it upgrades.
 if(PROJECT_VERSION_MAJOR EQUAL 0)
     set(VIRTUALITEMVIEWS_PACKAGE_COMPATIBILITY SameMinorVersion)

@@ -573,7 +573,7 @@ void VirtualTableView::connectColumnSignals(QAbstractItemModel *model)
     connect(model, &QAbstractItemModel::rowsInserted, this, refreshRowStrips);
     connect(model, &QAbstractItemModel::rowsRemoved, this, refreshRowStrips);
     // A layout change rebuilds every row size from the estimate (the kernel's contract: sizes
-    // keyed by row cannot be trusted after a reorder - see docs/model-signals.md). The heights
+    // keyed by row cannot be trusted after a reorder - see docs/history/model-signals.md). The heights
     // the *user* set are not those derived sizes: they are attached to their row through
     // m_explicitRowHeights (a persistent index), so they are re-applied here. Under
     // RowSizePolicy::MeasuredWins the measurement still wins (canMeasureItem()).
@@ -1338,7 +1338,7 @@ HeaderViewInterface *VirtualTableView::createVerticalPaneHeader()
         return header;
     }
     // A renderer this table cannot reproduce (an application's own HeaderViewInterface)
-    // leaves the strip single - documented in docs/row-freezing.md.
+    // leaves the strip single - documented in docs/history/row-freezing.md.
     return nullptr;
 }
 
@@ -2040,7 +2040,7 @@ QRect VirtualTableView::cellRect(qsizetype row, int logicalColumn) const
     if (!column.isValid() || column.hidden || column.width <= 0)
         return QRect();
     // Pane aware: a frozen row is pinned, a scrolling one follows the offset
-    // (§31 row direction, docs/row-freezing.md).
+    // (§31 row direction, docs/history/row-freezing.md).
     const QRect rowRect = geometryForViewRow(row);
     if (rowRect.height() <= 0)
         return QRect();
@@ -2048,7 +2048,7 @@ QRect VirtualTableView::cellRect(qsizetype row, int logicalColumn) const
 }
 
 // ---------------------------------------------------------------------------
-// Spans (§43 "spans", see docs/spans.md)
+// Spans (§43 "spans", see docs/history/spans.md)
 // ---------------------------------------------------------------------------
 
 int VirtualTableView::itemPaneSeparatorLeftExtension() const
@@ -2729,7 +2729,7 @@ TableRowLayoutContext VirtualTableView::layoutContext(const QRect &viewportRect,
     // §43 "spans": tell the adapter what the framework decided for this row.
     // A merged rectangle is reported in row widget coordinates and clipped to
     // the row: Row Widget Mode owns one widget per row, so a cross-row merge can
-    // only be honoured by the business (see docs/spans.md).
+    // only be honoured by the business (see docs/history/spans.md).
     if (m_spanProvider && rowIndex.isValid()) {
         const QModelIndex row = rowIndex.siblingAtColumn(0);
         const QVector<int> columns = context.columnsToLayout();

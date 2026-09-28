@@ -33,7 +33,7 @@ public:
     /// Tells the adapter which model the labels come from.
     ///
     /// Called by VirtualHeaderView::setLabelModel() (with nullptr when the header drops its
-    /// model), so an adapter that captures the model - the README example does - does not
+    /// model), so an adapter that captures the model does not
     /// keep a second, stale copy of it: the header owns the model reference, the adapter is
     /// told what it is. The default does nothing: an adapter that reads the model through
     /// its own reference keeps working.

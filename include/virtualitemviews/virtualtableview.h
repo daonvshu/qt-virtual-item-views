@@ -222,7 +222,7 @@ public:
         return m_panes.paneOfColumn(logicalIndex);
     }
     /// The row pane boundary lines reach across the row-number strip as well, so the
-    /// horizontal and the vertical boundaries look the same (§31, docs/row-freezing.md).
+    /// horizontal and the vertical boundaries look the same (§31, docs/history/row-freezing.md).
     int itemPaneSeparatorLeftExtension() const override;
     /// Same colour the column boundary uses - the one the current style paints section
     /// separators with - so both directions look identical.
@@ -332,7 +332,7 @@ public:
     void clearRowHeight(qsizetype row);
     bool hasExplicitRowHeight(qsizetype row) const;
 
-    // -- spans (§43 "spans", see docs/spans.md) ------------------------------
+    // -- spans (§43 "spans", see docs/history/spans.md) ------------------------------
     /// Source of the merged cells. The default is "nothing is merged", so a
     /// table without spans behaves exactly as before. Passing nullptr detaches
     /// (and with takeOwnership = true deletes) the current provider.

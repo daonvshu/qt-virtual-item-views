@@ -220,7 +220,7 @@ void VirtualHeaderView::setLabelModel(QAbstractItemModel *model)
         connect(m_labelModel, &QAbstractItemModel::modelReset, this, [this]() { relayout(); });
     }
     // The label model is part of the section binding contract: an adapter that captured the
-    // model (the README example does) is told about the switch, and the sections that are
+    // model is told about the switch, and the sections that are
     // already materialized are re-bound from the new model instead of keeping the old titles
     // (P1 of the third review).
     if (m_adapter)
@@ -356,7 +356,7 @@ void VirtualHeaderView::setAdapter(HeaderWidgetAdapter *adapter, bool takeOwners
     m_adapter = adapter;
     m_ownAdapter = adapter && takeOwnership;
     // The label model is part of the section binding contract (see setLabelModel()): an
-    // adapter that captured the model - the README example does - has to be told the current
+    // adapter that captured the model has to be told the current
     // one here as well, otherwise "setLabelModel() then setAdapter()" and
     // "setAdapter() then setLabelModel()" would behave differently (P1.1 of the fourth review).
     if (m_adapter)

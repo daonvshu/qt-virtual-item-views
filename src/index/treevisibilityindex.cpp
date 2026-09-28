@@ -214,7 +214,7 @@ void TreeVisibilityIndex::expand(const QModelIndex &index)
     // sub-tree is written. (A rebuild of the whole vector - two mid() copies plus an
     // allocation, what this used to do - is what makes expanding a small branch under
     // a huge visible set expensive; the remaining tail move is inherent to a flat
-    // vector, docs/roadmap.md §3 决策表 has the rope/block variant as 1.x work.)
+    // vector, docs/history/roadmap.md §3 决策表 has the rope/block variant as 1.x work.)
     const qsizetype insertAt = row + 1;
     const qsizetype added = subtreeRows.size();
     const qsizetype previousSize = m_visibleRows.size();
@@ -222,7 +222,7 @@ void TreeVisibilityIndex::expand(const QModelIndex &index)
     // QModelIndex is a value type: moving the tail is a memmove, not a copy loop over a
     // million elements (measured: 9 ms vs 1.5 ms for the same splice, bench_listview
     // --tree). A rope/block structure would not have to move the tail at all - that is
-    // the part tracked for the next major version (docs/roadmap.md).
+    // the part tracked for the next major version (docs/history/roadmap.md).
     static_assert(std::is_trivially_copyable<QModelIndex>::value,
                   "the visible row splice relies on QModelIndex being memcpy-able");
     QModelIndex *const rows = m_visibleRows.data();

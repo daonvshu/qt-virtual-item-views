@@ -3,7 +3,7 @@
 #include <QtGlobal>
 
 /// Symbol visibility of every public class and free function
-/// (see docs/abi.md).
+/// (see docs/history/abi.md).
 ///
 /// Three cases, driven by the build system:
 ///  - the library itself defines `VIRTUALITEMVIEWS_LIBRARY` while it is built as
@@ -27,6 +27,6 @@
 // private and never hand their symbols across the boundary (they are only
 // touched inside the library), so C4251 is noise here. Scoped to the library
 // build, so including these headers in a consumer stays unaffected. The layout
-// rules behind that claim are in docs/abi.md.
+// rules behind that claim are in docs/history/abi.md.
 #  pragma warning(disable : 4251)
 #endif
