@@ -1,5 +1,7 @@
 #include <virtualitemviews/reorderabletablemodel.h>
 
+#include <limits>
+
 namespace viv {
 
 ReorderableTableModel::ReorderableTableModel(QObject *parent)
@@ -15,6 +17,7 @@ ReorderableTableModel::ReorderableTableModel(int rows, int columns, QObject *par
     m_order.reserve(count);
     for (int row = 0; row < count; ++row)
         m_order.append(row);
+    m_sourceOrder = m_order;
     m_nextSourceId = count;
 }
 
@@ -75,20 +78,30 @@ void ReorderableTableModel::setRowCount(int rows)
 
 bool ReorderableTableModel::insertRows(int row, int count, const QModelIndex &parent)
 {
-    if (parent.isValid() || count <= 0 || row < 0 || row > m_order.size())
+    if (parent.isValid() || count <= 0 || row < 0 || row > m_order.size()
+        || count > std::numeric_limits<int>::max() - int(m_order.size())
+        || count > std::numeric_limits<int>::max() - m_nextSourceId)
         return false;
+    const int sourceSlot = row == m_order.size() ? m_sourceOrder.size()
+        : int(m_sourceOrder.indexOf(m_order.at(row)));
     beginInsertRows(parent, row, row + count - 1);
-    for (int index = 0; index < count; ++index)
-        m_order.insert(row + index, m_nextSourceId++);
+    for (int index = 0; index < count; ++index) {
+        const int id = m_nextSourceId++;
+        m_order.insert(row + index, id);
+        m_sourceOrder.insert(sourceSlot + index, id);
+    }
     endInsertRows();
     return true;
 }
 
 bool ReorderableTableModel::removeRows(int row, int count, const QModelIndex &parent)
 {
-    if (parent.isValid() || count <= 0 || row < 0 || row + count > m_order.size())
+    if (parent.isValid() || count <= 0 || row < 0 || row >= m_order.size()
+        || count > m_order.size() - row)
         return false;
     beginRemoveRows(parent, row, row + count - 1);
+    for (int index = 0; index < count; ++index)
+        m_sourceOrder.removeOne(m_order.at(row + index));
     m_order.remove(row, count);
     endRemoveRows();
     return true;
@@ -111,21 +124,14 @@ void ReorderableTableModel::resetRowOrder()
     if (isIdentityOrder())
         return;
     beginResetModel();
-    const int count = int(m_order.size());
-    m_order.resize(count);
-    for (int row = 0; row < count; ++row)
-        m_order[row] = row;
+    m_order = m_sourceOrder;
     endResetModel();
     emit rowOrderChanged();
 }
 
 bool ReorderableTableModel::isIdentityOrder() const
 {
-    for (int row = 0; row < m_order.size(); ++row) {
-        if (m_order.at(row) != row)
-            return false;
-    }
-    return true;
+    return m_order == m_sourceOrder;
 }
 
 bool ReorderableTableModel::moveRows(const QModelIndex &sourceParent, int sourceRow,
@@ -133,7 +139,7 @@ bool ReorderableTableModel::moveRows(const QModelIndex &sourceParent, int source
                                      int destinationChild)
 {
     if (sourceParent.isValid() || destinationParent.isValid() || count <= 0 || sourceRow < 0
-        || sourceRow + count > m_order.size())
+        || sourceRow >= m_order.size() || count > m_order.size() - sourceRow)
         return false;
     if (destinationChild < 0 || destinationChild > m_order.size())
         return false;

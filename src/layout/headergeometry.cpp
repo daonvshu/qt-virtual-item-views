@@ -80,10 +80,9 @@ void HeaderGeometry::setSectionCount(int count)
         const int removedFrom = clamped;
         m_sections.resize(clamped);
         // Drop the removed logical indices from the visual order.
-        for (int visual = m_visualToLogical.size() - 1; visual >= 0; --visual) {
-            if (m_visualToLogical.at(visual) >= removedFrom)
-                m_visualToLogical.remove(visual);
-        }
+        auto kept = std::remove_if(m_visualToLogical.begin(), m_visualToLogical.end(),
+                                   [removedFrom](int logical) { return logical >= removedFrom; });
+        m_visualToLogical.erase(kept, m_visualToLogical.end());
         // A sort indicator that pointed into the removed tail has nothing left to name.
         // setSectionCount() is the path a model reset / setModel takes, so it has to do the
         // same cleanup as removeLogicalSections() (P1-7 of the second review).
@@ -272,6 +271,29 @@ void HeaderGeometry::insertLogicalSections(int first, int count)
 {
     if (count <= 0)
         return;
+    if (sectionCount() == 0) {
+        setSectionCount(count);
+        return;
+    }
+    if (m_uniformCount > 0) {
+        const int at = qBound(0, first, m_uniformCount);
+        for (int &key : m_sparseKeys) {
+            if (key >= at)
+                key += count;
+        }
+        m_uniformCount += count;
+        rebuildSparsePrefix();
+        if (m_sortIndicatorSection >= at) {
+            m_sortIndicatorSection += count;
+            emit sortIndicatorChanged(m_sortIndicatorSection, m_sortIndicatorOrder);
+        }
+        ++m_orderRevision;
+        invalidateCaches();
+        emit sectionCountChanged(m_uniformCount);
+        applyStretch();
+        emitGeometryChanged();
+        return;
+    }
     densify();   // an insert gives sections state to keep
     const int total = sectionCount();
     const int at = qBound(0, first, total);
@@ -332,6 +354,39 @@ void HeaderGeometry::removeLogicalSections(int first, int count)
 {
     if (count <= 0)
         return;
+    if (m_uniformCount > 0) {
+        const int at = qBound(0, first, m_uniformCount);
+        const int removed = qMin(count, m_uniformCount - at);
+        if (removed <= 0)
+            return;
+        QVector<int> keys;
+        QVector<int> sizes;
+        QVector<qreal> factors;
+        for (int index = 0; index < m_sparseKeys.size(); ++index) {
+            const int key = m_sparseKeys.at(index);
+            if (key >= at && key < at + removed)
+                continue;
+            keys.append(key >= at + removed ? key - removed : key);
+            sizes.append(m_sparseSizes.at(index));
+            factors.append(m_sparseFactors.at(index));
+        }
+        m_sparseKeys = keys;
+        m_sparseSizes = sizes;
+        m_sparseFactors = factors;
+        m_uniformCount -= removed;
+        rebuildSparsePrefix();
+        if (m_sortIndicatorSection >= at) {
+            m_sortIndicatorSection = m_sortIndicatorSection < at + removed
+                ? -1 : m_sortIndicatorSection - removed;
+            emit sortIndicatorChanged(m_sortIndicatorSection, m_sortIndicatorOrder);
+        }
+        ++m_orderRevision;
+        invalidateCaches();
+        emit sectionCountChanged(m_uniformCount);
+        applyStretch();
+        emitGeometryChanged();
+        return;
+    }
     densify();   // dropping sections needs the stored state
     const int total = sectionCount();
     const int at = qBound(0, first, total);
@@ -539,15 +594,26 @@ void HeaderGeometry::clearExplicitSectionSize(int logicalIndex)
 void HeaderGeometry::clearExplicitSectionSizes()
 {
     if (m_uniformCount > 0) {
-        if (m_sparseKeys.isEmpty())
+        bool changed = false;
+        QVector<int> keys;
+        QVector<int> sizes;
+        QVector<qreal> factors;
+        for (int index = 0; index < m_sparseKeys.size(); ++index) {
+            const qreal factor = m_sparseFactors.at(index);
+            if (factor <= 0.0) {
+                changed = true;
+                continue;
+            }
+            keys.append(m_sparseKeys.at(index));
+            sizes.append(m_sparseSizes.at(index));
+            factors.append(factor);
+        }
+        if (!changed)
             return;
-        // The sparse list *is* the explicit state, so forgetting it drops the stretch
-        // factors stored in it as well - the sections go back to the default size and to
-        // being fixed.
-        m_sparseKeys.clear();
-        m_sparseSizes.clear();
-        m_sparseFactors.clear();
-        m_sparseDeltaPrefix.clear();
+        m_sparseKeys = keys;
+        m_sparseSizes = sizes;
+        m_sparseFactors = factors;
+        rebuildSparsePrefix();
         invalidateCaches();
         applyStretch();
         emit bulkGeometryChanged();
@@ -558,12 +624,17 @@ void HeaderGeometry::clearExplicitSectionSizes()
     for (Section &section : m_sections) {
         if (!section.explicitSize)
             continue;
+        section.size = m_defaultSectionSize;
         section.explicitSize = false;
         changed = true;
     }
-    if (changed)
+    if (changed) {
+        invalidateCaches();
         emit bulkGeometryChanged();
+    }
     applyStretch();
+    if (changed)
+        emitGeometryChanged();
 }
 void HeaderGeometry::setDefaultSectionSize(int size)
 {
@@ -879,6 +950,59 @@ void HeaderGeometry::moveLogicalSections(int start, int count, int destination)
     invalidateCaches();
     // A model-side move renames many sections at once and has no granular signal of its own
     // (unlike a resize or a visibility toggle), so renderers are told to re-read everything.
+    emit bulkGeometryChanged();
+    applyStretch();
+    emitGeometryChanged();
+}
+
+void HeaderGeometry::moveLogicalSectionSizes(int start, int count, int destination)
+{
+    if (m_uniformCount <= 0) {
+        moveLogicalSections(start, count, destination);
+        return;
+    }
+    const int total = m_uniformCount;
+    if (count <= 0 || start < 0 || count > total - start)
+        return;
+    const int to = qBound(0, destination, total);
+    if (to >= start && to <= start + count)
+        return;
+    const int target = to > start ? to - count : to;
+
+    struct Entry { int key; int size; qreal factor; };
+    QVector<Entry> entries;
+    entries.reserve(m_sparseKeys.size());
+    for (int index = 0; index < m_sparseKeys.size(); ++index) {
+        int key = m_sparseKeys.at(index);
+        if (key >= start && key < start + count)
+            key = target + key - start;
+        else if (target < start && key >= target && key < start)
+            key += count;
+        else if (target > start && key >= start + count && key < to)
+            key -= count;
+        entries.append({key, m_sparseSizes.at(index), m_sparseFactors.at(index)});
+    }
+    std::sort(entries.begin(), entries.end(),
+              [](const Entry &lhs, const Entry &rhs) { return lhs.key < rhs.key; });
+    for (int index = 0; index < entries.size(); ++index) {
+        m_sparseKeys[index] = entries.at(index).key;
+        m_sparseSizes[index] = entries.at(index).size;
+        m_sparseFactors[index] = entries.at(index).factor;
+    }
+    if (m_sortIndicatorSection >= 0) {
+        const int old = m_sortIndicatorSection;
+        if (old >= start && old < start + count)
+            m_sortIndicatorSection = target + old - start;
+        else if (target < start && old >= target && old < start)
+            m_sortIndicatorSection += count;
+        else if (target > start && old >= start + count && old < to)
+            m_sortIndicatorSection -= count;
+        if (m_sortIndicatorSection != old)
+            emit sortIndicatorChanged(m_sortIndicatorSection, m_sortIndicatorOrder);
+    }
+    rebuildSparsePrefix();
+    ++m_orderRevision;
+    invalidateCaches();
     emit bulkGeometryChanged();
     applyStretch();
     emitGeometryChanged();
@@ -1248,9 +1372,6 @@ bool HeaderGeometry::applyStretch()
 
 QByteArray HeaderGeometry::saveState() const
 {
-    // The serialised form is per-section: a uniform geometry writes each section's
-    // implied state (default size, visible, logical order) without materialising it.
-    // Saving a 10M-row geometry is an explicit O(N) stream, not a second copy in memory.
     QByteArray state;
     QDataStream stream(&state, QIODevice::WriteOnly);
     stream.setVersion(QDataStream::Qt_5_15);
@@ -1258,20 +1379,22 @@ QByteArray HeaderGeometry::saveState() const
     stream << qint32(m_orientation == Qt::Horizontal ? 1 : 0);
     stream << qint32(sectionCount());
 
-    QVector<qint32> visualOrder;
-    QVector<qint32> sizes;
-    QVector<quint8> hidden;
     if (m_uniformCount > 0) {
-        const int count = m_uniformCount;
-        visualOrder.reserve(count);
-        sizes.reserve(count);
-        hidden.reserve(count);
-        for (int logical = 0; logical < count; ++logical) {
-            visualOrder.append(qint32(logical));
-            sizes.append(qint32(sectionSize(logical)));   // the sparse overrides included
-            hidden.append(quint8(0));
-        }
+        stream << quint8(1);
+        QVector<qint32> keys;
+        QVector<qint32> sizes;
+        keys.reserve(m_sparseKeys.size());
+        sizes.reserve(m_sparseSizes.size());
+        for (int key : m_sparseKeys)
+            keys.append(qint32(key));
+        for (int size : m_sparseSizes)
+            sizes.append(qint32(size));
+        stream << keys << sizes << m_sparseFactors;
     } else {
+        stream << quint8(0);
+        QVector<qint32> visualOrder;
+        QVector<qint32> sizes;
+        QVector<quint8> hidden;
         visualOrder.reserve(m_visualToLogical.size());
         for (int visual = 0; visual < m_visualToLogical.size(); ++visual)
             visualOrder.append(qint32(m_visualToLogical.at(visual)));
@@ -1281,21 +1404,8 @@ QByteArray HeaderGeometry::saveState() const
             sizes.append(qint32(section.size));
             hidden.append(section.hidden ? quint8(1) : quint8(0));
         }
-    }
-    stream << visualOrder;
-    stream << sizes << hidden;
-    // Stretch factors are stored sparsely (logical index -> factor): a uniform geometry
-    // with two stretching sections would otherwise write a factor per section.
-    QVector<qint32> stretchKeys;
-    QVector<qreal> stretchFactors;
-    if (m_uniformCount > 0) {
-        for (int index = 0; index < m_sparseKeys.size(); ++index) {
-            if (m_sparseFactors.at(index) <= 0.0)
-                continue;
-            stretchKeys.append(qint32(m_sparseKeys.at(index)));
-            stretchFactors.append(m_sparseFactors.at(index));
-        }
-    } else {
+        QVector<qint32> stretchKeys;
+        QVector<qreal> stretchFactors;
         for (int logical = 0; logical < sectionCount(); ++logical) {
             const qreal factor = m_sections.at(logical).stretchFactor;
             if (factor <= 0.0)
@@ -1303,8 +1413,8 @@ QByteArray HeaderGeometry::saveState() const
             stretchKeys.append(qint32(logical));
             stretchFactors.append(factor);
         }
+        stream << visualOrder << sizes << hidden << stretchKeys << stretchFactors;
     }
-    stream << stretchKeys << stretchFactors;
 
     stream << qint32(m_defaultSectionSize) << qint32(m_minimumSectionSize)
            << qint32(m_maximumSectionSize);
@@ -1327,7 +1437,8 @@ bool HeaderGeometry::restoreState(const QByteArray &state)
     qint32 orientation = 0;
     qint32 count = 0;
     stream >> magic >> version >> orientation >> count;
-    if (stream.status() != QDataStream::Ok || magic != kStateMagic || version != kStateVersion)
+    if (stream.status() != QDataStream::Ok || magic != kStateMagic
+        || (version != 2 && version != kStateVersion))
         return false;
     if (sectionCount() != count)
         return false;
@@ -1337,6 +1448,9 @@ bool HeaderGeometry::restoreState(const QByteArray &state)
     QVector<qint32> visualOrder;
     QVector<qint32> sizes;
     QVector<quint8> hidden;
+    QVector<qint32> sparseKeys;
+    QVector<qint32> sparseSizes;
+    QVector<qreal> sparseFactors;
     qint32 defaultSize = 0;
     qint32 minimumSize = 0;
     qint32 maximumSize = 0;
@@ -1346,41 +1460,76 @@ bool HeaderGeometry::restoreState(const QByteArray &state)
     quint8 stretch = 0;
     QVector<qint32> stretchKeys;
     QVector<qreal> stretchFactors;
-    stream >> visualOrder >> sizes >> hidden >> stretchKeys >> stretchFactors >> defaultSize
-           >> minimumSize >> maximumSize >> offset >> sortSection >> sortOrder >> stretch;
+    quint8 compact = 0;
+    if (version >= 3)
+        stream >> compact;
+    if (compact > 1)
+        return false;
+    if (compact)
+        stream >> sparseKeys >> sparseSizes >> sparseFactors;
+    else
+        stream >> visualOrder >> sizes >> hidden >> stretchKeys >> stretchFactors;
+    stream >> defaultSize >> minimumSize >> maximumSize >> offset >> sortSection >> sortOrder
+           >> stretch;
     if (stream.status() != QDataStream::Ok)
         return false;
-    if (visualOrder.size() != count || sizes.size() != count || hidden.size() != count
-        || stretchKeys.size() != stretchFactors.size() || !isValidVisualOrder(visualOrder))
-        return false;
-    for (qint32 logical : stretchKeys) {
-        if (!isValidLogical(int(logical)))
+    if (compact) {
+        if (sparseKeys.size() != sparseSizes.size()
+            || sparseKeys.size() != sparseFactors.size())
             return false;
+        for (int index = 0; index < sparseKeys.size(); ++index) {
+            if (sparseKeys.at(index) < 0 || sparseKeys.at(index) >= count
+                || (index > 0 && sparseKeys.at(index) <= sparseKeys.at(index - 1)))
+                return false;
+        }
+    } else {
+        if (visualOrder.size() != count || sizes.size() != count || hidden.size() != count
+            || stretchKeys.size() != stretchFactors.size() || !isValidVisualOrder(visualOrder))
+            return false;
+        for (qint32 logical : stretchKeys) {
+            if (!isValidLogical(int(logical)))
+                return false;
+        }
     }
 
-    // The restored state is per-section: a uniform geometry gets its stored state now
-    // (the count matches, so this is the representation the state describes).
-    densify();
+    if (!compact)
+        densify();
     m_defaultSectionSize = qMax(1, int(defaultSize));
     m_minimumSectionSize = qMax(1, int(minimumSize));
     m_maximumSectionSize = qMax(m_minimumSectionSize, int(maximumSize));
 
-    for (int logical = 0; logical < count; ++logical) {
-        Section &section = m_sections[logical];
-        section.size = clampedSize(int(sizes.at(logical)));
-        section.hidden = hidden.at(logical) != 0;
-        section.explicitSize = true;
-        section.stretchFactor = 0.0;
+    if (compact) {
+        m_sections.clear();
+        m_visualToLogical.clear();
+        m_logicalToVisual.clear();
+        m_uniformCount = count;
+        m_sparseKeys.clear();
+        m_sparseSizes.clear();
+        m_sparseFactors.clear();
+        for (int index = 0; index < sparseKeys.size(); ++index) {
+            m_sparseKeys.append(int(sparseKeys.at(index)));
+            m_sparseSizes.append(clampedSize(int(sparseSizes.at(index))));
+            m_sparseFactors.append(sparseFactors.at(index));
+        }
+        rebuildSparsePrefix();
+    } else {
+        for (int logical = 0; logical < count; ++logical) {
+            Section &section = m_sections[logical];
+            section.size = clampedSize(int(sizes.at(logical)));
+            section.hidden = hidden.at(logical) != 0;
+            section.explicitSize = true;
+            section.stretchFactor = 0.0;
+        }
+        for (int index = 0; index < stretchKeys.size(); ++index) {
+            Section &section = m_sections[int(stretchKeys.at(index))];
+            section.stretchFactor = stretchFactors.at(index);
+            if (section.stretchFactor > 0.0)
+                section.explicitSize = false;
+        }
+        m_visualToLogical = visualOrder;
+        for (int visual = 0; visual < m_visualToLogical.size(); ++visual)
+            m_logicalToVisual[m_visualToLogical.at(visual)] = visual;
     }
-    for (int index = 0; index < stretchKeys.size(); ++index) {
-        Section &section = m_sections[int(stretchKeys.at(index))];
-        section.stretchFactor = stretchFactors.at(index);
-        if (section.stretchFactor > 0.0)
-            section.explicitSize = false;
-    }
-    m_visualToLogical = visualOrder;
-    for (int visual = 0; visual < m_visualToLogical.size(); ++visual)
-        m_logicalToVisual[m_visualToLogical.at(visual)] = visual;
 
     m_viewportOffset = qMax<qint64>(0, offset);
     m_sortIndicatorSection = isValidLogical(int(sortSection)) ? int(sortSection) : -1;

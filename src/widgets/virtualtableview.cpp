@@ -245,6 +245,12 @@ void VirtualTableView::ensureHeaders()
     if (!m_verticalHeader) {
         m_verticalHeader = createDefaultVerticalHeader();
         m_ownVerticalHeader = true;
+        if (auto *widgetHeader = dynamic_cast<VirtualHeaderView *>(m_verticalHeader)) {
+            connect(widgetHeader, &VirtualHeaderView::adapterAboutToChange, this,
+                    &VirtualTableView::dropFrozenRowHeaders, Qt::UniqueConnection);
+            connect(widgetHeader, &VirtualHeaderView::adapterChanged, this,
+                    &VirtualTableView::rebuildFrozenRowHeaders, Qt::UniqueConnection);
+        }
         m_verticalHeader->setGeometryModel(m_rowHeaders);
         m_verticalHeader->setLabelModel(model());
         m_verticalHeader->headerWidget()->setParent(this);
@@ -323,6 +329,12 @@ void VirtualTableView::setVerticalHeader(HeaderViewInterface *header)
         deleteHeader(m_verticalHeader);
     m_verticalHeader = header;
     m_ownVerticalHeader = true;
+    if (auto *widgetHeader = dynamic_cast<VirtualHeaderView *>(m_verticalHeader)) {
+        connect(widgetHeader, &VirtualHeaderView::adapterAboutToChange, this,
+                &VirtualTableView::dropFrozenRowHeaders, Qt::UniqueConnection);
+        connect(widgetHeader, &VirtualHeaderView::adapterChanged, this,
+                &VirtualTableView::rebuildFrozenRowHeaders, Qt::UniqueConnection);
+    }
     m_verticalHeader->setGeometryModel(m_rowHeaders);
     m_verticalHeader->setLabelModel(model());
     m_verticalHeader->headerWidget()->setParent(this);
@@ -512,6 +524,7 @@ void VirtualTableView::setModel(QAbstractItemModel *model)
         m_frozenBottomRowsHeader->setLabelModel(model);
 
     m_columns->setSectionCount(model ? model->columnCount() : 0);
+    m_rowHeaders->setSectionCount(0);
     m_rowHeaders->setDefaultSectionSize(uniformItemHeight() > 0 ? uniformItemHeight()
                                                                : estimatedItemHeight());
     m_explicitRowHeights.clear();
@@ -528,11 +541,26 @@ void VirtualTableView::connectColumnSignals(QAbstractItemModel *model)
     connect(model, &QAbstractItemModel::columnsMoved, this, &VirtualTableView::onColumnsMoved);
     connect(model, &QAbstractItemModel::modelReset, this, [this]() {
         m_columns->setSectionCount(columnCount());
+        m_explicitRowHeights.clear();
+        m_rowHeaders->setSectionCount(0);
     });
-    // A row move/insert/remove changes which *item* a row-number section shows without
-    // touching the row section set, so the strip has to re-read its labels - otherwise the
-    // numbers keep the text of the row that used to sit there (a row drag then looks like it
-    // did nothing).
+    connect(model, &QAbstractItemModel::rowsInserted, this,
+            [this](const QModelIndex &parent, int first, int last) {
+                if (!parent.isValid())
+                    m_rowHeaders->insertLogicalSections(first, last - first + 1);
+            });
+    connect(model, &QAbstractItemModel::rowsRemoved, this,
+            [this](const QModelIndex &parent, int first, int last) {
+                if (!parent.isValid())
+                    m_rowHeaders->removeLogicalSections(first, last - first + 1);
+            });
+    connect(model, &QAbstractItemModel::rowsMoved, this,
+            [this](const QModelIndex &source, int first, int last,
+                   const QModelIndex &destination, int row) {
+                if (!source.isValid() && !destination.isValid())
+                    m_rowHeaders->moveLogicalSectionSizes(first, last - first + 1, row);
+            });
+    // Row identity changes also require the visible labels to be rebound.
     const auto refreshRowStrips = [this]() {
         if (m_verticalHeader)
             m_verticalHeader->refreshSectionLabels();
@@ -551,6 +579,7 @@ void VirtualTableView::connectColumnSignals(QAbstractItemModel *model)
     // RowSizePolicy::MeasuredWins the measurement still wins (canMeasureItem()).
     connect(model, &QAbstractItemModel::layoutChanged, this,
             [this](const QList<QPersistentModelIndex> &, QAbstractItemModel::LayoutChangeHint) {
+                m_rowHeaders->setSectionCount(0);
                 reapplyExplicitRowHeights();
             });
 }
@@ -1258,6 +1287,18 @@ void VirtualTableView::rebuildDerivedPaneHeaders()
     layoutHeaderWidgets();
 }
 
+void VirtualTableView::dropFrozenRowHeaders()
+{
+    deleteHeader(m_frozenTopRowsHeader);
+    deleteHeader(m_frozenBottomRowsHeader);
+}
+
+void VirtualTableView::rebuildFrozenRowHeaders()
+{
+    syncVerticalPaneHeaders();
+    layoutVerticalHeaderStrips();
+}
+
 HeaderViewInterface *VirtualTableView::createHorizontalPaneHeader()
 {
     if (auto *widgetHeader = dynamic_cast<VirtualHeaderView *>(m_horizontalHeader)) {
@@ -1615,7 +1656,11 @@ void VirtualTableView::updateRowHeaderGeometry()
     const bool sparseSizes = count > kRowHeaderMirrorLimit
         && !m_explicitRowHeights.isEmpty()
         && m_explicitRowHeights.size() <= kMaxSparseRowHeights;
-    const bool supported = sparseSizes || !(variable && count > kRowHeaderMirrorLimit);
+    const auto *blockSizes = m_rowLayout
+        ? dynamic_cast<const BlockSizeIndex *>(m_rowLayout->sizeIndex()) : nullptr;
+    const bool noSizeExceptions = blockSizes && blockSizes->explicitSizeCount() == 0;
+    const bool supported = sparseSizes || noSizeExceptions
+        || !(variable && count > kRowHeaderMirrorLimit);
     if (supported != m_verticalHeaderSupported) {
         m_verticalHeaderSupported = supported;
         if (!supported) {
@@ -1693,6 +1738,15 @@ void VirtualTableView::updateRowHeaderGeometry()
     for (const MaterializedItem &item : materializedItems()) {
         const qsizetype row = viewItemForIndex(item.index);
         if (row < 0)
+            continue;
+        const int size = rowHeight(row);
+        if (size > 0 && m_rowHeaders->storedSectionSize(int(row)) != size)
+            pending.append({row, size});
+    }
+    for (auto it = m_explicitRowHeights.constBegin(); it != m_explicitRowHeights.constEnd();
+         ++it) {
+        const qsizetype row = viewItemForIndex(it.key());
+        if (row < 0 || row >= count)
             continue;
         const int size = rowHeight(row);
         if (size > 0 && m_rowHeaders->storedSectionSize(int(row)) != size)

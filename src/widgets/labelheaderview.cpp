@@ -184,10 +184,9 @@ int LabelHeaderAdapter::sortOrderFor(int logicalIndex) const
 
 LabelHeaderView::LabelHeaderView(Qt::Orientation orientation, QWidget *parent)
     : VirtualHeaderView(orientation, parent)
-    , m_labelAdapter(new LabelHeaderAdapter)
 {
     // Handed over: the header unbinds and deletes it with itself.
-    setAdapter(m_labelAdapter, /*takeOwnership=*/true);
+    setAdapter(new LabelHeaderAdapter, /*takeOwnership=*/true);
 }
 
 LabelHeaderView::~LabelHeaderView() = default;

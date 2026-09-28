@@ -85,11 +85,10 @@ public:
     /// View row that currently shows the data row \a sourceRow, or -1 when it is not part
     /// of the model (any more).
     int viewRow(int sourceRow) const;
-    /// Puts the order back to "view row == source row", i.e. the order of the data set.
+    /// Restores the data-set order, preserving the identities and insertion positions
+    /// of all rows that still exist.
     void resetRowOrder();
-    /// True while the recorded order is still the identity - view row i shows data row i.
-    /// A cheap "did anything move?" check for tests and diagnostics (an insert/remove can
-    /// make it true or false on its own; it only tracks the *order*).
+    /// True while the view order matches the data-set order.
     bool isIdentityOrder() const;
 
     /// Moves one row, or a run of rows, before \a destinationChild - Qt's
@@ -109,6 +108,8 @@ signals:
 private:
     /// view row -> source row
     QVector<int> m_order;
+    /// Data-set order, unaffected by view moves.
+    QVector<int> m_sourceOrder;
     int m_columns = 0;
     /// Identity of the next row insertRows() creates; source ids are never reused, so a
     /// removed row cannot be confused with a later one.

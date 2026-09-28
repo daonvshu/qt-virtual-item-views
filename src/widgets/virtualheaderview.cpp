@@ -194,23 +194,30 @@ void VirtualHeaderView::setLabelModel(QAbstractItemModel *model)
                         return;
                     rebindMaterializedSections(first, last);
                 });
-        connect(m_labelModel, &QAbstractItemModel::columnsAboutToBeInserted, this,
-                [this](const QModelIndex &, int, int) { recycleAllSections(); });
-        connect(m_labelModel, &QAbstractItemModel::columnsAboutToBeRemoved, this,
-                [this](const QModelIndex &, int, int) { recycleAllSections(); });
-        connect(m_labelModel, &QAbstractItemModel::columnsAboutToBeMoved, this,
-                [this](const QModelIndex &, int, int, const QModelIndex &, int) {
-                    recycleAllSections();
-                });
+        const auto recycle = [this](const QModelIndex &, int, int) { recycleAllSections(); };
+        const auto recycleMove = [this](const QModelIndex &, int, int,
+                                        const QModelIndex &, int) { recycleAllSections(); };
+        const auto refresh = [this](const QModelIndex &, int, int) { relayout(); };
+        const auto refreshMove = [this](const QModelIndex &, int, int,
+                                        const QModelIndex &, int) { relayout(); };
+        if (isHorizontal()) {
+            connect(m_labelModel, &QAbstractItemModel::columnsAboutToBeInserted, this, recycle);
+            connect(m_labelModel, &QAbstractItemModel::columnsAboutToBeRemoved, this, recycle);
+            connect(m_labelModel, &QAbstractItemModel::columnsAboutToBeMoved, this, recycleMove);
+            connect(m_labelModel, &QAbstractItemModel::columnsInserted, this, refresh);
+            connect(m_labelModel, &QAbstractItemModel::columnsRemoved, this, refresh);
+            connect(m_labelModel, &QAbstractItemModel::columnsMoved, this, refreshMove);
+        } else {
+            connect(m_labelModel, &QAbstractItemModel::rowsAboutToBeInserted, this, recycle);
+            connect(m_labelModel, &QAbstractItemModel::rowsAboutToBeRemoved, this, recycle);
+            connect(m_labelModel, &QAbstractItemModel::rowsAboutToBeMoved, this, recycleMove);
+            connect(m_labelModel, &QAbstractItemModel::rowsInserted, this, refresh);
+            connect(m_labelModel, &QAbstractItemModel::rowsRemoved, this, refresh);
+            connect(m_labelModel, &QAbstractItemModel::rowsMoved, this, refreshMove);
+        }
         connect(m_labelModel, &QAbstractItemModel::modelAboutToBeReset, this,
                 [this]() { recycleAllSections(); });
         connect(m_labelModel, &QAbstractItemModel::modelReset, this, [this]() { relayout(); });
-        connect(m_labelModel, &QAbstractItemModel::columnsInserted, this,
-                [this](const QModelIndex &, int, int) { relayout(); });
-        connect(m_labelModel, &QAbstractItemModel::columnsRemoved, this,
-                [this](const QModelIndex &, int, int) { relayout(); });
-        connect(m_labelModel, &QAbstractItemModel::columnsMoved, this,
-                [this](const QModelIndex &, int, int, const QModelIndex &, int) { relayout(); });
     }
     // The label model is part of the section binding contract: an adapter that captured the
     // model (the README example does) is told about the switch, and the sections that are
@@ -852,16 +859,19 @@ int VirtualHeaderView::dragTargetIndex() const
     const int draggedSize = m_geometry->sectionSize(m_dragSection);
     const int centre
         = sectionPos(m_dragSection) + (m_dragCurrentPos - m_dragStartPos) + draggedSize / 2;
-    int to = 0;
-    for (int packed = 0; packed < shown.size(); ++packed) {
-        if (packed == from)
-            continue;
-        const int otherCentre =
-            sectionPos(shown.at(packed)) + m_geometry->sectionSize(shown.at(packed)) / 2;
+    int low = 0;
+    int high = shown.size() - 1;
+    while (low < high) {
+        const int middle = low + (high - low) / 2;
+        const int logical = shown.at(middle < from ? middle : middle + 1);
+        const qint64 otherCentre = qint64(sectionPos(logical))
+            + m_geometry->sectionSize(logical) / 2;
         if (otherCentre < centre)
-            ++to;
+            low = middle + 1;
+        else
+            high = middle;
     }
-    return qBound(0, to, shown.size() - 1);
+    return low;
 }
 
 void VirtualHeaderView::positionDraggedSections()
@@ -1154,7 +1164,13 @@ int VirtualHeaderView::resizeEdgeAt(const QPoint &pos) const
         if (qAbs(axisOf(pos) - right) <= kResizeMargin)
             return logical;
         if (qAbs(axisOf(pos) - left) <= kResizeMargin) {
-            // The leading edge belongs to the previous section.
+            if (m_paneFilterActive) {
+                rebuildPaneCacheIfNeeded();
+                const int slot = logical < m_paneSlotByLogical.size()
+                    ? m_paneSlotByLogical.at(logical) : -1;
+                return slot > 0 ? m_paneOrder.at(slot - 1) : -1;
+            }
+            // The leading edge belongs to the previous shown section.
             const int visual = m_geometry->visualIndex(logical);
             if (visual > 0)
                 return m_geometry->logicalIndex(visual - 1);

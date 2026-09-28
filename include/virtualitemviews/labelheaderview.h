@@ -108,11 +108,10 @@ public:
     /// The adapter the sections are built with. Replacing it (setAdapter()) is
     /// allowed; a subclassed LabelHeaderAdapter is the cheap way to change what a
     /// label shows without building section widgets.
-    LabelHeaderAdapter *labelAdapter() const { return m_labelAdapter; }
-
-private:
-    /// Owned by this header (handed over with takeOwnership).
-    LabelHeaderAdapter *m_labelAdapter = nullptr;
+    LabelHeaderAdapter *labelAdapter() const
+    {
+        return dynamic_cast<LabelHeaderAdapter *>(adapter());
+    }
 };
 
 } // namespace viv

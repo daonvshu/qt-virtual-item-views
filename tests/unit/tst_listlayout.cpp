@@ -196,6 +196,12 @@ void TestListLayout::horizontalOrientationUsesWidth()
     QCOMPARE(layout.itemRect(1, 20), QRect(30, 0, 50, 120));
     QCOMPARE(layout.itemAtPoint(QPoint(30, 10), 20), qsizetype(1));
     QCOMPARE(layout.itemAtPoint(QPoint(30, 200), 20), qsizetype(-1));
+
+    layout.setViewportMargins(QMargins(4, 10, 4, 15));
+    QCOMPARE(layout.itemRect(1, 20), QRect(34, 10, 50, 95));
+    QCOMPARE(layout.itemAtPoint(QPoint(34, 9), 20), qsizetype(-1));
+    QCOMPARE(layout.itemAtPoint(QPoint(34, 10), 20), qsizetype(1));
+    QCOMPARE(layout.itemAtPoint(QPoint(34, 105), 20), qsizetype(-1));
 }
 
 void TestListLayout::policyWithoutSizeIndexReleasesOwnership()

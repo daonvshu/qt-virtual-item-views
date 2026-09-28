@@ -32,9 +32,8 @@ struct ColumnGeometry
 
 /// Single source of truth for column geometry and column state (§14).
 ///
-/// The table body, the native header adapter and (later) a QWidget based header
-/// all consume this object; none of them keeps an authoritative width, order or
-/// visibility copy of its own (§45.10).
+/// The table body and widget header renderers consume this object; neither keeps
+/// an authoritative width, order or visibility copy of its own (§45.10).
 class VIRTUALITEMVIEWS_EXPORT HeaderGeometry : public QObject
 {
     Q_OBJECT
@@ -50,21 +49,17 @@ public:
     /// How many sections the geometry *has*.
     ///
     /// This is deliberately independent of how many per-section states are stored: a
-    /// geometry whose sections are all at the default size, visible and in logical order
-    /// is **uniform** and keeps O(1) state whatever the count is (a `setSectionCount()`
-    /// plus a `setDefaultSectionSize()` needs no per-section storage). A per-section edit
-    /// (a resize, a hide, a move, an insert/remove) materialises the stored state once -
-    /// see storedSectionStateCount() and densify().
+    /// geometry with identity order and no hidden sections stays compact. Size changes
+    /// are sparse; visibility and visual-order edits materialize per-section state.
     int sectionCount() const { return m_uniformCount > 0 ? m_uniformCount : int(m_sections.size()); }
-    /// Diagnostics: per-section states actually stored. 0 for a uniform geometry, and a
-    /// per-section edit makes it `sectionCount()` - the large-count paths (a 10M-row
-    /// uniform table) must keep it 0.
+    /// Diagnostics: per-section states actually stored. Compact geometry stores only
+    /// exceptional sizes and stretch factors, even at very large section counts.
     int storedSectionStateCount() const
     {
         return m_uniformCount > 0 ? int(m_sparseKeys.size()) : int(m_sections.size());
     }
-    /// True while every section carries the default size, is visible and sits in logical
-    /// order, so no per-section state is stored (see sectionCount()).
+    /// True while the geometry uses identity visual order and no hidden sections.
+    /// Sparse size overrides do not change this compact representation.
     bool isUniform() const { return m_uniformCount > 0; }
     /// Grows/shrinks the section set at the end. Model structure changes should
     /// use the logical insert/remove/move calls below instead: they keep the
@@ -125,6 +120,9 @@ public:
     /// Follows a QAbstractItemModel column move: section state (size,
     /// visibility) shifts with the columns and the visual order is remapped.
     void moveLogicalSections(int start, int count, int destination);
+    /// Remaps sizes after a model row move while keeping identity visual order.
+    /// Compact row geometry stays sparse; indexed geometry uses moveLogicalSections().
+    void moveLogicalSectionSizes(int start, int count, int destination);
     bool isSectionHidden(int logicalIndex) const;
     void setSectionHidden(int logicalIndex, bool hidden);
     void setAllSectionsHidden(bool hidden);
@@ -194,8 +192,8 @@ public:
 
     // -- persistence (§32) ---------------------------------------------------
     static constexpr quint32 kStateMagic = 0x56495648; // 'VIVH'
-    /// Version 2 added the per-section stretch factors at the end of the stream.
-    static constexpr quint32 kStateVersion = 2;
+    /// Version 3 stores compact geometry without expanding every section.
+    static constexpr quint32 kStateVersion = 3;
     QByteArray saveState() const;
     /// Restores sizes, order, visibility, sort state and offset. Returns false
     /// (and changes nothing) when the state is invalid or belongs to a different

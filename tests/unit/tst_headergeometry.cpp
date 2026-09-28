@@ -1,6 +1,7 @@
 #include <virtualitemviews/headergeometry.h>
 
 #include <QtTest>
+#include <QDataStream>
 
 using namespace viv;
 
@@ -40,6 +41,10 @@ private slots:
     void resizingAStretchingSectionFixesItsWidth();
     void stretchFactorsSurviveTheStateRoundTrip();
     void sparseStretchKeepsTheLargeCountCompact();
+    void sparseStructuralChangesStayCompact();
+    void clearExplicitSizesPreservesStretchFactors();
+    void compactStateRoundTripStaysCompact();
+    void versionTwoStateStillRestores();
 };
 
 void TestHeaderGeometry::defaultSectionGeometry()
@@ -729,9 +734,7 @@ void TestHeaderGeometry::uniformLargeCountStoresNothingPerSection()
     QCOMPARE(geometry.storedSectionStateCount(), 0);
     QCOMPARE(geometry.totalExtent(), qint64(kSections + 4096) * kSize);
 
-    // State round trip: the serialised form is per-section, so it is generated from the
-    // implied state. (Done on a small count - writing 10M sections is an explicit O(N)
-    // operation, not something the suite should pay for.)
+    // State round trip preserves the compact representation.
     constexpr int kSmall = 5000;
     HeaderGeometry small(Qt::Vertical);
     small.setSectionCount(kSmall);
@@ -742,7 +745,7 @@ void TestHeaderGeometry::uniformLargeCountStoresNothingPerSection()
     restored.setSectionCount(kSmall);
     QVERIFY(restored.restoreState(state));
     QCOMPARE(restored.sectionSize(1234), kSize);
-    QCOMPARE(restored.storedSectionStateCount(), kSmall);
+    QCOMPARE(restored.storedSectionStateCount(), 0);
     QCOMPARE(restored.totalExtent(), small.totalExtent());
 }
 
@@ -1102,6 +1105,79 @@ void TestHeaderGeometry::sparseStretchKeepsTheLargeCountCompact()
     QCOMPARE(structural.sectionStretchFactor(2), 2.0);
     QCOMPARE(structural.sectionSize(2), 200);    // the hidden column frees its 100 px
     QCOMPARE(structural.totalExtent(), qint64(600));
+}
+
+void TestHeaderGeometry::sparseStructuralChangesStayCompact()
+{
+    HeaderGeometry geometry(Qt::Vertical);
+    geometry.setDefaultSectionSize(24);
+    geometry.setSectionCount(10'000'000);
+    geometry.resizeSection(1000, 50);
+
+    geometry.insertLogicalSections(0, 1);
+    QCOMPARE(geometry.storedSectionStateCount(), 1);
+    QCOMPARE(geometry.sectionSize(1001), 50);
+    QCOMPARE(geometry.sectionSize(1000), 24);
+
+    geometry.moveLogicalSectionSizes(1001, 1, 1500);
+    QCOMPARE(geometry.storedSectionStateCount(), 1);
+    QCOMPARE(geometry.sectionSize(1499), 50);
+    QCOMPARE(geometry.sectionSize(1001), 24);
+
+    geometry.removeLogicalSections(0, 1);
+    QCOMPARE(geometry.storedSectionStateCount(), 1);
+    QCOMPARE(geometry.sectionSize(1498), 50);
+    QCOMPARE(geometry.totalExtent(), qint64(10'000'000) * 24 + 26);
+}
+
+void TestHeaderGeometry::clearExplicitSizesPreservesStretchFactors()
+{
+    for (bool indexed : {false, true}) {
+        HeaderGeometry geometry;
+        geometry.setSectionCount(5);
+        if (indexed)
+            geometry.setSectionHidden(4, true);
+        geometry.setSectionStretchFactor(1, 2.0);
+        geometry.resizeSection(2, 150);
+        geometry.clearExplicitSectionSizes();
+        QCOMPARE(geometry.sectionStretchFactor(1), 2.0);
+        QCOMPARE(geometry.sectionSize(2), geometry.defaultSectionSize());
+        QVERIFY(!geometry.isSectionSizeExplicit(2));
+    }
+}
+
+void TestHeaderGeometry::compactStateRoundTripStaysCompact()
+{
+    HeaderGeometry geometry(Qt::Vertical);
+    geometry.setSectionCount(10'000'000);
+    geometry.resizeSection(1234, 150);
+    const QByteArray state = geometry.saveState();
+    QVERIFY(state.size() < 1024);
+
+    HeaderGeometry restored(Qt::Vertical);
+    restored.setSectionCount(10'000'000);
+    QVERIFY(restored.restoreState(state));
+    QCOMPARE(restored.storedSectionStateCount(), 1);
+    QCOMPARE(restored.sectionSize(1234), 150);
+    QCOMPARE(restored.sectionSize(1235), restored.defaultSectionSize());
+}
+
+void TestHeaderGeometry::versionTwoStateStillRestores()
+{
+    QByteArray state;
+    QDataStream stream(&state, QIODevice::WriteOnly);
+    stream.setVersion(QDataStream::Qt_5_15);
+    stream << HeaderGeometry::kStateMagic << quint32(2) << qint32(1) << qint32(2);
+    stream << QVector<qint32>({0, 1}) << QVector<qint32>({100, 150})
+           << QVector<quint8>({0, 0}) << QVector<qint32>() << QVector<qreal>();
+    stream << qint32(100) << qint32(1) << qint32(1000) << qint64(0)
+           << qint32(-1) << qint32(Qt::AscendingOrder) << quint8(0);
+
+    HeaderGeometry restored;
+    restored.setSectionCount(2);
+    QVERIFY(restored.restoreState(state));
+    QCOMPARE(restored.sectionSize(0), 100);
+    QCOMPARE(restored.sectionSize(1), 150);
 }
 QTEST_APPLESS_MAIN(TestHeaderGeometry)
 

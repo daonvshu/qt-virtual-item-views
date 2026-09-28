@@ -8,6 +8,7 @@
 #include <QPersistentModelIndex>
 #include <QStringList>
 #include <QWidget>
+#include <QVector>
 
 #include <functional>
 
@@ -64,11 +65,13 @@ public:
     bool removeRowsAt(int first, int count);
     bool moveRow(int from, int to);
 
-    /// Text of a row; the identity of a row is its index for this model.
+    /// Text for a row identity (the model keeps identities when rows move).
     static QString textForRow(int row);
 
 private:
     int m_count = 0;
+    QVector<int> m_order;
+    int m_nextId = 0;
 };
 
 /// Minimal business row widget: a label plus lifecycle counters.

@@ -6,6 +6,7 @@
 #include <QHash>
 #include <QList>
 #include <QObject>
+#include <QPointer>
 #include <QtGlobal>
 
 #include <functional>
@@ -37,7 +38,7 @@ public:
     WidgetRecycler &operator=(const WidgetRecycler &) = delete;
 
     void setParentWidget(QWidget *parent);
-    QWidget *parentWidget() const { return m_parent; }
+    QWidget *parentWidget() const;
 
     void setFactory(Factory factory);
 
@@ -81,9 +82,9 @@ public:
 private:
     bool canReuse(WidgetType type, const QWidget *widget) const;
 
-    QWidget *m_parent = nullptr;
+    QPointer<QWidget> m_parent;
     Factory m_factory;
-    QHash<WidgetType, QList<QWidget *>> m_pools;
+    QHash<WidgetType, QList<QPointer<QWidget>>> m_pools;
     QHash<WidgetType, qsizetype> m_maxPoolSize;
     qsizetype m_activeCount = 0;
     qsizetype m_createdCount = 0;

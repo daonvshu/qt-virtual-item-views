@@ -31,7 +31,7 @@ class ListLayout;
 ///
 /// Design invariants:
 ///  - HeaderGeometry is the single source of truth for column geometry and
-///    state; the body, the native header and the business row widgets all query
+///    state; the body, widget headers and the business row widgets all query
 ///    it (§14, §45.10),
 ///  - rows are virtualized exactly like VirtualListView: only visible rows,
 ///    overscan rows and pinned rows own a QWidget,
@@ -74,7 +74,7 @@ public:
     // -- headers -------------------------------------------------------------
     HeaderGeometry *horizontalHeaderGeometry() const { return m_columns; }
     HeaderGeometry *verticalHeaderGeometry() const { return m_rowHeaders; }
-    /// Takes ownership of \a header; nullptr selects the default native header.
+    /// Takes ownership of \a header; nullptr selects the default LabelHeaderView.
     void setHorizontalHeader(HeaderViewInterface *header);
     HeaderViewInterface *horizontalHeader() const { return m_horizontalHeader; }
     void setVerticalHeader(HeaderViewInterface *header);
@@ -453,6 +453,9 @@ private:
     /// is replaced (they borrow that adapter, see VirtualHeaderView::adapterAboutToChange()).
     void dropDerivedPaneHeaders();
     void rebuildDerivedPaneHeaders();
+    /// Frozen row strips borrow the primary vertical header's adapter.
+    void dropFrozenRowHeaders();
+    void rebuildFrozenRowHeaders();
     /// Cell Widget Mode: a cell has to be unbound *before* the model invalidates
     /// its persistent index, otherwise the business loses the row / column the
     /// widget was bound to.
@@ -509,7 +512,7 @@ private:
     void applyHeaderGestureSettings();
     /// Row-number strip of a frozen row pane (§31 row direction): same kind as the
     /// installed vertical header. Null when the installed one cannot be cloned (a custom
-    /// renderer that is not a native header), in which case the strip stays single.
+    /// renderer that is not a VirtualHeaderView), in which case the strip stays single.
     HeaderViewInterface *createVerticalPaneHeader();
     /// Creates/destroys/positions the row-number strips of the frozen row panes: each
     /// band of the strip shows its own rows with its own offset, because the content

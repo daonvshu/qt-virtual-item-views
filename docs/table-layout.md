@@ -6,9 +6,10 @@
 > `visibleRows x visibleColumns`）；**v0.7 起 `VirtualHeaderView` + `HeaderWidgetAdapter` 已实现**
 > （§15/§17–§19），换序的 committed/visual 两层几何与按需过渡见
 > [header-animation.md](header-animation.md)；**1.0 起列方向的默认渲染器是 widget 表头
-> `LabelHeaderView`**（只画 label 的 section，见 §8），native 渲染器仍可显式安装。
+> `LabelHeaderView`**（只画 label 的 section，见 §8）。`NativeHeaderView` 已从当前 API 删除；
+> 下文的 v0.4 native 设计记录只用于解释当时的方案，不是可调用接口。
 
-本文记录 `VirtualTableView` 尚未实现、但必须从第一天遵守的边界。方案文档把它列为项目级
+本文记录 `VirtualTableView` 的几何与渲染边界。方案文档把它列为项目级
 architecture invariant：**Header owns geometry; VirtualTableView owns virtualization;
 Row/Cell Widget owns business UI.**
 
@@ -22,7 +23,7 @@ Row/Cell Widget owns business UI.**
 * section content position 与 viewport position
 * logical horizontal offset 与 total extent
 
-Table Body、Native Header（QHeaderView）与 Widget Header（VirtualHeaderView）都消费同一份状态。
+Table Body 与 Widget Header（VirtualHeaderView）都消费同一份状态。
 
 禁止维护第二套权威宽度，也不允许用 "logical index 前缀宽度求和" 推导 visual position；必须查询
 `visualIndex(logical)` 与 `sectionViewportPosition(logical)`。
@@ -30,16 +31,12 @@ Table Body、Native Header（QHeaderView）与 Widget Header（VirtualHeaderView
 ## 2. Header Renderer 可替换
 
 ```text
-              HeaderGeometry
-                    |
-        +-----------+-----------+
-        v                       v
-NativeHeaderView          VirtualHeaderView
- (QHeaderView, 轻量)        (QWidget, 复杂业务)
+         HeaderGeometry
+               |
+         VirtualHeaderView
+        (QWidget, 两个方向)
 ```
 
-* Native 模式保留 QHeaderView 的轻量优势（文本、sort indicator、标准 resize/move），仍是
-  可替换的渲染器之一。
 * Widget 模式使用 `VirtualHeaderView + HeaderWidgetAdapter + Recycler`，只 materialize
   `visible columns + overscan + pinned`，不随总列数线性增长。
 * **表格默认装的是 Widget 表头**：`LabelHeaderView`（`VirtualHeaderView` + 库里自带的
@@ -48,14 +45,10 @@ NativeHeaderView          VirtualHeaderView
   选项**（1.0 起默认关闭）：列方向 `setColumnDragEnabled(true)`，行方向
   `setVerticalHeaderDragEnabled(true)`（见 §6/§8）；
   `setHorizontalHeader(nullptr)` 回到它，`setHorizontalHeaderVisible(false)` 隐藏表头，
-  `setHorizontalHeader(new NativeHeaderView(Qt::Horizontal))` 才是 QStyle 绘制的那个。
+  样式绘制由 `LabelHeaderAdapter` 完成。
 * `VirtualTableView` 不关心 Header 用 painter 还是 QWidget 呈现。
-* **极宽表格要用 Widget 表头**：body、`HeaderGeometry`、滚动条与 `columnGeometry()` 都是 64 位
-  像素空间（`docs/abi.md` 的 `ScrollMapper`），但 **`QHeaderView` 自己的 section 空间是 int**
-  —— 当可见内容宽度超过 `INT_MAX` 时，native 渲染器无法完整镜像几何，`NativeHeaderView` 会
-  跳过镜像并 `qWarning()` 一次（横向上会与 body 失步）。这个边界来自 Qt，不是框架可以消除的：
-  超过 int 几何范围的表格请用 `VirtualHeaderView`（它按 `HeaderGeometry` 自己摆放 section，
-  没有这个限制）。
+* **极宽表格**：body、`HeaderGeometry`、滚动条与 `columnGeometry()` 使用 64 位像素空间；
+  `VirtualHeaderView` 按共享几何摆放可见 section。
 
 ## 3. Resize 与动画的两种几何
 
@@ -78,7 +71,7 @@ NativeHeaderView          VirtualHeaderView
 * `visibleRows()` / `visibleColumns()` 是 Table 的公开查询能力。
 * Frozen Left / Right pane 见下面第 7 节：pane 只是对同一份 committed geometry 的不同投影。
 * Header state 持久化属于 `HeaderGeometry::saveState()/restoreState()`（带版本号），
-  `QHeaderView::saveState()` 只能作为 Native adapter 的补充。
+  状态持久化以 `HeaderGeometry::saveState()` 为准。
 
 ## 5. 与 List 内核的关系
 
@@ -89,7 +82,7 @@ Table 新增的只有：行/列两级几何、`HeaderGeometry`、二维可见区
 ## 6. 垂直行号表头（v0.4 实现细节）
 
 * **共享偏移**：行号条与 body 使用同一个纵向偏移（`HeaderGeometry::offsetChanged` →
-  `QHeaderView::setOffset()`），所以行号始终贴住对应的行；偏移变化只做一次 shift，
+  表头渲染器的 pane offset），所以行号始终贴住对应的行；偏移变化只做一次 shift，
   不做 O(sections) 的全量同步。
 * **不复制行高**：默认 section 尺寸 = 未测量行的高度；被测量或被用户拖动的行按行镜像
   （≤ 100 万行，约 8 MB 镜像状态）。行数超过上限且高度可变时，行号条会禁用并给出告警
@@ -114,10 +107,8 @@ Table 新增的只有：行/列两级几何、`HeaderGeometry`、二维可见区
   拖动列松手就写进几何，不需要模型配合（只需要 `setColumnDragEnabled(true)`）。
 * **单 section 应用**：`sectionResized` / `sectionVisibilityChanged` 只更新对应 section
   （O(1)），因此滚动与拖动列/行分隔线都不会退化成 O(总列数/总行数)。
-* **表头顺序同步**：列顺序的每次变化（`moveColumn()`、模型 `columnsMoved`、`restoreHeaderState()`、
-  冻结 pane 过滤）都会经 `NativeHeaderView::applyVisualOrder()` 写回 QHeaderView 的视觉顺序——
-  否则头会停在旧顺序、body 用新顺序，出现"列和表头错位"。用户直接拖动表头时反向走
-  `sectionMoved` 写回 geometry；两个方向都先比较再写入，所以不会互相触发。
+* **表头顺序同步**：列顺序变化写入 `HeaderGeometry`，Widget Header 与 body 都从同一份
+  committed geometry 读取位置；拖动预览只改变表头的 visual geometry，松手后一次提交。
 
 ## 7. Frozen / Pinned Columns（v0.7，§31）
 
@@ -144,10 +135,7 @@ Table 新增的只有：行/列两级几何、`HeaderGeometry`、二维可见区
   的偏移。判据是"flat committed x 只在冻结列正好排在视觉序最前时才等于 pane 自己的打包"：
   一旦不相等，section 会落到别的列的槽位上，物化窗口也会按 flat x 算错 —— 表现就是表头里整列
   "消失"，随便再拖一下（触发一次重排）才回来。
-  **pane 交界的分割线**：`QHeaderView` 只在 section **之间**画分隔线、不在控件边缘画，
-  所以冻结 pane 表头用 `setPaneSeparatorEdge()` 在朝向滚动区的一侧（左 pane 画右边、
-  右 pane 画左边）自己补 1px 分隔线，否则冻结/滚动交界处会少一条线（这条对 widget 表头的
-  pane 克隆同样成立——它也是同一个渲染器类）。
+  **pane 交界的分割线**由 `VirtualTableView` 绘制，表头与 body 共用样式。
   body 里同一条线由框架的 1 px 覆盖控件（`vivPaneSeparatorLine`）画在**所有 item 之上**
   （viewport 自己画的线会被行控件/单元格盖住；该控件 `WA_TransparentForMouseEvents`，
   不挡输入，每次 materialization 之后重新 `raise()`）。两条线的颜色都不靠调色板猜，而是
@@ -178,7 +166,7 @@ table->setHorizontalHeader(header);     // 传给 nullptr 回到默认的 label 
 
 **默认渲染器**：`setHorizontalHeader(nullptr)`（以及视图自己 `ensureHeaders()` 时）装的就是
 `LabelHeaderView`。它把每个 section 交给一个只画 label 的控件，用当前样式（`CE_Header`）画出
-原生样式的 section 与排序箭头——实测与 `NativeHeaderView` 的 section **逐像素一致**，唯一差别是
+原生样式的 section 与排序箭头。与旧 `QHeaderView` 渲染器相比，差别是
 最后一节的宽度：`QHeaderView` 会把最后一节拉伸填满表头，而 widget 表头按 committed 几何画，
 所以表头与 body 的最后一列严格一致（想两者都填满就 `setStretchLastColumn(true)`，那是写进
 几何的、表头与 body 共用的伸缩）。
@@ -186,7 +174,7 @@ table->setHorizontalHeader(header);     // 传给 nullptr 回到默认的 label 
 `LabelHeaderAdapter` 也直接可用/可继承：覆写 `labelText()` / `sortOrderFor()` 就能只改"每个
 section 显什么"而不用写 section 控件。
 
-* **与 native 完全可替换**：`HeaderViewInterface` 是唯一的接缝（§15）。表格只通过
+* **可替换的自定义表头**：`HeaderViewInterface` 是表格使用的接口（§15）。表格只通过
   `headerWidget()`/`setGeometryModel()`/`setLabelModel()`/`setSortInteractionEnabled()`/
   `setViewportOrigin()`/`setPaneFilter()` 与表头交互，所以机身在换表头时一行都不用改。
 * **只 materialize 窗口内的 section**（§19）：集合 = 可见列 + 横向 overscan + pinned section，

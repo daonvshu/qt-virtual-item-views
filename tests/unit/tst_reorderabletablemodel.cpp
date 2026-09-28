@@ -45,6 +45,7 @@ private slots:
     void refusedMovesLeaveTheOrderAlone();
     void insertAndRemoveKeepTheIdentities();
     void resettingTheOrderRestoresTheDataOrder();
+    void resettingAfterInsertAndRemovePreservesIdentities();
     void theBaseIsUsableWithoutData();
 };
 
@@ -183,6 +184,31 @@ void TestReorderableTableModel::resettingTheOrderRestoresTheDataOrder()
     QSignalSpy resetSpy(&model, &QAbstractItemModel::modelReset);
     model.resetRowOrder();
     QCOMPARE(resetSpy.count(), 0);
+}
+
+void TestReorderableTableModel::resettingAfterInsertAndRemovePreservesIdentities()
+{
+    IdentityModel model(3, 1);
+    QVERIFY(model.insertRows(1, 1));     // canonical order: 0, 3, 1, 2
+    QVERIFY(model.removeRows(2, 1));     // source id 1 is gone
+    QVERIFY(model.moveRows(QModelIndex(), 0, 1, QModelIndex(), 3));
+    QVERIFY(!model.isIdentityOrder());
+
+    model.resetRowOrder();
+    QVERIFY(model.isIdentityOrder());
+    QCOMPARE(model.sourceRow(0), 0);
+    QCOMPARE(model.sourceRow(1), 3);
+    QCOMPARE(model.sourceRow(2), 2);
+    QCOMPARE(model.viewRow(1), -1);
+    QCOMPARE(model.index(1, 0).data().toString(), QStringLiteral("r3c0"));
+
+    QVERIFY(model.moveRows(QModelIndex(), 0, 1, QModelIndex(), 3));
+    QVERIFY(model.insertRows(1, 1)); // insert before source 2 in the moved view
+    model.resetRowOrder();
+    QCOMPARE(model.sourceRow(0), 0);
+    QCOMPARE(model.sourceRow(1), 3);
+    QCOMPARE(model.sourceRow(2), 4);
+    QCOMPARE(model.sourceRow(3), 2);
 }
 
 void TestReorderableTableModel::theBaseIsUsableWithoutData()

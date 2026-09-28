@@ -305,11 +305,19 @@ bool TablePaneLayout::update(int viewportWidth, int viewportHeight)
         }
     } else {
         const QVector<int> leftColumns = visualOrderOf(m_frozenLeft);
+        QSet<int> leftSet;
+        leftSet.reserve(leftColumns.size());
+        for (int logical : leftColumns)
+            leftSet.insert(logical);
         QVector<int> rightColumns;
         for (int logical : visualOrderOf(m_frozenRight)) {
-            if (!leftColumns.contains(logical))
+            if (!leftSet.contains(logical))
                 rightColumns.append(logical);
         }
+        QSet<int> rightSet;
+        rightSet.reserve(rightColumns.size());
+        for (int logical : rightColumns)
+            rightSet.insert(logical);
 
         ResolvedPane left;
         left.pane.type = TablePane::Type::FrozenLeft;
@@ -324,7 +332,7 @@ bool TablePaneLayout::update(int viewportWidth, int viewportHeight)
             const int logical = m_geometry->logicalIndex(visual);
             if (logical < 0 || m_geometry->isSectionHidden(logical))
                 continue;
-            if (leftColumns.contains(logical) || rightColumns.contains(logical))
+            if (leftSet.contains(logical) || rightSet.contains(logical))
                 continue;
             scrollable.pane.logicalColumns.append(logical);
         }

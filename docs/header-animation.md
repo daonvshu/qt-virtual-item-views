@@ -86,8 +86,7 @@ Cell Widget Mode 的 cell 控件与 span）。两点要知道：
 | 渲染器 | 支持 | 说明 |
 | --- | --- | --- |
 | `LabelHeaderView`（默认） / `VirtualHeaderView`（§17–§19） | 是 | 每个可见 section 一个控件、位置由渲染器决定，所以能逐帧插值、也能报告视觉 x；打断时从当前位置继续（不会跳回上一帧的起点）。**默认装的就是这一类**，所以动画与"整列一起动"开箱可用。 |
-| `NativeHeaderView`（§16，不再是默认） | 否（忽略） | section 的位置与绘制属于 `QHeaderView`，框架不改它的 paint；此时表头与 body 一起在 commit 时跳变（`setColumnFollowsHeaderVisual()` 在这边无事可做）。 |
-| 自定义 `HeaderViewInterface` | 可选 | 实现 `setSectionAnimationEnabled()/setSectionAnimationDuration()` 即参与过渡；再加上 `hasVisualSectionGeometry()/sectionVisualX()/setVisualGeometryCallback()` 就能让整列跟着走。都不实现则语义与 native 相同。 |
+| 自定义 `HeaderViewInterface` | 可选 | 实现 `setSectionAnimationEnabled()/setSectionAnimationDuration()` 即参与过渡；再加上 `hasVisualSectionGeometry()/sectionVisualX()/setVisualGeometryCallback()` 就能让整列跟着走。未实现这些可选钩子时只显示提交后的几何。 |
 
 ## 5. 打断与边界
 

@@ -128,7 +128,8 @@ qsizetype ListLayout::itemAtPoint(const QPoint &viewportPos, qint64 scrollOffset
         return -1;
 
     if (m_orientation == Qt::Horizontal) {
-        if (viewportPos.y() < 0 || viewportPos.y() >= m_crossExtent)
+        if (viewportPos.y() < m_viewportMargins.top()
+            || viewportPos.y() >= m_crossExtent - m_viewportMargins.bottom())
             return -1;
         const qint64 offset = scrollOffset + viewportPos.x() - m_viewportMargins.left();
         if (offset < 0 || offset >= m_sizeIndex->totalSize())

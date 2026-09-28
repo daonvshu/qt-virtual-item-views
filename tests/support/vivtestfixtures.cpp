@@ -74,6 +74,10 @@ void StringListModel::insertRowsAt(int first, const QStringList &texts)
         return;
     const int clamped = qBound(0, first, int(m_rows.size()));
     beginInsertRows(QModelIndex(), clamped, clamped + int(texts.size()) - 1);
+    QHash<int, int> shifted;
+    for (auto it = m_heights.constBegin(); it != m_heights.constEnd(); ++it)
+        shifted.insert(it.key() >= clamped ? it.key() + texts.size() : it.key(), it.value());
+    m_heights = shifted;
     for (int i = 0; i < texts.size(); ++i)
         m_rows.insert(clamped + i, texts.at(i));
     endInsertRows();
@@ -84,11 +88,6 @@ bool StringListModel::removeRowsAt(int first, int count)
     if (count <= 0 || first < 0 || first + count > m_rows.size())
         return false;
     beginRemoveRows(QModelIndex(), first, first + count - 1);
-    for (int i = 0; i < count; ++i)
-        m_rows.removeAt(first);
-    endRemoveRows();
-
-    // Row keyed metadata has to follow the removal.
     QHash<int, int> shifted;
     for (auto it = m_heights.constBegin(); it != m_heights.constEnd(); ++it) {
         if (it.key() < first)
@@ -97,6 +96,9 @@ bool StringListModel::removeRowsAt(int first, int count)
             shifted.insert(it.key() - count, it.value());
     }
     m_heights = shifted;
+    for (int i = 0; i < count; ++i)
+        m_rows.removeAt(first);
+    endRemoveRows();
     return true;
 }
 
@@ -108,6 +110,19 @@ bool StringListModel::moveRow(int from, int to)
         return false;
     if (!beginMoveRows(QModelIndex(), from, from, QModelIndex(), to))
         return false;
+    QHash<int, int> shifted;
+    const int target = to > from ? to - 1 : to;
+    for (auto it = m_heights.constBegin(); it != m_heights.constEnd(); ++it) {
+        int row = it.key();
+        if (row == from)
+            row = target;
+        else if (from < target && row > from && row <= target)
+            --row;
+        else if (target < from && row >= target && row < from)
+            ++row;
+        shifted.insert(row, it.value());
+    }
+    m_heights = shifted;
     m_rows.move(from, to > from ? to - 1 : to);
     endMoveRows();
     return true;
@@ -162,6 +177,7 @@ void StringListModel::reverseKeepingPersistentIndexes()
 NumericListModel::NumericListModel(int count, QObject *parent)
     : QAbstractListModel(parent)
     , m_count(qMax(0, count))
+    , m_nextId(m_count)
 {
 }
 
@@ -175,7 +191,7 @@ QVariant NumericListModel::data(const QModelIndex &index, int role) const
     if (!index.isValid() || index.row() < 0 || index.row() >= m_count)
         return QVariant();
     if (role == Qt::DisplayRole)
-        return textForRow(index.row());
+        return textForRow(m_order.isEmpty() ? index.row() : m_order.at(index.row()));
     return QVariant();
 }
 
@@ -188,6 +204,8 @@ void NumericListModel::setCount(int count)
 {
     beginResetModel();
     m_count = qMax(0, count);
+    m_order.clear();
+    m_nextId = m_count;
     endResetModel();
 }
 
@@ -196,6 +214,12 @@ void NumericListModel::appendRows(int count)
     if (count <= 0)
         return;
     beginInsertRows(QModelIndex(), m_count, m_count + count - 1);
+    if (!m_order.isEmpty()) {
+        for (int row = 0; row < count; ++row)
+            m_order.append(m_nextId++);
+    } else {
+        m_nextId += count;
+    }
     m_count += count;
     endInsertRows();
 }
@@ -205,6 +229,8 @@ bool NumericListModel::removeRowsAt(int first, int count)
     if (count <= 0 || first < 0 || first + count > m_count)
         return false;
     beginRemoveRows(QModelIndex(), first, first + count - 1);
+    if (!m_order.isEmpty())
+        m_order.remove(first, count);
     m_count -= count;
     endRemoveRows();
     return true;
@@ -216,6 +242,12 @@ bool NumericListModel::moveRow(int from, int to)
         return false;
     if (!beginMoveRows(QModelIndex(), from, from, QModelIndex(), to))
         return false;
+    if (m_order.isEmpty()) {
+        m_order.reserve(m_count);
+        for (int row = 0; row < m_count; ++row)
+            m_order.append(row);
+    }
+    m_order.move(from, to > from ? to - 1 : to);
     endMoveRows();
     return true;
 }
