@@ -19,6 +19,7 @@ viv_add_example(table_spans table_spans/main.cpp)
 viv_add_example(table_panes table_panes/main.cpp)
 viv_add_example(table_frozen_rows table_frozen_rows/main.cpp)
 viv_add_example(table_stretch_columns table_stretch_columns/main.cpp)
+viv_add_example(table_header_persistence table_header_persistence/main.cpp)
 
 if(QT_VERSION_MAJOR EQUAL 5)
     find_package(SmoothScrollbar CONFIG QUIET)
