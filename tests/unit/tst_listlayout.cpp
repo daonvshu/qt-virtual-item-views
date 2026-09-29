@@ -58,6 +58,7 @@ private slots:
     void resetItemsUsesEstimate();
     void horizontalOrientationUsesWidth();
     void policyWithoutSizeIndexReleasesOwnership();
+    void spacingChangesOffsetsAndLeavesGapsUnhittable();
 };
 
 void TestListLayout::uniformItemGeometry()
@@ -227,6 +228,28 @@ void TestListLayout::policyWithoutSizeIndexReleasesOwnership()
     layout.resetItems(3, 10);
     QCOMPARE(layout.itemCount(), qsizetype(3));
     QCOMPARE(CountingSizeIndex::destroyed, 2);
+}
+
+void TestListLayout::spacingChangesOffsetsAndLeavesGapsUnhittable()
+{
+    ListLayout layout(new FixedSizeIndex(0, 20));
+    layout.setCrossExtent(100);
+    layout.resetItems(3, 20);
+    layout.setItemSpacing(6);
+    QCOMPARE(layout.contentExtent(), qint64(72));
+    QCOMPARE(layout.offsetOf(layout.itemCount()), qint64(72));
+    QCOMPARE(layout.indexAtOffset(72), qsizetype(3));
+    QCOMPARE(layout.itemRect(1, 0), QRect(0, 26, 100, 20));
+    QCOMPARE(layout.itemAtPoint(QPoint(5, 20), 0), qsizetype(-1));
+    QCOMPARE(layout.itemAtPoint(QPoint(5, 25), 0), qsizetype(-1));
+    QCOMPARE(layout.itemAtPoint(QPoint(5, 26), 0), qsizetype(1));
+
+    layout.setSpacingAfter(1, 12);
+    QCOMPARE(layout.contentExtent(), qint64(78));
+    QCOMPARE(layout.offsetOf(2), qint64(58));
+    layout.moveItems(1, 1, 3);
+    QCOMPARE(layout.spacingAfter(2), 0);
+    QCOMPARE(layout.spacingAfter(1), 6);
 }
 
 QTEST_APPLESS_MAIN(TestListLayout)

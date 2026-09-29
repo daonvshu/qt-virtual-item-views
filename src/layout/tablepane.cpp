@@ -224,6 +224,9 @@ qint64 TablePaneLayout::extentOf(const QVector<int> &logicalColumns) const
     qint64 extent = 0;
     for (int logical : logicalColumns)
         extent += m_geometry->sectionSize(logical);
+    if (!logicalColumns.isEmpty()) {
+        extent += qint64(logicalColumns.size()) * m_geometry->sectionSpacing();
+    }
     return extent;
 }
 
@@ -355,9 +358,18 @@ bool TablePaneLayout::update(int viewportWidth, int viewportHeight)
             break;
         }
     }
+    int terminalColumn = -1;
+    for (int index = resolved.size() - 1; index >= 0; --index) {
+        if (!resolved.at(index).pane.logicalColumns.isEmpty()) {
+            terminalColumn = resolved.at(index).pane.logicalColumns.last();
+            break;
+        }
+    }
     for (int index = 0; index < resolved.size(); ++index) {
         ResolvedPane &pane = resolved[index];
         pane.extent = extentOf(pane.pane.logicalColumns);
+        if (pane.pane.logicalColumns.contains(terminalColumn))
+            pane.extent -= m_geometry->sectionSpacing();
         if (pane.pane.type == TablePane::Type::Scrollable)
             continue;
         pane.pane.type = primaryIndex < 0 || index < primaryIndex ? TablePane::Type::FrozenLeft
@@ -459,7 +471,8 @@ bool TablePaneLayout::update(int viewportWidth, int viewportHeight)
             m_paneIndexByLogical[logical] = paneIndex;
             m_groupByLogical[logical] = frozen ? -1 : pane.pane.scrollGroup;
             m_paneSlotByLogical[logical] = slot;
-            contentX += m_geometry->sectionSize(logical);
+            contentX += m_geometry->sectionSize(logical)
+                + (logical == terminalColumn ? 0 : m_geometry->sectionSpacing());
             prefix.append(contentX);
             ++m_columnVisits;
         }

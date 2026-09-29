@@ -43,11 +43,11 @@ void LabelHeaderSection::paintEvent(QPaintEvent *)
 {
     // The same section widget renders both axes (the column header and the row-number
     // strip) and both are painted with the *horizontal* option, so a strip looks exactly
-    // like the column header's sections (panel, gradient, edges). The axis only decides
-    // where the trailing separator goes: the style draws it on the right edge, so a
-    // vertical section draws its own line at the bottom with the same colour.
+    // like the column header's sections (panel and gradient). Both edges are
+    // finished with the table's separator color after the style paints them.
     Qt::Orientation orientation = Qt::Horizontal;
-    if (auto *header = qobject_cast<const VirtualHeaderView *>(parentWidget()))
+    const auto *header = qobject_cast<const VirtualHeaderView *>(parentWidget());
+    if (header)
         orientation = header->orientation();
     const bool vertical = orientation == Qt::Vertical;
 
@@ -79,14 +79,25 @@ void LabelHeaderSection::paintEvent(QPaintEvent *)
         : (m_sortOrder == Qt::AscendingOrder ? QStyleOptionHeader::SortDown
                                              : QStyleOptionHeader::SortUp);
     QPainter painter(this);
+    painter.setClipRect(rect().adjusted(0, 0, -2, -2));
     style()->drawControl(QStyle::CE_Header, &option, &painter, this);
-    if (vertical) {
-        // Same line as between two columns, just along the other axis (see
-        // headerSectionSeparatorColor()).
-        const QColor separator = headerSectionSeparatorColor(this);
-        if (separator.isValid())
-            painter.fillRect(rect().left(), rect().bottom(), rect().width(), 1, separator);
-    }
+    painter.setClipping(false);
+    painter.fillRect(QRect(width() - 2, 0, 2, height()), palette().brush(QPalette::Button));
+    painter.fillRect(QRect(0, height() - 2, width(), 2), palette().brush(QPalette::Button));
+    const bool hasGap = header && header->geometryModel()
+        && header->geometryModel()->sectionSpacing() > 0;
+    const QColor sectionColor = header && header->sectionSeparatorColor().isValid()
+        ? header->sectionSeparatorColor() : headerSectionSeparatorColor(this);
+    const QColor crossColor = header && header->crossAxisSeparatorColor().isValid()
+        ? header->crossAxisSeparatorColor() : headerSectionSeparatorColor(this);
+    const int sectionWidth = header ? header->sectionSeparatorWidth() : 1;
+    const int crossWidth = header ? header->crossAxisSeparatorWidth() : 1;
+    if (!header || header->crossAxisSeparatorVisible())
+        painter.fillRect(vertical ? QRect(width() - crossWidth, 0, crossWidth, height())
+                                  : QRect(0, height() - crossWidth, width(), crossWidth), crossColor);
+    if ((!header || header->sectionSeparatorsVisible()) && (!vertical || !hasGap))
+        painter.fillRect(vertical ? QRect(0, height() - sectionWidth, width(), sectionWidth)
+                                  : QRect(width() - sectionWidth, 0, sectionWidth, height()), sectionColor);
 }
 
 void LabelHeaderSection::changeEvent(QEvent *event)

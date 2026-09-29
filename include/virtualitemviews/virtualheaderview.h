@@ -5,6 +5,7 @@
 #include <virtualitemviews/headerview.h>
 
 #include <QHash>
+#include <QColor>
 #include <QList>
 #include <QPoint>
 #include <QPointer>
@@ -149,6 +150,22 @@ public:
     /// Origin of the viewport inside the view; the table sets it so section x
     /// positions can be derived from HeaderGeometry (viewport coordinates).
     void setViewportOrigin(const QPoint &origin) override;
+    void setPaneTerminalColumn(int logicalIndex);
+    /// Controls the trailing edge of the built-in section widgets and spacing gaps.
+    void setSectionSeparatorsVisible(bool visible);
+    bool sectionSeparatorsVisible() const { return m_sectionSeparatorsVisible; }
+    /// Controls the edge perpendicular to the section sequence.
+    void setCrossAxisSeparatorVisible(bool visible);
+    bool crossAxisSeparatorVisible() const { return m_crossAxisSeparatorVisible; }
+    /// Optional shared color supplied by the owning table.
+    void setSectionSeparatorColor(const QColor &color);
+    QColor sectionSeparatorColor() const { return m_sectionSeparatorColor; }
+    void setCrossAxisSeparatorColor(const QColor &color);
+    QColor crossAxisSeparatorColor() const { return m_crossAxisSeparatorColor; }
+    void setSectionSeparatorWidth(int pixels);
+    int sectionSeparatorWidth() const { return m_sectionSeparatorWidth; }
+    void setCrossAxisSeparatorWidth(int pixels);
+    int crossAxisSeparatorWidth() const { return m_crossAxisSeparatorWidth; }
     /// Visual section geometry (§23/§24): the x a section is *drawn* at while a
     /// drag preview or a transition is running, in viewport coordinates. False
     /// when the renderer is idle or the section owns no widget, so the caller
@@ -198,6 +215,7 @@ signals:
     void sectionMoveRequested(int fromVisual, int toVisual);
 
 protected:
+    void paintEvent(QPaintEvent *event) override;
     void resizeEvent(QResizeEvent *event) override;
     void mousePressEvent(QMouseEvent *event) override;
     void mouseMoveEvent(QMouseEvent *event) override;
@@ -338,10 +356,18 @@ private:
     WidgetRecycler *m_recycler = nullptr;
 
     QHash<int, QWidget *> m_sectionWidgets;
+    QWidget *m_dragLeadingSeparator = nullptr;
     QPoint m_viewportOrigin;
     QVector<int> m_paneFilter;
     bool m_paneFilterActive = false;
     qint64 m_paneOffset = kFollowGeometryOffset;
+    int m_paneTerminalColumn = -1;
+    bool m_sectionSeparatorsVisible = true;
+    bool m_crossAxisSeparatorVisible = true;
+    QColor m_sectionSeparatorColor;
+    QColor m_crossAxisSeparatorColor;
+    int m_sectionSeparatorWidth = 1;
+    int m_crossAxisSeparatorWidth = 1;
     /// Pane cache (§31/§43, P1-8 of the second review): the pane's columns in committed
     /// visual order, the prefix sums of their widths, a logical → slot map and the
     /// membership set. Without it every sectionPos() rebuilt and sorted the pane's list and

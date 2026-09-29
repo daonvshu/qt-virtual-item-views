@@ -2,6 +2,7 @@
 
 #include <virtualitemviews/widgetadapter.h>
 #include <virtualitemviews/layoutpolicy.h>
+#include <virtualitemviews/listlayout.h>
 #include <virtualitemviews/sizeindex.h>
 #include <virtualitemviews/widgetrecycler.h>
 
@@ -25,6 +26,7 @@
 #include <algorithm>
 #include <limits>
 #include <numeric>
+#include <utility>
 
 namespace viv {
 
@@ -106,6 +108,70 @@ public:
         setObjectName(QStringLiteral("vivItemPaneClipHost"));
         setFocusPolicy(Qt::NoFocus);
     }
+};
+
+class RowSpacingHost : public QWidget
+{
+public:
+    explicit RowSpacingHost(QWidget *parent = nullptr) : QWidget(parent)
+    {
+        setObjectName(QStringLiteral("vivRowSpacingHost"));
+        setFocusPolicy(Qt::NoFocus);
+        setProperty("vivShowSpacingLines", true);
+    }
+
+    void setContent(QWidget *content)
+    {
+        m_content = content;
+        if (m_content) {
+            m_content->setParent(this);
+            m_content->show();
+        }
+        layoutContent();
+    }
+
+    QWidget *content() const { return m_content; }
+    void setLineColor(const QColor &color) { m_lineColor = color; update(); }
+
+protected:
+    void resizeEvent(QResizeEvent *event) override
+    {
+        QWidget::resizeEvent(event);
+        layoutContent();
+    }
+
+    void paintEvent(QPaintEvent *) override
+    {
+        QPainter painter(this);
+        const int lineWidth = qMax(1, property("vivSpacingLineWidth").toInt());
+        if (property("vivFillSpacingBackground").toBool())
+            painter.fillRect(rect(), palette().brush(QPalette::Base));
+        if (property("vivShowSpacingLines").toBool()) {
+            const int left = qBound(0, property("vivSpacingLineLeftInset").toInt(), width());
+            painter.fillRect(QRect(left, 0, width() - left, lineWidth), m_lineColor);
+            painter.fillRect(QRect(left, height() - lineWidth, width() - left, lineWidth), m_lineColor);
+        }
+    }
+
+private:
+    void layoutContent()
+    {
+        if (m_content)
+            m_content->setGeometry(0, qMax(1, property("vivSpacingLineWidth").toInt()), width(),
+                                   qMax(0, height() - 2 * qMax(1, property("vivSpacingLineWidth").toInt())));
+    }
+
+    bool event(QEvent *event) override
+    {
+        if (event->type() == QEvent::DynamicPropertyChange) {
+            layoutContent();
+            update();
+        }
+        return QWidget::event(event);
+    }
+
+    QWidget *m_content = nullptr;
+    QColor m_lineColor;
 };
 
 /// The line between two row panes (§31). The item widgets cover the viewport, so a
@@ -204,6 +270,10 @@ VirtualItemView::VirtualItemView(QWidget *parent)
 
 VirtualItemView::~VirtualItemView()
 {
+    for (QWidget *widget : m_rowSpacingWidgets)
+        delete widget;
+    for (const QVector<QWidget *> &pool : m_rowSpacingPool)
+        qDeleteAll(pool);
     // Materialized widgets have to be released while the adapter and the
     // recycler are both alive: business code stops its timers / async requests
     // in unbindWidget(), and a pooled widget must not outlive the factory that
@@ -340,6 +410,60 @@ void VirtualItemView::resetLayoutForNewModel()
         return;
     const qsizetype count = viewItemCount();
     m_layout->resetItems(count, estimateItemSize(count > 0 ? count - 1 : 0));
+    applyRowSpacingOverrides();
+}
+
+void VirtualItemView::applyRowSpacingOverrides()
+{
+}
+
+void VirtualItemView::configureRowSpacingWidget(QWidget *widget) const
+{
+    Q_UNUSED(widget);
+}
+
+void VirtualItemView::raiseRowSpacingWidgets() const
+{
+    for (QWidget *widget : m_rowSpacingWidgets)
+        widget->raise();
+}
+
+QVector<QRect> VirtualItemView::rowSpacingWidgetRectsInView() const
+{
+    QVector<QRect> rects;
+    rects.reserve(m_rowSpacingWidgets.size());
+    for (QWidget *widget : m_rowSpacingWidgets) {
+        if (widget->isVisible())
+            rects.append(QRect(widget->mapTo(const_cast<VirtualItemView *>(this), QPoint()),
+                               widget->size()));
+    }
+    return rects;
+}
+
+void VirtualItemView::setRowSpacing(int pixels)
+{
+    const int spacing = qMax(0, pixels);
+    if (m_rowSpacing == spacing)
+        return;
+    m_rowSpacing = spacing;
+    if (auto *layout = dynamic_cast<ListLayout *>(m_layout)) {
+        layout->setItemSpacing(spacing);
+        applyRowSpacingOverrides();
+    }
+    relayout();
+}
+
+void VirtualItemView::setRowSpacingFactory(RowSpacingFactory factory, RowSpacingBinder binder)
+{
+    for (QWidget *widget : m_rowSpacingWidgets)
+        delete widget;
+    m_rowSpacingWidgets.clear();
+    for (const QVector<QWidget *> &pool : m_rowSpacingPool)
+        qDeleteAll(pool);
+    m_rowSpacingPool.clear();
+    m_rowSpacingFactory = std::move(factory);
+    m_rowSpacingBinder = std::move(binder);
+    relayout();
 }
 
 // ---------------------------------------------------------------------------
@@ -1108,6 +1232,71 @@ void VirtualItemView::raiseItemPaneSeparatorLines() const
         line->raise();
 }
 
+void VirtualItemView::syncRowSpacingWidgets(const QVector<VisibleRange> &ranges)
+{
+    auto *layout = dynamic_cast<ListLayout *>(m_layout);
+    QHash<qsizetype, QRect> desired;
+    if (layout && viewport()->width() > 0) {
+        for (const VisibleRange &range : ranges) {
+            for (qsizetype row = range.first; row >= 0 && row <= range.last; ++row) {
+                const int spacing = layout->spacingAfter(row);
+                if (spacing <= 0)
+                    continue;
+                const QRect itemRect = layout->itemRect(row, itemPaneScrollOffset(itemPaneForRow(row)));
+                const QRect gap(0, itemRect.bottom() + 1, viewport()->width(), spacing);
+                if (gap.intersects(itemPaneRect(itemPaneForRow(row)).intersected(viewport()->rect())))
+                    desired.insert(row, gap);
+            }
+        }
+    }
+    for (auto it = m_rowSpacingWidgets.begin(); it != m_rowSpacingWidgets.end();) {
+        if (desired.contains(it.key())) {
+            ++it;
+            continue;
+        }
+        QWidget *widget = it.value();
+        const int depth = widget->property("vivSpacingDepth").toInt();
+        widget->hide();
+        m_rowSpacingPool[depth].append(widget);
+        it = m_rowSpacingWidgets.erase(it);
+    }
+    for (auto it = desired.cbegin(); it != desired.cend(); ++it) {
+        const qsizetype row = it.key();
+        const QModelIndex index = viewIndex(row);
+        const int depth = itemDepth(index);
+        QWidget *widget = m_rowSpacingWidgets.value(row, nullptr);
+        if (widget && widget->property("vivSpacingDepth").toInt() != depth) {
+            widget->hide();
+            m_rowSpacingPool[widget->property("vivSpacingDepth").toInt()].append(widget);
+            m_rowSpacingWidgets.remove(row);
+            widget = nullptr;
+        }
+        if (!widget) {
+            QVector<QWidget *> &pool = m_rowSpacingPool[depth];
+            widget = pool.isEmpty() ? new RowSpacingHost(viewport()) : pool.takeLast();
+            widget->setProperty("vivSpacingDepth", depth);
+            auto *host = static_cast<RowSpacingHost *>(widget);
+            if (m_rowSpacingFactory && !host->content())
+                host->setContent(m_rowSpacingFactory(index, host));
+            m_rowSpacingWidgets.insert(row, widget);
+        }
+        auto *host = static_cast<RowSpacingHost *>(widget);
+        configureRowSpacingWidget(host);
+        host->setLineColor(itemPaneSeparatorColor());
+        if (host->content() && m_rowSpacingBinder)
+            m_rowSpacingBinder(host->content(), index);
+        const bool scrolling = m_scrollPaneHost && !isRowFrozen(row);
+        QWidget *parent = scrolling ? m_scrollPaneHost : viewport();
+        const QPoint origin = scrolling ? itemPaneRect(ItemPane::Type::Scrollable).topLeft() : QPoint();
+        if (widget->parentWidget() != parent)
+            widget->setParent(parent);
+        widget->setGeometry(it.value().translated(-origin));
+        widget->show();
+        widget->raise();
+    }
+    raiseItemPaneSeparatorLines();
+}
+
 void VirtualItemView::applyItemPaneGeometry(MaterializedItem &item, qsizetype row)
 {
     QWidget *widget = item.widget;
@@ -1442,6 +1631,7 @@ void VirtualItemView::relayout()
     if (!m_layout || (!m_adapter && usesItemWidgets())) {
         recycleAllItems();
         syncItemPanes();
+        syncRowSpacingWidgets({});
         syncScrollBars();
         return;
     }
@@ -1449,8 +1639,10 @@ void VirtualItemView::relayout()
     // Safety net: a model may emit coarser signals than expected (proxy
     // models, custom models). The layout must always match the model.
     const qsizetype expectedCount = viewItemCount();
-    if (m_layout->itemCount() != expectedCount)
+    if (m_layout->itemCount() != expectedCount) {
         m_layout->resetItems(expectedCount, estimateItemSize(expectedCount > 0 ? expectedCount - 1 : 0));
+        applyRowSpacingOverrides();
+    }
 
     if (m_anchorPending)
         applyPendingAnchor();
@@ -1528,6 +1720,8 @@ void VirtualItemView::relayout()
         // The view materializes its own widgets (table cell mode): it only needs
         // the ranges, not row widgets.
         materializeItemRanges(ranges);
+        syncItemPanes();
+        syncRowSpacingWidgets(ranges);
         m_inRelayout = false;
         syncScrollBars();
         afterMaterialize();
@@ -1634,6 +1828,7 @@ void VirtualItemView::relayout()
     syncItemPanes();
     for (MaterializedItem &item : m_items)
         applyItemPaneGeometry(item, viewItemForIndex(item.index));
+    syncRowSpacingWidgets(ranges);
     raiseItemPaneSeparatorLines();
 
     m_inRelayout = false;

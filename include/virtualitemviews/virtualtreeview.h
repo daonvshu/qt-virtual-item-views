@@ -5,7 +5,10 @@
 #include <virtualitemviews/treevisibilityindex.h>
 #include <virtualitemviews/virtualitemview.h>
 
+#include <QColor>
+#include <QHash>
 #include <QPersistentModelIndex>
+#include <QVector>
 
 class QAbstractItemModel;
 class QKeyEvent;
@@ -58,6 +61,23 @@ public:
     // -- branch UI -----------------------------------------------------------
     void setIndentation(int pixels);
     int indentation() const { return m_indentation; }
+    /// Gap below a node of this depth. Negative pixels restore the common row spacing.
+    void setDepthRowSpacing(int depth, int pixels);
+    int depthRowSpacing(int depth) const;
+    /// Row separators are visible by default, including after nodes with zero spacing.
+    void setRowGridLinesVisible(bool visible);
+    bool rowGridLinesVisible() const { return m_rowGridLinesVisible; }
+    /// Width is clamped to at least one pixel.
+    void setRowGridLineWidth(int pixels);
+    int rowGridLineWidth() const { return m_rowGridLineWidth; }
+    /// An invalid color restores the palette's mid color.
+    void setRowGridLineColor(const QColor &color);
+    QColor rowGridLineColor() const { return m_rowGridLineColor; }
+    /// Horizontal extent of row lines, measured from the node above each boundary.
+    enum class RowGridLineExtent { NodeOnly, NodeAndIcon, FullWidth };
+    void setRowGridLineExtent(RowGridLineExtent extent);
+    RowGridLineExtent rowGridLineExtent() const { return m_rowGridLineExtent; }
+    QColor itemPaneSeparatorColor() const override;
     /// Draws and handles the expand/collapse indicator of branch items.
     void setBranchIndicatorsVisible(bool visible);
     bool branchIndicatorsVisible() const { return m_branchIndicatorsVisible; }
@@ -80,6 +100,7 @@ public:
     qsizetype visibleRowCount() const;
     /// Depth of an index in the (possibly root-restricted) tree.
     int itemDepth(const QModelIndex &index) const override;
+    void applyRowSpacingOverrides() override;
 
 signals:
     void expanded(const QModelIndex &index);
@@ -93,6 +114,7 @@ protected:
     /// are handled through TreeVisibilityIndex instead.
     bool isLayoutParent(const QModelIndex &parent) const override;
     QRect geometryForViewRow(qsizetype row) const override;
+    void configureRowSpacingWidget(QWidget *widget) const override;
     bool handleItemKeyPress(QKeyEvent *event) override;
     /// Repaints the branch indicator strip: the indicators are painted by the
     /// viewport, so they are not moved by the row widgets and must be
@@ -121,6 +143,9 @@ private:
     /// Invalidates the strip that can contain branch indicators (the previously
     /// invalidated strip too, so an indicator that scrolled away is erased).
     void invalidateBranchIndicators();
+    void syncRowGridLines();
+    /// Left edge of a row line for a node at the given depth.
+    int rowGridLineInsetForDepth(int depth) const;
     /// Paints the indicators of every visible cell into \a painter.
     void paintBranchIndicators(QPainter *painter);
     /// Cell rect (viewport coordinates) of \a cellDepth of a view row.
@@ -140,6 +165,13 @@ private:
     ListLayout *m_rowLayout = nullptr;
     QPersistentModelIndex m_rootIndex;
     int m_indentation = 20;
+    QHash<int, int> m_depthRowSpacing;
+    QHash<qsizetype, QWidget *> m_rowGridLines;
+    QVector<QWidget *> m_rowGridLinePool;
+    QColor m_rowGridLineColor;
+    int m_rowGridLineWidth = 1;
+    bool m_rowGridLinesVisible = true;
+    RowGridLineExtent m_rowGridLineExtent = RowGridLineExtent::FullWidth;
     bool m_branchIndicatorsVisible = true;
     BranchIndicatorRenderer *m_branchRenderer = nullptr;
     bool m_ownBranchRenderer = false;

@@ -47,6 +47,12 @@ public:
     void moveItems(qsizetype from, qsizetype count, qsizetype to) override;
     void setItemSize(qsizetype item, int size) override;
 
+    /// Space after each item, except the last. Individual overrides follow rows on moves.
+    void setItemSpacing(int pixels);
+    int itemSpacing() const { return m_defaultSpacing; }
+    void setSpacingAfter(qsizetype item, int pixels);
+    int spacingAfter(qsizetype item) const;
+
     /// Estimated item size used when a caller passes estimate <= 0.
     int estimate() const { return m_estimate; }
     void setEstimate(int estimate);
@@ -59,6 +65,10 @@ private:
     qint64 clampToIntRange(qint64 value) const;
 
     SizeIndex *m_sizeIndex = nullptr;
+    BlockSizeIndex m_spacings;
+    BlockSizeIndex m_extents;
+    int m_defaultSpacing = 0;
+    bool m_hasSpacingOverrides = false;
     bool m_ownsSizeIndex = true;
     Qt::Orientation m_orientation = Qt::Vertical;
     int m_crossExtent = 0;

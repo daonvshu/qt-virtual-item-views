@@ -11,7 +11,9 @@
 #include <QApplication>
 #include <QAbstractTableModel>
 #include <QCheckBox>
+#include <QColorDialog>
 #include <QCommandLineParser>
+#include <QIcon>
 #include <QLabel>
 #include <QMainWindow>
 #include <QProgressBar>
@@ -179,10 +181,14 @@ int main(int argc, char **argv)
                                   QStringLiteral("ms"), QStringLiteral("0"));
     QCommandLineOption snapshotOption(QStringLiteral("snapshot"),
                                       QStringLiteral("渲染整个窗口到 PNG 后退出"), QStringLiteral("file"));
+    QCommandLineOption spacingPreviewOption(QStringLiteral("spacing-preview"),
+                                            QStringLiteral("间隙截图状态：through、none、custom、zero、grid-off 或 zero-grid-off"),
+                                            QStringLiteral("state"));
     QCommandLineOption moveOption(QStringLiteral("move-status-first"),
                                   QStringLiteral("启动时把状态列移到最前（列移动回归检查）"));
     parser.addOption(rowsOption);
     parser.addOption(snapshotOption);
+    parser.addOption(spacingPreviewOption);
     parser.addOption(moveOption);
     parser.addOption(exitOption);
     parser.process(app);
@@ -215,6 +221,54 @@ int main(int argc, char **argv)
 
     // 列状态操作：全部通过 HeaderGeometry 生效，body 只查询它。
     auto *toolbar = window.addToolBar(QStringLiteral("列"));
+    auto *spacingToolbar = window.addToolBar(QStringLiteral("间距"));
+    window.insertToolBarBreak(spacingToolbar);
+    spacingToolbar->addWidget(new QLabel(QStringLiteral("行间距: "), &window));
+    auto *rowSpacing = new QSpinBox(&window);
+    rowSpacing->setRange(0, 100);
+    rowSpacing->setSuffix(QStringLiteral(" px"));
+    rowSpacing->setValue(view->rowSpacing());
+    spacingToolbar->addWidget(rowSpacing);
+    spacingToolbar->addWidget(new QLabel(QStringLiteral("列间距: "), &window));
+    auto *columnSpacing = new QSpinBox(&window);
+    columnSpacing->setRange(0, 100);
+    columnSpacing->setSuffix(QStringLiteral(" px"));
+    columnSpacing->setValue(view->columnSpacing());
+    spacingToolbar->addWidget(columnSpacing);
+    auto *verticalThrough = new QCheckBox(QStringLiteral("竖线穿过行间距"), &window);
+    verticalThrough->setChecked(view->verticalSpacingLineThroughRowSpacing());
+    spacingToolbar->addWidget(verticalThrough);
+    auto *horizontalThrough = new QCheckBox(QStringLiteral("横线穿过列间距"), &window);
+    horizontalThrough->setChecked(view->horizontalSpacingLineThroughColumnSpacing());
+    spacingToolbar->addWidget(horizontalThrough);
+    auto *customGaps = new QCheckBox(QStringLiteral("自定义间隙控件"), &window);
+    spacingToolbar->addWidget(customGaps);
+    auto *gridToolbar = window.addToolBar(QStringLiteral("分割线"));
+    window.insertToolBarBreak(gridToolbar);
+    auto *verticalGrid = new QCheckBox(QStringLiteral("显示竖向分割线"), &window);
+    verticalGrid->setChecked(view->verticalGridLinesVisible());
+    gridToolbar->addWidget(verticalGrid);
+    auto *horizontalGrid = new QCheckBox(QStringLiteral("显示横向分割线"), &window);
+    horizontalGrid->setChecked(view->horizontalGridLinesVisible());
+    gridToolbar->addWidget(horizontalGrid);
+    gridToolbar->addWidget(new QLabel(QStringLiteral("竖线宽度: "), &window));
+    auto *verticalLineWidth = new QSpinBox(&window);
+    verticalLineWidth->setRange(1, 8);
+    verticalLineWidth->setValue(view->verticalGridLineWidth());
+    gridToolbar->addWidget(verticalLineWidth);
+    gridToolbar->addWidget(new QLabel(QStringLiteral("横线宽度: "), &window));
+    auto *horizontalLineWidth = new QSpinBox(&window);
+    horizontalLineWidth->setRange(1, 8);
+    horizontalLineWidth->setValue(view->horizontalGridLineWidth());
+    gridToolbar->addWidget(horizontalLineWidth);
+    auto *verticalLineColor = new QPushButton(QStringLiteral("竖线颜色"), &window);
+    auto *horizontalLineColor = new QPushButton(QStringLiteral("横线颜色"), &window);
+    QPixmap defaultSwatch(16, 16);
+    defaultSwatch.fill(viv::VirtualTableView::sectionSeparatorColor(view));
+    verticalLineColor->setIcon(QIcon(defaultSwatch));
+    horizontalLineColor->setIcon(QIcon(defaultSwatch));
+    gridToolbar->addWidget(verticalLineColor);
+    gridToolbar->addWidget(horizontalLineColor);
     auto *hideCustomer = new QCheckBox(QStringLiteral("隐藏“客户”"), &window);
     toolbar->addWidget(hideCustomer);
     auto *moveStatusFirst = new QPushButton(QStringLiteral("状态列移到最前"), &window);
@@ -227,6 +281,89 @@ int main(int argc, char **argv)
     auto *horizontalOffset = new QSpinBox(&window);
     horizontalOffset->setRange(0, 5000);
     toolbar->addWidget(horizontalOffset);
+
+    QObject::connect(rowSpacing, QOverload<int>::of(&QSpinBox::valueChanged),
+                     view, [view](int pixels) { view->setRowSpacing(pixels); });
+    QObject::connect(columnSpacing, QOverload<int>::of(&QSpinBox::valueChanged),
+                     view, [view](int pixels) { view->setColumnSpacing(pixels); });
+    QObject::connect(verticalThrough, &QCheckBox::toggled, view,
+                     [view](bool enabled) { view->setVerticalSpacingLineThroughRowSpacing(enabled); });
+    QObject::connect(horizontalThrough, &QCheckBox::toggled, view,
+                     [view](bool enabled) { view->setHorizontalSpacingLineThroughColumnSpacing(enabled); });
+    QObject::connect(verticalGrid, &QCheckBox::toggled, view,
+                     [view](bool visible) { view->setVerticalGridLinesVisible(visible); });
+    QObject::connect(horizontalGrid, &QCheckBox::toggled, view,
+                     [view](bool visible) { view->setHorizontalGridLinesVisible(visible); });
+    QObject::connect(verticalLineWidth, QOverload<int>::of(&QSpinBox::valueChanged),
+                     view, [view](int pixels) { view->setVerticalGridLineWidth(pixels); });
+    QObject::connect(horizontalLineWidth, QOverload<int>::of(&QSpinBox::valueChanged),
+                     view, [view](int pixels) { view->setHorizontalGridLineWidth(pixels); });
+    QObject::connect(verticalLineColor, &QPushButton::clicked, view, [view, verticalLineColor]() {
+        const QColor color = QColorDialog::getColor(
+            view->verticalGridLineColor().isValid() ? view->verticalGridLineColor()
+                                                    : viv::VirtualTableView::sectionSeparatorColor(view),
+            view, QStringLiteral("竖线颜色"));
+        if (color.isValid()) {
+            view->setVerticalGridLineColor(color);
+            QPixmap swatch(16, 16);
+            swatch.fill(color);
+            verticalLineColor->setIcon(QIcon(swatch));
+        }
+    });
+    QObject::connect(horizontalLineColor, &QPushButton::clicked, view, [view, horizontalLineColor]() {
+        const QColor color = QColorDialog::getColor(
+            view->horizontalGridLineColor().isValid() ? view->horizontalGridLineColor()
+                                                      : viv::VirtualTableView::sectionSeparatorColor(view),
+            view, QStringLiteral("横线颜色"));
+        if (color.isValid()) {
+            view->setHorizontalGridLineColor(color);
+            QPixmap swatch(16, 16);
+            swatch.fill(color);
+            horizontalLineColor->setIcon(QIcon(swatch));
+        }
+    });
+    QObject::connect(customGaps, &QCheckBox::toggled, view, [view](bool enabled) {
+        if (!enabled) {
+            view->setHeaderColumnSpacingFactory({});
+            view->setColumnSpacingFactory({});
+            return;
+        }
+        view->setHeaderColumnSpacingFactory([](int, QWidget *parent) -> QWidget * {
+            auto *stripe = new QWidget(parent);
+            stripe->setStyleSheet(QStringLiteral("background: #f4d35e;"));
+            return stripe;
+        });
+        view->setColumnSpacingFactory([](int, QWidget *parent) -> QWidget * {
+            auto *stripe = new QWidget(parent);
+            stripe->setStyleSheet(QStringLiteral("background: #83c5be;"));
+            return stripe;
+        });
+    });
+    const QString spacingPreview = parser.value(spacingPreviewOption);
+    if (spacingPreview == QLatin1String("through") || spacingPreview == QLatin1String("none") ||
+        spacingPreview == QLatin1String("custom") || spacingPreview == QLatin1String("grid-off")) {
+        rowSpacing->setValue(8);
+        columnSpacing->setValue(12);
+    }
+    if (spacingPreview == QLatin1String("through")) {
+        horizontalThrough->setChecked(true);
+    } else if (spacingPreview == QLatin1String("none")) {
+        verticalThrough->setChecked(false);
+        horizontalThrough->setChecked(false);
+    } else if (spacingPreview == QLatin1String("custom")) {
+        customGaps->setChecked(true);
+    } else if (spacingPreview == QLatin1String("zero")) {
+        rowSpacing->setValue(0);
+        columnSpacing->setValue(0);
+    } else if (spacingPreview == QLatin1String("grid-off")) {
+        verticalGrid->setChecked(false);
+        horizontalGrid->setChecked(false);
+    } else if (spacingPreview == QLatin1String("zero-grid-off")) {
+        rowSpacing->setValue(0);
+        columnSpacing->setValue(0);
+        verticalGrid->setChecked(false);
+        horizontalGrid->setChecked(false);
+    }
 
     QByteArray savedState;
     QObject::connect(hideCustomer, &QCheckBox::toggled, view, [view](bool hidden) {

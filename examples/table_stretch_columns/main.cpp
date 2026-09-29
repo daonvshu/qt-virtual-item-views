@@ -1,5 +1,5 @@
 // 列宽比例分配示例（§9 of docs/history/table-layout.md）：固定宽度的列保持自己的宽度，
-// 其余列按比例分掉剩余宽度。列数少、总宽正好等于视口宽度，所以不会出现横向滚动。
+// 其余列按比例分掉剩余宽度。默认间距为 0，总宽正好等于视口宽度。
 //
 // 想直接看到的几件事：
 //   1. 拖窗口宽度：比例不变，参与分配的列一起变宽/变窄，表头与 body 逐像素同步；
@@ -488,12 +488,38 @@ int main(int argc, char **argv)
         view->setFrozenColumns(on ? QVector<int>({OrderModel::ColumnIndex}) : QVector<int>());
     });
 
+    auto *spacingToolbar = window.addToolBar(QStringLiteral("间距"));
+    window.insertToolBarBreak(spacingToolbar);
+    spacingToolbar->addWidget(new QLabel(QStringLiteral("行间距: "), &window));
+    auto *rowSpacing = new QSpinBox(&window);
+    rowSpacing->setRange(0, 100);
+    rowSpacing->setSuffix(QStringLiteral(" px"));
+    rowSpacing->setValue(view->rowSpacing());
+    spacingToolbar->addWidget(rowSpacing);
+    QObject::connect(rowSpacing, qOverload<int>(&QSpinBox::valueChanged), view,
+                     [view](int pixels) { view->setRowSpacing(pixels); });
+
+    spacingToolbar->addWidget(new QLabel(QStringLiteral("列间距: "), &window));
+    auto *columnSpacing = new QSpinBox(&window);
+    columnSpacing->setRange(0, 100);
+    columnSpacing->setSuffix(QStringLiteral(" px"));
+    columnSpacing->setValue(view->columnSpacing());
+    spacingToolbar->addWidget(columnSpacing);
+    QObject::connect(columnSpacing, qOverload<int>(&QSpinBox::valueChanged), view,
+                     [view](int pixels) { view->setColumnSpacing(pixels); });
+
     auto *status = new QLabel(&window);
     window.statusBar()->addPermanentWidget(status);
     const auto updateStatus = [&]() {
-        status->setText(QStringLiteral("列宽(* = 参与分配): %1    合计 %2 = 视口 %3    横向偏移 %4/%5"
-                                       "    行 %6    实例化 %7")
+        int columnsWidth = 0;
+        for (int column = 0; column < view->columnCount(); ++column)
+            columnsWidth += view->columnWidth(column);
+        const int gapsWidth = qMax(0, view->columnCount() - 1) * view->columnSpacing();
+        status->setText(QStringLiteral("列宽(* = 参与分配): %1    列宽合计 %2 + 间隙 %3 = 内容 %4 / 视口 %5"
+                                       "    横向偏移 %6/%7    行 %8    实例化 %9")
                             .arg(widthsText(*view))
+                            .arg(columnsWidth)
+                            .arg(gapsWidth)
                             .arg(view->horizontalContentExtent())
                             .arg(view->viewport()->width())
                             .arg(view->horizontalOffset())

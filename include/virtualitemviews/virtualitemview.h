@@ -14,6 +14,7 @@
 #include <QPointer>
 #include <QSet>
 #include <QVector>
+#include <functional>
 
 class QAbstractItemModel;
 class QDragEnterEvent;
@@ -231,6 +232,14 @@ public:
     int overscanBefore() const { return m_overscanBefore; }
     int overscanAfter() const { return m_overscanAfter; }
 
+    using RowSpacingFactory = std::function<QWidget *(const QModelIndex &, QWidget *)>;
+    using RowSpacingBinder = std::function<void(QWidget *, const QModelIndex &)>;
+    /// Gap below a row; the last row has no trailing gap. Zero disables it.
+    void setRowSpacing(int pixels);
+    int rowSpacing() const { return m_rowSpacing; }
+    /// Optional content for visible gaps. The binder refreshes a reused widget.
+    void setRowSpacingFactory(RowSpacingFactory factory, RowSpacingBinder binder = {});
+
     void scrollTo(const QModelIndex &index, ScrollHint hint = EnsureVisible);
 
     /// Keeps the widget of \a index materialized even when it leaves the
@@ -416,6 +425,11 @@ protected:
     /// Estimated size of an item that has never been measured (0 = layout
     /// estimate).
     virtual int estimateItemSize(qsizetype item) const;
+    /// Applies view-specific spacing (tree depth) after a row layout reset.
+    virtual void applyRowSpacingOverrides();
+    virtual void configureRowSpacingWidget(QWidget *widget) const;
+    void raiseRowSpacingWidgets() const;
+    QVector<QRect> rowSpacingWidgetRectsInView() const;
     /// Hook called after a materialization pass (measurement feedback).
     virtual void afterMaterialize();
     /// Called instead of the built-in widget materialization when
@@ -544,6 +558,7 @@ protected:
     void applyItemPaneGeometry(MaterializedItem &item, qsizetype row);
     /// Raises the boundary lines above the (re)materialized items.
     void raiseItemPaneSeparatorLines() const;
+    void syncRowSpacingWidgets(const QVector<VisibleRange> &ranges);
 
     // -- events --------------------------------------------------------------
     void paintEvent(QPaintEvent *event) override;
@@ -647,6 +662,11 @@ private:
     QWidget *m_scrollPaneHost = nullptr;
     /// Boundary lines between the row panes (1 px overlays, one per boundary).
     QVector<QWidget *> m_itemPaneSeparatorLines;
+    QHash<qsizetype, QWidget *> m_rowSpacingWidgets;
+    QHash<int, QVector<QWidget *>> m_rowSpacingPool;
+    RowSpacingFactory m_rowSpacingFactory;
+    RowSpacingBinder m_rowSpacingBinder;
+    int m_rowSpacing = 0;
     PaneSeparatorStyle m_itemPaneSeparatorStyle;
     ScrollAnchor m_pendingAnchor;
     bool m_anchorPending = false;

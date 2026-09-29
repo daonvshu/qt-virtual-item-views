@@ -3,7 +3,10 @@
 #include <virtualitemviews/global.h>
 #include <virtualitemviews/virtualitemview.h>
 
+#include <QColor>
+#include <QHash>
 #include <QPersistentModelIndex>
+#include <QVector>
 
 class QAbstractItemModel;
 
@@ -42,15 +45,35 @@ public:
 
     ListLayout *listLayout() const { return m_listLayout; }
 
+    /// Row separators are visible by default, including when row spacing is zero.
+    void setRowGridLinesVisible(bool visible);
+    bool rowGridLinesVisible() const { return m_rowGridLinesVisible; }
+    /// Width is clamped to at least one pixel.
+    void setRowGridLineWidth(int pixels);
+    int rowGridLineWidth() const { return m_rowGridLineWidth; }
+    /// An invalid color restores the palette's mid color.
+    void setRowGridLineColor(const QColor &color);
+    QColor rowGridLineColor() const { return m_rowGridLineColor; }
+    QColor itemPaneSeparatorColor() const override;
+
 protected:
     qsizetype viewItemCount() const override;
     QModelIndex viewIndex(qsizetype item, int column = 0) const override;
     qsizetype viewItemForIndex(const QModelIndex &index) const override;
     bool isLayoutParent(const QModelIndex &parent) const override;
+    void configureRowSpacingWidget(QWidget *widget) const override;
+    void afterMaterialize() override;
 
 private:
+    void syncRowGridLines();
+
     ListLayout *m_listLayout = nullptr;
     QPersistentModelIndex m_rootIndex;
+    QHash<qsizetype, QWidget *> m_rowGridLines;
+    QVector<QWidget *> m_rowGridLinePool;
+    QColor m_rowGridLineColor;
+    int m_rowGridLineWidth = 1;
+    bool m_rowGridLinesVisible = true;
 };
 
 } // namespace viv

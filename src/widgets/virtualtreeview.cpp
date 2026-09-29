@@ -7,6 +7,7 @@
 #include <QKeyEvent>
 #include <QMouseEvent>
 #include <QPainter>
+#include <QPalette>
 
 namespace viv {
 
@@ -41,6 +42,8 @@ VirtualTreeView::VirtualTreeView(QWidget *parent)
 
 VirtualTreeView::~VirtualTreeView()
 {
+    qDeleteAll(m_rowGridLines);
+    qDeleteAll(m_rowGridLinePool);
     if (m_ownBranchRenderer)
         delete m_branchRenderer;
     delete m_visibility;
@@ -178,6 +181,95 @@ int VirtualTreeView::itemDepth(const QModelIndex &index) const
 {
     const int depth = m_visibility->depth(index);
     return depth < 0 ? 0 : depth;
+}
+
+void VirtualTreeView::setDepthRowSpacing(int depth, int pixels)
+{
+    if (depth < 0)
+        return;
+    if (pixels < 0)
+        m_depthRowSpacing.remove(depth);
+    else
+        m_depthRowSpacing.insert(depth, pixels);
+    if (m_rowLayout) {
+        m_rowLayout->setItemSpacing(rowSpacing());
+        applyRowSpacingOverrides();
+    }
+    relayout();
+}
+
+int VirtualTreeView::depthRowSpacing(int depth) const
+{
+    return m_depthRowSpacing.value(depth, rowSpacing());
+}
+
+void VirtualTreeView::setRowGridLinesVisible(bool visible)
+{
+    if (m_rowGridLinesVisible == visible)
+        return;
+    m_rowGridLinesVisible = visible;
+    relayout();
+}
+
+void VirtualTreeView::setRowGridLineWidth(int pixels)
+{
+    const int width = qMax(1, pixels);
+    if (m_rowGridLineWidth == width)
+        return;
+    m_rowGridLineWidth = width;
+    relayout();
+}
+
+void VirtualTreeView::setRowGridLineColor(const QColor &color)
+{
+    if (m_rowGridLineColor == color)
+        return;
+    m_rowGridLineColor = color;
+    relayout();
+}
+
+void VirtualTreeView::setRowGridLineExtent(RowGridLineExtent extent)
+{
+    if (extent != RowGridLineExtent::NodeOnly && extent != RowGridLineExtent::NodeAndIcon
+        && extent != RowGridLineExtent::FullWidth)
+        return;
+    if (m_rowGridLineExtent == extent)
+        return;
+    m_rowGridLineExtent = extent;
+    relayout();
+}
+
+int VirtualTreeView::rowGridLineInsetForDepth(int depth) const
+{
+    const qint64 cells = m_rowGridLineExtent == RowGridLineExtent::NodeOnly ? qint64(depth) + 1
+        : m_rowGridLineExtent == RowGridLineExtent::NodeAndIcon ? qint64(depth) : 0;
+    return int(qMin<qint64>(qMax(0, viewport()->width()), qMax<qint64>(0, cells) * m_indentation));
+}
+
+QColor VirtualTreeView::itemPaneSeparatorColor() const
+{
+    return m_rowGridLineColor.isValid() ? m_rowGridLineColor
+                                        : VirtualItemView::itemPaneSeparatorColor();
+}
+
+void VirtualTreeView::configureRowSpacingWidget(QWidget *widget) const
+{
+    widget->setProperty("vivShowSpacingLines", m_rowGridLinesVisible);
+    widget->setProperty("vivSpacingLineWidth", m_rowGridLineWidth);
+    const int depth = widget->property("vivSpacingDepth").toInt();
+    widget->setProperty("vivSpacingLineLeftInset", rowGridLineInsetForDepth(depth));
+}
+
+void VirtualTreeView::applyRowSpacingOverrides()
+{
+    if (!m_rowLayout || m_depthRowSpacing.isEmpty())
+        return;
+    for (qsizetype row = 0; row < m_rowLayout->itemCount(); ++row) {
+        const int depth = itemDepth(viewIndex(row));
+        const auto it = m_depthRowSpacing.constFind(depth);
+        if (it != m_depthRowSpacing.cend())
+            m_rowLayout->setSpacingAfter(row, it.value());
+    }
 }
 
 qsizetype VirtualTreeView::visibleRowCount() const
@@ -373,6 +465,59 @@ void VirtualTreeView::afterMaterialize()
 {
     VirtualItemView::afterMaterialize();
     invalidateBranchIndicators();
+    syncRowGridLines();
+}
+
+void VirtualTreeView::syncRowGridLines()
+{
+    QHash<qsizetype, QRect> desired;
+    const QRect viewportRect = viewport()->geometry();
+    if (m_rowGridLinesVisible && m_rowLayout && viewportRect.width() > 0) {
+        for (const VisibleRange &range : visibleItemRanges()) {
+            for (qsizetype row = range.first; row >= 0 && row <= range.last; ++row) {
+                if (row + 1 >= viewItemCount() || m_rowLayout->spacingAfter(row) > 0)
+                    continue;
+                const QRect rowRect = VirtualItemView::geometryForViewRow(row);
+                if (!rowRect.intersects(viewport()->rect()))
+                    continue;
+                const int left = rowGridLineInsetForDepth(itemDepth(viewIndex(row)));
+                const QRect lineRect(viewportRect.x() + left,
+                                     viewportRect.y() + rowRect.bottom() - m_rowGridLineWidth + 1,
+                                     viewportRect.width() - left, m_rowGridLineWidth);
+                const QRect paneRect = itemPaneRect(itemPaneForRow(row))
+                    .translated(viewportRect.topLeft());
+                const QRect clipped = lineRect.intersected(paneRect);
+                if (!clipped.isEmpty())
+                    desired.insert(row, clipped);
+            }
+        }
+    }
+    for (auto it = m_rowGridLines.begin(); it != m_rowGridLines.end();) {
+        if (desired.contains(it.key())) {
+            ++it;
+            continue;
+        }
+        it.value()->hide();
+        m_rowGridLinePool.append(it.value());
+        it = m_rowGridLines.erase(it);
+    }
+    for (auto it = desired.cbegin(); it != desired.cend(); ++it) {
+        QWidget *line = m_rowGridLines.value(it.key(), nullptr);
+        if (!line) {
+            line = m_rowGridLinePool.isEmpty() ? new QWidget(this) : m_rowGridLinePool.takeLast();
+            line->setObjectName(QStringLiteral("vivTreeRowGridLine"));
+            line->setAttribute(Qt::WA_TransparentForMouseEvents);
+            line->setAutoFillBackground(true);
+            m_rowGridLines.insert(it.key(), line);
+        }
+        QPalette colors = line->palette();
+        colors.setColor(QPalette::Window, itemPaneSeparatorColor());
+        line->setPalette(colors);
+        line->setGeometry(it.value());
+        line->clearMask();
+        line->show();
+        line->raise();
+    }
 }
 
 void VirtualTreeView::invalidateBranchIndicators()

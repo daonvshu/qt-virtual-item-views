@@ -1,4 +1,5 @@
 #include <virtualitemviews/headergeometry.h>
+#include <virtualitemviews/tablepane.h>
 
 #include <QtTest>
 #include <QDataStream>
@@ -45,6 +46,8 @@ private slots:
     void clearExplicitSizesPreservesStretchFactors();
     void compactStateRoundTripStaysCompact();
     void versionTwoStateStillRestores();
+    void spacingFollowsVisibleOrderAndStretch();
+    void panePositionsIncludeColumnSpacing();
 };
 
 void TestHeaderGeometry::defaultSectionGeometry()
@@ -1178,6 +1181,49 @@ void TestHeaderGeometry::versionTwoStateStillRestores()
     QVERIFY(restored.restoreState(state));
     QCOMPARE(restored.sectionSize(0), 100);
     QCOMPARE(restored.sectionSize(1), 150);
+}
+
+void TestHeaderGeometry::spacingFollowsVisibleOrderAndStretch()
+{
+    HeaderGeometry geometry;
+    geometry.setSectionCount(3);
+    geometry.setSectionSpacing(8);
+    QCOMPARE(geometry.totalExtent(), qint64(316));
+    QCOMPARE(geometry.sectionPosition(1), qint64(108));
+    QCOMPARE(geometry.sectionAtOffset(100), -1);
+    QCOMPARE(geometry.sectionAtOffset(108), 1);
+    geometry.moveSection(2, 0);
+    QCOMPARE(geometry.sectionPosition(2), qint64(0));
+    geometry.setSectionHidden(1, true);
+    QCOMPARE(geometry.totalExtent(), qint64(208));
+    QCOMPARE(geometry.sectionAtOffset(100), -1);
+    geometry.setSectionStretchFactor(0, 1.0);
+    geometry.setStretchExtent(300);
+    QCOMPARE(geometry.totalExtent(), qint64(300));
+}
+
+void TestHeaderGeometry::panePositionsIncludeColumnSpacing()
+{
+    HeaderGeometry geometry;
+    geometry.setSectionCount(3);
+    geometry.setSectionSpacing(10);
+    TablePaneLayout panes;
+    panes.setGeometry(&geometry);
+    panes.setFrozenColumns({0});
+    panes.update(400, 200);
+    QCOMPARE(panes.frozenLeftWidth(), 110);
+    QCOMPARE(panes.columnViewportX(0), 0);
+    QCOMPARE(panes.columnViewportX(1), 110);
+    QCOMPARE(panes.columnViewportX(2), 220);
+    QCOMPARE(panes.groupExtent(0), qint64(210));
+
+    panes.setFrozenColumns({2});
+    panes.update(400, 200);
+    QCOMPARE(panes.frozenLeftWidth(), 110);
+    QCOMPARE(panes.columnViewportX(2), 0);
+    QCOMPARE(panes.columnViewportX(0), 110);
+    QCOMPARE(panes.columnViewportX(1), 220);
+    QCOMPARE(panes.groupExtent(0), qint64(210));
 }
 QTEST_APPLESS_MAIN(TestHeaderGeometry)
 

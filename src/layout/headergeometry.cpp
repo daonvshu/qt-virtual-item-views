@@ -636,6 +636,18 @@ void HeaderGeometry::clearExplicitSectionSizes()
     if (changed)
         emitGeometryChanged();
 }
+
+void HeaderGeometry::setSectionSpacing(int pixels)
+{
+    const int spacing = qMax(0, pixels);
+    if (m_sectionSpacing == spacing)
+        return;
+    m_sectionSpacing = spacing;
+    invalidateCaches();
+    applyStretch();
+    emitGeometryChanged();
+}
+
 void HeaderGeometry::setDefaultSectionSize(int size)
 {
     const int clamped = clampedSize(size);
@@ -758,7 +770,8 @@ void HeaderGeometry::rebuildCaches() const
         m_contentXByLogical.clear();
         m_visibleLogicalOrder.clear();
         m_totalExtent = qint64(m_uniformCount) * qint64(m_defaultSectionSize)
-            + m_sparseDeltaPrefix.value(m_sparseKeys.size(), 0);
+            + m_sparseDeltaPrefix.value(m_sparseKeys.size(), 0)
+            + qint64(qMax(0, m_uniformCount - 1)) * m_sectionSpacing;
         m_cacheDirty = false;
         return;
     }
@@ -775,10 +788,10 @@ void HeaderGeometry::rebuildCaches() const
         if (section.hidden)
             continue;
         m_visibleLogicalOrder.append(logical);
-        position += section.size;
+        position += section.size + m_sectionSpacing;
     }
 
-    m_totalExtent = position;
+    m_totalExtent = position - (m_visibleLogicalOrder.isEmpty() ? 0 : m_sectionSpacing);
     m_cacheDirty = false;
 }
 
@@ -794,7 +807,7 @@ qint64 HeaderGeometry::sectionPosition(int logicalIndex) const
     if (!isValidLogical(logicalIndex))
         return 0;
     if (m_uniformCount > 0) {
-        return qint64(logicalIndex) * qint64(m_defaultSectionSize)
+        return qint64(logicalIndex) * (qint64(m_defaultSectionSize) + m_sectionSpacing)
             + sparseDeltaBefore(logicalIndex);
     }
     if (m_cacheDirty)
@@ -821,18 +834,19 @@ int HeaderGeometry::visualSectionAtOffset(qint64 contentOffset) const
         qint64 position = 0;
         for (int slot = 0; slot < m_sparseKeys.size(); ++slot) {
             const int key = m_sparseKeys.at(slot);
-            const qint64 keyStart = qint64(key) * qint64(m_defaultSectionSize)
+            const qint64 keyStart = qint64(key) * (qint64(m_defaultSectionSize) + m_sectionSpacing)
                 + m_sparseDeltaPrefix.at(slot);
             if (keyStart > contentOffset)
                 break;
             if (contentOffset < keyStart + m_sparseSizes.at(slot))
                 return key;
             index = key + 1;
-            position = keyStart + m_sparseSizes.at(slot);
+            position = keyStart + m_sparseSizes.at(slot) + m_sectionSpacing;
         }
         if (index >= m_uniformCount)
             return m_uniformCount - 1;
-        const qint64 ahead = (contentOffset - position) / qint64(m_defaultSectionSize);
+        const qint64 ahead = (contentOffset - position)
+            / (qint64(m_defaultSectionSize) + m_sectionSpacing);
         return int(qBound<qint64>(qint64(index), qint64(index) + ahead, qint64(m_uniformCount) - 1));
     }
     if (m_cacheDirty)
@@ -861,7 +875,11 @@ int HeaderGeometry::visualSectionAtOffset(qint64 contentOffset) const
 int HeaderGeometry::sectionAtOffset(qint64 contentOffset) const
 {
     const int visual = visualSectionAtOffset(contentOffset);
-    return visual < 0 ? -1 : logicalIndex(visual);
+    const int logical = visual < 0 ? -1 : logicalIndex(visual);
+    if (m_sectionSpacing == 0 || contentOffset < 0 || contentOffset >= totalExtent())
+        return logical;
+    return logical >= 0 && contentOffset < sectionPosition(logical) + sectionSize(logical)
+        ? logical : -1;
 }
 
 // ---------------------------------------------------------------------------

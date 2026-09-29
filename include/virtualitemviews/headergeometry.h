@@ -96,6 +96,9 @@ public:
 
     int defaultSectionSize() const { return m_defaultSectionSize; }
     void setDefaultSectionSize(int size);
+    /// Blank pixels between visible sections; excluded after the last section.
+    int sectionSpacing() const { return m_sectionSpacing; }
+    void setSectionSpacing(int pixels);
     int minimumSectionSize() const { return m_minimumSectionSize; }
     void setMinimumSectionSize(int size);
     int maximumSectionSize() const { return m_maximumSectionSize; }
@@ -296,6 +299,7 @@ private:
     QVector<int> m_logicalToVisual; ///< logical index -> visual index
 
     int m_defaultSectionSize = 100;
+    int m_sectionSpacing = 0;
     int m_minimumSectionSize = 24;
     int m_maximumSectionSize = 100000;
     qint64 m_viewportOffset = 0;

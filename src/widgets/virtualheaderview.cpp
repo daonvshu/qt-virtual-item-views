@@ -10,6 +10,7 @@
 #include <QEasingCurve>
 #include <QKeyEvent>
 #include <QMouseEvent>
+#include <QPainter>
 #include <QResizeEvent>
 #include <QSet>
 #include <QVariantAnimation>
@@ -93,6 +94,56 @@ VirtualHeaderView::~VirtualHeaderView()
 // ---------------------------------------------------------------------------
 // HeaderViewInterface
 // ---------------------------------------------------------------------------
+
+void VirtualHeaderView::paintEvent(QPaintEvent *event)
+{
+    Q_UNUSED(event);
+    QPainter painter(this);
+    painter.fillRect(rect(), palette().brush(QPalette::Button));
+    if ((!m_sectionSeparatorsVisible && !m_crossAxisSeparatorVisible) || !m_geometry)
+        return;
+    const QColor sectionColor = m_sectionSeparatorColor.isValid()
+        ? m_sectionSeparatorColor : headerSectionSeparatorColor(this);
+    const QColor crossColor = m_crossAxisSeparatorColor.isValid()
+        ? m_crossAxisSeparatorColor : headerSectionSeparatorColor(this);
+    const int spacing = m_geometry->sectionSpacing();
+    for (auto it = m_sectionWidgets.cbegin(); it != m_sectionWidgets.cend(); ++it) {
+        const QWidget *section = it.value();
+        if (!section->isVisible())
+            continue;
+        if (isHorizontal()) {
+            if (m_sectionSeparatorsVisible) {
+                const int x = section->geometry().right();
+                if (x >= 0 && x < width())
+                    painter.fillRect(QRect(x - m_sectionSeparatorWidth + 1, 0,
+                                           m_sectionSeparatorWidth, height()), sectionColor);
+            }
+            continue;
+        }
+        if (spacing == 0) {
+            if (m_sectionSeparatorsVisible) {
+                const int y = section->geometry().bottom();
+                if (y >= 0 && y < height())
+                    painter.fillRect(QRect(0, y - m_sectionSeparatorWidth + 1,
+                                           width(), m_sectionSeparatorWidth), sectionColor);
+            }
+            continue;
+        }
+        if (m_geometry->sectionPosition(it.key()) + m_geometry->sectionSize(it.key())
+            >= m_geometry->totalExtent())
+            continue;
+        const int top = section->geometry().bottom() + 1;
+        if (m_crossAxisSeparatorVisible && width() > 0)
+            painter.fillRect(QRect(width() - m_crossAxisSeparatorWidth, top,
+                                   m_crossAxisSeparatorWidth, spacing), crossColor);
+        if (m_sectionSeparatorsVisible) {
+            for (int y : {top, top + qMax(0, spacing - m_sectionSeparatorWidth)}) {
+                if (y >= 0 && y < height())
+                    painter.fillRect(QRect(0, y, width(), m_sectionSeparatorWidth), sectionColor);
+            }
+        }
+    }
+}
 
 void VirtualHeaderView::setGeometryModel(HeaderGeometry *geometry)
 {
@@ -333,6 +384,77 @@ void VirtualHeaderView::setViewportOrigin(const QPoint &origin)
     relayout();
 }
 
+void VirtualHeaderView::setPaneTerminalColumn(int logicalIndex)
+{
+    if (m_paneTerminalColumn == logicalIndex)
+        return;
+    m_paneTerminalColumn = logicalIndex;
+    m_paneCacheDirty = true;
+    relayout();
+}
+
+void VirtualHeaderView::setSectionSeparatorsVisible(bool visible)
+{
+    if (m_sectionSeparatorsVisible == visible)
+        return;
+    m_sectionSeparatorsVisible = visible;
+    for (QWidget *section : m_sectionWidgets)
+        section->update();
+    update();
+}
+
+void VirtualHeaderView::setCrossAxisSeparatorVisible(bool visible)
+{
+    if (m_crossAxisSeparatorVisible == visible)
+        return;
+    m_crossAxisSeparatorVisible = visible;
+    for (QWidget *section : m_sectionWidgets)
+        section->update();
+    update();
+}
+
+void VirtualHeaderView::setSectionSeparatorColor(const QColor &color)
+{
+    if (m_sectionSeparatorColor == color)
+        return;
+    m_sectionSeparatorColor = color;
+    for (QWidget *section : m_sectionWidgets)
+        section->update();
+    update();
+}
+
+void VirtualHeaderView::setCrossAxisSeparatorColor(const QColor &color)
+{
+    if (m_crossAxisSeparatorColor == color)
+        return;
+    m_crossAxisSeparatorColor = color;
+    for (QWidget *section : m_sectionWidgets)
+        section->update();
+    update();
+}
+
+void VirtualHeaderView::setSectionSeparatorWidth(int pixels)
+{
+    pixels = qMax(1, pixels);
+    if (m_sectionSeparatorWidth == pixels)
+        return;
+    m_sectionSeparatorWidth = pixels;
+    for (QWidget *section : m_sectionWidgets)
+        section->update();
+    update();
+}
+
+void VirtualHeaderView::setCrossAxisSeparatorWidth(int pixels)
+{
+    pixels = qMax(1, pixels);
+    if (m_crossAxisSeparatorWidth == pixels)
+        return;
+    m_crossAxisSeparatorWidth = pixels;
+    for (QWidget *section : m_sectionWidgets)
+        section->update();
+    update();
+}
+
 void VirtualHeaderView::setAdapter(HeaderWidgetAdapter *adapter, bool takeOwnership)
 {
     if (m_adapter == adapter) {
@@ -423,7 +545,8 @@ void VirtualHeaderView::rebuildPaneCacheIfNeeded() const
     for (int slot = 0; slot < m_paneOrder.size(); ++slot) {
         const int logical = m_paneOrder.at(slot);
         m_paneSlotByLogical[logical] = slot;
-        x += m_geometry->sectionSize(logical);
+        x += m_geometry->sectionSize(logical)
+            + (logical == m_paneTerminalColumn ? 0 : m_geometry->sectionSpacing());
         m_panePrefix.append(x);
     }
 }
@@ -753,6 +876,8 @@ void VirtualHeaderView::positionSections()
         notifyVisualGeometry();
         return;
     }
+    if (m_dragLeadingSeparator)
+        m_dragLeadingSeparator->hide();
     const int extent = axisExtent();
     for (auto it = m_sectionWidgets.constBegin(); it != m_sectionWidgets.constEnd(); ++it) {
         const int logical = it.key();
@@ -931,6 +1056,26 @@ void VirtualHeaderView::positionDraggedSections()
         if (logical == m_dragSection)
             widget->raise();
     }
+    QWidget *dragged = m_sectionWidgets.value(m_dragSection, nullptr);
+    if (m_sectionSeparatorsVisible && dragged && dragged->isVisible()) {
+        if (!m_dragLeadingSeparator) {
+            m_dragLeadingSeparator = new QWidget(this);
+            m_dragLeadingSeparator->setAttribute(Qt::WA_TransparentForMouseEvents);
+            m_dragLeadingSeparator->setAutoFillBackground(true);
+        }
+        QPalette colors = m_dragLeadingSeparator->palette();
+        colors.setColor(QPalette::Window, m_sectionSeparatorColor.isValid()
+            ? m_sectionSeparatorColor : headerSectionSeparatorColor(this));
+        m_dragLeadingSeparator->setPalette(colors);
+        if (isHorizontal())
+            m_dragLeadingSeparator->setGeometry(dragged->x(), 0, m_sectionSeparatorWidth, height());
+        else
+            m_dragLeadingSeparator->setGeometry(0, dragged->y(), width(), m_sectionSeparatorWidth);
+        m_dragLeadingSeparator->show();
+        m_dragLeadingSeparator->raise();
+    } else if (m_dragLeadingSeparator) {
+        m_dragLeadingSeparator->hide();
+    }
 }
 
 void VirtualHeaderView::restartDragPreviewTween(int packedSlot)
@@ -1017,6 +1162,8 @@ void VirtualHeaderView::finishSectionDrag(bool commit)
 
     m_dragSection = -1;
     m_dragging = false;
+    if (m_dragLeadingSeparator)
+        m_dragLeadingSeparator->hide();
     if (m_previewAnimation)
         m_previewAnimation->stop();
     m_previewFrom.clear();

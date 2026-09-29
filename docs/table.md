@@ -15,6 +15,57 @@
 
 先按控件所有权选：需要把整行当成一个整体管理，用行控件模式；需要让每格独立回收，尤其是宽表，用单元格模式。两种模式都支持普通的纵向、横向滚动；滚动库的接入方式不决定这里的选型。
 
+## 行列间距
+
+两种控件模式都可设置行间距和列间距，默认均为 0；末行、末列之后不加间距。空白区域不命中行或列，行间距上下、列间距左右都有分割线。列间距跟随列的显示顺序、隐藏状态和冻结 pane。间距设为 0 时仍显示单元格分割线。
+
+```cpp
+table.setRowSpacing(8);
+table.setColumnSpacing(12);
+table.setVerticalSpacingLineThroughRowSpacing(false);      // 竖线在行间距处中断
+table.setHorizontalSpacingLineThroughColumnSpacing(false); // 横线在列间距处中断
+table.setVerticalGridLinesVisible(false);                  // 隐藏竖线及默认列表头分割线
+table.setHorizontalGridLinesVisible(false);                // 隐藏横线及默认行表头分割线
+```
+
+横、竖分割线默认都显示，可以分别关闭；列表头底边、行表头右边及其间隙边框也遵循对应方向的开关。竖线穿过行间距、横线穿过列间距默认都开启；这两个开关只决定已显示的线在间隙内是否连续，不改变分割线的显隐。自定义表头控件若自己绘制边框，应由该控件同步处理边框显隐。
+
+横线和竖线可以分别设置颜色与宽度，默认跟随 Qt 样式颜色、宽度为 1 px。颜色传入无效的 `QColor()` 可恢复样式颜色；宽度最小为 1 px。设置作用于表体分割线、间隙边缘和默认表头分割线，较宽的线向已有单元格或间隙内部绘制，不改变行列尺寸。pane 边界线仍由 `setPaneSeparatorStyle()` 单独控制。
+
+```cpp
+table.setVerticalGridLineColor(QColor(QStringLiteral("#3983a8")));
+table.setVerticalGridLineWidth(2);
+table.setHorizontalGridLineColor(QColor(QStringLiteral("#c76552")));
+table.setHorizontalGridLineWidth(3);
+```
+
+需要在间距里显示控件时，分别提供创建与绑定回调。下面可接在本页的 `table` 和 `model` 建立之后；绑定回调会在控件复用时收到当前间距左侧的逻辑列号。
+
+```cpp
+table.setColumnSpacingFactory(
+    [](int, QWidget *parent) -> QWidget * { return new QLabel(parent); },
+    [](QWidget *widget, int leftColumn) {
+        static_cast<QLabel *>(widget)->setText(QString::number(leftColumn));
+    });
+```
+
+行间距控件使用 `setRowSpacingFactory()`，接口和列表相同。分割线占据间距的上下边缘；要容纳控件内容，间距须大于横线宽度的两倍。间距属于视图显示设置，未写入表头状态文件，重启后可从应用配置重新设置。
+
+表头列间距和表体列间距可以分别放控件。两个工厂都只为可见间距创建控件；如果控件内容依赖左侧列，传入对应 binder 在复用时刷新。
+
+```cpp
+table.setHeaderColumnSpacingFactory([](int, QWidget *parent) -> QWidget * {
+    auto *stripe = new QWidget(parent);
+    stripe->setStyleSheet(QStringLiteral("background: #f4d35e;"));
+    return stripe;
+});
+table.setColumnSpacingFactory([](int, QWidget *parent) -> QWidget * {
+    auto *stripe = new QWidget(parent);
+    stripe->setStyleSheet(QStringLiteral("background: #83c5be;"));
+    return stripe;
+});
+```
+
 ## 一行一个控件（默认）
 
 使用 `TableWidgetAdapter` 创建行控件。以下第 0 列放名称标签，第 1 列放进度条。`ColumnHost(列号, 行控件)` 只是列布局容器：视图会找到它，随列宽、顺序、隐藏、冻结和横向滚动调整其几何与裁剪；里面的业务控件由行控件持有和绑定，不会作为独立单元格回收。代码放在已创建 `QApplication` 的程序中。

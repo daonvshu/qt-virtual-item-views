@@ -7,6 +7,7 @@
 ```cpp
 #include <virtualitemviews/virtualtreeview.h>
 #include <virtualitemviews/widgetadapter.h>
+#include <QColor>
 #include <QLabel>
 #include <QStandardItemModel>
 
@@ -39,6 +40,23 @@ tree.show();
 ```
 
 还可用 `setRootIndex()` 只显示一棵子树，`isExpanded()` 查询状态，`visibleRowCount()` 查询展开后的行数。分支指示器可点击，双击和方向键也可展开/收起。
+
+## 按深度设置行间距
+
+树的间距跟在上方节点之后，按这个节点的深度计算；默认行间距为 0，各深度默认没有覆盖值，末个可见节点后没有间距。普通行间距和深度覆盖可以组合：
+
+```cpp
+tree.setRowSpacing(6);          // 默认深度
+tree.setDepthRowSpacing(0, 18); // 顶层节点后
+tree.setDepthRowSpacing(1, 4);  // 子节点后
+tree.setDepthRowSpacing(1, -1); // 取消深度 1 的覆盖，恢复默认值
+tree.setRowGridLinesVisible(true);
+tree.setRowGridLineWidth(2);
+tree.setRowGridLineColor(QColor("#5b7280"));
+tree.setRowGridLineExtent(viv::VirtualTreeView::RowGridLineExtent::NodeAndIcon);
+```
+
+分割线默认显示，绘制范围默认为 `FullWidth`（整行）。`NodeOnly` 仅从上方节点的内容区域左侧开始，`NodeAndIcon` 从该节点的图标格左侧开始；三种模式都绘制连续横线，起点随上方节点深度变化。间距为 0 时绘制单条行线，有间距时在留白上下边缘绘制，范围设置对两者都生效。`setRowGridLinesVisible(false)` 可隐藏这些线。默认间距为空白；自定义间距控件使用列表相同的 `setRowSpacingFactory()`；创建与绑定回调收到的是上方节点的索引，可用 `tree.itemDepth(index)` 区分深度。控件按可见范围创建，并在同一深度内复用。
 
 ## 不同父节点使用不同控件
 

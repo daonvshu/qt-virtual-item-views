@@ -8,11 +8,16 @@
 #include <QAbstractItemModel>
 #include <QApplication>
 #include <QCheckBox>
+#include <QColorDialog>
+#include <QComboBox>
 #include <QCommandLineParser>
+#include <QIcon>
 #include <QLabel>
 #include <QMainWindow>
 #include <QPainter>
+#include <QPalette>
 #include <QPixmap>
+#include <QPushButton>
 #include <QSpinBox>
 #include <QStatusBar>
 #include <QTimer>
@@ -300,6 +305,50 @@ int main(int argc, char **argv)
     indentation->setRange(0, 60);
     indentation->setValue(view->indentation());
     toolbar->addWidget(indentation);
+    toolbar->addWidget(new QLabel(QStringLiteral("默认行间距: "), &window));
+    auto *rowSpacing = new QSpinBox(&window);
+    rowSpacing->setRange(0, 100);
+    rowSpacing->setSuffix(QStringLiteral(" px"));
+    rowSpacing->setValue(view->rowSpacing());
+    toolbar->addWidget(rowSpacing);
+    toolbar->addWidget(new QLabel(QStringLiteral("深度 0: "), &window));
+    auto *depth0Spacing = new QSpinBox(&window);
+    depth0Spacing->setRange(0, 150);
+    depth0Spacing->setSpecialValueText(QStringLiteral("默认"));
+    depth0Spacing->setSuffix(QStringLiteral(" px"));
+    toolbar->addWidget(depth0Spacing);
+    toolbar->addWidget(new QLabel(QStringLiteral("深度 1: "), &window));
+    auto *depth1Spacing = new QSpinBox(&window);
+    depth1Spacing->setRange(0, 150);
+    depth1Spacing->setSpecialValueText(QStringLiteral("默认"));
+    depth1Spacing->setSuffix(QStringLiteral(" px"));
+    toolbar->addWidget(depth1Spacing);
+    window.addToolBarBreak();
+    auto *gridToolbar = window.addToolBar(QStringLiteral("分割线"));
+    auto *rowLines = new QCheckBox(QStringLiteral("显示分割线"), &window);
+    rowLines->setChecked(view->rowGridLinesVisible());
+    gridToolbar->addWidget(rowLines);
+    gridToolbar->addWidget(new QLabel(QStringLiteral("范围: "), &window));
+    auto *lineExtent = new QComboBox(&window);
+    lineExtent->addItem(QStringLiteral("仅节点"));
+    lineExtent->addItem(QStringLiteral("节点及图标"));
+    lineExtent->addItem(QStringLiteral("整行"));
+    lineExtent->setCurrentIndex(int(view->rowGridLineExtent()));
+    gridToolbar->addWidget(lineExtent);
+    gridToolbar->addWidget(new QLabel(QStringLiteral("线宽: "), &window));
+    auto *lineWidth = new QSpinBox(&window);
+    lineWidth->setRange(1, 12);
+    lineWidth->setValue(view->rowGridLineWidth());
+    lineWidth->setSuffix(QStringLiteral(" px"));
+    gridToolbar->addWidget(lineWidth);
+    auto *lineColor = new QPushButton(QStringLiteral("颜色"), &window);
+    const auto setColorSwatch = [lineColor](const QColor &color) {
+        QPixmap swatch(16, 16);
+        swatch.fill(color);
+        lineColor->setIcon(QIcon(swatch));
+    };
+    setColorSwatch(view->palette().color(QPalette::Mid));
+    gridToolbar->addWidget(lineColor);
     auto *status = new QLabel(&window);
     window.statusBar()->addPermanentWidget(status);
 
@@ -320,6 +369,35 @@ int main(int argc, char **argv)
         customIcons->setChecked(true);
     QObject::connect(indentation, QOverload<int>::of(&QSpinBox::valueChanged), view, [view](int pixels) {
         view->setIndentation(pixels);
+    });
+    QObject::connect(rowSpacing, QOverload<int>::of(&QSpinBox::valueChanged), view,
+                     [view, depth0Spacing, depth1Spacing](int pixels) {
+        view->setRowSpacing(pixels);
+        if (depth0Spacing->value() > 0)
+            view->setDepthRowSpacing(0, depth0Spacing->value());
+        if (depth1Spacing->value() > 0)
+            view->setDepthRowSpacing(1, depth1Spacing->value());
+    });
+    QObject::connect(depth0Spacing, QOverload<int>::of(&QSpinBox::valueChanged), view,
+                     [view](int pixels) { view->setDepthRowSpacing(0, pixels > 0 ? pixels : -1); });
+    QObject::connect(depth1Spacing, QOverload<int>::of(&QSpinBox::valueChanged), view,
+                     [view](int pixels) { view->setDepthRowSpacing(1, pixels > 0 ? pixels : -1); });
+    QObject::connect(rowLines, &QCheckBox::toggled, view,
+                     [view](bool visible) { view->setRowGridLinesVisible(visible); });
+    QObject::connect(lineExtent, QOverload<int>::of(&QComboBox::currentIndexChanged), view,
+                     [view](int index) {
+        view->setRowGridLineExtent(static_cast<viv::VirtualTreeView::RowGridLineExtent>(index));
+    });
+    QObject::connect(lineWidth, QOverload<int>::of(&QSpinBox::valueChanged), view,
+                     [view](int pixels) { view->setRowGridLineWidth(pixels); });
+    QObject::connect(lineColor, &QPushButton::clicked, view, [view, setColorSwatch]() {
+        const QColor initial = view->rowGridLineColor().isValid()
+            ? view->rowGridLineColor() : view->palette().color(QPalette::Mid);
+        const QColor color = QColorDialog::getColor(initial, view, QStringLiteral("分割线颜色"));
+        if (color.isValid()) {
+            view->setRowGridLineColor(color);
+            setColorSwatch(color);
+        }
     });
 
     const auto updateStatus = [&]() {

@@ -9,6 +9,7 @@
 ```cpp
 #include <virtualitemviews/virtuallistview.h>
 #include <virtualitemviews/widgetadapter.h>
+#include <QColor>
 #include <QLabel>
 #include <QStringListModel>
 
@@ -58,6 +59,31 @@ model.setData(first, QStringLiteral("更新后的多行内容，可以因文本�
 ```
 
 视口上方的高度变化会通过滚动锚点补偿，减少内容跳动。若高度来自异步图片或展开状态，先更新模型数据，再发出该行的 `dataChanged`；`bindWidget()` 应刷新控件内容和尺寸提示。
+
+## 行间距
+
+`setRowSpacing()` 在相邻行之间留白，默认间距为 0，末行后不加间距。行控件高度不包含间距，点击留白不会命中行。默认显示分割线：间距为 0 时绘制在相邻行的边界；有间距时绘制在留白的上下边缘。
+
+```cpp
+view.setRowSpacing(12);
+view.setRowGridLinesVisible(true);
+view.setRowGridLineWidth(2);
+view.setRowGridLineColor(QColor("#5b7280"));
+```
+
+留白默认没有内容。需要在可见留白中放控件时，提供创建和重新绑定回调；控件离屏后会复用，绑定回调必须完整刷新它的内容。下面的 `view` 和 `model` 沿用本页前面的最小示例：
+
+```cpp
+view.setRowSpacingFactory(
+    [](const QModelIndex &, QWidget *parent) -> QWidget * {
+        return new QLabel(parent);
+    },
+    [](QWidget *widget, const QModelIndex &above) {
+        static_cast<QLabel *>(widget)->setText(above.data().toString());
+    });
+```
+
+工厂收到的是留白上方的行索引；控件被放在两条分割线之间，需要至少 `2 * 线宽 + 1` px 的间距才有可用高度。`setRowGridLinesVisible(false)` 可同时隐藏零间距行线和留白边线。
 
 ## 滚动与物化窗口
 

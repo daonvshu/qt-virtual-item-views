@@ -12,6 +12,7 @@
 #include <QPersistentModelIndex>
 #include <QSet>
 #include <QVector>
+#include <functional>
 
 class QAbstractItemModel;
 class QPainter;
@@ -138,6 +139,32 @@ public:
     int columnCount() const;
     ColumnGeometry columnGeometry(int logicalIndex) const;
     int columnWidth(int logicalIndex) const;
+    using ColumnSpacingFactory = std::function<QWidget *(int, QWidget *)>;
+    using ColumnSpacingBinder = std::function<void(QWidget *, int)>;
+    /// Blank pixels between visible columns, including pane boundaries.
+    void setColumnSpacing(int pixels);
+    int columnSpacing() const { return m_columns ? m_columns->sectionSpacing() : 0; }
+    /// Optional content for visible column gaps; the binder refreshes reused widgets.
+    void setColumnSpacingFactory(ColumnSpacingFactory factory, ColumnSpacingBinder binder = {});
+    void setHeaderColumnSpacingFactory(ColumnSpacingFactory factory, ColumnSpacingBinder binder = {});
+    void setVerticalSpacingLineThroughRowSpacing(bool enabled);
+    bool verticalSpacingLineThroughRowSpacing() const { return m_verticalSpacingLineThroughRowSpacing; }
+    void setHorizontalSpacingLineThroughColumnSpacing(bool enabled);
+    bool horizontalSpacingLineThroughColumnSpacing() const { return m_horizontalSpacingLineThroughColumnSpacing; }
+    /// Grid lines remain visible at zero spacing; each direction can be hidden independently.
+    void setVerticalGridLinesVisible(bool visible);
+    bool verticalGridLinesVisible() const { return m_verticalGridLinesVisible; }
+    void setHorizontalGridLinesVisible(bool visible);
+    bool horizontalGridLinesVisible() const { return m_horizontalGridLinesVisible; }
+    /// Invalid color follows the current style; width is at least one pixel.
+    void setVerticalGridLineColor(const QColor &color);
+    QColor verticalGridLineColor() const { return m_verticalGridLineColor; }
+    void setHorizontalGridLineColor(const QColor &color);
+    QColor horizontalGridLineColor() const { return m_horizontalGridLineColor; }
+    void setVerticalGridLineWidth(int pixels);
+    int verticalGridLineWidth() const { return m_verticalGridLineWidth; }
+    void setHorizontalGridLineWidth(int pixels);
+    int horizontalGridLineWidth() const { return m_horizontalGridLineWidth; }
     /// Logical column under a viewport x, honoring the panes (§31/§43): a frozen
     /// column is hit by its own viewport x, a scrollable one by the horizontal
     /// offset of its own scroll group, and a column is only hit inside the pane it
@@ -430,6 +457,8 @@ protected:
     QModelIndex indexAt(const QPoint &viewportPos) const override;
     bool canMeasureItem(qsizetype item) const override;
     void afterMaterialize() override;
+    void applyRowSpacingOverrides() override;
+    void configureRowSpacingWidget(QWidget *widget) const override;
     bool handleItemKeyPress(QKeyEvent *event) override;
     /// §38: a table drops between rows (row semantics) or into a cell. The
     /// column of the target is -1 when the whole row is the drop unit.
@@ -547,6 +576,11 @@ private:
     void updateVisualRowGeometry();
     /// Lifts the body lines above the (re)materialized items.
     void raisePaneSeparatorLines();
+    void syncColumnSpacingWidgets();
+    void syncRowGridLines();
+    void applyGridLineVisibilityToHeaders();
+    QColor resolvedVerticalGridLineColor() const;
+    QColor resolvedHorizontalGridLineColor() const;
     /// Column hosts of a row widget (direct children plus the clip host's).
     QList<ColumnHost *> rowColumnHosts(QWidget *rowWidget) const;
     /// Clip containers of a row widget, one per scrolling pane (empty when the
@@ -630,6 +664,22 @@ private:
     QHash<quint64, QWidget *> m_cellClipHosts;
     /// 1 px body lines at the pane boundaries (left | scrollable | right).
     QVector<QWidget *> m_paneSeparatorLines;
+    QHash<int, QWidget *> m_columnSpacingWidgets;
+    QVector<QWidget *> m_columnSpacingPool;
+    QHash<qsizetype, QWidget *> m_rowGridLines;
+    QVector<QWidget *> m_rowGridLinePool;
+    ColumnSpacingFactory m_columnSpacingFactory;
+    ColumnSpacingBinder m_columnSpacingBinder;
+    ColumnSpacingFactory m_headerColumnSpacingFactory;
+    ColumnSpacingBinder m_headerColumnSpacingBinder;
+    bool m_verticalSpacingLineThroughRowSpacing = true;
+    bool m_horizontalSpacingLineThroughColumnSpacing = true;
+    bool m_verticalGridLinesVisible = true;
+    bool m_horizontalGridLinesVisible = true;
+    QColor m_verticalGridLineColor;
+    QColor m_horizontalGridLineColor;
+    int m_verticalGridLineWidth = 1;
+    int m_horizontalGridLineWidth = 1;
     PaneSeparatorStyle m_paneSeparatorStyle;
     bool m_headerAnimationEnabled = true;
     int m_headerAnimationDuration = 300;
