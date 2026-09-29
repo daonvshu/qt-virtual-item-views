@@ -77,6 +77,16 @@ public:
     enum class RowGridLineExtent { NodeOnly, NodeAndIcon, FullWidth };
     void setRowGridLineExtent(RowGridLineExtent extent);
     RowGridLineExtent rowGridLineExtent() const { return m_rowGridLineExtent; }
+    /// Optional animated hover/selection background, painted below branch icons.
+    void setVisualStateBackgroundVisible(bool visible);
+    bool visualStateBackgroundVisible() const { return m_visualStateBackgroundVisible; }
+    /// Left edge of the background for each node depth, independent of grid lines.
+    enum class VisualStateBackgroundExtent { NodeOnly, NodeAndIcon, FullWidth };
+    void setVisualStateBackgroundExtent(VisualStateBackgroundExtent extent);
+    VisualStateBackgroundExtent visualStateBackgroundExtent() const
+    {
+        return m_visualStateBackgroundExtent;
+    }
     QColor itemPaneSeparatorColor() const override;
     /// Draws and handles the expand/collapse indicator of branch items.
     void setBranchIndicatorsVisible(bool visible);
@@ -121,6 +131,8 @@ protected:
     /// invalidated after every materialization pass (scroll, expand/collapse,
     /// indentation, resize).
     void afterMaterialize() override;
+    void refreshVisualStates() override;
+    void refreshVisualState(const QModelIndex &index) override;
     /// §38: a tree drops *between* siblings or *into* an item. The middle band
     /// of a drop-enabled item expresses "become a child of this item" as
     /// (item, item.rowCount()), the same convention QTreeView uses.
@@ -148,6 +160,7 @@ private:
     int rowGridLineInsetForDepth(int depth) const;
     /// Paints the indicators of every visible cell into \a painter.
     void paintBranchIndicators(QPainter *painter);
+    void paintVisualStateBackgrounds(QPainter *painter, const QRect &dirty);
     /// Cell rect (viewport coordinates) of \a cellDepth of a view row.
     QRect branchCellRect(qsizetype row, int cellDepth) const;
     /// x of the branch indicator of a view row.
@@ -172,6 +185,8 @@ private:
     int m_rowGridLineWidth = 1;
     bool m_rowGridLinesVisible = true;
     RowGridLineExtent m_rowGridLineExtent = RowGridLineExtent::FullWidth;
+    VisualStateBackgroundExtent m_visualStateBackgroundExtent = VisualStateBackgroundExtent::FullWidth;
+    bool m_visualStateBackgroundVisible = false;
     bool m_branchIndicatorsVisible = true;
     BranchIndicatorRenderer *m_branchRenderer = nullptr;
     bool m_ownBranchRenderer = false;

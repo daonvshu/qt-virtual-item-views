@@ -15,6 +15,39 @@
 
 先按控件所有权选：需要把整行当成一个整体管理，用行控件模式；需要让每格独立回收，尤其是宽表，用单元格模式。两种模式都支持普通的纵向、横向滚动；滚动库的接入方式不决定这里的选型。
 
+## 自绘悬停与选中背景
+
+`table.visualState(index)` 返回 `hovered`、`selected` 目标标志和各自的 0–1 动画进度。默认 180 ms 平滑过渡；`setVisualStateAnimationDuration(0)` 可关闭。默认 `VisualStateScope::Row`：同一行只要有一个格被选中，整行的 `selected` 为真；鼠标位于行中任意格时，整行的 `hovered` 为真。切到 `Cell` 后，仅命中的格或选中的格返回对应标志。此设置与行控件/单元格控件的物化模式独立。
+
+选区本身仍由 `setSelectionBehavior()` 控制。若需要点击后只选中一个单元格，同时调用 `table.setSelectionBehavior(viv::VirtualItemView::SelectionBehavior::SelectItems)`；仅修改绘制范围不会改变已有选区。
+
+```cpp
+table.setVisualStateScope(viv::VirtualTableView::VisualStateScope::Cell);
+table.setHoverBackgroundColor(QColor("#e7f4ed"));
+table.setSelectedBackgroundColor(QColor("#b9d9f1"));
+table.setVisualStateAnimationDuration(180);
+const auto state = table.visualState(model.index(2, 1));
+```
+
+在行控件模式中，`TableWidgetAdapter::visualStateChanged(widget, rowIndex)` 通知整行控件重绘。若按格着色，在行控件的 `paintEvent()` 中逐列查询 `table.visualState(QModelIndex(rowIndex).siblingAtColumn(column))`，再按该列当前的 `columnGeometry(column)` 画背景；列顺序、宽度和冻结位置都应取当前几何。下面是关键绘制部分，`rowIndex` 是绑定时保存的 `QPersistentModelIndex`，`table` 是当前视图：
+
+```cpp
+QPainter painter(this);
+for (int column = 0; column < table->model()->columnCount(); ++column) {
+    const auto geometry = table->columnGeometry(column);
+    if (!geometry.isValid() || geometry.hidden) continue;
+    const auto state = table->visualState(QModelIndex(rowIndex).siblingAtColumn(column));
+    const QRect cellRect(geometry.viewportX - x(), 0, geometry.width, height());
+    painter.setOpacity(state.hoverProgress);
+    painter.fillRect(cellRect, table->hoverBackgroundColor());
+    painter.setOpacity(state.selectedProgress);
+    painter.fillRect(cellRect, table->selectedBackgroundColor());
+    painter.setOpacity(1.0);
+}
+```
+
+单元格控件模式则由 `CellWidgetAdapter::visualStateChanged(widget, index)` 通知对应控件。控件可保存 `table.visualState(index)` 并在自己的 `paintEvent()` 中画背景。两个适配器的默认回调都会调用 `widget->update()`；如果控件在绘制时直接查询视图状态，不必重写回调。回收后重新绑定时也会通知状态，避免旧控件的选中色残留。不透明子控件会遮住父控件背景，需要同步处理其背景。
+
 ## 行列间距
 
 两种控件模式都可设置行间距和列间距，默认均为 0；末行、末列之后不加间距。空白区域不命中行或列，行间距上下、列间距左右都有分割线。列间距跟随列的显示顺序、隐藏状态和冻结 pane。间距设为 0 时仍显示单元格分割线。
@@ -200,6 +233,76 @@ mixedTable.show();
 ```
 
 同一类型的控件可能绑定到不同的行，`bindCellWidget()` 每次都要写全当前状态；若控件持有与旧单元格有关的异步工作，还需在 `unbindCellWidget()` 中清理。行控件模式则在一个 `RowWidget` 的不同 `ColumnHost` 内放不同子控件，不使用 `cellWidgetType()`。
+
+## 状态背景
+
+需要带动画的悬停、选中背景时，可用 `StyledTableView` 替代 `VirtualTableView`，并让行控件继承 `StyledTableRowWidget`、单元格容器使用 `StyledTableCellHost`。这些基类负责背景绘制、圆角、冻结列边缘以及分隔线覆盖；业务控件只需绑定内容。
+
+```cpp
+#include <virtualitemviews/styledtableview.h>
+#include <QLabel>
+#include <QStandardItemModel>
+
+class Row : public viv::StyledTableRowWidget
+{
+public:
+    explicit Row(viv::StyledTableView *view, QWidget *parent)
+        : viv::StyledTableRowWidget(view, parent)
+    {
+        auto *cell = new viv::StyledTableCellHost(0, view, this);
+        label = new QLabel(cell);
+        label->setGeometry(4, 0, 120, 28);
+    }
+
+    void bind(const QModelIndex &index)
+    {
+        bindRow(index);
+        label->setText(index.data().toString());
+    }
+
+    QLabel *label = nullptr;
+};
+
+class Adapter : public viv::TableWidgetAdapter
+{
+public:
+    explicit Adapter(viv::StyledTableView *table) : view(table) {}
+
+    QWidget *createWidget(viv::WidgetType, QWidget *parent) override
+    {
+        return new Row(view, parent);
+    }
+    void bindWidget(QWidget *widget, const QModelIndex &index) override
+    {
+        static_cast<Row *>(widget)->bind(index);
+    }
+    void unbindWidget(QWidget *widget, const QModelIndex &) override
+    {
+        static_cast<Row *>(widget)->unbindRow();
+    }
+    QSize estimatedSize(const QModelIndex &) const override { return QSize(120, 28); }
+
+    viv::StyledTableView *view;
+};
+
+QStandardItemModel model(2, 1);
+model.setData(model.index(0, 0), QStringLiteral("第一行"));
+model.setData(model.index(1, 0), QStringLiteral("第二行"));
+viv::StyledTableView table;
+Adapter adapter(&table);
+table.setTableAdapter(&adapter);
+table.setUniformItemHeight(28);
+table.setModel(&model);
+table.setVisualStateScope(viv::VirtualTableView::VisualStateScope::Cell);
+table.setHoverBackgroundColor(QColor("#dceef4"));
+table.setSelectedBackgroundColor(QColor("#b8dce9"));
+table.setVisualStateAnimationDuration(150);
+table.setVisualStateCornerRadius(6);
+table.setBackgroundCoversGridLines(false); // 默认：分隔线显示在背景上方
+table.show();
+```
+
+`VisualStateScope::Row` 把背景画在整行，`Cell` 按单元格绘制；两种模式都能设置圆角。`setBackgroundCoversGridLines(true)` 让高亮背景覆盖其范围内的分隔线，默认 `false`。需要自定义形状或绘制时，继承 `StyledTableView` 并覆写 `visualStateBackgroundPath()` 与 `paintVisualStateBackground()`；两处绘制会使用相同的钩子。这个样式基类适用于 `TableWidgetAdapter` 的行控件模式；不影响普通 `VirtualTableView` 的自定义绘制。
 
 ## 行高与选择
 

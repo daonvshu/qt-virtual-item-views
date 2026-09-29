@@ -898,7 +898,7 @@ ColumnGeometry VirtualTableView::columnGeometry(int logicalIndex) const
     // Pane aware (§31): frozen columns keep their own x, the scrollable ones are
     // shifted by the horizontal offset.
     const int x = m_panes.columnViewportX(logicalIndex);
-    if (geometry.isValid() && x >= 0)
+    if (geometry.isValid() && m_panes.paneIndexOfColumn(logicalIndex) >= 0)
         geometry.viewportX = x;
     return geometry;
 }
@@ -1237,6 +1237,7 @@ void VirtualTableView::setHorizontalOffset(qint64 offset)
     m_columns->setViewportOffset(clamped);
     // The offset change only shifts the header; the row widgets have to be told.
     updateColumnLayout();
+    refreshHoveredIndex();
     syncHorizontalScrollBar();
     emit horizontalOffsetChanged(clamped);
     emit columnGeometryChanged();
@@ -1515,6 +1516,7 @@ void VirtualTableView::updatePaneLayoutForScroll()
     syncHeaderPanes();
     // Every column x may have moved: the row widgets (or the cells) follow.
     updateColumnLayout();
+    refreshHoveredIndex();
     // Row widgets cover the viewport and only re-position their columns, so a
     // horizontal scroll does not need a materialization pass there. A cell window
     // does: which cells exist changed.
@@ -2685,6 +2687,8 @@ QWidget *VirtualTableView::createCellWidget(const QPersistentModelIndex &index)
     // Never show a cell before it has been bound to its new index.
     widget->hide();
     m_cellAdapter->bindCellWidget(widget, modelIndex);
+    prepareHoverTracking(widget);
+    m_cellAdapter->visualStateChanged(widget, modelIndex);
     m_cellTypes.insert(widget, type);
     return widget;
 }
@@ -2694,6 +2698,8 @@ void VirtualTableView::recycleCell(const QPersistentModelIndex &index, QWidget *
     if (!widget || !m_cellAdapter)
         return;
     m_cellAdapter->unbindCellWidget(widget, QModelIndex(index));
+    if (m_visualStateScope == VisualStateScope::Cell)
+        clearVisualTransition(QModelIndex(index));
     widget->hide();
     const WidgetType type = m_cellTypes.take(widget);
     recycler()->recycle(type, widget);
@@ -2959,6 +2965,7 @@ void VirtualTableView::rebindItemsInRange(const QModelIndex &topLeft, const QMod
         if (index.column() < topLeft.column() || index.column() > bottomRight.column())
             continue;
         m_cellAdapter->bindCellWidget(it.value(), index);
+        m_cellAdapter->visualStateChanged(it.value(), index);
     }
 }
 
@@ -2992,8 +2999,6 @@ int VirtualTableView::columnAtViewportX(int viewportX) const
         if (logical < 0 || m_columns->isSectionHidden(logical))
             continue;
         const int x = m_panes.columnViewportX(logical);
-        if (x < 0)
-            continue;
         // A pane is a hard boundary: a scrolled column may stick out of its own
         // pane (under a frozen pane, or into the pane of another scroll group),
         // and what is drawn there belongs to the neighbour.
@@ -3012,6 +3017,63 @@ QWidget *VirtualTableView::cellWidget(const QModelIndex &index) const
     if (!index.isValid())
         return nullptr;
     return m_cells.value(QPersistentModelIndex(index), nullptr);
+}
+
+void VirtualTableView::setVisualStateScope(VisualStateScope scope)
+{
+    if (m_visualStateScope == scope)
+        return;
+    m_visualStateScope = scope;
+    clearVisualTransitions();
+    refreshVisualStates();
+}
+
+VirtualItemView::VisualState VirtualTableView::visualState(const QModelIndex &index) const
+{
+    if (m_visualStateScope == VisualStateScope::Cell || !index.isValid()
+        || index.model() != model())
+        return VirtualItemView::visualState(index);
+    const QModelIndex hovered = hoveredIndex();
+    const bool hoveredRow = hovered.isValid() && hovered.parent() == index.parent()
+        && hovered.row() == index.row();
+    const bool selectedRow = selectionModel()
+        && selectionModel()->rowIntersectsSelection(index.row(), index.parent());
+    return animatedVisualState(index.siblingAtColumn(0), hoveredRow, selectedRow);
+}
+
+void VirtualTableView::refreshVisualStates()
+{
+    if (m_materializationMode == MaterializationMode::RowWidgets) {
+        VirtualItemView::refreshVisualStates();
+        return;
+    }
+    if (!m_cellAdapter)
+        return;
+    for (auto it = m_cells.constBegin(); it != m_cells.constEnd(); ++it) {
+        if (it.value() && it.key().isValid())
+            m_cellAdapter->visualStateChanged(it.value(), QModelIndex(it.key()));
+    }
+}
+
+void VirtualTableView::refreshVisualState(const QModelIndex &index)
+{
+    if (m_materializationMode == MaterializationMode::RowWidgets) {
+        VirtualItemView::refreshVisualState(index);
+        return;
+    }
+    if (!m_cellAdapter || !index.isValid())
+        return;
+    if (m_visualStateScope == VisualStateScope::Cell) {
+        auto it = m_cells.constFind(QPersistentModelIndex(index));
+        if (it != m_cells.constEnd())
+            m_cellAdapter->visualStateChanged(it.value(), QModelIndex(it.key()));
+        return;
+    }
+    for (auto it = m_cells.constBegin(); it != m_cells.constEnd(); ++it) {
+        const QModelIndex cell = it.key();
+        if (cell.isValid() && cell.parent() == index.parent() && cell.row() == index.row())
+            m_cellAdapter->visualStateChanged(it.value(), cell);
+    }
 }
 
 QModelIndex VirtualTableView::cellIndexForWidget(const QWidget *widget) const
@@ -3681,8 +3743,6 @@ void VirtualTableView::scrollToColumn(int logicalIndex)
     const int scrollGroup = pane.scrollGroup;
     const qint64 groupOffset = m_panes.groupOffset(scrollGroup);
     const int viewportX = m_panes.columnViewportX(logicalIndex);
-    if (viewportX < 0)
-        return;
     // The pane packs its own columns from its own left edge, so the number that
     // matters is the x inside the pane, not the flat content x.
     const qint64 localStart = qint64(viewportX) - pane.viewportRect.x() + groupOffset;

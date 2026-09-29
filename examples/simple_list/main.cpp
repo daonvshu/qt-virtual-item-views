@@ -14,6 +14,7 @@
 #include <QIcon>
 #include <QLabel>
 #include <QMainWindow>
+#include <QPainter>
 #include <QPalette>
 #include <QPixmap>
 #include <QPushButton>
@@ -40,12 +41,50 @@ public:
 
     void setText(const QString &text) { m_label->setText(text); }
 
+    void setCornerRadius(int radius)
+    {
+        if (m_cornerRadius == radius)
+            return;
+        m_cornerRadius = radius;
+        update();
+    }
+
+    void setVisualState(viv::VirtualItemView::VisualState state,
+                        const QColor &hoverColor, const QColor &selectedColor)
+    {
+        m_state = state;
+        m_hoverColor = hoverColor;
+        m_selectedColor = selectedColor;
+        update();
+    }
+
     void relayout(int width)
     {
         m_label->setGeometry(8, 0, qMax(0, width - 16), height());
     }
 
 protected:
+    void paintEvent(QPaintEvent *) override
+    {
+        QPainter painter(this);
+        painter.fillRect(rect(), palette().color(QPalette::Base));
+        painter.setRenderHint(QPainter::Antialiasing, m_cornerRadius > 0);
+        painter.setPen(Qt::NoPen);
+        const auto paintBackground = [this, &painter](const QColor &color, qreal opacity) {
+            if (opacity <= 0.0)
+                return;
+            painter.setOpacity(opacity);
+            if (m_cornerRadius > 0) {
+                painter.setBrush(color);
+                painter.drawRoundedRect(QRectF(rect()), m_cornerRadius, m_cornerRadius);
+            } else {
+                painter.fillRect(rect(), color);
+            }
+        };
+        paintBackground(m_hoverColor, m_state.hoverProgress);
+        paintBackground(m_selectedColor, m_state.selectedProgress);
+    }
+
     void resizeEvent(QResizeEvent *event) override
     {
         QWidget::resizeEvent(event);
@@ -54,6 +93,10 @@ protected:
 
 private:
     QLabel *m_label = nullptr;
+    viv::VirtualItemView::VisualState m_state;
+    QColor m_hoverColor;
+    QColor m_selectedColor;
+    int m_cornerRadius = 8;
 };
 
 class SimpleAdapter : public viv::WidgetAdapter
@@ -63,12 +106,21 @@ public:
     {
         Q_UNUSED(type);
         ++created;
-        return new SimpleRowWidget(parent);
+        auto *row = new SimpleRowWidget(parent);
+        row->setCornerRadius(cornerRadius);
+        return row;
     }
 
     void bindWidget(QWidget *widget, const QModelIndex &index) override
     {
         static_cast<SimpleRowWidget *>(widget)->setText(index.data(Qt::DisplayRole).toString());
+    }
+
+    void visualStateChanged(QWidget *widget, const QModelIndex &index) override
+    {
+        static_cast<SimpleRowWidget *>(widget)->setVisualState(
+            view->visualState(index), view->hoverBackgroundColor(),
+            view->selectedBackgroundColor());
     }
 
     void unbindWidget(QWidget *widget, const QModelIndex &index) override
@@ -84,7 +136,18 @@ public:
         return QSize(400, 28);
     }
 
+    void setCornerRadius(int radius)
+    {
+        cornerRadius = radius;
+        for (auto *widget : view->viewport()->findChildren<QWidget *>()) {
+            if (auto *row = dynamic_cast<SimpleRowWidget *>(widget))
+                row->setCornerRadius(radius);
+        }
+    }
+
     int created = 0;
+    int cornerRadius = 8;
+    viv::VirtualListView *view = nullptr;
 };
 
 } // namespace
@@ -124,6 +187,7 @@ int main(int argc, char **argv)
     // 视图由窗口持有。注意不要用栈上的 QWidget：窗口析构时会 delete 自己的子控件，
     // 而 delete 一个栈对象正是"退出时报异常"的典型原因。
     auto *view = new viv::VirtualListView(&window);
+    adapter.view = view;
     view->setAdapter(&adapter);
     view->setUniformItemHeight(28);
     view->setOverscan(2, 2);
@@ -172,6 +236,52 @@ int main(int argc, char **argv)
         if (color.isValid()) {
             view->setRowGridLineColor(color);
             setColorSwatch(color);
+        }
+    });
+    auto *hoverColor = new QPushButton(QStringLiteral("悬停颜色"), &window);
+    auto *selectedColor = new QPushButton(QStringLiteral("选中颜色"), &window);
+    auto *stateToolbar = window.addToolBar(QStringLiteral("状态"));
+    window.insertToolBarBreak(stateToolbar);
+    stateToolbar->addWidget(hoverColor);
+    stateToolbar->addWidget(selectedColor);
+    stateToolbar->addWidget(new QLabel(QStringLiteral("过渡: "), &window));
+    auto *animationDuration = new QSpinBox(&window);
+    animationDuration->setRange(0, 1000);
+    animationDuration->setSuffix(QStringLiteral(" ms"));
+    animationDuration->setValue(view->visualStateAnimationDuration());
+    stateToolbar->addWidget(animationDuration);
+    QObject::connect(animationDuration, QOverload<int>::of(&QSpinBox::valueChanged), view,
+                     [view](int ms) { view->setVisualStateAnimationDuration(ms); });
+    stateToolbar->addWidget(new QLabel(QStringLiteral("圆角: "), &window));
+    auto *cornerRadius = new QSpinBox(&window);
+    cornerRadius->setRange(0, 20);
+    cornerRadius->setSuffix(QStringLiteral(" px"));
+    cornerRadius->setValue(adapter.cornerRadius);
+    stateToolbar->addWidget(cornerRadius);
+    QObject::connect(cornerRadius, QOverload<int>::of(&QSpinBox::valueChanged), view,
+                     [&adapter](int radius) { adapter.setCornerRadius(radius); });
+    const auto setStateSwatch = [](QPushButton *button, const QColor &color) {
+        QPixmap swatch(16, 16);
+        swatch.fill(color);
+        button->setIcon(QIcon(swatch));
+    };
+    setStateSwatch(hoverColor, view->hoverBackgroundColor());
+    setStateSwatch(selectedColor, view->selectedBackgroundColor());
+    QObject::connect(hoverColor, &QPushButton::clicked, view, [view, hoverColor, setStateSwatch]() {
+        const QColor color = QColorDialog::getColor(view->hoverBackgroundColor(), view,
+                                                    QStringLiteral("悬停背景颜色"));
+        if (color.isValid()) {
+            view->setHoverBackgroundColor(color);
+            setStateSwatch(hoverColor, color);
+        }
+    });
+    QObject::connect(selectedColor, &QPushButton::clicked, view,
+                     [view, selectedColor, setStateSwatch]() {
+        const QColor color = QColorDialog::getColor(view->selectedBackgroundColor(), view,
+                                                    QStringLiteral("选中背景颜色"));
+        if (color.isValid()) {
+            view->setSelectedBackgroundColor(color);
+            setStateSwatch(selectedColor, color);
         }
     });
     window.statusBar()->addPermanentWidget(status);

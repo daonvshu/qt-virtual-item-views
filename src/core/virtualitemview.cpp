@@ -7,19 +7,24 @@
 #include <virtualitemviews/widgetrecycler.h>
 
 #include <QApplication>
+#include <QChildEvent>
 #include <QDrag>
 #include <QDragEnterEvent>
 #include <QDragLeaveEvent>
 #include <QDragMoveEvent>
 #include <QDropEvent>
+#include <QCursor>
+#include <QEasingCurve>
 #include <QKeyEvent>
 #include <QMimeData>
 #include <QMouseEvent>
 #include <QPainter>
+#include <QPointF>
 #include <QResizeEvent>
 #include <QScrollBar>
 #include <QShowEvent>
 #include <QTimer>
+#include <QVariantAnimation>
 #include <QVector>
 #include <QWheelEvent>
 
@@ -257,6 +262,9 @@ VirtualItemView::VirtualItemView(QWidget *parent)
     setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
     viewport()->setAutoFillBackground(false);
+    viewport()->setAttribute(Qt::WA_Hover);
+    viewport()->setMouseTracking(true);
+    viewport()->installEventFilter(this);
 
     m_overscanBefore = kDefaultOverscan;
     m_overscanAfter = kDefaultOverscan;
@@ -270,6 +278,7 @@ VirtualItemView::VirtualItemView(QWidget *parent)
 
 VirtualItemView::~VirtualItemView()
 {
+    viewport()->removeEventFilter(this);
     for (QWidget *widget : m_rowSpacingWidgets)
         delete widget;
     for (const QVector<QWidget *> &pool : m_rowSpacingPool)
@@ -311,6 +320,10 @@ void VirtualItemView::setModel(QAbstractItemModel *model)
     disconnectModel(m_model.data());
     // A drag or drop in flight refers to the outgoing model (§38).
     finishDrag();
+    clearVisualTransitions();
+    if (m_selectionModel)
+        disconnect(m_selectionModel.data(), nullptr, this, nullptr);
+    m_hoveredIndex = QPersistentModelIndex();
     recycleAllItems();
     m_explicitPinned.clear();
     cancelPendingAnchor();
@@ -334,6 +347,7 @@ void VirtualItemView::setModel(QAbstractItemModel *model)
         m_selectionModel = new QItemSelectionModel(model, this);
         m_ownSelectionModel = true;
     }
+    connectSelectionModel();
 
     resetLayoutForNewModel();
     relayout();
@@ -479,11 +493,263 @@ void VirtualItemView::setSelectionModel(QItemSelectionModel *selectionModel)
                  "model; the current selection model is kept");
         return;
     }
+    if (m_selectionModel)
+        disconnect(m_selectionModel.data(), nullptr, this, nullptr);
     if (m_ownSelectionModel) {
         delete m_selectionModel.data();
         m_ownSelectionModel = false;
     }
     m_selectionModel = selectionModel;
+    connectSelectionModel();
+    refreshVisualStates();
+}
+
+void VirtualItemView::connectSelectionModel()
+{
+    if (!m_selectionModel)
+        return;
+    connect(m_selectionModel.data(), &QItemSelectionModel::selectionChanged, this,
+            [this]() { refreshVisualStates(); });
+}
+
+VirtualItemView::VisualState VirtualItemView::visualState(const QModelIndex &index) const
+{
+    if (!index.isValid() || index.model() != m_model)
+        return {};
+    return animatedVisualState(index, m_hoveredIndex == index,
+                               m_selectionModel && m_selectionModel->isSelected(index));
+}
+
+VirtualItemView::VisualState VirtualItemView::animatedVisualState(
+    const QModelIndex &index, bool hovered, bool selected) const
+{
+    const qreal hoverTarget = hovered ? 1.0 : 0.0;
+    const qreal selectedTarget = selected ? 1.0 : 0.0;
+    VisualState state{hovered, selected, hoverTarget, selectedTarget};
+    if (m_visualStateAnimationDuration <= 0)
+        return state;
+
+    const QPersistentModelIndex key(index);
+    auto it = m_visualTransitions.find(key);
+    if (it == m_visualTransitions.end()) {
+        // Public queries may name offscreen indexes; cap retained snapshots.
+        if (m_visualTransitions.size() >= 8192) {
+            const_cast<VirtualItemView *>(this)->stopVisualTransition(
+                m_visualTransitions.begin().value());
+            m_visualTransitions.erase(m_visualTransitions.begin());
+        }
+        m_visualTransitions.insert(key, {hoverTarget, selectedTarget, hovered, selected, nullptr});
+        return state;
+    }
+
+    VisualTransition &transition = it.value();
+    state.hoverProgress = transition.hoverProgress;
+    state.selectedProgress = transition.selectedProgress;
+    if (transition.hoverTarget != hovered || transition.selectedTarget != selected) {
+        transition.hoverTarget = hovered;
+        transition.selectedTarget = selected;
+        auto *view = const_cast<VirtualItemView *>(this);
+        if (!transition.animation) {
+            auto *animation = new QVariantAnimation(view);
+            transition.animation = animation;
+            connect(animation, &QVariantAnimation::valueChanged, view,
+                    [view, key, animation](const QVariant &value) {
+                auto current = view->m_visualTransitions.find(key);
+                if (current == view->m_visualTransitions.end()
+                    || current.value().animation != animation)
+                    return;
+                const QPointF progress = value.toPointF();
+                current.value().hoverProgress = progress.x();
+                current.value().selectedProgress = progress.y();
+                view->scheduleVisualStateRefresh(key);
+            });
+            connect(animation, &QVariantAnimation::finished, view,
+                    [view, key, animation]() {
+                auto current = view->m_visualTransitions.find(key);
+                if (current == view->m_visualTransitions.end()
+                    || current.value().animation != animation)
+                    return;
+                current.value().hoverProgress = qreal(current.value().hoverTarget);
+                current.value().selectedProgress = qreal(current.value().selectedTarget);
+                current.value().animation = nullptr;
+                animation->deleteLater();
+                view->scheduleVisualStateRefresh(key);
+            });
+        }
+        QVariantAnimation *animation = transition.animation;
+        animation->stop();
+        animation->setDuration(m_visualStateAnimationDuration);
+        animation->setEasingCurve(QEasingCurve::InOutCubic);
+        animation->setStartValue(QPointF(state.hoverProgress, state.selectedProgress));
+        animation->setEndValue(QPointF(hoverTarget, selectedTarget));
+        animation->start();
+    }
+    return state;
+}
+
+void VirtualItemView::scheduleVisualStateRefresh(const QPersistentModelIndex &index)
+{
+    m_pendingVisualRefreshes.insert(index);
+    if (m_visualRefreshScheduled)
+        return;
+    m_visualRefreshScheduled = true;
+    QMetaObject::invokeMethod(this, [this]() {
+        m_visualRefreshScheduled = false;
+        QSet<QPersistentModelIndex> pending;
+        pending.swap(m_pendingVisualRefreshes);
+        for (const QPersistentModelIndex &index : pending) {
+            if (index.isValid() && index.model() == m_model)
+                refreshVisualState(QModelIndex(index));
+        }
+    }, Qt::QueuedConnection);
+}
+
+void VirtualItemView::stopVisualTransition(VisualTransition &transition)
+{
+    if (!transition.animation)
+        return;
+    disconnect(transition.animation, nullptr, this, nullptr);
+    transition.animation->stop();
+    transition.animation->deleteLater();
+    transition.animation = nullptr;
+}
+
+void VirtualItemView::setVisualStateAnimationDuration(int milliseconds)
+{
+    milliseconds = qMax(0, milliseconds);
+    if (m_visualStateAnimationDuration == milliseconds)
+        return;
+    m_visualStateAnimationDuration = milliseconds;
+    clearVisualTransitions();
+    refreshVisualStates();
+}
+
+void VirtualItemView::clearVisualTransition(const QModelIndex &index)
+{
+    auto it = m_visualTransitions.find(QPersistentModelIndex(index));
+    if (it == m_visualTransitions.end())
+        return;
+    stopVisualTransition(it.value());
+    m_visualTransitions.erase(it);
+    m_pendingVisualRefreshes.remove(QPersistentModelIndex(index));
+}
+
+void VirtualItemView::clearVisualTransitionsForRow(const QModelIndex &index)
+{
+    for (auto it = m_visualTransitions.begin(); it != m_visualTransitions.end();) {
+        const QModelIndex key = it.key();
+        if (key.isValid() && key.parent() == index.parent() && key.row() == index.row()) {
+            stopVisualTransition(it.value());
+            m_pendingVisualRefreshes.remove(it.key());
+            it = m_visualTransitions.erase(it);
+        } else {
+            ++it;
+        }
+    }
+}
+
+void VirtualItemView::clearVisualTransitions()
+{
+    for (auto it = m_visualTransitions.begin(); it != m_visualTransitions.end(); ++it)
+        stopVisualTransition(it.value());
+    m_visualTransitions.clear();
+    m_pendingVisualRefreshes.clear();
+}
+
+void VirtualItemView::setHoverBackgroundColor(const QColor &color)
+{
+    if (!color.isValid() || m_hoverBackgroundColor == color)
+        return;
+    m_hoverBackgroundColor = color;
+    refreshVisualStates();
+}
+
+void VirtualItemView::setSelectedBackgroundColor(const QColor &color)
+{
+    if (!color.isValid() || m_selectedBackgroundColor == color)
+        return;
+    m_selectedBackgroundColor = color;
+    refreshVisualStates();
+}
+
+void VirtualItemView::updateHoveredIndex(const QModelIndex &index)
+{
+    if (m_hoveredIndex == index)
+        return;
+    const QPersistentModelIndex previous = m_hoveredIndex;
+    m_hoveredIndex = QPersistentModelIndex(index);
+    if (previous.isValid())
+        refreshVisualState(QModelIndex(previous));
+    if (m_hoveredIndex.isValid())
+        refreshVisualState(QModelIndex(m_hoveredIndex));
+}
+
+void VirtualItemView::refreshHoveredIndex()
+{
+    QWidget *target = QApplication::widgetAt(QCursor::pos());
+    if (target != viewport() && !viewport()->isAncestorOf(target)) {
+        updateHoveredIndex(QModelIndex());
+        return;
+    }
+    const QPoint pos = viewport()->mapFromGlobal(QCursor::pos());
+    updateHoveredIndex(viewport()->rect().contains(pos) ? indexAt(pos) : QModelIndex());
+}
+
+void VirtualItemView::refreshVisualStates()
+{
+    if (!m_adapter)
+        return;
+    for (const MaterializedItem &item : m_items) {
+        if (item.widget && item.index.isValid())
+            m_adapter->visualStateChanged(item.widget, QModelIndex(item.index));
+    }
+}
+
+void VirtualItemView::refreshVisualState(const QModelIndex &index)
+{
+    if (!m_adapter || !index.isValid())
+        return;
+    for (const MaterializedItem &item : m_items) {
+        const QModelIndex materialized = item.index;
+        if (item.widget && materialized.isValid() && materialized.parent() == index.parent()
+            && materialized.row() == index.row())
+            m_adapter->visualStateChanged(item.widget, materialized);
+    }
+}
+
+void VirtualItemView::prepareHoverTracking(QWidget *widget)
+{
+    if (!widget)
+        return;
+    widget->setMouseTracking(true);
+    widget->setAttribute(Qt::WA_Hover);
+    widget->installEventFilter(this);
+    for (QWidget *child : widget->findChildren<QWidget *>()) {
+        child->setMouseTracking(true);
+        child->setAttribute(Qt::WA_Hover);
+        child->installEventFilter(this);
+    }
+}
+
+bool VirtualItemView::eventFilter(QObject *watched, QEvent *event)
+{
+    auto *widget = qobject_cast<QWidget *>(watched);
+    if (widget && event->type() == QEvent::ChildAdded) {
+        const QPointer<QObject> child(static_cast<QChildEvent *>(event)->child());
+        QTimer::singleShot(0, this, [this, child]() {
+            auto *added = qobject_cast<QWidget *>(child.data());
+            if (added && (added == viewport() || viewport()->isAncestorOf(added)))
+                prepareHoverTracking(added);
+        });
+    }
+    if (widget && (event->type() == QEvent::MouseMove || event->type() == QEvent::HoverMove
+                   || event->type() == QEvent::Enter || event->type() == QEvent::Leave)) {
+        const QPoint pos = event->type() == QEvent::MouseMove
+            ? widget->mapTo(viewport(), mousePosition(static_cast<QMouseEvent *>(event)))
+            : viewport()->mapFromGlobal(QCursor::pos());
+        updateHoveredIndex(viewport()->rect().contains(pos) ? indexAt(pos) : QModelIndex());
+    }
+    return QAbstractScrollArea::eventFilter(watched, event);
 }
 
 QModelIndex VirtualItemView::currentIndex() const
@@ -1725,6 +1991,7 @@ void VirtualItemView::relayout()
         m_inRelayout = false;
         syncScrollBars();
         afterMaterialize();
+        refreshHoveredIndex();
         emit virtualizationUpdated();
         return;
     }
@@ -1835,6 +2102,7 @@ void VirtualItemView::relayout()
 
     syncScrollBars();
     afterMaterialize();
+    refreshHoveredIndex();
     emit virtualizationUpdated();
 }
 
@@ -1864,6 +2132,8 @@ MaterializedItem VirtualItemView::createItem(const QPersistentModelIndex &index)
     // Never show a widget before it has been bound to its new index.
     widget->hide();
     m_adapter->bindWidget(widget, QModelIndex(index));
+    prepareHoverTracking(widget);
+    m_adapter->visualStateChanged(widget, QModelIndex(index));
     ++m_bindCount;
     if (m_lifecycleLogEnabled)
         appendLifecycleLog(QStringLiteral("bind row=%1").arg(index.row()));
@@ -1875,6 +2145,7 @@ void VirtualItemView::recycleItem(MaterializedItem &item)
     if (!item.widget)
         return;
     m_adapter->unbindWidget(item.widget, QModelIndex(item.index));
+    clearVisualTransitionsForRow(QModelIndex(item.index));
     if (m_lifecycleLogEnabled)
         appendLifecycleLog(QStringLiteral("unbind row=%1").arg(item.index.row()));
     item.widget->hide();
@@ -1934,6 +2205,7 @@ void VirtualItemView::rebindItemsInModelRange(const QModelIndex &parent, int fir
         if (row < first || row > last)
             continue;
         m_adapter->bindWidget(item.widget, index);
+        m_adapter->visualStateChanged(item.widget, index);
         ++m_bindCount;
         if (m_lifecycleLogEnabled)
             appendLifecycleLog(QStringLiteral("rebind row=%1").arg(row));
@@ -2957,6 +3229,8 @@ void VirtualItemView::onLayoutChanged(const QList<QPersistentModelIndex> &parent
 
 void VirtualItemView::onModelAboutToBeReset()
 {
+    clearVisualTransitions();
+    m_hoveredIndex = QPersistentModelIndex();
     recycleAllItems();
     m_explicitPinned.clear();
     cancelPendingAnchor();

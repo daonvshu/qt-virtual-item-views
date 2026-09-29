@@ -41,6 +41,27 @@ tree.show();
 
 还可用 `setRootIndex()` 只显示一棵子树，`isExpanded()` 查询状态，`visibleRowCount()` 查询展开后的行数。分支指示器可点击，双击和方向键也可展开/收起。
 
+## 悬停与选中背景
+
+树可以直接绘制带过渡动画的状态背景。覆盖范围按当前节点深度计算，和分割线范围独立设置：
+
+```cpp
+tree.setVisualStateBackgroundVisible(true);
+tree.setVisualStateBackgroundExtent(
+    viv::VirtualTreeView::VisualStateBackgroundExtent::NodeAndIcon);
+tree.setHoverBackgroundColor(QColor("#e7f4ed"));
+tree.setSelectedBackgroundColor(QColor("#b9d9f1"));
+tree.setVisualStateAnimationDuration(150);
+```
+
+`NodeOnly` 从节点内容左侧开始，`NodeAndIcon` 从当前节点图标格左侧开始，`FullWidth` 覆盖整行。背景在分支图标下方绘制，不遮住图标；行控件需要保持透明，才能看到其下方的状态背景。默认不启用内置背景。
+
+也可由节点控件自行绘制背景。树与列表使用同一接口：在 `WidgetAdapter::visualStateChanged(widget, index)` 中读取 `tree.visualState(index)`，把独立的 `hovered`、`selected` 标志交给节点控件，然后调用 `update()`。节点控件在 `paintEvent()` 中画自己的背景；回调也会在控件复用并绑定新节点后触发。两种状态可以同时为真，颜色优先级由业务决定。完整的自绘控件写法见 [列表的状态示例](list.md#自绘悬停与选中背景)。
+
+节点控件按 `hoverProgress`、`selectedProgress` 混合背景颜色即可得到进入和离开动画；`setVisualStateAnimationDuration()` 控制过渡时间。
+
+`tree.setHoverBackgroundColor(QColor("#e7f4ed"))` 和 `tree.setSelectedBackgroundColor(QColor("#b9d9f1"))` 分别设置业务控件可读取的颜色；更改后可见节点会收到重绘通知。
+
 ## 按深度设置行间距
 
 树的间距跟在上方节点之后，按这个节点的深度计算；默认行间距为 0，各深度默认没有覆盖值，末个可见节点后没有间距。普通行间距和深度覆盖可以组合：

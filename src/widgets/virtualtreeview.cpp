@@ -239,6 +239,27 @@ void VirtualTreeView::setRowGridLineExtent(RowGridLineExtent extent)
     relayout();
 }
 
+void VirtualTreeView::setVisualStateBackgroundVisible(bool visible)
+{
+    if (m_visualStateBackgroundVisible == visible)
+        return;
+    m_visualStateBackgroundVisible = visible;
+    viewport()->update();
+}
+
+void VirtualTreeView::setVisualStateBackgroundExtent(VisualStateBackgroundExtent extent)
+{
+    if (extent != VisualStateBackgroundExtent::NodeOnly
+        && extent != VisualStateBackgroundExtent::NodeAndIcon
+        && extent != VisualStateBackgroundExtent::FullWidth)
+        return;
+    if (m_visualStateBackgroundExtent == extent)
+        return;
+    m_visualStateBackgroundExtent = extent;
+    if (m_visualStateBackgroundVisible)
+        viewport()->update();
+}
+
 int VirtualTreeView::rowGridLineInsetForDepth(int depth) const
 {
     const qint64 cells = m_rowGridLineExtent == RowGridLineExtent::NodeOnly ? qint64(depth) + 1
@@ -466,6 +487,22 @@ void VirtualTreeView::afterMaterialize()
     VirtualItemView::afterMaterialize();
     invalidateBranchIndicators();
     syncRowGridLines();
+    if (m_visualStateBackgroundVisible)
+        viewport()->update();
+}
+
+void VirtualTreeView::refreshVisualStates()
+{
+    VirtualItemView::refreshVisualStates();
+    if (m_visualStateBackgroundVisible)
+        viewport()->update();
+}
+
+void VirtualTreeView::refreshVisualState(const QModelIndex &index)
+{
+    VirtualItemView::refreshVisualState(index);
+    if (m_visualStateBackgroundVisible && index.isValid())
+        viewport()->update(visualRect(index));
 }
 
 void VirtualTreeView::syncRowGridLines()
@@ -555,11 +592,45 @@ void VirtualTreeView::invalidateBranchIndicators()
 void VirtualTreeView::paintEvent(QPaintEvent *event)
 {
     VirtualItemView::paintEvent(event);
-    if (!m_branchIndicatorsVisible)
-        return;
-
     QPainter painter(viewport());
-    paintBranchIndicators(&painter);
+    if (m_visualStateBackgroundVisible)
+        paintVisualStateBackgrounds(&painter, event->rect());
+    if (m_branchIndicatorsVisible)
+        paintBranchIndicators(&painter);
+}
+
+void VirtualTreeView::paintVisualStateBackgrounds(QPainter *painter, const QRect &dirty)
+{
+    const QRect viewportRect = viewport()->rect();
+    for (const MaterializedItem &item : materializedItems()) {
+        const QRect rowRect(0, item.geometry.y(), viewportRect.width(), item.geometry.height());
+        if (!item.index.isValid() || !rowRect.intersects(dirty))
+            continue;
+        const VisualState state = visualState(QModelIndex(item.index));
+        if (state.hoverProgress <= 0.0 && state.selectedProgress <= 0.0)
+            continue;
+        const int depth = itemDepth(item.index);
+        const qint64 cells = m_visualStateBackgroundExtent == VisualStateBackgroundExtent::NodeOnly
+            ? qint64(depth) + 1
+            : m_visualStateBackgroundExtent == VisualStateBackgroundExtent::NodeAndIcon
+                ? qint64(depth) : 0;
+        const int left = int(qMin<qint64>(viewportRect.width(),
+                                         qMax<qint64>(0, cells) * m_indentation));
+        const qsizetype row = viewItemForIndex(item.index);
+        if (row < 0)
+            continue;
+        const QRect background = QRect(left, item.geometry.y(),
+                                       viewportRect.width() - left, item.geometry.height())
+            .intersected(itemPaneRect(itemPaneForRow(row))).intersected(viewportRect);
+        if (background.isEmpty())
+            continue;
+        painter->save();
+        painter->setOpacity(state.hoverProgress);
+        painter->fillRect(background, hoverBackgroundColor());
+        painter->setOpacity(state.selectedProgress);
+        painter->fillRect(background, selectedBackgroundColor());
+        painter->restore();
+    }
 }
 
 void VirtualTreeView::paintBranchIndicators(QPainter *painter)

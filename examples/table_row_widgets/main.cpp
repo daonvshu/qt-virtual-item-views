@@ -12,10 +12,12 @@
 #include <QAbstractTableModel>
 #include <QCheckBox>
 #include <QColorDialog>
+#include <QComboBox>
 #include <QCommandLineParser>
 #include <QIcon>
 #include <QLabel>
 #include <QMainWindow>
+#include <QPainter>
 #include <QProgressBar>
 #include <QPushButton>
 #include <QPixmap>
@@ -103,8 +105,9 @@ private:
 class OrderRowWidget : public QWidget
 {
 public:
-    explicit OrderRowWidget(QWidget *parent = nullptr)
+    explicit OrderRowWidget(viv::VirtualTableView *view, QWidget *parent = nullptr)
         : QWidget(parent)
+        , m_view(view)
     {
         for (int column = 0; column < ColumnCount; ++column) {
             auto *host = new viv::ColumnHost(column, this);
@@ -128,17 +131,68 @@ public:
 
     void bind(const QModelIndex &rowIndex)
     {
+        m_rowIndex = QPersistentModelIndex(rowIndex);
         for (const auto &entry : m_labels)
             entry.second->setText(rowIndex.siblingAtColumn(entry.first).data().toString());
         m_status->setText(rowIndex.siblingAtColumn(ColumnStatus).data().toString());
         m_progress->setValue(rowIndex.siblingAtColumn(ColumnProgress).data().toInt());
     }
 
+    void setCornerRadius(int radius)
+    {
+        if (m_cornerRadius == radius)
+            return;
+        m_cornerRadius = radius;
+        update();
+    }
+
+protected:
+    void paintEvent(QPaintEvent *) override
+    {
+        QPainter painter(this);
+        painter.fillRect(rect(), palette().color(QPalette::Base));
+        if (!m_view || !m_rowIndex.isValid())
+            return;
+        painter.setRenderHint(QPainter::Antialiasing, m_cornerRadius > 0);
+        painter.setPen(Qt::NoPen);
+        const auto paintBackground = [this, &painter](const QRect &area, const QColor &color,
+                                                       qreal opacity) {
+            if (opacity <= 0.0)
+                return;
+            painter.setOpacity(opacity);
+            if (m_cornerRadius > 0) {
+                painter.setBrush(color);
+                painter.drawRoundedRect(QRectF(area), m_cornerRadius, m_cornerRadius);
+            } else {
+                painter.fillRect(area, color);
+            }
+        };
+        if (m_view->visualStateScope() == viv::VirtualTableView::VisualStateScope::Row) {
+            const auto state = m_view->visualState(QModelIndex(m_rowIndex));
+            paintBackground(rect(), m_view->hoverBackgroundColor(), state.hoverProgress);
+            paintBackground(rect(), m_view->selectedBackgroundColor(), state.selectedProgress);
+            return;
+        }
+        for (int column = 0; column < ColumnCount; ++column) {
+            const auto geometry = m_view->columnGeometry(column);
+            if (!geometry.isValid() || geometry.hidden)
+                continue;
+            const auto state = m_view->visualState(QModelIndex(m_rowIndex).siblingAtColumn(column));
+            const QRect cellRect(geometry.viewportX - x(), 0, geometry.width, height());
+            paintBackground(cellRect, m_view->hoverBackgroundColor(), state.hoverProgress);
+            paintBackground(cellRect, m_view->selectedBackgroundColor(), state.selectedProgress);
+            painter.setOpacity(1.0);
+        }
+    }
+
 private:
+    viv::VirtualTableView *m_view = nullptr;
+    QPersistentModelIndex m_rowIndex;
     QVector<QPair<int, QLabel *>> m_labels;
     QLabel *m_status = nullptr;
     QProgressBar *m_progress = nullptr;
     QPushButton *m_action = nullptr;
+    int m_cornerRadius = 8;
 };
 
 class OrderAdapter : public viv::TableWidgetAdapter
@@ -148,7 +202,9 @@ public:
     {
         Q_UNUSED(type);
         ++created;
-        return new OrderRowWidget(parent);
+        auto *row = new OrderRowWidget(view, parent);
+        row->setCornerRadius(cornerRadius);
+        return row;
     }
 
     void bindWidget(QWidget *widget, const QModelIndex &index) override
@@ -162,7 +218,18 @@ public:
         return QSize(700, kRowHeight);
     }
 
+    void setCornerRadius(int radius)
+    {
+        cornerRadius = radius;
+        for (auto *widget : view->viewport()->findChildren<QWidget *>()) {
+            if (auto *row = dynamic_cast<OrderRowWidget *>(widget))
+                row->setCornerRadius(radius);
+        }
+    }
+
     int created = 0;
+    int cornerRadius = 8;
+    viv::VirtualTableView *view = nullptr;
 };
 
 } // namespace
@@ -201,6 +268,7 @@ int main(int argc, char **argv)
 
     // 视图由窗口持有；模型/适配器先声明，生命周期覆盖视图。
     auto *view = new viv::VirtualTableView(&window);
+    adapter.view = view;
     view->setTableAdapter(&adapter);
     view->setUniformItemHeight(kRowHeight);
     view->setDefaultColumnWidth(150);
@@ -245,6 +313,66 @@ int main(int argc, char **argv)
     spacingToolbar->addWidget(customGaps);
     auto *gridToolbar = window.addToolBar(QStringLiteral("分割线"));
     window.insertToolBarBreak(gridToolbar);
+    auto *stateToolbar = window.addToolBar(QStringLiteral("状态"));
+    window.insertToolBarBreak(stateToolbar);
+    auto *stateScope = new QComboBox(&window);
+    stateScope->addItem(QStringLiteral("状态: 整行"));
+    stateScope->addItem(QStringLiteral("状态: 单元格"));
+    stateToolbar->addWidget(stateScope);
+    QObject::connect(stateScope, QOverload<int>::of(&QComboBox::currentIndexChanged), view,
+                     [view](int index) {
+        view->selectionModel()->clearSelection();
+        view->setSelectionBehavior(index == 0
+            ? viv::VirtualItemView::SelectionBehavior::SelectRows
+            : viv::VirtualItemView::SelectionBehavior::SelectItems);
+        view->setVisualStateScope(index == 0
+            ? viv::VirtualTableView::VisualStateScope::Row
+            : viv::VirtualTableView::VisualStateScope::Cell);
+    });
+    auto *hoverColor = new QPushButton(QStringLiteral("悬停颜色"), &window);
+    auto *selectedColor = new QPushButton(QStringLiteral("选中颜色"), &window);
+    stateToolbar->addWidget(hoverColor);
+    stateToolbar->addWidget(selectedColor);
+    stateToolbar->addWidget(new QLabel(QStringLiteral("过渡: "), &window));
+    auto *animationDuration = new QSpinBox(&window);
+    animationDuration->setRange(0, 1000);
+    animationDuration->setSuffix(QStringLiteral(" ms"));
+    animationDuration->setValue(view->visualStateAnimationDuration());
+    stateToolbar->addWidget(animationDuration);
+    QObject::connect(animationDuration, QOverload<int>::of(&QSpinBox::valueChanged), view,
+                     [view](int ms) { view->setVisualStateAnimationDuration(ms); });
+    stateToolbar->addWidget(new QLabel(QStringLiteral("圆角: "), &window));
+    auto *cornerRadius = new QSpinBox(&window);
+    cornerRadius->setRange(0, 20);
+    cornerRadius->setSuffix(QStringLiteral(" px"));
+    cornerRadius->setValue(adapter.cornerRadius);
+    stateToolbar->addWidget(cornerRadius);
+    QObject::connect(cornerRadius, QOverload<int>::of(&QSpinBox::valueChanged), view,
+                     [&adapter](int radius) { adapter.setCornerRadius(radius); });
+    const auto setStateSwatch = [](QPushButton *button, const QColor &color) {
+        QPixmap swatch(16, 16);
+        swatch.fill(color);
+        button->setIcon(QIcon(swatch));
+    };
+    setStateSwatch(hoverColor, view->hoverBackgroundColor());
+    setStateSwatch(selectedColor, view->selectedBackgroundColor());
+    QObject::connect(hoverColor, &QPushButton::clicked, view, [view, hoverColor, setStateSwatch]() {
+        const QColor color = QColorDialog::getColor(view->hoverBackgroundColor(), view,
+                                                    QStringLiteral("悬停背景颜色"));
+        if (color.isValid()) {
+            view->setHoverBackgroundColor(color);
+            setStateSwatch(hoverColor, color);
+        }
+    });
+    QObject::connect(selectedColor, &QPushButton::clicked, view,
+                     [view, selectedColor, setStateSwatch]() {
+        const QColor color = QColorDialog::getColor(view->selectedBackgroundColor(), view,
+                                                    QStringLiteral("选中背景颜色"));
+        if (color.isValid()) {
+            view->setSelectedBackgroundColor(color);
+            setStateSwatch(selectedColor, color);
+        }
+    });
     auto *verticalGrid = new QCheckBox(QStringLiteral("显示竖向分割线"), &window);
     verticalGrid->setChecked(view->verticalGridLinesVisible());
     gridToolbar->addWidget(verticalGrid);

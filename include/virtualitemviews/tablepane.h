@@ -155,7 +155,8 @@ public:
     TablePane pane(TablePane::Type type) const;
     QRect paneRect(TablePane::Type type) const { return pane(type).viewportRect; }
 
-    /// Viewport x of a column, or -1 when it is hidden or unknown.
+    /// Viewport x of a column. Negative x is valid for a partially clipped column;
+    /// use paneIndexOfColumn() to distinguish it from an unknown column.
     int columnViewportX(int logicalIndex) const;
     /// Pane a column is painted in (scrollable when it is not frozen).
     TablePane::Type paneOfColumn(int logicalIndex) const;

@@ -147,7 +147,7 @@ inline ColumnGeometry TableRowLayoutContext::column(int logicalIndex) const
         // Pane aware: a frozen column keeps its own x, the scrollable ones are
         // shifted by the horizontal offset.
         const int x = m_panes->columnViewportX(logicalIndex);
-        if (x >= 0)
+        if (m_panes->paneIndexOfColumn(logicalIndex) >= 0)
             geometry.viewportX = x;
     }
     return geometry;
@@ -259,6 +259,13 @@ public:
     /// Fills \a widget with the data of \a index; called before the widget is
     /// shown and every time the cell is reused.
     virtual void bindCellWidget(QWidget *widget, const QModelIndex &index) = 0;
+
+    /// Called after binding and when hover or selection changes.
+    virtual void visualStateChanged(QWidget *widget, const QModelIndex &index)
+    {
+        Q_UNUSED(index);
+        widget->update();
+    }
 
     /// Detaches \a widget from \a index (stop timers, animations, subscriptions).
     virtual void unbindCellWidget(QWidget *widget, const QModelIndex &index)

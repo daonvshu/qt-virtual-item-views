@@ -2,16 +2,20 @@
 // 并且横向滚动时表头与行控件共享同一个 HeaderGeometry 偏移（不会漂移）。
 // 每行只把可见列的 ColumnHost 设为可见，横向虚拟化的成本与总列数无关。
 
-#include <virtualitemviews/tablewidgetadapter.h>
-#include <virtualitemviews/virtualtableview.h>
+#include <virtualitemviews/styledtableview.h>
 
 #include <QApplication>
 #include <QAbstractTableModel>
 #include <QCheckBox>
+#include <QColorDialog>
+#include <QComboBox>
 #include <QCommandLineParser>
+#include <QIcon>
 #include <QLabel>
 #include <QMainWindow>
 #include <QPixmap>
+#include <QPushButton>
+#include <QSpinBox>
 #include <QStandardItemModel>
 #include <QStatusBar>
 #include <QTimer>
@@ -63,16 +67,15 @@ private:
     int m_columnCount = 0;
 };
 
-/// 行控件：为每个列创建一个 ColumnHost，框架负责定位与显示/隐藏。
-class WideRowWidget : public QWidget
+class WideRowWidget : public viv::StyledTableRowWidget
 {
 public:
-    WideRowWidget(QWidget *parent, int columnCount)
-        : QWidget(parent)
+    WideRowWidget(QWidget *parent, int columnCount, viv::StyledTableView *view)
+        : viv::StyledTableRowWidget(view, parent)
     {
         m_labels.reserve(columnCount);
         for (int column = 0; column < columnCount; ++column) {
-            auto *host = new viv::ColumnHost(column, this);
+            auto *host = new viv::StyledTableCellHost(column, view, this);
             auto *label = new QLabel(host);
             label->setObjectName(QStringLiteral("cellLabel"));
             label->setGeometry(2, 0, 60, 18);
@@ -82,6 +85,7 @@ public:
 
     void bind(const QModelIndex &rowIndex)
     {
+        bindRow(rowIndex);
         for (int column = 0; column < m_labels.size(); ++column)
             m_labels.at(column)->setText(rowIndex.siblingAtColumn(column).data().toString());
     }
@@ -102,12 +106,17 @@ public:
     {
         Q_UNUSED(type);
         ++created;
-        return new WideRowWidget(parent, m_columnCount);
+        return new WideRowWidget(parent, m_columnCount, view);
     }
 
     void bindWidget(QWidget *widget, const QModelIndex &index) override
     {
         static_cast<WideRowWidget *>(widget)->bind(index);
+    }
+
+    void unbindWidget(QWidget *widget, const QModelIndex &) override
+    {
+        static_cast<WideRowWidget *>(widget)->unbindRow();
     }
 
     QSize estimatedSize(const QModelIndex &index) const override
@@ -117,6 +126,7 @@ public:
     }
 
     int created = 0;
+    viv::StyledTableView *view = nullptr;
 
 private:
     int m_columnCount = 0;
@@ -186,13 +196,16 @@ int main(int argc, char **argv)
     WideTableAdapter adapter(columnCount);
     QMainWindow window;
 
-    auto *view = new viv::VirtualTableView(&window);
+    auto *view = new viv::StyledTableView(&window);
+    adapter.view = view;
     view->setTableAdapter(&adapter);
     view->setUniformItemHeight(kRowHeight);
     view->setDefaultColumnWidth(90);
     view->setColumnOverscan(1);
     view->setHorizontalWheelPixels(parser.value(wheelOption).toInt());
     view->setModel(&model);
+    view->setSelectionBehavior(viv::VirtualItemView::SelectionBehavior::SelectItems);
+    view->setVisualStateScope(viv::VirtualTableView::VisualStateScope::Cell);
 
     window.setCentralWidget(view);
     window.setWindowTitle(QStringLiteral("VirtualItemViews · %1 rows x %2 columns")
@@ -211,6 +224,70 @@ int main(int argc, char **argv)
     // 冻结顶部 2 行（§31 行方向）：行号条会按行 pane 切成"冻结带 + 可滚动带"。
     auto *frozenRows = new QCheckBox(QStringLiteral("冻结顶部 2 行"), &window);
     toolbar->addWidget(frozenRows);
+    auto *stateToolbar = window.addToolBar(QStringLiteral("状态"));
+    window.insertToolBarBreak(stateToolbar);
+    auto *stateScope = new QComboBox(&window);
+    stateScope->addItem(QStringLiteral("状态: 单元格"));
+    stateScope->addItem(QStringLiteral("状态: 整行"));
+    stateToolbar->addWidget(stateScope);
+    QObject::connect(stateScope, QOverload<int>::of(&QComboBox::currentIndexChanged), view,
+                     [view](int index) {
+        view->selectionModel()->clearSelection();
+        view->setSelectionBehavior(index == 0
+            ? viv::VirtualItemView::SelectionBehavior::SelectItems
+            : viv::VirtualItemView::SelectionBehavior::SelectRows);
+        view->setVisualStateScope(index == 0
+            ? viv::VirtualTableView::VisualStateScope::Cell
+            : viv::VirtualTableView::VisualStateScope::Row);
+    });
+    auto *coverGrid = new QCheckBox(QStringLiteral("背景覆盖分隔线"), &window);
+    stateToolbar->addWidget(coverGrid);
+    QObject::connect(coverGrid, &QCheckBox::toggled, view,
+                     [view](bool enabled) { view->setBackgroundCoversGridLines(enabled); });
+    auto *hoverColor = new QPushButton(QStringLiteral("悬停颜色"), &window);
+    auto *selectedColor = new QPushButton(QStringLiteral("选中颜色"), &window);
+    stateToolbar->addWidget(hoverColor);
+    stateToolbar->addWidget(selectedColor);
+    stateToolbar->addWidget(new QLabel(QStringLiteral("过渡: "), &window));
+    auto *animationDuration = new QSpinBox(&window);
+    animationDuration->setRange(0, 1000);
+    animationDuration->setSuffix(QStringLiteral(" ms"));
+    animationDuration->setValue(view->visualStateAnimationDuration());
+    stateToolbar->addWidget(animationDuration);
+    QObject::connect(animationDuration, QOverload<int>::of(&QSpinBox::valueChanged), view,
+                     [view](int ms) { view->setVisualStateAnimationDuration(ms); });
+    stateToolbar->addWidget(new QLabel(QStringLiteral("圆角: "), &window));
+    auto *cornerRadius = new QSpinBox(&window);
+    cornerRadius->setRange(0, 12);
+    cornerRadius->setSuffix(QStringLiteral(" px"));
+    cornerRadius->setValue(view->visualStateCornerRadius());
+    stateToolbar->addWidget(cornerRadius);
+    QObject::connect(cornerRadius, QOverload<int>::of(&QSpinBox::valueChanged), view,
+                     [view](int radius) { view->setVisualStateCornerRadius(radius); });
+    const auto setStateSwatch = [](QPushButton *button, const QColor &color) {
+        QPixmap swatch(16, 16);
+        swatch.fill(color);
+        button->setIcon(QIcon(swatch));
+    };
+    setStateSwatch(hoverColor, view->hoverBackgroundColor());
+    setStateSwatch(selectedColor, view->selectedBackgroundColor());
+    QObject::connect(hoverColor, &QPushButton::clicked, view, [view, hoverColor, setStateSwatch]() {
+        const QColor color = QColorDialog::getColor(view->hoverBackgroundColor(), view,
+                                                    QStringLiteral("悬停背景颜色"));
+        if (color.isValid()) {
+            view->setHoverBackgroundColor(color);
+            setStateSwatch(hoverColor, color);
+        }
+    });
+    QObject::connect(selectedColor, &QPushButton::clicked, view,
+                     [view, selectedColor, setStateSwatch]() {
+        const QColor color = QColorDialog::getColor(view->selectedBackgroundColor(), view,
+                                                    QStringLiteral("选中背景颜色"));
+        if (color.isValid()) {
+            view->setSelectedBackgroundColor(color);
+            setStateSwatch(selectedColor, color);
+        }
+    });
     auto *status = new QLabel(&window);
     window.statusBar()->addPermanentWidget(status);
 

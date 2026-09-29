@@ -429,6 +429,13 @@ public:
     /// Cell diagnostics (Cell Widget Mode).
     qsizetype materializedCellCount() const { return m_cells.size(); }
     QWidget *cellWidget(const QModelIndex &index) const;
+    /// Whether hover and selection backgrounds are queried per row or per cell.
+    /// This is independent of RowWidgets/CellWidgets materialization.
+    enum class VisualStateScope { Row, Cell };
+    Q_ENUM(VisualStateScope)
+    void setVisualStateScope(VisualStateScope scope);
+    VisualStateScope visualStateScope() const { return m_visualStateScope; }
+    VisualState visualState(const QModelIndex &index) const override;
     QModelIndex cellIndexForWidget(const QWidget *widget) const;
     QList<QModelIndex> materializedCellIndexes() const;
 
@@ -454,6 +461,8 @@ protected:
     /// window plus the frozen rows (§31 row direction).
     void materializeItemRanges(const QVector<VisibleRange> &ranges) override;
     void rebindItemsInRange(const QModelIndex &topLeft, const QModelIndex &bottomRight) override;
+    void refreshVisualStates() override;
+    void refreshVisualState(const QModelIndex &index) override;
     QModelIndex indexAt(const QPoint &viewportPos) const override;
     bool canMeasureItem(qsizetype item) const override;
     void afterMaterialize() override;
@@ -641,6 +650,7 @@ private:
     void updateCellGeometry();
 
     ListLayout *m_rowLayout = nullptr;
+    VisualStateScope m_visualStateScope = VisualStateScope::Row;
     HeaderGeometry *m_columns = nullptr;
     /// Compresses the 64-bit horizontal offset into the int-only scroll bar (the
     /// vertical axis has the same mapper in the kernel).

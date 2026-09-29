@@ -80,6 +80,7 @@ set(VIRTUALITEMVIEWS_PUBLIC_HEADERS
     include/virtualitemviews/reorderabletablemodel.h
     include/virtualitemviews/scrollmapper.h
     include/virtualitemviews/sizeindex.h
+    include/virtualitemviews/styledtableview.h
     include/virtualitemviews/tablewidgetadapter.h
     include/virtualitemviews/tablespan.h
     include/virtualitemviews/tablepane.h
@@ -109,6 +110,7 @@ set(VIRTUALITEMVIEWS_SOURCES
     src/widgets/branchindicator.cpp
     src/widgets/columnhost.cpp
     src/widgets/labelheaderview.cpp
+    src/widgets/styledtableview.cpp
     src/widgets/virtuallistview.cpp
     src/widgets/virtualtreeview.cpp
     src/widgets/virtualheaderview.cpp

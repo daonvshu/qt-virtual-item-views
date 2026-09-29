@@ -7,6 +7,7 @@
 #include <virtualitemviews/types.h>
 
 #include <QAbstractScrollArea>
+#include <QColor>
 #include <QHash>
 #include <QItemSelectionModel>
 #include <QList>
@@ -27,6 +28,7 @@ class QPaintEvent;
 class QResizeEvent;
 class QShowEvent;
 class QTimer;
+class QVariantAnimation;
 class QWheelEvent;
 
 namespace viv {
@@ -108,6 +110,27 @@ public:
     /// because the view would otherwise hold two different models at once.
     void setSelectionModel(QItemSelectionModel *selectionModel);
     QItemSelectionModel *selectionModel() const { return m_selectionModel.data(); }
+
+    struct VisualState {
+        bool hovered = false;
+        bool selected = false;
+        qreal hoverProgress = 0.0;
+        qreal selectedProgress = 0.0;
+    };
+
+    /// State of an index for business-widget painting. Hover and selection may
+    /// both be true; the business widget decides which appearance takes priority.
+    virtual VisualState visualState(const QModelIndex &index) const;
+    QModelIndex hoveredIndex() const { return QModelIndex(m_hoveredIndex); }
+    /// Colors available to business widgets that paint hover/selection backgrounds.
+    /// Changing either color notifies materialized widgets to repaint.
+    void setHoverBackgroundColor(const QColor &color);
+    QColor hoverBackgroundColor() const { return m_hoverBackgroundColor; }
+    void setSelectedBackgroundColor(const QColor &color);
+    QColor selectedBackgroundColor() const { return m_selectedBackgroundColor; }
+    /// Duration of hover/selection color transitions; zero disables animation.
+    void setVisualStateAnimationDuration(int milliseconds);
+    int visualStateAnimationDuration() const { return m_visualStateAnimationDuration; }
 
     QModelIndex currentIndex() const;
     void setCurrentIndex(const QModelIndex &index);
@@ -446,6 +469,19 @@ protected:
     /// Rebuilds the widgets affected by a dataChanged() range. The default
     /// implementation rebinds the row widgets.
     virtual void rebindItemsInRange(const QModelIndex &topLeft, const QModelIndex &bottomRight);
+    /// Notifies the currently materialized widgets after visual state changes.
+    virtual void refreshVisualStates();
+    /// Notifies only the materialized widget bound to this index's row.
+    virtual void refreshVisualState(const QModelIndex &index);
+    /// Re-evaluates the index under the stationary pointer after scrolling.
+    void refreshHoveredIndex();
+    /// Enables move/hover delivery for an item widget and its current children.
+    void prepareHoverTracking(QWidget *widget);
+    /// Applies per-index interpolation to a row or cell's target state.
+    VisualState animatedVisualState(const QModelIndex &index, bool hovered, bool selected) const;
+    void clearVisualTransition(const QModelIndex &index);
+    void clearVisualTransitionsForRow(const QModelIndex &index);
+    void clearVisualTransitions();
     /// True when \a widget (or one of its children/popups) owns the focus, that
     /// is: when it must not be recycled.
     bool hasFocusWithin(const QWidget *widget) const;
@@ -575,9 +611,12 @@ protected:
     void dragMoveEvent(QDragMoveEvent *event) override;
     void dragLeaveEvent(QDragLeaveEvent *event) override;
     void dropEvent(QDropEvent *event) override;
+    bool eventFilter(QObject *watched, QEvent *event) override;
 
 private:
     void connectModel(QAbstractItemModel *model);
+    void connectSelectionModel();
+    void updateHoveredIndex(const QModelIndex &index);
     void disconnectModel(QAbstractItemModel *model);
     void scheduleRelayout();
     void applyPendingAnchor();
@@ -641,6 +680,22 @@ private:
     /// before the view must not leave the view with a dangling pointer.
     QPointer<QAbstractItemModel> m_model;
     QPointer<QItemSelectionModel> m_selectionModel;
+    QPersistentModelIndex m_hoveredIndex;
+    struct VisualTransition {
+        qreal hoverProgress = 0.0;
+        qreal selectedProgress = 0.0;
+        bool hoverTarget = false;
+        bool selectedTarget = false;
+        QVariantAnimation *animation = nullptr;
+    };
+    void stopVisualTransition(VisualTransition &transition);
+    void scheduleVisualStateRefresh(const QPersistentModelIndex &index);
+    mutable QHash<QPersistentModelIndex, VisualTransition> m_visualTransitions;
+    QSet<QPersistentModelIndex> m_pendingVisualRefreshes;
+    bool m_visualRefreshScheduled = false;
+    int m_visualStateAnimationDuration = 180;
+    QColor m_hoverBackgroundColor = QColor(QStringLiteral("#e7f4ed"));
+    QColor m_selectedBackgroundColor = QColor(QStringLiteral("#b9d9f1"));
     bool m_ownSelectionModel = false;
     WidgetAdapter *m_adapter = nullptr;
     bool m_ownAdapter = false;

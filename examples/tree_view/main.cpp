@@ -287,6 +287,7 @@ int main(int argc, char **argv)
     view->setWheelScrollMode(viv::VirtualItemView::WheelScrollMode::Pixels);
     view->setWheelScrollPixels(parser.value(pixelStepOption).toInt());
     view->setModel(&model);
+    view->setVisualStateBackgroundVisible(true);
 
     window.setCentralWidget(view);
     window.setWindowTitle(QStringLiteral("VirtualItemViews · tree (%1 devices)").arg(deviceCount));
@@ -349,6 +350,35 @@ int main(int argc, char **argv)
     };
     setColorSwatch(view->palette().color(QPalette::Mid));
     gridToolbar->addWidget(lineColor);
+    window.addToolBarBreak();
+    auto *stateToolbar = window.addToolBar(QStringLiteral("状态背景"));
+    auto *stateBackground = new QCheckBox(QStringLiteral("状态背景"), &window);
+    stateBackground->setChecked(view->visualStateBackgroundVisible());
+    stateToolbar->addWidget(stateBackground);
+    stateToolbar->addWidget(new QLabel(QStringLiteral("覆盖范围: "), &window));
+    auto *backgroundExtent = new QComboBox(&window);
+    backgroundExtent->addItem(QStringLiteral("仅内容"));
+    backgroundExtent->addItem(QStringLiteral("图标及内容"));
+    backgroundExtent->addItem(QStringLiteral("整行"));
+    backgroundExtent->setCurrentIndex(int(view->visualStateBackgroundExtent()));
+    stateToolbar->addWidget(backgroundExtent);
+    auto *hoverColor = new QPushButton(QStringLiteral("悬停颜色"), &window);
+    auto *selectedColor = new QPushButton(QStringLiteral("选中颜色"), &window);
+    stateToolbar->addWidget(hoverColor);
+    stateToolbar->addWidget(selectedColor);
+    const auto setStateSwatch = [](QPushButton *button, const QColor &color) {
+        QPixmap swatch(16, 16);
+        swatch.fill(color);
+        button->setIcon(QIcon(swatch));
+    };
+    setStateSwatch(hoverColor, view->hoverBackgroundColor());
+    setStateSwatch(selectedColor, view->selectedBackgroundColor());
+    stateToolbar->addWidget(new QLabel(QStringLiteral("过渡: "), &window));
+    auto *animationDuration = new QSpinBox(&window);
+    animationDuration->setRange(0, 1000);
+    animationDuration->setSuffix(QStringLiteral(" ms"));
+    animationDuration->setValue(view->visualStateAnimationDuration());
+    stateToolbar->addWidget(animationDuration);
     auto *status = new QLabel(&window);
     window.statusBar()->addPermanentWidget(status);
 
@@ -399,6 +429,33 @@ int main(int argc, char **argv)
             setColorSwatch(color);
         }
     });
+    QObject::connect(stateBackground, &QCheckBox::toggled, view,
+                     [view](bool visible) { view->setVisualStateBackgroundVisible(visible); });
+    QObject::connect(backgroundExtent, QOverload<int>::of(&QComboBox::currentIndexChanged), view,
+                     [view](int index) {
+        view->setVisualStateBackgroundExtent(
+            static_cast<viv::VirtualTreeView::VisualStateBackgroundExtent>(index));
+    });
+    QObject::connect(hoverColor, &QPushButton::clicked, view,
+                     [view, hoverColor, setStateSwatch]() {
+        const QColor color = QColorDialog::getColor(view->hoverBackgroundColor(), view,
+                                                    QStringLiteral("悬停背景颜色"));
+        if (color.isValid()) {
+            view->setHoverBackgroundColor(color);
+            setStateSwatch(hoverColor, color);
+        }
+    });
+    QObject::connect(selectedColor, &QPushButton::clicked, view,
+                     [view, selectedColor, setStateSwatch]() {
+        const QColor color = QColorDialog::getColor(view->selectedBackgroundColor(), view,
+                                                    QStringLiteral("选中背景颜色"));
+        if (color.isValid()) {
+            view->setSelectedBackgroundColor(color);
+            setStateSwatch(selectedColor, color);
+        }
+    });
+    QObject::connect(animationDuration, QOverload<int>::of(&QSpinBox::valueChanged), view,
+                     [view](int ms) { view->setVisualStateAnimationDuration(ms); });
 
     const auto updateStatus = [&]() {
         const viv::VirtualViewStats stats = view->stats();

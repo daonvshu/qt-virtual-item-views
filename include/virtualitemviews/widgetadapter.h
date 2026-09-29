@@ -5,8 +5,7 @@
 
 #include <QModelIndex>
 #include <QSize>
-
-class QWidget;
+#include <QWidget>
 
 namespace viv {
 
@@ -34,6 +33,14 @@ public:
     /// Fills \a widget with the data of \a index. Called before the widget is
     /// shown, so implementations must not rely on being visible yet.
     virtual void bindWidget(QWidget *widget, const QModelIndex &index) = 0;
+
+    /// Called after binding and when hover or selection changes. The widget can
+    /// query the view's visualState() and paint its own background.
+    virtual void visualStateChanged(QWidget *widget, const QModelIndex &index)
+    {
+        Q_UNUSED(index);
+        widget->update();
+    }
 
     /// Detaches \a widget from \a index. Called before the widget is hidden and
     /// recycled, and before a widget is rebound to another index.

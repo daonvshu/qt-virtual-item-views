@@ -11,6 +11,7 @@
 #include <virtualitemviews/widgetadapter.h>
 #include <QColor>
 #include <QLabel>
+#include <QPainter>
 #include <QStringListModel>
 
 class WrappingRow : public QLabel
@@ -59,6 +60,51 @@ model.setData(first, QStringLiteral("更新后的多行内容，可以因文本�
 ```
 
 视口上方的高度变化会通过滚动锚点补偿，减少内容跳动。若高度来自异步图片或展开状态，先更新模型数据，再发出该行的 `dataChanged`；`bindWidget()` 应刷新控件内容和尺寸提示。
+
+## 自绘悬停与选中背景
+
+`view.visualState(index)` 返回独立的 `hovered` 和 `selected` 目标标志，以及 0–1 的 `hoverProgress`、`selectedProgress`。两种状态可以同时存在，进度从当前值平滑过渡到目标值，离开和取消选中时也会淡出。默认过渡时间为 180 ms；`setVisualStateAnimationDuration(0)` 可关闭动画。`setHoverBackgroundColor()` 与 `setSelectedBackgroundColor()` 分别设置提供给业务控件的颜色；视图不代替业务控件绘制背景。适配器绑定新行、状态、颜色或动画帧变化时会收到 `visualStateChanged()`；默认实现调用 `widget->update()`，若控件直接保存状态，可重写它：
+
+```cpp
+class StateRow : public QWidget {
+public:
+    using QWidget::QWidget;
+    void setState(viv::VirtualItemView::VisualState state,
+                  const QColor &hoverColor, const QColor &selectedColor) {
+        state_ = state;
+        hoverColor_ = hoverColor;
+        selectedColor_ = selectedColor;
+        update();
+    }
+protected:
+    void paintEvent(QPaintEvent *) override {
+        QPainter painter(this);
+        painter.fillRect(rect(), palette().color(QPalette::Base));
+        painter.setOpacity(state_.hoverProgress);
+        painter.fillRect(rect(), hoverColor_);
+        painter.setOpacity(state_.selectedProgress);
+        painter.fillRect(rect(), selectedColor_);
+    }
+private:
+    viv::VirtualItemView::VisualState state_;
+    QColor hoverColor_;
+    QColor selectedColor_;
+};
+
+// 在 WidgetAdapter 子类中保存指向当前 view 的指针：
+void visualStateChanged(QWidget *widget, const QModelIndex &index) override {
+    static_cast<StateRow *>(widget)->setState(view->visualState(index),
+        view->hoverBackgroundColor(), view->selectedBackgroundColor());
+}
+```
+
+```cpp
+view.setHoverBackgroundColor(QColor("#e7f4ed"));
+view.setSelectedBackgroundColor(QColor("#b9d9f1"));
+view.setVisualStateAnimationDuration(180);
+```
+
+控件复用时会重新绑定并重新通知状态。若自定义行控件包含不透明子控件，背景只会显示在未被子控件覆盖的区域；需要整行着色时，也要处理这些子控件的背景。
 
 ## 行间距
 
