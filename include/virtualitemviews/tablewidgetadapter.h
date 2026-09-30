@@ -132,6 +132,7 @@ private:
     QHash<int, QWidget *> m_paneHosts;
     TableSpanContext m_spans;
     int m_columnCount = 0;
+    int m_leadingCellInset = 0;
     QRect m_viewportRect;
     qint64 m_horizontalOffset = 0;
     int m_columnOverscan = 0;
@@ -149,6 +150,11 @@ inline ColumnGeometry TableRowLayoutContext::column(int logicalIndex) const
         const int x = m_panes->columnViewportX(logicalIndex);
         if (m_panes->paneIndexOfColumn(logicalIndex) >= 0)
             geometry.viewportX = x;
+    }
+    if (logicalIndex == 0 && m_leadingCellInset > 0) {
+        const int inset = qMin(m_leadingCellInset, geometry.width);
+        geometry.viewportX += inset;
+        geometry.width -= inset;
     }
     return geometry;
 }

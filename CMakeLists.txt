@@ -89,6 +89,7 @@ set(VIRTUALITEMVIEWS_PUBLIC_HEADERS
     include/virtualitemviews/virtualitemview.h
     include/virtualitemviews/virtuallistview.h
     include/virtualitemviews/virtualtableview.h
+    include/virtualitemviews/virtualtreetableview.h
     include/virtualitemviews/virtualheaderview.h
     include/virtualitemviews/virtualtreeview.h
     include/virtualitemviews/widgetadapter.h
@@ -113,6 +114,7 @@ set(VIRTUALITEMVIEWS_SOURCES
     src/widgets/styledtableview.cpp
     src/widgets/virtuallistview.cpp
     src/widgets/virtualtreeview.cpp
+    src/widgets/virtualtreetableview.cpp
     src/widgets/virtualheaderview.cpp
     src/widgets/virtualtableview.cpp)
 

@@ -106,7 +106,6 @@ void VirtualHeaderView::paintEvent(QPaintEvent *event)
         ? m_sectionSeparatorColor : headerSectionSeparatorColor(this);
     const QColor crossColor = m_crossAxisSeparatorColor.isValid()
         ? m_crossAxisSeparatorColor : headerSectionSeparatorColor(this);
-    const int spacing = m_geometry->sectionSpacing();
     for (auto it = m_sectionWidgets.cbegin(); it != m_sectionWidgets.cend(); ++it) {
         const QWidget *section = it.value();
         if (!section->isVisible())
@@ -120,6 +119,7 @@ void VirtualHeaderView::paintEvent(QPaintEvent *event)
             }
             continue;
         }
+        const int spacing = m_geometry->sectionSpacingAfter(it.key());
         if (spacing == 0) {
             if (m_sectionSeparatorsVisible) {
                 const int y = section->geometry().bottom();
@@ -546,7 +546,8 @@ void VirtualHeaderView::rebuildPaneCacheIfNeeded() const
         const int logical = m_paneOrder.at(slot);
         m_paneSlotByLogical[logical] = slot;
         x += m_geometry->sectionSize(logical)
-            + (logical == m_paneTerminalColumn ? 0 : m_geometry->sectionSpacing());
+            + (logical == m_paneTerminalColumn ? 0
+                                              : m_geometry->sectionSpacingAfter(logical));
         m_panePrefix.append(x);
     }
 }
@@ -619,9 +620,9 @@ void VirtualHeaderView::relayout()
     // geometry change here, never inside those calls (P1-8 of the second review).
     rebuildPaneCacheIfNeeded();
 
-    const int count = qMin(m_geometry->sectionCount(),
-                           m_labelModel ? (isHorizontal() ? m_labelModel->columnCount() : m_labelModel->rowCount())
-                           : m_geometry->sectionCount());
+    // The geometry is the section source: a tree table may show more visible rows
+    // than the model has top-level rows, or use a root with a different column count.
+    const int count = m_geometry->sectionCount();
     if (count <= 0) {
         recycleAllSections();
         m_lastVisualOrder.clear();
@@ -827,10 +828,7 @@ VirtualHeaderView::PackedOrder VirtualHeaderView::packedOrder() const
     PackedOrder packed;
     if (!m_geometry)
         return packed;
-    const int count = qMin(m_geometry->sectionCount(),
-                           m_labelModel ? (isHorizontal() ? m_labelModel->columnCount()
-                                                          : m_labelModel->rowCount())
-                                        : m_geometry->sectionCount());
+    const int count = m_geometry->sectionCount();
     if (count <= 0)
         return packed;
     if (m_geometry->isUniform() && !m_paneFilterActive) {
@@ -854,9 +852,7 @@ QVector<int> VirtualHeaderView::visualOrder() const
     QVector<int> order;
     if (!m_geometry)
         return order;
-    const int count = qMin(m_geometry->sectionCount(),
-                           m_labelModel ? (isHorizontal() ? m_labelModel->columnCount() : m_labelModel->rowCount())
-                           : m_geometry->sectionCount());
+    const int count = m_geometry->sectionCount();
     order.reserve(count);
     for (int visual = 0; visual < count; ++visual) {
         const int logical = m_geometry->logicalIndex(visual);

@@ -59,6 +59,9 @@ private slots:
     void horizontalOrientationUsesWidth();
     void policyWithoutSizeIndexReleasesOwnership();
     void spacingChangesOffsetsAndLeavesGapsUnhittable();
+    void insertKeepsDepthSpacingWithUniformSize();
+    void insertWithNewUniformSizeRebuildsExtents();
+    void insertKeepsVariableSizesAndSpacing();
 };
 
 void TestListLayout::uniformItemGeometry()
@@ -250,6 +253,63 @@ void TestListLayout::spacingChangesOffsetsAndLeavesGapsUnhittable()
     layout.moveItems(1, 1, 3);
     QCOMPARE(layout.spacingAfter(2), 0);
     QCOMPARE(layout.spacingAfter(1), 6);
+}
+
+void TestListLayout::insertKeepsDepthSpacingWithUniformSize()
+{
+    ListLayout layout(new FixedSizeIndex(0, 20));
+    layout.resetItems(4, 20);
+    layout.setItemSpacing(2);
+    layout.setSpacingAfter(1, 8);
+
+    layout.insertItems(2, 1, 20);
+    layout.setSpacingAfter(2, 5);
+
+    QCOMPARE(layout.itemCount(), qsizetype(5));
+    QCOMPARE(layout.spacingAfter(1), 8);
+    QCOMPARE(layout.spacingAfter(2), 5);
+    QCOMPARE(layout.offsetOf(2), qint64(50));
+    QCOMPARE(layout.offsetOf(3), qint64(75));
+    QCOMPARE(layout.contentExtent(), qint64(117));
+
+    layout.removeItems(2, 1);
+    QCOMPARE(layout.spacingAfter(1), 8);
+    QCOMPARE(layout.offsetOf(2), qint64(50));
+    QCOMPARE(layout.contentExtent(), qint64(92));
+}
+
+void TestListLayout::insertWithNewUniformSizeRebuildsExtents()
+{
+    ListLayout layout(new FixedSizeIndex(0, 20));
+    layout.resetItems(3, 20);
+    layout.setItemSpacing(2);
+    layout.setSpacingAfter(0, 8);
+
+    layout.insertItems(1, 1, 30);
+
+    QCOMPARE(layout.itemSize(0), 30);
+    QCOMPARE(layout.spacingAfter(0), 8);
+    QCOMPARE(layout.offsetOf(1), qint64(38));
+    QCOMPARE(layout.offsetOf(2), qint64(70));
+    QCOMPARE(layout.contentExtent(), qint64(132));
+}
+
+void TestListLayout::insertKeepsVariableSizesAndSpacing()
+{
+    ListLayout layout(new BlockSizeIndex(0, 20, 4));
+    layout.resetItems(3, 20);
+    layout.setItemSize(2, 35);
+    layout.setItemSpacing(2);
+    layout.setSpacingAfter(0, 7);
+
+    layout.insertItems(1, 1, 25);
+
+    QCOMPARE(layout.itemSize(3), 35);
+    QCOMPARE(layout.spacingAfter(0), 7);
+    QCOMPARE(layout.offsetOf(1), qint64(27));
+    QCOMPARE(layout.offsetOf(2), qint64(54));
+    QCOMPARE(layout.offsetOf(3), qint64(76));
+    QCOMPARE(layout.contentExtent(), qint64(111));
 }
 
 QTEST_APPLESS_MAIN(TestListLayout)

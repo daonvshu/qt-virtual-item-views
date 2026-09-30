@@ -148,8 +148,8 @@ public:
     QStringList keyBindingsForAction(const QString &actionName) const override;
 
     // -- QAccessibleTableInterface (table views only) ------------------------
-    // Rows and columns are addressed by *model* coordinates, so a screen reader can
-    // read a table cell by cell even though only the visible rows exist as widgets.
+    // Flat tables use model row coordinates; tree tables use expanded visible-row
+    // coordinates. Columns remain logical model columns in both cases.
     // selectRow()/selectColumn() go through the view's selection model and fail when
     // the view does not allow a selection at all.
     QAccessibleInterface *caption() const override;

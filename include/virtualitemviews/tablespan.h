@@ -51,6 +51,8 @@ public:
     /// cell is not merged). The default walks up/left through spanAt() bounded by
     /// maximumSpan(); providers with many or large spans should override it.
     virtual QModelIndex anchorOf(const QModelIndex &index) const;
+    /// Rebuild persistent-index keyed storage after model rows or columns move.
+    virtual void modelStructureChanged() {}
 };
 
 /// Map based provider: the application registers the anchors it wants merged.
@@ -59,6 +61,8 @@ public:
 /// registered on through inserts, removals, moves and sorting - exactly like the
 /// pinned items of the view (§36). The span extent itself stays "N model rows /
 /// M model columns from the anchor", which is what the merged geometry means.
+/// If a structural change makes two spans overlap, the anchor earlier in the
+/// current sibling row/column order survives and the other span is removed.
 class VIRTUALITEMVIEWS_EXPORT TableSpanMap : public TableSpanProvider
 {
 public:
@@ -71,6 +75,7 @@ public:
     int count() const { return int(m_spans.size()); }
 
     TableSpan spanAt(const QModelIndex &index) const override;
+    void modelStructureChanged() override;
     TableSpan maximumSpan() const override { return m_maximum; }
 
 private:

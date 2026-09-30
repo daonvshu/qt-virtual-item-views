@@ -708,6 +708,32 @@ void TestDnd::moveCleanupRemovesTheDraggedRowsOnce()
     // The model owns its items: the dragged node (and its child) are gone now.
     QCOMPARE(treeModel.rowCount(), 1);
     QCOMPARE(treeModel.index(0, 0).data().toString(), QStringLiteral("tail"));
+
+    // A synchronous model switch during the first removal must not apply later
+    // source row numbers to the replacement model.
+    QStringListModel switchingModel(QStringList({QStringLiteral("a"), QStringLiteral("b"),
+                                                QStringLiteral("c"), QStringLiteral("d")}));
+    QStringListModel replacement(QStringList({QStringLiteral("keep0"), QStringLiteral("keep1"),
+                                             QStringLiteral("keep2"), QStringLiteral("keep3")}));
+    MoveCleanupProbe switchingView;
+    RowAdapter switchingAdapter;
+    switchingView.setAdapter(&switchingAdapter);
+    switchingView.setUniformItemHeight(kRowHeight);
+    switchingView.setModel(&switchingModel);
+    const QList<QPersistentModelIndex> switchingSources{switchingModel.index(1, 0),
+                                                         switchingModel.index(3, 0)};
+    QObject::connect(&switchingModel, &QAbstractItemModel::rowsRemoved, &switchingView,
+                     [&] { switchingView.setModel(&replacement); });
+    switchingView.removeDraggedSourceRows(switchingSources);
+    QCOMPARE(switchingView.model(), static_cast<QAbstractItemModel *>(&replacement));
+    QCOMPARE(switchingModel.stringList(), QStringList({QStringLiteral("a"), QStringLiteral("b"),
+                                                      QStringLiteral("c")}));
+    QCOMPARE(replacement.stringList(), QStringList({QStringLiteral("keep0"),
+                                                   QStringLiteral("keep1"),
+                                                   QStringLiteral("keep2"),
+                                                   QStringLiteral("keep3")}));
+    switchingView.removeDraggedSourceRows(switchingSources);
+    QCOMPARE(replacement.rowCount(), 4);
 }
 
 void TestDnd::dragGranularityDecidesThePayloadAndThePreview()

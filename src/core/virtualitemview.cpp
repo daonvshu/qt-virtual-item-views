@@ -19,6 +19,7 @@
 #include <QMimeData>
 #include <QMouseEvent>
 #include <QPainter>
+#include <QPair>
 #include <QPointF>
 #include <QResizeEvent>
 #include <QScrollBar>
@@ -129,8 +130,14 @@ public:
     {
         m_content = content;
         if (m_content) {
-            m_content->setParent(this);
-            m_content->show();
+            QPointer<RowSpacingHost> host(this);
+            QPointer<QWidget> child(m_content);
+            child->setParent(this);
+            if (!host || !child)
+                return;
+            child->show();
+            if (!host)
+                return;
         }
         layoutContent();
     }
@@ -153,8 +160,13 @@ protected:
             painter.fillRect(rect(), palette().brush(QPalette::Base));
         if (property("vivShowSpacingLines").toBool()) {
             const int left = qBound(0, property("vivSpacingLineLeftInset").toInt(), width());
-            painter.fillRect(QRect(left, 0, width() - left, lineWidth), m_lineColor);
-            painter.fillRect(QRect(left, height() - lineWidth, width() - left, lineWidth), m_lineColor);
+            const int skipLeft = qBound(left, property("vivSpacingLineSkipX").toInt(), width());
+            const int skipRight = qBound(skipLeft,
+                skipLeft + qMax(0, property("vivSpacingLineSkipWidth").toInt()), width());
+            for (int y : {0, height() - lineWidth}) {
+                painter.fillRect(QRect(left, y, skipLeft - left, lineWidth), m_lineColor);
+                painter.fillRect(QRect(skipRight, y, width() - skipRight, lineWidth), m_lineColor);
+            }
         }
     }
 
@@ -175,7 +187,7 @@ private:
         return QWidget::event(event);
     }
 
-    QWidget *m_content = nullptr;
+    QPointer<QWidget> m_content;
     QColor m_lineColor;
 };
 
@@ -278,6 +290,7 @@ VirtualItemView::VirtualItemView(QWidget *parent)
 
 VirtualItemView::~VirtualItemView()
 {
+    m_destroying = true;
     viewport()->removeEventFilter(this);
     for (QWidget *widget : m_rowSpacingWidgets)
         delete widget;
@@ -316,15 +329,22 @@ void VirtualItemView::setModel(QAbstractItemModel *model)
 {
     if (m_model.data() == model)
         return;
+    const quint64 changeSerial = ++m_modelChangeSerial;
+    const QPointer<QAbstractItemModel> requestedModel(model);
 
     disconnectModel(m_model.data());
     // A drag or drop in flight refers to the outgoing model (§38).
     finishDrag();
+    if (m_modelChangeSerial != changeSerial)
+        return;
     clearVisualTransitions();
     if (m_selectionModel)
         disconnect(m_selectionModel.data(), nullptr, this, nullptr);
     m_hoveredIndex = QPersistentModelIndex();
     recycleAllItems();
+    if (m_modelChangeSerial != changeSerial)
+        return;
+    model = requestedModel.data();
     m_explicitPinned.clear();
     cancelPendingAnchor();
     m_scrollOffset = 0;
@@ -337,9 +357,12 @@ void VirtualItemView::setModel(QAbstractItemModel *model)
     // model at all. A selection model of the outgoing model cannot address the
     // new one, so it is detached (an external one is not deleted).
     if (m_ownSelectionModel) {
-        delete m_selectionModel.data();
+        QItemSelectionModel *previousSelection = m_selectionModel.data();
         m_selectionModel = nullptr;
         m_ownSelectionModel = false;
+        delete previousSelection;
+        if (m_modelChangeSerial != changeSerial)
+            return;
     } else if (m_selectionModel && m_selectionModel->model() != model) {
         m_selectionModel = nullptr;
     }
@@ -348,8 +371,13 @@ void VirtualItemView::setModel(QAbstractItemModel *model)
         m_ownSelectionModel = true;
     }
     connectSelectionModel();
+    emit selectionModelChanged(m_selectionModel.data());
+    if (m_modelChangeSerial != changeSerial)
+        return;
 
     resetLayoutForNewModel();
+    if (m_modelChangeSerial != changeSerial)
+        return;
     relayout();
 }
 
@@ -384,18 +412,18 @@ void VirtualItemView::connectModel(QAbstractItemModel *model)
     // index lookup). A change that does not touch column 0 cannot affect any row identity.
     connect(model, &QAbstractItemModel::columnsAboutToBeInserted, this,
             [this](const QModelIndex &parent, int first, int) {
-                if (!parent.isValid() && first == 0)
+                if (!managesVisibleRows() && !parent.isValid() && first == 0)
                     recycleItemsForColumnChange();
             });
     connect(model, &QAbstractItemModel::columnsAboutToBeRemoved, this,
             [this](const QModelIndex &parent, int first, int) {
-                if (!parent.isValid() && first == 0)
+                if (!managesVisibleRows() && !parent.isValid() && first == 0)
                     recycleItemsForColumnChange();
             });
     connect(model, &QAbstractItemModel::columnsAboutToBeMoved, this,
             [this](const QModelIndex &parent, int start, int, const QModelIndex &destination,
                    int destinationColumn) {
-                if (!parent.isValid() && !destination.isValid()
+                if (!managesVisibleRows() && !parent.isValid() && !destination.isValid()
                     && (start == 0 || destinationColumn == 0)) {
                     recycleItemsForColumnChange();
                 }
@@ -459,6 +487,7 @@ void VirtualItemView::setRowSpacing(int pixels)
     const int spacing = qMax(0, pixels);
     if (m_rowSpacing == spacing)
         return;
+    ++m_rowSpacingStateSerial;
     m_rowSpacing = spacing;
     if (auto *layout = dynamic_cast<ListLayout *>(m_layout)) {
         layout->setItemSpacing(spacing);
@@ -469,12 +498,22 @@ void VirtualItemView::setRowSpacing(int pixels)
 
 void VirtualItemView::setRowSpacingFactory(RowSpacingFactory factory, RowSpacingBinder binder)
 {
-    for (QWidget *widget : m_rowSpacingWidgets)
-        delete widget;
-    m_rowSpacingWidgets.clear();
-    for (const QVector<QWidget *> &pool : m_rowSpacingPool)
-        qDeleteAll(pool);
-    m_rowSpacingPool.clear();
+    const quint64 changeSerial = ++m_rowSpacingStateSerial;
+    QHash<qsizetype, QWidget *> active;
+    QHash<int, QVector<QWidget *>> pooled;
+    active.swap(m_rowSpacingWidgets);
+    pooled.swap(m_rowSpacingPool);
+    QVector<QPointer<QWidget>> oldWidgets;
+    for (QWidget *widget : active)
+        oldWidgets.append(widget);
+    for (const QVector<QWidget *> &pool : pooled) {
+        for (QWidget *widget : pool)
+            oldWidgets.append(widget);
+    }
+    for (const QPointer<QWidget> &widget : oldWidgets)
+        delete widget.data();
+    if (m_rowSpacingStateSerial != changeSerial)
+        return;
     m_rowSpacingFactory = std::move(factory);
     m_rowSpacingBinder = std::move(binder);
     relayout();
@@ -501,6 +540,7 @@ void VirtualItemView::setSelectionModel(QItemSelectionModel *selectionModel)
     }
     m_selectionModel = selectionModel;
     connectSelectionModel();
+    emit selectionModelChanged(m_selectionModel.data());
     refreshVisualStates();
 }
 
@@ -656,6 +696,41 @@ void VirtualItemView::clearVisualTransitions()
     m_pendingVisualRefreshes.clear();
 }
 
+void VirtualItemView::rekeyPersistentState()
+{
+    QSet<QPersistentModelIndex> pinned;
+    for (const QPersistentModelIndex &index : m_explicitPinned) {
+        const QModelIndex cell = index;
+        if (isPersistentRowStateValid(index)
+            || (!usesItemWidgets() && index.isValid()
+                && isPersistentRowStateValid(cell.siblingAtColumn(0))))
+            pinned.insert(index);
+    }
+    m_explicitPinned.swap(pinned);
+
+    QHash<QPersistentModelIndex, VisualTransition> transitions;
+    for (auto it = m_visualTransitions.begin(); it != m_visualTransitions.end(); ++it) {
+        if (it.key().isValid())
+            transitions.insert(it.key(), it.value());
+        else
+            stopVisualTransition(it.value());
+    }
+    m_visualTransitions.swap(transitions);
+
+    QSet<QPersistentModelIndex> pending;
+    for (const QPersistentModelIndex &index : m_pendingVisualRefreshes) {
+        if (index.isValid())
+            pending.insert(index);
+    }
+    m_pendingVisualRefreshes.swap(pending);
+    rebuildLookup();
+}
+
+bool VirtualItemView::isPersistentRowStateValid(const QModelIndex &index) const
+{
+    return index.isValid();
+}
+
 void VirtualItemView::setHoverBackgroundColor(const QColor &color)
 {
     if (!color.isValid() || m_hoverBackgroundColor == color)
@@ -699,21 +774,54 @@ void VirtualItemView::refreshVisualStates()
 {
     if (!m_adapter)
         return;
-    for (const MaterializedItem &item : m_items) {
-        if (item.widget && item.index.isValid())
-            m_adapter->visualStateChanged(item.widget, QModelIndex(item.index));
+    const quint64 modelSerial = m_modelChangeSerial;
+    const quint64 mappingSerial = viewMappingSerial();
+    const quint64 lifecycleSerial = m_itemLifecycleSerial;
+    const QPointer<QAbstractItemModel> activeModel(m_model);
+    WidgetAdapter *const activeAdapter = m_adapter;
+    QList<QPersistentModelIndex> indexes;
+    indexes.reserve(m_items.size());
+    for (const MaterializedItem &item : m_items)
+        indexes.append(item.index);
+    for (const QPersistentModelIndex &persistent : indexes) {
+        if (!activeModel || m_model != activeModel.data()
+            || m_modelChangeSerial != modelSerial || viewMappingSerial() != mappingSerial
+            || m_itemLifecycleSerial != lifecycleSerial || m_adapter != activeAdapter)
+            return;
+        const QModelIndex index = persistent;
+        QPointer<QWidget> widget(index.isValid() ? widgetForIndex(index) : nullptr);
+        if (widget)
+            activeAdapter->visualStateChanged(widget.data(), index);
     }
 }
 
 void VirtualItemView::refreshVisualState(const QModelIndex &index)
 {
-    if (!m_adapter || !index.isValid())
+    if (!m_adapter || !index.isValid() || index.model() != m_model)
         return;
-    for (const MaterializedItem &item : m_items) {
-        const QModelIndex materialized = item.index;
-        if (item.widget && materialized.isValid() && materialized.parent() == index.parent()
-            && materialized.row() == index.row())
-            m_adapter->visualStateChanged(item.widget, materialized);
+    const QPersistentModelIndex target(index);
+    const quint64 modelSerial = m_modelChangeSerial;
+    const quint64 mappingSerial = viewMappingSerial();
+    const quint64 lifecycleSerial = m_itemLifecycleSerial;
+    const QPointer<QAbstractItemModel> activeModel(m_model);
+    WidgetAdapter *const activeAdapter = m_adapter;
+    QList<QPersistentModelIndex> indexes;
+    indexes.reserve(m_items.size());
+    for (const MaterializedItem &item : m_items)
+        indexes.append(item.index);
+    for (const QPersistentModelIndex &persistent : indexes) {
+        if (!activeModel || m_model != activeModel.data()
+            || m_modelChangeSerial != modelSerial || viewMappingSerial() != mappingSerial
+            || m_itemLifecycleSerial != lifecycleSerial || m_adapter != activeAdapter)
+            return;
+        const QModelIndex materialized = persistent;
+        if (!target.isValid() || !materialized.isValid()
+            || materialized.parent() != target.parent()
+            || materialized.row() != target.row())
+            continue;
+        QPointer<QWidget> widget(widgetForIndex(materialized));
+        if (widget)
+            activeAdapter->visualStateChanged(widget.data(), materialized);
     }
 }
 
@@ -733,6 +841,8 @@ void VirtualItemView::prepareHoverTracking(QWidget *widget)
 
 bool VirtualItemView::eventFilter(QObject *watched, QEvent *event)
 {
+    if (m_destroying)
+        return false;
     auto *widget = qobject_cast<QWidget *>(watched);
     if (widget && event->type() == QEvent::ChildAdded) {
         const QPointer<QObject> child(static_cast<QChildEvent *>(event)->child());
@@ -774,7 +884,8 @@ void VirtualItemView::setSelectionMode(SelectionMode mode)
         const QModelIndex current = m_selectionModel->currentIndex();
         m_selectionModel->clearSelection();
         if (current.isValid())
-            m_selectionModel->select(current, QItemSelectionModel::ClearAndSelect);
+            m_selectionModel->select(selectionRange(current, current),
+                                     selectionFlagsFor(QItemSelectionModel::ClearAndSelect));
         break;
     }
     case SelectionMode::MultiSelection:
@@ -794,6 +905,7 @@ void VirtualItemView::setCurrentIndex(const QModelIndex &index)
         return;
     if (!index.isValid()) {
         m_selectionModel->clearCurrentIndex();
+        m_selectionAnchor = QPersistentModelIndex();
         return;
     }
     switch (m_selectionMode) {
@@ -801,7 +913,7 @@ void VirtualItemView::setCurrentIndex(const QModelIndex &index)
         m_selectionModel->setCurrentIndex(index, QItemSelectionModel::Current);
         break;
     default:
-        m_selectionModel->setCurrentIndex(index, QItemSelectionModel::ClearAndSelect | rowFlags());
+        selectCurrentIndex(index, QItemSelectionModel::ClearAndSelect);
         pinCurrentIndex(index);
         m_selectionAnchor = QPersistentModelIndex(index);
         break;
@@ -828,10 +940,26 @@ void VirtualItemView::pinCurrentIndex(const QModelIndex &index)
         m_selectionModel->setCurrentIndex(index, QItemSelectionModel::Current);
 }
 
+void VirtualItemView::selectCurrentIndex(const QModelIndex &index,
+                                         QItemSelectionModel::SelectionFlags command)
+{
+    if (m_selectionBehavior == SelectionBehavior::SelectRows && usesExplicitRowSelection()) {
+        const QPointer<QItemSelectionModel> selection = m_selectionModel;
+        const QPersistentModelIndex current(index);
+        selection->setCurrentIndex(index, QItemSelectionModel::Current);
+        if (!selection || selection != m_selectionModel || !current.isValid()
+            || current.model() != model())
+            return;
+        selection->select(selectionRange(current, current), command);
+    } else {
+        m_selectionModel->setCurrentIndex(index, command | rowFlags());
+    }
+}
+
 QItemSelectionModel::SelectionFlags VirtualItemView::rowFlags() const
 {
-    return m_selectionBehavior == SelectionBehavior::SelectRows ? QItemSelectionModel::Rows
-                                                                : QItemSelectionModel::NoUpdate;
+    return m_selectionBehavior == SelectionBehavior::SelectRows && !usesExplicitRowSelection()
+        ? QItemSelectionModel::Rows : QItemSelectionModel::NoUpdate;
 }
 
 QItemSelectionModel::SelectionFlags
@@ -869,24 +997,45 @@ void VirtualItemView::clearLifecycleLog()
 
 void VirtualItemView::setAdapter(WidgetAdapter *adapter, bool takeOwnership)
 {
+    installAdapter(adapter, takeOwnership, true);
+}
+
+bool VirtualItemView::installAdapter(WidgetAdapter *adapter, bool takeOwnership, bool relayoutAfter)
+{
     if (m_adapter == adapter) {
         m_ownAdapter = m_ownAdapter || takeOwnership;
-        return;
+        return true;
     }
+    const quint64 changeSerial = ++m_adapterChangeSerial;
+    const quint64 modelSerial = m_modelChangeSerial;
+    const quint64 mappingSerial = viewMappingSerial();
+    WidgetAdapter *const previous = m_adapter;
     // Order matters: hand the materialized widgets back through the *old*
     // adapter, drop every pooled widget (a widget class of another adapter must
     // never be handed out through the new adapter's WidgetType namespace), and
     // only then let the old adapter die.
     recycleAllItems();
+    if (m_adapterChangeSerial != changeSerial || m_modelChangeSerial != modelSerial
+        || viewMappingSerial() != mappingSerial || m_adapter != previous)
+        return false;
     if (m_recycler)
         m_recycler->clear();
+    if (m_adapterChangeSerial != changeSerial || m_modelChangeSerial != modelSerial
+        || viewMappingSerial() != mappingSerial || m_adapter != previous)
+        return false;
     if (m_ownAdapter) {
-        delete m_adapter;
         m_adapter = nullptr;
+        m_ownAdapter = false;
+        delete previous;
+        if (m_adapterChangeSerial != changeSerial || m_modelChangeSerial != modelSerial
+            || viewMappingSerial() != mappingSerial || m_adapter)
+            return false;
     }
     m_adapter = adapter;
     m_ownAdapter = takeOwnership;
-    relayout();
+    if (relayoutAfter)
+        relayout();
+    return true;
 }
 
 void VirtualItemView::setLayoutPolicy(LayoutPolicy *policy, bool takeOwnership)
@@ -1090,6 +1239,16 @@ QModelIndex VirtualItemView::indexForNavigation(qsizetype item, const QModelInde
     return viewIndex(item);
 }
 
+QItemSelection VirtualItemView::selectionRange(const QModelIndex &anchor,
+                                                const QModelIndex &target) const
+{
+    if (anchor.isValid() && anchor.parent() == target.parent())
+        return QItemSelection(anchor, target);
+    QItemSelection selection;
+    selection.select(target, target);
+    return selection;
+}
+
 // ---------------------------------------------------------------------------
 // Scrolling helpers
 // ---------------------------------------------------------------------------
@@ -1152,6 +1311,10 @@ VisibleRange VirtualItemView::coreVisibleRange() const
     const qint64 viewExtent = viewportMainExtent();
     if (count <= 0 || viewExtent <= 0 || m_layout->contentExtent() <= 0)
         return range;
+    const qsizetype topRows = qsizetype(frozenRows());
+    const qsizetype bottomRows = qsizetype(frozenBottomRows());
+    if (topRows >= count - bottomRows)
+        return range;
 
     // The scrolling pane starts below the frozen band, so the visible content
     // window is shifted by its height (§31 row direction). Frozen rows are always
@@ -1163,8 +1326,9 @@ VisibleRange VirtualItemView::coreVisibleRange() const
 
     qsizetype first = qMin(m_layout->indexAtOffset(top), count - 1);
     qsizetype last = qMin(m_layout->indexAtOffset(bottom), count - 1);
-    first = qMax<qsizetype>(0, first);
-    last = qMax<qsizetype>(first, last);
+    const qsizetype lastScrollable = count - bottomRows - 1;
+    first = qBound<qsizetype>(topRows, first, lastScrollable);
+    last = qBound<qsizetype>(first, last, lastScrollable);
     range.first = first;
     range.last = last;
     return range;
@@ -1501,6 +1665,28 @@ void VirtualItemView::raiseItemPaneSeparatorLines() const
 void VirtualItemView::syncRowSpacingWidgets(const QVector<VisibleRange> &ranges)
 {
     auto *layout = dynamic_cast<ListLayout *>(m_layout);
+    const quint64 modelSerial = m_modelChangeSerial;
+    const quint64 mappingSerial = viewMappingSerial();
+    const quint64 lifecycleSerial = m_itemLifecycleSerial;
+    const quint64 spacingSerial = m_rowSpacingStateSerial;
+    const QPointer<QAbstractItemModel> activeModel(m_model);
+    const bool hadModel = activeModel;
+    WidgetAdapter *const activeAdapter = m_adapter;
+    const RowSpacingFactory factory = m_rowSpacingFactory;
+    const RowSpacingBinder binder = m_rowSpacingBinder;
+    const auto requestIsCurrent = [this, layout, &activeModel, hadModel, activeAdapter,
+                                   modelSerial, mappingSerial, lifecycleSerial, spacingSerial]() {
+        return m_layout == layout && m_modelChangeSerial == modelSerial
+            && viewMappingSerial() == mappingSerial && m_itemLifecycleSerial == lifecycleSerial
+            && m_rowSpacingStateSerial == spacingSerial && m_model.data() == activeModel.data()
+            && (!hadModel || activeModel) && m_adapter == activeAdapter;
+    };
+    const auto abortStalePass = [this, &requestIsCurrent]() {
+        if (requestIsCurrent())
+            return false;
+        abortMaterializationPass();
+        return true;
+    };
     QHash<qsizetype, QRect> desired;
     if (layout && viewport()->width() > 0) {
         for (const VisibleRange &range : ranges) {
@@ -1515,59 +1701,147 @@ void VirtualItemView::syncRowSpacingWidgets(const QVector<VisibleRange> &ranges)
             }
         }
     }
-    for (auto it = m_rowSpacingWidgets.begin(); it != m_rowSpacingWidgets.end();) {
-        if (desired.contains(it.key())) {
-            ++it;
+    if (abortStalePass())
+        return;
+    QList<qsizetype> obsolete;
+    for (auto it = m_rowSpacingWidgets.cbegin(); it != m_rowSpacingWidgets.cend(); ++it) {
+        if (!desired.contains(it.key()))
+            obsolete.append(it.key());
+    }
+    for (qsizetype row : obsolete) {
+        QWidget *widget = m_rowSpacingWidgets.take(row);
+        QPointer<QWidget> guardedWidget(widget);
+        if (!guardedWidget)
             continue;
-        }
-        QWidget *widget = it.value();
         const int depth = widget->property("vivSpacingDepth").toInt();
         widget->hide();
-        m_rowSpacingPool[depth].append(widget);
-        it = m_rowSpacingWidgets.erase(it);
+        if (abortStalePass()) {
+            if (guardedWidget)
+                guardedWidget->deleteLater();
+            return;
+        }
+        if (guardedWidget)
+            m_rowSpacingPool[depth].append(guardedWidget.data());
     }
     for (auto it = desired.cbegin(); it != desired.cend(); ++it) {
         const qsizetype row = it.key();
         const QModelIndex index = viewIndex(row);
+        if (abortStalePass())
+            return;
         const int depth = itemDepth(index);
+        if (abortStalePass())
+            return;
         QWidget *widget = m_rowSpacingWidgets.value(row, nullptr);
         if (widget && widget->property("vivSpacingDepth").toInt() != depth) {
-            widget->hide();
-            m_rowSpacingPool[widget->property("vivSpacingDepth").toInt()].append(widget);
             m_rowSpacingWidgets.remove(row);
+            QPointer<QWidget> guardedWidget(widget);
+            const int oldDepth = widget->property("vivSpacingDepth").toInt();
+            widget->hide();
+            if (abortStalePass()) {
+                if (guardedWidget)
+                    guardedWidget->deleteLater();
+                return;
+            }
+            if (guardedWidget)
+                m_rowSpacingPool[oldDepth].append(guardedWidget.data());
             widget = nullptr;
         }
         if (!widget) {
             QVector<QWidget *> &pool = m_rowSpacingPool[depth];
             widget = pool.isEmpty() ? new RowSpacingHost(viewport()) : pool.takeLast();
-            widget->setProperty("vivSpacingDepth", depth);
-            auto *host = static_cast<RowSpacingHost *>(widget);
-            if (m_rowSpacingFactory && !host->content())
-                host->setContent(m_rowSpacingFactory(index, host));
             m_rowSpacingWidgets.insert(row, widget);
+            QPointer<QWidget> guardedWidget(widget);
+            widget->setProperty("vivSpacingDepth", depth);
+            if (!guardedWidget) {
+                if (m_rowSpacingWidgets.value(row) == widget)
+                    m_rowSpacingWidgets.remove(row);
+                abortMaterializationPass();
+                return;
+            }
+            if (abortStalePass())
+                return;
+            auto *host = static_cast<RowSpacingHost *>(widget);
+            if (factory && !host->content()) {
+                QPointer<QWidget> content(factory(index, host));
+                if (!guardedWidget) {
+                    if (m_rowSpacingWidgets.value(row) == widget)
+                        m_rowSpacingWidgets.remove(row);
+                    if (content)
+                        content->deleteLater();
+                    abortMaterializationPass();
+                    return;
+                }
+                if (abortStalePass()) {
+                    if (content)
+                        content->deleteLater();
+                    return;
+                }
+                host->setContent(content.data());
+                if (!guardedWidget) {
+                    if (m_rowSpacingWidgets.value(row) == widget)
+                        m_rowSpacingWidgets.remove(row);
+                    abortMaterializationPass();
+                    return;
+                }
+                if (abortStalePass())
+                    return;
+            }
         }
+        QPointer<QWidget> guardedWidget(widget);
+        const auto hostIsCurrent = [this, row, widget, &guardedWidget, &requestIsCurrent]() {
+            if (guardedWidget && requestIsCurrent()
+                && m_rowSpacingWidgets.value(row) == widget)
+                return true;
+            if (!guardedWidget && m_rowSpacingWidgets.value(row) == widget)
+                m_rowSpacingWidgets.remove(row);
+            abortMaterializationPass();
+            return false;
+        };
         auto *host = static_cast<RowSpacingHost *>(widget);
         configureRowSpacingWidget(host);
+        if (!hostIsCurrent())
+            return;
         host->setLineColor(itemPaneSeparatorColor());
-        if (host->content() && m_rowSpacingBinder)
-            m_rowSpacingBinder(host->content(), index);
+        if (!hostIsCurrent())
+            return;
+        if (host->content() && binder)
+            binder(host->content(), index);
+        if (!hostIsCurrent())
+            return;
         const bool scrolling = m_scrollPaneHost && !isRowFrozen(row);
         QWidget *parent = scrolling ? m_scrollPaneHost : viewport();
         const QPoint origin = scrolling ? itemPaneRect(ItemPane::Type::Scrollable).topLeft() : QPoint();
         if (widget->parentWidget() != parent)
             widget->setParent(parent);
+        if (!hostIsCurrent())
+            return;
         widget->setGeometry(it.value().translated(-origin));
+        if (!hostIsCurrent())
+            return;
         widget->show();
+        if (!hostIsCurrent())
+            return;
         widget->raise();
+        if (!hostIsCurrent())
+            return;
     }
     raiseItemPaneSeparatorLines();
 }
 
 void VirtualItemView::applyItemPaneGeometry(MaterializedItem &item, qsizetype row)
 {
-    QWidget *widget = item.widget;
+    QPointer<QWidget> widget(item.widget);
     if (!widget)
         return;
+    const QPersistentModelIndex index = item.index;
+    const QRect geometry = item.geometry;
+
+    if (row < 0 || row >= viewItemCount()) {
+        // A focused row may stay pinned after its tree branch collapses. Keep it
+        // alive and focused without painting over the row now occupying its old slot.
+        widget->move(-qMax(1, widget->width()), -qMax(1, widget->height()));
+        return;
+    }
 
     QWidget *parent = viewport();
     QPoint origin;
@@ -1584,10 +1858,14 @@ void VirtualItemView::applyItemPaneGeometry(MaterializedItem &item, qsizetype ro
     }
     if (widget->parentWidget() != parent)
         widget->setParent(parent);
-    widget->setGeometry(item.geometry.translated(-origin));
+    if (!widget || widgetForIndex(index) != widget.data())
+        return;
+    widget->setGeometry(geometry.translated(-origin));
+    if (!widget || widgetForIndex(index) != widget.data())
+        return;
     if (!widget->isVisible())
         widget->show();
-    if (frozen)
+    if (widget && widgetForIndex(index) == widget.data() && frozen)
         widget->raise();
 }
 
@@ -1690,9 +1968,12 @@ void VirtualItemView::scrollTo(const QModelIndex &index, ScrollHint hint)
 
 void VirtualItemView::setItemPinned(const QModelIndex &index, bool pinned)
 {
-    if (!index.isValid())
+    if (!index.isValid() || index.model() != m_model)
         return;
-    const QPersistentModelIndex persistent(index);
+    const QModelIndex item = usesItemWidgets() ? index.siblingAtColumn(0) : index;
+    if (!item.isValid())
+        return;
+    const QPersistentModelIndex persistent(item);
     if (pinned) {
         m_explicitPinned.insert(persistent);
         if (m_lifecycleLogEnabled)
@@ -1711,7 +1992,10 @@ void VirtualItemView::setItemPinned(const QModelIndex &index, bool pinned)
 
 bool VirtualItemView::isItemPinned(const QModelIndex &index) const
 {
-    return index.isValid() && m_explicitPinned.contains(QPersistentModelIndex(index));
+    if (!index.isValid() || index.model() != m_model)
+        return false;
+    const QModelIndex item = usesItemWidgets() ? index.siblingAtColumn(0) : index;
+    return item.isValid() && m_explicitPinned.contains(QPersistentModelIndex(item));
 }
 
 void VirtualItemView::pinWidget(QWidget *widget)
@@ -1887,6 +2171,12 @@ void VirtualItemView::flushPendingRelayout()
     relayout();
 }
 
+void VirtualItemView::abortMaterializationPass()
+{
+    m_materializationAborted = true;
+    markDirty();
+}
+
 void VirtualItemView::relayout()
 {
     if (m_inRelayout)
@@ -1914,6 +2204,29 @@ void VirtualItemView::relayout()
         applyPendingAnchor();
 
     m_inRelayout = true;
+    m_materializationAborted = false;
+    const quint64 modelSerial = m_modelChangeSerial;
+    const quint64 mappingSerial = viewMappingSerial();
+    const quint64 lifecycleSerial = m_itemLifecycleSerial;
+    const QPointer<QAbstractItemModel> activeModel(m_model);
+    const bool hadModel = activeModel;
+    WidgetAdapter *const activeAdapter = m_adapter;
+    LayoutPolicy *const activeLayout = m_layout;
+    const bool rowWidgets = usesItemWidgets();
+    const auto requestIsCurrent = [this, &activeModel, hadModel, activeAdapter, activeLayout,
+                                   modelSerial, mappingSerial, lifecycleSerial, rowWidgets]() {
+        return m_modelChangeSerial == modelSerial && viewMappingSerial() == mappingSerial
+            && m_itemLifecycleSerial == lifecycleSerial && m_model.data() == activeModel.data()
+            && (!hadModel || activeModel) && m_adapter == activeAdapter
+            && m_layout == activeLayout && usesItemWidgets() == rowWidgets;
+    };
+    const auto abortStalePass = [this, &requestIsCurrent]() {
+        if (requestIsCurrent())
+            return false;
+        m_inRelayout = false;
+        abortMaterializationPass();
+        return true;
+    };
 
     const qint64 viewExtent = viewportMainExtent();
     m_scrollOffset = qBound<qint64>(qint64(0), m_scrollOffset, maximumVerticalOffset());
@@ -1933,12 +2246,21 @@ void VirtualItemView::relayout()
             const VisibleRange window = VisibleRange::expanded(visible.first, visible.last,
                                                               m_overscanBefore, m_overscanAfter,
                                                               count);
-            // The overscan must not reach into the frozen panes: those rows have their
-            // own range and would otherwise be materialized twice.
-            const qsizetype top = qsizetype(frozenRows());
-            const qsizetype bottom = qsizetype(frozenBottomRows());
-            firstRow = qBound<qsizetype>(top, window.first, count - bottom - 1);
-            lastRow = qBound<qsizetype>(firstRow, window.last, count - bottom - 1);
+            if (window.isValid()) {
+                firstRow = window.first;
+                lastRow = window.last;
+            }
+        }
+        // Frozen ranges are materialized separately. There may be no scrolling row
+        // at all when the frozen top and bottom bands cover the entire model.
+        const qsizetype top = qsizetype(frozenRows());
+        const qsizetype lastScrollable = count - qsizetype(frozenBottomRows()) - 1;
+        if (firstRow >= 0 && top <= lastScrollable) {
+            firstRow = qBound<qsizetype>(top, firstRow, lastScrollable);
+            lastRow = qBound<qsizetype>(firstRow, lastRow, lastScrollable);
+        } else {
+            firstRow = -1;
+            lastRow = -1;
         }
     }
 
@@ -1986,8 +2308,16 @@ void VirtualItemView::relayout()
         // The view materializes its own widgets (table cell mode): it only needs
         // the ranges, not row widgets.
         materializeItemRanges(ranges);
+        if (m_materializationAborted) {
+            m_inRelayout = false;
+            return;
+        }
         syncItemPanes();
         syncRowSpacingWidgets(ranges);
+        if (m_materializationAborted) {
+            m_inRelayout = false;
+            return;
+        }
         m_inRelayout = false;
         syncScrollBars();
         afterMaterialize();
@@ -1997,81 +2327,90 @@ void VirtualItemView::relayout()
     }
 
     // ---- decide what to reuse, then recycle what is obsolete --------------
-    QHash<QPersistentModelIndex, qsizetype> existing;
-    existing.reserve(m_items.size());
-    for (qsizetype i = 0; i < m_items.size(); ++i)
-        existing.insert(m_items.at(i).index, i);
-
-    QVector<bool> claimed(int(m_items.size()), false);
-    QList<qsizetype> desiredRows;
-    QList<qsizetype> reuseIndex;
+    QList<QPair<qsizetype, QPersistentModelIndex>> desired;
+    QSet<QPersistentModelIndex> desiredIndexes;
     for (const VisibleRange &range : ranges) {
         for (qsizetype row = range.first; row >= 0 && row <= range.last; ++row) {
             const QModelIndex index = viewIndex(row);
+            if (abortStalePass())
+                return;
             if (!index.isValid())
                 continue;
             const QPersistentModelIndex persistent(index);
-            const auto it = existing.constFind(persistent);
-            if (it != existing.constEnd() && !claimed.at(it.value())) {
-                claimed[it.value()] = true;
-                desiredRows.append(row);
-                reuseIndex.append(it.value());
+            if (desiredIndexes.contains(persistent))
                 continue;
-            }
-            desiredRows.append(row);
-            reuseIndex.append(-1);
+            desiredIndexes.insert(persistent);
+            desired.append(qMakePair(row, persistent));
         }
     }
 
     // Recycling before creating lets the pool serve the incoming rows, so
     // steady state scrolling performs no allocation at all.
-    QList<MaterializedItem> keptPinned;
-    keptPinned.reserve(m_items.size());
-    for (qsizetype i = 0; i < m_items.size(); ++i) {
-        if (claimed.at(i))
-            continue;
+    for (qsizetype i = m_items.size(); i > 0;) {
+        --i;
         MaterializedItem item = m_items.at(i);
-        item.pinned = isPinnedItem(item);
-        if (item.pinned) {
-            const qsizetype row = viewItemForIndex(item.index);
-            item.geometry = row >= 0 && row < m_layout->itemCount()
-                ? geometryForViewRow(row)
-                : item.geometry;
-            keptPinned.append(item);
+        if (desiredIndexes.contains(item.index) || isPinnedItem(item))
             continue;
-        }
+        m_items.removeAt(i);
+        rebuildLookup();
         recycleItem(item);
-        // Drop the dangling pointer from the source list as well.
-        m_items[i].widget = nullptr;
+        if (abortStalePass())
+            return;
     }
 
     // ---- materialize ------------------------------------------------------
     QList<MaterializedItem> next;
     QList<qsizetype> nextRows;
-    next.reserve(desiredRows.size() + keptPinned.size());
-    nextRows.reserve(desiredRows.size() + keptPinned.size());
+    QSet<QPersistentModelIndex> nextIndexes;
+    next.reserve(desired.size() + m_items.size());
+    nextRows.reserve(desired.size() + m_items.size());
 
-    for (qsizetype k = 0; k < desiredRows.size(); ++k) {
-        const qsizetype row = desiredRows.at(k);
+    for (const auto &target : desired) {
+        const qsizetype row = target.first;
+        const QPersistentModelIndex index = target.second;
+        if (!index.isValid())
+            continue;
         MaterializedItem item;
-        if (reuseIndex.at(k) >= 0) {
-            item = m_items.at(reuseIndex.at(k));
+        const auto existing = m_itemLookup.constFind(index);
+        if (existing != m_itemLookup.constEnd()) {
+            item = m_items.at(existing.value());
         } else {
-            const QModelIndex index = viewIndex(row);
-            if (!index.isValid())
-                continue;
-            item = createItem(QPersistentModelIndex(index));
+            item = createItem(index);
+            if (abortStalePass())
+                return;
             if (!item.widget)
                 continue;
         }
         item.geometry = geometryForViewRow(row);
+        if (abortStalePass())
+            return;
         item.pinned = isPinnedItem(item);
         next.append(item);
         nextRows.append(row);
+        nextIndexes.insert(index);
     }
 
-    for (MaterializedItem &item : keptPinned) {
+    for (qsizetype i = m_items.size(); i > 0;) {
+        --i;
+        MaterializedItem item = m_items.at(i);
+        if (nextIndexes.contains(item.index))
+            continue;
+        if (!isPinnedItem(item)) {
+            m_items.removeAt(i);
+            rebuildLookup();
+            recycleItem(item);
+            if (abortStalePass())
+                return;
+            continue;
+        }
         const qsizetype row = viewItemForIndex(item.index);
+        if (abortStalePass())
+            return;
+        item.geometry = row >= 0 && row < m_layout->itemCount()
+            ? geometryForViewRow(row) : item.geometry;
+        if (abortStalePass())
+            return;
+        item.pinned = true;
         next.append(item);
         nextRows.append(row >= 0 ? row : std::numeric_limits<qsizetype>::max());
     }
@@ -2093,16 +2432,29 @@ void VirtualItemView::relayout()
     // The row panes decide the parent (the scrolling rows are clipped into their
     // pane) and, for the frozen rows, lift them above the scrolling pane.
     syncItemPanes();
-    for (MaterializedItem &item : m_items)
+    if (abortStalePass())
+        return;
+    for (MaterializedItem &item : m_items) {
         applyItemPaneGeometry(item, viewItemForIndex(item.index));
+        if (abortStalePass())
+            return;
+    }
     syncRowSpacingWidgets(ranges);
+    if (abortStalePass())
+        return;
     raiseItemPaneSeparatorLines();
 
     m_inRelayout = false;
 
     syncScrollBars();
+    if (abortStalePass())
+        return;
     afterMaterialize();
+    if (abortStalePass())
+        return;
     refreshHoveredIndex();
+    if (abortStalePass())
+        return;
     emit virtualizationUpdated();
 }
 
@@ -2110,12 +2462,35 @@ MaterializedItem VirtualItemView::createItem(const QPersistentModelIndex &index)
 {
     MaterializedItem item;
     item.index = index;
-    item.type = m_adapter->widgetType(index);
+    if (!m_adapter || !index.isValid())
+        return item;
+    const quint64 modelSerial = m_modelChangeSerial;
+    const quint64 mappingSerial = viewMappingSerial();
+    const quint64 lifecycleSerial = m_itemLifecycleSerial;
+    const QPointer<QAbstractItemModel> activeModel(m_model);
+    WidgetAdapter *const activeAdapter = m_adapter;
+    LayoutPolicy *const activeLayout = m_layout;
+    const auto requestIsCurrent = [this, &index, &activeModel, activeAdapter, activeLayout,
+                                   modelSerial, mappingSerial, lifecycleSerial]() {
+        return activeModel && m_model.data() == activeModel.data()
+            && m_modelChangeSerial == modelSerial && viewMappingSerial() == mappingSerial
+            && m_itemLifecycleSerial == lifecycleSerial && m_adapter == activeAdapter
+            && m_layout == activeLayout && usesItemWidgets() && index.isValid();
+    };
+    const QModelIndex modelIndex(index);
+    item.type = activeAdapter->widgetType(modelIndex);
+    if (!requestIsCurrent() || QModelIndex(index) != modelIndex)
+        return item;
 
     const qsizetype reuseBefore = m_recycler->reuseCount();
     QWidget *widget = m_recycler->acquire(item.type);
     if (!widget)
         return item;
+    QPointer<QWidget> guardedWidget(widget);
+    if (!requestIsCurrent() || QModelIndex(index) != modelIndex) {
+        m_recycler->discard(guardedWidget.data());
+        return item;
+    }
 
     if (m_lifecycleLogEnabled) {
         appendLifecycleLog(QStringLiteral("%1 type=%2 row=%3")
@@ -2129,11 +2504,53 @@ MaterializedItem VirtualItemView::createItem(const QPersistentModelIndex &index)
     item.widget = widget;
     if (widget->parentWidget() != viewport())
         widget->setParent(viewport());
+    if (!guardedWidget || !requestIsCurrent() || QModelIndex(index) != modelIndex) {
+        m_recycler->discard(guardedWidget.data());
+        item.widget = nullptr;
+        return item;
+    }
     // Never show a widget before it has been bound to its new index.
     widget->hide();
-    m_adapter->bindWidget(widget, QModelIndex(index));
+    if (!guardedWidget || !requestIsCurrent() || QModelIndex(index) != modelIndex) {
+        m_recycler->discard(guardedWidget.data());
+        item.widget = nullptr;
+        return item;
+    }
+    m_items.append(item);
+    rebuildLookup();
+    m_bindingWidgets.insert(widget);
+    const auto bindingIsCurrent = [this, &index, &modelIndex, &guardedWidget,
+                                   &requestIsCurrent, widget]() {
+        if (requestIsCurrent() && QModelIndex(index) == modelIndex && guardedWidget
+            && widgetForIndex(index) == widget)
+            return true;
+        m_bindingWidgets.remove(widget);
+        for (qsizetype i = 0; i < m_items.size(); ++i) {
+            if (m_items.at(i).widget != widget)
+                continue;
+            m_items.removeAt(i);
+            rebuildLookup();
+            m_recycler->discard(guardedWidget.data());
+            break;
+        }
+        return false;
+    };
+    activeAdapter->bindWidget(widget, modelIndex);
+    if (!bindingIsCurrent()) {
+        item.widget = nullptr;
+        return item;
+    }
     prepareHoverTracking(widget);
-    m_adapter->visualStateChanged(widget, QModelIndex(index));
+    if (!bindingIsCurrent()) {
+        item.widget = nullptr;
+        return item;
+    }
+    activeAdapter->visualStateChanged(widget, modelIndex);
+    if (!bindingIsCurrent()) {
+        item.widget = nullptr;
+        return item;
+    }
+    m_bindingWidgets.remove(widget);
     ++m_bindCount;
     if (m_lifecycleLogEnabled)
         appendLifecycleLog(QStringLiteral("bind row=%1").arg(index.row()));
@@ -2144,12 +2561,19 @@ void VirtualItemView::recycleItem(MaterializedItem &item)
 {
     if (!item.widget)
         return;
-    m_adapter->unbindWidget(item.widget, QModelIndex(item.index));
+    WidgetAdapter *const activeAdapter = m_adapter;
+    QPointer<QWidget> widget(item.widget);
+    if (activeAdapter)
+        activeAdapter->unbindWidget(item.widget, QModelIndex(item.index));
     clearVisualTransitionsForRow(QModelIndex(item.index));
     if (m_lifecycleLogEnabled)
         appendLifecycleLog(QStringLiteral("unbind row=%1").arg(item.index.row()));
-    item.widget->hide();
-    m_recycler->recycle(item.type, item.widget);
+    if (widget) {
+        if (m_adapter == activeAdapter && activeAdapter)
+            m_recycler->recycle(item.type, widget.data());
+        else
+            m_recycler->discard(widget.data());
+    }
     ++m_recycleCount;
     if (m_lifecycleLogEnabled)
         appendLifecycleLog(QStringLiteral("recycle type=%1").arg(item.type));
@@ -2158,12 +2582,26 @@ void VirtualItemView::recycleItem(MaterializedItem &item)
 
 void VirtualItemView::recycleAllItems()
 {
-    if (m_adapter) {
-        for (MaterializedItem &item : m_items)
-            recycleItem(item);
-    }
-    m_items.clear();
+    ++m_itemLifecycleSerial;
+    QList<MaterializedItem> items;
+    items.swap(m_items);
     m_itemLookup.clear();
+    QVector<QPointer<QWidget>> widgets;
+    widgets.reserve(items.size());
+    for (const MaterializedItem &item : items)
+        widgets.append(item.widget);
+    WidgetAdapter *const activeAdapter = m_adapter;
+    for (qsizetype i = 0; i < items.size(); ++i) {
+        MaterializedItem &item = items[i];
+        m_bindingWidgets.remove(item.widget);
+        item.widget = widgets.at(i).data();
+        if (activeAdapter && m_adapter == activeAdapter)
+            recycleItem(item);
+        else if (item.widget) {
+            m_recycler->discard(item.widget);
+            item.widget = nullptr;
+        }
+    }
 }
 
 bool VirtualItemView::hasFocusWithin(const QWidget *widget) const
@@ -2197,15 +2635,41 @@ void VirtualItemView::rebindItemsInModelRange(const QModelIndex &parent, int fir
 {
     if (!m_adapter)
         return;
-    for (MaterializedItem &item : m_items) {
-        const QModelIndex index = item.index;
+    const quint64 modelSerial = m_modelChangeSerial;
+    const quint64 mappingSerial = viewMappingSerial();
+    const quint64 lifecycleSerial = m_itemLifecycleSerial;
+    const QPointer<QAbstractItemModel> activeModel(m_model);
+    WidgetAdapter *const activeAdapter = m_adapter;
+    QList<QPersistentModelIndex> indexes;
+    indexes.reserve(m_items.size());
+    for (const MaterializedItem &item : m_items)
+        indexes.append(item.index);
+    for (const QPersistentModelIndex &persistent : indexes) {
+        if (!activeModel || m_modelChangeSerial != modelSerial
+            || viewMappingSerial() != mappingSerial || m_itemLifecycleSerial != lifecycleSerial
+            || m_adapter != activeAdapter)
+            return;
+        const QModelIndex index = persistent;
         if (!index.isValid() || index.parent() != parent)
             continue;
         const int row = index.row();
         if (row < first || row > last)
             continue;
-        m_adapter->bindWidget(item.widget, index);
-        m_adapter->visualStateChanged(item.widget, index);
+        QPointer<QWidget> widget(widgetForIndex(index));
+        if (!widget || m_bindingWidgets.contains(widget.data()))
+            continue;
+        activeAdapter->bindWidget(widget.data(), index);
+        if (!activeModel || m_modelChangeSerial != modelSerial
+            || viewMappingSerial() != mappingSerial || m_itemLifecycleSerial != lifecycleSerial
+            || m_adapter != activeAdapter)
+            return;
+        if (!widget || widgetForIndex(index) != widget.data())
+            continue;
+        activeAdapter->visualStateChanged(widget.data(), index);
+        if (!activeModel || m_modelChangeSerial != modelSerial
+            || viewMappingSerial() != mappingSerial || m_itemLifecycleSerial != lifecycleSerial
+            || m_adapter != activeAdapter)
+            return;
         ++m_bindCount;
         if (m_lifecycleLogEnabled)
             appendLifecycleLog(QStringLiteral("rebind row=%1").arg(row));
@@ -2257,20 +2721,42 @@ void VirtualItemView::recycleItemsInModelRange(const QModelIndex &parent, int fi
         return;
 
     QList<MaterializedItem> kept;
+    QList<MaterializedItem> removedItems;
     kept.reserve(m_items.size());
-    for (MaterializedItem &item : m_items) {
-        const QModelIndex index = item.index;
-        const bool removed = index.isValid() && index.parent() == parent
-            && index.row() >= first && index.row() <= last;
+    for (const MaterializedItem &item : m_items) {
+        QModelIndex branch = item.index;
+        while (branch.isValid() && branch.parent() != parent)
+            branch = branch.parent();
+        const bool removed = branch.isValid() && branch.row() >= first
+            && branch.row() <= last;
         if (!removed) {
             kept.append(item);
             continue;
         }
-        m_explicitPinned.remove(item.index);
-        recycleItem(item);
+        removedItems.append(item);
     }
-    m_items = kept;
+    m_items.swap(kept);
     rebuildLookup();
+    if (removedItems.isEmpty())
+        return;
+    ++m_itemLifecycleSerial;
+    QVector<QPointer<QWidget>> widgets;
+    widgets.reserve(removedItems.size());
+    for (const MaterializedItem &item : removedItems)
+        widgets.append(item.widget);
+    WidgetAdapter *const activeAdapter = m_adapter;
+    for (qsizetype i = 0; i < removedItems.size(); ++i) {
+        MaterializedItem &item = removedItems[i];
+        m_bindingWidgets.remove(item.widget);
+        item.widget = widgets.at(i).data();
+        m_explicitPinned.remove(item.index);
+        if (activeAdapter && m_adapter == activeAdapter)
+            recycleItem(item);
+        else if (item.widget) {
+            m_recycler->discard(item.widget);
+            item.widget = nullptr;
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -2513,6 +2999,8 @@ Qt::DropAction VirtualItemView::startDrag(const QModelIndex &index)
 {
     if (!m_model)
         return Qt::IgnoreAction;
+    const QPointer<QAbstractItemModel> sourceModel = m_model;
+    const quint64 modelSerial = m_modelChangeSerial;
 
     QModelIndex dragIndex = index;
     if (!dragIndex.isValid()) {
@@ -2522,6 +3010,8 @@ Qt::DropAction VirtualItemView::startDrag(const QModelIndex &index)
     }
     if (!canStartDrag(dragIndex))
         return Qt::IgnoreAction;
+    if (!sourceModel || m_modelChangeSerial != modelSerial)
+        return Qt::IgnoreAction;
 
     // The selection is the payload when the dragged item is part of it - and it is handed over
     // column for column, like Qt does: a *row* selection (SelectionBehavior::SelectRows) carries
@@ -2529,10 +3019,16 @@ Qt::DropAction VirtualItemView::startDrag(const QModelIndex &index)
     // carries just the dragged cell. Filtering the payload down to column 0 (the materialized row
     // identity) used to lose every other column of a row drag.
     QModelIndexList indexes = dragSourceIndexes(dragIndex);
+    if (!sourceModel || m_modelChangeSerial != modelSerial)
+        return Qt::IgnoreAction;
 
-    QMimeData *mime = m_model->mimeData(indexes);
+    QMimeData *mime = sourceModel->mimeData(indexes);
     if (!mime)
         return Qt::IgnoreAction;
+    if (!sourceModel || m_modelChangeSerial != modelSerial) {
+        delete mime;
+        return Qt::IgnoreAction;
+    }
 
     // §36/§38: the widget of the dragged item must survive the drag, otherwise a
     // scroll-induced recycle would destroy the drag source mid-gesture. The materialized unit of
@@ -2567,7 +3063,8 @@ Qt::DropAction VirtualItemView::startDrag(const QModelIndex &index)
     // when QAbstractItemView does it (after QDrag::exec(), before the drag state is released).
     const QList<QPersistentModelIndex> sources = m_dragSourceIndexes;
     finishDrag();
-    if (action == Qt::MoveAction && m_moveRemovesSourceRows)
+    if (action == Qt::MoveAction && m_moveRemovesSourceRows
+        && sourceModel && m_modelChangeSerial == modelSerial)
         removeDraggedSourceRows(sources);
     return action;
 }
@@ -2595,16 +3092,23 @@ QRect VirtualItemView::dragPixmapRect(const QModelIndex &index) const
     return QRect();   // the whole item widget is the preview
 }
 
+QModelIndex VirtualItemView::dragNodeIndex(const QModelIndex &index) const
+{
+    return index;
+}
+
 void VirtualItemView::removeDraggedSourceRows(const QList<QPersistentModelIndex> &sources)
 {
     if (!m_model || sources.isEmpty())
         return;
+    const QPointer<QAbstractItemModel> sourceModel = m_model;
+    const quint64 modelSerial = m_modelChangeSerial;
 
     // Group the dragged rows by parent: a tree drag can span several parents, and a dragged
     // parent already covers the dragged children below it (they are removed with it).
     QHash<QPersistentModelIndex, QList<qsizetype>> rowsPerParent;
     for (const QPersistentModelIndex &source : sources) {
-        if (!source.isValid())
+        if (!source.isValid() || source.model() != sourceModel)
             continue;   // the model removed it already (it performed the move itself)
         rowsPerParent[QPersistentModelIndex(source.parent())].append(source.row());
     }
@@ -2626,17 +3130,24 @@ void VirtualItemView::removeDraggedSourceRows(const QList<QPersistentModelIndex>
               });
 
     for (const QPersistentModelIndex &parent : parents) {
+        if (!sourceModel || m_modelChangeSerial != modelSerial
+            || (parent.isValid() && parent.model() != sourceModel))
+            return;
+        const bool hasParent = parent.isValid();
         QList<qsizetype> rows = rowsPerParent.value(parent);
         std::sort(rows.begin(), rows.end());
         rows.erase(std::unique(rows.begin(), rows.end()), rows.end());
         // Walk the runs from the last one upwards so the earlier rows keep their positions.
         qsizetype runEnd = rows.size() - 1;
         while (runEnd >= 0) {
+            if (!sourceModel || m_modelChangeSerial != modelSerial
+                || (hasParent && !parent.isValid()))
+                return;
             qsizetype runStart = runEnd;
             while (runStart > 0 && rows.at(runStart - 1) + 1 == rows.at(runStart))
                 --runStart;
             const qsizetype count = runEnd - runStart + 1;
-            m_model->removeRows(int(rows.at(runStart)), int(count), QModelIndex(parent));
+            sourceModel->removeRows(int(rows.at(runStart)), int(count), QModelIndex(parent));
             runEnd = runStart - 1;
         }
     }
@@ -2663,7 +3174,9 @@ bool VirtualItemView::isDropOnItself(const DropTarget &target, Qt::DropAction ac
     for (const QPersistentModelIndex &persistent : m_dragSourceIndexes) {
         if (!persistent.isValid())
             continue;
-        const QModelIndex source(persistent);
+        const QModelIndex source = dragNodeIndex(QModelIndex(persistent));
+        if (!source.isValid())
+            continue;
         // Into the dragged item, or into one of its descendants.
         for (QModelIndex ancestor = target.parent; ancestor.isValid(); ancestor = ancestor.parent()) {
             if (ancestor == source)
@@ -2722,13 +3235,17 @@ void VirtualItemView::dragMoveEvent(QDragMoveEvent *event)
     m_dragHoverPos = pos;
     m_dragHoverValid = true;
     const DropTarget target = resolveDropTarget(pos);
+    const QPointer<QAbstractItemModel> dropModel = m_model;
+    const quint64 modelSerial = m_modelChangeSerial;
+    const QPersistentModelIndex parent(target.parent);
     const Qt::DropAction action = event->dropAction() != Qt::IgnoreAction
         ? event->dropAction()
         : event->proposedAction();
     const bool canDrop = target.isValid() && !isDropOnItself(target, action)
-        && m_model->canDropMimeData(event->mimeData(), action, target.row, target.column,
-                                    target.parent);
-    if (!canDrop) {
+        && dropModel->canDropMimeData(event->mimeData(), action, target.row, target.column,
+                                      target.parent);
+    if (!canDrop || !dropModel || m_modelChangeSerial != modelSerial
+        || (target.parent.isValid() && !parent.isValid())) {
         hideDropIndicator();
         stopDragAutoscroll();
         event->ignore();
@@ -2757,19 +3274,30 @@ void VirtualItemView::dropEvent(QDropEvent *event)
         return;
     }
     const DropTarget target = resolveDropTarget(dropPosition(event));
+    const QPointer<QAbstractItemModel> dropModel = m_model;
+    const quint64 modelSerial = m_modelChangeSerial;
+    const QPersistentModelIndex parent(target.parent);
     const Qt::DropAction action = event->dropAction() != Qt::IgnoreAction
         ? event->dropAction()
         : event->proposedAction();
     if (!target.isValid() || isDropOnItself(target, action)
-        || !m_model->canDropMimeData(event->mimeData(), action, target.row, target.column,
-                                     target.parent)) {
+        || !dropModel->canDropMimeData(event->mimeData(), action, target.row, target.column,
+                                       target.parent)
+        || !dropModel || m_modelChangeSerial != modelSerial
+        || (target.parent.isValid() && !parent.isValid())) {
         event->ignore();
         return;
     }
     // The model owns the semantics: it inserts, moves or rejects (§38).
-    if (m_model->dropMimeData(event->mimeData(), action, target.row, target.column, target.parent)) {
+    const bool accepted = dropModel->dropMimeData(event->mimeData(), action, target.row,
+                                                   target.column, QModelIndex(parent));
+    if (!dropModel || m_modelChangeSerial != modelSerial) {
+        event->ignore();
+        return;
+    }
+    if (accepted) {
         event->acceptProposedAction();
-        emit itemDropped(target.parent, target.row, target.column, action);
+        emit itemDropped(QModelIndex(parent), target.row, target.column, action);
         markDirty();
     } else {
         event->ignore();
@@ -2991,7 +3519,7 @@ void VirtualItemView::keyPressEvent(QKeyEvent *event)
             const QItemSelectionModel::SelectionFlags command = selectionFlagsFor(
                 wasSelected ? QItemSelectionModel::Deselect : QItemSelectionModel::Select);
             if (command != QItemSelectionModel::NoUpdate) {
-                m_selectionModel->select(current, command);
+                m_selectionModel->select(selectionRange(current, current), command);
                 pinCurrentIndex(current);
             }
         }
@@ -3025,7 +3553,7 @@ void VirtualItemView::moveCurrentTo(qsizetype row, Qt::KeyboardModifiers modifie
             m_selectionModel->setCurrentIndex(index, QItemSelectionModel::Current);
             break;
         case SelectionMode::SingleSelection:
-            m_selectionModel->setCurrentIndex(index, QItemSelectionModel::ClearAndSelect | rowFlags());
+            selectCurrentIndex(index, QItemSelectionModel::ClearAndSelect);
             m_selectionAnchor = QPersistentModelIndex(index);
             break;
         case SelectionMode::MultiSelection:
@@ -3037,7 +3565,7 @@ void VirtualItemView::moveCurrentTo(qsizetype row, Qt::KeyboardModifiers modifie
                 // Move the current index and leave the selection untouched.
                 m_selectionModel->setCurrentIndex(index, QItemSelectionModel::Current | rowFlags());
             } else {
-                m_selectionModel->setCurrentIndex(index, QItemSelectionModel::ClearAndSelect | rowFlags());
+                selectCurrentIndex(index, QItemSelectionModel::ClearAndSelect);
                 pinCurrentIndex(index);
                 m_selectionAnchor = QPersistentModelIndex(index);
             }
@@ -3058,7 +3586,7 @@ void VirtualItemView::updateSelectionForClick(const QModelIndex &index, Qt::Keyb
         m_selectionModel->setCurrentIndex(index, QItemSelectionModel::Current);
         return;
     case SelectionMode::SingleSelection:
-        m_selectionModel->setCurrentIndex(index, selectionFlagsFor(QItemSelectionModel::ClearAndSelect));
+        selectCurrentIndex(index, selectionFlagsFor(QItemSelectionModel::ClearAndSelect));
         pinCurrentIndex(index);
         m_selectionAnchor = QPersistentModelIndex(index);
         return;
@@ -3076,7 +3604,7 @@ void VirtualItemView::updateSelectionForClick(const QModelIndex &index, Qt::Keyb
         toggleClickedIndex(index);
         return;
     }
-    m_selectionModel->setCurrentIndex(index, selectionFlagsFor(QItemSelectionModel::ClearAndSelect));
+    selectCurrentIndex(index, selectionFlagsFor(QItemSelectionModel::ClearAndSelect));
     pinCurrentIndex(index);
     m_selectionAnchor = QPersistentModelIndex(index);
 }
@@ -3092,7 +3620,7 @@ void VirtualItemView::toggleClickedIndex(const QModelIndex &index)
     const QItemSelectionModel::SelectionFlags command = selectionFlagsFor(
         wasSelected ? QItemSelectionModel::Deselect : QItemSelectionModel::Select);
     if (command != QItemSelectionModel::NoUpdate)
-        m_selectionModel->select(index, command);
+        m_selectionModel->select(selectionRange(index, index), command);
     m_selectionModel->setCurrentIndex(index, QItemSelectionModel::Current | rowFlags());
     pinCurrentIndex(index);
     m_selectionAnchor = QPersistentModelIndex(index);
@@ -3104,14 +3632,14 @@ void VirtualItemView::extendSelectionTo(const QModelIndex &index)
         return;
     // QItemSelectionModel has no "extend" flag, so the range is built from the
     // anchor explicitly.
-    if (!m_selectionAnchor.isValid())
-        m_selectionAnchor = QPersistentModelIndex(m_selectionModel->currentIndex());
+    if (!m_selectionAnchor.isValid() || viewItemForIndex(m_selectionAnchor) < 0) {
+        const QModelIndex current = m_selectionModel->currentIndex();
+        m_selectionAnchor = QPersistentModelIndex(
+            current.isValid() && viewItemForIndex(current) >= 0 ? current : index);
+    }
     const QModelIndex base = m_selectionAnchor.isValid() ? QModelIndex(m_selectionAnchor) : index;
     const QItemSelectionModel::SelectionFlags command = selectionFlagsFor(QItemSelectionModel::ClearAndSelect);
-    if (base.isValid() && base.parent() == index.parent())
-        m_selectionModel->select(QItemSelection(base, index), command);
-    else
-        m_selectionModel->select(index, command);
+    m_selectionModel->select(selectionRange(base, index), command);
     m_selectionModel->setCurrentIndex(index, QItemSelectionModel::Current | rowFlags());
     pinCurrentIndex(index);
 }
@@ -3126,8 +3654,14 @@ void VirtualItemView::onDataChanged(const QModelIndex &topLeft, const QModelInde
     Q_UNUSED(roles);
     if (!topLeft.isValid() || !bottomRight.isValid())
         return;
-    if (topLeft.parent() != bottomRight.parent() || !isLayoutParent(topLeft.parent()))
+    if (topLeft.parent() != bottomRight.parent())
         return;
+    if (managesVisibleRows()) {
+        if (viewItemForIndex(topLeft) < 0)
+            return;
+    } else if (!isLayoutParent(topLeft.parent())) {
+        return;
+    }
 
     // Identities are unchanged: rebind only the affected materialized items.
     rebindItemsInRange(topLeft, bottomRight);
@@ -3193,6 +3727,10 @@ void VirtualItemView::onRowsMoved(const QModelIndex &sourceParent, int start, in
 {
     if (!isLayoutParent(sourceParent) || !isLayoutParent(destParent)) {
         // Cross-parent moves change the visible mapping entirely.
+        if (managesVisibleRows()) {
+            markDirty();
+            return;
+        }
         recycleAllItems();
         resetLayoutForNewModel();
         markDirty();
@@ -3214,7 +3752,8 @@ void VirtualItemView::onLayoutAboutToBeChanged(const QList<QPersistentModelIndex
     setPendingAnchor(captureAnchor());
     // The mapping between rows and items may have been rewritten completely:
     // rebuild the materialized set from scratch.
-    recycleAllItems();
+    if (!managesVisibleRows())
+        recycleAllItems();
 }
 
 void VirtualItemView::onLayoutChanged(const QList<QPersistentModelIndex> &parents,
@@ -3223,7 +3762,8 @@ void VirtualItemView::onLayoutChanged(const QList<QPersistentModelIndex> &parent
     Q_UNUSED(parents);
     Q_UNUSED(hint);
     // Sizes are keyed by row, so they cannot be trusted after a reorder.
-    resetLayoutForNewModel();
+    if (!managesVisibleRows())
+        resetLayoutForNewModel();
     markDirty();
 }
 
@@ -3240,7 +3780,8 @@ void VirtualItemView::onModelReset()
 {
     m_scrollOffset = 0;
     m_scrollMapper.resetAnchor();
-    resetLayoutForNewModel();
+    if (!managesVisibleRows())
+        resetLayoutForNewModel();
     markDirty();
 }
 

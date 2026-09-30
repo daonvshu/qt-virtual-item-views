@@ -47,6 +47,8 @@ private slots:
     void compactStateRoundTripStaysCompact();
     void versionTwoStateStillRestores();
     void spacingFollowsVisibleOrderAndStretch();
+    void perSectionSpacingKeepsPositionsAndGapsAligned();
+    void sparseSpacingKeepsLargeUniformGeometryCompact();
     void panePositionsIncludeColumnSpacing();
 };
 
@@ -1200,6 +1202,67 @@ void TestHeaderGeometry::spacingFollowsVisibleOrderAndStretch()
     geometry.setSectionStretchFactor(0, 1.0);
     geometry.setStretchExtent(300);
     QCOMPARE(geometry.totalExtent(), qint64(300));
+}
+
+void TestHeaderGeometry::perSectionSpacingKeepsPositionsAndGapsAligned()
+{
+    HeaderGeometry geometry(Qt::Vertical);
+    geometry.setMinimumSectionSize(1);
+    geometry.setDefaultSectionSize(30);
+    geometry.setSectionCount(4);
+    geometry.setSectionSpacing(2);
+    geometry.setSectionSpacingOverrides({2, 9, 0, 2});
+    QCOMPARE(geometry.totalExtent(), qint64(131));
+    QCOMPARE(geometry.sectionPosition(2), qint64(71));
+    QCOMPARE(geometry.sectionPosition(3), qint64(101));
+    QCOMPARE(geometry.sectionAtOffset(62), -1);
+    QCOMPARE(geometry.sectionAtOffset(70), -1);
+    QCOMPARE(geometry.sectionAtOffset(71), 2);
+    QCOMPARE(geometry.sectionAtOffset(101), 3);
+
+    geometry.resizeSection(1, 40);
+    QCOMPARE(geometry.sectionPosition(2), qint64(81));
+    geometry.moveSection(0, 3);
+    QCOMPARE(geometry.sectionPosition(1), qint64(0));
+    QCOMPARE(geometry.sectionPosition(2), qint64(49));
+    QCOMPARE(geometry.sectionAtOffset(45), -1);
+
+    geometry.setSectionCount(3);
+    QCOMPARE(geometry.sectionSpacingAfter(1), 2);
+    QCOMPARE(geometry.totalExtent(), qint64(104));
+}
+
+void TestHeaderGeometry::sparseSpacingKeepsLargeUniformGeometryCompact()
+{
+    HeaderGeometry geometry(Qt::Vertical);
+    geometry.setMinimumSectionSize(1);
+    geometry.setDefaultSectionSize(10);
+    geometry.setSectionCount(1000000);
+    geometry.setSectionSpacing(2);
+    geometry.setSparseSectionSpacingOverrides({{1, 5}, {500000, 0}});
+
+    QVERIFY(geometry.isUniform());
+    QCOMPARE(geometry.storedSectionStateCount(), 0);
+    QCOMPARE(geometry.sectionSpacingAfter(1), 5);
+    QCOMPARE(geometry.sectionSpacingAfter(500000), 0);
+    QCOMPARE(geometry.sectionPosition(2), qint64(27));
+    QCOMPARE(geometry.sectionAtOffset(22), -1);
+    QCOMPARE(geometry.sectionAtOffset(27), 2);
+    QCOMPARE(geometry.sectionPosition(500001), qint64(6000013));
+    QCOMPARE(geometry.totalExtent(), qint64(11999999));
+    geometry.setSectionSpacing(3);
+    QCOMPARE(geometry.sectionPosition(2), qint64(28));
+    QCOMPARE(geometry.totalExtent(), qint64(12999996));
+    geometry.setSectionSpacing(2);
+
+    geometry.setSectionCount(6);
+    QCOMPARE(geometry.sectionSpacingAfter(1), 2);
+    QCOMPARE(geometry.totalExtent(), qint64(70));
+    geometry.setSparseSectionSpacingOverrides({{1, 5}, {3, 0}});
+    QCOMPARE(geometry.totalExtent(), qint64(71));
+    geometry.setSectionSpacingOverrides({2, 9, 0, 2, 2, 2});
+    QCOMPARE(geometry.sectionSpacingAfter(1), 9);
+    QCOMPARE(geometry.sectionPosition(2), qint64(31));
 }
 
 void TestHeaderGeometry::panePositionsIncludeColumnSpacing()

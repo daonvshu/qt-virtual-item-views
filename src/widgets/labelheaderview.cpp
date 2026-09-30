@@ -39,6 +39,14 @@ void LabelHeaderSection::setSortOrder(int order)
     update();
 }
 
+void LabelHeaderSection::setLogicalIndex(int logicalIndex)
+{
+    if (m_logicalIndex == logicalIndex)
+        return;
+    m_logicalIndex = logicalIndex;
+    update();
+}
+
 void LabelHeaderSection::paintEvent(QPaintEvent *)
 {
     // The same section widget renders both axes (the column header and the row-number
@@ -85,7 +93,7 @@ void LabelHeaderSection::paintEvent(QPaintEvent *)
     painter.fillRect(QRect(width() - 2, 0, 2, height()), palette().brush(QPalette::Button));
     painter.fillRect(QRect(0, height() - 2, width(), 2), palette().brush(QPalette::Button));
     const bool hasGap = header && header->geometryModel()
-        && header->geometryModel()->sectionSpacing() > 0;
+        && header->geometryModel()->sectionSpacingAfter(m_logicalIndex) > 0;
     const QColor sectionColor = header && header->sectionSeparatorColor().isValid()
         ? header->sectionSeparatorColor() : headerSectionSeparatorColor(this);
     const QColor crossColor = header && header->crossAxisSeparatorColor().isValid()
@@ -162,6 +170,7 @@ void LabelHeaderAdapter::bindSection(QWidget *widget, int logicalIndex)
         orientation = header->orientation();
     section->setText(labelText(logicalIndex, orientation));
     section->setSortOrder(sortOrderFor(logicalIndex));
+    section->setLogicalIndex(logicalIndex);
 }
 
 void LabelHeaderAdapter::unbindSection(QWidget *widget, int logicalIndex)
@@ -171,6 +180,7 @@ void LabelHeaderAdapter::unbindSection(QWidget *widget, int logicalIndex)
     auto *section = static_cast<LabelHeaderSection *>(widget);
     section->setText(QString());
     section->setSortOrder(-1);
+    section->setLogicalIndex(-1);
 }
 
 QString LabelHeaderAdapter::labelText(int logicalIndex, Qt::Orientation orientation) const

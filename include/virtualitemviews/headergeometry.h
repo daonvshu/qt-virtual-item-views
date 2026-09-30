@@ -2,6 +2,7 @@
 
 #include <QByteArray>
 #include <QObject>
+#include <QPair>
 #include <QVector>
 #include <Qt>
 #include <QtGlobal>
@@ -99,6 +100,13 @@ public:
     /// Blank pixels between visible sections; excluded after the last section.
     int sectionSpacing() const { return m_sectionSpacing; }
     void setSectionSpacing(int pixels);
+    /// Replaces the spacing after each logical section. Empty restores sectionSpacing().
+    /// Overrides are a transient layout projection and clear on structure changes.
+    void setSectionSpacingOverrides(const QVector<int> &spacings);
+    /// Sorted logical-index/spacing pairs for sparse row gaps. Entries equal to the
+    /// default spacing are omitted; structure changes clear this projection too.
+    void setSparseSectionSpacingOverrides(const QVector<QPair<int, int>> &spacings);
+    int sectionSpacingAfter(int logicalIndex) const;
     int minimumSectionSize() const { return m_minimumSectionSize; }
     void setMinimumSectionSize(int size);
     int maximumSectionSize() const { return m_maximumSectionSize; }
@@ -269,6 +277,9 @@ private:
     /// maximum range in one pass, emitting at most one geometryChanged().
     void clampSectionsToTheSizeRange();
     void invalidateCaches();
+    void rebuildSpacingPrefix();
+    qint64 spacingDeltaBefore(int logicalIndex) const;
+    void clearSpacingOverrides();
     void emitGeometryChanged();
     bool isValidVisualOrder(const QVector<qint32> &order) const;
     bool isValidLogical(int logicalIndex) const;
@@ -300,6 +311,9 @@ private:
 
     int m_defaultSectionSize = 100;
     int m_sectionSpacing = 0;
+    QVector<int> m_sectionSpacingOverrides;
+    QVector<QPair<int, int>> m_sparseSpacingOverrides;
+    QVector<qint64> m_spacingDeltaPrefix;
     int m_minimumSectionSize = 24;
     int m_maximumSectionSize = 100000;
     qint64 m_viewportOffset = 0;

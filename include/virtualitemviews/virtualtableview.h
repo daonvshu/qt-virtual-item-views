@@ -136,7 +136,7 @@ public:
     bool isVerticalHeaderResizeEnabled() const { return m_verticalHeaderResizeEnabled; }
 
     // -- geometry ------------------------------------------------------------
-    int columnCount() const;
+    virtual int columnCount() const;
     ColumnGeometry columnGeometry(int logicalIndex) const;
     int columnWidth(int logicalIndex) const;
     using ColumnSpacingFactory = std::function<QWidget *(int, QWidget *)>;
@@ -365,8 +365,8 @@ public:
     /// (and with takeOwnership = true deletes) the current provider.
     void setSpanProvider(TableSpanProvider *provider, bool takeOwnership = false);
     TableSpanProvider *spanProvider() const { return m_spanProvider; }
-    /// Convenience for the map provider: merges the cells starting at
-    /// (\a row, \a column). Creates the owned TableSpanMap on first use.
+    /// Convenience for the map provider: merges the cells starting at the
+    /// visible (\a row, \a column). Creates the owned TableSpanMap on first use.
     void setSpan(int row, int column, int rowSpan = 1, int columnSpan = 1);
     /// Drops the span anchored at (\a row, \a column).
     void removeSpan(int row, int column);
@@ -436,6 +436,7 @@ public:
     void setVisualStateScope(VisualStateScope scope);
     VisualStateScope visualStateScope() const { return m_visualStateScope; }
     VisualState visualState(const QModelIndex &index) const override;
+    QModelIndex indexForWidget(const QWidget *widget) const override;
     QModelIndex cellIndexForWidget(const QWidget *widget) const;
     QList<QModelIndex> materializedCellIndexes() const;
 
@@ -451,6 +452,30 @@ signals:
     void rowHeightChanged(qsizetype row, int height);
 
 protected:
+    /// Parent whose columns define the shared table schema.
+    virtual QModelIndex columnSchemaParent() const;
+    virtual bool isColumnSchemaParent(const QModelIndex &parent) const;
+    /// The default implementation moves flat top-level rows.
+    virtual void moveRowsForStripDrag(int fromRow, int toRow);
+    /// A tree can reject a span that crosses a visible hierarchy boundary.
+    virtual bool isSpanValid(const QModelIndex &anchor, const TableSpan &span) const;
+    virtual QRect spanRowRect(qsizetype row) const;
+    /// Space reserved before the content of a cell (zero for a flat table).
+    virtual int leadingCellInset(const QModelIndex &index) const;
+    /// Portion of a horizontal row line occupied by tree decoration, in viewport x.
+    virtual QRect rowGridLineExclusion(int depth) const;
+    /// Visual x of a column while its header section is being dragged or animated.
+    bool columnVisualX(int logicalIndex, int *viewportX) const;
+    /// Refreshes the horizontal line masks after tree decoration moves.
+    void syncRowGridLines();
+    /// Lets derived views move decorations with a header's visual column position.
+    virtual void visualColumnGeometryChanged() {}
+    /// Reapply row heights keyed by persistent model indexes after visible rows change.
+    void reapplyExplicitRowHeights();
+    /// Reapply heights only for newly visible rows, preserving measurements elsewhere.
+    void reapplyExplicitRowHeightsInRange(qsizetype first, qsizetype last);
+    void rekeyPersistentTableState();
+    void recycleAllCells();
     qsizetype viewItemCount() const override;
     QModelIndex viewIndex(qsizetype item, int column = 0) const override;
     qsizetype viewItemForIndex(const QModelIndex &index) const override;
@@ -542,7 +567,6 @@ private:
     /// that request to rowMoveRequested() + moveRows().
     void watchRowStrip(HeaderViewInterface *strip);
     /// Row move of a strip drag: report it, then ask the model to move the rows.
-    void moveRowsForStripDrag(int fromRow, int toRow);
     /// Forwards the gesture switches (drag / resize, both axes) to the installed renderers
     /// - the installed headers, the pane clones and the frozen-row bands. A renderer that
     /// is not a VirtualHeaderView (a business' own HeaderViewInterface) has no such
@@ -570,7 +594,6 @@ private:
     /// Visual x of \a logicalIndex while a horizontal renderer draws it away from
     /// its committed position; false when every renderer is on the committed
     /// geometry (or has no visual state for that section).
-    bool columnVisualX(int logicalIndex, int *viewportX) const;
     /// The renderer placed its sections: move the body's columns in the same frame.
     void onHeaderVisualGeometryFrame();
     /// Geometry-only refresh while the body follows a header animation: re-positions
@@ -586,7 +609,6 @@ private:
     /// Lifts the body lines above the (re)materialized items.
     void raisePaneSeparatorLines();
     void syncColumnSpacingWidgets();
-    void syncRowGridLines();
     void applyGridLineVisibilityToHeaders();
     QColor resolvedVerticalGridLineColor() const;
     QColor resolvedHorizontalGridLineColor() const;
@@ -633,7 +655,6 @@ private:
     void updateRowHeaderGeometry();
     /// Re-applies the heights the user set (m_explicitRowHeights, keyed by row identity) after a
     /// layout change rebuilt every derived size from the estimate.
-    void reapplyExplicitRowHeights();
     /// Cell granularity (SelectionBehavior::SelectItems) previews only the dragged cell: the
     /// materialized widget is the whole row, so the host the framework placed for that column is
     /// what the pixmap is cut down to.
@@ -645,7 +666,9 @@ private:
     QRect cellRect(qsizetype row, int logicalColumn) const;
     QWidget *createCellWidget(const QPersistentModelIndex &index);
     void recycleCell(const QPersistentModelIndex &index, QWidget *widget);
-    void recycleAllCells();
+    void discardCellWidget(QWidget *widget);
+    /// Dispatches cell state callbacks from an index snapshot; an invalid row means all cells.
+    void notifyCellVisualStates(const QModelIndex &row);
     bool isCellPinned(const QPersistentModelIndex &index, const QWidget *widget) const;
     void updateCellGeometry();
 
@@ -708,11 +731,14 @@ private:
     bool m_ownVerticalHeader = false;
     TableWidgetAdapter *m_tableAdapter = nullptr;
     bool m_ownTableAdapter = false;
+    quint64 m_tableAdapterChangeSerial = 0;
     CellWidgetAdapter *m_cellAdapter = nullptr;
     bool m_ownCellAdapter = false;
     MaterializationMode m_materializationMode = MaterializationMode::RowWidgets;
     QHash<QPersistentModelIndex, QWidget *> m_cells;
     QHash<QWidget *, WidgetType> m_cellTypes;
+    quint64 m_cellConfigurationSerial = 0;
+    quint64 m_cellLifecycleSerial = 0;
     bool m_cellMaterializationActive = false;
 
     int m_headerHeight = 28;

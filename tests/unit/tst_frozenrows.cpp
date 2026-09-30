@@ -147,6 +147,7 @@ private slots:
     void frozenRowsSurviveTheStateRoundTrip();
     void rowBoundaryLooksLikeTheColumnBoundary();
     void frozenRowsAreClampedToWhatFits();
+    void allRowsCanBeFrozenWithoutScrollableRows();
 };
 
 void TestFrozenRows::noFrozenRowsKeepsEverythingAsBefore()
@@ -675,6 +676,32 @@ void TestFrozenRows::frozenRowsAreClampedToWhatFits()
     for (const ItemPane &pane : panes)
         height += pane.viewportRect.height();
     QCOMPARE(height, view.viewport()->height());
+}
+
+void TestFrozenRows::allRowsCanBeFrozenWithoutScrollableRows()
+{
+    NumericListModel model(2);
+    TestAdapter adapter(kRowHeight);
+    VirtualListView view;
+    view.setAdapter(&adapter);
+    view.setUniformItemHeight(kRowHeight);
+    view.setModel(&model);
+    showView(&view, QSize(kViewWidth, 100));
+
+    view.setFrozenRows(1);
+    view.setFrozenBottomRows(1);
+    view.flushPendingRelayout();
+    QCOMPARE(view.frozenRows(), 1);
+    QCOMPARE(view.frozenBottomRows(), 1);
+    QCOMPARE(view.materializedItemCount(), qsizetype(2));
+    QVERIFY(adapter.widgetForRow(0));
+    QVERIFY(adapter.widgetForRow(1));
+    const QVector<VisibleRange> ranges = view.visibleItemRanges();
+    QCOMPARE(ranges.size(), 2);
+    QCOMPARE(ranges.at(0).first, qsizetype(0));
+    QCOMPARE(ranges.at(0).last, qsizetype(0));
+    QCOMPARE(ranges.at(1).first, qsizetype(1));
+    QCOMPARE(ranges.at(1).last, qsizetype(1));
 }
 
 QTEST_MAIN(TestFrozenRows)

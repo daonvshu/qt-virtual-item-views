@@ -50,6 +50,8 @@ public:
     /// Returns \a widget to the pool of \a type. The widget is hidden; when the
     /// pool is full the widget is scheduled for deletion (deleteLater()).
     void recycle(WidgetType type, QWidget *widget);
+    /// Retires an acquired widget without making it available for reuse.
+    void discard(QWidget *widget);
 
     /// Upper bound of the pool of \a type. A negative size means unlimited.
     void setMaxPoolSize(WidgetType type, qsizetype size);

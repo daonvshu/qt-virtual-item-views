@@ -36,6 +36,7 @@ public:
 
     void setText(const QString &text);
     void setSortOrder(int order);
+    void setLogicalIndex(int logicalIndex);
 
 protected:
     void paintEvent(QPaintEvent *event) override;
@@ -50,6 +51,7 @@ protected:
 private:
     QString m_text;
     int m_sortOrder = -1;
+    int m_logicalIndex = -1;
 };
 
 /// The header adapter of the built-in label header: one label per section, taken

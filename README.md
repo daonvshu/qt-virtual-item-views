@@ -13,6 +13,7 @@
 | 表格布局 | 列宽比例分配、左右冻结列、上下冻结行、多滚动组、合并单元格 | [布局与合并](docs/table-layout-guide.md) |
 | 表头 | 排序、自定义控件、行列拖动换序、动画与状态恢复 | [表头与排序](docs/headers.md)、[列布局持久化](docs/header-persistence.md) |
 | 树 | 展开/折叠、按深度设置行间距、键盘导航、缩进和分支图标 | [树视图](docs/tree.md) |
+| 多列表格树 | 树节点展开、表格列布局、表头、冻结 pane 与单元格控件 | [多列表格树](docs/tree-table.md) |
 | 通用交互 | 选择、拖放、编辑器焦点与弹窗 | [选择与拖放](docs/interaction.md) |
 | 可访问性与诊断 | 可见项接口、物化统计和生命周期日志 | [可访问性与诊断](docs/accessibility-guide.md) |
 

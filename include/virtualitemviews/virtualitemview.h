@@ -408,7 +408,7 @@ public:
     qsizetype materializedItemCount() const { return m_items.size(); }
     qsizetype pinnedItemCount() const;
     QWidget *widgetForIndex(const QModelIndex &index) const;
-    QModelIndex indexForWidget(const QWidget *widget) const;
+    virtual QModelIndex indexForWidget(const QWidget *widget) const;
     const QList<MaterializedItem> &materializedItems() const { return m_items; }
 
     qsizetype pooledWidgetCount() const;
@@ -427,6 +427,7 @@ signals:
     /// Emitted after the model accepted a drop (§38) with the target the model
     /// received; a refused drop emits nothing (the model said no).
     void itemDropped(const QModelIndex &parent, int row, int column, Qt::DropAction action);
+    void selectionModelChanged(QItemSelectionModel *selectionModel);
     /// Emitted after every completed materialization pass.
     void virtualizationUpdated();
 
@@ -440,11 +441,27 @@ protected:
     virtual qsizetype viewItemForIndex(const QModelIndex &index) const = 0;
     /// True when \a parent owns the items of the layout.
     virtual bool isLayoutParent(const QModelIndex &parent) const = 0;
+    /// A view with its own flattened row index updates the layout after model signals.
+    virtual bool managesVisibleRows() const { return false; }
+    /// Changes whenever a model replacement begins, including nested replacements.
+    quint64 modelChangeSerial() const { return m_modelChangeSerial; }
+    /// Changes when a derived view replaces its visible row/root mapping.
+    virtual quint64 viewMappingSerial() const { return 0; }
+    /// Rehash persistent-index keyed state after a model changes index coordinates.
+    void rekeyPersistentState();
+    /// Whether a persistent index still identifies a row in this view after a model change.
+    virtual bool isPersistentRowStateValid(const QModelIndex &index) const;
+    const QSet<QPersistentModelIndex> &explicitPinnedIndexes() const { return m_explicitPinned; }
     /// Tree depth of an index; used by the future tree layout.
     virtual int itemDepth(const QModelIndex &index) const;
     /// Index used when the current item moves to \a item. The default is
     /// viewIndex(item); a table keeps the current column instead.
     virtual QModelIndex indexForNavigation(qsizetype item, const QModelIndex &current) const;
+    /// Selection covered by a Shift gesture from anchor to target.
+    virtual QItemSelection selectionRange(const QModelIndex &anchor,
+                                          const QModelIndex &target) const;
+    /// Views with a narrower column schema build row selections explicitly.
+    virtual bool usesExplicitRowSelection() const { return false; }
     /// Estimated size of an item that has never been measured (0 = layout
     /// estimate).
     virtual int estimateItemSize(qsizetype item) const;
@@ -513,6 +530,8 @@ protected:
     /// table cuts the row widget down to the dragged cell), so the drag preview shows what the
     /// drop would move.
     virtual QRect dragPixmapRect(const QModelIndex &index) const;
+    /// Identity used when checking whether a move drops onto its source or descendant.
+    virtual QModelIndex dragNodeIndex(const QModelIndex &index) const;
     /// Removes the rows a finished drag dragged (see setMoveRemovesSourceRows()). Parents are
     /// handled deepest first and rows from the last one upwards, so no removal shifts an index
     /// that is still to come; rows the model already removed are skipped.
@@ -548,6 +567,8 @@ protected:
     /// this as the only place the policy is set) - it is not a runtime swap
     /// (P1 of the third review).
     void setLayoutPolicy(LayoutPolicy *policy, bool takeOwnership = true);
+    /// Installs an adapter without relayout when a derived view must first update its typed pointer.
+    bool installAdapter(WidgetAdapter *adapter, bool takeOwnership, bool relayoutAfter);
     /// Rebuilds the layout item count from the model (after a model change).
     void resetLayoutForNewModel();
 
@@ -555,6 +576,8 @@ protected:
     void markDirty();
     /// Runs a materialization pass immediately.
     void relayout();
+    bool relayoutActive() const { return m_inRelayout; }
+    void abortMaterializationPass();
 
     ScrollAnchor captureAnchor() const;
     void setPendingAnchor(const ScrollAnchor &anchor);
@@ -636,6 +659,8 @@ private:
     /// Re-asserts the current index after a selection command whose Rows/Columns
     /// flag may have moved it to the start of the row/column.
     void pinCurrentIndex(const QModelIndex &index);
+    void selectCurrentIndex(const QModelIndex &index,
+                            QItemSelectionModel::SelectionFlags command);
     QItemSelectionModel::SelectionFlags rowFlags() const;
     /// Selection flags of a command (Select / Deselect / Toggle / ClearAndSelect)
     /// with the SelectionBehavior applied. Every selection mutation goes through
@@ -679,6 +704,7 @@ private:
     /// Both are watched: a business that deletes its model (or selection model)
     /// before the view must not leave the view with a dangling pointer.
     QPointer<QAbstractItemModel> m_model;
+    quint64 m_modelChangeSerial = 0;
     QPointer<QItemSelectionModel> m_selectionModel;
     QPersistentModelIndex m_hoveredIndex;
     struct VisualTransition {
@@ -699,12 +725,15 @@ private:
     bool m_ownSelectionModel = false;
     WidgetAdapter *m_adapter = nullptr;
     bool m_ownAdapter = false;
+    quint64 m_adapterChangeSerial = 0;
     LayoutPolicy *m_layout = nullptr;
     bool m_ownLayout = false;
     WidgetRecycler *m_recycler = nullptr;
 
     QList<MaterializedItem> m_items;
     QHash<QPersistentModelIndex, qsizetype> m_itemLookup;
+    QSet<QWidget *> m_bindingWidgets;
+    quint64 m_itemLifecycleSerial = 0;
     QSet<QPersistentModelIndex> m_explicitPinned;
 
     ScrollMapper m_scrollMapper;
@@ -721,6 +750,7 @@ private:
     QHash<int, QVector<QWidget *>> m_rowSpacingPool;
     RowSpacingFactory m_rowSpacingFactory;
     RowSpacingBinder m_rowSpacingBinder;
+    quint64 m_rowSpacingStateSerial = 0;
     int m_rowSpacing = 0;
     PaneSeparatorStyle m_itemPaneSeparatorStyle;
     ScrollAnchor m_pendingAnchor;
@@ -769,6 +799,8 @@ private:
     int m_measurePasses = 0;
 
     bool m_inRelayout = false;
+    bool m_destroying = false;
+    bool m_materializationAborted = false;
     bool m_relayoutScheduled = false;
 };
 

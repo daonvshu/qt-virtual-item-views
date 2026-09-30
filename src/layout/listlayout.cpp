@@ -239,11 +239,13 @@ void ListLayout::insertItems(qsizetype index, qsizetype count, int estimate)
     if (!m_sizeIndex || count <= 0)
         return;
     const int effective = estimate > 0 ? estimate : m_estimate;
+    const int previousUniformSize = m_sizeIndex->isUniform() ? m_sizeIndex->uniformSize() : -1;
     m_sizeIndex->insert(index, count, effective);
     m_spacings.insert(index, count, m_defaultSpacing);
     if (m_hasSpacingOverrides) {
-        m_extents.insert(index, count, effective + m_defaultSpacing);
-        if (m_sizeIndex->isUniform()) {
+        const int insertedSize = m_sizeIndex->isUniform() ? m_sizeIndex->uniformSize() : effective;
+        m_extents.insert(index, count, insertedSize + m_defaultSpacing);
+        if (m_sizeIndex->isUniform() && m_sizeIndex->uniformSize() != previousUniformSize) {
             m_extents.reset(itemCount(), m_sizeIndex->uniformSize() + m_defaultSpacing);
             for (qsizetype row = 0; row < itemCount(); ++row)
                 m_extents.setSize(row, itemSize(row) + m_spacings.sizeOf(row));

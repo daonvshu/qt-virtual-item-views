@@ -153,6 +153,20 @@ void WidgetRecycler::recycle(WidgetType type, QWidget *widget)
     pool.append(widget);
 }
 
+void WidgetRecycler::discard(QWidget *widget)
+{
+    if (!widget)
+        return;
+    if (m_activeCount > 0)
+        --m_activeCount;
+    QPointer<QWidget> guardedWidget(widget);
+    widget->hide();
+    if (!guardedWidget)
+        return;
+    ++m_pendingDestructions;
+    guardedWidget->deleteLater();
+}
+
 void WidgetRecycler::trim()
 {
     for (auto it = m_pools.begin(); it != m_pools.end(); ++it) {

@@ -53,6 +53,7 @@ public:
     QAbstractItemModel *model() const { return m_model; }
 
     /// Root of the flattened sub-tree (invalid = the model's invisible root).
+    /// A valid root and every ancestor must be in logical column zero.
     QModelIndex rootIndex() const { return m_rootIndex; }
     void setRootIndex(const QModelIndex &index);
 
@@ -73,6 +74,7 @@ public:
     /// Number of ancestors of \a index (top level items have depth 0).
     int depth(const QModelIndex &index) const;
 
+    /// Expansion accepts only nodes in the logical column-zero hierarchy.
     void expand(const QModelIndex &index);
     void collapse(const QModelIndex &index);
     /// Expands \a index and every branch below it (QTreeView's `*`). The

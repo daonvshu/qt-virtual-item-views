@@ -40,6 +40,7 @@ void HeaderGeometry::setSectionCount(int count)
     const int clamped = qMax(0, count);
     if (clamped == sectionCount())
         return;
+    clearSpacingOverrides();
 
     if (m_uniformCount > 0) {
         // Uniform: every section is default-sized, visible and in logical order, so a
@@ -271,6 +272,7 @@ void HeaderGeometry::insertLogicalSections(int first, int count)
 {
     if (count <= 0)
         return;
+    clearSpacingOverrides();
     if (sectionCount() == 0) {
         setSectionCount(count);
         return;
@@ -359,6 +361,7 @@ void HeaderGeometry::removeLogicalSections(int first, int count)
         const int removed = qMin(count, m_uniformCount - at);
         if (removed <= 0)
             return;
+        clearSpacingOverrides();
         QVector<int> keys;
         QVector<int> sizes;
         QVector<qreal> factors;
@@ -393,6 +396,7 @@ void HeaderGeometry::removeLogicalSections(int first, int count)
     const int removed = qMin(count, total - at);
     if (removed <= 0)
         return;
+    clearSpacingOverrides();
 
     QVector<Section> sections;
     sections.reserve(total - removed);
@@ -643,9 +647,113 @@ void HeaderGeometry::setSectionSpacing(int pixels)
     if (m_sectionSpacing == spacing)
         return;
     m_sectionSpacing = spacing;
+    rebuildSpacingPrefix();
     invalidateCaches();
     applyStretch();
     emitGeometryChanged();
+}
+
+void HeaderGeometry::setSectionSpacingOverrides(const QVector<int> &spacings)
+{
+    if (!spacings.isEmpty() && spacings.size() != sectionCount())
+        return;
+    QVector<int> normalized;
+    if (!spacings.isEmpty()) {
+        normalized.reserve(spacings.size());
+        bool differs = false;
+        for (int spacing : spacings) {
+            const int value = qMax(0, spacing);
+            normalized.append(value);
+            differs |= value != m_sectionSpacing;
+        }
+        if (!differs)
+            normalized.clear();
+    }
+    if (m_sectionSpacingOverrides == normalized && m_sparseSpacingOverrides.isEmpty())
+        return;
+    m_sectionSpacingOverrides.swap(normalized);
+    m_sparseSpacingOverrides.clear();
+    rebuildSpacingPrefix();
+    invalidateCaches();
+    applyStretch();
+    emitGeometryChanged();
+}
+
+void HeaderGeometry::setSparseSectionSpacingOverrides(const QVector<QPair<int, int>> &spacings)
+{
+    QVector<QPair<int, int>> normalized;
+    normalized.reserve(spacings.size());
+    int previous = -1;
+    for (const auto &entry : spacings) {
+        if (entry.first <= previous || entry.first >= sectionCount())
+            return;
+        previous = entry.first;
+        const int spacing = qMax(0, entry.second);
+        if (spacing != m_sectionSpacing)
+            normalized.append(qMakePair(entry.first, spacing));
+    }
+    if (m_sparseSpacingOverrides == normalized && m_sectionSpacingOverrides.isEmpty())
+        return;
+    m_sparseSpacingOverrides.swap(normalized);
+    m_sectionSpacingOverrides.clear();
+    rebuildSpacingPrefix();
+    invalidateCaches();
+    applyStretch();
+    emitGeometryChanged();
+}
+
+int HeaderGeometry::sectionSpacingAfter(int logicalIndex) const
+{
+    if (!isValidLogical(logicalIndex))
+        return m_sectionSpacing;
+    if (!m_sectionSpacingOverrides.isEmpty())
+        return m_sectionSpacingOverrides.at(logicalIndex);
+    const auto found = std::lower_bound(m_sparseSpacingOverrides.cbegin(),
+                                        m_sparseSpacingOverrides.cend(), logicalIndex,
+                                        [](const QPair<int, int> &entry, int key) {
+                                            return entry.first < key;
+                                        });
+    return found != m_sparseSpacingOverrides.cend() && found->first == logicalIndex
+        ? found->second : m_sectionSpacing;
+}
+
+void HeaderGeometry::rebuildSpacingPrefix()
+{
+    m_spacingDeltaPrefix.clear();
+    if (!m_sectionSpacingOverrides.isEmpty()) {
+        m_spacingDeltaPrefix.reserve(m_sectionSpacingOverrides.size() + 1);
+        m_spacingDeltaPrefix.append(0);
+        for (int spacing : m_sectionSpacingOverrides)
+            m_spacingDeltaPrefix.append(m_spacingDeltaPrefix.last()
+                                        + qint64(spacing - m_sectionSpacing));
+    } else if (!m_sparseSpacingOverrides.isEmpty()) {
+        m_spacingDeltaPrefix.reserve(m_sparseSpacingOverrides.size() + 1);
+        m_spacingDeltaPrefix.append(0);
+        for (const auto &entry : m_sparseSpacingOverrides)
+            m_spacingDeltaPrefix.append(m_spacingDeltaPrefix.last()
+                                        + qint64(entry.second - m_sectionSpacing));
+    }
+}
+
+qint64 HeaderGeometry::spacingDeltaBefore(int logicalIndex) const
+{
+    if (!m_sectionSpacingOverrides.isEmpty())
+        return m_spacingDeltaPrefix.value(logicalIndex, 0);
+    if (m_sparseSpacingOverrides.isEmpty())
+        return 0;
+    const auto found = std::lower_bound(m_sparseSpacingOverrides.cbegin(),
+                                        m_sparseSpacingOverrides.cend(), logicalIndex,
+                                        [](const QPair<int, int> &entry, int key) {
+                                            return entry.first < key;
+                                        });
+    return m_spacingDeltaPrefix.at(int(found - m_sparseSpacingOverrides.cbegin()));
+}
+
+void HeaderGeometry::clearSpacingOverrides()
+{
+    m_sectionSpacingOverrides.clear();
+    m_sparseSpacingOverrides.clear();
+    m_spacingDeltaPrefix.clear();
 }
 
 void HeaderGeometry::setDefaultSectionSize(int size)
@@ -771,7 +879,8 @@ void HeaderGeometry::rebuildCaches() const
         m_visibleLogicalOrder.clear();
         m_totalExtent = qint64(m_uniformCount) * qint64(m_defaultSectionSize)
             + m_sparseDeltaPrefix.value(m_sparseKeys.size(), 0)
-            + qint64(qMax(0, m_uniformCount - 1)) * m_sectionSpacing;
+            + qint64(qMax(0, m_uniformCount - 1)) * m_sectionSpacing
+            + spacingDeltaBefore(qMax(0, m_uniformCount - 1));
         m_cacheDirty = false;
         return;
     }
@@ -788,10 +897,11 @@ void HeaderGeometry::rebuildCaches() const
         if (section.hidden)
             continue;
         m_visibleLogicalOrder.append(logical);
-        position += section.size + m_sectionSpacing;
+        position += section.size + sectionSpacingAfter(logical);
     }
 
-    m_totalExtent = position - (m_visibleLogicalOrder.isEmpty() ? 0 : m_sectionSpacing);
+    m_totalExtent = position - (m_visibleLogicalOrder.isEmpty()
+        ? 0 : sectionSpacingAfter(m_visibleLogicalOrder.last()));
     m_cacheDirty = false;
 }
 
@@ -808,7 +918,8 @@ qint64 HeaderGeometry::sectionPosition(int logicalIndex) const
         return 0;
     if (m_uniformCount > 0) {
         return qint64(logicalIndex) * (qint64(m_defaultSectionSize) + m_sectionSpacing)
-            + sparseDeltaBefore(logicalIndex);
+            + sparseDeltaBefore(logicalIndex)
+            + spacingDeltaBefore(logicalIndex);
     }
     if (m_cacheDirty)
         rebuildCaches();
@@ -825,6 +936,18 @@ int HeaderGeometry::sectionViewportPosition(int logicalIndex) const
 int HeaderGeometry::visualSectionAtOffset(qint64 contentOffset) const
 {
     if (m_uniformCount > 0) {
+        if (!m_sectionSpacingOverrides.isEmpty() || !m_sparseSpacingOverrides.isEmpty()) {
+            int low = 0;
+            int high = m_uniformCount - 1;
+            while (low < high) {
+                const int mid = low + (high - low + 1) / 2;
+                if (sectionPosition(mid) <= contentOffset)
+                    low = mid;
+                else
+                    high = mid - 1;
+            }
+            return qMin(low, m_uniformCount - 1);
+        }
         // Identity order and one uniform size: the section is one division away - but the
         // sparse size overrides shift the positions, so the (short) override list decides
         // which region the offset falls into.
@@ -876,7 +999,9 @@ int HeaderGeometry::sectionAtOffset(qint64 contentOffset) const
 {
     const int visual = visualSectionAtOffset(contentOffset);
     const int logical = visual < 0 ? -1 : logicalIndex(visual);
-    if (m_sectionSpacing == 0 || contentOffset < 0 || contentOffset >= totalExtent())
+    if ((m_sectionSpacing == 0 && m_sectionSpacingOverrides.isEmpty()
+         && m_sparseSpacingOverrides.isEmpty())
+        || contentOffset < 0 || contentOffset >= totalExtent())
         return logical;
     return logical >= 0 && contentOffset < sectionPosition(logical) + sectionSize(logical)
         ? logical : -1;
@@ -933,6 +1058,7 @@ void HeaderGeometry::moveLogicalSections(int start, int count, int destination)
         : clampedDestination;
     if (target == start)
         return;
+    clearSpacingOverrides();
 
     // Permutation of logical indices caused by the model move.
     const auto remap = [start, count, target](int logical) {
@@ -985,6 +1111,7 @@ void HeaderGeometry::moveLogicalSectionSizes(int start, int count, int destinati
     const int to = qBound(0, destination, total);
     if (to >= start && to <= start + count)
         return;
+    clearSpacingOverrides();
     const int target = to > start ? to - count : to;
 
     struct Entry { int key; int size; qreal factor; };

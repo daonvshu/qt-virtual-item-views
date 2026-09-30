@@ -1,5 +1,13 @@
 #include <virtualitemviews/tablespan.h>
 
+#include <QPair>
+#include <QVector>
+
+#include <algorithm>
+#include <functional>
+#include <iterator>
+#include <map>
+
 namespace viv {
 
 QModelIndex TableSpanProvider::anchorOf(const QModelIndex &index) const
@@ -23,8 +31,8 @@ QModelIndex TableSpanProvider::anchorOf(const QModelIndex &index) const
             // itself and every lookup would answer with the cell it started at.
             if (!span.isMerged() || span.rowSpan < 1 || span.columnSpan < 1)
                 continue;
-            if (row + span.rowSpan - 1 >= index.row()
-                && column + span.columnSpan - 1 >= index.column()) {
+            if (qint64(row) + span.rowSpan - 1 >= index.row()
+                && qint64(column) + span.columnSpan - 1 >= index.column()) {
                 return candidate;
             }
         }
@@ -74,20 +82,77 @@ void TableSpanMap::clearSpans()
     m_overlapWarningShown = false;
 }
 
+void TableSpanMap::modelStructureChanged()
+{
+    using Entry = QPair<QPersistentModelIndex, TableSpan>;
+    QHash<QPersistentModelIndex, QVector<Entry>> byParent;
+    for (auto it = m_spans.cbegin(); it != m_spans.cend(); ++it) {
+        if (it.key().isValid())
+            byParent[it.key().parent()].append(qMakePair(it.key(), it.value()));
+    }
+    m_spans.clear();
+    for (auto group = byParent.begin(); group != byParent.end(); ++group) {
+        auto &entries = group.value();
+        std::sort(entries.begin(), entries.end(), [](const Entry &left, const Entry &right) {
+            if (left.first.model() != right.first.model())
+                return std::less<const QAbstractItemModel *>()(left.first.model(),
+                                                                right.first.model());
+            return left.first.row() == right.first.row()
+                ? left.first.column() < right.first.column()
+                : left.first.row() < right.first.row();
+        });
+        std::map<int, qint64> activeColumns;
+        std::multimap<qint64, int> expirations;
+        const QAbstractItemModel *currentModel = nullptr;
+        for (const Entry &entry : entries) {
+            if (entry.first.model() != currentModel) {
+                activeColumns.clear();
+                expirations.clear();
+                currentModel = entry.first.model();
+            }
+            const int row = entry.first.row();
+            const int column = entry.first.column();
+            while (!expirations.empty() && expirations.begin()->first < row) {
+                activeColumns.erase(expirations.begin()->second);
+                expirations.erase(expirations.begin());
+            }
+            const qint64 lastColumn = qint64(column) + entry.second.columnSpan - 1;
+            const auto next = activeColumns.lower_bound(column);
+            const bool overlap = (next != activeColumns.end() && next->first <= lastColumn)
+                || (next != activeColumns.begin()
+                    && std::prev(next)->second >= column);
+            if (overlap) {
+                if (!m_overlapWarningShown) {
+                    m_overlapWarningShown = true;
+                    qWarning("TableSpanMap::modelStructureChanged(): reordered spans overlap; "
+                             "the later anchor was removed");
+                }
+                continue;
+            }
+            activeColumns.emplace(column, lastColumn);
+            expirations.emplace(qint64(row) + entry.second.rowSpan - 1, column);
+            m_spans.insert(entry.first, entry.second);
+        }
+    }
+    recomputeMaximum();
+}
+
 bool TableSpanMap::overlapsExisting(const QModelIndex &anchor, const TableSpan &span) const
 {
     const QPersistentModelIndex self(anchor);
     for (auto it = m_spans.constBegin(); it != m_spans.constEnd(); ++it) {
-        if (it.key() == self || !it.key().isValid())
+        if (it.key() == self || !it.key().isValid()
+            || it.key().model() != anchor.model()
+            || it.key().parent() != anchor.parent())
             continue;                       // replacing one's own span is allowed
         const QModelIndex other = it.key();
         const TableSpan otherSpan = it.value();
         // Two model rectangles are disjoint when one of them ends before the
         // other begins on either axis.
-        const bool disjoint = anchor.row() + span.rowSpan - 1 < other.row()
-            || other.row() + otherSpan.rowSpan - 1 < anchor.row()
-            || anchor.column() + span.columnSpan - 1 < other.column()
-            || other.column() + otherSpan.columnSpan - 1 < anchor.column();
+        const bool disjoint = qint64(anchor.row()) + span.rowSpan - 1 < other.row()
+            || qint64(other.row()) + otherSpan.rowSpan - 1 < anchor.row()
+            || qint64(anchor.column()) + span.columnSpan - 1 < other.column()
+            || qint64(other.column()) + otherSpan.columnSpan - 1 < anchor.column();
         if (!disjoint)
             return true;
     }

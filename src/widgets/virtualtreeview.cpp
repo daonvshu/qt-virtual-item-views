@@ -61,9 +61,14 @@ void VirtualTreeView::setModel(QAbstractItemModel *model)
     m_rootIndex = QModelIndex();
     m_visibility->setRootIndex(m_rootIndex);
 
+    const quint64 previousChangeSerial = modelChangeSerial();
     VirtualItemView::setModel(model);
-    connectModelSignals(model);
+    if (modelChangeSerial() != previousChangeSerial + 1)
+        return;
+    connectModelSignals(this->model());
     resetLayoutForNewModel();
+    if (modelChangeSerial() != previousChangeSerial + 1)
+        return;
     relayout();
 }
 
@@ -403,8 +408,10 @@ void VirtualTreeView::setBranchIndicatorsVisible(bool visible)
 
 void VirtualTreeView::setBranchIndicatorRenderer(BranchIndicatorRenderer *renderer, bool takeOwnership)
 {
-    if (m_branchRenderer == renderer)
+    if (m_branchRenderer == renderer) {
+        m_ownBranchRenderer = m_ownBranchRenderer || (renderer && takeOwnership);
         return;
+    }
     if (m_ownBranchRenderer)
         delete m_branchRenderer;
     m_branchRenderer = renderer;
