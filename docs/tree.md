@@ -62,20 +62,21 @@ tree.setVisualStateAnimationDuration(150);
 
 `tree.setHoverBackgroundColor(QColor("#e7f4ed"))` 和 `tree.setSelectedBackgroundColor(QColor("#b9d9f1"))` 分别设置业务控件可读取的颜色；更改后可见节点会收到重绘通知。
 
-## 按深度设置行间距
+## 节点间距
 
-树的间距跟在上方节点之后，按这个节点的深度计算；默认行间距为 0，各深度默认没有覆盖值，末个可见节点后没有间距。普通行间距和深度覆盖可以组合：
+创建节点时由应用根据深度或业务属性计算间距，写入第 0 列的 `NodeRowSpacingRole`（两种树视图均为 `Qt::UserRole + 0x100`）：
 
 ```cpp
-tree.setRowSpacing(6);          // 默认深度
-tree.setDepthRowSpacing(0, 18); // 顶层节点后
-tree.setDepthRowSpacing(1, 4);  // 子节点后
-tree.setDepthRowSpacing(1, -1); // 取消深度 1 的覆盖，恢复默认值
-tree.setRowGridLinesVisible(true);
-tree.setRowGridLineWidth(2);
-tree.setRowGridLineColor(QColor("#5b7280"));
-tree.setRowGridLineExtent(viv::VirtualTreeView::RowGridLineExtent::NodeAndIcon);
+const int spacing = depth == 0 ? 18 : depth == 1 ? 4 : 0;
+item->setData(spacing, viv::VirtualTreeView::NodeRowSpacingRole);
+item->setData(8, viv::VirtualTreeView::NodeRowSpacingAboveRole); // 节点上方
+// 自定义模型在 data(index, NodeRowSpacingRole) 中返回节点保存的间距。
+tree.setRowSpacing(6); // 节点未提供间距时的回退值
 ```
+
+`NodeRowSpacingBelowRole` 是原 `NodeRowSpacingRole` 的明确别名（下方间距），`NodeRowSpacingAboveRole` 为 `Qt::UserRole + 0x101`（上方间距）。相邻可见节点间距为前一节点下方值加后一节点上方值；下方缺失/无效/负值回退到 `rowSpacing()`，上方缺失/无效/负值为 0。第一可见节点上方和末节点下方不额外留白。修改任一 role 并发送 dataChanged 后更新布局。
+
+仅在第二个及后续根节点上方留白，创建节点时设置 `depth == 0 && rootRow > 0 ? 12 : 0` 到 `NodeRowSpacingAboveRole`，并将默认及节点下方间距设为 0。展开后，留白仍位于根节点之前。节点移动或更换显示根不会改写模型保存的间距。旧的按深度、同级和层级统一设置接口已移除。
 
 分割线默认显示，绘制范围默认为 `FullWidth`（整行）。`NodeOnly` 仅从上方节点的内容区域左侧开始，`NodeAndIcon` 从该节点的图标格左侧开始；三种模式都绘制连续横线，起点随上方节点深度变化。间距为 0 时绘制单条行线，有间距时在留白上下边缘绘制，范围设置对两者都生效。`setRowGridLinesVisible(false)` 可隐藏这些线。默认间距为空白；自定义间距控件使用列表相同的 `setRowSpacingFactory()`；创建与绑定回调收到的是上方节点的索引，可用 `tree.itemDepth(index)` 区分深度。控件按可见范围创建，并在同一深度内复用。
 

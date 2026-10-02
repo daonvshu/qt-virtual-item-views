@@ -57,6 +57,20 @@ using namespace vivtest;
 
 namespace {
 
+void setNodeSpacingAtDepth(QAbstractItemModel &model, const QModelIndex &root,
+                           int targetDepth, int pixels)
+{
+    const auto visit = [&](const auto &self, const QModelIndex &parent, int depth) -> void {
+        for (int row = 0; row < model.rowCount(parent); ++row) {
+            const QModelIndex node = model.index(row, 0, parent);
+            if (depth == targetDepth)
+                model.setData(node, pixels, VirtualTreeTableView::NodeRowSpacingRole);
+            self(self, node, depth + 1);
+        }
+    };
+    visit(visit, root, 0);
+}
+
 QList<QStandardItem *> row(const QString &name)
 {
     return {new QStandardItem(name), new QStandardItem(name + QStringLiteral(" type")),
@@ -2625,9 +2639,9 @@ void TestTreeTableViewInteraction::depthSpacingKeepsRowHeadersAndHitTestsAligned
     VirtualTreeTableView view;
     configure(&view, &model, false);
     view.setRowSpacing(4);
-    view.setDepthRowSpacing(0, 8);
-    view.setDepthRowSpacing(1, 13);
-    view.setDepthRowSpacing(2, 21);
+    setNodeSpacingAtDepth(model, view.rootIndex(), 0, 8);
+    setNodeSpacingAtDepth(model, view.rootIndex(), 1, 13);
+    setNodeSpacingAtDepth(model, view.rootIndex(), 2, 21);
     const QModelIndex root = model.index(0, 0);
     const QModelIndex child = model.index(0, 0, root);
     const QModelIndex grandchild = model.index(0, 0, child);
@@ -2665,7 +2679,7 @@ void TestTreeTableViewInteraction::depthSpacingKeepsRowHeadersAndHitTestsAligned
     };
     verify({root, child, grandchild, sibling}, {8, 13, 21});
 
-    view.setDepthRowSpacing(1, 0);
+    setNodeSpacingAtDepth(model, view.rootIndex(), 1, 0);
     view.flushPendingRelayout();
     verify({root, child, grandchild, sibling}, {8, 0, 21});
 
@@ -2685,7 +2699,7 @@ void TestTreeTableViewInteraction::customSpacingWidgetsFollowVisibleNodesAndHead
     VirtualTreeTableView view;
     configure(&view, &model, false);
     view.setRowSpacing(8);
-    view.setDepthRowSpacing(1, 12);
+    setNodeSpacingAtDepth(model, view.rootIndex(), 1, 12);
     view.setColumnSpacing(9);
     view.setRowSpacingFactory([](const QModelIndex &, QWidget *parent) {
         auto *label = new QLabel(parent);
@@ -2804,7 +2818,7 @@ void TestTreeTableViewInteraction::customSpacingWidgetsFollowAdvancedPanes()
     view.setDefaultColumnWidth(100);
     view.setColumnOverscan(0);
     view.setRowSpacing(8);
-    view.setDepthRowSpacing(1, 12);
+    setNodeSpacingAtDepth(model, view.rootIndex(), 1, 12);
     view.setColumnSpacing(9);
     view.setFrozenColumns({0});
     view.setFrozenRows(1);
@@ -3042,7 +3056,7 @@ void TestTreeTableViewInteraction::customBranchRendererFollowsAdvancedPanes()
     settle();
     QCOMPARE(pixel(marker(child)), leafA);
     view.setRowSpacing(4);
-    view.setDepthRowSpacing(1, 6);
+    setNodeSpacingAtDepth(model, view.rootIndex(), 1, 6);
     view.setColumnSpacing(4);
     const QModelIndex spanAnchor = child.siblingAtColumn(1);
     view.setSpan(int(view.visibilityIndex()->visibleRowForIndex(child)), 1, 1, 2);
@@ -5414,7 +5428,7 @@ void TestTreeTableViewInteraction::scrollHintsPositionExpandedNodes()
     }
     const QModelIndex parent = model.index(0, 0);
     view.expand(parent);
-    view.setDepthRowSpacing(1, 5);
+    setNodeSpacingAtDepth(model, view.rootIndex(), 1, 5);
     const QModelIndex target = model.index(80, 1, parent);
     const qsizetype visible = view.visibilityIndex()->visibleRowForIndex(target);
     view.setRowHeight(visible, 44);
@@ -5492,8 +5506,8 @@ void TestTreeTableViewInteraction::itemWheelStepsAcrossVariableTreeRows()
     VirtualTreeTableView view;
     configure(&view, &model, cells);
     view.setRowSpacing(3);
-    view.setDepthRowSpacing(1, 5);
-    view.setDepthRowSpacing(2, 9);
+    setNodeSpacingAtDepth(model, view.rootIndex(), 1, 5);
+    setNodeSpacingAtDepth(model, view.rootIndex(), 2, 9);
     if (frozen) {
         view.setFrozenRows(1);
         view.setFrozenBottomRows(1);
@@ -7324,7 +7338,7 @@ void TestTreeTableViewInteraction::rowHeightsAndScrollAnchorsFollowNodes()
     view.setDefaultColumnWidth(100);
     view.setOverscan(0, 0);
     view.setRowSpacing(3);
-    view.setDepthRowSpacing(1, 7);
+    setNodeSpacingAtDepth(model, view.rootIndex(), 1, 7);
     if (cells) {
         view.setCellAdapter(&cellAdapter);
         view.setMaterializationMode(VirtualTableView::MaterializationMode::CellWidgets);
@@ -11128,8 +11142,8 @@ void TestTreeTableViewInteraction::customHeadersFollowTreeGeometry()
     view.setUniformItemHeight(28);
     view.setDefaultColumnWidth(100);
     view.setRowSpacing(6);
-    view.setDepthRowSpacing(1, 9);
-    view.setDepthRowSpacing(2, 3);
+    setNodeSpacingAtDepth(model, view.rootIndex(), 1, 9);
+    setNodeSpacingAtDepth(model, view.rootIndex(), 2, 3);
     view.setColumnSpacing(6);
     if (cells) {
         view.setCellAdapter(new CellAdapter, true);

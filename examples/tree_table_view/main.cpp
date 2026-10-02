@@ -120,14 +120,19 @@ int main(int argc, char **argv)
         auto deviceRow = makeRow(QStringLiteral("设备 %1").arg(device), QStringLiteral("设备"),
                                  QStringLiteral("在线"));
         QStandardItem *deviceItem = deviceRow.first();
+        deviceItem->setData(0, viv::VirtualTreeTableView::NodeRowSpacingBelowRole);
+        deviceItem->setData(device > 0 ? 12 : 0,
+                            viv::VirtualTreeTableView::NodeRowSpacingAboveRole);
         for (int channel = 0; channel < 8; ++channel) {
             auto channelRow = makeRow(QStringLiteral("通道 %1").arg(channel),
                                       QStringLiteral("通道"));
             QStandardItem *channelItem = channelRow.first();
+            channelItem->setData(4, viv::VirtualTreeTableView::NodeRowSpacingRole);
             for (int point = 0; point < 4; ++point) {
-                channelItem->appendRow(makeRow(QStringLiteral("测点 %1").arg(point),
-                                               QStringLiteral("测点"),
-                                               QStringLiteral("正常")));
+                auto pointRow = makeRow(QStringLiteral("测点 %1").arg(point),
+                                        QStringLiteral("测点"), QStringLiteral("正常"));
+                pointRow.first()->setData(0, viv::VirtualTreeTableView::NodeRowSpacingRole);
+                channelItem->appendRow(pointRow);
             }
             deviceItem->appendRow(channelRow);
         }
@@ -177,35 +182,8 @@ int main(int argc, char **argv)
     rowSpacing->setValue(view.rowSpacing());
     spacingToolbar->addWidget(rowSpacing);
 
-    spacingToolbar->addWidget(new QLabel(QStringLiteral("深度 0: "), &window));
-    auto *depth0Spacing = new QSpinBox(&window);
-    depth0Spacing->setRange(0, 150);
-    depth0Spacing->setSpecialValueText(QStringLiteral("默认"));
-    depth0Spacing->setSuffix(QStringLiteral(" px"));
-    spacingToolbar->addWidget(depth0Spacing);
-    spacingToolbar->addWidget(new QLabel(QStringLiteral("深度 1: "), &window));
-    auto *depth1Spacing = new QSpinBox(&window);
-    depth1Spacing->setRange(0, 150);
-    depth1Spacing->setSpecialValueText(QStringLiteral("默认"));
-    depth1Spacing->setSuffix(QStringLiteral(" px"));
-    spacingToolbar->addWidget(depth1Spacing);
     QObject::connect(rowSpacing, QOverload<int>::of(&QSpinBox::valueChanged),
-                     &view, [&view, depth0Spacing, depth1Spacing](int pixels) {
-                         view.setRowSpacing(pixels);
-                         if (depth0Spacing->value() > 0)
-                             view.setDepthRowSpacing(0, depth0Spacing->value());
-                         if (depth1Spacing->value() > 0)
-                             view.setDepthRowSpacing(1, depth1Spacing->value());
-                     });
-    QObject::connect(depth0Spacing, QOverload<int>::of(&QSpinBox::valueChanged),
-                     &view, [&view](int pixels) {
-                         view.setDepthRowSpacing(0, pixels > 0 ? pixels : -1);
-                     });
-    QObject::connect(depth1Spacing, QOverload<int>::of(&QSpinBox::valueChanged),
-                     &view, [&view](int pixels) {
-                         view.setDepthRowSpacing(1, pixels > 0 ? pixels : -1);
-                     });
-
+                     &view, &viv::VirtualItemView::setRowSpacing);
     spacingToolbar->addWidget(new QLabel(QStringLiteral("列间距: "), &window));
     auto *columnSpacing = new QSpinBox(&window);
     columnSpacing->setRange(0, 100);

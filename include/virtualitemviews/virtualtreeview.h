@@ -61,9 +61,14 @@ public:
     // -- branch UI -----------------------------------------------------------
     void setIndentation(int pixels);
     int indentation() const { return m_indentation; }
-    /// Gap below a node of this depth. Negative pixels restore the common row spacing.
-    void setDepthRowSpacing(int depth, int pixels);
-    int depthRowSpacing(int depth) const;
+    /// Model data on column zero: pixels below this node; missing/negative values
+    /// use rowSpacing(). The last visible node has no trailing gap.
+    static constexpr int NodeRowSpacingRole = Qt::UserRole + 0x100;
+    /// Explicit name for the existing below-node role.
+    static constexpr int NodeRowSpacingBelowRole = NodeRowSpacingRole;
+    /// Pixels above this node, added to the preceding node's below gap.
+    /// Missing/negative values mean zero; the first visible row has no leading gap.
+    static constexpr int NodeRowSpacingAboveRole = Qt::UserRole + 0x101;
     /// Row separators are visible by default, including after nodes with zero spacing.
     void setRowGridLinesVisible(bool visible);
     bool rowGridLinesVisible() const { return m_rowGridLinesVisible; }
@@ -123,6 +128,8 @@ protected:
     /// A tree never maps model rows onto layout rows directly: model mutations
     /// are handled through TreeVisibilityIndex instead.
     bool isLayoutParent(const QModelIndex &parent) const override;
+    /// Rebuild the visible mapping before layout queries after model mutations.
+    bool managesVisibleRows() const override { return true; }
     QRect geometryForViewRow(qsizetype row) const override;
     void configureRowSpacingWidget(QWidget *widget) const override;
     bool handleItemKeyPress(QKeyEvent *event) override;
@@ -145,6 +152,8 @@ protected:
     void paintEvent(QPaintEvent *event) override;
 
 private:
+    /// Resolves the gap from node data, falling back to rowSpacing().
+    int effectiveRowSpacing(qsizetype row) const;
     void connectModelSignals(QAbstractItemModel *model);
     void onStructureChanged();
     /// A column change only invalidates the cells the visible-row index points at (the row
@@ -178,7 +187,6 @@ private:
     ListLayout *m_rowLayout = nullptr;
     QPersistentModelIndex m_rootIndex;
     int m_indentation = 20;
-    QHash<int, int> m_depthRowSpacing;
     QHash<qsizetype, QWidget *> m_rowGridLines;
     QVector<QWidget *> m_rowGridLinePool;
     QColor m_rowGridLineColor;

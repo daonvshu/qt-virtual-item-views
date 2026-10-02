@@ -30,6 +30,8 @@ namespace {
 struct Node
 {
     QString name;
+    int rowSpacing = 0;
+    int rowSpacingAbove = 0;
     Node *parent = nullptr;
     QVector<Node *> children;
 
@@ -45,9 +47,11 @@ public:
     {
         for (int device = 0; device < deviceCount; ++device) {
             auto *node = new Node;
+            node->rowSpacingAbove = device > 0 ? 12 : 0;
             node->name = QStringLiteral("设备 %1").arg(device);
             for (int channel = 0; channel < 20; ++channel) {
                 auto *channelNode = new Node;
+                channelNode->rowSpacing = 4;
                 channelNode->name = QStringLiteral("通道 %1").arg(channel);
                 channelNode->parent = node;
                 for (int point = 0; point < 5; ++point) {
@@ -110,9 +114,14 @@ public:
 
     QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override
     {
-        if (!index.isValid() || role != Qt::DisplayRole)
+        if (!index.isValid())
             return QVariant();
-        return static_cast<Node *>(index.internalPointer())->name;
+        const auto *node = static_cast<Node *>(index.internalPointer());
+        if (role == viv::VirtualTreeView::NodeRowSpacingRole)
+            return node->rowSpacing;
+        if (role == viv::VirtualTreeView::NodeRowSpacingAboveRole)
+            return node->rowSpacingAbove;
+        return role == Qt::DisplayRole ? QVariant(node->name) : QVariant();
     }
 
     QVariant headerData(int, Qt::Orientation orientation, int role) const override
@@ -306,24 +315,14 @@ int main(int argc, char **argv)
     indentation->setRange(0, 60);
     indentation->setValue(view->indentation());
     toolbar->addWidget(indentation);
-    toolbar->addWidget(new QLabel(QStringLiteral("默认行间距: "), &window));
+    window.addToolBarBreak();
+    auto *spacingToolbar = window.addToolBar(QStringLiteral("间距"));
+    spacingToolbar->addWidget(new QLabel(QStringLiteral("默认行间距: "), &window));
     auto *rowSpacing = new QSpinBox(&window);
     rowSpacing->setRange(0, 100);
     rowSpacing->setSuffix(QStringLiteral(" px"));
     rowSpacing->setValue(view->rowSpacing());
-    toolbar->addWidget(rowSpacing);
-    toolbar->addWidget(new QLabel(QStringLiteral("深度 0: "), &window));
-    auto *depth0Spacing = new QSpinBox(&window);
-    depth0Spacing->setRange(0, 150);
-    depth0Spacing->setSpecialValueText(QStringLiteral("默认"));
-    depth0Spacing->setSuffix(QStringLiteral(" px"));
-    toolbar->addWidget(depth0Spacing);
-    toolbar->addWidget(new QLabel(QStringLiteral("深度 1: "), &window));
-    auto *depth1Spacing = new QSpinBox(&window);
-    depth1Spacing->setRange(0, 150);
-    depth1Spacing->setSpecialValueText(QStringLiteral("默认"));
-    depth1Spacing->setSuffix(QStringLiteral(" px"));
-    toolbar->addWidget(depth1Spacing);
+    spacingToolbar->addWidget(rowSpacing);
     window.addToolBarBreak();
     auto *gridToolbar = window.addToolBar(QStringLiteral("分割线"));
     auto *rowLines = new QCheckBox(QStringLiteral("显示分割线"), &window);
@@ -400,18 +399,8 @@ int main(int argc, char **argv)
     QObject::connect(indentation, QOverload<int>::of(&QSpinBox::valueChanged), view, [view](int pixels) {
         view->setIndentation(pixels);
     });
-    QObject::connect(rowSpacing, QOverload<int>::of(&QSpinBox::valueChanged), view,
-                     [view, depth0Spacing, depth1Spacing](int pixels) {
-        view->setRowSpacing(pixels);
-        if (depth0Spacing->value() > 0)
-            view->setDepthRowSpacing(0, depth0Spacing->value());
-        if (depth1Spacing->value() > 0)
-            view->setDepthRowSpacing(1, depth1Spacing->value());
-    });
-    QObject::connect(depth0Spacing, QOverload<int>::of(&QSpinBox::valueChanged), view,
-                     [view](int pixels) { view->setDepthRowSpacing(0, pixels > 0 ? pixels : -1); });
-    QObject::connect(depth1Spacing, QOverload<int>::of(&QSpinBox::valueChanged), view,
-                     [view](int pixels) { view->setDepthRowSpacing(1, pixels > 0 ? pixels : -1); });
+    QObject::connect(rowSpacing, QOverload<int>::of(&QSpinBox::valueChanged),
+                     view, &viv::VirtualItemView::setRowSpacing);
     QObject::connect(rowLines, &QCheckBox::toggled, view,
                      [view](bool visible) { view->setRowGridLinesVisible(visible); });
     QObject::connect(lineExtent, QOverload<int>::of(&QComboBox::currentIndexChanged), view,

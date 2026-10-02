@@ -8,6 +8,7 @@
 #include <QMouseEvent>
 #include <QPainter>
 #include <QPalette>
+#include <limits>
 
 namespace viv {
 
@@ -77,6 +78,17 @@ void VirtualTreeView::connectModelSignals(QAbstractItemModel *model)
     if (!model)
         return;
 
+    connect(model, &QAbstractItemModel::dataChanged, this,
+            [this](const QModelIndex &, const QModelIndex &, const QVector<int> &roles) {
+                if (!roles.isEmpty() && !roles.contains(NodeRowSpacingBelowRole)
+                    && !roles.contains(NodeRowSpacingAboveRole))
+                    return;
+                if (auto *layout = m_rowLayout) {
+                    layout->setItemSpacing(rowSpacing());
+                    applyRowSpacingOverrides();
+                }
+                relayout();
+            });
     // The anchor has to be captured before the model changes, and removed rows
     // must lose their widgets before their persistent indexes become invalid.
     connect(model, &QAbstractItemModel::rowsAboutToBeInserted, this,
@@ -188,24 +200,17 @@ int VirtualTreeView::itemDepth(const QModelIndex &index) const
     return depth < 0 ? 0 : depth;
 }
 
-void VirtualTreeView::setDepthRowSpacing(int depth, int pixels)
+int VirtualTreeView::effectiveRowSpacing(qsizetype row) const
 {
-    if (depth < 0)
-        return;
-    if (pixels < 0)
-        m_depthRowSpacing.remove(depth);
-    else
-        m_depthRowSpacing.insert(depth, pixels);
-    if (m_rowLayout) {
-        m_rowLayout->setItemSpacing(rowSpacing());
-        applyRowSpacingOverrides();
-    }
-    relayout();
-}
-
-int VirtualTreeView::depthRowSpacing(int depth) const
-{
-    return m_depthRowSpacing.value(depth, rowSpacing());
+    const QVariant value = viewIndex(row).data(NodeRowSpacingBelowRole);
+    bool valid = false;
+    const int spacing = value.toInt(&valid);
+    const int below = valid && spacing >= 0 ? spacing : rowSpacing();
+    const QVariant aboveValue = row + 1 < viewItemCount()
+        ? viewIndex(row + 1).data(NodeRowSpacingAboveRole) : QVariant();
+    const int above = aboveValue.toInt(&valid);
+    return int(qMin<qint64>(qint64(below) + (valid ? qMax(0, above) : 0),
+                           std::numeric_limits<int>::max()));
 }
 
 void VirtualTreeView::setRowGridLinesVisible(bool visible)
@@ -288,13 +293,12 @@ void VirtualTreeView::configureRowSpacingWidget(QWidget *widget) const
 
 void VirtualTreeView::applyRowSpacingOverrides()
 {
-    if (!m_rowLayout || m_depthRowSpacing.isEmpty())
+    if (!m_rowLayout)
         return;
     for (qsizetype row = 0; row < m_rowLayout->itemCount(); ++row) {
-        const int depth = itemDepth(viewIndex(row));
-        const auto it = m_depthRowSpacing.constFind(depth);
-        if (it != m_depthRowSpacing.cend())
-            m_rowLayout->setSpacingAfter(row, it.value());
+        const int spacing = effectiveRowSpacing(row);
+        if (spacing != rowSpacing())
+            m_rowLayout->setSpacingAfter(row, spacing);
     }
 }
 

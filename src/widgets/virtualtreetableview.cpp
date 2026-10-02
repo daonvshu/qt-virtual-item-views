@@ -15,6 +15,7 @@
 #include <QSet>
 
 #include <climits>
+#include <limits>
 #include <functional>
 
 namespace viv {
@@ -133,6 +134,17 @@ void VirtualTreeTableView::connectTreeSignals(QAbstractItemModel *treeModel)
 {
     if (!treeModel)
         return;
+    connect(treeModel, &QAbstractItemModel::dataChanged, this,
+            [this](const QModelIndex &, const QModelIndex &, const QVector<int> &roles) {
+                if (!roles.isEmpty() && !roles.contains(NodeRowSpacingBelowRole)
+                    && !roles.contains(NodeRowSpacingAboveRole))
+                    return;
+                if (auto *layout = dynamic_cast<ListLayout *>(layoutPolicy())) {
+                    layout->setItemSpacing(rowSpacing());
+                    applyRowSpacingOverrides();
+                }
+                relayout();
+            });
     connect(treeModel, &QAbstractItemModel::rowsAboutToBeInserted, this,
             [this](const QModelIndex &, int, int) { setPendingAnchor(captureAnchor()); });
     connect(treeModel, &QAbstractItemModel::rowsAboutToBeRemoved, this,
@@ -530,21 +542,21 @@ void VirtualTreeTableView::refreshVisibilitySplice(qsizetype first, qsizetype re
         if (modelChangeSerial() != modelSerial || m_mappingSerial != mappingSerial)
             return;
     }
-    // Keep the row header's sparse depth gaps in the same visible-row order as
-    // ListLayout. Only newly visible nodes need a depth lookup.
+    // The boundary before the splice also changes its next node's above gap.
     QVector<QPair<int, int>> spacings;
     spacings.reserve(m_headerSpacingOverrides.size() + int(inserted));
+    const qsizetype firstGap = qMax(qsizetype(0), first - 1);
     for (const auto &entry : m_headerSpacingOverrides) {
-        if (entry.first >= first)
+        if (entry.first >= firstGap)
             break;
         spacings.append(entry);
     }
     m_rowHeaderSpacingDirty = true;
-    for (qsizetype row = first; row < first + inserted; ++row) {
-        const int spacing = depthRowSpacing(itemDepth(viewIndex(row)));
+    for (qsizetype row = firstGap; row < first + inserted; ++row) {
+        const int spacing = effectiveRowSpacing(row);
+        layout->setSpacingAfter(row, spacing);
         if (spacing == rowSpacing())
             continue;
-        layout->setSpacingAfter(row, spacing);
         spacings.append(qMakePair(int(row), spacing));
     }
     const qsizetype afterRemoved = first + removed;
@@ -840,24 +852,17 @@ void VirtualTreeTableView::setIndentation(int pixels)
     invalidateBranches();
 }
 
-void VirtualTreeTableView::setDepthRowSpacing(int depth, int pixels)
+int VirtualTreeTableView::effectiveRowSpacing(qsizetype row) const
 {
-    if (depth < 0)
-        return;
-    if (pixels < 0)
-        m_depthRowSpacing.remove(depth);
-    else
-        m_depthRowSpacing.insert(depth, pixels);
-    if (auto *layout = dynamic_cast<ListLayout *>(layoutPolicy())) {
-        layout->setItemSpacing(rowSpacing());
-        applyRowSpacingOverrides();
-    }
-    relayout();
-}
-
-int VirtualTreeTableView::depthRowSpacing(int depth) const
-{
-    return m_depthRowSpacing.value(depth, rowSpacing());
+    const QVariant value = viewIndex(row).data(NodeRowSpacingBelowRole);
+    bool valid = false;
+    const int spacing = value.toInt(&valid);
+    const int below = valid && spacing >= 0 ? spacing : rowSpacing();
+    const QVariant aboveValue = row + 1 < viewItemCount()
+        ? viewIndex(row + 1).data(NodeRowSpacingAboveRole) : QVariant();
+    const int above = aboveValue.toInt(&valid);
+    return int(qMin<qint64>(qint64(below) + (valid ? qMax(0, above) : 0),
+                           std::numeric_limits<int>::max()));
 }
 
 void VirtualTreeTableView::applyRowSpacingOverrides()
@@ -865,12 +870,12 @@ void VirtualTreeTableView::applyRowSpacingOverrides()
     m_rowHeaderSpacingDirty = true;
     m_headerSpacingOverrides.clear();
     auto *layout = dynamic_cast<ListLayout *>(layoutPolicy());
-    if (layout && !m_depthRowSpacing.isEmpty()) {
+    if (layout) {
         for (qsizetype row = 0; row < layout->itemCount(); ++row) {
-            const auto it = m_depthRowSpacing.constFind(itemDepth(viewIndex(row)));
-            if (it != m_depthRowSpacing.cend() && it.value() != rowSpacing()) {
-                layout->setSpacingAfter(row, it.value());
-                m_headerSpacingOverrides.append(qMakePair(int(row), it.value()));
+            const int spacing = effectiveRowSpacing(row);
+            if (spacing != rowSpacing()) {
+                layout->setSpacingAfter(row, spacing);
+                m_headerSpacingOverrides.append(qMakePair(int(row), spacing));
             }
         }
     }

@@ -45,9 +45,14 @@ public:
     /// The branch decoration occupies one indentation cell per ancestor and node.
     void setIndentation(int pixels);
     int indentation() const { return m_indentation; }
-    /// Negative pixels remove the depth override and restore rowSpacing().
-    void setDepthRowSpacing(int depth, int pixels);
-    int depthRowSpacing(int depth) const;
+    /// Model data on column zero: pixels below this node; missing/negative values
+    /// use rowSpacing(). The last visible node has no trailing gap.
+    static constexpr int NodeRowSpacingRole = Qt::UserRole + 0x100;
+    /// Explicit name for the existing below-node role.
+    static constexpr int NodeRowSpacingBelowRole = NodeRowSpacingRole;
+    /// Pixels above this node, added to the preceding node's below gap.
+    /// Missing/negative values mean zero; the first visible row has no leading gap.
+    static constexpr int NodeRowSpacingAboveRole = Qt::UserRole + 0x101;
     /// Row line style is the table's horizontal grid line style.
     void setRowGridLinesVisible(bool visible) { setHorizontalGridLinesVisible(visible); }
     bool rowGridLinesVisible() const { return horizontalGridLinesVisible(); }
@@ -121,6 +126,8 @@ protected:
     void paintEvent(QPaintEvent *event) override;
 
 private:
+    /// Resolves the gap from node data, falling back to rowSpacing().
+    int effectiveRowSpacing(qsizetype row) const;
     void connectTreeSignals(QAbstractItemModel *model);
     bool isNodeWithinRoot(const QModelIndex &index) const;
     void clearStateOutsideRoot();
@@ -144,7 +151,6 @@ private:
     QPersistentModelIndex m_rootIndex;
     quint64 m_rootChangeSerial = 0;
     quint64 m_mappingSerial = 0;
-    QHash<int, int> m_depthRowSpacing;
     QVector<QPair<int, int>> m_headerSpacingOverrides;
     BranchIndicatorRenderer *m_branchRenderer = nullptr;
     QWidget *m_branchOverlay = nullptr;

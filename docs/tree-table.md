@@ -146,7 +146,7 @@ view.setSelectionBehavior(viv::VirtualTableView::SelectionBehavior::SelectItems)
 
 `setExpanded()`、`toggleExpanded()` 和 `isExpanded()` 接受同节点的非零列索引，并归一到逻辑列 0；`hasChildren()` 查询模型是否有子节点。展开或折叠发生变化后，`expanded` / `collapsed` 的索引也是列 0 节点。`visibleRowsChanged` 通知可见行映射刷新；批量展开、折叠不保证为每个后代逐一发送展开、折叠信号。
 
-`visibilityIndex()` 用于查询 `visibleRowForIndex()` / `indexAtVisibleRow()` 等映射，行号会随展开、排序及结构变化改变。应用应通过视图的展开和根索引 API 修改状态，直接修改返回的映射对象不会自动同步视图布局。`itemDepth()` 的深度从当前显示根的子节点开始计为 0。`setIndentation()` 的负值归零；`setDepthRowSpacing(depth, -1)` 移除该深度覆盖并恢复默认 `rowSpacing()`。
+`visibilityIndex()` 用于查询 `visibleRowForIndex()` / `indexAtVisibleRow()` 等映射，行号会随展开、排序及结构变化改变。应用应通过视图的展开和根索引 API 修改状态，直接修改返回的映射对象不会自动同步视图布局。`itemDepth()` 的深度从当前显示根的子节点开始计为 0。`setIndentation()` 的负值归零。
 
 `visibleRowsChanged` 发出时可查询刷新后的可见行映射和垂直表头。`rowHeightChanged(row, height)` 的 row 是通知当时的可见行号，height 为应用后的高度；应用需长期保存目标时应立即取得模型节点索引。显式行高仍跟随节点，在折叠/展开及切换显示根后保留。`selectionModelChanged` 发布当前安装的选择模型指针。横向偏移信号只携带应用后的偏移值，不携带滚动组 ID；使用多个独立组时，应通过带组号的查询读取各组状态。
 
@@ -160,7 +160,7 @@ view.setSelectionBehavior(viv::VirtualTableView::SelectionBehavior::SelectItems)
 
 ```cpp
 view.setRowSpacing(4);               // 所有节点后的默认间距
-view.setDepthRowSpacing(1, 10);      // 深度 1 节点后的间距
+node->setData(10, viv::VirtualTreeTableView::NodeRowSpacingRole); // 创建节点时设置其下方间距
 view.setColumnSpacing(6);
 view.setHorizontalGridLinesVisible(true);
 view.setVerticalGridLinesVisible(true);
@@ -176,7 +176,9 @@ view.setSelectedBackgroundColor(QColor("#b9d9f1"));
 
 `RowGridLineExtent` 和 `VisualStateBackgroundExtent` 分别选择只覆盖节点内容（`NodeOnly`）、图标加内容（`NodeAndIcon`）或整行（`FullWidth`）。范围只扣除第 0 逻辑列中的树装饰区域，其他列仍正常绘制。分割线的颜色、宽度、显隐、是否穿过行列间距，以及自定义间距控件均沿用[表格设置](table.md)。状态背景默认关闭；行控件需要保持透明，才能看到视图在其下方绘制的背景。也可以使用 adapter 的状态回调自行绘制。
 
-深度行间距跟随其上方节点，垂直表头的行号位置和间隙随可见节点同步更新。
+与 `VirtualTreeView` 相同，创建节点时将根据深度或业务属性计算的间距写入第 0 列的 `NodeRowSpacingRole`（`Qt::UserRole + 0x100`）。间距属于上方节点，0 表示没有间距，缺失/无效/负值回退到 `rowSpacing()`。该 role 的 dataChanged 会更新布局；表头、单元格和间距命中使用同一几何，末行后不额外留白。模型移动或切换显示根不会自动修改节点保存的间距；旧的按深度、同级和层级设置接口已移除。
+
+可用 `NodeRowSpacingBelowRole` 明确设置下方间距（原 role 的别名），以及 `NodeRowSpacingAboveRole`（`Qt::UserRole + 0x101`）设置上方间距。相邻可见节点的总间距为前者下方加后者上方；上方缺失/无效/负值为 0。第一可见节点上方与末节点下方不额外留白。仅在后续根节点上方留白时，将默认/下方间距设为 0，创建根节点时写入 `rootRow > 0 ? 12 : 0` 到上方 role，展开收起不会把留白移到根节点之后。
 
 结构变化时，存活的滚动锚点按节点身份保留位置。锚点节点被删除后，视图保留原数值滚动偏移，并钳制到新内容的可滚动范围；不会将被删节点的选择、固定项、显式行高或跨度转给占据相同行号的新节点。
 
