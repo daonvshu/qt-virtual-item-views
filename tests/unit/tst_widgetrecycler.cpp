@@ -20,6 +20,8 @@ private slots:
     void cleanup();
 
     void acquireCreatesThroughFactory();
+    void factoryRetainsMutableState();
+    void factoryCanDestroyRecycler();
     void recycleThenAcquireReuses();
     void poolsAreSeparatedByType();
     void recycleBeyondLimitSchedulesDestruction();
@@ -64,6 +66,35 @@ void TestWidgetRecycler::acquireCreatesThroughFactory()
     QCOMPARE(m_recycler->createdCount(), qsizetype(1));
     QCOMPARE(m_recycler->activeCount(), qsizetype(1));
     QCOMPARE(m_recycler->pooledCount(kTypeA), qsizetype(0));
+}
+
+void TestWidgetRecycler::factoryRetainsMutableState()
+{
+    m_recycler->setFactory([calls = 0](WidgetType, QWidget *parent) mutable {
+        auto *widget = new QWidget(parent);
+        widget->setProperty("factoryCall", ++calls);
+        return widget;
+    });
+    QWidget *first = m_recycler->acquire(kTypeA);
+    QWidget *second = m_recycler->acquire(kTypeB);
+    QCOMPARE(first->property("factoryCall").toInt(), 1);
+    QCOMPARE(second->property("factoryCall").toInt(), 2);
+}
+
+void TestWidgetRecycler::factoryCanDestroyRecycler()
+{
+    QPointer<WidgetRecycler> recycler = m_recycler;
+    QPointer<QWidget> created;
+    m_recycler->setFactory([&](WidgetType, QWidget *parent) {
+        created = new QWidget(parent);
+        delete m_recycler;
+        m_recycler = nullptr;
+        return created.data();
+    });
+    QVERIFY(!recycler->acquire(kTypeA));
+    QVERIFY(recycler.isNull());
+    QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+    QVERIFY(created.isNull());
 }
 
 void TestWidgetRecycler::recycleThenAcquireReuses()

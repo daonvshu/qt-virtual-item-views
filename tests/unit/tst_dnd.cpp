@@ -396,6 +396,7 @@ class DragGranularityProbe : public VirtualTableView
 public:
     using VirtualItemView::dragPixmapRect;
     using VirtualItemView::dragSourceIndexes;
+    using VirtualItemView::dragSourceWidget;
     using VirtualItemView::removeDraggedSourceRows;
 };
 
@@ -636,6 +637,10 @@ void TestDnd::canStartDragFollowsTheModelFlags()
     QVERIFY(!view.canStartDrag(model.index(0, 0)));
     model.dragEnabled = true;
     QVERIFY(!view.canStartDrag(QModelIndex()));
+    DropListModel foreign({QStringLiteral("foreign")});
+    QVERIFY(!view.canStartDrag(foreign.index(0, 0)));
+    QCOMPARE(view.startDrag(foreign.index(0, 0)), Qt::IgnoreAction);
+    QCOMPARE(model.mimeDataCalls, 0);
 
     // The actions offered by the view come from the model (§38).
     QCOMPARE(view.dragDropActions(), Qt::MoveAction | Qt::CopyAction);
@@ -768,6 +773,8 @@ void TestDnd::dragGranularityDecidesThePayloadAndThePreview()
         QCOMPARE(rowPayload.at(column).column(), column);
     }
     QVERIFY(view.dragPixmapRect(model->index(3, 2)).isEmpty());      // the whole row widget
+    QVERIFY(view.widgetForIndex(model->index(3, 0)));
+    QCOMPARE(view.dragSourceWidget(model->index(3, 2)), view.widgetForIndex(model->index(3, 0)));
     QCOMPARE(view.dropTargetAt(QPoint(2 * kColumnWidth + 10, kRowHeight + 2)).column, -1);
     // (b) Cell granularity: the payload is the dragged cell, the preview just that cell, and the
     // drop keeps resolving the column under the cursor.

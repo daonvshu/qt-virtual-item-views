@@ -225,6 +225,9 @@ protected:
     bool eventFilter(QObject *watched, QEvent *event) override;
 
 private:
+    friend class VirtualTableView;
+    /// Restricts a row strip to its pane without allocating a per-row filter.
+    void setRowPaneRange(int first, int last);
     // -- axis helpers (§45: one renderer, two axes) ---------------------------
     bool isHorizontal() const { return m_orientation == Qt::Horizontal; }
     /// Component of \a point the sections are packed along.
@@ -317,9 +320,10 @@ private:
     /// (§7 of the vertical-header decision).
     struct PackedOrder
     {
-        /// Empty for an identity order (a uniform geometry): the packed slot *is* the
-        /// logical index then, and nothing was built.
+        /// Empty for a contiguous uniform order: the packed slot plus first is the
+        /// logical index, and nothing was built.
         QVector<int> storage;
+        int first = 0;
         int count = 0;
         bool isEmpty() const { return count <= 0; }
         int size() const { return count; }
@@ -327,13 +331,15 @@ private:
         {
             if (slot < 0 || slot >= count)
                 return -1;
-            return storage.isEmpty() ? slot : storage.at(slot);
+            return storage.isEmpty() ? first + slot : storage.at(slot);
         }
         int indexOf(int logical) const
         {
-            if (logical < 0 || logical >= count)
+            if (logical < 0)
                 return -1;
-            return storage.isEmpty() ? logical : storage.indexOf(logical);
+            if (storage.isEmpty())
+                return logical >= first && logical - first < count ? logical - first : -1;
+            return storage.indexOf(logical);
         }
     };
     PackedOrder packedOrder() const;
@@ -352,6 +358,7 @@ private:
     QPointer<HeaderGeometry> m_geometry;
     QPointer<QAbstractItemModel> m_labelModel;
     HeaderWidgetAdapter *m_adapter = nullptr;
+    quint64 m_adapterSerial = 0;
     bool m_ownAdapter = false;
     WidgetRecycler *m_recycler = nullptr;
 
@@ -360,6 +367,9 @@ private:
     QPoint m_viewportOrigin;
     QVector<int> m_paneFilter;
     bool m_paneFilterActive = false;
+    bool m_paneOrderChanged = false;
+    int m_firstPaneRow = 0;
+    int m_lastPaneRow = std::numeric_limits<int>::max();
     qint64 m_paneOffset = kFollowGeometryOffset;
     int m_paneTerminalColumn = -1;
     bool m_sectionSeparatorsVisible = true;
@@ -384,6 +394,7 @@ private:
     /// Visual geometry (§23): visual x a section slides away from, and the
     /// progress of the transition (1 = committed geometry).
     QHash<int, int> m_slideFrom;
+    QHash<int, QPair<int, int>> m_slideTargets;
     qreal m_slideProgress = 1.0;
     QVariantAnimation *m_slideAnimation = nullptr;
     bool m_animationEnabled = true;

@@ -220,6 +220,7 @@ private slots:
     void focusedCellIsNotRecycled();
     void frozenColumnsStayMaterializedAndOnTop();
     void frozenCellsCoverTheScrolledOnes();
+    void changingOverscanRebuildsCells();
 
 private:
     HugeTableModel *m_model = nullptr;
@@ -238,6 +239,25 @@ void TestTableCellMode::init()
     m_view->setDefaultColumnWidth(kColumnWidth);
     m_view->setModel(m_model);
     showView(m_view, QSize(kViewWidth, kViewHeight));
+}
+
+void TestTableCellMode::changingOverscanRebuildsCells()
+{
+    m_view->setFocus();
+    m_view->setColumnOverscan(0);
+    m_view->flushPendingRelayout();
+    const QVector<int> tight = m_view->visibleColumnLogicalIndexes();
+    m_view->setColumnOverscan(2);
+    m_view->flushPendingRelayout();
+    const QVector<int> wide = m_view->visibleColumnLogicalIndexes();
+    QVERIFY(wide.size() > tight.size());
+    for (int column : wide)
+        QVERIFY(m_view->cellWidget(m_model->index(0, column)));
+    m_view->setColumnOverscan(0);
+    m_view->flushPendingRelayout();
+    QCOMPARE(m_view->visibleColumnLogicalIndexes(), tight);
+    for (int column : wide)
+        QCOMPARE(bool(m_view->cellWidget(m_model->index(0, column))), tight.contains(column));
 }
 
 void TestTableCellMode::cleanup()
@@ -329,6 +349,7 @@ void TestTableCellMode::cellWidgetsFollowBothAxes()
 
 void TestTableCellMode::scrollingIsAllocationFree()
 {
+    m_view->setLifecycleLoggingEnabled(true);
     const int createdAfterFirstPass = m_adapter->created;
     QVERIFY(createdAfterFirstPass > 0);
 
@@ -345,10 +366,14 @@ void TestTableCellMode::scrollingIsAllocationFree()
         m_view->flushPendingRelayout();
     }
     QCOMPARE(m_adapter->created, createdAfterFirstPass);
+    QCOMPARE(m_view->stats().bindCount, quint64(m_adapter->bound));
+    QCOMPARE(m_view->stats().recycleCount, quint64(m_adapter->unbound));
+    QCOMPARE(m_view->lifecycleLog().size(), VirtualItemView::kLifecycleLogCapacity);
 }
 
 void TestTableCellMode::dataChangedRebindsAffectedCellsOnly()
 {
+    m_view->setLifecycleLoggingEnabled(true);
     const QModelIndex index = m_model->index(1, 1);
     QWidget *cell = m_view->cellWidget(index);
     QVERIFY(cell != nullptr);
@@ -358,8 +383,11 @@ void TestTableCellMode::dataChangedRebindsAffectedCellsOnly()
     m_view->flushPendingRelayout();
 
     QCOMPARE(m_adapter->bound, bindsBefore + 1);
+    QCOMPARE(m_view->stats().bindCount, quint64(m_adapter->bound));
     QCOMPARE(cell->findChild<QLabel *>(QStringLiteral("cellLabel"))->text(),
              m_model->data(index).toString());
+    QCOMPARE(m_view->lifecycleLog(),
+             QStringList{QStringLiteral("rebind cell row=1 column=1")});
 }
 
 void TestTableCellMode::hiddenColumnDropsItsCells()

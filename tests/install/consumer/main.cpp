@@ -8,6 +8,7 @@
 #include <virtualitemviews/accessibility.h>
 #include <virtualitemviews/virtualtableview.h>
 #include <virtualitemviews/virtualtreeview.h>
+#include <virtualitemviews/virtualtreetableview.h>
 #include <virtualitemviews/virtuallistview.h>
 #include <virtualitemviews/widgetadapter.h>
 
@@ -15,6 +16,7 @@
 #include <QAbstractItemModel>
 #include <QApplication>
 #include <QLabel>
+#include <QStandardItemModel>
 
 #include <cstdio>
 
@@ -153,6 +155,30 @@ public:
     }
 };
 
+/// Tree-table row: the public ColumnHost contract positions each column.
+class LabelTableAdapter : public viv::TableWidgetAdapter
+{
+public:
+    QWidget *createWidget(viv::WidgetType, QWidget *parent) override
+    {
+        auto *widget = new QWidget(parent);
+        for (int column = 0; column < 3; ++column) {
+            auto *host = new viv::ColumnHost(column, widget);
+            auto *label = new QLabel(host);
+            label->setGeometry(0, 0, 90, 24);
+        }
+        return widget;
+    }
+
+    void bindWidget(QWidget *widget, const QModelIndex &index) override
+    {
+        for (viv::ColumnHost *host : widget->findChildren<viv::ColumnHost *>())
+            host->findChild<QLabel *>()->setText(index.siblingAtColumn(host->logicalColumn()).data().toString());
+    }
+
+    QSize estimatedSize(const QModelIndex &) const override { return QSize(300, 24); }
+};
+
 int failures = 0;
 
 void check(bool ok, const char *what)
@@ -168,6 +194,9 @@ void check(bool ok, const char *what)
 int main(int argc, char **argv)
 {
     QApplication app(argc, argv);
+#if QT_CONFIG(accessibility)
+    viv::installAccessibilityFactory();
+#endif
 
     std::printf("viv_consumer: Qt %s, linking against the installed package\n", qVersion());
 
@@ -275,10 +304,79 @@ int main(int argc, char **argv)
     QApplication::processEvents();
     check(tree.visibleRowCount() == 2, "collapsing restores two visible rows");
 
+    // -- multi-column tree table --------------------------------------------
+    QStandardItemModel multiColumnTree;
+    multiColumnTree.setHorizontalHeaderLabels({QStringLiteral("name"), QStringLiteral("type"),
+                                               QStringLiteral("state")});
+    auto *parentItem = new QStandardItem(QStringLiteral("parent"));
+    parentItem->appendRow({new QStandardItem(QStringLiteral("child")),
+                           new QStandardItem(QStringLiteral("leaf")),
+                           new QStandardItem(QStringLiteral("ready"))});
+    multiColumnTree.appendRow({parentItem, new QStandardItem(QStringLiteral("group")),
+                               new QStandardItem(QStringLiteral("active"))});
+    LabelTableAdapter tableAdapter;
+    viv::VirtualTreeTableView treeTable;
+    treeTable.setModel(&multiColumnTree);
+    treeTable.setTableAdapter(&tableAdapter);
+    treeTable.setCellAdapter(&cellAdapter);
+    treeTable.setUniformItemHeight(24);
+    treeTable.setDefaultColumnWidth(100);
+    treeTable.resize(500, 300);
+    treeTable.show();
+    treeTable.expand(multiColumnTree.index(0, 0));
+    treeTable.flushPendingRelayout();
+    QApplication::processEvents();
+    const QModelIndex treeRoot = multiColumnTree.index(0, 0);
+    const QModelIndex child = multiColumnTree.index(0, 1, treeRoot);
+    check(treeTable.visibleRowCount() == 2 && treeTable.columnCount() == 3,
+          "tree table combines expanded nodes with the root column schema");
+    check(treeTable.widgetForIndex(child.siblingAtColumn(0)) != nullptr,
+          "tree table row mode materializes the child");
+    check(treeTable.itemDepth(child) == 1 && treeTable.branchState(treeRoot).hasChildren,
+          "tree table exports depth and branch state");
+    treeTable.setMaterializationMode(viv::VirtualTableView::MaterializationMode::CellWidgets);
+    treeTable.flushPendingRelayout();
+    QApplication::processEvents();
+    check(treeTable.cellWidget(child) != nullptr, "tree table cell mode binds a nonzero child column");
+    treeTable.setSpan(1, 1, 1, 2);
+    treeTable.flushPendingRelayout();
+    check(treeTable.anchorIndex(child.siblingAtColumn(2)) == child,
+          "tree table span API maps the visible child row");
+    treeTable.setFrozenColumns({0});
+    const QByteArray treeTableState = treeTable.saveHeaderState();
+    treeTable.setFrozenColumns({});
+    check(treeTable.restoreHeaderState(treeTableState) && treeTable.isColumnFrozen(0),
+          "tree table header state restores the frozen tree column");
+    treeTable.clearSpans();
+    treeTable.setRootIndex(treeRoot);
+    treeTable.flushPendingRelayout();
+    check(treeTable.rootIndex() == treeRoot && treeTable.visibleRowCount() == 1
+              && treeTable.itemDepth(child) == 0,
+          "tree table root restriction resets visible depth");
+
 #if QT_CONFIG(accessibility)
-    viv::installAccessibilityFactory();
     check(QAccessible::queryAccessibleInterface(&list) != nullptr,
           "the accessibility factory exposes the view");
+    QAccessibleInterface *treeTableInterface = QAccessible::queryAccessibleInterface(&treeTable);
+    check(treeTableInterface != nullptr,
+          "the accessibility factory exposes the installed tree table");
+    QAccessibleInterface *accessibleRow = treeTableInterface ? treeTableInterface->child(0) : nullptr;
+    check(accessibleRow && !accessibleRow->object()
+              && QAccessible::uniqueId(accessibleRow) != QAccessible::uniqueId(treeTableInterface),
+          "installed virtual row has an independent cache identity");
+    QAccessibleInterface *accessibleCell = treeTableInterface && treeTableInterface->tableInterface()
+        ? treeTableInterface->tableInterface()->cellAt(0, 1) : nullptr;
+    check(accessibleCell && !accessibleCell->object() && accessibleCell->parent() == accessibleRow,
+          "installed virtual cell resolves its model-bound parent row");
+    check(accessibleCell && accessibleCell->window() == treeTable.windowHandle(),
+          "installed virtual cell exports its native window");
+    if (accessibleRow && accessibleCell) {
+        QAccessible::deleteAccessibleInterface(QAccessible::uniqueId(accessibleRow));
+        accessibleRow = accessibleCell->parent();
+    }
+    check(accessibleRow && accessibleCell && accessibleRow->isValid()
+              && accessibleRow->child(1) == accessibleCell,
+          "installed virtual cell survives parent cache retirement");
     viv::removeAccessibilityFactory();
 #endif
 

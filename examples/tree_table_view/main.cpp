@@ -1,15 +1,21 @@
 #include <virtualitemviews/virtualtreetableview.h>
 
 #include <QApplication>
+#include <QCheckBox>
 #include <QColor>
+#include <QColorDialog>
 #include <QComboBox>
 #include <QHBoxLayout>
+#include <QIcon>
 #include <QItemSelectionModel>
 #include <QLabel>
+#include <QMainWindow>
+#include <QPixmap>
 #include <QProgressBar>
+#include <QPushButton>
 #include <QSpinBox>
 #include <QStandardItemModel>
-#include <QVBoxLayout>
+#include <QToolBar>
 
 namespace {
 
@@ -103,11 +109,9 @@ QList<QStandardItem *> makeRow(const QString &name, const QString &type,
 int main(int argc, char **argv)
 {
     QApplication app(argc, argv);
-    QWidget window;
+    QMainWindow window;
     window.setWindowTitle(QStringLiteral("VirtualTreeTableView"));
-    auto *layout = new QVBoxLayout(&window);
-    auto *controls = new QHBoxLayout;
-    layout->addLayout(controls);
+    auto *controls = window.addToolBar(QStringLiteral("树表格"));
 
     QStandardItemModel model(&window);
     model.setHorizontalHeaderLabels({QStringLiteral("节点"), QStringLiteral("类型"),
@@ -144,7 +148,7 @@ int main(int argc, char **argv)
     view.setHoverBackgroundColor(QColor(231, 244, 237));
     view.setSelectedBackgroundColor(QColor(185, 217, 241));
     view.expand(model.index(0, 0));
-    layout->addWidget(&view);
+    window.setCentralWidget(&view);
 
     auto *mode = new QComboBox(&window);
     mode->addItems({QStringLiteral("行控件"), QStringLiteral("单元格控件")});
@@ -164,41 +168,140 @@ int main(int argc, char **argv)
                              view.selectionModel()->clearSelection();
                      });
 
+    window.addToolBarBreak();
+    auto *spacingToolbar = window.addToolBar(QStringLiteral("间距"));
+    spacingToolbar->addWidget(new QLabel(QStringLiteral("默认行间距: "), &window));
     auto *rowSpacing = new QSpinBox(&window);
-    rowSpacing->setRange(0, 24);
-    rowSpacing->setPrefix(QStringLiteral("行距 "));
-    controls->addWidget(rowSpacing);
+    rowSpacing->setRange(0, 100);
+    rowSpacing->setSuffix(QStringLiteral(" px"));
+    rowSpacing->setValue(view.rowSpacing());
+    spacingToolbar->addWidget(rowSpacing);
+
+    spacingToolbar->addWidget(new QLabel(QStringLiteral("深度 0: "), &window));
+    auto *depth0Spacing = new QSpinBox(&window);
+    depth0Spacing->setRange(0, 150);
+    depth0Spacing->setSpecialValueText(QStringLiteral("默认"));
+    depth0Spacing->setSuffix(QStringLiteral(" px"));
+    spacingToolbar->addWidget(depth0Spacing);
+    spacingToolbar->addWidget(new QLabel(QStringLiteral("深度 1: "), &window));
+    auto *depth1Spacing = new QSpinBox(&window);
+    depth1Spacing->setRange(0, 150);
+    depth1Spacing->setSpecialValueText(QStringLiteral("默认"));
+    depth1Spacing->setSuffix(QStringLiteral(" px"));
+    spacingToolbar->addWidget(depth1Spacing);
     QObject::connect(rowSpacing, QOverload<int>::of(&QSpinBox::valueChanged),
-                     &view, &viv::VirtualItemView::setRowSpacing);
+                     &view, [&view, depth0Spacing, depth1Spacing](int pixels) {
+                         view.setRowSpacing(pixels);
+                         if (depth0Spacing->value() > 0)
+                             view.setDepthRowSpacing(0, depth0Spacing->value());
+                         if (depth1Spacing->value() > 0)
+                             view.setDepthRowSpacing(1, depth1Spacing->value());
+                     });
+    QObject::connect(depth0Spacing, QOverload<int>::of(&QSpinBox::valueChanged),
+                     &view, [&view](int pixels) {
+                         view.setDepthRowSpacing(0, pixels > 0 ? pixels : -1);
+                     });
+    QObject::connect(depth1Spacing, QOverload<int>::of(&QSpinBox::valueChanged),
+                     &view, [&view](int pixels) {
+                         view.setDepthRowSpacing(1, pixels > 0 ? pixels : -1);
+                     });
 
-    auto *depthSpacing = new QSpinBox(&window);
-    depthSpacing->setRange(0, 24);
-    depthSpacing->setPrefix(QStringLiteral("深度 1 行距 "));
-    controls->addWidget(depthSpacing);
-    QObject::connect(depthSpacing, QOverload<int>::of(&QSpinBox::valueChanged),
-                     &view, [&view](int pixels) { view.setDepthRowSpacing(1, pixels); });
-
+    spacingToolbar->addWidget(new QLabel(QStringLiteral("列间距: "), &window));
     auto *columnSpacing = new QSpinBox(&window);
-    columnSpacing->setRange(0, 24);
-    columnSpacing->setPrefix(QStringLiteral("列距 "));
-    controls->addWidget(columnSpacing);
+    columnSpacing->setRange(0, 100);
+    columnSpacing->setSuffix(QStringLiteral(" px"));
+    columnSpacing->setValue(view.columnSpacing());
+    spacingToolbar->addWidget(columnSpacing);
     QObject::connect(columnSpacing, QOverload<int>::of(&QSpinBox::valueChanged),
                      &view, &viv::VirtualTableView::setColumnSpacing);
+    auto *verticalThrough = new QCheckBox(QStringLiteral("竖线穿过行间距"), &window);
+    verticalThrough->setChecked(view.verticalSpacingLineThroughRowSpacing());
+    spacingToolbar->addWidget(verticalThrough);
+    auto *horizontalThrough = new QCheckBox(QStringLiteral("横线穿过列间距"), &window);
+    horizontalThrough->setChecked(view.horizontalSpacingLineThroughColumnSpacing());
+    spacingToolbar->addWidget(horizontalThrough);
+    QObject::connect(verticalThrough, &QCheckBox::toggled,
+                     &view, &viv::VirtualTableView::setVerticalSpacingLineThroughRowSpacing);
+    QObject::connect(horizontalThrough, &QCheckBox::toggled,
+                     &view, &viv::VirtualTableView::setHorizontalSpacingLineThroughColumnSpacing);
 
+    window.addToolBarBreak();
+    auto *gridToolbar = window.addToolBar(QStringLiteral("分割线"));
+    auto *verticalGrid = new QCheckBox(QStringLiteral("显示竖向分割线"), &window);
+    verticalGrid->setChecked(view.verticalGridLinesVisible());
+    gridToolbar->addWidget(verticalGrid);
+    auto *horizontalGrid = new QCheckBox(QStringLiteral("显示横向分割线"), &window);
+    horizontalGrid->setChecked(view.horizontalGridLinesVisible());
+    gridToolbar->addWidget(horizontalGrid);
+    gridToolbar->addWidget(new QLabel(QStringLiteral("竖线宽度: "), &window));
+    auto *verticalLineWidth = new QSpinBox(&window);
+    verticalLineWidth->setRange(1, 8);
+    verticalLineWidth->setValue(view.verticalGridLineWidth());
+    gridToolbar->addWidget(verticalLineWidth);
+    gridToolbar->addWidget(new QLabel(QStringLiteral("横线宽度: "), &window));
+    auto *horizontalLineWidth = new QSpinBox(&window);
+    horizontalLineWidth->setRange(1, 8);
+    horizontalLineWidth->setValue(view.horizontalGridLineWidth());
+    gridToolbar->addWidget(horizontalLineWidth);
+    auto *verticalLineColor = new QPushButton(QStringLiteral("竖线颜色"), &window);
+    auto *horizontalLineColor = new QPushButton(QStringLiteral("横线颜色"), &window);
+    const auto setColorSwatch = [](QPushButton *button, const QColor &color) {
+        QPixmap swatch(16, 16);
+        swatch.fill(color);
+        button->setIcon(QIcon(swatch));
+    };
+    setColorSwatch(verticalLineColor, view.verticalGridLineColor().isValid()
+        ? view.verticalGridLineColor() : viv::VirtualTableView::sectionSeparatorColor(&view));
+    setColorSwatch(horizontalLineColor, view.horizontalGridLineColor().isValid()
+        ? view.horizontalGridLineColor() : viv::VirtualTableView::sectionSeparatorColor(&view));
+    gridToolbar->addWidget(verticalLineColor);
+    gridToolbar->addWidget(horizontalLineColor);
+    QObject::connect(verticalGrid, &QCheckBox::toggled,
+                     &view, &viv::VirtualTableView::setVerticalGridLinesVisible);
+    QObject::connect(horizontalGrid, &QCheckBox::toggled,
+                     &view, &viv::VirtualTableView::setHorizontalGridLinesVisible);
+    QObject::connect(verticalLineWidth, QOverload<int>::of(&QSpinBox::valueChanged),
+                     &view, &viv::VirtualTableView::setVerticalGridLineWidth);
+    QObject::connect(horizontalLineWidth, QOverload<int>::of(&QSpinBox::valueChanged),
+                     &view, &viv::VirtualTableView::setHorizontalGridLineWidth);
+    QObject::connect(verticalLineColor, &QPushButton::clicked, &view,
+                     [&view, verticalLineColor, setColorSwatch]() {
+                         const QColor initial = view.verticalGridLineColor().isValid()
+                             ? view.verticalGridLineColor()
+                             : viv::VirtualTableView::sectionSeparatorColor(&view);
+                         const QColor color = QColorDialog::getColor(initial, &view,
+                                                                      QStringLiteral("竖线颜色"));
+                         if (color.isValid()) {
+                             view.setVerticalGridLineColor(color);
+                             setColorSwatch(verticalLineColor, color);
+                         }
+                     });
+    QObject::connect(horizontalLineColor, &QPushButton::clicked, &view,
+                     [&view, horizontalLineColor, setColorSwatch]() {
+                         const QColor initial = view.horizontalGridLineColor().isValid()
+                             ? view.horizontalGridLineColor()
+                             : viv::VirtualTableView::sectionSeparatorColor(&view);
+                         const QColor color = QColorDialog::getColor(initial, &view,
+                                                                      QStringLiteral("横线颜色"));
+                         if (color.isValid()) {
+                             view.setHorizontalGridLineColor(color);
+                             setColorSwatch(horizontalLineColor, color);
+                         }
+                     });
+
+    gridToolbar->addWidget(new QLabel(QStringLiteral("横线范围: "), &window));
     auto *lineExtent = new QComboBox(&window);
-    lineExtent->addItems({QStringLiteral("横线整行"), QStringLiteral("横线避开缩进"),
-                          QStringLiteral("横线避开图标")});
-    controls->addWidget(lineExtent);
+    lineExtent->addItems({QStringLiteral("仅节点"), QStringLiteral("节点及图标"),
+                          QStringLiteral("整行")});
+    lineExtent->setCurrentIndex(int(view.rowGridLineExtent()));
+    gridToolbar->addWidget(lineExtent);
     QObject::connect(lineExtent, QOverload<int>::of(&QComboBox::currentIndexChanged),
                      &view, [&view](int choice) {
-                         using Extent = viv::VirtualTreeTableView::RowGridLineExtent;
-                         view.setRowGridLineExtent(choice == 1 ? Extent::NodeAndIcon
-                                                   : choice == 2 ? Extent::NodeOnly
-                                                                 : Extent::FullWidth);
+                         view.setRowGridLineExtent(
+                             static_cast<viv::VirtualTreeTableView::RowGridLineExtent>(choice));
                      });
-    controls->addStretch();
 
-    window.resize(860, 560);
+    window.resize(1100, 560);
     window.show();
     return app.exec();
 }

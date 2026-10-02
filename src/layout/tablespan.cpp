@@ -14,7 +14,10 @@ QModelIndex TableSpanProvider::anchorOf(const QModelIndex &index) const
 {
     if (!index.isValid())
         return index;
+    const QPersistentModelIndex target(index);
     const TableSpan limit = maximumSpan();
+    if (!target.isValid() || QModelIndex(target) != index)
+        return QModelIndex();
     if (!limit.isMerged())
         return index;
     // Bounded walk: the anchor of a merge lies above/left of every covered cell,
@@ -26,7 +29,12 @@ QModelIndex TableSpanProvider::anchorOf(const QModelIndex &index) const
             const QModelIndex candidate = index.sibling(row, column);
             if (!candidate.isValid())
                 continue;
+            const QPersistentModelIndex guardedCandidate(candidate);
             const TableSpan span = spanAt(candidate);
+            // A provider callback may reset, remove or move model items.
+            if (!target.isValid() || QModelIndex(target) != index
+                || !guardedCandidate.isValid() || QModelIndex(guardedCandidate) != candidate)
+                return QModelIndex();
             // Only a real merge can cover another cell: a 1x1 would "cover"
             // itself and every lookup would answer with the cell it started at.
             if (!span.isMerged() || span.rowSpan < 1 || span.columnSpan < 1)

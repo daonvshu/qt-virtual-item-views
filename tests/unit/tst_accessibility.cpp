@@ -3,17 +3,43 @@
 #include <virtualitemviews/virtuallistview.h>
 #include <virtualitemviews/virtualtableview.h>
 #include <virtualitemviews/virtualtreeview.h>
+#include <virtualitemviews/virtualtreetableview.h>
 #include "vivtestfixtures.h"
 
 #include <QtTest>
 
 #include <QLabel>
+#include <QAccessibleEvent>
 #include <QStandardItemModel>
+#include <memory>
 
 using namespace viv;
 using namespace vivtest;
 
 namespace {
+QAccessible::Id lastFocusTarget = 0;
+QList<QAccessible::Id> expansionTargets;
+QString lastAnnouncement;
+QAccessible::Id announcementTarget = 0;
+
+/// Records the interface receiving a focus notification, rather than querying focus afterwards.
+void captureFocusEvent(QAccessibleEvent *event)
+{
+    if (event->type() == QAccessible::Focus)
+        lastFocusTarget = event->uniqueId();
+    if (event->type() == QAccessible::StateChanged) {
+        const auto state = static_cast<QAccessibleStateChangeEvent *>(event)->changedStates();
+        if (state.expanded && state.collapsed)
+            expansionTargets.append(event->uniqueId());
+    }
+#if QT_VERSION >= QT_VERSION_CHECK(6, 8, 0)
+    if (event->type() == QAccessible::Announcement) {
+        lastAnnouncement = static_cast<QAccessibleAnnouncementEvent *>(event)->message();
+        announcementTarget = event->uniqueId();
+    }
+#endif
+}
+
 constexpr int kRowHeight = 24;
 constexpr int kColumnWidth = 90;
 constexpr int kViewWidth = 400;
@@ -184,10 +210,14 @@ private slots:
     void cleanupTestCase();
 
     void factoryReportsTheRoleOfEveryViewType();
+    void virtualNodesHaveDistinctCacheIds_data();
+    void virtualNodesHaveDistinctCacheIds();
     void listExposesTheVisibleItemsOnDemand();
     void hugeModelStillExposesOnlyTheViewport();
     void itemTextStateAndRectComeFromTheModelAndView();
     void currentItemIsTheFocusChild();
+    void focusEventsTargetNestedCurrentCell_data();
+    void focusEventsTargetNestedCurrentCell();
     void childAtMapsAPointToTheItemUnderIt();
     void tableExposesRowsAndCells();
     void tableCellWidgetModeAlsoExposesRows();
@@ -251,6 +281,119 @@ void TestAccessibility::factoryReportsTheRoleOfEveryViewType()
     QAccessibleInterface *treeInterface = QAccessible::queryAccessibleInterface(&tree);
     QVERIFY(treeInterface);
     QCOMPARE(treeInterface->role(), QAccessible::Tree);
+}
+
+void TestAccessibility::virtualNodesHaveDistinctCacheIds_data()
+{
+    QTest::addColumn<int>("kind");
+    QTest::addColumn<bool>("cells");
+    QTest::newRow("list") << 0 << false;
+    QTest::newRow("table-rows") << 1 << false;
+    QTest::newRow("table-cells") << 1 << true;
+    QTest::newRow("tree") << 2 << false;
+    QTest::newRow("tree-table-rows") << 3 << false;
+    QTest::newRow("tree-table-cells") << 3 << true;
+}
+
+void TestAccessibility::virtualNodesHaveDistinctCacheIds()
+{
+    QFETCH(int, kind);
+    QFETCH(bool, cells);
+    QStandardItemModel model;
+    model.appendRow({new QStandardItem(QStringLiteral("first")),
+                     new QStandardItem(QStringLiteral("first value"))});
+    model.appendRow({new QStandardItem(QStringLiteral("second")),
+                     new QStandardItem(QStringLiteral("second value"))});
+    model.item(0)->appendRow({new QStandardItem(QStringLiteral("child")),
+                              new QStandardItem(QStringLiteral("child value"))});
+    TestAdapter listAdapter(kRowHeight);
+    AccessibleTableAdapter tableAdapter(2);
+    AccessibleCellAdapter cellAdapter;
+    std::unique_ptr<VirtualItemView> view;
+    if (kind == 0)
+        view.reset(new VirtualListView);
+    else if (kind == 1)
+        view.reset(new VirtualTableView);
+    else if (kind == 2)
+        view.reset(new VirtualTreeView);
+    else
+        view.reset(new VirtualTreeTableView);
+    if (auto *table = qobject_cast<VirtualTableView *>(view.get())) {
+        table->setDefaultColumnWidth(kColumnWidth);
+        if (cells) {
+            table->setCellAdapter(&cellAdapter);
+            table->setMaterializationMode(VirtualTableView::MaterializationMode::CellWidgets);
+        } else {
+            table->setTableAdapter(&tableAdapter);
+        }
+    } else {
+        view->setAdapter(&listAdapter);
+    }
+    view->setUniformItemHeight(kRowHeight);
+    view->setModel(&model);
+    if (kind == 2)
+        static_cast<VirtualTreeView *>(view.get())->expand(model.index(0, 0));
+    else if (kind == 3)
+        static_cast<VirtualTreeTableView *>(view.get())->expand(model.index(0, 0));
+    showView(view.get(), QSize(kViewWidth, kViewHeight));
+    QAccessibleInterface *interface = QAccessible::queryAccessibleInterface(view.get());
+    QVERIFY(interface);
+    QCOMPARE(interface->object(), static_cast<QObject *>(view.get()));
+    QCOMPARE(interface->window(), view->windowHandle());
+    const QAccessible::Id viewId = QAccessible::uniqueId(interface);
+    QAccessibleInterface *first = interface->child(0);
+    QAccessibleInterface *second = interface->child(1);
+    QVERIFY(first);
+    QVERIFY(second);
+    QVERIFY(!first->object());
+    QVERIFY(!second->object());
+    QCOMPARE(first->window(), view->windowHandle());
+    QAccessible::Id firstId = QAccessible::uniqueId(first);
+    const QAccessible::Id secondId = QAccessible::uniqueId(second);
+    QVERIFY(firstId != viewId);
+    QVERIFY(secondId != viewId);
+    QVERIFY(firstId != secondId);
+    QCOMPARE(QAccessible::accessibleInterface(firstId), first);
+    QCOMPARE(QAccessible::queryAccessibleInterface(view.get()), interface);
+    QList<QAccessible::Id> ids{viewId, firstId, secondId};
+    if (auto *table = interface->tableInterface()) {
+        QAccessibleInterface *cell = table->cellAt(0, 1);
+        QVERIFY(cell);
+        QVERIFY(!cell->object());
+        QCOMPARE(cell->window(), view->windowHandle());
+        const QAccessible::Id cellId = QAccessible::uniqueId(cell);
+        QVERIFY(!ids.contains(cellId));
+        ids.append(cellId);
+        QAccessible::deleteAccessibleInterface(cellId);
+        QVERIFY(!QAccessible::accessibleInterface(cellId));
+        cell = table->cellAt(0, 1);
+        QVERIFY(cell);
+        const QAccessible::Id replacementId = QAccessible::uniqueId(cell);
+        QCOMPARE(QAccessible::accessibleInterface(replacementId), cell);
+        QVERIFY(replacementId != viewId);
+        QVERIFY(replacementId != firstId);
+        QVERIFY(replacementId != secondId);
+        ids.append(replacementId);
+        QCOMPARE(cell->parent(), first);
+        QAccessible::deleteAccessibleInterface(firstId);
+        QVERIFY(!QAccessible::accessibleInterface(firstId));
+        first = cell->parent();
+        QVERIFY(first);
+        QVERIFY(first->isValid());
+        firstId = QAccessible::uniqueId(first);
+        ids.append(firstId);
+        QCOMPARE(interface->child(0), first);
+        QCOMPARE(first->indexOfChild(cell), 1);
+        QCOMPARE(first->child(1), cell);
+        QCOMPARE(cell->parent(), first);
+        QCOMPARE(cell->tableCellInterface()->table(), interface);
+    }
+    model.removeRow(0);
+    QVERIFY(!first->isValid());
+    QCOMPARE(QAccessible::accessibleInterface(firstId), first);
+    view.reset();
+    for (QAccessible::Id id : ids)
+        QVERIFY(!QAccessible::accessibleInterface(id));
 }
 
 void TestAccessibility::listExposesTheVisibleItemsOnDemand()
@@ -387,6 +530,112 @@ void TestAccessibility::currentItemIsTheFocusChild()
     QVERIFY(!viewInterface->focusChild());
     QVERIFY(focusChild->state().offscreen);
     QCOMPARE(focusChild->text(QAccessible::Name), QStringLiteral("row 1"));
+}
+
+void TestAccessibility::focusEventsTargetNestedCurrentCell_data()
+{
+    QTest::addColumn<bool>("cells");
+    QTest::newRow("rows") << false;
+    QTest::newRow("cells") << true;
+}
+
+void TestAccessibility::focusEventsTargetNestedCurrentCell()
+{
+    QFETCH(bool, cells);
+    QStandardItemModel model;
+    model.setHorizontalHeaderLabels({QStringLiteral("Node"), QStringLiteral("Value")});
+    auto *parent = new QStandardItem(QStringLiteral("parent"));
+    parent->appendRow({new QStandardItem(QStringLiteral("edited")), new QStandardItem(QStringLiteral("draft"))});
+    model.appendRow({parent, new QStandardItem(QStringLiteral("parent value"))});
+    model.appendRow({new QStandardItem(QStringLiteral("tail")), new QStandardItem(QStringLiteral("tail value"))});
+    VirtualTreeTableView view;
+    AccessibleTableAdapter rows(2);
+    AccessibleCellAdapter cellAdapter;
+    view.setSelectionBehavior(VirtualItemView::SelectionBehavior::SelectItems);
+    view.setTableAdapter(&rows);
+    view.setCellAdapter(&cellAdapter);
+    view.setMaterializationMode(cells ? VirtualTableView::MaterializationMode::CellWidgets
+                                      : VirtualTableView::MaterializationMode::RowWidgets);
+    view.setModel(&model);
+    view.setUniformItemHeight(kRowHeight);
+    view.setDefaultColumnWidth(kColumnWidth);
+    view.expand(parent->index());
+    showView(&view, QSize(kViewWidth, kViewHeight));
+    auto *bridge = static_cast<AccessibleVirtualItemView *>(QAccessible::queryAccessibleInterface(&view));
+    QVERIFY(bridge);
+    struct RestoreAccessibility {
+        bool active = QAccessible::isActive();
+        QAccessible::UpdateHandler previous = QAccessible::installUpdateHandler(captureFocusEvent);
+        ~RestoreAccessibility()
+        {
+            QAccessible::installUpdateHandler(previous);
+            QAccessible::setActive(active);
+        }
+    } restore;
+    QAccessible::setActive(true);
+    QVERIFY(QAccessible::isActive());
+    view.setCurrentIndex(parent->index());
+    auto *parentCell = bridge->itemFor(parent->index(), 0);
+    QCOMPARE(parentCell->role(), QAccessible::TreeItem);
+    QVERIFY(parentCell->tableCellInterface());
+    QCOMPARE(bridge->focusChild(), parentCell);
+    QVERIFY(parentCell->state().expandable);
+    QVERIFY(parentCell->state().expanded);
+    QVERIFY(parentCell->actionInterface()->actionNames().contains(QAccessibleActionInterface::pressAction()));
+    QVERIFY(parentCell->actionInterface()->actionNames().contains(QAccessibleActionInterface::showMenuAction()));
+    view.setFocus();
+    QVERIFY(view.hasFocus());
+    QVERIFY(parentCell->state().focused);
+    QVERIFY(!bridge->itemFor(parent->index())->state().focused);
+    expansionTargets.clear();
+    lastAnnouncement.clear();
+    announcementTarget = 0;
+    lastFocusTarget = 0;
+    QTest::keyClick(&view, Qt::Key_Left, Qt::AltModifier);
+    QVERIFY(!view.isExpanded(parent->index()));
+    QVERIFY(parentCell->state().collapsed);
+    QCOMPARE(expansionTargets.size(), 2);
+    QCOMPARE(QAccessible::accessibleInterface(expansionTargets.at(0)), bridge->itemFor(parent->index()));
+    QCOMPARE(QAccessible::accessibleInterface(expansionTargets.at(1)), parentCell);
+#if defined(Q_OS_WIN) && QT_VERSION >= QT_VERSION_CHECK(6, 8, 0)
+    QCOMPARE(lastAnnouncement, QStringLiteral("parent collapsed"));
+    QCOMPARE(QAccessible::accessibleInterface(announcementTarget), parentCell);
+#endif
+    expansionTargets.clear();
+    parentCell->actionInterface()->doAction(QAccessibleActionInterface::showMenuAction());
+    QVERIFY(view.isExpanded(parent->index()));
+    QVERIFY(parentCell->state().expanded);
+    QCOMPARE(expansionTargets.size(), 2);
+    QCOMPARE(QAccessible::accessibleInterface(expansionTargets.at(1)), parentCell);
+#if defined(Q_OS_WIN) && QT_VERSION >= QT_VERSION_CHECK(6, 8, 0)
+    QCOMPARE(lastAnnouncement, QStringLiteral("parent expanded"));
+    QCOMPARE(QAccessible::accessibleInterface(announcementTarget), parentCell);
+#endif
+    lastFocusTarget = 0;
+    QTest::keyClick(&view, Qt::Key_Down);
+    const QModelIndex child = model.index(0, 0, parent->index());
+    QCOMPARE(view.currentIndex(), child);
+    auto *target = QAccessible::accessibleInterface(lastFocusTarget);
+    QVERIFY(target);
+    QCOMPARE(target, bridge->itemFor(child, 0));
+    QCOMPARE(bridge->focusChild(), target);
+    QCOMPARE(target->text(QAccessible::Name), QStringLiteral("edited"));
+    lastFocusTarget = 0;
+    QTest::keyClick(&view, Qt::Key_Right);
+    QCOMPARE(view.currentIndex(), child.siblingAtColumn(1));
+    QCOMPARE(bridge->focusChild(), bridge->itemFor(child.siblingAtColumn(1), 1));
+    QCOMPARE(bridge->focusChild()->role(), QAccessible::Cell);
+    QCOMPARE(QAccessible::accessibleInterface(lastFocusTarget), bridge->itemFor(child.siblingAtColumn(1), 1));
+    QVERIFY(model.setData(child.siblingAtColumn(1), QStringLiteral("accepted"), Qt::EditRole));
+    QCOMPARE(bridge->itemFor(child.siblingAtColumn(1), 1)->text(QAccessible::Name), QStringLiteral("accepted"));
+    QCOMPARE(bridge->itemFor(child.siblingAtColumn(1), 1)->text(QAccessible::Value), QStringLiteral("accepted"));
+    lastFocusTarget = 0;
+    QTest::keyClick(&view, Qt::Key_Down);
+    QCOMPARE(view.currentIndex(), model.index(1, 1));
+    QCOMPARE(QAccessible::accessibleInterface(lastFocusTarget), bridge->itemFor(model.index(1, 1), 1));
+    lastAnnouncement.clear();
+    view.collapse(parent->index());
+    QVERIFY(lastAnnouncement.isEmpty());
 }
 
 void TestAccessibility::childAtMapsAPointToTheItemUnderIt()

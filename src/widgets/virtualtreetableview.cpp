@@ -267,6 +267,42 @@ void VirtualTreeTableView::connectTreeSignals(QAbstractItemModel *treeModel)
     connect(treeModel, &QAbstractItemModel::columnsMoved, this, columnsChanged);
 }
 
+bool VirtualTreeTableView::isNodeWithinRoot(const QModelIndex &index) const
+{
+    if (!index.isValid() || index.model() != model())
+        return false;
+    if (!m_rootIndex.isValid())
+        return true;
+    for (QModelIndex node = index.siblingAtColumn(0); node.isValid(); node = node.parent()) {
+        if (node == m_rootIndex)
+            return true;
+    }
+    return false;
+}
+
+void VirtualTreeTableView::clearStateOutsideRoot()
+{
+    QVector<QModelIndex> pins;
+    for (const QPersistentModelIndex &pinned : explicitPinnedIndexes()) {
+        if (!isNodeWithinRoot(pinned))
+            pins.append(pinned);
+    }
+    for (const QModelIndex &pin : pins)
+        setItemPinned(pin, false);
+
+    QItemSelectionModel *selection = selectionModel();
+    if (!selection)
+        return;
+    const QModelIndexList selected = selection->selectedIndexes();
+    for (const QModelIndex &index : selected) {
+        if (!isNodeWithinRoot(index))
+            selection->select(index, QItemSelectionModel::Deselect);
+    }
+    const QModelIndex current = selection->currentIndex();
+    if (current.isValid() && !isNodeWithinRoot(current))
+        selection->setCurrentIndex(QModelIndex(), QItemSelectionModel::NoUpdate);
+}
+
 void VirtualTreeTableView::clearPinsForColumnIdentityChange(const QModelIndex &parent)
 {
     QVector<QModelIndex> affected;
@@ -315,11 +351,14 @@ void VirtualTreeTableView::reconcileColumnIdentitySelection()
     QItemSelectionModel *selection = selectionModel() == sourceSelection.data()
         ? sourceSelection.data() : nullptr;
     if (selection) {
+        const auto hasStableColumnIdentity = [this](const QModelIndex &index) {
+            return isPersistentRowStateValid(index) && index.column() == 0;
+        };
         // A row keeps its selection only while its original column-zero node survives.
         QItemSelection staleRows;
         QSet<QModelIndex> seenRows;
         for (const SelectedCellIdentity &entry : snapshot) {
-            if (isPersistentRowStateValid(entry.node) || !entry.cell.isValid())
+            if (hasStableColumnIdentity(entry.node) || !entry.cell.isValid())
                 continue;
             const QModelIndex row = QModelIndex(entry.cell).siblingAtColumn(0);
             const QModelIndex key = row.isValid() ? row : QModelIndex(entry.cell);
@@ -330,7 +369,7 @@ void VirtualTreeTableView::reconcileColumnIdentitySelection()
         }
         if (!staleRows.isEmpty())
             selection->select(staleRows, QItemSelectionModel::Deselect | QItemSelectionModel::Rows);
-        if (hadCurrent && !isPersistentRowStateValid(currentNode)
+        if (hadCurrent && !hasStableColumnIdentity(currentNode)
             && sourceSelection && selectionModel() == sourceSelection.data()) {
             sourceSelection->setCurrentIndex(QModelIndex(), QItemSelectionModel::NoUpdate);
         }
@@ -363,6 +402,9 @@ void VirtualTreeTableView::onStructureChanged(bool resetSizes, bool columnChange
     m_visibility->handleModelChanged();
     if (!requestIsCurrent())
         return;
+    clearStateOutsideRoot();
+    if (!requestIsCurrent())
+        return;
     if (columnChange)
         m_columnMappingPending = false;
     horizontalHeaderGeometry()->setSectionCount(columnCount());
@@ -380,7 +422,9 @@ bool VirtualTreeTableView::isPersistentRowStateValid(const QModelIndex &index) c
 {
     if (!index.isValid() || index.model() != model())
         return false;
-    for (QModelIndex ancestor = index; ancestor.isValid(); ancestor = ancestor.parent()) {
+    if (index.column() != 0)
+        return false;
+    for (QModelIndex ancestor = index.parent(); ancestor.isValid(); ancestor = ancestor.parent()) {
         if (ancestor.column() != 0)
             return false;
     }
@@ -404,6 +448,7 @@ void VirtualTreeTableView::refreshVisibility(bool resetSizes)
         return;
     }
     m_updatingVisibility = true;
+    const QPointer<VirtualTreeTableView> self(this);
     for (;;) {
         m_visibilityRefreshPending = false;
         const quint64 modelSerial = modelChangeSerial();
@@ -411,14 +456,19 @@ void VirtualTreeTableView::refreshVisibility(bool resetSizes)
         const quint64 mappingSerial = m_mappingSerial;
         const QPointer<QAbstractItemModel> activeModel(model());
         const bool hadModel = activeModel;
-        const auto requestIsCurrent = [this, modelSerial, rootSerial, mappingSerial,
+        const auto requestIsCurrent = [self, modelSerial, rootSerial, mappingSerial,
                                        &activeModel, hadModel]() {
-            return modelChangeSerial() == modelSerial && m_rootChangeSerial == rootSerial
-                && m_mappingSerial == mappingSerial
-                && model() == activeModel.data() && (!hadModel || activeModel);
+            return self && self->modelChangeSerial() == modelSerial
+                && self->m_rootChangeSerial == rootSerial
+                && self->m_mappingSerial == mappingSerial
+                && self->model() == activeModel.data() && (!hadModel || activeModel);
         };
-        if (resetSizes)
+        if (resetSizes) {
+            verticalHeaderGeometry()->clearExplicitSectionSizes();
+            if (!requestIsCurrent() || m_visibilityRefreshPending)
+                continue;
             resetLayoutForNewModel();
+        }
         if (!requestIsCurrent() || m_visibilityRefreshPending) {
             resetSizes = true;
             continue;
@@ -430,12 +480,13 @@ void VirtualTreeTableView::refreshVisibility(bool resetSizes)
             continue;
         }
         relayout();
+        if (!self)
+            return;
         if (!requestIsCurrent() || m_visibilityRefreshPending) {
             resetSizes = true;
             continue;
         }
-        if (verticalHeader())
-            verticalHeader()->refreshSectionLabels();
+        refreshRowHeaderLabels();
         if (!requestIsCurrent() || m_visibilityRefreshPending) {
             resetSizes = true;
             continue;
@@ -466,6 +517,19 @@ void VirtualTreeTableView::refreshVisibilitySplice(qsizetype first, qsizetype re
         layout->removeItems(first, removed);
     if (inserted > 0)
         layout->insertItems(first, inserted, estimateItemSize(first));
+    const quint64 modelSerial = modelChangeSerial();
+    const quint64 mappingSerial = m_mappingSerial;
+    HeaderGeometry *header = verticalHeaderGeometry();
+    if (header->sectionCount() == previousCount) {
+        if (removed > 0)
+            header->removeLogicalSections(int(first), int(removed));
+        if (modelChangeSerial() != modelSerial || m_mappingSerial != mappingSerial)
+            return;
+        if (inserted > 0)
+            header->insertLogicalSections(int(first), int(inserted));
+        if (modelChangeSerial() != modelSerial || m_mappingSerial != mappingSerial)
+            return;
+    }
     // Keep the row header's sparse depth gaps in the same visible-row order as
     // ListLayout. Only newly visible nodes need a depth lookup.
     QVector<QPair<int, int>> spacings;
@@ -518,9 +582,11 @@ void VirtualTreeTableView::setRootIndex(const QModelIndex &index)
     ++m_mappingSerial;
     const quint64 modelSerial = modelChangeSerial();
     const bool requestedNode = root.isValid();
-    const auto requestIsCurrent = [this, changeSerial, modelSerial, requestedNode, &root]() {
-        return m_rootChangeSerial == changeSerial && modelChangeSerial() == modelSerial
-            && (!requestedNode || isPersistentRowStateValid(root));
+    const QPointer<VirtualTreeTableView> self(this);
+    const auto requestIsCurrent = [self, changeSerial, modelSerial, requestedNode, &root]() {
+        return self && self->m_rootChangeSerial == changeSerial
+            && self->modelChangeSerial() == modelSerial
+            && (!requestedNode || self->isPersistentRowStateValid(root));
     };
     recycleAllCells();
     if (!requestIsCurrent())
@@ -530,6 +596,11 @@ void VirtualTreeTableView::setRootIndex(const QModelIndex &index)
         return;
     m_rootIndex = root;
     m_visibility->setRootIndex(root);
+    if (!requestIsCurrent())
+        return;
+    clearStateOutsideRoot();
+    if (!requestIsCurrent())
+        return;
     if (currentIndex().isValid()
         && (viewItemForIndex(currentIndex()) < 0 || currentIndex().column() >= columnCount()))
         setCurrentIndex(QModelIndex());
@@ -593,7 +664,18 @@ QModelIndex VirtualTreeTableView::indexForNavigation(qsizetype item,
     if (!node.isValid() || !current.isValid())
         return node;
     const int last = qMin(columnCount(), model()->columnCount(node.parent())) - 1;
-    return node.siblingAtColumn(qBound(0, current.column(), qMax(0, last)));
+    const int column = qBound(0, current.column(), qMax(0, last));
+    if (!isColumnHidden(column))
+        return node.siblingAtColumn(column);
+    for (int candidate = column - 1; candidate >= 0; --candidate) {
+        if (!isColumnHidden(candidate))
+            return node.siblingAtColumn(candidate);
+    }
+    for (int candidate = column + 1; candidate <= last; ++candidate) {
+        if (!isColumnHidden(candidate))
+            return node.siblingAtColumn(candidate);
+    }
+    return node.siblingAtColumn(column);
 }
 
 QItemSelection VirtualTreeTableView::selectionRange(const QModelIndex &anchor,
@@ -913,7 +995,10 @@ void VirtualTreeTableView::paintVisualStateBackgrounds(QPainter *painter,
     for (const VisibleRange &range : visibleItemRanges()) {
         for (qsizetype row = range.first; row >= 0 && row <= range.last; ++row) {
             const QModelIndex node = viewIndex(row);
-            const QRect rowRect = geometryForViewRow(row);
+            QRect rowRect = geometryForViewRow(row);
+            int visualY = rowRect.y();
+            if (rowVisualY(row, &visualY))
+                rowRect.moveTop(visualY);
             if (!node.isValid() || !rowRect.intersects(dirty))
                 continue;
             const QRect fullRow(0, rowRect.y(), viewportWidth, rowRect.height());
@@ -934,9 +1019,15 @@ void VirtualTreeTableView::paintVisualStateBackgrounds(QPainter *painter,
                 if (!anchor.isValid() || paintedCells.contains(anchor))
                     continue;
                 paintedCells.insert(anchor);
-                const QRect rect = spanRect(anchor);
+                QRect rect = spanRect(anchor);
                 const int columnPane = paneIndexOfColumn(anchor.column());
                 const qsizetype anchorRow = viewItemForIndex(anchor);
+                if (anchorRow < 0)
+                    continue;
+                int anchorY = geometryForViewRow(anchorRow).top();
+                const int committedY = anchorY;
+                if (rowVisualY(anchorRow, &anchorY))
+                    rect.translate(0, anchorY - committedY);
                 if (rect.isEmpty() || !rect.intersects(dirty) || anchorRow < 0
                     || columnPane < 0 || columnPane >= currentPanes.size())
                     continue;
@@ -993,11 +1084,14 @@ BranchIndicatorState VirtualTreeTableView::branchState(const QModelIndex &index,
     return state;
 }
 
-QRect VirtualTreeTableView::branchCellRect(qsizetype row, int cellDepth) const
+QRect VirtualTreeTableView::branchCellRect(qsizetype row, int cellDepth, bool visual) const
 {
     const QModelIndex node = viewIndex(row);
     const ColumnGeometry column = columnGeometry(0);
-    const QRect item = geometryForViewRow(row);
+    QRect item = geometryForViewRow(row);
+    int visualY = item.y();
+    if (visual && rowVisualY(row, &visualY))
+        item.moveTop(visualY);
     const int paneIndex = paneIndexOfColumn(0);
     const QVector<TablePane> currentPanes = panes();
     if (!node.isValid() || !column.isValid() || column.hidden || m_indentation <= 0
@@ -1046,7 +1140,7 @@ void VirtualTreeTableView::paintBranches(QPainter *painter) const
             if (!m_branchRenderer) {
                 if (hasChildren(node))
                     BranchIndicatorRenderer::paintBuiltinBranch(
-                        painter, branchState(node), branchCellRect(row, depth), palette());
+                        painter, branchState(node), branchCellRect(row, depth, true), palette());
                 continue;
             }
             QVector<QModelIndex> ancestors(depth + 1);
@@ -1056,7 +1150,7 @@ void VirtualTreeTableView::paintBranches(QPainter *painter) const
                 ancestor = ancestor.parent();
             }
             for (int cellDepth = 0; cellDepth <= depth; ++cellDepth) {
-                const QRect rect = branchCellRect(row, cellDepth);
+                const QRect rect = branchCellRect(row, cellDepth, true);
                 const QModelIndex cell = ancestors.at(cellDepth);
                 if (rect.isEmpty() || !cell.isValid())
                     continue;
@@ -1220,7 +1314,10 @@ void VirtualTreeTableView::mousePressEvent(QMouseEvent *event)
         const QPoint position = mousePosition(event);
         const QModelIndex index = VirtualItemView::indexAt(position);
         if (isIndicatorPosition(index, position)) {
+            const QPointer<VirtualTreeTableView> self(this);
             toggleExpanded(index);
+            if (!self)
+                return;
             m_indicatorPressToggled = true;
             event->accept();
             return;
@@ -1240,6 +1337,8 @@ void VirtualTreeTableView::mouseReleaseEvent(QMouseEvent *event)
 
 void VirtualTreeTableView::mouseDoubleClickEvent(QMouseEvent *event)
 {
+    const QPointer<VirtualTreeTableView> self(this);
+    const quint64 modelSerial = modelChangeSerial();
     if (event->button() == Qt::LeftButton) {
         const QPoint position = mousePosition(event);
         const QModelIndex index = VirtualItemView::indexAt(position);
@@ -1248,6 +1347,8 @@ void VirtualTreeTableView::mouseDoubleClickEvent(QMouseEvent *event)
         if (!alreadyToggled && hasChildren(index))
             toggleExpanded(index);
     }
+    if (!self || modelChangeSerial() != modelSerial)
+        return;
     VirtualTableView::mouseDoubleClickEvent(event);
 }
 

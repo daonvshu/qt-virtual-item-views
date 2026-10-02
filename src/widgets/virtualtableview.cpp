@@ -393,8 +393,8 @@ VirtualTableView::~VirtualTableView()
         delete m_tableAdapter;
     if (m_ownCellAdapter)
         delete m_cellAdapter;
-    if (m_ownSpanProvider)
-        delete m_spanProvider;
+    m_spanProvider = nullptr;
+    m_spanProviderOwner.reset();
 }
 
 // ---------------------------------------------------------------------------
@@ -443,6 +443,7 @@ void VirtualTableView::ensureHeaders()
         m_verticalHeader->headerWidget()->setParent(this);
         watchRowStrip(m_verticalHeader);
     }
+    applyHeaderAnimationSettings();
     applyHeaderGestureSettings();
 }
 
@@ -761,6 +762,7 @@ void VirtualTableView::connectColumnSignals(QAbstractItemModel *model)
         m_columns->setSectionCount(columnCount());
         m_explicitRowHeights.clear();
         m_rowHeaders->setSectionCount(0);
+        updateRowHeaderGeometry();
     });
     connect(model, &QAbstractItemModel::rowsInserted, this,
             [this](const QModelIndex &parent, int first, int last) {
@@ -780,12 +782,7 @@ void VirtualTableView::connectColumnSignals(QAbstractItemModel *model)
             });
     // Row identity changes also require the visible labels to be rebound.
     const auto refreshRowStrips = [this]() {
-        if (m_verticalHeader)
-            m_verticalHeader->refreshSectionLabels();
-        for (HeaderViewInterface *strip : {m_frozenTopRowsHeader, m_frozenBottomRowsHeader}) {
-            if (strip)
-                strip->refreshSectionLabels();
-        }
+        refreshRowHeaderLabels();
     };
     connect(model, &QAbstractItemModel::rowsMoved, this, refreshRowStrips);
     connect(model, &QAbstractItemModel::rowsInserted, this, refreshRowStrips);
@@ -842,7 +839,11 @@ void VirtualTableView::rekeyPersistentTableState()
     QHash<QPersistentModelIndex, QWidget *> cells;
     QHash<QPersistentModelIndex, QWidget *> invalidCells;
     for (auto it = m_cells.cbegin(); it != m_cells.cend(); ++it) {
-        if (it.key().isValid())
+        const QModelIndex index = it.key();
+        const bool schemaValid = index.isValid() && index.model() == activeModel.data()
+            && index.column() >= 0
+            && index.column() < activeModel->columnCount(index.parent());
+        if (schemaValid)
             cells.insert(it.key(), it.value());
         else
             invalidCells.insert(it.key(), it.value());
@@ -860,6 +861,8 @@ void VirtualTableView::rekeyPersistentTableState()
     if (modelChangeSerial() != modelSerial || viewMappingSerial() != mappingSerial
         || model() != activeModel.data())
         return;
+    const auto retainedProvider = m_spanProviderOwner;
+    Q_UNUSED(retainedProvider);
     if (m_spanProvider)
         m_spanProvider->modelStructureChanged();
 }
@@ -1177,6 +1180,8 @@ void VirtualTableView::setColumnOverscan(int columns)
         return;
     m_columnOverscan = clamped;
     updateColumnLayout();
+    if (m_materializationMode == MaterializationMode::CellWidgets)
+        markDirty();
 }
 
 void VirtualTableView::setColumnWidth(int logicalIndex, int width)
@@ -1437,6 +1442,13 @@ void VirtualTableView::applyHeaderAnimationSettings()
         header->setSectionAnimationEnabled(m_headerAnimationEnabled);
         header->setSectionAnimationDuration(m_headerAnimationDuration);
     }
+    for (HeaderViewInterface *header : {m_verticalHeader, m_frozenTopRowsHeader,
+                                       m_frozenBottomRowsHeader}) {
+        if (!header)
+            continue;
+        header->setSectionAnimationEnabled(m_headerAnimationEnabled);
+        header->setSectionAnimationDuration(m_headerAnimationDuration);
+    }
 }
 
 void VirtualTableView::requestSectionMoveAnimation(bool animated)
@@ -1499,11 +1511,15 @@ void VirtualTableView::onHeaderVisualGeometryFrame()
     if (m_visualGeometryFrameActive)
         return;
     m_visualGeometryFrameActive = true;
+    const bool hadRowPreview = m_rowVisualOffsetsActive;
     if (m_columnFollowsHeaderVisual)
         updateVisualColumnGeometry();
     visualColumnGeometryChanged();
     if (m_rowFollowsHeaderVisual)
         updateVisualRowGeometry();
+    if (m_spanProvider && (hadRowPreview || m_rowVisualOffsetsActive)) {
+        refreshPreviewGridMasks();
+    }
     m_visualGeometryFrameActive = false;
 }
 
@@ -1529,8 +1545,11 @@ void VirtualTableView::setRowFollowsHeaderVisual(bool follows)
     m_rowFollowsHeaderVisual = follows;
     // Turning it off has to put the rows back on the committed layout *now*: the running
     // strip will not send another frame.
-    if (!follows)
-        updateVisualRowGeometry();
+    updateVisualRowGeometry();
+    visualColumnGeometryChanged();
+    if (m_spanProvider) {
+        refreshPreviewGridMasks();
+    }
 }
 
 VirtualHeaderView *VirtualTableView::visualRowStrip() const
@@ -1545,12 +1564,24 @@ VirtualHeaderView *VirtualTableView::visualRowStrip() const
     return strip;
 }
 
+bool VirtualTableView::rowVisualY(qsizetype row, int *viewportY) const
+{
+    if (!m_rowFollowsHeaderVisual || isRowFrozen(row))
+        return false;
+    VirtualHeaderView *strip = visualRowStrip();
+    return strip && strip->sectionVisualX(int(row), viewportY);
+}
+
 void VirtualTableView::updateVisualRowGeometry()
 {
-    VirtualHeaderView *strip = visualRowStrip();
+    VirtualHeaderView *strip = m_rowFollowsHeaderVisual ? visualRowStrip() : nullptr;
     if (!strip && !m_rowVisualOffsetsActive)
         return;                       // nothing is dragging and nothing was offset
     m_rowVisualOffsetsActive = strip != nullptr;
+    if (m_materializationMode == MaterializationMode::CellWidgets) {
+        updateCellGeometry();
+        return;
+    }
 
     for (const MaterializedItem &item : materializedItems()) {
         QWidget *widget = item.widget;
@@ -1562,13 +1593,7 @@ void VirtualTableView::updateVisualRowGeometry()
         QWidget *parent = widget->parentWidget();
         const int parentY = parent && parent != viewport() ? parent->y() : 0;
         int visualY = item.geometry.y();
-        if (strip) {
-            // The strip reports the y its section is *drawn* at, in viewport coordinates
-            // (the interface's report hook is axis aware).
-            int reported = 0;
-            if (strip->sectionVisualX(int(row), &reported))
-                visualY = reported;
-        }
+        rowVisualY(row, &visualY);
         widget->move(widget->x(), visualY - parentY);
 
     }
@@ -1745,8 +1770,24 @@ void VirtualTableView::dropFrozenRowHeaders()
 
 void VirtualTableView::rebuildFrozenRowHeaders()
 {
-    syncVerticalPaneHeaders();
-    layoutVerticalHeaderStrips();
+    updateRowHeaderOffset();
+}
+
+void VirtualTableView::refreshRowHeaderLabels()
+{
+    const quint64 modelSerial = modelChangeSerial();
+    const quint64 mappingSerial = viewMappingSerial();
+    QVector<QPair<HeaderViewInterface *, QPointer<QWidget>>> strips;
+    for (HeaderViewInterface *strip : {m_verticalHeader, m_frozenTopRowsHeader, m_frozenBottomRowsHeader}) {
+        if (strip)
+            strips.append(qMakePair(strip, QPointer<QWidget>(strip->headerWidget())));
+    }
+    for (const auto &entry : strips) {
+        if (entry.second)
+            entry.first->refreshSectionLabels();
+        if (modelChangeSerial() != modelSerial || viewMappingSerial() != mappingSerial)
+            return;
+    }
 }
 
 HeaderViewInterface *VirtualTableView::createHorizontalPaneHeader()
@@ -1882,6 +1923,7 @@ void VirtualTableView::syncVerticalPaneHeaders()
         if (qobject_cast<QHeaderView *>(m_verticalHeader->headerWidget()))
             m_verticalHeader->setPaneOffset(HeaderViewInterface::kFollowGeometryOffset);
     }
+    applyHeaderAnimationSettings();
     applyHeaderGestureSettings();
     applyGridLineVisibilityToHeaders();
 }
@@ -2046,6 +2088,8 @@ void VirtualTableView::clearRowHeight(qsizetype row)
             m_rowLayout->setItemSize(row, restored);
             setPendingAnchor(anchor);
         }
+        if (m_rowHeaders && row < m_rowHeaders->sectionCount())
+            m_rowHeaders->resizeSection(int(row), restored);
     }
     updateRowHeaderGeometry();
     markDirty();
@@ -2090,6 +2134,10 @@ void VirtualTableView::updateRowHeaderOffset()
     if (panes.size() <= 1) {
         // Unchanged: one strip, the geometry carries the offset, so a custom renderer
         // that reads HeaderGeometry keeps working.
+        if (auto *strip = dynamic_cast<VirtualHeaderView *>(m_verticalHeader)) {
+            strip->setRowPaneRange(0, std::numeric_limits<int>::max());
+            strip->setPaneOffset(HeaderViewInterface::kFollowGeometryOffset);
+        }
         m_rowHeaders->setViewportOffset(verticalOffset());
         return;
     }
@@ -2104,6 +2152,8 @@ void VirtualTableView::updateRowHeaderOffset()
             header = m_frozenTopRowsHeader;
         else if (pane.type == ItemPane::Type::FrozenBottom)
             header = m_frozenBottomRowsHeader;
+        if (auto *strip = dynamic_cast<VirtualHeaderView *>(header))
+            strip->setRowPaneRange(int(pane.firstRow), int(pane.lastRow));
         if (header)
             header->setPaneOffset(rowStripOffset(pane, verticalOffset(), contentExtent()));
     }
@@ -2129,7 +2179,8 @@ void VirtualTableView::updateRowHeaderGeometry()
         && m_explicitRowHeights.size() <= kMaxSparseRowHeights;
     const auto *blockSizes = m_rowLayout
         ? dynamic_cast<const BlockSizeIndex *>(m_rowLayout->sizeIndex()) : nullptr;
-    const bool noSizeExceptions = blockSizes && blockSizes->explicitSizeCount() == 0;
+    const bool noSizeExceptions = !variable && blockSizes
+        && blockSizes->explicitSizeCount() == 0;
     const bool supported = sparseSizes || noSizeExceptions
         || !(variable && count > kRowHeaderMirrorLimit);
     if (supported != m_verticalHeaderSupported) {
@@ -2213,6 +2264,15 @@ void VirtualTableView::updateRowHeaderGeometry()
         const int size = rowHeight(row);
         if (size > 0 && m_rowHeaders->storedSectionSize(int(row)) != size)
             pending.append({row, size});
+    }
+    if (m_materializationMode == MaterializationMode::CellWidgets) {
+        for (const VisibleRange &range : visibleItemRanges()) {
+            for (qsizetype row = range.first; row >= 0 && row <= range.last; ++row) {
+                const int size = rowHeight(row);
+                if (size > 0 && m_rowHeaders->storedSectionSize(int(row)) != size)
+                    pending.append({row, size});
+            }
+        }
     }
     for (auto it = m_explicitRowHeights.constBegin(); it != m_explicitRowHeights.constEnd();
          ++it) {
@@ -2389,11 +2449,18 @@ bool VirtualTableView::restoreHeaderState(const QByteArray &state)
 // Adapter
 // ---------------------------------------------------------------------------
 
+QWidget *VirtualTableView::dragSourceWidget(const QModelIndex &index) const
+{
+    if (m_materializationMode == MaterializationMode::CellWidgets)
+        return cellWidget(anchorIndex(index));
+    return VirtualItemView::dragSourceWidget(index);
+}
+
 QRect VirtualTableView::dragPixmapRect(const QModelIndex &index) const
 {
     // Per-cell drags preview the dragged cell; a row drag (SelectionBehavior::SelectRows) keeps the
-    // whole row, which is exactly what Row Widget Mode materializes. Cell Widget Mode has no row
-    // widget to cut down, so it keeps the "no preview" behaviour.
+    // whole row, which is exactly what Row Widget Mode materializes. Cell Widget Mode captures
+    // the complete anchor widget, so it needs no cropping rectangle.
     if (!index.isValid() || m_materializationMode != MaterializationMode::RowWidgets
         || selectionBehavior() != SelectionBehavior::SelectItems) {
         return QRect();
@@ -2526,6 +2593,33 @@ void VirtualTableView::setCellAdapter(CellWidgetAdapter *adapter, bool takeOwner
 bool VirtualTableView::usesItemWidgets() const
 {
     return m_materializationMode == MaterializationMode::RowWidgets;
+}
+
+void VirtualTableView::augmentMaterializationRanges(QVector<VisibleRange> &ranges) const
+{
+    if (m_materializationMode != MaterializationMode::RowWidgets || !m_spanProvider || !model())
+        return;
+
+    const QVector<int> columns = m_panes.columnsForLayout(m_columnOverscan);
+    if (columns.isEmpty())
+        return;
+
+    const QVector<VisibleRange> sourceRanges = ranges;
+    for (const VisibleRange &range : sourceRanges) {
+        for (qsizetype row = range.first; row >= 0 && row <= range.last; ++row) {
+            for (int column : columns) {
+                const QModelIndex index = viewIndex(row, column);
+                if (!index.isValid())
+                    continue;
+                const QModelIndex anchor = anchorIndex(index);
+                if (!anchor.isValid() || anchor == index)
+                    continue;
+                const qsizetype anchorRow = viewItemForIndex(anchor);
+                if (anchorRow >= 0)
+                    ranges.append(VisibleRange{anchorRow, anchorRow});
+            }
+        }
+    }
 }
 
 QVector<int> VirtualTableView::columnsForCellMaterialization() const
@@ -2680,13 +2774,23 @@ QVector<QRect> VirtualTableView::paneSeparatorRects() const
 
 void VirtualTableView::setSpanProvider(TableSpanProvider *provider, bool takeOwnership)
 {
+    ++m_spanProviderSerial;
+    std::shared_ptr<TableSpanProvider> previousOwner;
     if (m_spanProvider != provider) {
-        if (m_ownSpanProvider)
-            delete m_spanProvider;
+        previousOwner = std::move(m_spanProviderOwner);
         m_spanProvider = provider;
-        m_ownSpanProvider = provider && takeOwnership;
-    } else if (takeOwnership) {
-        m_ownSpanProvider = true;
+        if (provider)
+            m_spanProviderOwner = m_spanProviderOwners.value(provider).lock();
+    }
+    if (provider && takeOwnership && !m_spanProviderOwner) {
+        m_spanProviderOwner.reset(provider);
+        m_spanProviderOwners.insert(provider, m_spanProviderOwner);
+    }
+    for (auto it = m_spanProviderOwners.begin(); it != m_spanProviderOwners.end();) {
+        if (it.value().expired())
+            it = m_spanProviderOwners.erase(it);
+        else
+            ++it;
     }
     // Which cells exist and where they sit changed.
     markDirty();
@@ -2704,6 +2808,7 @@ void VirtualTableView::setSpan(int row, int column, int rowSpan, int columnSpan)
         setSpanProvider(map, true);
     }
     map->setSpan(anchor, rowSpan, columnSpan);
+    ++m_spanProviderSerial;
     markDirty();
     updateColumnLayout();
 }
@@ -2714,6 +2819,7 @@ void VirtualTableView::removeSpan(int row, int column)
     if (!map)
         return;
     map->removeSpan(viewIndex(row, column));
+    ++m_spanProviderSerial;
     markDirty();
     updateColumnLayout();
 }
@@ -2724,32 +2830,58 @@ void VirtualTableView::clearSpans()
     if (!map)
         return;
     map->clearSpans();
+    ++m_spanProviderSerial;
     markDirty();
     updateColumnLayout();
 }
 
 TableSpan VirtualTableView::spanAt(const QModelIndex &index) const
 {
-    if (!m_spanProvider || !index.isValid())
+    if (!m_spanProvider || !index.isValid() || index.model() != model())
         return TableSpan();
+    const quint64 modelSerial = modelChangeSerial();
+    const quint64 mappingSerial = viewMappingSerial();
+    const quint64 providerSerial = m_spanProviderSerial;
+    const QPointer<QAbstractItemModel> activeModel(model());
+    const auto retainedProvider = m_spanProviderOwner;
+    Q_UNUSED(retainedProvider);
     const TableSpan span = m_spanProvider->spanAt(index);
+    if (!activeModel || model() != activeModel.data() || modelChangeSerial() != modelSerial
+        || viewMappingSerial() != mappingSerial || m_spanProviderSerial != providerSerial)
+        return TableSpan();
     return isSpanValid(index, span) ? span : TableSpan();
 }
 
 QModelIndex VirtualTableView::anchorIndex(const QModelIndex &index) const
 {
-    if (!m_spanProvider || !index.isValid() || index.model() != model())
+    if (!index.isValid() || index.model() != model())
+        return QModelIndex();
+    if (!m_spanProvider)
         return index;
+    const quint64 modelSerial = modelChangeSerial();
+    const quint64 mappingSerial = viewMappingSerial();
+    const quint64 providerSerial = m_spanProviderSerial;
+    const QPointer<QAbstractItemModel> activeModel(model());
+    TableSpanProvider *const provider = m_spanProvider;
+    const auto retainedProvider = m_spanProviderOwner;
+    Q_UNUSED(retainedProvider);
+    const auto requestIsCurrent = [this, modelSerial, mappingSerial, providerSerial, &activeModel]() {
+        return activeModel && model() == activeModel.data() && modelChangeSerial() == modelSerial
+            && viewMappingSerial() == mappingSerial && m_spanProviderSerial == providerSerial;
+    };
     const int targetVisual = m_columns->visualIndex(index.column());
     if (targetVisual < 0)
         return index;
     const int parentColumns = model()->columnCount(index.parent());
 
-    const auto covers = [this, &index, targetVisual, parentColumns](const QModelIndex &anchor) {
-        if (!anchor.isValid() || anchor.model() != index.model()
+    const auto covers = [this, &index, targetVisual, parentColumns, provider,
+                         &requestIsCurrent](const QModelIndex &anchor) {
+        if (!requestIsCurrent() || !anchor.isValid() || anchor.model() != index.model()
             || anchor.parent() != index.parent())
             return false;
-        const TableSpan span = m_spanProvider->spanAt(anchor);
+        const TableSpan span = provider->spanAt(anchor);
+        if (!requestIsCurrent())
+            return false;
         const int anchorVisual = m_columns->visualIndex(anchor.column());
         if (!span.isMerged() || !isSpanValid(anchor, span) || anchorVisual < 0
             || index.row() < anchor.row() || index.row() - anchor.row() >= span.rowSpan
@@ -2770,13 +2902,19 @@ QModelIndex VirtualTableView::anchorIndex(const QModelIndex &index) const
         return true;
     };
 
-    const QModelIndex providerAnchor = m_spanProvider->anchorOf(index);
+    const QModelIndex providerAnchor = provider->anchorOf(index);
+    if (!requestIsCurrent())
+        return QModelIndex();
     if (covers(providerAnchor))
         return providerAnchor;
+    if (!requestIsCurrent())
+        return QModelIndex();
 
     // The provider's default reverse lookup walks model columns. After a visual
     // reorder, search the bounded visual predecessors that spanRect() can draw.
-    const TableSpan maximum = m_spanProvider->maximumSpan();
+    const TableSpan maximum = provider->maximumSpan();
+    if (!requestIsCurrent())
+        return QModelIndex();
     if (!maximum.isMerged())
         return index;
     const int firstRow = qMax(0, index.row() - maximum.rowSpan + 1);
@@ -2787,6 +2925,8 @@ QModelIndex VirtualTableView::anchorIndex(const QModelIndex &index) const
             const QModelIndex candidate = model()->index(row, logical, index.parent());
             if (covers(candidate))
                 return candidate;
+            if (!requestIsCurrent())
+                return QModelIndex();
         }
     }
     return index;
@@ -2809,7 +2949,14 @@ QRect VirtualTableView::spanRect(const QModelIndex &index) const
     if (anchorIndex(index) != index)
         return QRect();
 
+    const quint64 modelSerial = modelChangeSerial();
+    const quint64 mappingSerial = viewMappingSerial();
+    const quint64 providerSerial = m_spanProviderSerial;
+    const QPointer<QAbstractItemModel> activeModel(tableModel);
     const TableSpan span = spanAt(index);
+    if (!activeModel || model() != activeModel.data() || modelChangeSerial() != modelSerial
+        || viewMappingSerial() != mappingSerial || m_spanProviderSerial != providerSerial)
+        return QRect();
     if (!isSpanValid(index, span))
         return QRect();
     const int lastModelRow = int(qMin(qint64(index.row()) + qMax(1, span.rowSpan) - 1,
@@ -2891,20 +3038,24 @@ QWidget *VirtualTableView::createCellWidget(const QPersistentModelIndex &index)
     const quint64 mappingSerial = viewMappingSerial();
     const quint64 configurationSerial = m_cellConfigurationSerial;
     const quint64 lifecycleSerial = m_cellLifecycleSerial;
+    const QPointer<VirtualTableView> self(this);
     const QPointer<QAbstractItemModel> activeModel(model());
     CellWidgetAdapter *const activeAdapter = m_cellAdapter;
-    const auto requestIsCurrent = [this, &index, &activeModel, activeAdapter, modelSerial,
+    const auto requestIsCurrent = [self, &index, &activeModel, activeAdapter, modelSerial,
                                    mappingSerial, configurationSerial, lifecycleSerial]() {
-        return activeModel && model() == activeModel.data()
-            && modelChangeSerial() == modelSerial && viewMappingSerial() == mappingSerial
-            && m_cellConfigurationSerial == configurationSerial
-            && m_cellLifecycleSerial == lifecycleSerial && m_cellAdapter == activeAdapter
-            && m_materializationMode == MaterializationMode::CellWidgets && index.isValid();
+        return self && activeModel && self->model() == activeModel.data()
+            && self->modelChangeSerial() == modelSerial
+            && self->viewMappingSerial() == mappingSerial
+            && self->m_cellConfigurationSerial == configurationSerial
+            && self->m_cellLifecycleSerial == lifecycleSerial
+            && self->m_cellAdapter == activeAdapter
+            && self->m_materializationMode == MaterializationMode::CellWidgets && index.isValid();
     };
     const QModelIndex modelIndex(index);
     const WidgetType type = activeAdapter->cellWidgetType(modelIndex);
     if (!requestIsCurrent() || QModelIndex(index) != modelIndex)
         return nullptr;
+    const qsizetype reuseBefore = recycler()->reuseCount();
     QWidget *widget = recycler()->acquire(type);
     if (!widget)
         return nullptr;
@@ -2914,6 +3065,13 @@ QWidget *VirtualTableView::createCellWidget(const QPersistentModelIndex &index)
         return nullptr;
     }
 
+    if (isLifecycleLoggingEnabled()) {
+        appendLifecycleLog(QStringLiteral("%1 cell type=%2 row=%3 column=%4")
+                               .arg(recycler()->reuseCount() == reuseBefore
+                                        ? QStringLiteral("create")
+                                        : QStringLiteral("reuse"))
+                               .arg(type).arg(index.row()).arg(index.column()));
+    }
     if (widget->parentWidget() != viewport())
         widget->setParent(viewport());
     if (!guardedWidget || !requestIsCurrent() || QModelIndex(index) != modelIndex) {
@@ -2929,15 +3087,17 @@ QWidget *VirtualTableView::createCellWidget(const QPersistentModelIndex &index)
     }
     m_cellTypes.insert(widget, type);
     m_cells.insert(index, widget);
-    const auto bindingIsCurrent = [this, &index, &modelIndex, &guardedWidget,
+    const auto bindingIsCurrent = [self, &index, &modelIndex, &guardedWidget,
                                    &requestIsCurrent, widget]() {
         if (requestIsCurrent() && QModelIndex(index) == modelIndex
-            && guardedWidget && m_cells.value(index) == widget)
+            && guardedWidget && self->m_cells.value(index) == widget)
             return true;
-        if (m_cells.value(index) == widget) {
-            m_cells.remove(index);
-            m_cellTypes.remove(widget);
-            recycler()->discard(guardedWidget.data());
+        if (!self)
+            return false;
+        if (self->m_cells.value(index) == widget) {
+            self->m_cells.remove(index);
+            self->m_cellTypes.remove(widget);
+            self->recycler()->discard(guardedWidget.data());
         }
         return false;
     };
@@ -2950,6 +3110,10 @@ QWidget *VirtualTableView::createCellWidget(const QPersistentModelIndex &index)
     activeAdapter->visualStateChanged(widget, modelIndex);
     if (!bindingIsCurrent())
         return nullptr;
+    ++m_cellBindCount;
+    if (isLifecycleLoggingEnabled())
+        appendLifecycleLog(QStringLiteral("bind cell row=%1 column=%2")
+                               .arg(index.row()).arg(index.column()));
     return widget;
 }
 
@@ -2959,17 +3123,25 @@ void VirtualTableView::recycleCell(const QPersistentModelIndex &index, QWidget *
         return;
     const WidgetType type = m_cellTypes.take(widget);
     CellWidgetAdapter *const activeAdapter = m_cellAdapter;
+    const quint64 configurationSerial = m_cellConfigurationSerial;
     QPointer<QWidget> guardedWidget(widget);
+    ++m_cellRecycleCount;
     activeAdapter->unbindCellWidget(widget, QModelIndex(index));
+    if (isLifecycleLoggingEnabled())
+        appendLifecycleLog(QStringLiteral("unbind cell row=%1 column=%2")
+                               .arg(index.row()).arg(index.column()));
     if (m_visualStateScope == VisualStateScope::Cell)
         clearVisualTransition(QModelIndex(index));
     if (!guardedWidget)
         return;
-    if (m_cellAdapter != activeAdapter) {
+    if (m_cellAdapter != activeAdapter || m_cellConfigurationSerial != configurationSerial
+        || m_materializationMode != MaterializationMode::CellWidgets) {
         recycler()->discard(guardedWidget.data());
         return;
     }
     recycler()->recycle(type, guardedWidget.data());
+    if (isLifecycleLoggingEnabled())
+        appendLifecycleLog(QStringLiteral("recycle cell type=%1").arg(type));
 }
 
 void VirtualTableView::discardCellWidget(QWidget *widget)
@@ -2986,8 +3158,11 @@ void VirtualTableView::recycleAllCells()
     QHash<QPersistentModelIndex, QWidget *> cells;
     cells.swap(m_cells);
     CellWidgetAdapter *const activeAdapter = m_cellAdapter;
+    const quint64 configurationSerial = m_cellConfigurationSerial;
     for (auto it = cells.constBegin(); it != cells.constEnd(); ++it) {
-        if (activeAdapter && m_cellAdapter == activeAdapter)
+        if (activeAdapter && m_cellAdapter == activeAdapter
+            && m_cellConfigurationSerial == configurationSerial
+            && m_materializationMode == MaterializationMode::CellWidgets)
             recycleCell(it.key(), it.value());
         else
             discardCellWidget(it.value());
@@ -3098,21 +3273,26 @@ void VirtualTableView::materializeItemRanges(const QVector<VisibleRange> &ranges
     const quint64 mappingSerial = viewMappingSerial();
     const quint64 configurationSerial = m_cellConfigurationSerial;
     const quint64 lifecycleSerial = m_cellLifecycleSerial;
+    const QPointer<VirtualTableView> self(this);
     const QPointer<QAbstractItemModel> activeModel(model());
     CellWidgetAdapter *const activeAdapter = m_cellAdapter;
-    const auto requestIsCurrent = [this, &activeModel, activeAdapter, modelSerial,
+    const auto requestIsCurrent = [self, &activeModel, activeAdapter, modelSerial,
                                    mappingSerial, configurationSerial, lifecycleSerial]() {
-        return activeModel && model() == activeModel.data()
-            && modelChangeSerial() == modelSerial && viewMappingSerial() == mappingSerial
-            && m_cellConfigurationSerial == configurationSerial
-            && m_cellLifecycleSerial == lifecycleSerial && m_cellAdapter == activeAdapter
-            && m_materializationMode == MaterializationMode::CellWidgets;
+        return self && activeModel && self->model() == activeModel.data()
+            && self->modelChangeSerial() == modelSerial
+            && self->viewMappingSerial() == mappingSerial
+            && self->m_cellConfigurationSerial == configurationSerial
+            && self->m_cellLifecycleSerial == lifecycleSerial
+            && self->m_cellAdapter == activeAdapter
+            && self->m_materializationMode == MaterializationMode::CellWidgets;
     };
-    const auto abortStalePass = [this, &requestIsCurrent]() {
+    const auto abortStalePass = [self, &requestIsCurrent]() {
         if (requestIsCurrent())
             return false;
-        m_cellMaterializationActive = false;
-        abortMaterializationPass();
+        if (self) {
+            self->m_cellMaterializationActive = false;
+            self->abortMaterializationPass();
+        }
         return true;
     };
 
@@ -3249,7 +3429,7 @@ void VirtualTableView::syncCellPaneClipHosts()
         const QList<QWidget *> cells =
             host->findChildren<QWidget *>(QString(), Qt::FindDirectChildrenOnly);
         for (QWidget *cell : cells)
-            cell->setParent(viewport());
+            reparentPreservingFocus(cell, viewport());
         host->hide();
         host->setParent(nullptr);
         host->deleteLater();
@@ -3259,10 +3439,31 @@ void VirtualTableView::syncCellPaneClipHosts()
 
 void VirtualTableView::updateCellGeometry()
 {
+    const QPointer<VirtualTableView> self(this);
+    const quint64 modelSerial = modelChangeSerial();
+    const quint64 mappingSerial = viewMappingSerial();
+    const quint64 configurationSerial = m_cellConfigurationSerial;
+    const quint64 lifecycleSerial = m_cellLifecycleSerial;
+    const quint64 providerSerial = m_spanProviderSerial;
+    const auto requestIsCurrent = [=]() {
+        return self && self->modelChangeSerial() == modelSerial
+            && self->viewMappingSerial() == mappingSerial
+            && self->m_cellConfigurationSerial == configurationSerial
+            && self->m_cellLifecycleSerial == lifecycleSerial
+            && self->m_spanProviderSerial == providerSerial;
+    };
     syncCellPaneClipHosts();
+    if (!requestIsCurrent())
+        return;
 
-    for (auto it = m_cells.constBegin(); it != m_cells.constEnd(); ++it) {
-        QWidget *widget = it.value();
+    // Restoring a popup highlight can synchronously replace the model or root.
+    const auto cells = m_cells;
+    for (auto it = cells.constBegin(); it != cells.constEnd(); ++it) {
+        if (!requestIsCurrent())
+            return;
+        QPointer<QWidget> widget(it.value());
+        if (!widget)
+            continue;
         const QModelIndex index = it.key();
         if (!index.isValid()) {
             widget->hide();
@@ -3275,13 +3476,18 @@ void VirtualTableView::updateCellGeometry()
         }
         // Span aware: an anchor cell widget covers its whole merged area.
         QRect rect = cellRect(index);
+        if (!requestIsCurrent() || !widget)
+            return;
         const int inset = qBound(0, leadingCellInset(index), rect.width());
         rect.adjust(inset, 0, 0, 0);
         // ... and follows its column while the header draws it away from the
         // committed position (§23/§24), like the row widget mode hosts do.
         int visualX = 0;
         if (columnVisualX(index.column(), &visualX))
-            rect.translate(visualX - m_columns->columnGeometry(index.column()).viewportX, 0);
+            rect.translate(visualX - columnGeometry(index.column()).viewportX, 0);
+        int visualY = 0;
+        if (rowVisualY(viewRow, &visualY))
+            rect.translate(0, visualY - visualRect(index).top());
         const int paneIndex = m_panes.paneIndexOfColumn(index.column());
         const ItemPane::Type rowPane = itemPaneForRow(viewRow);
         const bool frozen = m_panes.isFrozenColumn(index.column());
@@ -3292,7 +3498,9 @@ void VirtualTableView::updateCellGeometry()
         QWidget *clipHost = m_cellClipHosts.value(cellClipKey(rowPane, paneIndex), nullptr);
         QWidget *parent = clipHost ? clipHost : viewport();
         if (widget->parentWidget() != parent)
-            widget->setParent(parent);
+            reparentPreservingFocus(widget, parent);
+        if (!requestIsCurrent() || !widget)
+            return;
 
         // A cell that does not own a container is not clipped at all (a frozen cell
         // in a view without frozen rows).
@@ -3301,8 +3509,12 @@ void VirtualTableView::updateCellGeometry()
         if (rect.isValid() && !visible.isEmpty()) {
             const QPoint origin = hostRect.isNull() ? QPoint(0, 0) : hostRect.topLeft();
             widget->setGeometry(rect.translated(-origin));
+            if (!requestIsCurrent() || !widget)
+                return;
             if (!widget->isVisible())
                 widget->show();
+            if (!requestIsCurrent() || !widget)
+                return;
             // A frozen cell (either direction) goes above the scrolling cells, so it
             // stays visible when a scrolling cell passes behind it.
             if (frozen || isRowFrozen(viewRow))
@@ -3360,6 +3572,10 @@ void VirtualTableView::rebindItemsInRange(const QModelIndex &topLeft, const QMod
         activeAdapter->visualStateChanged(widget.data(), index);
         if (!current())
             return;
+        ++m_cellBindCount;
+        if (isLifecycleLoggingEnabled())
+            appendLifecycleLog(QStringLiteral("rebind cell row=%1 column=%2")
+                                   .arg(index.row()).arg(index.column()));
     }
 }
 
@@ -3520,6 +3736,8 @@ QList<QModelIndex> VirtualTableView::materializedCellIndexes() const
 VirtualViewStats VirtualTableView::stats() const
 {
     VirtualViewStats result = VirtualItemView::stats();
+    result.bindCount += m_cellBindCount;
+    result.recycleCount += m_cellRecycleCount;
     if (m_materializationMode == MaterializationMode::CellWidgets) {
         result.materializedItems = m_cells.size();
         qsizetype pinned = 0;
@@ -3653,7 +3871,7 @@ void VirtualTableView::dropStaleRowPaneClipHosts(QWidget *rowWidget, const QSet<
         const QList<ColumnHost *> clipped =
             clipHost->findChildren<ColumnHost *>(QString(), Qt::FindDirectChildrenOnly);
         for (ColumnHost *host : clipped)
-            host->setParent(rowWidget);
+            reparentPreservingFocus(host, rowWidget);
         clipHost->hide();
         clipHost->setParent(nullptr);
         clipHost->deleteLater();
@@ -3663,6 +3881,10 @@ void VirtualTableView::dropStaleRowPaneClipHosts(QWidget *rowWidget, const QSet<
 void VirtualTableView::applyColumnLayout(const MaterializedItem &item, bool notifyAdapter)
 {
     if (!item.widget)
+        return;
+    // Folded pinned rows already live outside their parent's clip. Hiding a
+    // ColumnHost here would remove focus from an editor that must stay alive.
+    if (viewItemForIndex(item.index) < 0)
         return;
 
     // One clip container per scrolling pane (§43 "advanced panes"): several
@@ -3708,7 +3930,10 @@ void VirtualTableView::applyColumnLayout(const MaterializedItem &item, bool noti
             // §43 "spans": the columns a merged area covers have no widget of
             // their own, the anchor host takes over their rectangle.
             if (context.spans().isCovered(logicalColumn)) {
-                host->setVisible(false);
+                if (hasFocusWithin(host))
+                    host->move(-qMax(1, host->width()), -qMax(1, host->height()));
+                else
+                    host->setVisible(false);
                 continue;
             }
             const bool frozen = context.isColumnFrozen(geometry.logicalIndex);
@@ -3729,7 +3954,7 @@ void VirtualTableView::applyColumnLayout(const MaterializedItem &item, bool noti
                 }
             }
             if (host->parentWidget() != parent)
-                host->setParent(parent);
+                reparentPreservingFocus(host, parent);
 
             // The header may be drawing this column away from its committed position
             // (§23/§24: a drag preview, or a transition settling a move). Only x is
@@ -3756,7 +3981,7 @@ void VirtualTableView::applyColumnLayout(const MaterializedItem &item, bool noti
             const bool intersects = !visible.isEmpty() && hostRect.intersects(localViewport);
             const QPoint origin = localPaneRect.isNull() ? QPoint(0, 0) : localPaneRect.topLeft();
             host->setGeometry(hostRect.translated(-origin));
-            host->setVisible(intersects);
+            host->setVisible(intersects || hasFocusWithin(host));
             if (!intersects)
                 continue;
 
@@ -3779,11 +4004,132 @@ void VirtualTableView::updateColumnLayout()
     } else {
         // Snapshot: the adapter hook or a ColumnHost may trigger a relayout.
         const QList<MaterializedItem> items = materializedItems();
+        const quint64 modelSerial = modelChangeSerial();
+        const quint64 mappingSerial = viewMappingSerial();
+        const quint64 configurationSerial = m_cellConfigurationSerial;
+        TableWidgetAdapter *const activeAdapter = m_tableAdapter;
+        QVector<QPointer<QWidget>> widgets;
+        widgets.reserve(items.size());
         for (const MaterializedItem &item : items)
+            widgets.append(item.widget);
+        const auto requestIsCurrent = [this, modelSerial, mappingSerial,
+                                       configurationSerial, activeAdapter]() {
+            return modelChangeSerial() == modelSerial && viewMappingSerial() == mappingSerial
+                && m_cellConfigurationSerial == configurationSerial
+                && m_tableAdapter == activeAdapter
+                && m_materializationMode == MaterializationMode::RowWidgets;
+        };
+        for (qsizetype i = 0; i < items.size(); ++i) {
+            const MaterializedItem &item = items.at(i);
+            if (!requestIsCurrent()) {
+                abortMaterializationPass();
+                break;
+            }
+            if (!widgets.at(i) || !item.index.isValid()
+                || widgetForIndex(item.index) != widgets.at(i).data())
+                continue;
             applyColumnLayout(item);
+            if (!requestIsCurrent()) {
+                abortMaterializationPass();
+                break;
+            }
+        }
     }
     m_columnUpdateActive = false;
+    updateRowSpacingWidgetMasks();
     syncColumnSpacingWidgets();
+}
+
+void VirtualTableView::refreshPreviewGridMasks()
+{
+    // A provider callback can invalidate a partially computed projection.
+    for (int attempt = 0; attempt < 2; ++attempt) {
+        auto cache = std::make_shared<PreviewSpanCache>();
+        cache->modelSerial = modelChangeSerial();
+        cache->mappingSerial = viewMappingSerial();
+        cache->providerSerial = m_spanProviderSerial;
+        cache->configurationSerial = m_cellConfigurationSerial;
+        const auto requestIsCurrent = [&]() {
+            return cache->modelSerial == modelChangeSerial()
+                && cache->mappingSerial == viewMappingSerial()
+                && cache->providerSerial == m_spanProviderSerial
+                && cache->configurationSerial == m_cellConfigurationSerial;
+        };
+        m_previewSpanCache = cache;
+        syncRowGridLines();
+        if (!requestIsCurrent())
+            continue;
+        updateRowSpacingWidgetMasks();
+        if (!requestIsCurrent())
+            continue;
+        syncColumnSpacingWidgets();
+        if (requestIsCurrent())
+            return;
+    }
+    markDirty();
+}
+
+QVector<QRect> VirtualTableView::previewSpanRects() const
+{
+    QVector<QRect> rectangles;
+    if (!m_spanProvider || !model() || !m_rowFollowsHeaderVisual || !visualRowStrip())
+        return rectangles;
+    const quint64 modelSerial = modelChangeSerial();
+    const quint64 mappingSerial = viewMappingSerial();
+    const quint64 providerSerial = m_spanProviderSerial;
+    const quint64 configurationSerial = m_cellConfigurationSerial;
+    const auto requestIsCurrent = [&]() {
+        return modelChangeSerial() == modelSerial && viewMappingSerial() == mappingSerial
+            && m_spanProviderSerial == providerSerial
+            && m_cellConfigurationSerial == configurationSerial;
+    };
+    const auto cache = m_previewSpanCache.lock();
+    const auto cacheIsCurrent = [&]() {
+        return cache && cache->modelSerial == modelChangeSerial()
+            && cache->mappingSerial == viewMappingSerial()
+            && cache->providerSerial == m_spanProviderSerial
+            && cache->configurationSerial == m_cellConfigurationSerial;
+    };
+    if (cacheIsCurrent() && cache->populated)
+        return cache->rectangles;
+    QSet<QPersistentModelIndex> anchors;
+    const QVector<int> columns = m_panes.columnsForLayout(1);
+    for (const VisibleRange &range : visibleItemRanges()) {
+        for (qsizetype row = range.first; row >= 0 && row <= range.last; ++row) {
+            for (int column : columns) {
+                const QModelIndex anchor = anchorIndex(viewIndex(row, column));
+                if (!requestIsCurrent())
+                    return {};
+                if (!anchor.isValid() || anchors.contains(anchor))
+                    continue;
+                anchors.insert(anchor);
+                const TableSpan span = spanAt(anchor);
+                if (!requestIsCurrent())
+                    return {};
+                if (!span.isMerged())
+                    continue;
+                const qsizetype anchorRow = viewItemForIndex(anchor);
+                const int pane = m_panes.paneIndexOfColumn(anchor.column());
+                if (anchorRow < 0 || pane < 0)
+                    continue;
+                QRect merged = spanRect(anchor);
+                if (!requestIsCurrent())
+                    return {};
+                int visualY = 0;
+                if (rowVisualY(anchorRow, &visualY))
+                    merged.translate(0, visualY - geometryForViewRow(anchorRow).top());
+                merged = merged.intersected(itemPaneRect(itemPaneForRow(anchorRow)))
+                    .intersected(m_panes.paneAt(pane).viewportRect);
+                if (!merged.isEmpty())
+                    rectangles.append(merged);
+            }
+        }
+    }
+    if (cacheIsCurrent()) {
+        cache->rectangles = rectangles;
+        cache->populated = true;
+    }
+    return rectangles;
 }
 
 void VirtualTableView::syncRowGridLines()
@@ -3821,6 +4167,8 @@ void VirtualTableView::syncRowGridLines()
     }
     const QColor color = resolvedHorizontalGridLineColor();
     const QVector<int> visibleColumns = m_spanProvider ? m_panes.columnsForLayout(1) : QVector<int>();
+    const bool preview = m_rowFollowsHeaderVisual && visualRowStrip();
+    const QVector<QRect> previewSpans = preview ? previewSpanRects() : QVector<QRect>();
     for (auto it = desired.cbegin(); it != desired.cend(); ++it) {
         QWidget *line = m_rowGridLines.value(it.key(), nullptr);
         if (!line) {
@@ -3838,7 +4186,11 @@ void VirtualTableView::syncRowGridLines()
         const QRect excluded = rowGridLineExclusion(itemDepth(viewIndex(it.key())));
         if (!excluded.isEmpty())
             mask -= excluded.translated(viewportRect.x() - line->x(), 0);
-        if (m_spanProvider && model()) {
+        if (preview) {
+            for (const QRect &merged : previewSpans)
+                mask -= merged.adjusted(0, 0, 0, -m_horizontalGridLineWidth)
+                    .translated(viewportRect.topLeft() - line->pos());
+        } else if (m_spanProvider && model()) {
             for (int column : visibleColumns) {
                 const QModelIndex above = viewIndex(it.key(), column);
                 const QModelIndex below = viewIndex(it.key() + 1, column);
@@ -3957,8 +4309,12 @@ void VirtualTableView::syncColumnSpacingWidgets()
                         if (!anchor.isValid() || anchor != anchorIndex(right)
                             || m_panes.paneIndexOfColumn(anchor.column()) != paneIndex)
                             continue;
-                        const QRect merged = spanRect(anchor)
-                            .intersected(itemPaneRect(itemPaneForRow(row)));
+                        QRect merged = spanRect(anchor);
+                        const qsizetype anchorRow = viewItemForIndex(anchor);
+                        int visualY = 0;
+                        if (rowVisualY(anchorRow, &visualY))
+                            merged.translate(0, visualY - geometryForViewRow(anchorRow).top());
+                        merged = merged.intersected(itemPaneRect(itemPaneForRow(row)));
                         if (!merged.isEmpty())
                             mask -= QRect(0, viewportRect.y() + merged.y() - widget->y(),
                                           widget->width(), merged.height());
@@ -4052,6 +4408,32 @@ void VirtualTableView::configureRowSpacingWidget(QWidget *widget) const
         widget->setProperty("vivShowSpacingLines", m_horizontalGridLinesVisible);
         widget->setProperty("vivSpacingLineWidth", m_horizontalGridLineWidth);
     }
+}
+
+QRegion VirtualTableView::rowSpacingWidgetMask(qsizetype row, const QRect &geometry) const
+{
+    QRegion mask = VirtualItemView::rowSpacingWidgetMask(row, geometry);
+    if (!m_spanProvider || !model())
+        return mask;
+    if (m_rowFollowsHeaderVisual && visualRowStrip()) {
+        for (const QRect &merged : previewSpanRects())
+            mask -= merged.translated(-geometry.topLeft());
+        return mask;
+    }
+    for (int column : m_panes.columnsForLayout(1)) {
+        const QModelIndex above = viewIndex(row, column);
+        const QModelIndex below = viewIndex(row + 1, column);
+        const QModelIndex anchor = anchorIndex(above);
+        if (!anchor.isValid() || anchor != anchorIndex(below))
+            continue;
+        const int pane = m_panes.paneIndexOfColumn(column);
+        if (pane < 0)
+            continue;
+        const QRect merged = spanRect(anchor).intersected(m_panes.paneAt(pane).viewportRect)
+            .intersected(itemPaneRect(itemPaneForRow(row)));
+        mask -= merged.translated(-geometry.topLeft());
+    }
+    return mask;
 }
 
 void VirtualTableView::resizeEvent(QResizeEvent *event)

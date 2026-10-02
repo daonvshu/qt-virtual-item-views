@@ -238,6 +238,7 @@ private slots:
     void animationDefaultsToOutCubicWith300ms();
     void dragRoomEasesAndCanBeTurnedOff();
     void dragReordersInsideItsPaneOnly();
+    void draggedSectionStaysVisibleOutsidePane();
     void escapeCancelsTheDrag();
     void hoverOverASectionWidgetUpdatesTheCursor();
     void childrenAddedAfterBindingAreWatchedToo();
@@ -824,6 +825,39 @@ void TestVirtualHeaderView::dragReordersInsideItsPaneOnly()
     QCOMPARE(m_geometry->visualIndex(0), 0);
     QVERIFY(m_geometry->visualIndex(1) > m_geometry->visualIndex(3));
     QVERIFY(m_geometry->visualIndex(4) > m_geometry->visualIndex(3));
+}
+
+void TestVirtualHeaderView::draggedSectionStaysVisibleOutsidePane()
+{
+    m_header->setSectionAnimationEnabled(false);
+    m_header->setPaneFilter(QVector<int>({1, 3}), true);
+    m_header->setPaneOffset(0);
+    QPointer<QWidget> dragged(m_header->sectionWidget(1));
+    QVERIFY(dragged);
+    const QPoint start(kSectionWidth / 2, 5);
+    const QPoint outside(m_header->width() + kSectionWidth, 5);
+    const auto begin = [&]() {
+        sendMouse(m_header, QEvent::MouseButtonPress, start, Qt::LeftButton, Qt::LeftButton);
+        sendMouse(m_header, QEvent::MouseMove, outside, Qt::NoButton, Qt::LeftButton);
+    };
+    begin();
+    QVERIFY(dragged);
+    QVERIFY(dragged->isVisible());
+    QVERIFY(dragged->x() >= m_header->width());
+    QCOMPARE(m_header->sectionWidget(1), dragged.data());
+    QCOMPARE(m_geometry->visualIndex(1), 1);
+    QKeyEvent escape(QEvent::KeyPress, Qt::Key_Escape, Qt::NoModifier);
+    QApplication::sendEvent(m_header, &escape);
+    QCOMPARE(dragged->x(), 0);
+    QCOMPARE(m_geometry->visualIndex(1), 1);
+    begin();
+    QVERIFY(dragged->isVisible());
+    sendMouse(m_header, QEvent::MouseButtonRelease, outside, Qt::LeftButton, Qt::NoButton);
+    QCOMPARE(m_geometry->visualIndex(1), 3);
+    QCOMPARE(dragged->x(), kSectionWidth);
+    QCOMPARE(m_header->sectionWidget(1), dragged.data());
+    m_header->setPaneOffset(10 * kSectionWidth);
+    QVERIFY(!dragged || !dragged->isVisible());
 }
 
 void TestVirtualHeaderView::escapeCancelsTheDrag()

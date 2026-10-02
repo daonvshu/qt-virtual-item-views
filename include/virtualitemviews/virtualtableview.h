@@ -13,6 +13,7 @@
 #include <QSet>
 #include <QVector>
 #include <functional>
+#include <memory>
 
 class QAbstractItemModel;
 class QPainter;
@@ -220,7 +221,7 @@ public:
     bool stretchLastColumn() const;
 
     // -- horizontal scrolling -------------------------------------------------
-    /// Offset of the primary scroll group (group 0): the group the header
+    /// Offset of the primary scroll group: the group the header
     /// geometry and the horizontal scroll bar drive.
     qint64 horizontalOffset() const;
     void setHorizontalOffset(qint64 offset);
@@ -262,9 +263,8 @@ public:
     /// Any number of frozen panes and scrolling groups is supported. Panes of one
     /// scroll group share a horizontal offset; the group of the *first* scrolling
     /// pane is the primary group and is the one the header geometry and the
-    /// horizontal scroll bar drive, so keep that pane in group 0 to have the
-    /// scroll bar control it. Every other group is driven by
-    /// setHorizontalOffset(group, offset).
+    /// horizontal scroll bar drive, regardless of its group number. Every other
+    /// group is driven by setHorizontalOffset(group, offset).
     void setPanes(const QVector<TablePaneSpec> &panes);
     QVector<TablePaneSpec> paneSpecs() const { return m_panes.paneSpecs(); }
     /// Index of the pane that shows \a logicalIndex (-1 when hidden/unknown).
@@ -277,8 +277,8 @@ public:
     /// Horizontal offset of one scroll group. The primary group follows the header
     /// geometry, so setHorizontalOffset(qint64) moves it.
     qint64 horizontalOffset(int scrollGroup) const { return m_panes.groupOffset(scrollGroup); }
-    /// Sets the offset of \a scrollGroup (no-op for the primary group: use
-    /// setHorizontalOffset(qint64) there, the scroll bar drives it).
+    /// Sets the offset of \a scrollGroup. For the primary group this delegates to
+    /// setHorizontalOffset(qint64), keeping the header and scroll bar in sync.
     void setHorizontalOffset(int scrollGroup, qint64 offset);
     qint64 maximumHorizontalOffset(int scrollGroup) const
     {
@@ -362,7 +362,7 @@ public:
     // -- spans (§43 "spans", see docs/history/spans.md) ------------------------------
     /// Source of the merged cells. The default is "nothing is merged", so a
     /// table without spans behaves exactly as before. Passing nullptr detaches
-    /// (and with takeOwnership = true deletes) the current provider.
+    /// the current provider; an owned provider is released after active queries return.
     void setSpanProvider(TableSpanProvider *provider, bool takeOwnership = false);
     TableSpanProvider *spanProvider() const { return m_spanProvider; }
     /// Convenience for the map provider: merges the cells starting at the
@@ -466,6 +466,8 @@ protected:
     virtual QRect rowGridLineExclusion(int depth) const;
     /// Visual x of a column while its header section is being dragged or animated.
     bool columnVisualX(int logicalIndex, int *viewportX) const;
+    /// Reports a scrolling row's preview y only while row following is enabled.
+    bool rowVisualY(qsizetype row, int *viewportY) const;
     /// Refreshes the horizontal line masks after tree decoration moves.
     void syncRowGridLines();
     /// Lets derived views move decorations with a header's visual column position.
@@ -482,6 +484,7 @@ protected:
     bool isLayoutParent(const QModelIndex &parent) const override;
     QModelIndex indexForNavigation(qsizetype item, const QModelIndex &current) const override;
     void materializeItems(const VisibleRange &rows) override;
+    void augmentMaterializationRanges(QVector<VisibleRange> &ranges) const override;
     /// Cell Widget Mode materializes every range the kernel asks for: the scrolling
     /// window plus the frozen rows (§31 row direction).
     void materializeItemRanges(const QVector<VisibleRange> &ranges) override;
@@ -491,8 +494,11 @@ protected:
     QModelIndex indexAt(const QPoint &viewportPos) const override;
     bool canMeasureItem(qsizetype item) const override;
     void afterMaterialize() override;
+    /// Rebinds every row strip after visible rows change identity.
+    void refreshRowHeaderLabels();
     void applyRowSpacingOverrides() override;
     void configureRowSpacingWidget(QWidget *widget) const override;
+    QRegion rowSpacingWidgetMask(qsizetype row, const QRect &geometry) const override;
     bool handleItemKeyPress(QKeyEvent *event) override;
     /// §38: a table drops between rows (row semantics) or into a cell. The
     /// column of the target is -1 when the whole row is the drop unit.
@@ -543,6 +549,10 @@ private:
     void updateRowHeaderOffset();
     void syncHorizontalScrollBar();
     void updateColumnLayout();
+    /// Visible merged rectangles projected onto the row strip's preview positions.
+    QVector<QRect> previewSpanRects() const;
+    /// Shares preview span projection only within one grid mask refresh.
+    void refreshPreviewGridMasks();
     /// Recomputes the pane layout (§31) and the column layout that depends on
     /// it (frozen widths change the scrollable range and every column x).
     void updatePaneLayout();
@@ -659,6 +669,8 @@ private:
     /// materialized widget is the whole row, so the host the framework placed for that column is
     /// what the pixmap is cut down to.
     QRect dragPixmapRect(const QModelIndex &index) const override;
+    /// Uses the span anchor's cell widget in Cell Widget Mode, otherwise the row widget.
+    QWidget *dragSourceWidget(const QModelIndex &index) const override;
     void scrollToColumn(int logicalIndex);
     void onSortIndicatorChanged(int logicalIndex, Qt::SortOrder order);
 
@@ -724,6 +736,15 @@ private:
     bool m_rowVisualOffsetsActive = false;
     /// Re-entrancy guard: a visual frame must not start another one.
     bool m_visualGeometryFrameActive = false;
+    struct PreviewSpanCache {
+        quint64 modelSerial = 0;
+        quint64 mappingSerial = 0;
+        quint64 providerSerial = 0;
+        quint64 configurationSerial = 0;
+        bool populated = false;
+        QVector<QRect> rectangles;
+    };
+    std::weak_ptr<PreviewSpanCache> m_previewSpanCache;
     // The clip containers of a row widget are its children, tagged with their pane
     // index (see PaneClipHost): a recycled row widget can never leave a stale
     // pointer behind.
@@ -739,6 +760,8 @@ private:
     QHash<QWidget *, WidgetType> m_cellTypes;
     quint64 m_cellConfigurationSerial = 0;
     quint64 m_cellLifecycleSerial = 0;
+    quint64 m_cellBindCount = 0;
+    quint64 m_cellRecycleCount = 0;
     bool m_cellMaterializationActive = false;
 
     int m_headerHeight = 28;
@@ -748,7 +771,10 @@ private:
     int m_columnOverscan = 1;
     int m_horizontalWheelPixels = 48;
     TableSpanProvider *m_spanProvider = nullptr;
-    bool m_ownSpanProvider = false;
+    quint64 m_spanProviderSerial = 0;
+    std::shared_ptr<TableSpanProvider> m_spanProviderOwner;
+    // Reattaching an owned provider during its callback must reuse ownership.
+    QHash<TableSpanProvider *, std::weak_ptr<TableSpanProvider>> m_spanProviderOwners;
     RowSizePolicy m_rowSizePolicy = RowSizePolicy::ExplicitWins;
     bool m_sortingEnabled = false;
     bool m_sortGuard = false;

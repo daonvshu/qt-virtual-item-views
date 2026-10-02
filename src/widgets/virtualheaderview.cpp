@@ -231,6 +231,8 @@ void VirtualHeaderView::setLabelModel(QAbstractItemModel *model)
         connect(m_labelModel, &QObject::destroyed, this, [this]() {
             if (m_adapter)
                 m_adapter->setLabelModel(nullptr);
+            rebindMaterializedSections(std::numeric_limits<int>::min(),
+                                       std::numeric_limits<int>::max());
         });
         // A rename touches only the named sections, so those are rebound in place. A
         // structural change moves the logical identity of every section: the materialized
@@ -284,12 +286,27 @@ void VirtualHeaderView::rebindMaterializedSections(int first, int last)
 {
     if (!m_adapter)
         return;
-    for (auto it = m_sectionWidgets.cbegin(); it != m_sectionWidgets.cend(); ++it) {
-        if (it.key() < first || it.key() > last)
+    QPointer<VirtualHeaderView> self(this);
+    HeaderWidgetAdapter *const adapter = m_adapter;
+    const quint64 adapterSerial = m_adapterSerial;
+    for (auto it = m_sectionWidgets.begin(); it != m_sectionWidgets.end();) {
+        if (it.key() < first || it.key() > last) {
+            ++it;
             continue;
+        }
         // Re-binding is also how the business learns about the change, so this is the
         // contract for "the state of this section changed" (sort indicator included).
-        m_adapter->bindSection(it.value(), it.key());
+        QPointer<QWidget> guardedWidget(it.value());
+        adapter->bindSection(guardedWidget.data(), it.key());
+        if (!self)
+            return;
+        if (m_adapter != adapter || m_adapterSerial != adapterSerial)
+            return;
+        if (!guardedWidget) {
+            it = m_sectionWidgets.erase(it);
+            continue;
+        }
+        ++it;
     }
 }
 
@@ -308,6 +325,7 @@ void VirtualHeaderView::setPaneFilter(const QVector<int> &logicalColumns, bool f
         return;
     m_paneFilter = logicalColumns;
     m_paneFilterActive = true;
+    m_paneOrderChanged = true;
     m_paneCacheDirty = true;
     relayout();
 }
@@ -317,6 +335,7 @@ void VirtualHeaderView::clearPaneFilter()
     if (!m_paneFilterActive)
         return;
     m_paneFilterActive = false;
+    m_paneOrderChanged = true;
     m_paneFilter.clear();
     m_paneOffset = kFollowGeometryOffset;
     m_paneCacheDirty = true;
@@ -328,6 +347,15 @@ void VirtualHeaderView::setPaneOffset(qint64 offset)
     if (m_paneOffset == offset)
         return;
     m_paneOffset = offset;
+    relayout();
+}
+
+void VirtualHeaderView::setRowPaneRange(int first, int last)
+{
+    if (m_firstPaneRow == first && m_lastPaneRow == last)
+        return;
+    m_firstPaneRow = first;
+    m_lastPaneRow = last;
     relayout();
 }
 
@@ -457,18 +485,24 @@ void VirtualHeaderView::setCrossAxisSeparatorWidth(int pixels)
 
 void VirtualHeaderView::setAdapter(HeaderWidgetAdapter *adapter, bool takeOwnership)
 {
+    QPointer<VirtualHeaderView> self(this);
     if (m_adapter == adapter) {
         m_ownAdapter = m_ownAdapter || takeOwnership;
         return;
     }
+    ++m_adapterSerial;
     // Collaborators that borrowed the old adapter (the table's pane renderers) have to
     // release their sections first: they unbind through that adapter, which is still alive
     // here but may be deleted a few lines below (P0-1 of the third review).
     emit adapterAboutToChange();
+    if (!self)
+        return;
     // Same rule as the view: unbind with the old adapter, drop its pooled section
     // widgets (they belong to another adapter's WidgetType namespace), and only
     // then let the old adapter be deleted.
     recycleAllSections();
+    if (!self)
+        return;
     if (m_recycler)
         m_recycler->clear();
     if (m_ownAdapter) {
@@ -483,9 +517,15 @@ void VirtualHeaderView::setAdapter(HeaderWidgetAdapter *adapter, bool takeOwners
     // "setAdapter() then setLabelModel()" would behave differently (P1.1 of the fourth review).
     if (m_adapter)
         m_adapter->setLabelModel(m_labelModel.data());
+    if (!self)
+        return;
     if (m_adapter)
         m_adapter->setGeometryModel(m_geometry.data());
+    if (!self)
+        return;
     relayout();
+    if (!self)
+        return;
     emit adapterChanged();
 }
 
@@ -504,7 +544,8 @@ void VirtualHeaderView::setSectionOverscan(int sections)
 
 bool VirtualHeaderView::isFiltered(int logicalIndex) const
 {
-    return m_paneFilterActive && !m_paneFilterSet.contains(logicalIndex);
+    return logicalIndex < m_firstPaneRow || logicalIndex > m_lastPaneRow
+        || (m_paneFilterActive && !m_paneFilterSet.contains(logicalIndex));
 }
 
 void VirtualHeaderView::rebuildPaneCacheIfNeeded() const
@@ -606,9 +647,14 @@ int VirtualHeaderView::sectionPos(int logicalIndex) const
 
 void VirtualHeaderView::relayout()
 {
+    QPointer<VirtualHeaderView> self(this);
+    HeaderWidgetAdapter *const adapter = m_adapter;
+    const quint64 adapterSerial = m_adapterSerial;
     if (!m_geometry || !m_adapter
         || m_geometry->sectionCount() <= 0) {
         recycleAllSections();
+        if (!self)
+            return;
         m_lastVisualOrder.clear();
         m_lastOrderWasIdentity = false;
         m_lastOrderCount = 0;
@@ -625,6 +671,8 @@ void VirtualHeaderView::relayout()
     const int count = m_geometry->sectionCount();
     if (count <= 0) {
         recycleAllSections();
+        if (!self)
+            return;
         m_lastVisualOrder.clear();
         m_lastOrderWasIdentity = false;
         m_lastOrderCount = 0;
@@ -643,7 +691,7 @@ void VirtualHeaderView::relayout()
     // made a 20,000 column header walk 20,000 columns per wheel step.
     const quint32 orderRevision = m_geometry->orderRevision();
     bool sectionsReordered = false;
-    if (m_geometry->isUniform()) {
+    if (m_geometry->isUniform() && !m_paneFilterActive) {
         // A uniform geometry *is* the identity order (a reorder would have materialised
         // the stored order), so there is nothing to derive - and nothing can have been
         // reordered. Deriving it would walk every section: at ten million rows that is
@@ -651,7 +699,7 @@ void VirtualHeaderView::relayout()
         m_lastVisualOrder.clear();
         m_lastOrderWasIdentity = true;
         m_lastOrderCount = m_geometry->sectionCount();
-    } else if (m_animateOrderChange || orderRevision != m_lastOrderRevision
+    } else if (m_paneOrderChanged || m_animateOrderChange || orderRevision != m_lastOrderRevision
                || (m_lastVisualOrder.isEmpty() && !m_lastOrderWasIdentity)) {
         const QVector<int> order = visualOrder();
         if (m_lastOrderWasIdentity && m_lastOrderCount == order.size()) {
@@ -673,6 +721,7 @@ void VirtualHeaderView::relayout()
         m_lastOrderCount = order.size();
     }
     m_lastOrderRevision = orderRevision;
+    m_paneOrderChanged = false;
     const bool animateMove = sectionsReordered && m_animateOrderChange;
     m_animateOrderChange = false; // the request is consumed by this pass
 
@@ -787,9 +836,21 @@ void VirtualHeaderView::relayout()
             ++it;
             continue;
         }
-        m_adapter->unbindSection(it.value(), it.key());
-        it.value()->hide();
-        m_recycler->recycle(m_adapter->sectionType(it.key()), it.value());
+        QPointer<QWidget> guardedWidget(it.value());
+        adapter->unbindSection(guardedWidget.data(), it.key());
+        if (!self)
+            return;
+        if (m_adapter != adapter || m_adapterSerial != adapterSerial)
+            return;
+        if (!guardedWidget) {
+            it = m_sectionWidgets.erase(it);
+            continue;
+        }
+        guardedWidget->hide();
+        const WidgetType type = adapter->sectionType(it.key());
+        if (!self || m_adapter != adapter || m_adapterSerial != adapterSerial)
+            return;
+        m_recycler->recycle(type, guardedWidget.data());
         it = m_sectionWidgets.erase(it);
     }
 
@@ -797,16 +858,35 @@ void VirtualHeaderView::relayout()
     for (int logical : wanted) {
         QWidget *widget = m_sectionWidgets.value(logical, nullptr);
         if (!widget) {
-            widget = m_recycler->acquire(m_adapter->sectionType(logical));
+            const WidgetType type = adapter->sectionType(logical);
+            if (!self || m_adapter != adapter || m_adapterSerial != adapterSerial)
+                return;
+            widget = m_recycler->acquire(type);
+            if (!self)
+                return;
+            if (m_adapter != adapter || m_adapterSerial != adapterSerial) {
+                m_recycler->discard(widget);
+                return;
+            }
             if (!widget)
                 continue;
             widget->setParent(this);
             widget->hide();
             m_sectionWidgets.insert(logical, widget);
-            m_adapter->bindSection(widget, logical);
+            QPointer<QWidget> guardedWidget(widget);
+            adapter->bindSection(widget, logical);
+            if (!self)
+                return;
+            if (m_adapter != adapter || m_adapterSerial != adapterSerial
+                || !guardedWidget
+                || m_sectionWidgets.value(logical, nullptr) != widget) {
+                if (!guardedWidget)
+                    m_sectionWidgets.remove(logical);
+                return;
+            }
             // Watched at bind time and then kept up to date through ChildAdded, since
             // the business may add its widgets later (§25 cursor).
-            watchMouse(widget);
+            watchMouse(guardedWidget.data());
         }
     }
 
@@ -816,8 +896,20 @@ void VirtualHeaderView::relayout()
         && !m_sectionWidgets.isEmpty()) {
         animateSectionMove();
     } else {
-        m_slideFrom.clear();
-        m_slideProgress = 1.0;
+        bool keepTransition = m_slideAnimation
+            && m_slideAnimation->state() != QAbstractAnimation::Stopped && m_slideProgress < 1.0;
+        for (auto it = m_slideTargets.constBegin(); keepTransition && it != m_slideTargets.constEnd(); ++it) {
+            keepTransition = m_sectionWidgets.contains(it.key())
+                && sectionPos(it.key()) == it.value().first
+                && m_geometry->sectionSize(it.key()) == it.value().second;
+        }
+        if (!keepTransition) {
+            if (m_slideAnimation)
+                m_slideAnimation->stop();
+            m_slideFrom.clear();
+            m_slideTargets.clear();
+            m_slideProgress = 1.0;
+        }
         positionSections();
     }
     update();
@@ -832,8 +924,10 @@ VirtualHeaderView::PackedOrder VirtualHeaderView::packedOrder() const
     if (count <= 0)
         return packed;
     if (m_geometry->isUniform() && !m_paneFilterActive) {
-        // The order *is* the identity: nothing to build, nothing to walk.
-        packed.count = count;
+        // A row band is a contiguous slice of the identity order; keep it allocation-free.
+        packed.first = qBound(0, m_firstPaneRow, count);
+        const int last = qMin(count - 1, m_lastPaneRow);
+        packed.count = qMax(0, last - packed.first + 1);
         return packed;
     }
     packed.storage.reserve(count);
@@ -1197,9 +1291,12 @@ void VirtualHeaderView::animateSectionMove()
     // Where the materialized sections are right now: an interrupted transition
     // continues from the current visual position, never from a stale one.
     m_slideFrom.clear();
+    m_slideTargets.clear();
     for (auto it = m_sectionWidgets.constBegin(); it != m_sectionWidgets.constEnd(); ++it) {
-        if (it.value()->isVisible())
+        if (it.value()->isVisible()) {
             m_slideFrom.insert(it.key(), axisPosOf(it.value()));
+            m_slideTargets.insert(it.key(), qMakePair(sectionPos(it.key()), m_geometry->sectionSize(it.key())));
+        }
     }
 
     if (!m_slideAnimation) {
@@ -1234,6 +1331,9 @@ bool VirtualHeaderView::isSectionPinned(int logicalIndex) const
     const QWidget *widget = m_sectionWidgets.value(logicalIndex, nullptr);
     if (!widget)
         return false;
+    // Hiding the dragged child drops Qt's implicit mouse grab before the release.
+    if (m_dragging && logicalIndex == m_dragSection)
+        return true;
     if (const QWidget *focus = QApplication::focusWidget()) {
         if (focus == widget || widget->isAncestorOf(focus))
             return true;
@@ -1250,10 +1350,26 @@ void VirtualHeaderView::recycleAllSections()
         m_sectionWidgets.clear();
         return;
     }
-    for (auto it = m_sectionWidgets.begin(); it != m_sectionWidgets.end(); ++it) {
-        m_adapter->unbindSection(it.value(), it.key());
-        it.value()->hide();
-        m_recycler->recycle(m_adapter->sectionType(it.key()), it.value());
+    QPointer<VirtualHeaderView> self(this);
+    HeaderWidgetAdapter *const adapter = m_adapter;
+    const quint64 adapterSerial = m_adapterSerial;
+    for (auto it = m_sectionWidgets.begin(); it != m_sectionWidgets.end();) {
+        QPointer<QWidget> guardedWidget(it.value());
+        adapter->unbindSection(guardedWidget.data(), it.key());
+        if (!self)
+            return;
+        if (m_adapter != adapter || m_adapterSerial != adapterSerial)
+            return;
+        if (!guardedWidget) {
+            it = m_sectionWidgets.erase(it);
+            continue;
+        }
+        guardedWidget->hide();
+        const WidgetType type = adapter->sectionType(it.key());
+        if (!self || m_adapter != adapter || m_adapterSerial != adapterSerial)
+            return;
+        m_recycler->recycle(type, guardedWidget.data());
+        ++it;
     }
     m_sectionWidgets.clear();
 }

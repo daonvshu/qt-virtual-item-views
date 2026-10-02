@@ -8,6 +8,7 @@
 
 #include <QAbstractItemModel>
 #include <QAccessibleEvent>
+#include <QCoreApplication>
 #include <QItemSelectionModel>
 #include <QPointer>
 #include <QSet>
@@ -191,6 +192,10 @@ public:
             connect(treeTable, &VirtualTreeTableView::visibleRowsChanged, this, [this]() {
                 sendModelChange(QAccessibleTableModelChangeEvent::ModelReset);
             });
+            connect(treeTable, &VirtualTreeTableView::expanded, this,
+                    [this](const QModelIndex &index) { sendExpansionChange(index); });
+            connect(treeTable, &VirtualTreeTableView::collapsed, this,
+                    [this](const QModelIndex &index) { sendExpansionChange(index); });
         }
         syncSources();
     }
@@ -198,6 +203,7 @@ public:
 private:
     void syncSources();
     void sendEvent(QAccessible::Event type);
+    void sendExpansionChange(const QModelIndex &index);
     void sendModelChange(QAccessibleTableModelChangeEvent::ModelChangeType type, int firstRow = -1,
                          int lastRow = -1);
 
@@ -266,6 +272,17 @@ void AccessibilityNotifier::sendEvent(QAccessible::Event type)
 {
     if (!QAccessible::isActive() || !m_view)
         return;
+    if (type == QAccessible::Focus && m_viewNode) {
+        QAccessibleInterface *target = m_viewNode;
+        while (QAccessibleInterface *child = target->focusChild()) {
+            if (child == target)
+                break;
+            target = child;
+        }
+        QAccessibleEvent event(target, type);
+        QAccessible::updateAccessibility(&event);
+        return;
+    }
     QAccessibleEvent event(m_view, type);
     QAccessible::updateAccessibility(&event);
 }
@@ -282,6 +299,35 @@ void AccessibilityNotifier::sendModelChange(QAccessibleTableModelChangeEvent::Mo
         event.setLastRow(lastRow);
     QAccessible::updateAccessibility(&event);
 }
+
+void AccessibilityNotifier::sendExpansionChange(const QModelIndex &index)
+{
+    if (!QAccessible::isActive() || !m_viewNode || !index.isValid())
+        return;
+    QAccessible::State changed;
+    changed.expanded = true;
+    changed.collapsed = true;
+    const QPersistentModelIndex node(index.siblingAtColumn(0));
+    const QPointer<VirtualItemView> view(m_view);
+    QAccessibleStateChangeEvent rowEvent(m_viewNode->itemFor(node), changed);
+    QAccessible::updateAccessibility(&rowEvent);
+    if (!view || !node.isValid())
+        return;
+    QAccessibleStateChangeEvent cellEvent(m_viewNode->itemFor(node, 0), changed);
+    QAccessible::updateAccessibility(&cellEvent);
+#if defined(Q_OS_WIN) && QT_VERSION >= QT_VERSION_CHECK(6, 8, 0)
+    // Qt's UIA bridge does not forward expanded/collapsed state changes.
+    if (view && node.isValid() && view->hasFocus()
+        && view->currentIndex().siblingAtColumn(0) == node) {
+        const QString message = treeIsExpanded(view, node)
+            ? QCoreApplication::translate("VirtualItemViews", "%1 expanded")
+            : QCoreApplication::translate("VirtualItemViews", "%1 collapsed");
+        QAccessibleAnnouncementEvent announcement(m_viewNode->itemFor(node, 0),
+                                                  message.arg(node.data().toString()));
+        QAccessible::updateAccessibility(&announcement);
+    }
+#endif
+}
 } // namespace
 
 // ---------------------------------------------------------------------------
@@ -293,7 +339,6 @@ AccessibleVirtualItem::AccessibleVirtualItem(VirtualItemView *view, const QModel
     : m_view(view)
     , m_index(index)
     , m_column(-1)
-    , m_rowNode(nullptr)
     , m_viewNode(viewNode)
 {
 }
@@ -304,9 +349,15 @@ AccessibleVirtualItem::AccessibleVirtualItem(VirtualItemView *view, const QModel
     : m_view(view)
     , m_index(cellIndex)
     , m_column(column)
-    , m_rowNode(rowNode)
     , m_viewNode(viewNode)
 {
+    Q_UNUSED(rowNode);
+}
+
+AccessibleVirtualItem::~AccessibleVirtualItem()
+{
+    if (m_viewNode)
+        m_viewNode->m_nodes.removeAll(m_cacheId);
 }
 
 bool AccessibleVirtualItem::isValid() const
@@ -316,7 +367,13 @@ bool AccessibleVirtualItem::isValid() const
 
 QObject *AccessibleVirtualItem::object() const
 {
-    return m_view;
+    // Virtual children have independent cache IDs, not the view's QObject identity.
+    return nullptr;
+}
+
+QWindow *AccessibleVirtualItem::window() const
+{
+    return m_view && m_view->window() ? m_view->window()->windowHandle() : nullptr;
 }
 
 QModelIndex AccessibleVirtualItem::rowModelIndex() const
@@ -355,11 +412,18 @@ QRect AccessibleVirtualItem::rect() const
                 itemRect = itemRect.intersected(panes.at(paneIndex).viewportRect);
         }
     }
-    return toGlobal(m_view, itemRect.intersected(rowPaneClip(m_view, m_index)));
+    // A row/list item keeps its committed geometry when it scrolls outside the
+    // viewport; accessibility clients use the negative/global coordinates to
+    // determine its offscreen state. Cell nodes are clipped to their owning pane.
+    if (m_column >= 0)
+        itemRect = itemRect.intersected(rowPaneClip(m_view, m_index));
+    return toGlobal(m_view, itemRect);
 }
 
 QAccessible::Role AccessibleVirtualItem::role() const
 {
+    if (m_column == 0 && qobject_cast<VirtualTreeTableView *>(m_view))
+        return QAccessible::TreeItem;
     if (m_column >= 0)
         return QAccessible::Cell;
     if (isTree(m_view))
@@ -396,7 +460,9 @@ void AccessibleVirtualItem::setText(QAccessible::Text, const QString &)
 
 bool AccessibleVirtualItem::isInViewport() const
 {
-    return !rect().isEmpty();
+    if (!m_view || rect().isEmpty())
+        return false;
+    return rect().intersects(toGlobal(m_view, m_view->viewport()->rect()));
 }
 
 QAccessible::State AccessibleVirtualItem::state() const
@@ -415,7 +481,7 @@ QAccessible::State AccessibleVirtualItem::state() const
     state.selected = selection && selection->isSelected(m_index);
     const bool current = m_view->currentIndex() == m_index;
     state.active = current;
-    state.focused = current && m_view->hasFocus();
+    state.focused = current && m_view->hasFocus() && (m_column >= 0 || !isTable(m_view));
     state.focusable = state.selectable || current;
     state.readOnly = true;
 
@@ -428,7 +494,7 @@ QAccessible::State AccessibleVirtualItem::state() const
     state.invisible = hiddenColumn;
     state.offscreen = !hiddenColumn && !isInViewport();
 
-    if (isTree(m_view) && m_column < 0) {
+    if (isTree(m_view) && (m_column < 0 || m_column == 0)) {
         state.expandable = treeHasChildren(m_view, m_index);
         state.expanded = state.expandable && treeIsExpanded(m_view, m_index);
         state.collapsed = state.expandable && !treeIsExpanded(m_view, m_index);
@@ -520,7 +586,7 @@ int AccessibleVirtualItem::indexOfChild(const QAccessibleInterface *childInterfa
         return -1;
     const QList<int> columns = isTable(m_view) ? visibleColumns() : QList<int>();
     if (childNode->m_column >= 0) {
-        return childNode->m_rowNode == this
+        return childNode->rowModelIndex() == m_index
             && childNode->m_index.column() == childNode->m_column
             ? columns.indexOf(childNode->m_column) : -1;
     }
@@ -676,10 +742,11 @@ QStringList AccessibleVirtualItem::actionNames() const
     if (!isValid())
         return names;
     names << QAccessibleActionInterface::setFocusAction();
-    // A row/item node "presses" (a tree node toggles instead); a cell has no
-    // action of its own.
-    if (m_column < 0)
+    // Row nodes and expandable tree-column cells toggle their tree node.
+    if (m_column < 0 || (m_column == 0 && isTree(m_view) && treeHasChildren(m_view, m_index)))
         names << QAccessibleActionInterface::pressAction();
+    if ((m_column < 0 || m_column == 0) && isTree(m_view) && treeHasChildren(m_view, m_index))
+        names << QAccessibleActionInterface::showMenuAction();
     return names;
 }
 
@@ -692,7 +759,9 @@ void AccessibleVirtualItem::doAction(const QString &actionName)
         m_view->setCurrentIndex(m_index);
         return;
     }
-    if (actionName == QAccessibleActionInterface::pressAction() && m_column < 0) {
+    if ((actionName == QAccessibleActionInterface::pressAction()
+         || actionName == QAccessibleActionInterface::showMenuAction())
+        && (m_column < 0 || (m_column == 0 && isTree(m_view) && treeHasChildren(m_view, m_index)))) {
         if (auto *tree = qobject_cast<VirtualTreeView *>(m_view)) {
             if (tree->hasChildren(m_index)) {
                 tree->toggleExpanded(m_index);
@@ -738,8 +807,11 @@ QAccessibleInterface *AccessibleVirtualItem::parent() const
 {
     if (!m_view)
         return nullptr;
-    if (m_column >= 0)
-        return m_rowNode ? static_cast<QAccessibleInterface *>(m_rowNode) : m_viewNode;
+    if (m_column >= 0) {
+        if (m_viewNode && m_index.isValid())
+            return m_viewNode->itemFor(rowModelIndex());
+        return m_viewNode;
+    }
     if (AccessibleVirtualItem *itemNode = itemParent())
         return itemNode;
     return m_viewNode;
@@ -762,7 +834,15 @@ AccessibleVirtualItemView::~AccessibleVirtualItemView()
 {
     delete m_notifier;
     m_notifier = nullptr;
-    qDeleteAll(m_nodes);
+    m_view = nullptr;
+    for (QAccessible::Id id : m_nodes) {
+        if (auto *node = dynamic_cast<AccessibleVirtualItem *>(QAccessible::accessibleInterface(id))) {
+            node->m_view = nullptr;
+            node->m_viewNode = nullptr;
+        }
+    }
+    for (QAccessible::Id id : m_nodes)
+        QAccessible::deleteAccessibleInterface(id);
     m_nodes.clear();
 }
 
@@ -774,6 +854,11 @@ bool AccessibleVirtualItemView::isValid() const
 QObject *AccessibleVirtualItemView::object() const
 {
     return m_view;
+}
+
+QWindow *AccessibleVirtualItemView::window() const
+{
+    return m_view && m_view->window() ? m_view->window()->windowHandle() : nullptr;
 }
 
 QRect AccessibleVirtualItemView::rect() const
@@ -937,7 +1022,8 @@ int AccessibleVirtualItemView::visiblePosition(const QModelIndex &index) const
 AccessibleVirtualItem *AccessibleVirtualItemView::cachedNode(const QModelIndex &index,
                                                             int column) const
 {
-    for (AccessibleVirtualItem *node : m_nodes) {
+    for (QAccessible::Id id : m_nodes) {
+        auto *node = dynamic_cast<AccessibleVirtualItem *>(QAccessible::accessibleInterface(id));
         if (node && node->column() == column && node->index() == index)
             return node;
     }
@@ -950,12 +1036,14 @@ AccessibleVirtualItem *AccessibleVirtualItemView::createNode(const QModelIndex &
         return nullptr;
     if (column < 0) {
         auto *node = new AccessibleVirtualItem(m_view, index, this);
-        m_nodes.append(node);
+        node->m_cacheId = QAccessible::registerAccessibleInterface(node);
+        m_nodes.append(node->m_cacheId);
         return node;
     }
     AccessibleVirtualItem *rowNode = itemFor(index.siblingAtColumn(0), -1);
     auto *node = new AccessibleVirtualItem(m_view, index, column, rowNode, this);
-    m_nodes.append(node);
+    node->m_cacheId = QAccessible::registerAccessibleInterface(node);
+    m_nodes.append(node->m_cacheId);
     return node;
 }
 
@@ -1010,7 +1098,13 @@ QAccessibleInterface *AccessibleVirtualItemView::focusChild() const
     if (!current.isValid() || visiblePosition(current) < 0)
         return nullptr;
     const QModelIndex child = isTree(m_view) ? topLevelTreeIndex(m_view, current) : current;
-    return const_cast<AccessibleVirtualItemView *>(this)->itemFor(child);
+    QAccessibleInterface *target = const_cast<AccessibleVirtualItemView *>(this)->itemFor(child);
+    while (QAccessibleInterface *focused = target->focusChild()) {
+        if (focused == target)
+            break;
+        target = focused;
+    }
+    return target;
 }
 
 void *AccessibleVirtualItemView::interface_cast(QAccessible::InterfaceType type)

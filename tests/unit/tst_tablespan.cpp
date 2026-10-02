@@ -7,6 +7,9 @@
 #include <QLabel>
 #include <QStandardItemModel>
 
+#include <functional>
+#include <memory>
+
 using namespace viv;
 using namespace vivtest;
 
@@ -121,6 +124,37 @@ private:
     int m_columnCount = 0;
 };
 
+class CallbackSpanProvider : public TableSpanProvider
+{
+public:
+    TableSpan maximumSpan() const override
+    {
+        if (inMaximum)
+            fire();
+        return TableSpan{2, 2};
+    }
+    TableSpan spanAt(const QModelIndex &) const override
+    {
+        if (!inMaximum)
+            fire();
+        return TableSpan{};
+    }
+    void fire() const
+    {
+        if (!armed)
+            return;
+        armed = false;
+        ++calls;
+        const auto action = callback;
+        action();
+    }
+
+    bool inMaximum = false;
+    mutable bool armed = true;
+    mutable int calls = 0;
+    std::function<void()> callback;
+};
+
 QStandardItemModel *buildModel(int rows, int columns, QObject *parent)
 {
     auto *model = new QStandardItemModel(rows, columns, parent);
@@ -143,6 +177,8 @@ class TestTableSpan : public QObject
     Q_OBJECT
 
 private slots:
+    void defaultReverseLookupStopsAfterModelChanges_data();
+    void defaultReverseLookupStopsAfterModelChanges();
     void withoutProviderNothingIsMerged();
     void mapProviderResolvesAnchorAndCoveredCells();
     void mergedRectIsTheUnionOfTheCommittedGeometry();
@@ -156,7 +192,103 @@ private slots:
     void rowWidgetModeFoldsTheColumnHosts();
     void overlappingSpansAreIgnoredWithOneWarning();
     void removingASpanShrinksTheMaximum();
+    void rowSpacingLinesRespectMergedCells_data();
+    void rowSpacingLinesRespectMergedCells();
 };
+
+void TestTableSpan::defaultReverseLookupStopsAfterModelChanges_data()
+{
+    QTest::addColumn<bool>("inMaximum");
+    QTest::addColumn<int>("action");
+    for (bool inMaximum : {false, true}) {
+        for (int action = 0; action < 4; ++action) {
+            const QByteArray name = QByteArray(inMaximum ? "maximum-" : "span-")
+                + QByteArray::number(action);
+            QTest::newRow(name.constData()) << inMaximum << action;
+        }
+    }
+}
+
+void TestTableSpan::defaultReverseLookupStopsAfterModelChanges()
+{
+    QFETCH(bool, inMaximum);
+    QFETCH(int, action);
+    std::unique_ptr<QStandardItemModel> model(new QStandardItemModel(3, 3));
+    const QModelIndex index = model->index(1, 1);
+    const QPersistentModelIndex persistent(index);
+    CallbackSpanProvider provider;
+    provider.inMaximum = inMaximum;
+    provider.callback = [&]() {
+        if (action == 0) {
+            model->clear();
+            model->setRowCount(3);
+            model->setColumnCount(3);
+        } else if (action == 1) {
+            model->removeRow(1);
+        } else if (action == 2) {
+            model->insertRow(0);
+        } else {
+            model.reset();
+        }
+    };
+    QVERIFY(!provider.anchorOf(index).isValid());
+    QCOMPARE(provider.calls, 1);
+    if (action == 2) {
+        QVERIFY(persistent.isValid());
+        QCOMPARE(persistent.row(), 2);
+        QCOMPARE(provider.anchorOf(persistent), QModelIndex(persistent));
+    } else {
+        QVERIFY(!persistent.isValid());
+    }
+}
+
+void TestTableSpan::rowSpacingLinesRespectMergedCells_data()
+{
+    QTest::addColumn<bool>("cells");
+    QTest::newRow("rows") << false;
+    QTest::newRow("cells") << true;
+}
+
+void TestTableSpan::rowSpacingLinesRespectMergedCells()
+{
+    QFETCH(bool, cells);
+    QStandardItemModel model(6, 4);
+    SpanHostAdapter rowAdapter(4);
+    SpanCellAdapter cellAdapter;
+    VirtualTableView view;
+    if (cells) {
+        view.setMaterializationMode(VirtualTableView::MaterializationMode::CellWidgets);
+        view.setCellAdapter(&cellAdapter);
+    } else {
+        view.setTableAdapter(&rowAdapter);
+    }
+    view.setUniformItemHeight(kRowHeight);
+    view.setDefaultColumnWidth(kColumnWidth);
+    view.setRowSpacing(6);
+    view.setColumnSpacing(6);
+    const QColor horizontal(17, 131, 229);
+    view.setHorizontalGridLineColor(horizontal);
+    view.setHorizontalGridLinesVisible(true);
+    view.setHorizontalGridLineWidth(1);
+    view.setModel(&model);
+    showView(&view, QSize(500, kViewHeight));
+    const int y = view.visualRect(model.index(1, 0)).bottom() + 1;
+    const QPoint origin = view.viewport()->geometry().topLeft();
+    const auto gapColor = [&](int column) {
+        return view.grab().toImage().pixelColor(origin
+            + QPoint(view.columnGeometry(column).viewportX + 50, y));
+    };
+    QCOMPARE(gapColor(1), horizontal);
+    view.setSpan(1, 1, 2, 2);
+    view.flushPendingRelayout();
+    QCoreApplication::processEvents();
+    QVERIFY(gapColor(1) != horizontal);
+    QCOMPARE(gapColor(0), horizontal);
+    view.removeSpan(1, 1);
+    view.flushPendingRelayout();
+    QCoreApplication::processEvents();
+    QCOMPARE(gapColor(1), horizontal);
+}
 
 void TestTableSpan::withoutProviderNothingIsMerged()
 {

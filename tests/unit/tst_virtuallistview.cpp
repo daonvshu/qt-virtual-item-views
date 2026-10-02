@@ -38,6 +38,7 @@ private slots:
     void pageKeysSkipVisibleItems();
     void homeEndKeysReachTheEnds();
     void wheelScrollsByConfiguredItems();
+    void itemWheelUsesVariableHeightsAndSpacing();
     void wheelScrollsByPixelsByDefault();
     void pixelOffsetApiMovesTheViewport();
     void rootIndexRestrictsMaterialization();
@@ -237,6 +238,38 @@ void TestVirtualListView::wheelScrollsByConfiguredItems()
     QWheelEvent up(QPointF(10, 10), QPointF(10, 10), QPoint(), QPoint(0, 120),
                    Qt::NoButton, Qt::NoModifier, Qt::ScrollUpdate, false);
     QCoreApplication::sendEvent(view.viewport(), &up);
+    QCOMPARE(view.verticalOffset(), qint64(0));
+    QCOMPARE(view.visualRect(model.index(0, 0)).top(), 0);
+}
+
+void TestVirtualListView::itemWheelUsesVariableHeightsAndSpacing()
+{
+    StringListModel model(numberedRows(100));
+    for (int row = 0; row < 100; ++row)
+        model.setRowHeight(row, 20 + (row % 4) * 10);
+    TestAdapter adapter(20);
+    VirtualListView view;
+    view.setAdapter(&adapter);
+    view.setItemHeightMode(VirtualItemView::ItemHeightMode::Variable);
+    view.setEstimatedItemHeight(20);
+    view.setRowSpacing(4);
+    view.setWheelScrollItems(3);
+    view.setModel(&model);
+    showView(&view, QSize(kViewWidth, kViewHeight));
+    view.flushPendingRelayout();
+    settle();
+    for (int row = 0; row < 4; ++row)
+        QCOMPARE(view.listLayout()->itemSize(row), 20 + row * 10);
+    QWheelEvent down(QPointF(10, 10), QPointF(10, 10), QPoint(), QPoint(0, -120),
+                     Qt::NoButton, Qt::NoModifier, Qt::ScrollUpdate, false);
+    QCoreApplication::sendEvent(view.viewport(), &down);
+    QVERIFY(down.isAccepted());
+    QCOMPARE(view.verticalOffset(), qint64(20 + 4 + 30 + 4 + 40 + 4));
+    QCOMPARE(view.visualRect(model.index(3, 0)).top(), 0);
+    QWheelEvent up(QPointF(10, 10), QPointF(10, 10), QPoint(), QPoint(0, 120),
+                   Qt::NoButton, Qt::NoModifier, Qt::ScrollUpdate, false);
+    QCoreApplication::sendEvent(view.viewport(), &up);
+    QVERIFY(up.isAccepted());
     QCOMPARE(view.verticalOffset(), qint64(0));
     QCOMPARE(view.visualRect(model.index(0, 0)).top(), 0);
 }

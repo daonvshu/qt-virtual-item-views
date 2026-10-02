@@ -7,6 +7,7 @@
 #include <virtualitemviews/widgetrecycler.h>
 
 #include <QApplication>
+#include <QAbstractItemView>
 #include <QChildEvent>
 #include <QDrag>
 #include <QDragEnterEvent>
@@ -304,11 +305,7 @@ VirtualItemView::~VirtualItemView()
     if (m_recycler)
         m_recycler->clear();
     disconnectModel(m_model.data());
-    if (m_ownSelectionModel) {
-        delete m_selectionModel.data();
-        m_selectionModel = nullptr;
-        m_ownSelectionModel = false;
-    }
+    retireOwnedSelectionModel();
     if (m_ownAdapter) {
         delete m_adapter;
         m_adapter = nullptr;
@@ -357,10 +354,7 @@ void VirtualItemView::setModel(QAbstractItemModel *model)
     // model at all. A selection model of the outgoing model cannot address the
     // new one, so it is detached (an external one is not deleted).
     if (m_ownSelectionModel) {
-        QItemSelectionModel *previousSelection = m_selectionModel.data();
-        m_selectionModel = nullptr;
-        m_ownSelectionModel = false;
-        delete previousSelection;
+        retireOwnedSelectionModel();
         if (m_modelChangeSerial != changeSerial)
             return;
     } else if (m_selectionModel && m_selectionModel->model() != model) {
@@ -464,6 +458,44 @@ void VirtualItemView::configureRowSpacingWidget(QWidget *widget) const
     Q_UNUSED(widget);
 }
 
+QRegion VirtualItemView::rowSpacingWidgetMask(qsizetype row, const QRect &geometry) const
+{
+    Q_UNUSED(row);
+    return QRegion(QRect(QPoint(), geometry.size()));
+}
+
+void VirtualItemView::updateRowSpacingWidgetMasks()
+{
+    const quint64 modelSerial = modelChangeSerial();
+    const quint64 mappingSerial = viewMappingSerial();
+    const quint64 spacingSerial = m_rowSpacingStateSerial;
+    QHash<qsizetype, QPointer<QWidget>> widgets;
+    for (auto it = m_rowSpacingWidgets.cbegin(); it != m_rowSpacingWidgets.cend(); ++it)
+        widgets.insert(it.key(), it.value());
+    for (auto it = widgets.cbegin(); it != widgets.cend(); ++it) {
+        if (modelChangeSerial() != modelSerial || viewMappingSerial() != mappingSerial
+            || m_rowSpacingStateSerial != spacingSerial) {
+            abortMaterializationPass();
+            return;
+        }
+        const QPointer<QWidget> widget = it.value();
+        if (!widget || m_rowSpacingWidgets.value(it.key()) != widget.data())
+            continue;
+        const QRect geometry(widget->mapTo(viewport(), QPoint()), widget->size());
+        const QRegion mask = rowSpacingWidgetMask(it.key(), geometry);
+        if (!widget || modelChangeSerial() != modelSerial || viewMappingSerial() != mappingSerial
+            || m_rowSpacingStateSerial != spacingSerial) {
+            abortMaterializationPass();
+            return;
+        }
+        if (mask == QRegion(widget->rect()))
+            widget->clearMask();
+        else
+            widget->setMask(mask);
+        widget->setVisible(!mask.isEmpty());
+    }
+}
+
 void VirtualItemView::raiseRowSpacingWidgets() const
 {
     for (QWidget *widget : m_rowSpacingWidgets)
@@ -534,14 +566,26 @@ void VirtualItemView::setSelectionModel(QItemSelectionModel *selectionModel)
     }
     if (m_selectionModel)
         disconnect(m_selectionModel.data(), nullptr, this, nullptr);
-    if (m_ownSelectionModel) {
-        delete m_selectionModel.data();
-        m_ownSelectionModel = false;
-    }
+    retireOwnedSelectionModel();
     m_selectionModel = selectionModel;
     connectSelectionModel();
     emit selectionModelChanged(m_selectionModel.data());
     refreshVisualStates();
+}
+
+void VirtualItemView::retireOwnedSelectionModel()
+{
+    if (!m_ownSelectionModel)
+        return;
+    QItemSelectionModel *previous = m_selectionModel.data();
+    m_selectionModel = nullptr;
+    m_ownSelectionModel = false;
+    if (!previous)
+        return;
+    // Qt may still be delivering current/selection notifications from this object.
+    disconnect(previous, nullptr, this, nullptr);
+    previous->setParent(nullptr);
+    previous->deleteLater();
 }
 
 void VirtualItemView::connectSelectionModel()
@@ -903,30 +947,51 @@ void VirtualItemView::setCurrentIndex(const QModelIndex &index)
 {
     if (!m_selectionModel)
         return;
+    const QPointer<VirtualItemView> self(this);
+    const QPointer<QItemSelectionModel> selection = m_selectionModel;
+    const quint64 modelSerial = modelChangeSerial();
     if (!index.isValid()) {
-        m_selectionModel->clearCurrentIndex();
+        selection->clearCurrentIndex();
+        if (!self || selection != m_selectionModel || modelChangeSerial() != modelSerial)
+            return;
         m_selectionAnchor = QPersistentModelIndex();
         return;
     }
+    const QPersistentModelIndex target(index);
     switch (m_selectionMode) {
     case SelectionMode::NoSelection:
         m_selectionModel->setCurrentIndex(index, QItemSelectionModel::Current);
         break;
     default:
         selectCurrentIndex(index, QItemSelectionModel::ClearAndSelect);
-        pinCurrentIndex(index);
-        m_selectionAnchor = QPersistentModelIndex(index);
+        if (!self || selection != m_selectionModel || modelChangeSerial() != modelSerial
+            || !target.isValid() || target.model() != model())
+            return;
+        pinCurrentIndex(target);
+        if (!self || selection != m_selectionModel || modelChangeSerial() != modelSerial
+            || !target.isValid() || target.model() != model())
+            return;
+        m_selectionAnchor = target;
         break;
     }
 }
 
 void VirtualItemView::activateIndex(const QModelIndex &index)
 {
-    if (!index.isValid())
+    if (!index.isValid() || index.model() != model())
         return;
+    const QPointer<VirtualItemView> self(this);
+    const QPersistentModelIndex target(index);
+    const quint64 modelSerial = modelChangeSerial();
     setCurrentIndex(index);
-    emit clicked(index);
-    emit activated(index);
+    if (!self || modelChangeSerial() != modelSerial || !target.isValid()
+        || target.model() != model())
+        return;
+    emit clicked(target);
+    if (!self || modelChangeSerial() != modelSerial || !target.isValid()
+        || target.model() != model())
+        return;
+    emit activated(target);
 }
 
 void VirtualItemView::pinCurrentIndex(const QModelIndex &index)
@@ -944,10 +1009,11 @@ void VirtualItemView::selectCurrentIndex(const QModelIndex &index,
                                          QItemSelectionModel::SelectionFlags command)
 {
     if (m_selectionBehavior == SelectionBehavior::SelectRows && usesExplicitRowSelection()) {
+        const QPointer<VirtualItemView> self(this);
         const QPointer<QItemSelectionModel> selection = m_selectionModel;
         const QPersistentModelIndex current(index);
         selection->setCurrentIndex(index, QItemSelectionModel::Current);
-        if (!selection || selection != m_selectionModel || !current.isValid()
+        if (!self || !selection || selection != m_selectionModel || !current.isValid()
             || current.model() != model())
             return;
         selection->select(selectionRange(current, current), command);
@@ -1226,6 +1292,11 @@ void VirtualItemView::materializeItems(const VisibleRange &rows)
 void VirtualItemView::materializeItemRanges(const QVector<VisibleRange> &ranges)
 {
     materializeItems(ranges.isEmpty() ? VisibleRange() : ranges.first());
+}
+
+void VirtualItemView::augmentMaterializationRanges(QVector<VisibleRange> &ranges) const
+{
+    Q_UNUSED(ranges);
 }
 
 void VirtualItemView::rebindItemsInRange(const QModelIndex &topLeft, const QModelIndex &bottomRight)
@@ -1600,7 +1671,7 @@ void VirtualItemView::syncItemPanes()
             const QList<QWidget *> children =
                 m_scrollPaneHost->findChildren<QWidget *>(QString(), Qt::FindDirectChildrenOnly);
             for (QWidget *child : children)
-                child->setParent(viewport());
+                reparentPreservingFocus(child, viewport());
             m_scrollPaneHost->hide();
             m_scrollPaneHost->setParent(nullptr);
             m_scrollPaneHost->deleteLater();
@@ -1818,7 +1889,16 @@ void VirtualItemView::syncRowSpacingWidgets(const QVector<VisibleRange> &ranges)
         widget->setGeometry(it.value().translated(-origin));
         if (!hostIsCurrent())
             return;
-        widget->show();
+        const QRegion mask = rowSpacingWidgetMask(row, it.value());
+        if (!hostIsCurrent())
+            return;
+        if (mask == QRegion(widget->rect()))
+            widget->clearMask();
+        else
+            widget->setMask(mask);
+        if (!hostIsCurrent())
+            return;
+        widget->setVisible(!mask.isEmpty());
         if (!hostIsCurrent())
             return;
         widget->raise();
@@ -1857,7 +1937,7 @@ void VirtualItemView::applyItemPaneGeometry(MaterializedItem &item, qsizetype ro
         }
     }
     if (widget->parentWidget() != parent)
-        widget->setParent(parent);
+        reparentPreservingFocus(widget, parent);
     if (!widget || widgetForIndex(index) != widget.data())
         return;
     widget->setGeometry(geometry.translated(-origin));
@@ -1995,7 +2075,8 @@ bool VirtualItemView::isItemPinned(const QModelIndex &index) const
     if (!index.isValid() || index.model() != m_model)
         return false;
     const QModelIndex item = usesItemWidgets() ? index.siblingAtColumn(0) : index;
-    return item.isValid() && m_explicitPinned.contains(QPersistentModelIndex(item));
+    return item.isValid() && (m_explicitPinned.contains(QPersistentModelIndex(item))
+                             || item == m_dragSourcePin);
 }
 
 void VirtualItemView::pinWidget(QWidget *widget)
@@ -2208,23 +2289,30 @@ void VirtualItemView::relayout()
     const quint64 modelSerial = m_modelChangeSerial;
     const quint64 mappingSerial = viewMappingSerial();
     const quint64 lifecycleSerial = m_itemLifecycleSerial;
+    const QPointer<VirtualItemView> self(this);
     const QPointer<QAbstractItemModel> activeModel(m_model);
     const bool hadModel = activeModel;
     WidgetAdapter *const activeAdapter = m_adapter;
     LayoutPolicy *const activeLayout = m_layout;
     const bool rowWidgets = usesItemWidgets();
-    const auto requestIsCurrent = [this, &activeModel, hadModel, activeAdapter, activeLayout,
+    const auto requestIsCurrent = [self, &activeModel, hadModel, activeAdapter, activeLayout,
                                    modelSerial, mappingSerial, lifecycleSerial, rowWidgets]() {
-        return m_modelChangeSerial == modelSerial && viewMappingSerial() == mappingSerial
-            && m_itemLifecycleSerial == lifecycleSerial && m_model.data() == activeModel.data()
-            && (!hadModel || activeModel) && m_adapter == activeAdapter
-            && m_layout == activeLayout && usesItemWidgets() == rowWidgets;
+        if (!self)
+            return false;
+        return self->m_modelChangeSerial == modelSerial && self->viewMappingSerial() == mappingSerial
+            && self->m_itemLifecycleSerial == lifecycleSerial
+            && self->m_model.data() == activeModel.data()
+            && (!hadModel || activeModel)
+            && self->m_adapter == activeAdapter && self->m_layout == activeLayout
+            && self->usesItemWidgets() == rowWidgets;
     };
-    const auto abortStalePass = [this, &requestIsCurrent]() {
+    const auto abortStalePass = [self, &requestIsCurrent]() {
         if (requestIsCurrent())
             return false;
-        m_inRelayout = false;
-        abortMaterializationPass();
+        if (self) {
+            self->m_inRelayout = false;
+            self->abortMaterializationPass();
+        }
         return true;
     };
 
@@ -2281,7 +2369,7 @@ void VirtualItemView::relayout()
     // something asynchronous, and that widget may be one that was never on screen
     // (P2-2). Every consumer expects disjoint ranges, so a pinned row is only added
     // when the ranges above do not already cover it.
-    if (!m_explicitPinned.isEmpty()) {
+    if (!m_explicitPinned.isEmpty() || m_dragSourcePin.isValid()) {
         QList<qsizetype> pinnedRows;
         pinnedRows.reserve(m_explicitPinned.size());
         for (const QPersistentModelIndex &persistent : m_explicitPinned) {
@@ -2289,6 +2377,9 @@ void VirtualItemView::relayout()
             if (row >= 0 && row < count)
                 pinnedRows.append(row);
         }
+        const qsizetype dragRow = viewItemForIndex(m_dragSourcePin);
+        if (dragRow >= 0 && dragRow < count)
+            pinnedRows.append(dragRow);
         std::sort(pinnedRows.begin(), pinnedRows.end());
         qsizetype previous = -1;
         for (qsizetype row : pinnedRows) {
@@ -2302,6 +2393,8 @@ void VirtualItemView::relayout()
                 ranges.append(VisibleRange{row, row});
         }
     }
+
+    augmentMaterializationRanges(ranges);
 
     // ---- decide what to reuse, then recycle what is obsolete --------------
     if (!usesItemWidgets()) {
@@ -2467,15 +2560,17 @@ MaterializedItem VirtualItemView::createItem(const QPersistentModelIndex &index)
     const quint64 modelSerial = m_modelChangeSerial;
     const quint64 mappingSerial = viewMappingSerial();
     const quint64 lifecycleSerial = m_itemLifecycleSerial;
+    const QPointer<VirtualItemView> self(this);
     const QPointer<QAbstractItemModel> activeModel(m_model);
     WidgetAdapter *const activeAdapter = m_adapter;
     LayoutPolicy *const activeLayout = m_layout;
-    const auto requestIsCurrent = [this, &index, &activeModel, activeAdapter, activeLayout,
+    const auto requestIsCurrent = [self, &index, &activeModel, activeAdapter, activeLayout,
                                    modelSerial, mappingSerial, lifecycleSerial]() {
-        return activeModel && m_model.data() == activeModel.data()
-            && m_modelChangeSerial == modelSerial && viewMappingSerial() == mappingSerial
-            && m_itemLifecycleSerial == lifecycleSerial && m_adapter == activeAdapter
-            && m_layout == activeLayout && usesItemWidgets() && index.isValid();
+        return self && activeModel && self->m_model.data() == activeModel.data()
+            && self->m_modelChangeSerial == modelSerial
+            && self->viewMappingSerial() == mappingSerial
+            && self->m_itemLifecycleSerial == lifecycleSerial && self->m_adapter == activeAdapter
+            && self->m_layout == activeLayout && self->usesItemWidgets() && index.isValid();
     };
     const QModelIndex modelIndex(index);
     item.type = activeAdapter->widgetType(modelIndex);
@@ -2519,18 +2614,20 @@ MaterializedItem VirtualItemView::createItem(const QPersistentModelIndex &index)
     m_items.append(item);
     rebuildLookup();
     m_bindingWidgets.insert(widget);
-    const auto bindingIsCurrent = [this, &index, &modelIndex, &guardedWidget,
+    const auto bindingIsCurrent = [self, &index, &modelIndex, &guardedWidget,
                                    &requestIsCurrent, widget]() {
         if (requestIsCurrent() && QModelIndex(index) == modelIndex && guardedWidget
-            && widgetForIndex(index) == widget)
+            && self->widgetForIndex(index) == widget)
             return true;
-        m_bindingWidgets.remove(widget);
-        for (qsizetype i = 0; i < m_items.size(); ++i) {
-            if (m_items.at(i).widget != widget)
+        if (!self)
+            return false;
+        self->m_bindingWidgets.remove(widget);
+        for (qsizetype i = 0; i < self->m_items.size(); ++i) {
+            if (self->m_items.at(i).widget != widget)
                 continue;
-            m_items.removeAt(i);
-            rebuildLookup();
-            m_recycler->discard(guardedWidget.data());
+            self->m_items.removeAt(i);
+            self->rebuildLookup();
+            self->m_recycler->discard(guardedWidget.data());
             break;
         }
         return false;
@@ -2562,6 +2659,7 @@ void VirtualItemView::recycleItem(MaterializedItem &item)
     if (!item.widget)
         return;
     WidgetAdapter *const activeAdapter = m_adapter;
+    const quint64 lifecycleSerial = m_itemLifecycleSerial;
     QPointer<QWidget> widget(item.widget);
     if (activeAdapter)
         activeAdapter->unbindWidget(item.widget, QModelIndex(item.index));
@@ -2569,7 +2667,8 @@ void VirtualItemView::recycleItem(MaterializedItem &item)
     if (m_lifecycleLogEnabled)
         appendLifecycleLog(QStringLiteral("unbind row=%1").arg(item.index.row()));
     if (widget) {
-        if (m_adapter == activeAdapter && activeAdapter)
+        if (m_adapter == activeAdapter && activeAdapter && usesItemWidgets()
+            && m_itemLifecycleSerial == lifecycleSerial)
             m_recycler->recycle(item.type, widget.data());
         else
             m_recycler->discard(widget.data());
@@ -2591,15 +2690,77 @@ void VirtualItemView::recycleAllItems()
     for (const MaterializedItem &item : items)
         widgets.append(item.widget);
     WidgetAdapter *const activeAdapter = m_adapter;
+    const quint64 lifecycleSerial = m_itemLifecycleSerial;
     for (qsizetype i = 0; i < items.size(); ++i) {
         MaterializedItem &item = items[i];
         m_bindingWidgets.remove(item.widget);
         item.widget = widgets.at(i).data();
-        if (activeAdapter && m_adapter == activeAdapter)
+        if (activeAdapter && m_adapter == activeAdapter && usesItemWidgets()
+            && m_itemLifecycleSerial == lifecycleSerial)
             recycleItem(item);
         else if (item.widget) {
             m_recycler->discard(item.widget);
             item.widget = nullptr;
+        }
+    }
+}
+
+namespace {
+bool ownsPopupWidget(const QWidget *widget, const QWidget *popup)
+{
+    if (!widget)
+        return false;
+    for (const QWidget *owner = popup; owner; owner = owner->parentWidget()) {
+        if (owner == widget)
+            return true;
+        // QCompleter's parentless popup delegates focus to its editor.
+        for (const QWidget *proxy = owner->focusProxy(); proxy; proxy = proxy->focusProxy()) {
+            if (proxy == widget || widget->isAncestorOf(proxy))
+                return true;
+        }
+    }
+    return false;
+}
+} // namespace
+
+void VirtualItemView::reparentPreservingFocus(QWidget *widget, QWidget *parent)
+{
+    if (!widget || widget->parentWidget() == parent)
+        return;
+    QPointer<QWidget> guardedWidget(widget);
+    QPointer<QWidget> focus(QApplication::focusWidget());
+    QPointer<QWidget> popup(QApplication::activePopupWidget());
+    if (!ownsPopupWidget(widget, popup))
+        popup.clear();
+    const QRect popupGeometry = popup ? popup->geometry() : QRect();
+    QVector<QPair<QPointer<QAbstractItemView>, QPersistentModelIndex>> popupCurrent;
+    if (popup) {
+        // Hiding an editor can reset the popup's uncommitted list highlight.
+        auto views = popup->findChildren<QAbstractItemView *>();
+        if (auto *view = qobject_cast<QAbstractItemView *>(popup.data()))
+            views.prepend(view);
+        for (QAbstractItemView *view : views)
+            popupCurrent.append(qMakePair(QPointer<QAbstractItemView>(view),
+                                         QPersistentModelIndex(view->currentIndex())));
+    }
+    if (focus && focus != widget && !widget->isAncestorOf(focus))
+        focus.clear();
+    widget->setParent(parent);
+    if (guardedWidget && focus) {
+        guardedWidget->show();
+        if (guardedWidget && focus
+            && (focus == guardedWidget || guardedWidget->isAncestorOf(focus)))
+            focus->setFocus(Qt::OtherFocusReason);
+    }
+    if (guardedWidget && popup && !QApplication::activePopupWidget()) {
+        if (ownsPopupWidget(guardedWidget, popup)) {
+            popup->setGeometry(popupGeometry);
+            popup->show();
+            for (const auto &current : popupCurrent) {
+                if (popup && current.first && current.second.isValid()
+                    && current.first->model() == current.second.model())
+                    current.first->setCurrentIndex(current.second);
+            }
         }
     }
 }
@@ -2611,19 +2772,14 @@ bool VirtualItemView::hasFocusWithin(const QWidget *widget) const
     const QWidget *focus = QApplication::focusWidget();
     if (focus && (focus == widget || widget->isAncestorOf(focus)))
         return true;
-    // A popup (QComboBox, context menu, ...) is a top-level window whose owner
-    // chain still contains the item widget.
-    const QWidget *popup = QApplication::activePopupWidget();
-    if (popup && (popup == widget || widget->isAncestorOf(popup)))
-        return true;
-    return false;
+    return ownsPopupWidget(widget, QApplication::activePopupWidget());
 }
 
 bool VirtualItemView::isPinnedItem(const MaterializedItem &item) const
 {
     if (!item.widget)
         return false;
-    if (m_explicitPinned.contains(item.index))
+    if (isItemPinned(item.index))
         return true;
     // An open editor, an active IME composition or a popup must not be
     // recycled: in all three cases the widget (or one of its children) owns the
@@ -2920,8 +3076,14 @@ void VirtualItemView::mouseDoubleClickEvent(QMouseEvent *event)
     event->accept();
     if (!index.isValid())
         return;
-    emit doubleClicked(index);
-    emit activated(index);
+    const QPointer<VirtualItemView> self(this);
+    const QPersistentModelIndex target(index);
+    const quint64 modelSerial = modelChangeSerial();
+    emit doubleClicked(target);
+    if (!self || modelChangeSerial() != modelSerial || !target.isValid()
+        || target.model() != model())
+        return;
+    emit activated(target);
 }
 
 // ---------------------------------------------------------------------------
@@ -2950,12 +3112,24 @@ void VirtualItemView::setDragEnabled(bool enabled)
 
 bool VirtualItemView::canStartDrag(const QModelIndex &index) const
 {
-    if (!m_dragEnabled || !m_model || !index.isValid())
+    if (!m_dragEnabled || !m_model || !index.isValid() || index.model() != m_model)
         return false;
-    if (!(m_model->flags(index) & Qt::ItemIsDragEnabled))
+    const QPointer<const VirtualItemView> self(this);
+    const QPointer<QAbstractItemModel> sourceModel(m_model);
+    const QPersistentModelIndex source(index);
+    const quint64 modelSerial = modelChangeSerial();
+    const quint64 mappingSerial = viewMappingSerial();
+    const auto requestIsCurrent = [&]() {
+        return self && sourceModel && self->modelChangeSerial() == modelSerial
+            && self->viewMappingSerial() == mappingSerial && source.isValid()
+            && source == index && self->m_dragEnabled;
+    };
+    const Qt::ItemFlags flags = sourceModel->flags(source);
+    if (!requestIsCurrent() || !(flags & Qt::ItemIsDragEnabled))
         return false;
-    return (dragDropActions() & (Qt::CopyAction | Qt::MoveAction | Qt::LinkAction))
-        != Qt::IgnoreAction;
+    const Qt::DropActions actions = dragDropActions();
+    return requestIsCurrent()
+        && (actions & (Qt::CopyAction | Qt::MoveAction | Qt::LinkAction)) != Qt::IgnoreAction;
 }
 
 Qt::DropActions VirtualItemView::dragDropActions() const
@@ -2963,10 +3137,23 @@ Qt::DropActions VirtualItemView::dragDropActions() const
     if (m_dragDropActions != Qt::IgnoreAction)
         return m_dragDropActions;
     if (m_model) {
-        const Qt::DropActions supported = m_model->supportedDragActions();
+        const QPointer<const VirtualItemView> self(this);
+        const QPointer<QAbstractItemModel> sourceModel(m_model);
+        const quint64 modelSerial = modelChangeSerial();
+        const quint64 mappingSerial = viewMappingSerial();
+        const auto requestIsCurrent = [&]() {
+            return self && sourceModel && self->modelChangeSerial() == modelSerial
+                && self->viewMappingSerial() == mappingSerial
+                && self->m_dragDropActions == Qt::IgnoreAction;
+        };
+        const Qt::DropActions supported = sourceModel->supportedDragActions();
+        if (!requestIsCurrent())
+            return Qt::IgnoreAction;
         if (supported != Qt::IgnoreAction)
             return supported;
-        const Qt::DropActions drop = m_model->supportedDropActions();
+        const Qt::DropActions drop = sourceModel->supportedDropActions();
+        if (!requestIsCurrent())
+            return Qt::IgnoreAction;
         if (drop != Qt::IgnoreAction)
             return drop;
     }
@@ -2997,10 +3184,12 @@ void VirtualItemView::setMoveRemovesSourceRows(bool enabled)
 
 Qt::DropAction VirtualItemView::startDrag(const QModelIndex &index)
 {
-    if (!m_model)
+    if (!m_model || !m_dragSourceIndexes.isEmpty())
         return Qt::IgnoreAction;
+    const QPointer<VirtualItemView> self(this);
     const QPointer<QAbstractItemModel> sourceModel = m_model;
     const quint64 modelSerial = m_modelChangeSerial;
+    const quint64 mappingSerial = viewMappingSerial();
 
     QModelIndex dragIndex = index;
     if (!dragIndex.isValid()) {
@@ -3008,9 +3197,13 @@ Qt::DropAction VirtualItemView::startDrag(const QModelIndex &index)
         if (!dragIndex.isValid() && m_pressedIndex.isValid())
             dragIndex = QModelIndex(m_pressedIndex);
     }
-    if (!canStartDrag(dragIndex))
-        return Qt::IgnoreAction;
-    if (!sourceModel || m_modelChangeSerial != modelSerial)
+    const QPersistentModelIndex sourceIndex(dragIndex);
+    const auto requestIsCurrent = [&]() {
+        return self && sourceModel && self->modelChangeSerial() == modelSerial
+            && self->viewMappingSerial() == mappingSerial && sourceIndex.isValid()
+            && sourceIndex == dragIndex && self->m_dragEnabled;
+    };
+    if (!canStartDrag(sourceIndex) || !requestIsCurrent())
         return Qt::IgnoreAction;
 
     // The selection is the payload when the dragged item is part of it - and it is handed over
@@ -3019,26 +3212,29 @@ Qt::DropAction VirtualItemView::startDrag(const QModelIndex &index)
     // carries just the dragged cell. Filtering the payload down to column 0 (the materialized row
     // identity) used to lose every other column of a row drag.
     QModelIndexList indexes = dragSourceIndexes(dragIndex);
-    if (!sourceModel || m_modelChangeSerial != modelSerial)
+    if (!requestIsCurrent() || indexes.isEmpty())
+        return Qt::IgnoreAction;
+    const Qt::DropActions actions = dragDropActions();
+    if (!requestIsCurrent() || actions == Qt::IgnoreAction)
         return Qt::IgnoreAction;
 
     QMimeData *mime = sourceModel->mimeData(indexes);
     if (!mime)
         return Qt::IgnoreAction;
-    if (!sourceModel || m_modelChangeSerial != modelSerial) {
+    if (!requestIsCurrent()) {
         delete mime;
         return Qt::IgnoreAction;
     }
 
-    // §36/§38: the widget of the dragged item must survive the drag, otherwise a
-    // scroll-induced recycle would destroy the drag source mid-gesture. The materialized unit of
-    // a row is its canonical (row, 0) cell (see viewIndex()), while a drag may start on any
-    // column of it - looking the widget up by the dragged cell's own index would find nothing,
-    // so a table drag started on column 1 or later had no drag pixmap at all.
-    const qsizetype dragItem = viewItemForIndex(dragIndex);
-    m_dragSourceWidget = dragItem >= 0 ? widgetForIndex(viewIndex(dragItem, 0)) : nullptr;
-    if (m_dragSourceWidget)
-        pinWidget(m_dragSourceWidget);
+    // Keep the actual materialized source alive without taking ownership of a user pin.
+    const QPointer<QWidget> sourceWidget(dragSourceWidget(dragIndex));
+    if (!requestIsCurrent()) {
+        delete mime;
+        return Qt::IgnoreAction;
+    }
+    m_dragSourceWidget = sourceWidget;
+    m_dragSourcePin = m_dragSourceWidget
+        ? QPersistentModelIndex(indexForWidget(m_dragSourceWidget)) : QPersistentModelIndex();
     // The sources are remembered so the drag can refuse to drop onto itself.
     m_dragSourceIndexes.clear();
     for (const QModelIndex &source : indexes)
@@ -3056,7 +3252,7 @@ Qt::DropAction VirtualItemView::startDrag(const QModelIndex &index)
         drag.setPixmap(pixmap);
         drag.setHotSpot(pixmap.rect().center());
     }
-    const Qt::DropAction action = drag.exec(dragDropActions(), m_defaultDropAction);
+    const Qt::DropAction action = drag.exec(actions, m_defaultDropAction);
 
     // A drag that ended in a *move* moved the item somewhere else: if the application asked this
     // view to own that cleanup (setMoveRemovesSourceRows()), the dragged rows go now - exactly
@@ -3074,16 +3270,41 @@ QModelIndexList VirtualItemView::dragSourceIndexes(const QModelIndex &dragIndex)
     QModelIndexList indexes;
     if (!m_model || !dragIndex.isValid())
         return indexes;
-    if (m_selectionModel && m_selectionModel->isSelected(dragIndex)) {
-        const QModelIndexList selected = m_selectionModel->selectedIndexes();
+    const QPointer<const VirtualItemView> self(this);
+    const QPointer<QAbstractItemModel> sourceModel(m_model);
+    const QPersistentModelIndex source(dragIndex);
+    const QPointer<QItemSelectionModel> selection(m_selectionModel);
+    const quint64 modelSerial = modelChangeSerial();
+    const quint64 mappingSerial = viewMappingSerial();
+    const auto requestIsCurrent = [&]() {
+        return self && sourceModel && self->modelChangeSerial() == modelSerial
+            && self->viewMappingSerial() == mappingSerial && source.isValid()
+            && source == dragIndex && self->m_selectionModel == selection;
+    };
+    const bool sourceSelected = selection && selection->isSelected(source);
+    if (!requestIsCurrent())
+        return {};
+    if (sourceSelected) {
+        const QModelIndexList selected = selection->selectedIndexes();
+        if (!requestIsCurrent())
+            return {};
         for (const QModelIndex &candidate : selected) {
-            if (m_model->flags(candidate) & Qt::ItemIsDragEnabled)
+            const Qt::ItemFlags flags = sourceModel->flags(candidate);
+            if (!requestIsCurrent())
+                return {};
+            if (flags & Qt::ItemIsDragEnabled)
                 indexes.append(candidate);
         }
     }
     if (indexes.isEmpty())
         indexes.append(dragIndex);
     return indexes;
+}
+
+QWidget *VirtualItemView::dragSourceWidget(const QModelIndex &index) const
+{
+    const qsizetype item = viewItemForIndex(index);
+    return item >= 0 ? widgetForIndex(viewIndex(item, 0)) : nullptr;
 }
 
 QRect VirtualItemView::dragPixmapRect(const QModelIndex &index) const
@@ -3155,10 +3376,11 @@ void VirtualItemView::removeDraggedSourceRows(const QList<QPersistentModelIndex>
 
 void VirtualItemView::finishDrag()
 {
-    if (m_dragSourceWidget) {
-        unpinWidget(m_dragSourceWidget);
-        m_dragSourceWidget = nullptr;
-    }
+    const bool hadSourcePin = m_dragSourcePin.isValid();
+    m_dragSourceWidget = nullptr;
+    m_dragSourcePin = QPersistentModelIndex();
+    if (hadSourcePin)
+        markDirty();
     stopDragAutoscroll();
     hideDropIndicator();
     m_dragSourceIndexes.clear();
@@ -3448,10 +3670,30 @@ void VirtualItemView::stopDragAutoscroll()
 
 void VirtualItemView::wheelEvent(QWheelEvent *event)
 {
-    // High resolution input (touchpads, smooth wheels) delivers pixel deltas and
-    // must scroll pixel by pixel. Classic wheels scroll a fixed pixel step.
+    // High resolution pixel deltas take precedence even in Items mode.
     const QPoint pixel = event->pixelDelta();
     const QPoint angle = event->angleDelta();
+    if (pixel.isNull() && angle.y() != 0 && angle.y() % 120 == 0
+        && m_wheelScrollMode == WheelScrollMode::Items && m_layout
+        && m_layout->itemCount() > 0) {
+        const qsizetype first = frozenRows();
+        const qsizetype last = m_layout->itemCount() - frozenBottomRows() - 1;
+        if (first <= last) {
+            // Frozen rows are outside the wheel's window. Actual row starts
+            // include variable heights and spacing, unlike a reference-height step.
+            const qsizetype row = qBound(first,
+                m_layout->indexAtOffset(m_scrollOffset + frozenTopExtent()), last);
+            const qint64 steps = -qint64(angle.y()) / 120 * qMax(1, m_wheelScrollItems);
+            if (steps < qint64(first - row))
+                setVerticalOffset(0);
+            else if (steps > qint64(last - row))
+                setVerticalOffset(maximumVerticalOffset());
+            else
+                scrollByPixels(m_layout->offsetOf(row + qsizetype(steps)) - m_layout->offsetOf(row));
+        }
+        event->accept();
+        return;
+    }
     qint64 delta = 0;
     if (!pixel.isNull()) {
         delta = qint64(pixel.y());

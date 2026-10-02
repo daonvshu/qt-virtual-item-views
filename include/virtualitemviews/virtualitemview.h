@@ -13,6 +13,7 @@
 #include <QList>
 #include <QPersistentModelIndex>
 #include <QPointer>
+#include <QRegion>
 #include <QSet>
 #include <QVector>
 #include <functional>
@@ -54,7 +55,7 @@ struct VirtualViewStats
 
     /// Widgets created by the recycler since the view was constructed.
     quint64 createCount = 0;
-    /// adapter->bindWidget() calls (one per (re)bind of an item).
+    /// Completed row or cell adapter bindings (including rebindings).
     quint64 bindCount = 0;
     /// Widgets handed back to the recycler.
     quint64 recycleCount = 0;
@@ -270,6 +271,7 @@ public:
     /// at all (business code can request a pin for async operations). Each pin
     /// costs one widget until it is unpinned - see setMaxPinnedItems().
     void setItemPinned(const QModelIndex &index, bool pinned = true);
+    /// Includes the temporary pin held by an active drag; explicit pins are independent.
     bool isItemPinned(const QModelIndex &index) const;
     /// Pin/unpin the item that currently owns \a widget. Equivalent to
     /// setItemPinned(indexForWidget(widget), ...).
@@ -468,10 +470,16 @@ protected:
     /// Applies view-specific spacing (tree depth) after a row layout reset.
     virtual void applyRowSpacingOverrides();
     virtual void configureRowSpacingWidget(QWidget *widget) const;
+    /// Visible part of a row gap, in coordinates local to its viewport geometry.
+    virtual QRegion rowSpacingWidgetMask(qsizetype row, const QRect &geometry) const;
+    /// Recompute gap clipping after horizontal geometry changes.
+    void updateRowSpacingWidgetMasks();
     void raiseRowSpacingWidgets() const;
     QVector<QRect> rowSpacingWidgetRectsInView() const;
     /// Hook called after a materialization pass (measurement feedback).
     virtual void afterMaterialize();
+    /// Adds rows that must stay materialized for view-specific cross-row content.
+    virtual void augmentMaterializationRanges(QVector<VisibleRange> &ranges) const;
     /// Called instead of the built-in widget materialization when
     /// usesItemWidgets() is false: \a rows is the materialization window
     /// (visible rows widened by the overscan).
@@ -502,6 +510,8 @@ protected:
     /// True when \a widget (or one of its children/popups) owns the focus, that
     /// is: when it must not be recycled.
     bool hasFocusWithin(const QWidget *widget) const;
+    /// Keeps an active editor focused while moving its widget between pane hosts.
+    void reparentPreservingFocus(QWidget *widget, QWidget *parent);
     /// Recycles the materialized items whose index lies in the model range
     /// (identity based, so it also works for a tree).
     void recycleItemsInModelRange(const QModelIndex &parent, int first, int last);
@@ -525,6 +535,9 @@ protected:
     /// a row selection carries the whole row, like Qt), otherwise just \a dragIndex. Kernel API:
     /// a real drag (QDrag::exec) cannot run offscreen, so subclasses and tests use this.
     QModelIndexList dragSourceIndexes(const QModelIndex &dragIndex) const;
+    /// Materialized widget retained and captured for a drag of \a index.
+    /// The default resolves the canonical row; cell views override this lookup.
+    virtual QWidget *dragSourceWidget(const QModelIndex &index) const;
     /// Part of the drag source widget that shows \a index, empty for "the whole widget". A
     /// subclass with a finer drag granularity than its materialized widget overrides this (the
     /// table cuts the row widget down to the dragged cell), so the drag preview shows what the
@@ -618,6 +631,8 @@ protected:
     /// Raises the boundary lines above the (re)materialized items.
     void raiseItemPaneSeparatorLines() const;
     void syncRowSpacingWidgets(const QVector<VisibleRange> &ranges);
+    /// Records a derived view lifecycle event when logging is enabled.
+    void appendLifecycleLog(const QString &entry);
 
     // -- events --------------------------------------------------------------
     void paintEvent(QPaintEvent *event) override;
@@ -639,6 +654,7 @@ protected:
 private:
     void connectModel(QAbstractItemModel *model);
     void connectSelectionModel();
+    void retireOwnedSelectionModel();
     void updateHoveredIndex(const QModelIndex &index);
     void disconnectModel(QAbstractItemModel *model);
     void scheduleRelayout();
@@ -667,7 +683,6 @@ private:
     /// here, so click, keyboard navigation and Space cannot drift apart - and
     /// NoSelection answers NoUpdate, i.e. "select nothing", for all of them.
     QItemSelectionModel::SelectionFlags selectionFlagsFor(QItemSelectionModel::SelectionFlags command) const;
-    void appendLifecycleLog(const QString &entry);
     qint64 wheelStepPixels() const;
     qint64 scrollBarSingleStepPixels() const;
     void showDropIndicator(const DropTarget &target);
@@ -782,7 +797,8 @@ private:
     QPoint m_dragHoverPos;
     bool m_dragHoverValid = false;
     QWidget *m_dropIndicator = nullptr;
-    QWidget *m_dragSourceWidget = nullptr;
+    QPointer<QWidget> m_dragSourceWidget;
+    QPersistentModelIndex m_dragSourcePin;
     QTimer *m_dragAutoscrollTimer = nullptr;
     int m_dragAutoscrollDelta = 0;
 

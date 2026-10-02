@@ -38,7 +38,7 @@ QWidget *WidgetRecycler::parentWidget() const
 
 void WidgetRecycler::setFactory(Factory factory)
 {
-    m_factory = std::move(factory);
+    m_factory = factory ? std::make_shared<Factory>(std::move(factory)) : nullptr;
 }
 
 void WidgetRecycler::setMaxPoolSize(WidgetType type, qsizetype size)
@@ -112,18 +112,31 @@ QWidget *WidgetRecycler::acquire(WidgetType type)
         }
         ++m_reuseCount;
         ++m_activeCount;
+        m_activeWidgets.insert(candidate);
         return candidate;
     }
 
     if (!m_factory)
         return nullptr;
 
-    QWidget *created = m_factory(type, m_parent.data());
+    const std::shared_ptr<Factory> factory = m_factory;
+    QPointer<WidgetRecycler> self(this);
+    QWidget *created = (*factory)(type, m_parent.data());
+    if (!self) {
+        if (created)
+            created->deleteLater();
+        return nullptr;
+    }
     if (!created)
         return nullptr;
     ++m_createdCount;
     ++m_activeCount;
-    QObject::connect(created, &QObject::destroyed, this, [this]() { ++m_destroyedCount; });
+    m_activeWidgets.insert(created);
+    QObject::connect(created, &QObject::destroyed, this, [this, created]() {
+        ++m_destroyedCount;
+        if (m_activeWidgets.remove(created) > 0 && m_activeCount > 0)
+            --m_activeCount;
+    });
     return created;
 }
 
@@ -132,7 +145,7 @@ void WidgetRecycler::recycle(WidgetType type, QWidget *widget)
     if (!widget)
         return;
 
-    if (m_activeCount > 0)
+    if (m_activeWidgets.remove(widget) > 0 && m_activeCount > 0)
         --m_activeCount;
 
     widget->hide();
@@ -157,7 +170,7 @@ void WidgetRecycler::discard(QWidget *widget)
 {
     if (!widget)
         return;
-    if (m_activeCount > 0)
+    if (m_activeWidgets.remove(widget) > 0 && m_activeCount > 0)
         --m_activeCount;
     QPointer<QWidget> guardedWidget(widget);
     widget->hide();

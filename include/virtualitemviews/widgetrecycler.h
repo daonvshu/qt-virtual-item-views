@@ -7,9 +7,11 @@
 #include <QList>
 #include <QObject>
 #include <QPointer>
+#include <QSet>
 #include <QtGlobal>
 
 #include <functional>
+#include <memory>
 
 class QWidget;
 
@@ -85,8 +87,9 @@ private:
     bool canReuse(WidgetType type, const QWidget *widget) const;
 
     QPointer<QWidget> m_parent;
-    Factory m_factory;
+    std::shared_ptr<Factory> m_factory;
     QHash<WidgetType, QList<QPointer<QWidget>>> m_pools;
+    QSet<QWidget *> m_activeWidgets;
     QHash<WidgetType, qsizetype> m_maxPoolSize;
     qsizetype m_activeCount = 0;
     qsizetype m_createdCount = 0;

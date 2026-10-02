@@ -45,10 +45,13 @@ public:
     /// Cell node of a table: \a rowNode is the node of its row.
     AccessibleVirtualItem(VirtualItemView *view, const QModelIndex &cellIndex, int column,
                           AccessibleVirtualItem *rowNode, AccessibleVirtualItemView *viewNode);
+    /// Removes this virtual node's cache ID from its owner's release list.
+    ~AccessibleVirtualItem() override;
 
     // -- QAccessibleInterface ------------------------------------------------
     bool isValid() const override;
     QObject *object() const override;
+    QWindow *window() const override;
     QRect rect() const override;
     QAccessible::Role role() const override;
     QString text(QAccessible::Text t) const override;
@@ -109,8 +112,8 @@ private:
     VirtualItemView *m_view = nullptr;
     QPersistentModelIndex m_index;
     int m_column = -1;
-    AccessibleVirtualItem *m_rowNode = nullptr;
     AccessibleVirtualItemView *m_viewNode = nullptr;
+    QAccessible::Id m_cacheId = 0;
 };
 
 /// Accessibility node of the view itself (architecture document §37).
@@ -129,6 +132,7 @@ public:
     // -- QAccessibleInterface ------------------------------------------------
     bool isValid() const override;
     QObject *object() const override;
+    QWindow *window() const override;
     QRect rect() const override;
     QAccessible::Role role() const override;
     QString text(QAccessible::Text t) const override;
@@ -196,10 +200,10 @@ private:
     AccessibleVirtualItem *createNode(const QModelIndex &index, int column);
 
     VirtualItemView *m_view = nullptr;
-    /// Nodes handed out so far, owned by this interface (freed in the
-    /// destructor). A node whose row disappears reports isValid() == false
+    /// IDs of nodes handed out so far, released from Qt's cache in the
+    /// destructor. A node whose row disappears reports isValid() == false
     /// instead of vanishing under a screen reader.
-    QList<AccessibleVirtualItem *> m_nodes;
+    QList<QAccessible::Id> m_nodes;
     /// Interface of the parent widget, resolved once (not owned).
     QAccessibleInterface *m_parentNode = nullptr;
     /// QAccessibleEvent source of this view (owned; see accessibility.cpp).

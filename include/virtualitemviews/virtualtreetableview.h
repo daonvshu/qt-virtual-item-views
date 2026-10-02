@@ -122,6 +122,8 @@ protected:
 
 private:
     void connectTreeSignals(QAbstractItemModel *model);
+    bool isNodeWithinRoot(const QModelIndex &index) const;
+    void clearStateOutsideRoot();
     void clearPinsForColumnIdentityChange(const QModelIndex &parent);
     void captureColumnIdentitySelection();
     void reconcileColumnIdentitySelection();
@@ -130,7 +132,7 @@ private:
     void refreshVisibilitySplice(qsizetype first, qsizetype removed, qsizetype inserted,
                                  qsizetype previousCount);
     QModelIndex nodeIndex(const QModelIndex &index) const;
-    QRect branchCellRect(qsizetype row, int cellDepth) const;
+    QRect branchCellRect(qsizetype row, int cellDepth, bool visual = false) const;
     QRect decorationExclusion(int cells) const;
     bool isIndicatorPosition(const QModelIndex &index, const QPoint &position) const;
     void paintBranches(QPainter *painter) const;

@@ -2288,6 +2288,9 @@ void TestVirtualTableView::paneSeparatorStyleIsCustomizable()
     QApplication::processEvents();
     const int boundary = kColumnWidth;
     const int viewportY = m_view->viewport()->geometry().y();
+    const int viewportX = m_view->viewport()->geometry().x();
+    const QColor defaultBodyBoundary
+        = m_view->grab().toImage().pixelColor(viewportX + boundary - 1, viewportY + 20);
 
     // Default: 1 px, style coloured.
     QCOMPARE(m_view->paneSeparatorStyle().width, 1);
@@ -2303,7 +2306,6 @@ void TestVirtualTableView::paneSeparatorStyleIsCustomizable()
     QCOMPARE(m_view->paneSeparatorStyle().color, QColor(200, 0, 0));
 
     const QImage image = m_view->grab().toImage();
-    const int viewportX = m_view->viewport()->geometry().x();
     // The band sits inside the frozen pane, continuous from header to body.
     for (int dx = 1; dx <= 3; ++dx) {
         QCOMPARE(image.pixelColor(viewportX + boundary - dx, viewportY + 20), QColor(200, 0, 0));
@@ -2317,7 +2319,7 @@ void TestVirtualTableView::paneSeparatorStyleIsCustomizable()
     m_view->setPaneSeparatorStyle(hidden);
     m_view->flushPendingRelayout();
     const QImage without = m_view->grab().toImage();
-    QCOMPARE(without.pixelColor(viewportX + boundary - 1, viewportY + 20), QColor(Qt::white));
+    QCOMPARE(without.pixelColor(viewportX + boundary - 1, viewportY + 20), defaultBodyBoundary);
     QVERIFY(without.pixelColor(viewportX + boundary - 1, 8) != QColor(200, 0, 0));
 }
 
