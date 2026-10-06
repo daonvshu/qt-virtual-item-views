@@ -148,6 +148,8 @@ view.setSelectionBehavior(viv::VirtualTableView::SelectionBehavior::SelectItems)
 
 `visibilityIndex()` 用于查询 `visibleRowForIndex()` / `indexAtVisibleRow()` 等映射，行号会随展开、排序及结构变化改变。应用应通过视图的展开和根索引 API 修改状态，直接修改返回的映射对象不会自动同步视图布局。`itemDepth()` 的深度从当前显示根的子节点开始计为 0。`setIndentation()` 的负值归零。
 
+与普通树相同，`setExpansionAnimationEnabled(true)` 开启展开/收起的高度、位置和淡入淡出过渡，`setExpansionAnimationDuration(ms)` 设置时长，默认 300 ms，0 关闭过渡。组件默认关闭，示例默认开启。子节点画面及节点间距逐渐展开或收拢，后续行、垂直表头和分支同步上下移动，水平表头和滚动条保持固定。动画按节点身份插值视图大小的前后画面，逻辑映射、行高、信号、焦点及命中仍立即更新。滚动、缩放、列布局变化、模型变化、换根或鼠标/键盘操作取消旧画面，连续展开收起替换旧过渡。冻结行模式使用淡入淡出，避免跨越冻结边界。
+
 `visibleRowsChanged` 发出时可查询刷新后的可见行映射和垂直表头。`rowHeightChanged(row, height)` 的 row 是通知当时的可见行号，height 为应用后的高度；应用需长期保存目标时应立即取得模型节点索引。显式行高仍跟随节点，在折叠/展开及切换显示根后保留。`selectionModelChanged` 发布当前安装的选择模型指针。横向偏移信号只携带应用后的偏移值，不携带滚动组 ID；使用多个独立组时，应通过带组号的查询读取各组状态。
 
 `setBranchIndicatorsVisible(false)` 隐藏分支绘制，但保留节点缩进和键盘展开入口。`setBranchIndicatorRenderer(renderer, takeOwnership)` 可替换分支绘制，默认由应用持有 renderer；传入 `true` 后由视图持有，传入 `nullptr` 恢复内置分支。renderer 的 `paintBranch()` 收到视口坐标的缩进格，`branchState(index, cellDepth)` 可查询当前节点或祖先格的深度、子节点、兄弟和展开状态；省略 `cellDepth` 时查询节点自身的格。
@@ -172,9 +174,15 @@ view.setVisualStateBackgroundExtent(
     viv::VirtualTreeTableView::VisualStateBackgroundExtent::NodeOnly);
 view.setHoverBackgroundColor(QColor("#e7f4ed"));
 view.setSelectedBackgroundColor(QColor("#b9d9f1"));
+view.setHoverBackgroundThroughRowSpacing(false);    // 默认不覆盖行间距
+view.setSelectedBackgroundThroughRowSpacing(false);
+view.setHoverBackgroundThroughColumnSpacing(true);  // 默认覆盖列间距
+view.setSelectedBackgroundThroughColumnSpacing(true);
 ```
 
 `RowGridLineExtent` 和 `VisualStateBackgroundExtent` 分别选择只覆盖节点内容（`NodeOnly`）、图标加内容（`NodeAndIcon`）或整行（`FullWidth`）。范围只扣除第 0 逻辑列中的树装饰区域，其他列仍正常绘制。分割线的颜色、宽度、显隐、是否穿过行列间距，以及自定义间距控件均沿用[表格设置](table.md)。状态背景默认关闭；行控件需要保持透明，才能看到视图在其下方绘制的背景。也可以使用 adapter 的状态回调自行绘制。
+
+hover 和 select 分别通过 `setHoverBackgroundThroughRowSpacing()` / `setSelectedBackgroundThroughRowSpacing()` 控制行间距覆盖，默认关闭；通过 `setHoverBackgroundThroughColumnSpacing()` / `setSelectedBackgroundThroughColumnSpacing()` 控制列间距覆盖，默认开启。行间距按 role 分段归属：`NodeRowSpacingBelowRole` 的部分跟随上方节点，`NodeRowSpacingAboveRole` 的部分跟随下方节点；下间距 role 缺失、无效或负值时，默认行间距归上方节点。单元格模式的列间距跟随左侧单元格，合并单元格从其外边缘延伸。首行前、末行及末列后不延伸，不跨越冻结行或列 pane 边界。分隔线仍显示，自定义间距控件仍可绘制自己的内容。
 
 与 `VirtualTreeView` 相同，创建节点时将根据深度或业务属性计算的间距写入第 0 列的 `NodeRowSpacingRole`（`Qt::UserRole + 0x100`）。间距属于上方节点，0 表示没有间距，缺失/无效/负值回退到 `rowSpacing()`。该 role 的 dataChanged 会更新布局；表头、单元格和间距命中使用同一几何，末行后不额外留白。模型移动或切换显示根不会自动修改节点保存的间距；旧的按深度、同级和层级设置接口已移除。
 

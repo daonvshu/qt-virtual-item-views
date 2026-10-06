@@ -108,7 +108,14 @@ view.setVisualStateAnimationDuration(180);
 
 ## 行间距
 
-`setRowSpacing()` 在相邻行之间留白，默认间距为 0，末行后不加间距。行控件高度不包含间距，点击留白不会命中行。默认显示分割线：间距为 0 时绘制在相邻行的边界；有间距时绘制在留白的上下边缘。
+悬停与选中背景可分别延伸到行间距，默认均关闭。间距归属上方的行；视图使用配置的状态颜色和动画进度绘制间距，行内背景仍由业务控件绘制。自定义间距控件的不透明内容可能遮住背景。
+
+```cpp
+view.setHoverBackgroundThroughRowSpacing(true);
+view.setSelectedBackgroundThroughRowSpacing(true);
+```
+
+`setRowSpacing()` 在相邻行之间留白，默认间距为 0，末行后不加间距。行控件高度不包含间距，点击留白不会命中行。默认显示分割线：间距为 0 时绘制在相邻行的边界；有间距时绘制在留白的上下边缘。分割线宽度按物理像素绘制并对齐屏幕像素网格，默认 1 个物理像素；行高与间距仍使用逻辑像素。
 
 ```cpp
 view.setRowSpacing(12);

@@ -1,4 +1,5 @@
 #include <virtualitemviews/labelheaderview.h>
+#include "../core/pixelalignedlines_p.h"
 
 #include <virtualitemviews/headergeometry.h>
 
@@ -100,12 +101,22 @@ void LabelHeaderSection::paintEvent(QPaintEvent *)
         ? header->crossAxisSeparatorColor() : headerSectionSeparatorColor(this);
     const int sectionWidth = header ? header->sectionSeparatorWidth() : 1;
     const int crossWidth = header ? header->crossAxisSeparatorWidth() : 1;
-    if (!header || header->crossAxisSeparatorVisible())
-        painter.fillRect(vertical ? QRect(width() - crossWidth, 0, crossWidth, height())
-                                  : QRect(0, height() - crossWidth, width(), crossWidth), crossColor);
-    if ((!header || header->sectionSeparatorsVisible()) && (!vertical || !hasGap))
-        painter.fillRect(vertical ? QRect(0, height() - sectionWidth, width(), sectionWidth)
-                                  : QRect(width() - sectionWidth, 0, sectionWidth, height()), sectionColor);
+    if (!header || header->crossAxisSeparatorVisible()) {
+        if (vertical)
+            fillVerticalPixelLines(&painter, {QRect(width() - crossWidth, 0, crossWidth, height())},
+                                   crossWidth, crossColor);
+        else
+            fillHorizontalPixelLines(&painter, {QRect(0, height() - crossWidth, width(), crossWidth)},
+                                     crossWidth, crossColor);
+    }
+    if ((!header || header->sectionSeparatorsVisible()) && (!vertical || !hasGap)) {
+        if (vertical)
+            fillHorizontalPixelLines(&painter, {QRect(0, height() - sectionWidth, width(), sectionWidth)},
+                                     sectionWidth, sectionColor);
+        else
+            fillVerticalPixelLines(&painter, {QRect(width() - sectionWidth, 0, sectionWidth, height())},
+                                   sectionWidth, sectionColor);
+    }
 }
 
 void LabelHeaderSection::changeEvent(QEvent *event)

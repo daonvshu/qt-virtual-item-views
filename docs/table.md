@@ -50,6 +50,19 @@ for (int column = 0; column < table->model()->columnCount(); ++column) {
 
 ## 行列间距
 
+悬停与选中各自提供行、列间距覆盖开关：默认不覆盖行间距、覆盖列间距。行间距归属上方行，列间距归属左侧显示列；整行与单元格状态范围、两种物化模式均支持。视图负责间距背景，行内背景保留 adapter 的绘制；自定义间距控件的不透明内容可能遮住背景。`StyledTableView` 和 `VirtualTreeTableView` 也继承这些设置。
+
+自定义圆角背景需把行内容与覆盖的间距作为同一个形状绘制。可继承 `VirtualTableView` 并覆写 `paintStateBackgroundLayer()`：`extended` 是当前 hover/select 开关对应的完整区域，`clip` 已裁去不覆盖的列间距和 pane 边界，`spacingClip` 只含间距。默认实现只绘制 `spacingClip`；改为绘制完整形状时，adapter 的行控件应保持背景透明，避免重复绘制。`table_row_widgets` 示例采用这种方式，圆角位于包含间距后的外边缘。
+
+覆写中可调用 `paintRoundedStateBackgroundLayer(painter, extended, clip, color, radius)`；它同时对齐圆角形状和裁剪区域的物理像素边界，避免 125% 等缩放下抗锯齿颜色进入下一行。
+
+```cpp
+table.setHoverBackgroundThroughRowSpacing(false);
+table.setSelectedBackgroundThroughRowSpacing(false);
+table.setHoverBackgroundThroughColumnSpacing(true);
+table.setSelectedBackgroundThroughColumnSpacing(true);
+```
+
 两种控件模式都可设置行间距和列间距，默认均为 0；末行、末列之后不加间距。空白区域不命中行或列，行间距上下、列间距左右都有分割线。列间距跟随列的显示顺序、隐藏状态和冻结 pane。间距设为 0 时仍显示单元格分割线。
 
 ```cpp
@@ -63,7 +76,7 @@ table.setHorizontalGridLinesVisible(false);                // 隐藏横线及默
 
 横、竖分割线默认都显示，可以分别关闭；列表头底边、行表头右边及其间隙边框也遵循对应方向的开关。竖线穿过行间距、横线穿过列间距默认都开启；这两个开关只决定已显示的线在间隙内是否连续，不改变分割线的显隐。自定义表头控件若自己绘制边框，应由该控件同步处理边框显隐。
 
-横线和竖线可以分别设置颜色与宽度，默认跟随 Qt 样式颜色、宽度为 1 px。颜色传入无效的 `QColor()` 可恢复样式颜色；宽度最小为 1 px。设置作用于表体分割线、间隙边缘和默认表头分割线，较宽的线向已有单元格或间隙内部绘制，不改变行列尺寸。pane 边界线仍由 `setPaneSeparatorStyle()` 单独控制。
+横线和竖线可以分别设置颜色与宽度，默认跟随 Qt 样式颜色、宽度为 1 个物理像素。线宽按物理像素绘制并对齐屏幕像素网格，在 125% 或 150% 等缩放下保持一致；行列尺寸与间距仍使用逻辑像素。颜色传入无效的 `QColor()` 可恢复样式颜色；宽度最小为 1 个物理像素。设置作用于表体分割线、间隙边缘和默认表头分割线，较宽的线向已有单元格或间隙内部绘制，不改变行列尺寸。pane 边界线仍由 `setPaneSeparatorStyle()` 单独控制。
 
 ```cpp
 table.setVerticalGridLineColor(QColor(QStringLiteral("#3983a8")));

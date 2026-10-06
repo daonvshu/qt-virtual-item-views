@@ -1,4 +1,5 @@
 #include <virtualitemviews/virtualheaderview.h>
+#include "../core/pixelalignedlines_p.h"
 
 #include <virtualitemviews/headergeometry.h>
 #include <virtualitemviews/widgetrecycler.h>
@@ -114,8 +115,9 @@ void VirtualHeaderView::paintEvent(QPaintEvent *event)
             if (m_sectionSeparatorsVisible) {
                 const int x = section->geometry().right();
                 if (x >= 0 && x < width())
-                    painter.fillRect(QRect(x - m_sectionSeparatorWidth + 1, 0,
-                                           m_sectionSeparatorWidth, height()), sectionColor);
+                    fillVerticalPixelLines(&painter,
+                        {QRect(x - m_sectionSeparatorWidth + 1, 0, m_sectionSeparatorWidth, height())},
+                        m_sectionSeparatorWidth, sectionColor);
             }
             continue;
         }
@@ -124,8 +126,9 @@ void VirtualHeaderView::paintEvent(QPaintEvent *event)
             if (m_sectionSeparatorsVisible) {
                 const int y = section->geometry().bottom();
                 if (y >= 0 && y < height())
-                    painter.fillRect(QRect(0, y - m_sectionSeparatorWidth + 1,
-                                           width(), m_sectionSeparatorWidth), sectionColor);
+                    fillHorizontalPixelLines(&painter,
+                        {QRect(0, y - m_sectionSeparatorWidth + 1, width(), m_sectionSeparatorWidth)},
+                        m_sectionSeparatorWidth, sectionColor);
             }
             continue;
         }
@@ -134,13 +137,16 @@ void VirtualHeaderView::paintEvent(QPaintEvent *event)
             continue;
         const int top = section->geometry().bottom() + 1;
         if (m_crossAxisSeparatorVisible && width() > 0)
-            painter.fillRect(QRect(width() - m_crossAxisSeparatorWidth, top,
-                                   m_crossAxisSeparatorWidth, spacing), crossColor);
+            fillVerticalPixelLines(&painter,
+                {QRect(width() - m_crossAxisSeparatorWidth, top, m_crossAxisSeparatorWidth, spacing)},
+                m_crossAxisSeparatorWidth, crossColor);
         if (m_sectionSeparatorsVisible) {
+            QVector<QRect> lines;
             for (int y : {top, top + qMax(0, spacing - m_sectionSeparatorWidth)}) {
                 if (y >= 0 && y < height())
-                    painter.fillRect(QRect(0, y, width(), m_sectionSeparatorWidth), sectionColor);
+                    lines.append(QRect(0, y, width(), m_sectionSeparatorWidth));
             }
+            fillHorizontalPixelLines(&painter, lines, m_sectionSeparatorWidth, sectionColor);
         }
     }
 }

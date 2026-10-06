@@ -14,6 +14,8 @@ class QResizeEvent;
 
 namespace viv {
 
+class TreeExpansionTransition;
+
 /// A multi-column table whose rows are the expanded, visible nodes of a model tree.
 /// Column zero owns the branch indicator even when columns are reordered.
 class VIRTUALITEMVIEWS_EXPORT VirtualTreeTableView : public VirtualTableView
@@ -34,6 +36,12 @@ public:
     void collapse(const QModelIndex &index);
     void expandRecursively(const QModelIndex &index);
     void collapseAll();
+    /// Height/position and opacity transition; disabled by default. Frozen rows use a fade.
+    void setExpansionAnimationEnabled(bool enabled);
+    bool expansionAnimationEnabled() const;
+    /// Duration in milliseconds; zero disables the visual transition.
+    void setExpansionAnimationDuration(int milliseconds);
+    int expansionAnimationDuration() const;
     void setExpanded(const QModelIndex &index, bool expanded);
     void toggleExpanded(const QModelIndex &index);
     bool isExpanded(const QModelIndex &index) const;
@@ -105,6 +113,7 @@ protected:
     bool usesExplicitRowSelection() const override { return true; }
     void applyRowSpacingOverrides() override;
     void configureRowSpacingWidget(QWidget *widget) const override;
+    void configureColumnSpacingWidget(QWidget *widget) const override;
     void afterMaterialize() override;
     void visualColumnGeometryChanged() override;
     void moveRowsForStripDrag(int fromRow, int toRow) override;
@@ -148,6 +157,7 @@ private:
     QRect insertionLineRect(const DropTarget &target) const;
 
     TreeVisibilityIndex *m_visibility = nullptr;
+    TreeExpansionTransition *m_expansionTransition = nullptr;
     QPersistentModelIndex m_rootIndex;
     quint64 m_rootChangeSerial = 0;
     quint64 m_mappingSerial = 0;

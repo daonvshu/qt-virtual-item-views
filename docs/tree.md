@@ -41,6 +41,8 @@ tree.show();
 
 还可用 `setRootIndex()` 只显示一棵子树，`isExpanded()` 查询状态，`visibleRowCount()` 查询展开后的行数。分支指示器可点击，双击和方向键也可展开/收起。
 
+两种树视图均支持展开/收起的高度、位置和淡入淡出过渡：`setExpansionAnimationEnabled(true)` 开启，`setExpansionAnimationDuration(300)` 设置毫秒时长（默认 300 ms，0 关闭过渡）。组件默认关闭，示例开启。子节点画面连同节点间距逐渐展开或收拢，后续行同步上下移动；节点映射、逻辑几何和信号立即更新，视觉动画按节点身份插值当前视图大小的前后画面，不修改模型、显式行高或虚拟化布局。连续操作替换旧过渡；滚动、窗口缩放、模型变化、更换显示根或鼠标/键盘操作取消过渡，输入按最终布局处理。启用冻结行时使用淡入淡出，避免行画面跨越冻结边界。
+
 ## 悬停与选中背景
 
 树可以直接绘制带过渡动画的状态背景。覆盖范围按当前节点深度计算，和分割线范围独立设置：
@@ -52,11 +54,15 @@ tree.setVisualStateBackgroundExtent(
 tree.setHoverBackgroundColor(QColor("#e7f4ed"));
 tree.setSelectedBackgroundColor(QColor("#b9d9f1"));
 tree.setVisualStateAnimationDuration(150);
+tree.setHoverBackgroundThroughRowSpacing(true);
+tree.setSelectedBackgroundThroughRowSpacing(false);
 ```
 
 `NodeOnly` 从节点内容左侧开始，`NodeAndIcon` 从当前节点图标格左侧开始，`FullWidth` 覆盖整行。背景在分支图标下方绘制，不遮住图标；行控件需要保持透明，才能看到其下方的状态背景。默认不启用内置背景。
 
 也可由节点控件自行绘制背景。树与列表使用同一接口：在 `WidgetAdapter::visualStateChanged(widget, index)` 中读取 `tree.visualState(index)`，把独立的 `hovered`、`selected` 标志交给节点控件，然后调用 `update()`。节点控件在 `paintEvent()` 中画自己的背景；回调也会在控件复用并绑定新节点后触发。两种状态可以同时为真，颜色优先级由业务决定。完整的自绘控件写法见 [列表的状态示例](list.md#自绘悬停与选中背景)。
+
+`setHoverBackgroundThroughRowSpacing()` 和 `setSelectedBackgroundThroughRowSpacing()` 分别控制内置背景是否覆盖节点拥有的行间距，默认均为 false。`NodeRowSpacingBelowRole` 的部分跟随上方节点，`NodeRowSpacingAboveRole` 的部分跟随下方节点；下间距 role 缺失、无效或负值时，默认行间距归上方节点。两部分各自使用所属节点的状态和覆盖范围，首行前、末行后不延伸，不跨越冻结行边界。分隔线仍显示，自定义间距控件仍可绘制自己的内容。
 
 节点控件按 `hoverProgress`、`selectedProgress` 混合背景颜色即可得到进入和离开动画；`setVisualStateAnimationDuration()` 控制过渡时间。
 

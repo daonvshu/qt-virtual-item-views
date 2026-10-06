@@ -54,6 +54,11 @@ public:
     /// An invalid color restores the palette's mid color.
     void setRowGridLineColor(const QColor &color);
     QColor rowGridLineColor() const { return m_rowGridLineColor; }
+    /// Extends hover/selection backgrounds through row gaps (default false).
+    void setHoverBackgroundThroughRowSpacing(bool enabled);
+    bool hoverBackgroundThroughRowSpacing() const { return m_hoverBackgroundThroughRowSpacing; }
+    void setSelectedBackgroundThroughRowSpacing(bool enabled);
+    bool selectedBackgroundThroughRowSpacing() const { return m_selectedBackgroundThroughRowSpacing; }
     QColor itemPaneSeparatorColor() const override;
 
 protected:
@@ -63,6 +68,9 @@ protected:
     bool isLayoutParent(const QModelIndex &parent) const override;
     void configureRowSpacingWidget(QWidget *widget) const override;
     void afterMaterialize() override;
+    void paintEvent(QPaintEvent *event) override;
+    void refreshVisualStates() override;
+    void refreshVisualState(const QModelIndex &index) override;
 
 private:
     void syncRowGridLines();
@@ -74,6 +82,8 @@ private:
     QColor m_rowGridLineColor;
     int m_rowGridLineWidth = 1;
     bool m_rowGridLinesVisible = true;
+    bool m_hoverBackgroundThroughRowSpacing = false;
+    bool m_selectedBackgroundThroughRowSpacing = false;
 };
 
 } // namespace viv

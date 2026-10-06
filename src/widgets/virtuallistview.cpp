@@ -1,4 +1,5 @@
 #include <virtualitemviews/virtuallistview.h>
+#include "../core/pixelalignedlines_p.h"
 
 #include <virtualitemviews/widgetadapter.h>
 #include <virtualitemviews/sizeindex.h>
@@ -7,6 +8,8 @@
 #include <QAbstractItemModel>
 #include <QLoggingCategory>
 #include <QPalette>
+#include <QPainter>
+#include <QPaintEvent>
 
 namespace viv {
 
@@ -29,6 +32,62 @@ void VirtualListView::setRowGridLinesVisible(bool visible)
         return;
     m_rowGridLinesVisible = visible;
     relayout();
+}
+
+void VirtualListView::setHoverBackgroundThroughRowSpacing(bool enabled)
+{
+    if (m_hoverBackgroundThroughRowSpacing == enabled)
+        return;
+    m_hoverBackgroundThroughRowSpacing = enabled;
+    viewport()->update();
+}
+
+void VirtualListView::setSelectedBackgroundThroughRowSpacing(bool enabled)
+{
+    if (m_selectedBackgroundThroughRowSpacing == enabled)
+        return;
+    m_selectedBackgroundThroughRowSpacing = enabled;
+    viewport()->update();
+}
+
+void VirtualListView::refreshVisualStates()
+{
+    VirtualItemView::refreshVisualStates();
+    viewport()->update();
+}
+
+void VirtualListView::refreshVisualState(const QModelIndex &index)
+{
+    VirtualItemView::refreshVisualState(index);
+    if (m_hoverBackgroundThroughRowSpacing || m_selectedBackgroundThroughRowSpacing)
+        viewport()->update();
+}
+
+void VirtualListView::paintEvent(QPaintEvent *event)
+{
+    VirtualItemView::paintEvent(event);
+    if (!m_hoverBackgroundThroughRowSpacing && !m_selectedBackgroundThroughRowSpacing)
+        return;
+    QPainter painter(viewport());
+    for (const MaterializedItem &item : materializedItems()) {
+        const qsizetype row = viewItemForIndex(item.index);
+        if (row < 0 || row + 1 >= viewItemCount())
+            continue;
+        const QRect rect = geometryForViewRow(row);
+        const QRect gap = QRect(0, rect.bottom() + 1, viewport()->width(), m_listLayout->spacingAfter(row))
+            .intersected(itemPaneRect(itemPaneForRow(row))).intersected(event->rect());
+        if (gap.isEmpty())
+            continue;
+        const VisualState state = visualState(item.index);
+        if (m_hoverBackgroundThroughRowSpacing) {
+            painter.setOpacity(state.hoverProgress);
+            fillPixelAlignedRegion(&painter, QRegion(gap), hoverBackgroundColor());
+        }
+        if (m_selectedBackgroundThroughRowSpacing) {
+            painter.setOpacity(state.selectedProgress);
+            fillPixelAlignedRegion(&painter, QRegion(gap), selectedBackgroundColor());
+        }
+    }
 }
 
 void VirtualListView::setRowGridLineWidth(int pixels)
@@ -101,10 +160,10 @@ void VirtualListView::syncRowGridLines()
     for (auto it = desired.cbegin(); it != desired.cend(); ++it) {
         QWidget *line = m_rowGridLines.value(it.key(), nullptr);
         if (!line) {
-            line = m_rowGridLinePool.isEmpty() ? new QWidget(this) : m_rowGridLinePool.takeLast();
+            line = m_rowGridLinePool.isEmpty() ? new PixelAlignedHorizontalLine(this) : m_rowGridLinePool.takeLast();
             line->setObjectName(QStringLiteral("vivListRowGridLine"));
             line->setAttribute(Qt::WA_TransparentForMouseEvents);
-            line->setAutoFillBackground(true);
+            line->setAutoFillBackground(false);
             m_rowGridLines.insert(it.key(), line);
         }
         QPalette colors = line->palette();

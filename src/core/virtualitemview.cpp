@@ -1,4 +1,5 @@
 #include <virtualitemviews/virtualitemview.h>
+#include "pixelalignedlines_p.h"
 
 #include <virtualitemviews/widgetadapter.h>
 #include <virtualitemviews/layoutpolicy.h>
@@ -164,10 +165,12 @@ protected:
             const int skipLeft = qBound(left, property("vivSpacingLineSkipX").toInt(), width());
             const int skipRight = qBound(skipLeft,
                 skipLeft + qMax(0, property("vivSpacingLineSkipWidth").toInt()), width());
-            for (int y : {0, height() - lineWidth}) {
-                painter.fillRect(QRect(left, y, skipLeft - left, lineWidth), m_lineColor);
-                painter.fillRect(QRect(skipRight, y, width() - skipRight, lineWidth), m_lineColor);
+            QVector<QRect> lines;
+            for (int y : {0, qMax(0, height() - lineWidth)}) {
+                lines.append(QRect(left, y, skipLeft - left, lineWidth));
+                lines.append(QRect(skipRight, y, width() - skipRight, lineWidth));
             }
+            fillHorizontalPixelLines(&painter, lines, lineWidth, m_lineColor);
         }
     }
 
@@ -220,7 +223,7 @@ protected:
             return;
         QPainter painter(this);
         if (m_style.lineStyle == Qt::SolidLine) {
-            painter.fillRect(rect(), m_resolvedColor);
+            fillHorizontalPixelLines(&painter, {rect()}, qMax(1, m_style.width), m_resolvedColor);
             return;
         }
         QPen pen(m_resolvedColor);

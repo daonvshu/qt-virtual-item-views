@@ -102,12 +102,34 @@ private:
     int m_rowCount = 0;
 };
 
+class OrderTableView : public viv::VirtualTableView
+{
+public:
+    using viv::VirtualTableView::VirtualTableView;
+
+    void setCornerRadius(int radius)
+    {
+        m_cornerRadius = radius;
+        viewport()->update();
+    }
+
+protected:
+    void paintStateBackgroundLayer(QPainter *painter, const QRect &extended,
+                                  const QRegion &clip, const QRegion &,
+                                  const QColor &color) const override
+    {
+        paintRoundedStateBackgroundLayer(painter, extended, clip, color, m_cornerRadius);
+    }
+
+private:
+    int m_cornerRadius = 8;
+};
+
 class OrderRowWidget : public QWidget
 {
 public:
-    explicit OrderRowWidget(viv::VirtualTableView *view, QWidget *parent = nullptr)
+    explicit OrderRowWidget(QWidget *parent = nullptr)
         : QWidget(parent)
-        , m_view(view)
     {
         for (int column = 0; column < ColumnCount; ++column) {
             auto *host = new viv::ColumnHost(column, this);
@@ -138,61 +160,12 @@ public:
         m_progress->setValue(rowIndex.siblingAtColumn(ColumnProgress).data().toInt());
     }
 
-    void setCornerRadius(int radius)
-    {
-        if (m_cornerRadius == radius)
-            return;
-        m_cornerRadius = radius;
-        update();
-    }
-
-protected:
-    void paintEvent(QPaintEvent *) override
-    {
-        QPainter painter(this);
-        painter.fillRect(rect(), palette().color(QPalette::Base));
-        if (!m_view || !m_rowIndex.isValid())
-            return;
-        painter.setRenderHint(QPainter::Antialiasing, m_cornerRadius > 0);
-        painter.setPen(Qt::NoPen);
-        const auto paintBackground = [this, &painter](const QRect &area, const QColor &color,
-                                                       qreal opacity) {
-            if (opacity <= 0.0)
-                return;
-            painter.setOpacity(opacity);
-            if (m_cornerRadius > 0) {
-                painter.setBrush(color);
-                painter.drawRoundedRect(QRectF(area), m_cornerRadius, m_cornerRadius);
-            } else {
-                painter.fillRect(area, color);
-            }
-        };
-        if (m_view->visualStateScope() == viv::VirtualTableView::VisualStateScope::Row) {
-            const auto state = m_view->visualState(QModelIndex(m_rowIndex));
-            paintBackground(rect(), m_view->hoverBackgroundColor(), state.hoverProgress);
-            paintBackground(rect(), m_view->selectedBackgroundColor(), state.selectedProgress);
-            return;
-        }
-        for (int column = 0; column < ColumnCount; ++column) {
-            const auto geometry = m_view->columnGeometry(column);
-            if (!geometry.isValid() || geometry.hidden)
-                continue;
-            const auto state = m_view->visualState(QModelIndex(m_rowIndex).siblingAtColumn(column));
-            const QRect cellRect(geometry.viewportX - x(), 0, geometry.width, height());
-            paintBackground(cellRect, m_view->hoverBackgroundColor(), state.hoverProgress);
-            paintBackground(cellRect, m_view->selectedBackgroundColor(), state.selectedProgress);
-            painter.setOpacity(1.0);
-        }
-    }
-
 private:
-    viv::VirtualTableView *m_view = nullptr;
     QPersistentModelIndex m_rowIndex;
     QVector<QPair<int, QLabel *>> m_labels;
     QLabel *m_status = nullptr;
     QProgressBar *m_progress = nullptr;
     QPushButton *m_action = nullptr;
-    int m_cornerRadius = 8;
 };
 
 class OrderAdapter : public viv::TableWidgetAdapter
@@ -202,9 +175,7 @@ public:
     {
         Q_UNUSED(type);
         ++created;
-        auto *row = new OrderRowWidget(view, parent);
-        row->setCornerRadius(cornerRadius);
-        return row;
+        return new OrderRowWidget(parent);
     }
 
     void bindWidget(QWidget *widget, const QModelIndex &index) override
@@ -221,15 +192,12 @@ public:
     void setCornerRadius(int radius)
     {
         cornerRadius = radius;
-        for (auto *widget : view->viewport()->findChildren<QWidget *>()) {
-            if (auto *row = dynamic_cast<OrderRowWidget *>(widget))
-                row->setCornerRadius(radius);
-        }
+        view->setCornerRadius(radius);
     }
 
     int created = 0;
     int cornerRadius = 8;
-    viv::VirtualTableView *view = nullptr;
+    OrderTableView *view = nullptr;
 };
 
 } // namespace
@@ -267,7 +235,7 @@ int main(int argc, char **argv)
     QMainWindow window;
 
     // 视图由窗口持有；模型/适配器先声明，生命周期覆盖视图。
-    auto *view = new viv::VirtualTableView(&window);
+    auto *view = new OrderTableView(&window);
     adapter.view = view;
     view->setTableAdapter(&adapter);
     view->setUniformItemHeight(kRowHeight);
@@ -333,6 +301,28 @@ int main(int argc, char **argv)
     auto *selectedColor = new QPushButton(QStringLiteral("选中颜色"), &window);
     stateToolbar->addWidget(hoverColor);
     stateToolbar->addWidget(selectedColor);
+    auto *backgroundToolbar = window.addToolBar(QStringLiteral("背景间距"));
+    window.insertToolBarBreak(backgroundToolbar);
+    auto *hoverRowSpacing = new QCheckBox(QStringLiteral("悬停覆盖行间距"), &window);
+    hoverRowSpacing->setChecked(view->hoverBackgroundThroughRowSpacing());
+    backgroundToolbar->addWidget(hoverRowSpacing);
+    QObject::connect(hoverRowSpacing, &QCheckBox::toggled, view,
+                     &viv::VirtualTableView::setHoverBackgroundThroughRowSpacing);
+    auto *selectedRowSpacing = new QCheckBox(QStringLiteral("选中覆盖行间距"), &window);
+    selectedRowSpacing->setChecked(view->selectedBackgroundThroughRowSpacing());
+    backgroundToolbar->addWidget(selectedRowSpacing);
+    QObject::connect(selectedRowSpacing, &QCheckBox::toggled, view,
+                     &viv::VirtualTableView::setSelectedBackgroundThroughRowSpacing);
+    auto *hoverColumnSpacing = new QCheckBox(QStringLiteral("悬停覆盖列间距"), &window);
+    hoverColumnSpacing->setChecked(view->hoverBackgroundThroughColumnSpacing());
+    backgroundToolbar->addWidget(hoverColumnSpacing);
+    QObject::connect(hoverColumnSpacing, &QCheckBox::toggled, view,
+                     &viv::VirtualTableView::setHoverBackgroundThroughColumnSpacing);
+    auto *selectedColumnSpacing = new QCheckBox(QStringLiteral("选中覆盖列间距"), &window);
+    selectedColumnSpacing->setChecked(view->selectedBackgroundThroughColumnSpacing());
+    backgroundToolbar->addWidget(selectedColumnSpacing);
+    QObject::connect(selectedColumnSpacing, &QCheckBox::toggled, view,
+                     &viv::VirtualTableView::setSelectedBackgroundThroughColumnSpacing);
     stateToolbar->addWidget(new QLabel(QStringLiteral("过渡: "), &window));
     auto *animationDuration = new QSpinBox(&window);
     animationDuration->setRange(0, 1000);

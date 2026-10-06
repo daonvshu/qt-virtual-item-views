@@ -120,18 +120,15 @@ int main(int argc, char **argv)
         auto deviceRow = makeRow(QStringLiteral("设备 %1").arg(device), QStringLiteral("设备"),
                                  QStringLiteral("在线"));
         QStandardItem *deviceItem = deviceRow.first();
-        deviceItem->setData(0, viv::VirtualTreeTableView::NodeRowSpacingBelowRole);
         deviceItem->setData(device > 0 ? 12 : 0,
                             viv::VirtualTreeTableView::NodeRowSpacingAboveRole);
         for (int channel = 0; channel < 8; ++channel) {
             auto channelRow = makeRow(QStringLiteral("通道 %1").arg(channel),
                                       QStringLiteral("通道"));
             QStandardItem *channelItem = channelRow.first();
-            channelItem->setData(4, viv::VirtualTreeTableView::NodeRowSpacingRole);
             for (int point = 0; point < 4; ++point) {
                 auto pointRow = makeRow(QStringLiteral("测点 %1").arg(point),
                                         QStringLiteral("测点"), QStringLiteral("正常"));
-                pointRow.first()->setData(0, viv::VirtualTreeTableView::NodeRowSpacingRole);
                 channelItem->appendRow(pointRow);
             }
             deviceItem->appendRow(channelRow);
@@ -140,6 +137,7 @@ int main(int argc, char **argv)
     }
 
     viv::VirtualTreeTableView view;
+    view.setExpansionAnimationEnabled(true);
     view.setModel(&model);
     view.setTableAdapter(new TreeTableAdapter, true);
     view.setCellAdapter(new TreeTableCellAdapter, true);
@@ -158,6 +156,18 @@ int main(int argc, char **argv)
     auto *mode = new QComboBox(&window);
     mode->addItems({QStringLiteral("行控件"), QStringLiteral("单元格控件")});
     controls->addWidget(mode);
+    auto *expansionAnimation = new QCheckBox(QStringLiteral("展开动画"), &window);
+    expansionAnimation->setChecked(view.expansionAnimationEnabled());
+    controls->addWidget(expansionAnimation);
+    auto *expansionDuration = new QSpinBox(&window);
+    expansionDuration->setRange(0, 1000);
+    expansionDuration->setSuffix(QStringLiteral(" ms"));
+    expansionDuration->setValue(view.expansionAnimationDuration());
+    controls->addWidget(expansionDuration);
+    QObject::connect(expansionAnimation, &QCheckBox::toggled,
+                     &view, &viv::VirtualTreeTableView::setExpansionAnimationEnabled);
+    QObject::connect(expansionDuration, QOverload<int>::of(&QSpinBox::valueChanged),
+                     &view, &viv::VirtualTreeTableView::setExpansionAnimationDuration);
     QObject::connect(mode, QOverload<int>::of(&QComboBox::currentIndexChanged),
                      &view, [&view](int choice) {
                          using Mode = viv::VirtualTableView::MaterializationMode;
@@ -278,6 +288,29 @@ int main(int argc, char **argv)
                          view.setRowGridLineExtent(
                              static_cast<viv::VirtualTreeTableView::RowGridLineExtent>(choice));
                      });
+
+    window.addToolBarBreak();
+    auto *stateToolbar = window.addToolBar(QStringLiteral("状态背景"));
+    auto *hoverThrough = new QCheckBox(QStringLiteral("悬停覆盖行间距"), &window);
+    hoverThrough->setChecked(view.hoverBackgroundThroughRowSpacing());
+    stateToolbar->addWidget(hoverThrough);
+    auto *selectedThrough = new QCheckBox(QStringLiteral("选中覆盖行间距"), &window);
+    selectedThrough->setChecked(view.selectedBackgroundThroughRowSpacing());
+    stateToolbar->addWidget(selectedThrough);
+    QObject::connect(hoverThrough, &QCheckBox::toggled,
+                     &view, &viv::VirtualTreeTableView::setHoverBackgroundThroughRowSpacing);
+    QObject::connect(selectedThrough, &QCheckBox::toggled,
+                     &view, &viv::VirtualTreeTableView::setSelectedBackgroundThroughRowSpacing);
+    auto *hoverColumns = new QCheckBox(QStringLiteral("悬停覆盖列间距"), &window);
+    hoverColumns->setChecked(view.hoverBackgroundThroughColumnSpacing());
+    stateToolbar->addWidget(hoverColumns);
+    auto *selectedColumns = new QCheckBox(QStringLiteral("选中覆盖列间距"), &window);
+    selectedColumns->setChecked(view.selectedBackgroundThroughColumnSpacing());
+    stateToolbar->addWidget(selectedColumns);
+    QObject::connect(hoverColumns, &QCheckBox::toggled,
+                     &view, &viv::VirtualTreeTableView::setHoverBackgroundThroughColumnSpacing);
+    QObject::connect(selectedColumns, &QCheckBox::toggled,
+                     &view, &viv::VirtualTreeTableView::setSelectedBackgroundThroughColumnSpacing);
 
     window.resize(1100, 560);
     window.show();

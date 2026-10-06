@@ -30,7 +30,7 @@ namespace {
 struct Node
 {
     QString name;
-    int rowSpacing = 0;
+    int rowSpacing = -1;
     int rowSpacingAbove = 0;
     Node *parent = nullptr;
     QVector<Node *> children;
@@ -51,7 +51,6 @@ public:
             node->name = QStringLiteral("设备 %1").arg(device);
             for (int channel = 0; channel < 20; ++channel) {
                 auto *channelNode = new Node;
-                channelNode->rowSpacing = 4;
                 channelNode->name = QStringLiteral("通道 %1").arg(channel);
                 channelNode->parent = node;
                 for (int point = 0; point < 5; ++point) {
@@ -288,6 +287,7 @@ int main(int argc, char **argv)
     QMainWindow window;
     // 视图由窗口持有；模型/适配器先声明，生命周期覆盖视图。
     auto *view = new viv::VirtualTreeView(&window);
+    view->setExpansionAnimationEnabled(true);
     view->setAdapter(&adapter);
     view->setUniformItemHeight(26);
     view->setIndentation(parser.value(indentationOption).toInt());
@@ -305,6 +305,18 @@ int main(int argc, char **argv)
     auto *toolbar = window.addToolBar(QStringLiteral("树"));
     auto *collapseAll = new QCheckBox(QStringLiteral("全部折叠"), &window);
     toolbar->addWidget(collapseAll);
+    auto *expansionAnimation = new QCheckBox(QStringLiteral("展开动画"), &window);
+    expansionAnimation->setChecked(view->expansionAnimationEnabled());
+    toolbar->addWidget(expansionAnimation);
+    auto *expansionDuration = new QSpinBox(&window);
+    expansionDuration->setRange(0, 1000);
+    expansionDuration->setSuffix(QStringLiteral(" ms"));
+    expansionDuration->setValue(view->expansionAnimationDuration());
+    toolbar->addWidget(expansionDuration);
+    QObject::connect(expansionAnimation, &QCheckBox::toggled,
+                     view, &viv::VirtualTreeView::setExpansionAnimationEnabled);
+    QObject::connect(expansionDuration, QOverload<int>::of(&QSpinBox::valueChanged),
+                     view, &viv::VirtualTreeView::setExpansionAnimationDuration);
     auto *indicators = new QCheckBox(QStringLiteral("分支指示"));
     indicators->setChecked(true);
     toolbar->addWidget(indicators);
@@ -354,6 +366,16 @@ int main(int argc, char **argv)
     auto *stateBackground = new QCheckBox(QStringLiteral("状态背景"), &window);
     stateBackground->setChecked(view->visualStateBackgroundVisible());
     stateToolbar->addWidget(stateBackground);
+    auto *hoverThrough = new QCheckBox(QStringLiteral("悬停覆盖行间距"), &window);
+    hoverThrough->setChecked(view->hoverBackgroundThroughRowSpacing());
+    stateToolbar->addWidget(hoverThrough);
+    auto *selectedThrough = new QCheckBox(QStringLiteral("选中覆盖行间距"), &window);
+    selectedThrough->setChecked(view->selectedBackgroundThroughRowSpacing());
+    stateToolbar->addWidget(selectedThrough);
+    QObject::connect(hoverThrough, &QCheckBox::toggled,
+                     view, &viv::VirtualTreeView::setHoverBackgroundThroughRowSpacing);
+    QObject::connect(selectedThrough, &QCheckBox::toggled,
+                     view, &viv::VirtualTreeView::setSelectedBackgroundThroughRowSpacing);
     stateToolbar->addWidget(new QLabel(QStringLiteral("覆盖范围: "), &window));
     auto *backgroundExtent = new QComboBox(&window);
     backgroundExtent->addItem(QStringLiteral("仅内容"));

@@ -17,6 +17,8 @@ class QPaintEvent;
 
 namespace viv {
 
+class TreeExpansionTransition;
+
 class ListLayout;
 
 /// Tree MVP (architecture document §43 v0.6).
@@ -57,6 +59,12 @@ public:
     bool isExpanded(const QModelIndex &index) const;
     bool hasChildren(const QModelIndex &index) const;
     void collapseAll();
+    /// Height/position and opacity transition; disabled by default. Frozen rows use a fade.
+    void setExpansionAnimationEnabled(bool enabled);
+    bool expansionAnimationEnabled() const;
+    /// Duration in milliseconds; zero disables the visual transition.
+    void setExpansionAnimationDuration(int milliseconds);
+    int expansionAnimationDuration() const;
 
     // -- branch UI -----------------------------------------------------------
     void setIndentation(int pixels);
@@ -85,6 +93,11 @@ public:
     /// Optional animated hover/selection background, painted below branch icons.
     void setVisualStateBackgroundVisible(bool visible);
     bool visualStateBackgroundVisible() const { return m_visualStateBackgroundVisible; }
+    /// Extends the corresponding background through owned row gaps (default false).
+    void setHoverBackgroundThroughRowSpacing(bool enabled);
+    bool hoverBackgroundThroughRowSpacing() const { return m_hoverBackgroundThroughRowSpacing; }
+    void setSelectedBackgroundThroughRowSpacing(bool enabled);
+    bool selectedBackgroundThroughRowSpacing() const { return m_selectedBackgroundThroughRowSpacing; }
     /// Left edge of the background for each node depth, independent of grid lines.
     enum class VisualStateBackgroundExtent { NodeOnly, NodeAndIcon, FullWidth };
     void setVisualStateBackgroundExtent(VisualStateBackgroundExtent extent);
@@ -184,6 +197,7 @@ private:
     QRect insertionLineRect(const DropTarget &target) const;
 
     TreeVisibilityIndex *m_visibility = nullptr;
+    TreeExpansionTransition *m_expansionTransition = nullptr;
     ListLayout *m_rowLayout = nullptr;
     QPersistentModelIndex m_rootIndex;
     int m_indentation = 20;
@@ -195,6 +209,8 @@ private:
     RowGridLineExtent m_rowGridLineExtent = RowGridLineExtent::FullWidth;
     VisualStateBackgroundExtent m_visualStateBackgroundExtent = VisualStateBackgroundExtent::FullWidth;
     bool m_visualStateBackgroundVisible = false;
+    bool m_hoverBackgroundThroughRowSpacing = false;
+    bool m_selectedBackgroundThroughRowSpacing = false;
     bool m_branchIndicatorsVisible = true;
     BranchIndicatorRenderer *m_branchRenderer = nullptr;
     bool m_ownBranchRenderer = false;

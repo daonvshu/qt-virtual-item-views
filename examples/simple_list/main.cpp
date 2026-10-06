@@ -244,6 +244,16 @@ int main(int argc, char **argv)
     window.insertToolBarBreak(stateToolbar);
     stateToolbar->addWidget(hoverColor);
     stateToolbar->addWidget(selectedColor);
+    auto *hoverRowSpacing = new QCheckBox(QStringLiteral("悬停覆盖行间距"), &window);
+    hoverRowSpacing->setChecked(view->hoverBackgroundThroughRowSpacing());
+    stateToolbar->addWidget(hoverRowSpacing);
+    QObject::connect(hoverRowSpacing, &QCheckBox::toggled, view,
+                     &viv::VirtualListView::setHoverBackgroundThroughRowSpacing);
+    auto *selectedRowSpacing = new QCheckBox(QStringLiteral("选中覆盖行间距"), &window);
+    selectedRowSpacing->setChecked(view->selectedBackgroundThroughRowSpacing());
+    stateToolbar->addWidget(selectedRowSpacing);
+    QObject::connect(selectedRowSpacing, &QCheckBox::toggled, view,
+                     &viv::VirtualListView::setSelectedBackgroundThroughRowSpacing);
     stateToolbar->addWidget(new QLabel(QStringLiteral("过渡: "), &window));
     auto *animationDuration = new QSpinBox(&window);
     animationDuration->setRange(0, 1000);
