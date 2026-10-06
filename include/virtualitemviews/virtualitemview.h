@@ -259,7 +259,7 @@ public:
     using RowSpacingFactory = std::function<QWidget *(const QModelIndex &, QWidget *)>;
     using RowSpacingBinder = std::function<void(QWidget *, const QModelIndex &)>;
     /// Gap below a row; the last row has no trailing gap. Zero disables it.
-    void setRowSpacing(int pixels);
+    virtual void setRowSpacing(int pixels);
     int rowSpacing() const { return m_rowSpacing; }
     /// Optional content for visible gaps. The binder refreshes a reused widget.
     void setRowSpacingFactory(RowSpacingFactory factory, RowSpacingBinder binder = {});
@@ -445,6 +445,8 @@ protected:
     virtual bool isLayoutParent(const QModelIndex &parent) const = 0;
     /// A view with its own flattened row index updates the layout after model signals.
     virtual bool managesVisibleRows() const { return false; }
+    /// Keeps identity-bound widgets across model layout changes when sizes are not row-keyed.
+    virtual bool preservesItemsOnLayoutChange() const { return managesVisibleRows(); }
     /// Changes whenever a model replacement begins, including nested replacements.
     quint64 modelChangeSerial() const { return m_modelChangeSerial; }
     /// Changes when a derived view replaces its visible row/root mapping.
@@ -560,6 +562,11 @@ protected:
     /// Hook that lets a subclass veto the automatic height measurement of an
     /// item (for example a table row whose height the user set explicitly).
     virtual bool canMeasureItem(qsizetype item) const;
+    /// Whether the shared size-index height setters apply to this view's layout.
+    virtual bool supportsItemHeightConfiguration() const { return true; }
+    /// Whether display rows can be frozen or own custom spacing widgets.
+    virtual bool supportsRowPanes() const { return true; }
+    virtual bool supportsRowSpacingWidgets() const { return true; }
     /// Hook for subclass specific keys (tree expand/collapse). Returning true
     /// consumes the event.
     virtual bool handleItemKeyPress(QKeyEvent *event);

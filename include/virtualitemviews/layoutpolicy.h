@@ -33,6 +33,8 @@ public:
 
     /// First item intersecting \a offset; may return itemCount().
     virtual qsizetype indexAtOffset(qint64 offset) const = 0;
+    /// Last item at an offset; multi-column layouts include the entire display row.
+    virtual qsizetype lastIndexAtOffset(qint64 offset) const { return indexAtOffset(offset); }
 
     /// Total extent along the scrolling axis.
     virtual qint64 contentExtent() const = 0;
@@ -49,6 +51,8 @@ public:
 
     /// True when item sizes may differ from each other.
     virtual bool isVariableSized() const = 0;
+    /// Only layouts awaiting a size estimate need a provisional materialization pass.
+    virtual bool needsInitialMeasurement() const { return true; }
 
     /// Size model of the layout, when the layout is index based (rows/columns).
     virtual SizeIndex *sizeIndex() const { return nullptr; }

@@ -4,6 +4,7 @@
 #include <virtualitemviews/virtualtableview.h>
 #include <virtualitemviews/virtualtreeview.h>
 #include <virtualitemviews/virtualtreetableview.h>
+#include <virtualitemviews/virtualflowtableview.h>
 #include "vivtestfixtures.h"
 
 #include <QtTest>
@@ -13,6 +14,12 @@
 #include <QStandardItemModel>
 #include <memory>
 
+#ifdef Q_OS_WIN
+#include <QAbstractEventDispatcher>
+#include <QtCore/qt_windows.h>
+#undef interface
+#endif
+
 using namespace viv;
 using namespace vivtest;
 
@@ -21,10 +28,20 @@ QAccessible::Id lastFocusTarget = 0;
 QList<QAccessible::Id> expansionTargets;
 QString lastAnnouncement;
 QAccessible::Id announcementTarget = 0;
+int flowModelChanges = 0;
+QList<QAccessible::Id> flowLocationTargets;
+QHash<QAccessible::Id, QRect> flowLocationRects;
 
 /// Records the interface receiving a focus notification, rather than querying focus afterwards.
 void captureFocusEvent(QAccessibleEvent *event)
 {
+    if (event->type() == QAccessible::TableModelChanged)
+        ++flowModelChanges;
+    if (event->type() == QAccessible::LocationChanged) {
+        flowLocationTargets.append(event->uniqueId());
+        auto *target = event->accessibleInterface();
+        flowLocationRects.insert(event->uniqueId(), target ? target->rect() : QRect());
+    }
     if (event->type() == QAccessible::Focus)
         lastFocusTarget = event->uniqueId();
     if (event->type() == QAccessible::StateChanged) {
@@ -228,6 +245,8 @@ private slots:
     void cellInterfaceReportsItsCoordinates();
     void treeExposesHierarchyOfVisibleNodes();
     void pressingAnItemBehavesLikeAClick();
+    void flowCoordinatesFollowPersistentIdentity();
+    void flowSelectionAndBoundedNodes();
 };
 
 void TestAccessibility::initTestCase()
@@ -1083,6 +1102,217 @@ void TestAccessibility::pressingAnItemBehavesLikeAClick()
     QAccessibleInterface *afterReset = QAccessible::queryAccessibleInterface(&view);
     QCOMPARE(afterReset->childCount(), 1);
     QCOMPARE(afterReset->child(0)->text(QAccessible::Name), QStringLiteral("only"));
+}
+
+void TestAccessibility::flowCoordinatesFollowPersistentIdentity()
+{
+    QStandardItemModel model;
+    auto *root = new QStandardItem(QStringLiteral("root"));
+    for (int row = 0; row < 10; ++row)
+        root->appendRow(new QStandardItem(QStringLiteral("item-%1").arg(row)));
+    model.appendRow(root);
+    TestAdapter adapter;
+    VirtualFlowTableView view;
+    view.setFrameShape(QFrame::NoFrame);
+    view.setAdapter(&adapter);
+    view.setFixedCellHeight(30);
+    view.setModel(&model);
+    view.setRootIndex(root->index());
+    showView(&view, QSize(601, 240));
+    auto *bridge = dynamic_cast<AccessibleVirtualItemView *>(QAccessible::queryAccessibleInterface(&view));
+    QVERIFY(bridge);
+    QCOMPARE(bridge->role(), QAccessible::Table);
+    auto *table = bridge->tableInterface();
+    QVERIFY(table);
+    QCOMPARE(table->rowCount(), 3);
+    QCOMPARE(table->columnCount(), 4);
+    QCOMPARE(bridge->childCount(), 10);
+    QVERIFY(!table->cellAt(2, 2));
+    QAccessibleInterface *cell = table->cellAt(1, 1);
+    QVERIFY(cell);
+    auto *coordinates = cell->tableCellInterface();
+    QVERIFY(coordinates);
+    QCOMPARE(cell->role(), QAccessible::Cell);
+    QCOMPARE(cell->parent(), static_cast<QAccessibleInterface *>(bridge));
+    QCOMPARE(bridge->child(5), cell);
+    QCOMPARE(bridge->indexOfChild(cell), 5);
+    QCOMPARE(cell->text(QAccessible::Name), QStringLiteral("item-5"));
+    QCOMPARE(cell->childCount(), 0);
+    const QPersistentModelIndex identity = model.index(5, 0, root->index());
+    const QAccessible::Id id = QAccessible::uniqueId(cell);
+    struct RestoreAccessibility {
+        bool active = QAccessible::isActive();
+        QAccessible::UpdateHandler previous = QAccessible::installUpdateHandler(captureFocusEvent);
+        ~RestoreAccessibility()
+        {
+            QAccessible::installUpdateHandler(previous);
+            QAccessible::setActive(active);
+        }
+    } restore;
+    QAccessible::setActive(true);
+    const bool eventsActive = QAccessible::isActive();
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    QVERIFY(eventsActive);
+#else
+    if (!eventsActive)
+        qInfo("Qt5 offscreen accessibility events unavailable; checking interface mapping only");
+#endif
+    view.setFocus();
+    lastFocusTarget = 0;
+    view.setCurrentIndex(identity);
+    if (eventsActive)
+        QCOMPARE(lastFocusTarget, id);
+    QVERIFY(cell->state().focused);
+    QVERIFY(!cell->state().invisible);
+    QCOMPARE(bridge->focusChild(), cell);
+    flowModelChanges = 0;
+    flowLocationTargets.clear();
+    lastFocusTarget = 0;
+    flowLocationRects.clear();
+    QVERIFY(view.selectionModel()->isSelected(identity));
+    const QItemSelection originalSelection = view.selectionModel()->selection();
+    view.resize(401, 240);
+    settle();
+    QCOMPARE(table->columnCount(), 3);
+    QCOMPARE(table->rowCount(), 4);
+    QCOMPARE(coordinates->rowIndex(), 1);
+    QCOMPARE(coordinates->columnIndex(), 2);
+    QCOMPARE(table->cellAt(1, 2), cell);
+    QCOMPARE(QAccessible::uniqueId(cell), id);
+    QCOMPARE(bridge->focusChild(), cell);
+    if (eventsActive) {
+        QVERIFY(flowModelChanges > 0);
+        QVERIFY(flowLocationTargets.contains(id));
+    }
+    const QRect rect = view.visualRect(identity).translated(view.viewport()->mapToGlobal(QPoint()));
+    QCOMPARE(cell->rect(), rect);
+    QCOMPARE(bridge->childAt(rect.center().x(), rect.center().y()), cell);
+    if (eventsActive) {
+        QTRY_COMPARE(flowLocationRects.value(id), rect);
+        QCOMPARE(lastFocusTarget, QAccessible::Id(0));
+        QCOMPARE(view.selectionModel()->selection(), originalSelection);
+        // A width change without changing column count also moves the cell.
+        lastFocusTarget = 0;
+        flowLocationRects.clear();
+#ifdef Q_OS_WIN
+        MSG sizingMessage = {};
+        sizingMessage.hwnd = reinterpret_cast<HWND>(view.window()->effectiveWinId());
+        sizingMessage.message = WM_ENTERSIZEMOVE;
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+        qintptr nativeResult = 0;
+#else
+        long nativeResult = 0;
+#endif
+        auto *dispatcher = QAbstractEventDispatcher::instance();
+        QVERIFY(dispatcher);
+        dispatcher->filterNativeEvent("windows_generic_MSG", &sizingMessage, &nativeResult);
+#endif
+        view.resize(420, 240);
+        settle();
+        QCOMPARE(table->columnCount(), 3);
+#ifdef Q_OS_WIN
+        // Layout notifications are immediate; the final notification must wait
+        // for the native sizing loop to end.
+        flowLocationRects.clear();
+        QTest::qWait(180);
+        QCOMPARE(lastFocusTarget, QAccessible::Id(0));
+        QVERIFY(flowLocationRects.isEmpty());
+        sizingMessage.message = WM_EXITSIZEMOVE;
+        dispatcher->filterNativeEvent("windows_generic_MSG", &sizingMessage, &nativeResult);
+#endif
+        QTRY_COMPARE(flowLocationRects.value(id), cell->rect());
+        QCOMPARE(lastFocusTarget, QAccessible::Id(0));
+        QCOMPARE(view.selectionModel()->selection(), originalSelection);
+        QVERIFY(cell->rect() != rect);
+        QCOMPARE(view.currentIndex(), QModelIndex(identity));
+        // Resizing must not claim focus when the view no longer owns it.
+        view.clearFocus();
+        lastFocusTarget = 0;
+        flowLocationRects.clear();
+        view.resize(440, 240);
+        settle();
+        QTest::qWait(180);
+        QCOMPARE(lastFocusTarget, QAccessible::Id(0));
+        QCOMPARE(flowLocationRects.value(id), cell->rect());
+        view.setFocus();
+        // A current item can be unselected; never report it as selected.
+        view.selectionModel()->clearSelection();
+        lastFocusTarget = 0;
+        flowLocationRects.clear();
+        view.resize(460, 240);
+        settle();
+        QTRY_COMPARE(flowLocationRects.value(id), cell->rect());
+        QCOMPARE(lastFocusTarget, QAccessible::Id(0));
+        QVERIFY(view.selectionModel()->selection().isEmpty());
+    }
+    root->sortChildren(0, Qt::DescendingOrder);
+    settle();
+    QCOMPARE(cell->text(QAccessible::Name), QStringLiteral("item-5"));
+    QCOMPARE(coordinates->rowIndex(), int(view.displayRowForIndex(identity)));
+    QCOMPARE(coordinates->columnIndex(), view.displayColumnForIndex(identity));
+    QCOMPARE(table->cellAt(coordinates->rowIndex(), coordinates->columnIndex()), cell);
+    QSignalSpy clicked(&view, &VirtualItemView::clicked);
+    cell->actionInterface()->doAction(QAccessibleActionInterface::pressAction());
+    QCOMPARE(clicked.count(), 1);
+    model.removeRow(identity.row(), root->index());
+    settle();
+    QVERIFY(!cell->isValid());
+    QCOMPARE(QAccessible::accessibleInterface(id), cell);
+}
+
+void TestAccessibility::flowSelectionAndBoundedNodes()
+{
+    QStandardItemModel model;
+    auto *root = new QStandardItem(QStringLiteral("root"));
+    for (int row = 0; row < 10; ++row)
+        root->appendRow({new QStandardItem(QString::number(row)), new QStandardItem(QStringLiteral("business"))});
+    model.appendRow(root);
+    TestAdapter adapter;
+    VirtualFlowTableView view;
+    view.setFrameShape(QFrame::NoFrame);
+    view.setAdapter(&adapter);
+    view.setFixedCellHeight(30);
+    view.setModel(&model);
+    view.setRootIndex(root->index());
+    showView(&view, QSize(601, 240));
+    auto *node = QAccessible::queryAccessibleInterface(&view);
+    auto *table = node->tableInterface();
+    QVERIFY(table);
+    view.selectionModel()->select(QItemSelection(model.index(0, 0, root->index()), model.index(3, 0, root->index())),
+                                  QItemSelectionModel::Select);
+    view.selectionModel()->select(QItemSelection(model.index(8, 0, root->index()), model.index(9, 0, root->index())),
+                                  QItemSelectionModel::Select);
+    view.selectionModel()->select(model.index(5, 1, root->index()), QItemSelectionModel::Select);
+    QCOMPARE(table->selectedCellCount(), 6);
+    QCOMPARE(table->selectedRows(), QList<int>({0, 2}));
+    QVERIFY(table->selectedColumns().isEmpty());
+    QCOMPARE(table->selectedCells().size(), 6);
+    QVERIFY(!table->selectRow(1));
+    QVERIFY(!table->selectColumn(1));
+    QVERIFY(!table->unselectRow(0));
+    QVERIFY(!table->unselectColumn(0));
+    view.selectionModel()->select(QItemSelection(model.index(0, 0, root->index()), model.index(9, 0, root->index())),
+                                  QItemSelectionModel::Select);
+    QCOMPARE(table->selectedRows(), QList<int>({0, 1, 2}));
+    QCOMPARE(table->selectedColumns(), QList<int>({0, 1, 2, 3}));
+    QCOMPARE(table->selectedCellCount(), 10);
+    for (int column = 0; column < 4; ++column)
+        QVERIFY(table->isColumnSelected(column));
+    NumericListModel large(1000000);
+    view.setModel(&large);
+    settle();
+    QVERIFY(node->childCount() < 150);
+    const qsizetype materialized = view.materializedItemCount();
+    auto *last = table->cellAt(int(view.displayRowCount() - 1), (large.rowCount() - 1) % view.columnCount());
+    QVERIFY(last);
+    QVERIFY(last->state().offscreen);
+    QCOMPARE(view.materializedItemCount(), materialized);
+    last->actionInterface()->doAction(QAccessibleActionInterface::setFocusAction());
+    settle();
+    QCOMPARE(view.currentIndex(), large.index(999999, 0));
+    QVERIFY(!last->state().offscreen);
+    QCOMPARE(node->focusChild(), last);
+    QVERIFY(node->childCount() < 150);
 }
 
 QTEST_MAIN(TestAccessibility)

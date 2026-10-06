@@ -7,6 +7,7 @@ function(viv_add_example name)
 endfunction()
 
 viv_add_example(simple_list simple_list/main.cpp)
+viv_add_example(flow_table_view flow_table_view/main.cpp)
 viv_add_example(order_cards order_cards/main.cpp)
 viv_add_example(dynamic_height dynamic_height/main.cpp)
 viv_add_example(million_rows million_rows/main.cpp)

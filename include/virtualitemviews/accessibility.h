@@ -29,6 +29,8 @@ class AccessibleVirtualItemView;
 ///  - a list item is a ListItem, a table row is a Row, a tree node is a TreeItem
 ///    (its children are its *visible* children, its parent is its parent node),
 ///  - a table cell is a Cell whose parent is the node of its row.
+///  - a Flow item is a Cell directly under its view, with live display coordinates
+///    and a persistent source identity across reflows.
 ///
 /// The node owns no copy of the data: text comes from the model roles
 /// (DisplayRole/ToolTipRole/StatusTipRole), the geometry from the view's
@@ -154,6 +156,8 @@ public:
     // -- QAccessibleTableInterface (table views only) ------------------------
     // Flat tables use model row coordinates; tree tables use expanded visible-row
     // coordinates. Columns remain logical model columns in both cases.
+    // Flow uses display row/column coordinates and exposes only real items.
+    // Its whole-row/column selection actions are unsupported (item selection only).
     // selectRow()/selectColumn() go through the view's selection model and fail when
     // the view does not allow a selection at all.
     QAccessibleInterface *caption() const override;

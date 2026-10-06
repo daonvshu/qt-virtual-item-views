@@ -533,6 +533,10 @@ void VirtualItemView::setRowSpacing(int pixels)
 
 void VirtualItemView::setRowSpacingFactory(RowSpacingFactory factory, RowSpacingBinder binder)
 {
+    if (factory && !supportsRowSpacingWidgets()) {
+        qWarning("VirtualItemViews: this layout does not support custom row spacing widgets");
+        return;
+    }
     const quint64 changeSerial = ++m_rowSpacingStateSerial;
     QHash<qsizetype, QWidget *> active;
     QHash<int, QVector<QWidget *>> pooled;
@@ -1131,6 +1135,10 @@ void VirtualItemView::setLayoutPolicy(LayoutPolicy *policy, bool takeOwnership)
 
 void VirtualItemView::setItemHeightMode(ItemHeightMode mode)
 {
+    if (!supportsItemHeightConfiguration()) {
+        qWarning("VirtualItemViews: use this view's cell height configuration");
+        return;
+    }
     if (m_heightMode == mode)
         return;
     m_heightMode = mode;
@@ -1141,6 +1149,10 @@ void VirtualItemView::setItemHeightMode(ItemHeightMode mode)
 
 void VirtualItemView::setUniformItemHeight(int height)
 {
+    if (!supportsItemHeightConfiguration()) {
+        qWarning("VirtualItemViews: use this view's cell height configuration");
+        return;
+    }
     const int clamped = qMax(0, height);
     if (m_uniformItemHeight == clamped && m_heightMode == ItemHeightMode::Uniform)
         return;
@@ -1153,6 +1165,10 @@ void VirtualItemView::setUniformItemHeight(int height)
 
 void VirtualItemView::setEstimatedItemHeight(int height)
 {
+    if (!supportsItemHeightConfiguration()) {
+        qWarning("VirtualItemViews: use this view's cell height configuration");
+        return;
+    }
     const int clamped = qMax(1, height);
     if (m_estimatedItemHeight == clamped)
         return;
@@ -1165,6 +1181,10 @@ void VirtualItemView::setEstimatedItemHeight(int height)
 
 void VirtualItemView::setAutoMeasureItemHeight(bool enabled)
 {
+    if (enabled && !supportsItemHeightConfiguration()) {
+        qWarning("VirtualItemViews: this layout does not support automatic height measurement");
+        return;
+    }
     if (m_autoMeasure == enabled)
         return;
     m_autoMeasure = enabled;
@@ -1399,7 +1419,7 @@ VisibleRange VirtualItemView::coreVisibleRange() const
         return range; // the frozen bands cover the whole viewport
 
     qsizetype first = qMin(m_layout->indexAtOffset(top), count - 1);
-    qsizetype last = qMin(m_layout->indexAtOffset(bottom), count - 1);
+    qsizetype last = qMin(m_layout->lastIndexAtOffset(bottom), count - 1);
     const qsizetype lastScrollable = count - bottomRows - 1;
     first = qBound<qsizetype>(topRows, first, lastScrollable);
     last = qBound<qsizetype>(first, last, lastScrollable);
@@ -1452,6 +1472,10 @@ int VirtualItemView::frozenBottomRows() const
 
 void VirtualItemView::setFrozenRows(int count)
 {
+    if (count > 0 && !supportsRowPanes()) {
+        qWarning("VirtualItemViews: this layout does not support frozen rows");
+        return;
+    }
     const int clamped = qMax(0, count);
     if (m_frozenRows == clamped)
         return;
@@ -1461,6 +1485,10 @@ void VirtualItemView::setFrozenRows(int count)
 
 void VirtualItemView::setFrozenBottomRows(int count)
 {
+    if (count > 0 && !supportsRowPanes()) {
+        qWarning("VirtualItemViews: this layout does not support frozen rows");
+        return;
+    }
     const int clamped = qMax(0, count);
     if (m_frozenBottomRows == clamped)
         return;
@@ -2330,8 +2358,10 @@ void VirtualItemView::relayout()
             // Nothing measurable yet (for example the first pass of a
             // "fit to first item" layout): materialize just enough rows to
             // measure, never the whole model.
-            firstRow = 0;
-            lastRow = qMin<qsizetype>(count - 1, qMax<qsizetype>(2, m_overscanAfter));
+            if (m_layout->needsInitialMeasurement()) {
+                firstRow = 0;
+                lastRow = qMin<qsizetype>(count - 1, qMax<qsizetype>(2, m_overscanAfter));
+            }
         } else {
             const VisibleRange visible = coreVisibleRange();
             const VisibleRange window = VisibleRange::expanded(visible.first, visible.last,
@@ -3976,7 +4006,8 @@ void VirtualItemView::onRowsMoved(const QModelIndex &sourceParent, int start, in
             markDirty();
             return;
         }
-        recycleAllItems();
+        if (!preservesItemsOnLayoutChange())
+            recycleAllItems();
         resetLayoutForNewModel();
         markDirty();
         return;
@@ -3997,7 +4028,7 @@ void VirtualItemView::onLayoutAboutToBeChanged(const QList<QPersistentModelIndex
     setPendingAnchor(captureAnchor());
     // The mapping between rows and items may have been rewritten completely:
     // rebuild the materialized set from scratch.
-    if (!managesVisibleRows())
+    if (!preservesItemsOnLayoutChange())
         recycleAllItems();
 }
 
