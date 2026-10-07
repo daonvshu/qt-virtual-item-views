@@ -12,6 +12,7 @@ private slots:
     void fixedColumnCountRespectsMinimumWidth();
     void zeroWidthAndEmptyModelAreSafe();
     void invalidSpacingAndHeightsClamp();
+    void extremeGeometryArithmeticDoesNotOverflow();
     void hugeViewportDoesNotCreateEmptyColumns();
     void aspectAndEstimatedHeights();
     void sizeUpdateRebuildsOnlySuffixGeometry();
@@ -114,6 +115,27 @@ void MasonryLayoutTest::invalidSpacingAndHeightsClamp()
     const qreal ratio = layout.aspectRatio();
     layout.setAspectRatio(0);
     QCOMPARE(layout.aspectRatio(), ratio);
+}
+
+void MasonryLayoutTest::extremeGeometryArithmeticDoesNotOverflow()
+{
+    viv::MasonryLayout layout;
+    const int maxInt = std::numeric_limits<int>::max();
+    layout.setCrossExtent(maxInt);
+    layout.setWidthRange(maxInt, maxInt);
+    layout.setSpacing(0, maxInt);
+    layout.resetItems(1, 100);
+
+    QCOMPARE(layout.columnCount(), 1);
+    QCOMPARE(layout.columnX(0), 0);
+    QCOMPARE(layout.columnWidth(0), maxInt);
+    QVERIFY(layout.itemAtPoint(QPoint(0, 0), 0) >= 0);
+
+    layout.setMargins(QMargins(maxInt, 0, maxInt, 0));
+    QCOMPARE(layout.columnCount(), 0);
+    QCOMPARE(layout.columnWidth(0), 0);
+    QCOMPARE(layout.columnX(0), -1);
+    QCOMPARE(layout.itemAtPoint(QPoint(0, 0), 0), qsizetype(-1));
 }
 
 void MasonryLayoutTest::hugeViewportDoesNotCreateEmptyColumns()

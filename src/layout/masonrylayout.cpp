@@ -130,19 +130,27 @@ int MasonryLayout::columnWidth(int column) const
 {
     if (column < 0 || column >= m_columns || m_columns <= 0)
         return 0;
-    const int available = qMax(0, m_width - m_margins.left() - m_margins.right()
-        - (m_columns - 1) * m_columnSpacing);
-    return available / m_columns + (column < available % m_columns ? 1 : 0);
+    const qint64 available = qMax<qint64>(0, qint64(m_width)
+        - qint64(m_margins.left()) - qint64(m_margins.right())
+        - qint64(m_columns - 1) * qint64(m_columnSpacing));
+    const qint64 width = available / m_columns
+        + (column < available % m_columns ? 1 : 0);
+    return int(qBound<qint64>(qint64(0), width,
+                              qint64(std::numeric_limits<int>::max())));
 }
 
 int MasonryLayout::columnX(int column) const
 {
     if (column < 0 || column >= m_columns || m_columns <= 0)
         return -1;
-    const int available = qMax(0, m_width - m_margins.left() - m_margins.right()
-        - (m_columns - 1) * m_columnSpacing);
-    return m_margins.left() + column * (available / m_columns + m_columnSpacing)
-        + qMin(column, available % m_columns);
+    const qint64 available = qMax<qint64>(0, qint64(m_width)
+        - qint64(m_margins.left()) - qint64(m_margins.right())
+        - qint64(m_columns - 1) * qint64(m_columnSpacing));
+    const qint64 position = qint64(m_margins.left())
+        + qint64(column) * (available / m_columns + qint64(m_columnSpacing))
+        + qMin<qint64>(column, available % m_columns);
+    return int(qBound<qint64>(qint64(std::numeric_limits<int>::min()), position,
+                              qint64(std::numeric_limits<int>::max())));
 }
 
 int MasonryLayout::heightFor(qsizetype item, int width) const
@@ -444,13 +452,16 @@ qsizetype MasonryLayout::lastIndexAtOffset(qint64 offset) const
 qsizetype MasonryLayout::itemAtPoint(const QPoint &point, qint64 scrollOffset) const
 {
     const qint64 logicalY = qint64(point.y()) + scrollOffset;
-    if (point.x() < m_margins.left() || point.x() >= m_width - m_margins.right()
+    const qint64 pointX = point.x();
+    const qint64 right = qint64(m_width) - qint64(m_margins.right());
+    if (pointX < m_margins.left() || pointX >= right
         || logicalY < m_margins.top() || logicalY >= m_contentExtent - m_margins.bottom())
         return -1;
     int column = -1;
     for (int candidate = 0; candidate < m_columns; ++candidate) {
-        const int left = columnX(candidate);
-        if (point.x() >= left && point.x() < left + columnWidth(candidate)) {
+        const qint64 left = columnX(candidate);
+        const qint64 width = columnWidth(candidate);
+        if (pointX >= left && pointX < left + width) {
             column = candidate;
             break;
         }
@@ -459,7 +470,9 @@ qsizetype MasonryLayout::itemAtPoint(const QPoint &point, qint64 scrollOffset) c
         return -1;
     const QVector<qsizetype> items = columnItemsAt(column, logicalY, logicalY);
     for (qsizetype item : items) {
-        if (logicalItemRect(item).contains(QPoint(point.x(), int(logicalY))))
+        const QRect rect = logicalItemRect(item);
+        if (pointX >= rect.left() && pointX <= rect.right()
+            && logicalY >= rect.top() && logicalY <= rect.bottom())
             return item;
     }
     return -1;

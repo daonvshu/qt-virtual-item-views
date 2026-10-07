@@ -726,8 +726,9 @@ VirtualItemView::DropTarget VirtualMasonryView::resolveDropTarget(const QPoint &
     const qint64 logicalY = qint64(position.y()) + verticalOffset();
     int column = -1;
     for (int candidate = 0; candidate < m_masonry->columnCount(); ++candidate) {
-        const int left = m_masonry->columnX(candidate);
-        if (position.x() >= left && position.x() < left + m_masonry->columnWidth(candidate)) {
+        const qint64 left = m_masonry->columnX(candidate);
+        const qint64 width = m_masonry->columnWidth(candidate);
+        if (qint64(position.x()) >= left && qint64(position.x()) < left + width) {
             column = candidate;
             break;
         }
