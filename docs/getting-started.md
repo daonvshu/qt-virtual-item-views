@@ -63,4 +63,4 @@ find_package(VirtualItemViews REQUIRED)
 target_link_libraries(app PRIVATE VirtualItemViews::VirtualItemViews)
 ```
 
-下一步：[列表与行高](list.md)、[表格与单元格](table.md)、[流式表格](flow-table.md)、[树视图](tree.md)。
+下一步：[列表与行高](list.md)、[表格与单元格](table.md)、[流式表格](flow-table.md)、[瀑布流](masonry.md)、[树视图](tree.md)。

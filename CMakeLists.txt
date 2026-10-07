@@ -89,6 +89,7 @@ set(VIRTUALITEMVIEWS_PUBLIC_HEADERS
     include/virtualitemviews/virtualitemview.h
     include/virtualitemviews/virtuallistview.h
     include/virtualitemviews/virtualflowtableview.h
+    include/virtualitemviews/virtualmasonryview.h
     include/virtualitemviews/virtualtableview.h
     include/virtualitemviews/virtualtreetableview.h
     include/virtualitemviews/virtualheaderview.h
@@ -106,6 +107,7 @@ set(VIRTUALITEMVIEWS_SOURCES
     src/index/treevisibilityindex.cpp
     src/layout/listlayout.cpp
     src/layout/flowtablelayout.cpp
+    src/layout/masonrylayout.cpp
     src/layout/tablespan.cpp
     src/layout/tablepane.cpp
     src/recycler/widgetrecycler.cpp
@@ -116,6 +118,7 @@ set(VIRTUALITEMVIEWS_SOURCES
     src/widgets/styledtableview.cpp
     src/widgets/virtuallistview.cpp
     src/widgets/virtualflowtableview.cpp
+    src/widgets/virtualmasonryview.cpp
     src/widgets/virtualtreeview.cpp
     src/widgets/virtualtreetableview.cpp
     src/widgets/virtualheaderview.cpp

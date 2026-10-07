@@ -1322,6 +1322,18 @@ void VirtualItemView::augmentMaterializationRanges(QVector<VisibleRange> &ranges
     Q_UNUSED(ranges);
 }
 
+QVector<qsizetype> VirtualItemView::materializationItems(const QVector<VisibleRange> &ranges) const
+{
+    QVector<qsizetype> items;
+    for (const VisibleRange &range : ranges) {
+        if (!range.isValid())
+            continue;
+        for (qsizetype row = range.first; row <= range.last; ++row)
+            items.append(row);
+    }
+    return items;
+}
+
 void VirtualItemView::rebindItemsInRange(const QModelIndex &topLeft, const QModelIndex &bottomRight)
 {
     rebindItemsInModelRange(topLeft.parent(), topLeft.row(), bottomRight.row());
@@ -2455,19 +2467,19 @@ void VirtualItemView::relayout()
     // ---- decide what to reuse, then recycle what is obsolete --------------
     QList<QPair<qsizetype, QPersistentModelIndex>> desired;
     QSet<QPersistentModelIndex> desiredIndexes;
-    for (const VisibleRange &range : ranges) {
-        for (qsizetype row = range.first; row >= 0 && row <= range.last; ++row) {
-            const QModelIndex index = viewIndex(row);
-            if (abortStalePass())
-                return;
-            if (!index.isValid())
-                continue;
-            const QPersistentModelIndex persistent(index);
-            if (desiredIndexes.contains(persistent))
-                continue;
-            desiredIndexes.insert(persistent);
-            desired.append(qMakePair(row, persistent));
-        }
+    for (const qsizetype row : materializationItems(ranges)) {
+        if (row < 0 || row >= count)
+            continue;
+        const QModelIndex index = viewIndex(row);
+        if (abortStalePass())
+            return;
+        if (!index.isValid())
+            continue;
+        const QPersistentModelIndex persistent(index);
+        if (desiredIndexes.contains(persistent))
+            continue;
+        desiredIndexes.insert(persistent);
+        desired.append(qMakePair(row, persistent));
     }
 
     // Recycling before creating lets the pool serve the incoming rows, so
@@ -2961,7 +2973,7 @@ ScrollAnchor VirtualItemView::captureAnchor() const
     // The anchor is the first item of the *scrolling* pane, whose top edge sits
     // frozenTopExtent() pixels below the viewport top (§31 row direction).
     const qint64 contentOffset = m_scrollOffset + frozenTopExtent();
-    const qsizetype row = m_layout->indexAtOffset(contentOffset);
+    const qsizetype row = anchorItemAtOffset(contentOffset);
     if (row < 0 || row >= m_layout->itemCount())
         return anchor;
 
@@ -2970,8 +2982,18 @@ ScrollAnchor VirtualItemView::captureAnchor() const
         return anchor;
 
     anchor.index = QPersistentModelIndex(index);
-    anchor.offsetInsideItem = int(contentOffset - m_layout->offsetOf(row));
+    // A variable-column layout may choose the next item when the viewport starts
+    // inside an inter-item gap. Keep the persistent anchor inside that item so a
+    // later geometry rebuild cannot apply a negative offset and jump the view.
+    const qint64 inside = contentOffset - m_layout->offsetOf(row);
+    anchor.offsetInsideItem = int(qBound<qint64>(0, inside,
+        qMax<qint64>(0, m_layout->itemSize(row) - 1)));
     return anchor;
+}
+
+qsizetype VirtualItemView::anchorItemAtOffset(qint64 offset) const
+{
+    return m_layout ? m_layout->indexAtOffset(offset) : -1;
 }
 
 void VirtualItemView::setPendingAnchor(const ScrollAnchor &anchor)

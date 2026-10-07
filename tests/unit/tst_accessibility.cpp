@@ -592,7 +592,12 @@ void TestAccessibility::focusEventsTargetNestedCurrentCell()
         }
     } restore;
     QAccessible::setActive(true);
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+    if (!QAccessible::isActive())
+        QSKIP("Qt5 offscreen accessibility events unavailable");
+#else
     QVERIFY(QAccessible::isActive());
+#endif
     view.setCurrentIndex(parent->index());
     auto *parentCell = bridge->itemFor(parent->index(), 0);
     QCOMPARE(parentCell->role(), QAccessible::TreeItem);

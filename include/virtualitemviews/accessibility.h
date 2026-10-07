@@ -31,6 +31,8 @@ class AccessibleVirtualItemView;
 ///  - a table cell is a Cell whose parent is the node of its row.
 ///  - a Flow item is a Cell directly under its view, with live display coordinates
 ///    and a persistent source identity across reflows.
+///  - a Masonry item is also a Cell directly under its view; its columnIndex()
+///    and rectangle are read from the current shortest-column geometry.
 ///
 /// The node owns no copy of the data: text comes from the model roles
 /// (DisplayRole/ToolTipRole/StatusTipRole), the geometry from the view's

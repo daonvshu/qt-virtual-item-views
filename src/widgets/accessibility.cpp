@@ -6,6 +6,7 @@
 #include <virtualitemviews/virtualtreeview.h>
 #include <virtualitemviews/virtualtreetableview.h>
 #include <virtualitemviews/virtualflowtableview.h>
+#include <virtualitemviews/virtualmasonryview.h>
 
 #include <QAbstractItemModel>
 #include <QAccessibleEvent>
@@ -36,6 +37,11 @@ bool isTable(const VirtualItemView *view)
 {
     return view && (qobject_cast<const VirtualTableView *>(view) != nullptr
                     || qobject_cast<const VirtualFlowTableView *>(view) != nullptr);
+}
+
+bool isMasonry(const VirtualItemView *view)
+{
+    return view && qobject_cast<const VirtualMasonryView *>(view) != nullptr;
 }
 
 bool isTree(const VirtualItemView *view)
@@ -128,6 +134,8 @@ QAccessible::Role viewRole(const VirtualItemView *view)
         return QAccessible::Tree;
     if (isTable(view))
         return QAccessible::Table;
+    if (isMasonry(view))
+        return QAccessible::List;
     return QAccessible::List;
 }
 
@@ -230,6 +238,19 @@ public:
                     traceFlow("layout");
                     if (!m_flowNativeSizing)
                         m_flowLocationRefresh.start();
+                    QAccessibleEvent event(current, QAccessible::LocationChanged);
+                    QAccessible::updateAccessibility(&event);
+                }
+            });
+        }
+        if (auto *masonry = qobject_cast<VirtualMasonryView *>(view)) {
+            connect(masonry, &VirtualMasonryView::masonryLayoutChanged, this, [this]() {
+                sendModelChange(QAccessibleTableModelChangeEvent::ModelReset);
+                if (!QAccessible::isActive() || !m_view || !m_view->currentIndex().isValid())
+                    return;
+                QAccessibleInterface *current = m_viewNode
+                    ? m_viewNode->itemFor(m_view->currentIndex()) : nullptr;
+                if (current) {
                     QAccessibleEvent event(current, QAccessible::LocationChanged);
                     QAccessible::updateAccessibility(&event);
                 }
@@ -471,6 +492,8 @@ bool AccessibleVirtualItem::isValid() const
 {
     if (const auto *flow = qobject_cast<const VirtualFlowTableView *>(m_view))
         return m_index.isValid() && flow->displayRowForIndex(m_index) >= 0;
+    if (const auto *masonry = qobject_cast<const VirtualMasonryView *>(m_view))
+        return m_index.isValid() && masonry->itemColumn(m_index) >= 0;
     return m_view != nullptr && m_index.isValid();
 }
 
@@ -786,6 +809,8 @@ int AccessibleVirtualItem::columnIndex() const
 {
     if (const auto *flow = qobject_cast<const VirtualFlowTableView *>(m_view))
         return flow->displayColumnForIndex(m_index);
+    if (const auto *masonry = qobject_cast<const VirtualMasonryView *>(m_view))
+        return masonry->itemColumn(m_index);
     return m_column;
 }
 
@@ -857,6 +882,7 @@ QStringList AccessibleVirtualItem::actionNames() const
     names << QAccessibleActionInterface::setFocusAction();
     // Row nodes and expandable tree-column cells toggle their tree node.
     if (m_column < 0 || qobject_cast<const VirtualFlowTableView *>(m_view)
+        || qobject_cast<const VirtualMasonryView *>(m_view)
         || (m_column == 0 && isTree(m_view) && treeHasChildren(m_view, m_index)))
         names << QAccessibleActionInterface::pressAction();
     if ((m_column < 0 || m_column == 0) && isTree(m_view) && treeHasChildren(m_view, m_index))
@@ -869,7 +895,8 @@ void AccessibleVirtualItem::doAction(const QString &actionName)
     if (!isValid())
         return;
     if (actionName == QAccessibleActionInterface::setFocusAction()) {
-        if (qobject_cast<const VirtualFlowTableView *>(m_view))
+        if (qobject_cast<const VirtualFlowTableView *>(m_view)
+            || qobject_cast<const VirtualMasonryView *>(m_view))
             m_view->scrollTo(m_index);
         m_view->setFocus(Qt::OtherFocusReason);
         m_view->setCurrentIndex(m_index);
@@ -878,7 +905,8 @@ void AccessibleVirtualItem::doAction(const QString &actionName)
     if ((actionName == QAccessibleActionInterface::pressAction()
          || actionName == QAccessibleActionInterface::showMenuAction())
         && (m_column < 0 || qobject_cast<const VirtualFlowTableView *>(m_view)
-            || (m_column == 0 && isTree(m_view) && treeHasChildren(m_view, m_index)))) {
+         || qobject_cast<const VirtualMasonryView *>(m_view)
+         || (m_column == 0 && isTree(m_view) && treeHasChildren(m_view, m_index)))) {
         if (auto *tree = qobject_cast<VirtualTreeView *>(m_view)) {
             if (tree->hasChildren(m_index)) {
                 tree->toggleExpanded(m_index);
@@ -924,7 +952,8 @@ QAccessibleInterface *AccessibleVirtualItem::parent() const
 {
     if (!m_view)
         return nullptr;
-    if (qobject_cast<const VirtualFlowTableView *>(m_view))
+    if (qobject_cast<const VirtualFlowTableView *>(m_view)
+        || qobject_cast<const VirtualMasonryView *>(m_view))
         return m_viewNode;
     if (m_column >= 0) {
         if (m_viewNode && m_index.isValid())
@@ -1006,7 +1035,10 @@ QString AccessibleVirtualItemView::text(QAccessible::Text t) const
     case QAccessible::Description: {
         const QAbstractItemModel *model = m_view->model();
         const auto *flow = qobject_cast<const VirtualFlowTableView *>(m_view);
-        const int logical = model ? model->rowCount(flow ? flow->rootIndex() : QModelIndex()) : 0;
+        const auto *masonry = qobject_cast<const VirtualMasonryView *>(m_view);
+        const QModelIndex root = flow ? flow->rootIndex()
+            : masonry ? masonry->rootIndex() : QModelIndex();
+        const int logical = model ? model->rowCount(root) : 0;
         const int visible = int(visibleIndexes().size());
         return QStringLiteral("%1 / %2 items visible").arg(visible).arg(logical);
     }
@@ -1129,7 +1161,8 @@ int AccessibleVirtualItemView::visiblePosition(const QModelIndex &index) const
         return -1;
     const QModelIndex parent = row.parent();
     if (!parent.isValid() || parent == treeRoot(m_view)
-        || qobject_cast<const VirtualFlowTableView *>(m_view)) {
+        || qobject_cast<const VirtualFlowTableView *>(m_view)
+        || qobject_cast<const VirtualMasonryView *>(m_view)) {
         const QList<QModelIndex> indexes = visibleIndexes();
         for (int i = 0; i < indexes.size(); ++i) {
             if (indexes.at(i) == row)
@@ -1164,6 +1197,7 @@ AccessibleVirtualItem *AccessibleVirtualItemView::createNode(const QModelIndex &
         return node;
     }
     AccessibleVirtualItem *rowNode = qobject_cast<const VirtualFlowTableView *>(m_view)
+        || qobject_cast<const VirtualMasonryView *>(m_view)
         ? nullptr : itemFor(index.siblingAtColumn(0), -1);
     auto *node = new AccessibleVirtualItem(m_view, index, column, rowNode, this);
     node->m_cacheId = QAccessible::registerAccessibleInterface(node);
@@ -1179,6 +1213,11 @@ AccessibleVirtualItem *AccessibleVirtualItemView::itemFor(const QModelIndex &ind
         if (flow->displayRowForIndex(index) < 0)
             return nullptr;
         column = 0; // Cache by source identity, never by the changing display column.
+    }
+    if (const auto *masonry = qobject_cast<const VirtualMasonryView *>(m_view)) {
+        if (masonry->itemColumn(index) < 0)
+            return nullptr;
+        column = 0; // Cache by source identity; columnIndex() reads live geometry.
     }
     const QModelIndex normalized = column < 0 ? index.siblingAtColumn(0) : index;
     if (AccessibleVirtualItem *node = cachedNode(normalized, column))
@@ -1203,7 +1242,9 @@ int AccessibleVirtualItemView::indexOfChild(const QAccessibleInterface *childInt
 {
     const auto *childNode = dynamic_cast<const AccessibleVirtualItem *>(childInterface);
     if (!childNode || childNode->m_viewNode != this
-        || (childNode->m_column >= 0 && !qobject_cast<const VirtualFlowTableView *>(m_view)))
+        || (childNode->m_column >= 0
+            && !qobject_cast<const VirtualFlowTableView *>(m_view)
+            && !qobject_cast<const VirtualMasonryView *>(m_view)))
         return -1;
     return visibleIndexes().indexOf(childNode->index());
 }
@@ -1545,6 +1586,8 @@ int AccessibleVirtualItemView::selectedCellCount() const
             count += qint64(interval.second) - interval.first + 1;
         return int(qMin<qint64>(count, INT_MAX));
     }
+    if (qobject_cast<const VirtualMasonryView *>(m_view))
+        return int(selection->selectedIndexes().size());
     if (TreeVisibilityIndex *visibility = visibilityOf(m_view)) {
         const auto *treeTable = qobject_cast<const VirtualTreeTableView *>(m_view);
         int count = 0;
@@ -1564,7 +1607,8 @@ QList<QAccessibleInterface *> AccessibleVirtualItemView::selectedCells() const
     const QItemSelectionModel *selection = m_view ? m_view->selectionModel() : nullptr;
     if (!selection)
         return cells;
-    if (qobject_cast<const VirtualFlowTableView *>(m_view)) {
+    if (qobject_cast<const VirtualFlowTableView *>(m_view)
+        || qobject_cast<const VirtualMasonryView *>(m_view)) {
         auto *self = const_cast<AccessibleVirtualItemView *>(this);
         for (const QModelIndex &index : visibleIndexes()) {
             if (selection->isSelected(index))
@@ -1613,8 +1657,9 @@ bool AccessibleVirtualItemView::unselectColumn(int column)
 
 bool AccessibleVirtualItemView::applySelection(int row, int column, bool selected)
 {
-    if (qobject_cast<const VirtualFlowTableView *>(m_view))
-        return false; // Flow selects source items, not whole display rows or columns.
+    if (qobject_cast<const VirtualFlowTableView *>(m_view)
+        || qobject_cast<const VirtualMasonryView *>(m_view))
+        return false; // Flow/Masonry select source items, not whole display rows or columns.
     auto *table = qobject_cast<VirtualTableView *>(m_view);
     QAbstractItemModel *model = table ? table->model() : nullptr;
     QItemSelectionModel *selection = m_view ? m_view->selectionModel() : nullptr;

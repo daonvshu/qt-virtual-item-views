@@ -21,9 +21,13 @@ target_link_libraries(viv_consumer PRIVATE VirtualItemViews::VirtualItemViews)
 add_executable(viv_flow_consumer flow.cpp)
 target_link_libraries(viv_flow_consumer PRIVATE VirtualItemViews::VirtualItemViews)
 
+add_executable(viv_masonry_consumer masonry.cpp)
+target_link_libraries(viv_masonry_consumer PRIVATE VirtualItemViews::VirtualItemViews)
+
 if(MSVC)
     # Sources carry UTF-8 comments; without this the compiler falls back to the
     # system code page.
     target_compile_options(viv_consumer PRIVATE /utf-8)
     target_compile_options(viv_flow_consumer PRIVATE /utf-8)
+    target_compile_options(viv_masonry_consumer PRIVATE /utf-8)
 endif()

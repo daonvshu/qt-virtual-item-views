@@ -456,6 +456,8 @@ protected:
     /// Whether a persistent index still identifies a row in this view after a model change.
     virtual bool isPersistentRowStateValid(const QModelIndex &index) const;
     const QSet<QPersistentModelIndex> &explicitPinnedIndexes() const { return m_explicitPinned; }
+    /// Source item retained while a native drag is active.
+    QModelIndex dragSourceIndex() const { return QModelIndex(m_dragSourcePin); }
     /// Tree depth of an index; used by the future tree layout.
     virtual int itemDepth(const QModelIndex &index) const;
     /// Index used when the current item moves to \a item. The default is
@@ -482,6 +484,9 @@ protected:
     virtual void afterMaterialize();
     /// Adds rows that must stay materialized for view-specific cross-row content.
     virtual void augmentMaterializationRanges(QVector<VisibleRange> &ranges) const;
+    /// Returns logical item numbers for the current pass. The default expands
+    /// contiguous ranges; masonry layouts can return disjoint column items.
+    virtual QVector<qsizetype> materializationItems(const QVector<VisibleRange> &ranges) const;
     /// Called instead of the built-in widget materialization when
     /// usesItemWidgets() is false: \a rows is the materialization window
     /// (visible rows widened by the overscan).
@@ -600,6 +605,9 @@ protected:
     void abortMaterializationPass();
 
     ScrollAnchor captureAnchor() const;
+    /// Chooses the source item used to preserve the top scroll anchor. The
+    /// default follows the one-dimensional layout offset; masonry overrides it.
+    virtual qsizetype anchorItemAtOffset(qint64 offset) const;
     void setPendingAnchor(const ScrollAnchor &anchor);
     void cancelPendingAnchor();
     void recycleAllItems();
