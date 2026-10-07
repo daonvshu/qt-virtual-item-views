@@ -82,6 +82,7 @@ class VirtualMasonryViewTest : public QObject
     Q_OBJECT
 private slots:
     void materializesVisibleItemsAcrossColumns();
+    void rootIndexBindsChildrenOnly();
     void publicGeometryTracksSourceIdentity();
     void adapterEstimatesAreLoadedAfterModel();
     void modelMutationsPreserveSourceIdentityAndAnchor();
@@ -121,6 +122,36 @@ void VirtualMasonryViewTest::materializesVisibleItemsAcrossColumns()
         identities.insert(item.index);
     QCOMPARE(identities.size(), view.materializedItemCount());
     QVERIFY(view.contentMargins().left() >= 0);
+}
+
+void VirtualMasonryViewTest::rootIndexBindsChildrenOnly()
+{
+    QStandardItemModel model;
+    auto *parentItem = new QStandardItem(QStringLiteral("parent"));
+    for (int row = 0; row < 3; ++row)
+        parentItem->appendRow(new QStandardItem(QStringLiteral("child-%1").arg(row)));
+    model.appendRow(parentItem);
+
+    MasonryAdapter adapter;
+    viv::VirtualMasonryView view;
+    view.setAdapter(&adapter);
+    view.setFixedItemHeight(48);
+    view.setModel(&model);
+    vivtest::showView(&view, QSize(280, 180));
+
+    const QModelIndex parent = model.index(0, 0);
+    view.setRootIndex(parent);
+    view.flushPendingRelayout();
+
+    QCOMPARE(view.rootIndex(), parent);
+    QCOMPARE(view.stats().logicalItems, qsizetype(3));
+    QVERIFY(view.visualRect(parent).isEmpty());
+    for (int row = 0; row < 3; ++row) {
+        const QModelIndex child = model.index(row, 0, parent);
+        QVERIFY(!view.visualRect(child).isEmpty());
+        QVERIFY(view.itemColumn(child) >= 0);
+        QCOMPARE(view.indexAt(view.visualRect(child).center()), child);
+    }
 }
 
 void VirtualMasonryViewTest::publicGeometryTracksSourceIdentity()
