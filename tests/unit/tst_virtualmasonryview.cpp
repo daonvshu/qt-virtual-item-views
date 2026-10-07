@@ -52,6 +52,7 @@ private slots:
     void modelMutationsPreserveSourceIdentityAndAnchor();
     void modelMutationsRekeyLookupAcrossColumns();
     void modelDestructionClearsMasonryState();
+    void resizeReflowsColumnsWithoutLosingIdentity();
     void keyboardUsesGeometricNeighbors();
     void keyboardSupportsPageAndEnds();
     void dropUsesSourceOrder();
@@ -270,6 +271,48 @@ void VirtualMasonryViewTest::modelDestructionClearsMasonryState()
         const QModelIndex index = replacement.index(row, 0);
         QVERIFY(view.widgetForIndex(index));
     }
+}
+
+void VirtualMasonryViewTest::resizeReflowsColumnsWithoutLosingIdentity()
+{
+    QStandardItemModel model;
+    for (int row = 0; row < 120; ++row)
+        model.appendRow(new QStandardItem(QStringLiteral("row-%1").arg(row)));
+    MasonryAdapter adapter;
+    viv::VirtualMasonryView view;
+    view.setAdapter(&adapter);
+    view.setCellWidthRange(100, 200);
+    view.setFixedItemHeight(56);
+    view.resize(760, 180);
+    view.setModel(&model);
+    view.show();
+    QCoreApplication::processEvents();
+
+    QPersistentModelIndex anchor(model.index(30, 0));
+    view.setCurrentIndex(anchor);
+    view.scrollTo(anchor, viv::VirtualItemView::PositionAtTop);
+    view.flushPendingRelayout();
+    QWidget *identityWidget = view.widgetForIndex(anchor);
+    QVERIFY(identityWidget);
+    const int wideColumns = view.columnCount();
+    QVERIFY(wideColumns >= 3);
+
+    view.resize(420, 180);
+    view.flushPendingRelayout();
+    const int narrowColumns = view.columnCount();
+    QVERIFY(narrowColumns < wideColumns);
+    QCOMPARE(view.currentIndex(), QModelIndex(anchor));
+    QCOMPARE(view.widgetForIndex(anchor), identityWidget);
+    QVERIFY(view.itemColumn(anchor) >= 0);
+    QVERIFY(!view.visualRect(anchor).isEmpty());
+
+    view.resize(900, 180);
+    view.flushPendingRelayout();
+    QVERIFY(view.columnCount() > narrowColumns);
+    QCOMPARE(view.currentIndex(), QModelIndex(anchor));
+    QCOMPARE(view.widgetForIndex(anchor), identityWidget);
+    QVERIFY(view.itemColumn(anchor) >= 0);
+    QVERIFY(!view.visualRect(anchor).isEmpty());
 }
 
 void VirtualMasonryViewTest::keyboardUsesGeometricNeighbors()
