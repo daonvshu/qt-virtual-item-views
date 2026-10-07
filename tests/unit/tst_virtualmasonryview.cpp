@@ -105,6 +105,7 @@ private slots:
     void keyboardUsesGeometricNeighbors();
     void keyboardSupportsPageAndEnds();
     void dropUsesSourceOrder();
+    void dropGapUsesSourceOrder();
     void dropSubmitsSourceOrderToModel();
     void heightAnimationCommitsTargetWhenDisabledByDuration();
     void heightAnimationMovesFollowingColumnItemsContinuously();
@@ -520,6 +521,29 @@ void VirtualMasonryViewTest::dropUsesSourceOrder()
     const QRect first = view.visualRect(model.index(0, 0));
     const viv::VirtualItemView::DropTarget target =
         view.dropTargetAt(first.center() + QPoint(0, first.height() / 3));
+    QVERIFY(target.isValid());
+    QCOMPARE(target.parent, QModelIndex());
+    QCOMPARE(target.row, 1);
+    QVERIFY(!view.dropIndicatorRect(target).isEmpty());
+}
+
+void VirtualMasonryViewTest::dropGapUsesSourceOrder()
+{
+    QStandardItemModel model;
+    for (int row = 0; row < 6; ++row)
+        model.appendRow(new QStandardItem(QStringLiteral("item-%1").arg(row)));
+    MasonryAdapter adapter;
+    viv::VirtualMasonryView view;
+    view.setAdapter(&adapter);
+    view.setColumnCount(1);
+    view.setFixedItemHeight(60);
+    view.setRowSpacing(12);
+    view.setModel(&model);
+    vivtest::showView(&view, QSize(260, 180));
+
+    const QRect first = view.visualRect(model.index(0, 0));
+    const QPoint gap(first.center().x(), first.bottom() + 1);
+    const viv::VirtualItemView::DropTarget target = view.dropTargetAt(gap);
     QVERIFY(target.isValid());
     QCOMPARE(target.parent, QModelIndex());
     QCOMPARE(target.row, 1);
