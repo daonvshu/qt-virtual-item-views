@@ -632,6 +632,12 @@ void VirtualMasonryViewTest::accessibilityExposesCellsWithLiveColumn()
     QVERIFY(viewNode->childCount() > 0);
     QAccessibleInterface *cell = viewNode->child(0);
     QVERIFY(cell);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    QCOMPARE(cell->text(QAccessible::Name), QStringLiteral("item-0"));
+    QVERIFY(!cell->state().disabled);
+    QVERIFY(cell->state().selectable);
+    QVERIFY(!cell->state().selected);
+#endif
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     // Qt5 exposes the Cell role through the generic Client role.
     QVERIFY(cell->role() == QAccessible::Cell || cell->role() == QAccessible::Client);
@@ -647,6 +653,11 @@ void VirtualMasonryViewTest::accessibilityExposesCellsWithLiveColumn()
 #endif
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
     QCOMPARE(cell->rect().size(), view.visualRect(model.index(0, 0)).size());
+#endif
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    view.selectionModel()->select(model.index(0, 0), QItemSelectionModel::ClearAndSelect);
+    QCoreApplication::processEvents();
+    QVERIFY(cell->state().selected);
 #endif
     viv::removeAccessibilityFactory();
 }
