@@ -88,6 +88,7 @@ private slots:
     void modelMutationsRekeyLookupAcrossColumns();
     void modelDestructionClearsMasonryState();
     void resizeReflowsColumnsWithoutLosingIdentity();
+    void heightUpdatePreservesScrolledAnchor();
     void keyboardUsesGeometricNeighbors();
     void keyboardSupportsPageAndEnds();
     void dropUsesSourceOrder();
@@ -349,6 +350,38 @@ void VirtualMasonryViewTest::resizeReflowsColumnsWithoutLosingIdentity()
     QCOMPARE(view.widgetForIndex(anchor), identityWidget);
     QVERIFY(view.itemColumn(anchor) >= 0);
     QVERIFY(!view.visualRect(anchor).isEmpty());
+}
+
+void VirtualMasonryViewTest::heightUpdatePreservesScrolledAnchor()
+{
+    QStandardItemModel model;
+    for (int row = 0; row < 100; ++row)
+        model.appendRow(new QStandardItem(QStringLiteral("row-%1").arg(row)));
+    MasonryAdapter adapter;
+    viv::VirtualMasonryView view;
+    view.setAdapter(&adapter);
+    view.setColumnCount(1);
+    view.setFixedItemHeight(40);
+    view.setRowSpacing(8);
+    view.setModel(&model);
+    vivtest::showView(&view, QSize(260, 180));
+
+    QPersistentModelIndex anchor(model.index(40, 0));
+    view.setCurrentIndex(anchor);
+    view.scrollTo(anchor, viv::VirtualItemView::PositionAtTop);
+    view.flushPendingRelayout();
+    QWidget *identityWidget = view.widgetForIndex(anchor);
+    QVERIFY(identityWidget);
+    QCOMPARE(view.visualRect(anchor).top(), 0);
+    const qint64 offsetBefore = view.verticalOffset();
+    QVERIFY(offsetBefore > 0);
+
+    view.setItemHeight(model.index(0, 0), 120);
+    view.flushPendingRelayout();
+    QCOMPARE(view.currentIndex(), QModelIndex(anchor));
+    QCOMPARE(view.widgetForIndex(anchor), identityWidget);
+    QCOMPARE(view.visualRect(anchor).top(), 0);
+    QCOMPARE(view.verticalOffset(), offsetBefore + 80);
 }
 
 void VirtualMasonryViewTest::keyboardUsesGeometricNeighbors()
