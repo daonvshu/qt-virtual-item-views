@@ -433,6 +433,68 @@ QVector<qsizetype> MasonryLayout::itemsAtOrAfterOffset(qint64 offset) const
     return result;
 }
 
+qsizetype MasonryLayout::itemBeforeOffset(qint64 offset, int column) const
+{
+    qsizetype best = -1;
+    qint64 bestBottom = std::numeric_limits<qint64>::min();
+    const int firstColumn = column >= 0 ? column : 0;
+    const int lastColumn = column >= 0 ? column + 1 : m_columnItems.size();
+    if (firstColumn < 0 || firstColumn >= m_columnItems.size())
+        return -1;
+    for (int currentColumn = firstColumn; currentColumn < lastColumn; ++currentColumn) {
+        const auto &items = m_columnItems.at(currentColumn);
+        int low = 0;
+        int high = items.size();
+        while (low < high) {
+            const int middle = low + (high - low) / 2;
+            if (logicalItemRect(items.at(middle)).bottom() < offset)
+                low = middle + 1;
+            else
+                high = middle;
+        }
+        if (low <= 0)
+            continue;
+        const qsizetype candidate = items.at(low - 1);
+        const qint64 bottom = logicalItemRect(candidate).bottom();
+        if (bottom > bestBottom || (bottom == bestBottom && candidate < best)) {
+            best = candidate;
+            bestBottom = bottom;
+        }
+    }
+    return best;
+}
+
+qsizetype MasonryLayout::itemAfterOffset(qint64 offset, int column) const
+{
+    qsizetype best = -1;
+    qint64 bestTop = std::numeric_limits<qint64>::max();
+    const int firstColumn = column >= 0 ? column : 0;
+    const int lastColumn = column >= 0 ? column + 1 : m_columnItems.size();
+    if (firstColumn < 0 || firstColumn >= m_columnItems.size())
+        return -1;
+    for (int currentColumn = firstColumn; currentColumn < lastColumn; ++currentColumn) {
+        const auto &items = m_columnItems.at(currentColumn);
+        int low = 0;
+        int high = items.size();
+        while (low < high) {
+            const int middle = low + (high - low) / 2;
+            if (logicalItemRect(items.at(middle)).top() <= offset)
+                low = middle + 1;
+            else
+                high = middle;
+        }
+        if (low >= items.size())
+            continue;
+        const qsizetype candidate = items.at(low);
+        const qint64 top = logicalItemRect(candidate).top();
+        if (top < bestTop || (top == bestTop && candidate < best)) {
+            best = candidate;
+            bestTop = top;
+        }
+    }
+    return best;
+}
+
 qsizetype MasonryLayout::indexAtOffset(qint64 offset) const
 {
     const QVector<qsizetype> items = itemsInVerticalRange(offset, offset);

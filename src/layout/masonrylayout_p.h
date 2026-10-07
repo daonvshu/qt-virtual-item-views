@@ -71,6 +71,12 @@ public:
     QVector<qsizetype> itemsInVerticalRange(qint64 top, qint64 bottom) const;
     /// Returns the first item in each column that contains or follows an offset.
     QVector<qsizetype> itemsAtOrAfterOffset(qint64 offset) const;
+    /// Returns the item with the greatest bottom edge strictly before an offset.
+    /// When a column is negative, all columns participate in the search.
+    qsizetype itemBeforeOffset(qint64 offset, int column = -1) const;
+    /// Returns the item with the smallest top edge strictly after an offset.
+    /// When a column is negative, all columns participate in the search.
+    qsizetype itemAfterOffset(qint64 offset, int column = -1) const;
 
 private:
     struct Geometry {

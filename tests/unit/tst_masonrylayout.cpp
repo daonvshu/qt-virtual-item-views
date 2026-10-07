@@ -19,6 +19,7 @@ private slots:
     void estimateUpdateKeepsFallbackForUnestimatedPrefix();
     void hitTestingRejectsGaps();
     void rangeQueryIsSorted();
+    void gapDropCandidatesUseColumnSearch();
     void mutationsPreserveMetadata();
     void pageNeighborUsesGeometry();
     void largeModelGeometryRemainsBounded();
@@ -233,6 +234,25 @@ void MasonryLayoutTest::rangeQueryIsSorted()
     layout.setItemSize(2, 120);
     const QVector<qsizetype> items = layout.itemsInVerticalRange(90, 210);
     QCOMPARE(items, QVector<qsizetype>({0, 2, 3, 4, 5}));
+}
+
+void MasonryLayoutTest::gapDropCandidatesUseColumnSearch()
+{
+    viv::MasonryLayout layout;
+    layout.setCrossExtent(420);
+    layout.setWidthRange(100, 200);
+    layout.setSpacing(12, 12);
+    layout.setColumnCount(1);
+    layout.resetItems(4, 80);
+
+    const QRect first = layout.logicalItemRect(0);
+    const qsizetype next = layout.nextItemInColumn(0);
+    QVERIFY(next >= 0);
+    const qint64 gap = first.bottom() + 1;
+    QCOMPARE(layout.itemBeforeOffset(gap, 0), qsizetype(0));
+    QCOMPARE(layout.itemAfterOffset(gap, 0), next);
+    QCOMPARE(layout.itemBeforeOffset(gap), qsizetype(0));
+    QCOMPARE(layout.itemAfterOffset(gap), next);
 }
 
 void MasonryLayoutTest::mutationsPreserveMetadata()

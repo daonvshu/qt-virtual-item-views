@@ -795,27 +795,8 @@ VirtualItemView::DropTarget VirtualMasonryView::resolveDropTarget(const QPoint &
             break;
         }
     }
-    qsizetype before = -1;
-    qsizetype after = -1;
-    qint64 beforeBottom = std::numeric_limits<qint64>::min();
-    qint64 afterTop = std::numeric_limits<qint64>::max();
-    for (qsizetype candidate = 0; candidate < count; ++candidate) {
-        if (column >= 0 && m_masonry->itemColumn(candidate) != column)
-            continue;
-        const QRect rect = m_masonry->logicalItemRect(candidate);
-        if (rect.bottom() < logicalY
-            && (rect.bottom() > beforeBottom
-                || (rect.bottom() == beforeBottom && candidate < before))) {
-            before = candidate;
-            beforeBottom = rect.bottom();
-        }
-        if (rect.top() > logicalY
-            && (rect.top() < afterTop
-                || (rect.top() == afterTop && candidate < after))) {
-            after = candidate;
-            afterTop = rect.top();
-        }
-    }
+    const qsizetype before = m_masonry->itemBeforeOffset(logicalY, column);
+    const qsizetype after = m_masonry->itemAfterOffset(logicalY, column);
     const qsizetype insertion = after >= 0 ? after : before >= 0 ? before + 1 : count;
     target.parent = rootIndex();
     target.row = int(qBound<qsizetype>(0, insertion, count));
