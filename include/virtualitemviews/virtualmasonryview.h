@@ -137,6 +137,8 @@ private:
     void animateItemHeight(qsizetype item, int height);
     MasonryLayout *m_masonry = nullptr;
     QPersistentModelIndex m_root;
+    quint64 m_modelRequest = 0;
+    QVector<QMetaObject::Connection> m_modelConnections;
     QVector<QMetaObject::Connection> m_estimateConnections;
     QVariantAnimation *m_heightAnimation = nullptr;
     qsizetype m_animatingItem = -1;

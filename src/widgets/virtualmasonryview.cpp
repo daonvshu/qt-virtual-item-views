@@ -8,6 +8,7 @@
 #include <QKeyEvent>
 #include <QPainter>
 #include <QPaintEvent>
+#include <QPointer>
 #include <QResizeEvent>
 #include <QVariantAnimation>
 #include <QWidget>
@@ -74,12 +75,56 @@ void VirtualMasonryView::setModel(QAbstractItemModel *newModel)
 {
     if (model() == newModel)
         return;
+    const quint64 request = ++m_modelRequest;
+    const QPointer<VirtualMasonryView> self(this);
+    const QPointer<QAbstractItemModel> requested(newModel);
+    for (const auto &connection : m_modelConnections)
+        disconnect(connection);
+    m_modelConnections.clear();
     finishItemHeightAnimation();
     m_root = QModelIndex();
     ++m_revision;
     VirtualItemView::setModel(newModel);
+    if (!self || request != m_modelRequest || !requested || model() != requested.data())
+        return;
     connectEstimateSignals(newModel);
     refreshAdapterEstimates();
+    if (!self || request != m_modelRequest || !requested || model() != requested.data()
+        || !newModel)
+        return;
+
+    const auto changed = [this, requested, request]() {
+        if (!requested || model() != requested.data() || request != m_modelRequest)
+            return;
+        ++m_revision;
+        rekeyPersistentState();
+        markDirty();
+    };
+    m_modelConnections.append(connect(newModel, &QAbstractItemModel::rowsInserted,
+                                      this, changed));
+    m_modelConnections.append(connect(newModel, &QAbstractItemModel::rowsRemoved,
+                                      this, changed));
+    m_modelConnections.append(connect(newModel, &QAbstractItemModel::rowsAboutToBeMoved,
+        this, [this, requested, request]() {
+            if (!requested || model() != requested.data() || request != m_modelRequest)
+                return;
+            setPendingAnchor(captureAnchor());
+        }));
+    m_modelConnections.append(connect(newModel, &QAbstractItemModel::rowsMoved,
+                                      this, changed));
+    m_modelConnections.append(connect(newModel, &QAbstractItemModel::layoutChanged,
+                                      this, changed));
+    m_modelConnections.append(connect(newModel, &QAbstractItemModel::modelReset,
+                                      this, changed));
+    m_modelConnections.append(connect(newModel, &QObject::destroyed, this,
+        [this, request]() {
+            if (request != m_modelRequest)
+                return;
+            m_root = QModelIndex();
+            ++m_revision;
+            rekeyPersistentState();
+            markDirty();
+        }));
 }
 
 void VirtualMasonryView::setRootIndex(const QModelIndex &index)
