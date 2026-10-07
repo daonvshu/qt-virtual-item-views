@@ -124,6 +124,9 @@ protected:
     DropTarget resolveDropTarget(const QPoint &position) const override;
     QRect resolveDropIndicatorRect(const DropTarget &target) const override;
     void paintEvent(QPaintEvent *event) override;
+    /// Uses the same exclusive pixel edges for the complete state shape and clip.
+    void paintVisualStateBackgrounds(QPainter *painter, const QRect &dirty) const;
+    /// Paints visible item boundaries once, without outer or absent-item borders.
     void paintGridLines(QPainter *painter) const;
 
 private:
@@ -162,7 +165,6 @@ private:
     bool m_verticalThroughRows = true;
     bool m_horizontalThroughColumns = true;
 
-    void paintVisualStateBackgrounds(QPainter *painter, const QRect &dirty) const;
 };
 
 } // namespace viv

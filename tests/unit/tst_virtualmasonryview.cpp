@@ -9,6 +9,7 @@
 #include <QDropEvent>
 #include <QDragEnterEvent>
 #include <QDragMoveEvent>
+#include <QFrame>
 #include <QMimeData>
 #include <QSignalSpy>
 #include <QStandardItemModel>
@@ -72,7 +73,17 @@ public:
 class PaintableMasonryView : public viv::VirtualMasonryView
 {
 public:
+    using VirtualMasonryView::paintVisualStateBackgrounds;
     using VirtualMasonryView::paintGridLines;
+    QModelIndex selected;
+
+    VisualState visualState(const QModelIndex &index) const override
+    {
+        VisualState state;
+        state.selected = index == selected;
+        state.selectedProgress = state.selected ? 1.0 : 0.0;
+        return state;
+    }
 };
 
 } // namespace
@@ -97,6 +108,7 @@ private slots:
     void heightAnimationCommitsTargetWhenDisabledByDuration();
     void heightAnimationMovesFollowingColumnItemsContinuously();
     void heightAnimationFinishesBeforeModelMutation();
+    void stateBackgroundsRespectSpacingAndDpr();
     void gridLinesUseSinglePhysicalPixelBands();
     void accessibilityExposesCellsWithLiveColumn();
 };
@@ -610,6 +622,71 @@ void VirtualMasonryViewTest::heightAnimationFinishesBeforeModelMutation()
 
     QCOMPARE(view.visualRect(model.index(0, 0)).height(), 40);
     QCOMPARE(view.visualRect(model.index(1, 0)).height(), 100);
+}
+
+void VirtualMasonryViewTest::stateBackgroundsRespectSpacingAndDpr()
+{
+    QStandardItemModel model;
+    for (int row = 0; row < 6; ++row)
+        model.appendRow(new QStandardItem(QStringLiteral("item-%1").arg(row)));
+
+    PaintableMasonryView view;
+    MasonryAdapter adapter;
+    view.setFrameShape(QFrame::NoFrame);
+    view.setAdapter(&adapter);
+    view.setFixedItemHeight(40);
+    view.setColumnSpacing(8);
+    view.setRowSpacing(8);
+    view.setSelectedBackgroundColor(Qt::red);
+    view.setStateBackgroundCornerRadius(0);
+    view.setModel(&model);
+    vivtest::showView(&view, QSize(320, 220));
+
+    const auto paint = [&](qreal dpr) {
+        QImage image(qCeil(view.viewport()->width() * dpr),
+                     qCeil(view.viewport()->height() * dpr),
+                     QImage::Format_ARGB32_Premultiplied);
+        image.setDevicePixelRatio(dpr);
+        image.fill(Qt::white);
+        QPainter painter(&image);
+        view.paintVisualStateBackgrounds(&painter, view.viewport()->rect());
+        painter.end();
+        return image;
+    };
+
+    view.setColumnCount(2);
+    view.flushPendingRelayout();
+    view.selected = model.index(0, 0);
+    const QRect columnItem = view.visualRect(view.selected);
+    QVERIFY(!columnItem.isEmpty());
+    const QPoint columnGap(columnItem.right() + 1, columnItem.center().y());
+    QVERIFY(columnGap.x() < view.viewport()->width());
+    for (const qreal dpr : {1.0, 1.25, 1.5, 1.75}) {
+        view.setSelectedBackgroundThroughColumnSpacing(false);
+        const auto withoutGap = paint(dpr);
+        QCOMPARE(withoutGap.pixelColor(qRound(columnGap.x() * dpr),
+                                       qRound(columnGap.y() * dpr)), QColor(Qt::white));
+        view.setSelectedBackgroundThroughColumnSpacing(true);
+        const auto withGap = paint(dpr);
+        QCOMPARE(withGap.pixelColor(qRound(columnGap.x() * dpr),
+                                    qRound(columnGap.y() * dpr)), QColor(Qt::red));
+    }
+
+    view.setColumnCount(1);
+    view.flushPendingRelayout();
+    const QRect rowItem = view.visualRect(view.selected);
+    const QPoint rowGap(rowItem.center().x(), rowItem.bottom() + 1);
+    QVERIFY(rowGap.y() < view.viewport()->height());
+    for (const qreal dpr : {1.0, 1.25, 1.5, 1.75}) {
+        view.setSelectedBackgroundThroughRowSpacing(false);
+        const auto withoutGap = paint(dpr);
+        QCOMPARE(withoutGap.pixelColor(qRound(rowGap.x() * dpr),
+                                       qRound(rowGap.y() * dpr)), QColor(Qt::white));
+        view.setSelectedBackgroundThroughRowSpacing(true);
+        const auto withGap = paint(dpr);
+        QCOMPARE(withGap.pixelColor(qRound(rowGap.x() * dpr),
+                                    qRound(rowGap.y() * dpr)), QColor(Qt::red));
+    }
 }
 
 void VirtualMasonryViewTest::gridLinesUseSinglePhysicalPixelBands()
