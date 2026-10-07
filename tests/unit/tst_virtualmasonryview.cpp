@@ -50,6 +50,7 @@ private slots:
     void publicGeometryTracksSourceIdentity();
     void adapterEstimatesAreLoadedAfterModel();
     void modelMutationsPreserveSourceIdentityAndAnchor();
+    void modelMutationsRekeyLookupAcrossColumns();
     void keyboardUsesGeometricNeighbors();
     void keyboardSupportsPageAndEnds();
     void dropUsesSourceOrder();
@@ -184,6 +185,53 @@ void VirtualMasonryViewTest::modelMutationsPreserveSourceIdentityAndAnchor()
     view.flushPendingRelayout();
     QVERIFY(!view.currentIndex().isValid());
     QCOMPARE(view.verticalOffset(), qint64(0));
+}
+
+void VirtualMasonryViewTest::modelMutationsRekeyLookupAcrossColumns()
+{
+    vivtest::StringListModel model;
+    for (int row = 0; row < 80; ++row)
+        model.appendRow(QStringLiteral("row-%1").arg(row));
+    MasonryAdapter adapter;
+    viv::VirtualMasonryView view;
+    view.setAdapter(&adapter);
+    view.setColumnCount(3);
+    view.setFixedItemHeight(40);
+    view.setRowSpacing(8);
+    view.setModel(&model);
+    vivtest::showView(&view, QSize(420, 180));
+
+    QPersistentModelIndex anchor(model.index(20, 0));
+    view.setCurrentIndex(anchor);
+    view.scrollTo(anchor, viv::VirtualItemView::PositionAtTop);
+    view.flushPendingRelayout();
+    QWidget *identityWidget = view.widgetForIndex(anchor);
+    QVERIFY(identityWidget);
+    QVERIFY(view.itemColumn(anchor) >= 0);
+
+    model.insertRowsAt(0, {QStringLiteral("inserted")});
+    view.flushPendingRelayout();
+    QCOMPARE(anchor.row(), 21);
+    QCOMPARE(view.currentIndex(), QModelIndex(anchor));
+    QCOMPARE(view.widgetForIndex(anchor), identityWidget);
+    QVERIFY(view.itemColumn(anchor) >= 0);
+    QVERIFY(!view.visualRect(anchor).isEmpty());
+
+    QVERIFY(model.moveRow(anchor.row(), 2));
+    view.flushPendingRelayout();
+    QCOMPARE(anchor.row(), 2);
+    QCOMPARE(view.currentIndex(), QModelIndex(anchor));
+    QCOMPARE(view.widgetForIndex(anchor), identityWidget);
+    QVERIFY(view.itemColumn(anchor) >= 0);
+    QVERIFY(!view.visualRect(anchor).isEmpty());
+
+    QVERIFY(model.removeRowsAt(0, 1));
+    view.flushPendingRelayout();
+    QCOMPARE(anchor.row(), 1);
+    QCOMPARE(view.currentIndex(), QModelIndex(anchor));
+    QCOMPARE(view.widgetForIndex(anchor), identityWidget);
+    QVERIFY(view.itemColumn(anchor) >= 0);
+    QVERIFY(!view.visualRect(anchor).isEmpty());
 }
 
 void VirtualMasonryViewTest::keyboardUsesGeometricNeighbors()
