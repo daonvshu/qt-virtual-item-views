@@ -6,6 +6,11 @@
 #include <QImage>
 #include <QLabel>
 #include <QPainter>
+#include <QDropEvent>
+#include <QDragEnterEvent>
+#include <QDragMoveEvent>
+#include <QMimeData>
+#include <QSignalSpy>
 #include <QStandardItemModel>
 #include <QtTest>
 
@@ -34,6 +39,36 @@ public:
     }
 };
 
+class MasonryDropModel : public QStandardItemModel
+{
+public:
+    Qt::DropActions supportedDropActions() const override { return Qt::CopyAction; }
+
+    bool canDropMimeData(const QMimeData *data, Qt::DropAction action, int row, int column,
+                         const QModelIndex &parent) const override
+    {
+        return data && data->hasText() && action == Qt::CopyAction && column == -1
+            && !parent.isValid() && row >= 0 && row <= rowCount();
+    }
+
+    bool dropMimeData(const QMimeData *data, Qt::DropAction action, int row, int column,
+                      const QModelIndex &parent) override
+    {
+        ++calls;
+        lastRow = row;
+        lastColumn = column;
+        if (!canDropMimeData(data, action, row, column, parent) || !submitSucceeds)
+            return false;
+        insertRow(row, new QStandardItem(data->text()));
+        return true;
+    }
+
+    int calls = 0;
+    int lastRow = -1;
+    int lastColumn = -2;
+    bool submitSucceeds = true;
+};
+
 class PaintableMasonryView : public viv::VirtualMasonryView
 {
 public:
@@ -56,6 +91,7 @@ private slots:
     void keyboardUsesGeometricNeighbors();
     void keyboardSupportsPageAndEnds();
     void dropUsesSourceOrder();
+    void dropSubmitsSourceOrderToModel();
     void heightAnimationCommitsTargetWhenDisabledByDuration();
     void heightAnimationMovesFollowingColumnItemsContinuously();
     void gridLinesUseSinglePhysicalPixelBands();
@@ -384,6 +420,45 @@ void VirtualMasonryViewTest::dropUsesSourceOrder()
     QCOMPARE(target.parent, QModelIndex());
     QCOMPARE(target.row, 1);
     QVERIFY(!view.dropIndicatorRect(target).isEmpty());
+}
+
+void VirtualMasonryViewTest::dropSubmitsSourceOrderToModel()
+{
+    MasonryDropModel model;
+    for (int row = 0; row < 4; ++row)
+        model.appendRow(new QStandardItem(QStringLiteral("item-%1").arg(row)));
+    MasonryAdapter adapter;
+    viv::VirtualMasonryView view;
+    view.setAdapter(&adapter);
+    view.setColumnCount(1);
+    view.setFixedItemHeight(60);
+    view.setDragEnabled(true);
+    view.setModel(&model);
+    vivtest::showView(&view, QSize(260, 180));
+
+    const QRect first = view.visualRect(model.index(0, 0));
+    QVERIFY(!first.isEmpty());
+    const QPoint position = first.center() + QPoint(0, first.height() / 3);
+    QMimeData data;
+    data.setText(QStringLiteral("inserted"));
+
+    QDragEnterEvent enter(position, Qt::CopyAction, &data, Qt::LeftButton, Qt::NoModifier);
+    QApplication::sendEvent(view.viewport(), &enter);
+    QVERIFY(enter.isAccepted());
+    QDragMoveEvent move(position, Qt::CopyAction, &data, Qt::LeftButton, Qt::NoModifier);
+    QApplication::sendEvent(view.viewport(), &move);
+    QVERIFY(move.isAccepted());
+
+    QSignalSpy submitted(&view, &viv::VirtualItemView::itemDropped);
+    QDropEvent drop(QPointF(position), Qt::CopyAction, &data, Qt::LeftButton, Qt::NoModifier);
+    QApplication::sendEvent(view.viewport(), &drop);
+    QVERIFY(drop.isAccepted());
+    vivtest::settle();
+    QCOMPARE(model.calls, 1);
+    QCOMPARE(model.lastRow, 1);
+    QCOMPARE(model.lastColumn, -1);
+    QCOMPARE(model.index(1, 0).data().toString(), QStringLiteral("inserted"));
+    QCOMPARE(submitted.count(), 1);
 }
 
 void VirtualMasonryViewTest::heightAnimationCommitsTargetWhenDisabledByDuration()
