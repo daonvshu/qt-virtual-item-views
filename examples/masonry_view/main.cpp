@@ -276,7 +276,7 @@ int main(int argc, char **argv)
     view.setAccessibleName(QStringLiteral("瀑布流视图"));
     view.setAdapter(&adapter);
     view.setModel(&model);
-    view.setCellWidthRange(120, 220);
+    view.setCellWidthRange(100, 200);
     view.setItemHeightMode(viv::VirtualMasonryView::ItemHeightMode::AdapterEstimate);
     view.setColumnSpacing(12);
     view.setRowSpacing(12);
