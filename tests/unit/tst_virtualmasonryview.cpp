@@ -51,6 +51,7 @@ private slots:
     void adapterEstimatesAreLoadedAfterModel();
     void modelMutationsPreserveSourceIdentityAndAnchor();
     void modelMutationsRekeyLookupAcrossColumns();
+    void modelDestructionClearsMasonryState();
     void keyboardUsesGeometricNeighbors();
     void keyboardSupportsPageAndEnds();
     void dropUsesSourceOrder();
@@ -232,6 +233,43 @@ void VirtualMasonryViewTest::modelMutationsRekeyLookupAcrossColumns()
     QCOMPARE(view.widgetForIndex(anchor), identityWidget);
     QVERIFY(view.itemColumn(anchor) >= 0);
     QVERIFY(!view.visualRect(anchor).isEmpty());
+}
+
+void VirtualMasonryViewTest::modelDestructionClearsMasonryState()
+{
+    MasonryAdapter adapter;
+    viv::VirtualMasonryView view;
+    view.setAdapter(&adapter);
+    view.setColumnCount(3);
+    view.setFixedItemHeight(40);
+    auto *doomed = new QStandardItemModel(80, 1);
+    view.setModel(doomed);
+    vivtest::showView(&view, QSize(420, 180));
+
+    QPersistentModelIndex current(doomed->index(20, 0));
+    view.setCurrentIndex(current);
+    view.scrollTo(current, viv::VirtualItemView::PositionAtTop);
+    view.flushPendingRelayout();
+    QVERIFY(view.widgetForIndex(current));
+    QVERIFY(view.maximumVerticalOffset() > 0);
+
+    delete doomed;
+    vivtest::settle();
+    QVERIFY(!view.model());
+    QVERIFY(!view.currentIndex().isValid());
+    QCOMPARE(view.stats().logicalItems, qsizetype(0));
+    QCOMPARE(view.stats().materializedItems, qsizetype(0));
+    QCOMPARE(view.pinnedItemCount(), qsizetype(0));
+    QCOMPARE(view.maximumVerticalOffset(), qint64(0));
+
+    QStandardItemModel replacement(7, 1);
+    view.setModel(&replacement);
+    vivtest::settle();
+    QCOMPARE(view.stats().logicalItems, qsizetype(7));
+    for (int row = 0; row < replacement.rowCount(); ++row) {
+        const QModelIndex index = replacement.index(row, 0);
+        QVERIFY(view.widgetForIndex(index));
+    }
 }
 
 void VirtualMasonryViewTest::keyboardUsesGeometricNeighbors()
