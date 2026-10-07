@@ -104,16 +104,33 @@ void VirtualMasonryView::setModel(QAbstractItemModel *newModel)
                                       this, changed));
     m_modelConnections.append(connect(newModel, &QAbstractItemModel::rowsRemoved,
                                       this, changed));
+    m_modelConnections.append(connect(newModel, &QAbstractItemModel::rowsAboutToBeInserted,
+        this, [this](const QModelIndex &, int, int) {
+            finishItemHeightAnimation();
+        }));
+    m_modelConnections.append(connect(newModel, &QAbstractItemModel::rowsAboutToBeRemoved,
+        this, [this](const QModelIndex &, int, int) {
+            finishItemHeightAnimation();
+        }));
     m_modelConnections.append(connect(newModel, &QAbstractItemModel::rowsAboutToBeMoved,
         this, [this, requested, request]() {
             if (!requested || model() != requested.data() || request != m_modelRequest)
                 return;
+            finishItemHeightAnimation();
             setPendingAnchor(captureAnchor());
         }));
     m_modelConnections.append(connect(newModel, &QAbstractItemModel::rowsMoved,
                                       this, changed));
+    m_modelConnections.append(connect(newModel, &QAbstractItemModel::layoutAboutToBeChanged,
+        this, [this]() {
+            finishItemHeightAnimation();
+        }));
     m_modelConnections.append(connect(newModel, &QAbstractItemModel::layoutChanged,
                                       this, changed));
+    m_modelConnections.append(connect(newModel, &QAbstractItemModel::modelAboutToBeReset,
+        this, [this]() {
+            finishItemHeightAnimation();
+        }));
     m_modelConnections.append(connect(newModel, &QAbstractItemModel::modelReset,
                                       this, changed));
     m_modelConnections.append(connect(newModel, &QObject::destroyed, this,

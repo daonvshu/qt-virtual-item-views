@@ -95,6 +95,7 @@ private slots:
     void dropSubmitsSourceOrderToModel();
     void heightAnimationCommitsTargetWhenDisabledByDuration();
     void heightAnimationMovesFollowingColumnItemsContinuously();
+    void heightAnimationFinishesBeforeModelMutation();
     void gridLinesUseSinglePhysicalPixelBands();
     void accessibilityExposesCellsWithLiveColumn();
 };
@@ -556,6 +557,28 @@ void VirtualMasonryViewTest::heightAnimationMovesFollowingColumnItemsContinuousl
     QVERIFY(intermediateTop < initialTop + 120);
     QTRY_VERIFY_WITH_TIMEOUT(view.visualRect(source).height() == 220, 500);
     QCOMPARE(view.visualRect(following).top(), initialTop + 120);
+}
+
+void VirtualMasonryViewTest::heightAnimationFinishesBeforeModelMutation()
+{
+    QStandardItemModel model;
+    model.appendRow(new QStandardItem(QStringLiteral("original")));
+    MasonryAdapter adapter;
+    viv::VirtualMasonryView view;
+    view.setAdapter(&adapter);
+    view.setColumnCount(1);
+    view.setFixedItemHeight(40);
+    view.setItemHeightAnimationDuration(500);
+    view.setItemHeightAnimationEnabled(true);
+    view.setModel(&model);
+    vivtest::showView(&view, QSize(260, 180));
+
+    view.setItemHeight(model.index(0, 0), 100);
+    model.insertRow(0, new QStandardItem(QStringLiteral("inserted")));
+    view.flushPendingRelayout();
+
+    QCOMPARE(view.visualRect(model.index(0, 0)).height(), 40);
+    QCOMPARE(view.visualRect(model.index(1, 0)).height(), 100);
 }
 
 void VirtualMasonryViewTest::gridLinesUseSinglePhysicalPixelBands()
