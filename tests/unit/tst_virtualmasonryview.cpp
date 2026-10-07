@@ -822,6 +822,22 @@ void VirtualMasonryViewTest::accessibilityExposesCellsWithLiveColumn()
     view.selectionModel()->select(model.index(0, 0), QItemSelectionModel::ClearAndSelect);
     QCoreApplication::processEvents();
     QVERIFY(cell->state().selected);
+
+    QVERIFY(viewNode->childCount() > 3);
+    QAccessibleInterface *movingCell = viewNode->child(3);
+    QVERIFY(movingCell);
+    auto *movingCellInterface = static_cast<QAccessibleTableCellInterface *>(
+        movingCell->interface_cast(QAccessible::TableCellInterface));
+    QVERIFY(movingCellInterface);
+    const QModelIndex movingIndex = model.index(3, 0);
+    const int oldColumn = movingCellInterface->columnIndex();
+    const int oldColumnCount = view.columnCount();
+    view.resize(900, 300);
+    view.flushPendingRelayout();
+    QVERIFY(view.columnCount() != oldColumnCount);
+    QCOMPARE(movingCellInterface->columnIndex(), view.itemColumn(movingIndex));
+    QCOMPARE(movingCell->rect().size(), view.visualRect(movingIndex).size());
+    QVERIFY(movingCellInterface->columnIndex() != oldColumn);
 #endif
     viv::removeAccessibilityFactory();
 }
