@@ -134,7 +134,7 @@ QWidget *WidgetRecycler::acquire(WidgetType type)
     m_activeWidgets.insert(created);
     QObject::connect(created, &QObject::destroyed, this, [this, created]() {
         ++m_destroyedCount;
-        if (m_activeWidgets.remove(created) > 0 && m_activeCount > 0)
+        if (m_activeWidgets.remove(created) && m_activeCount > 0)
             --m_activeCount;
     });
     return created;
@@ -145,7 +145,7 @@ void WidgetRecycler::recycle(WidgetType type, QWidget *widget)
     if (!widget)
         return;
 
-    if (m_activeWidgets.remove(widget) > 0 && m_activeCount > 0)
+    if (m_activeWidgets.remove(widget) && m_activeCount > 0)
         --m_activeCount;
 
     widget->hide();
@@ -170,7 +170,7 @@ void WidgetRecycler::discard(QWidget *widget)
 {
     if (!widget)
         return;
-    if (m_activeWidgets.remove(widget) > 0 && m_activeCount > 0)
+    if (m_activeWidgets.remove(widget) && m_activeCount > 0)
         --m_activeCount;
     QPointer<QWidget> guardedWidget(widget);
     widget->hide();

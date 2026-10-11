@@ -2,7 +2,7 @@
 #include <virtualitemviews/widgetadapter.h>
 #include <virtualitemviews/accessibility.h>
 
-#include "thumbnailcache.h"
+#include "../common/demoimage.h"
 
 #include <QAbstractListModel>
 #include <QAction>
@@ -61,8 +61,9 @@ private:
 class ItemWidget : public QWidget
 {
 public:
-    explicit ItemWidget(flowdemo::ThumbnailCache *thumbnails, QWidget *parent)
-        : QWidget(parent), m_label(new QLabel(this)), m_thumbnails(thumbnails)
+    explicit ItemWidget(vivdemo::ImageBackend *images, QWidget *parent)
+        : QWidget(parent), m_label(new QLabel(this)),
+          m_content(new vivdemo::ImageContent(images, this))
     {
         m_label->setAlignment(Qt::AlignCenter);
         m_label->setAttribute(Qt::WA_TransparentForMouseEvents);
@@ -76,56 +77,36 @@ public:
             update();
             return;
         }
-        m_thumbnails->cancel(this);
         m_path = path;
-        const quint64 binding = ++m_binding;
-        m_image = QPixmap();
         m_hasImage = !path.isEmpty();
         setToolTip(path);
-        if (m_hasImage) {
-            m_thumbnails->request(path, this, [this, path, binding](const flowdemo::Thumbnail &thumbnail) {
-                if (binding != m_binding || path != m_path)
-                    return;
-                m_image = thumbnail.image;
-                if (m_image.isNull())
-                    setToolTip(path + QStringLiteral("\n无法读取图片：") + thumbnail.error);
-                layoutLabel();
-                update();
-            });
-        }
+        m_content->setVisible(m_hasImage);
+        layoutLabel();
+        m_content->setSource(path, [this](const QSize &) {
+            layoutLabel();
+            update();
+        }, [this](const QString &error) {
+            setToolTip(m_path + QStringLiteral("\n无法读取图片：") + error);
+            layoutLabel();
+        });
         layoutLabel();
         update();
     }
     void unbind()
     {
-        ++m_binding;
-        m_thumbnails->cancel(this);
+        m_content->clear();
+        m_content->hide();
         m_path.clear();
-        m_image = QPixmap();
         m_hasImage = false;
     }
 protected:
     void resizeEvent(QResizeEvent *) override { layoutLabel(); }
-    void paintEvent(QPaintEvent *) override
-    {
-        if (m_image.isNull())
-            return;
-        const QRect area = rect().adjusted(6, 6, -6, -m_label->sizeHint().height() - 12);
-        if (area.isEmpty())
-            return;
-        const QSize size = m_image.size().scaled(area.size(), Qt::KeepAspectRatio);
-        const QRect target(area.x() + (area.width() - size.width()) / 2,
-                           area.y() + (area.height() - size.height()) / 2,
-                           size.width(), size.height());
-        QPainter painter(this);
-        painter.setRenderHint(QPainter::SmoothPixmapTransform);
-        painter.drawPixmap(target, m_image);
-    }
 private:
     void layoutLabel()
     {
         const QRect area = rect().adjusted(6, 6, -6, -6);
-        if (m_hasImage && !m_image.isNull()) {
+        m_content->setGeometry(rect().adjusted(6, 6, -6, -m_label->sizeHint().height() - 12));
+        if (m_hasImage && m_content->hasImage()) {
             const int height = qMin(qMax(0, area.height()), m_label->sizeHint().height());
             m_label->setGeometry(area.x(), area.bottom() - height + 1, qMax(0, area.width()), height);
         } else {
@@ -133,17 +114,15 @@ private:
         }
     }
     QLabel *m_label;
-    QPixmap m_image;
+    vivdemo::ImageContent *m_content;
     QString m_path;
-    flowdemo::ThumbnailCache *m_thumbnails;
-    quint64 m_binding = 0;
     bool m_hasImage = false;
 };
 
 class Adapter : public viv::WidgetAdapter
 {
 public:
-    explicit Adapter(flowdemo::ThumbnailCache *thumbnails) : m_thumbnails(thumbnails) {}
+    explicit Adapter(vivdemo::ImageBackend *thumbnails) : m_thumbnails(thumbnails) {}
     QWidget *createWidget(viv::WidgetType, QWidget *parent) override { return new ItemWidget(m_thumbnails, parent); }
     void bindWidget(QWidget *widget, const QModelIndex &index) override
     {
@@ -155,7 +134,7 @@ public:
     }
     QSize estimatedSize(const QModelIndex &) const override { return QSize(150, 100); }
 private:
-    flowdemo::ThumbnailCache *m_thumbnails;
+    vivdemo::ImageBackend *m_thumbnails;
 };
 
 } // namespace
@@ -172,7 +151,7 @@ int main(int argc, char **argv)
     if (parser.isSet(QStringLiteral("accessibility-trace")))
         qputenv("VIV_FLOW_ACCESSIBILITY_TRACE", "1");
     ItemModel model(qMax(0, parser.value(QStringLiteral("items")).toInt()));
-    flowdemo::ThumbnailCache thumbnails;
+    vivdemo::ImageBackend thumbnails;
     Adapter adapter(&thumbnails);
     QMainWindow window;
     auto *view = new viv::VirtualFlowTableView(&window);

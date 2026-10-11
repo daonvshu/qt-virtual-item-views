@@ -139,7 +139,7 @@ int main(int argc, char **argv)
                      &window, updateOffsets);
     updateOffsets();
 
-    window.setWindowTitle(QStringLiteral("VirtualTableView + SmoothScrollbar (Qt 5)"));
+    window.setWindowTitle(QStringLiteral("VirtualTableView + SmoothScrollbar (Qt %1)").arg(QT_VERSION_MAJOR));
     window.resize(1000, 620);
     window.show();
     return app.exec();

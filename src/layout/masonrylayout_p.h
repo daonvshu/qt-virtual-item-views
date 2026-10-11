@@ -3,6 +3,7 @@
 #include <virtualitemviews/layoutpolicy.h>
 
 #include <QMargins>
+#include <QPair>
 #include <QSize>
 #include <QVector>
 
@@ -59,7 +60,13 @@ public:
     qreal aspectRatio() const { return m_aspectRatio; }
     void setEstimatedSize(qsizetype item, const QSize &size);
     void setEstimatedSizes(const QVector<QSize> &sizes);
+    /// Applies sparse estimates with one suffix rebuild from the earliest item.
+    void setItemEstimates(const QVector<QPair<qsizetype, QSize>> &estimates);
     QSize estimatedSize(qsizetype item) const;
+    int explicitItemHeight(qsizetype item) const;
+    /// Restores source-keyed estimates and authoritative heights in one rebuild.
+    void restoreItemSizes(const QVector<QSize> &estimates, const QVector<int> &heights);
+    /// Integer projection at scroll offset zero; offsetOf() retains the full top.
     QRect logicalItemRect(qsizetype item) const;
     int itemColumn(qsizetype item) const;
     qsizetype nearestVertical(qsizetype item, bool down) const;
@@ -67,8 +74,10 @@ public:
     /// Finds the item whose center is closest to the source center plus a delta.
     qsizetype nearestByVerticalOffset(qsizetype item, qint64 delta) const;
     qsizetype nextItemInColumn(qsizetype item) const;
-    /// Returns source item numbers intersecting the vertical interval.
-    QVector<qsizetype> itemsInVerticalRange(qint64 top, qint64 bottom) const;
+    /// Returns source item numbers intersecting the inclusive vertical interval,
+    /// extended by before/after neighboring items in each column.
+    QVector<qsizetype> itemsInVerticalRange(qint64 top, qint64 bottom,
+                                          int before = 0, int after = 0) const;
     /// Returns the first item in each column that contains or follows an offset.
     QVector<qsizetype> itemsAtOrAfterOffset(qint64 offset) const;
     /// Returns the item with the greatest bottom edge strictly before an offset.
@@ -80,14 +89,20 @@ public:
 
 private:
     struct Geometry {
-        QRect rect;
+        qint64 top = 0;
+        int x = 0;
+        int width = 0;
+        int height = 0;
         int column = -1;
     };
 
     void rebuild();
     void updateColumns();
     int heightFor(qsizetype item, int width) const;
-    QVector<qsizetype> columnItemsAt(int column, qint64 top, qint64 bottom) const;
+    qint64 bottomOf(qsizetype item) const;
+    qint64 centerOf(qsizetype item) const;
+    QVector<qsizetype> columnItemsAt(int column, qint64 top, qint64 bottom,
+                                    int before = 0, int after = 0) const;
     int clampColumn(int column) const;
     void rebuildFrom(qsizetype firstItem);
 
@@ -101,7 +116,6 @@ private:
     int m_columnSpacing = 0;
     int m_fixedHeight = 100;
     qreal m_aspectRatio = 1.0;
-    int m_estimateHeight = 100;
     QMargins m_margins;
     HeightMode m_heightMode = HeightMode::Fixed;
     QVector<QSize> m_estimatedSizes;

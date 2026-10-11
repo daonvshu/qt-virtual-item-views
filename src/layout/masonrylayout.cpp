@@ -1,6 +1,7 @@
 #include "masonrylayout_p.h"
 
 #include <QtMath>
+#include <QLoggingCategory>
 #include <algorithm>
 #include <limits>
 #include <utility>
@@ -8,14 +9,24 @@
 namespace viv {
 namespace {
 constexpr qint64 kGeometryClamp = qint64(1) << 24;
+constexpr qint64 kExtentLimit = std::numeric_limits<qint64>::max() / 2;
 constexpr int kMaximumColumns = 4096;
+Q_LOGGING_CATEGORY(masonrySizeLog, "viv.masonry.sizes", QtWarningMsg)
 
 qint64 safeAdd(qint64 lhs, qint64 rhs)
 {
-    const qint64 limit = std::numeric_limits<qint64>::max() / 2;
-    if (rhs > 0 && lhs > limit - rhs)
-        return limit;
+    if (rhs > 0 && lhs > kExtentLimit - rhs)
+        return kExtentLimit;
+    if (rhs < 0 && lhs < -kExtentLimit - rhs)
+        return -kExtentLimit;
     return lhs + rhs;
+}
+
+int roundedHeight(qreal height)
+{
+    if (!qIsFinite(height) || height >= std::numeric_limits<int>::max())
+        return std::numeric_limits<int>::max();
+    return qMax(1, qRound(height));
 }
 }
 
@@ -104,6 +115,9 @@ void MasonryLayout::setEstimatedSize(qsizetype item, const QSize &size)
     if (item < 0 || item >= m_count)
         return;
     m_estimatedSizes[item] = size;
+    if (size.width() <= 0 || size.height() <= 0)
+        qCDebug(masonrySizeLog) << "Invalid item estimate" << item << size
+                               << "fallback height" << m_fixedHeight;
     rebuildFrom(item);
 }
 
@@ -111,19 +125,53 @@ void MasonryLayout::setEstimatedSizes(const QVector<QSize> &sizes)
 {
     m_estimatedSizes = sizes;
     m_estimatedSizes.resize(int(m_count));
-    for (const QSize &size : std::as_const(m_estimatedSizes)) {
-        if (size.height() > 0) {
-            m_estimateHeight = size.height();
-            break;
-        }
-    }
+    const auto invalid = std::count_if(m_estimatedSizes.cbegin(), m_estimatedSizes.cend(),
+        [](const QSize &size) { return size.width() <= 0 || size.height() <= 0; });
+    if (invalid > 0)
+        qCDebug(masonrySizeLog) << "Invalid batch estimates" << invalid
+                               << "fallback height" << m_fixedHeight;
     rebuild();
+}
+
+void MasonryLayout::setItemEstimates(const QVector<QPair<qsizetype, QSize>> &estimates)
+{
+    qsizetype first = m_count;
+    qsizetype invalid = 0;
+    for (const auto &estimate : estimates) {
+        if (estimate.first < 0 || estimate.first >= m_count)
+            continue;
+        m_estimatedSizes[int(estimate.first)] = estimate.second;
+        if (estimate.second.width() <= 0 || estimate.second.height() <= 0)
+            ++invalid;
+        first = qMin(first, estimate.first);
+    }
+    if (invalid > 0)
+        qCDebug(masonrySizeLog) << "Invalid sparse estimates" << invalid
+                               << "fallback height" << m_fixedHeight;
+    if (first < m_count)
+        rebuildFrom(first);
 }
 
 QSize MasonryLayout::estimatedSize(qsizetype item) const
 {
     return item >= 0 && item < m_estimatedSizes.size()
         ? m_estimatedSizes.at(int(item)) : QSize();
+}
+
+int MasonryLayout::explicitItemHeight(qsizetype item) const
+{
+    return item >= 0 && item < m_explicitHeights.size()
+        ? m_explicitHeights.at(int(item)) : 0;
+}
+
+void MasonryLayout::restoreItemSizes(const QVector<QSize> &estimates,
+                                   const QVector<int> &heights)
+{
+    m_estimatedSizes = estimates;
+    m_estimatedSizes.resize(int(m_count));
+    m_explicitHeights = heights;
+    m_explicitHeights.resize(int(m_count));
+    rebuild();
 }
 
 int MasonryLayout::columnWidth(int column) const
@@ -160,11 +208,11 @@ int MasonryLayout::heightFor(qsizetype item, int width) const
     if (m_heightMode == HeightMode::Fixed)
         return m_fixedHeight;
     if (m_heightMode == HeightMode::AspectRatio)
-        return qMax(1, qRound(qreal(width) / m_aspectRatio));
+        return roundedHeight(qreal(width) / m_aspectRatio);
     const QSize estimate = estimatedSize(item);
     if (estimate.width() > 0 && estimate.height() > 0)
-        return qMax(1, qRound(qreal(width) * estimate.height() / estimate.width()));
-    return qMax(1, m_estimateHeight);
+        return roundedHeight(qreal(width) * estimate.height() / estimate.width());
+    return m_fixedHeight;
 }
 
 int MasonryLayout::clampColumn(int column) const
@@ -178,6 +226,7 @@ void MasonryLayout::rebuild()
     m_geometry.resize(int(m_count));
     m_contentExtent = 0;
     if (m_count <= 0 || m_columns <= 0) {
+        m_geometry.clear();
         m_columnItems.clear();
         return;
     }
@@ -203,8 +252,8 @@ void MasonryLayout::rebuildFrom(qsizetype firstItem)
         while (!items.isEmpty() && items.constLast() >= first)
             items.removeLast();
         if (!items.isEmpty()) {
-            const QRect &last = m_geometry.at(int(items.constLast())).rect;
-            bottoms[column] = safeAdd(last.top(), last.height());
+            const Geometry &last = m_geometry.at(int(items.constLast()));
+            bottoms[column] = safeAdd(last.top, last.height);
             occupied[column] = true;
             m_contentExtent = qMax(m_contentExtent, bottoms.at(column));
         }
@@ -217,11 +266,10 @@ void MasonryLayout::rebuildFrom(qsizetype firstItem)
                 column = candidate;
         }
         const int width = columnWidth(column);
-        const qint64 top = bottoms.at(column) + (occupied.at(column) ? m_rowSpacing : 0);
+        const qint64 top = safeAdd(bottoms.at(column), occupied.at(column) ? m_rowSpacing : 0);
         const int height = heightFor(item, width);
         const qint64 bottom = safeAdd(top, height);
-        m_geometry[int(item)] = {QRect(columnX(column), int(qBound(-kGeometryClamp, top,
-                                                                  kGeometryClamp)), width, height), column};
+        m_geometry[int(item)] = {top, columnX(column), width, height, column};
         m_columnItems[column].append(item);
         bottoms[column] = bottom;
         occupied[column] = true;
@@ -232,12 +280,22 @@ void MasonryLayout::rebuildFrom(qsizetype firstItem)
 
 int MasonryLayout::itemSize(qsizetype item) const
 {
-    return item >= 0 && item < m_geometry.size() ? m_geometry.at(int(item)).rect.height() : 0;
+    return item >= 0 && item < m_geometry.size() ? m_geometry.at(int(item)).height : 0;
 }
 
 qint64 MasonryLayout::offsetOf(qsizetype item) const
 {
-    return item >= 0 && item < m_geometry.size() ? m_geometry.at(int(item)).rect.top() : m_contentExtent;
+    return item >= 0 && item < m_geometry.size() ? m_geometry.at(int(item)).top : m_contentExtent;
+}
+
+qint64 MasonryLayout::bottomOf(qsizetype item) const
+{
+    return safeAdd(offsetOf(item), qint64(itemSize(item)) - 1);
+}
+
+qint64 MasonryLayout::centerOf(qsizetype item) const
+{
+    return safeAdd(offsetOf(item), (qint64(itemSize(item)) - 1) / 2);
 }
 
 qint64 MasonryLayout::contentExtent() const
@@ -247,7 +305,7 @@ qint64 MasonryLayout::contentExtent() const
 
 QRect MasonryLayout::logicalItemRect(qsizetype item) const
 {
-    return item >= 0 && item < m_geometry.size() ? m_geometry.at(int(item)).rect : QRect();
+    return itemRect(item, 0);
 }
 
 int MasonryLayout::itemColumn(qsizetype item) const
@@ -259,8 +317,8 @@ qsizetype MasonryLayout::nearestVertical(qsizetype item, bool down) const
 {
     if (item < 0 || item >= m_geometry.size())
         return -1;
-    const QRect source = logicalItemRect(item);
-    const int sourceCenter = source.center().y();
+    const Geometry &source = m_geometry.at(int(item));
+    const qint64 sourceCenter = centerOf(item);
     qsizetype best = -1;
     qint64 bestVertical = std::numeric_limits<qint64>::max();
     qint64 bestHorizontal = std::numeric_limits<qint64>::max();
@@ -269,7 +327,7 @@ qsizetype MasonryLayout::nearestVertical(qsizetype item, bool down) const
         int high = column.size();
         while (low < high) {
             const int middle = low + (high - low) / 2;
-            const int center = logicalItemRect(column.at(middle)).center().y();
+            const qint64 center = centerOf(column.at(middle));
             if ((down && center <= sourceCenter) || (!down && center < sourceCenter))
                 low = middle + 1;
             else
@@ -282,9 +340,10 @@ qsizetype MasonryLayout::nearestVertical(qsizetype item, bool down) const
         const qsizetype candidate = column.at(low);
         if (candidate == item)
             continue;
-        const QRect target = logicalItemRect(candidate);
-        const qint64 vertical = qAbs(qint64(target.center().y()) - sourceCenter);
-        const qint64 horizontal = qAbs(qint64(target.center().x()) - source.center().x());
+        const Geometry &target = m_geometry.at(int(candidate));
+        const qint64 vertical = qAbs(centerOf(candidate) - sourceCenter);
+        const qint64 horizontal = qAbs(qint64(target.x) + (qint64(target.width) - 1) / 2
+                                     - source.x - (qint64(source.width) - 1) / 2);
         if (vertical < bestVertical
             || (vertical == bestVertical && horizontal < bestHorizontal)
             || (vertical == bestVertical && horizontal == bestHorizontal && candidate < best)) {
@@ -306,12 +365,12 @@ qsizetype MasonryLayout::nearestHorizontal(qsizetype item, bool right) const
     while (column >= 0 && column < m_columns) {
         const auto &items = m_columnItems.at(column);
         if (!items.isEmpty()) {
-            const int sourceCenter = source.rect.center().y();
+            const qint64 sourceCenter = centerOf(item);
             int low = 0;
             int high = items.size();
             while (low < high) {
                 const int middle = low + (high - low) / 2;
-                if (logicalItemRect(items.at(middle)).center().y() < sourceCenter)
+                if (centerOf(items.at(middle)) < sourceCenter)
                     low = middle + 1;
                 else
                     high = middle;
@@ -320,7 +379,7 @@ qsizetype MasonryLayout::nearestHorizontal(qsizetype item, bool right) const
             qint64 bestDistance = std::numeric_limits<qint64>::max();
             for (int candidate = qMax(0, low - 1); candidate < qMin(items.size(), low + 2); ++candidate) {
                 const qsizetype target = items.at(candidate);
-                const qint64 distance = qAbs(qint64(logicalItemRect(target).center().y()) - sourceCenter);
+                const qint64 distance = qAbs(centerOf(target) - sourceCenter);
                 if (distance < bestDistance || (distance == bestDistance && target < best)) {
                     best = target;
                     bestDistance = distance;
@@ -338,13 +397,13 @@ qsizetype MasonryLayout::nearestByVerticalOffset(qsizetype item, qint64 delta) c
 {
     if (item < 0 || item >= m_geometry.size())
         return -1;
-    const qint64 target = qint64(logicalItemRect(item).center().y()) + delta;
+    const qint64 target = safeAdd(centerOf(item), delta);
     qsizetype best = -1;
     qint64 bestDistance = std::numeric_limits<qint64>::max();
     for (const auto &column : m_columnItems) {
         const auto position = std::lower_bound(column.cbegin(), column.cend(), target,
             [this](qsizetype candidate, qint64 value) {
-                return qint64(logicalItemRect(candidate).center().y()) < value;
+                return centerOf(candidate) < value;
             });
         const int insertion = int(position - column.cbegin());
         for (int offset = -1; offset <= 1; ++offset) {
@@ -354,7 +413,7 @@ qsizetype MasonryLayout::nearestByVerticalOffset(qsizetype item, qint64 delta) c
             const qsizetype candidate = column.at(index);
             if (candidate == item)
                 continue;
-            const qint64 distance = qAbs(qint64(logicalItemRect(candidate).center().y()) - target);
+            const qint64 distance = qAbs(centerOf(candidate) - target);
             if (distance < bestDistance
                 || (distance == bestDistance && candidate < best)) {
                 best = candidate;
@@ -371,7 +430,7 @@ qsizetype MasonryLayout::nextItemInColumn(qsizetype item) const
     if (column < 0 || column >= m_columnItems.size())
         return -1;
     const auto &items = m_columnItems.at(column);
-    const auto position = std::find(items.cbegin(), items.cend(), item);
+    const auto position = std::lower_bound(items.cbegin(), items.cend(), item);
     if (position == items.cend() || position + 1 == items.cend())
         return -1;
     return *(position + 1);
@@ -379,36 +438,49 @@ qsizetype MasonryLayout::nextItemInColumn(qsizetype item) const
 
 QRect MasonryLayout::itemRect(qsizetype item, qint64 scrollOffset) const
 {
-    QRect rect = logicalItemRect(item);
-    if (rect.isEmpty())
-        return rect;
-    rect.moveTop(int(qBound(-kGeometryClamp, qint64(rect.top()) - scrollOffset, kGeometryClamp)));
-    return rect;
+    if (item < 0 || item >= m_geometry.size())
+        return {};
+    const Geometry &geometry = m_geometry.at(int(item));
+    const qint64 top = safeAdd(geometry.top,
+        -qBound(-kExtentLimit, scrollOffset, kExtentLimit));
+    const qint64 bottom = safeAdd(top, qint64(geometry.height) - 1);
+    // Bound only the QWidget projection. Entirely distant pinned items must stay
+    // outside the viewport even when their logical height spans many screens.
+    if (bottom < -kGeometryClamp || top > kGeometryClamp)
+        return QRect(geometry.x, top > 0 ? int(kGeometryClamp) : -int(kGeometryClamp),
+                     geometry.width, 1);
+    const int projectedTop = int(qBound(-kGeometryClamp, top, kGeometryClamp));
+    const qint64 projectedHeight = qMin<qint64>(std::numeric_limits<int>::max(),
+        qMin<qint64>(bottom, std::numeric_limits<int>::max() - 1) - projectedTop + 1);
+    return QRect(geometry.x, projectedTop, geometry.width, int(qMax<qint64>(0, projectedHeight)));
 }
 
-QVector<qsizetype> MasonryLayout::columnItemsAt(int column, qint64 top, qint64 bottom) const
+QVector<qsizetype> MasonryLayout::columnItemsAt(int column, qint64 top, qint64 bottom,
+                                             int before, int after) const
 {
     QVector<qsizetype> result;
     if (column < 0 || column >= m_columnItems.size() || bottom < top)
         return result;
     const auto &items = m_columnItems.at(column);
-    auto first = std::lower_bound(items.cbegin(), items.cend(), top,
-        [this](qsizetype item, qint64 value) { return logicalItemRect(item).bottom() < value; });
-    for (auto it = first; it != items.cend(); ++it) {
-        const QRect rect = logicalItemRect(*it);
-        if (rect.top() > bottom)
-            break;
-        if (rect.bottom() >= top)
-            result.append(*it);
-    }
+    const auto first = std::lower_bound(items.cbegin(), items.cend(), top,
+        [this](qsizetype item, qint64 value) { return bottomOf(item) < value; });
+    const auto last = std::upper_bound(first, items.cend(), bottom,
+        [this](qint64 value, qsizetype item) { return value < offsetOf(item); });
+    const qsizetype begin = qMax<qsizetype>(0, first - items.cbegin() - qMax(0, before));
+    const qsizetype end = qMin<qsizetype>(items.size(),
+        last - items.cbegin() + qint64(qMax(0, after)));
+    result.reserve(int(end - begin));
+    for (qsizetype position = begin; position < end; ++position)
+        result.append(items.at(int(position)));
     return result;
 }
 
-QVector<qsizetype> MasonryLayout::itemsInVerticalRange(qint64 top, qint64 bottom) const
+QVector<qsizetype> MasonryLayout::itemsInVerticalRange(qint64 top, qint64 bottom,
+                                                     int before, int after) const
 {
     QVector<qsizetype> result;
     for (int column = 0; column < m_columns; ++column)
-        result += columnItemsAt(column, top, bottom);
+        result += columnItemsAt(column, top, bottom, before, after);
     std::sort(result.begin(), result.end());
     return result;
 }
@@ -421,7 +493,7 @@ QVector<qsizetype> MasonryLayout::itemsAtOrAfterOffset(qint64 offset) const
         int high = items.size();
         while (low < high) {
             const int middle = low + (high - low) / 2;
-            if (logicalItemRect(items.at(middle)).bottom() < offset)
+            if (bottomOf(items.at(middle)) < offset)
                 low = middle + 1;
             else
                 high = middle;
@@ -447,7 +519,7 @@ qsizetype MasonryLayout::itemBeforeOffset(qint64 offset, int column) const
         int high = items.size();
         while (low < high) {
             const int middle = low + (high - low) / 2;
-            if (logicalItemRect(items.at(middle)).bottom() < offset)
+            if (bottomOf(items.at(middle)) < offset)
                 low = middle + 1;
             else
                 high = middle;
@@ -455,7 +527,7 @@ qsizetype MasonryLayout::itemBeforeOffset(qint64 offset, int column) const
         if (low <= 0)
             continue;
         const qsizetype candidate = items.at(low - 1);
-        const qint64 bottom = logicalItemRect(candidate).bottom();
+        const qint64 bottom = bottomOf(candidate);
         if (bottom > bestBottom || (bottom == bestBottom && candidate < best)) {
             best = candidate;
             bestBottom = bottom;
@@ -478,7 +550,7 @@ qsizetype MasonryLayout::itemAfterOffset(qint64 offset, int column) const
         int high = items.size();
         while (low < high) {
             const int middle = low + (high - low) / 2;
-            if (logicalItemRect(items.at(middle)).top() <= offset)
+            if (offsetOf(items.at(middle)) <= offset)
                 low = middle + 1;
             else
                 high = middle;
@@ -486,7 +558,7 @@ qsizetype MasonryLayout::itemAfterOffset(qint64 offset, int column) const
         if (low >= items.size())
             continue;
         const qsizetype candidate = items.at(low);
-        const qint64 top = logicalItemRect(candidate).top();
+        const qint64 top = offsetOf(candidate);
         if (top < bestTop || (top == bestTop && candidate < best)) {
             best = candidate;
             bestTop = top;
@@ -513,7 +585,7 @@ qsizetype MasonryLayout::lastIndexAtOffset(qint64 offset) const
 
 qsizetype MasonryLayout::itemAtPoint(const QPoint &point, qint64 scrollOffset) const
 {
-    const qint64 logicalY = qint64(point.y()) + scrollOffset;
+    const qint64 logicalY = safeAdd(point.y(), scrollOffset);
     const qint64 pointX = point.x();
     const qint64 right = qint64(m_width) - qint64(m_margins.right());
     if (pointX < m_margins.left() || pointX >= right
@@ -532,9 +604,9 @@ qsizetype MasonryLayout::itemAtPoint(const QPoint &point, qint64 scrollOffset) c
         return -1;
     const QVector<qsizetype> items = columnItemsAt(column, logicalY, logicalY);
     for (qsizetype item : items) {
-        const QRect rect = logicalItemRect(item);
-        if (pointX >= rect.left() && pointX <= rect.right()
-            && logicalY >= rect.top() && logicalY <= rect.bottom())
+        const Geometry &geometry = m_geometry.at(int(item));
+        if (pointX >= geometry.x && pointX < qint64(geometry.x) + geometry.width
+            && logicalY >= geometry.top && logicalY <= bottomOf(item))
             return item;
     }
     return -1;
@@ -542,9 +614,8 @@ qsizetype MasonryLayout::itemAtPoint(const QPoint &point, qint64 scrollOffset) c
 
 void MasonryLayout::resetItems(qsizetype count, int estimate)
 {
+    Q_UNUSED(estimate);
     m_count = qMax<qsizetype>(0, count);
-    if (estimate > 0)
-        m_estimateHeight = estimate;
     m_estimatedSizes.fill(QSize(), int(m_count));
     m_explicitHeights.fill(0, int(m_count));
     rebuild();
@@ -552,14 +623,13 @@ void MasonryLayout::resetItems(qsizetype count, int estimate)
 
 void MasonryLayout::insertItems(qsizetype index, qsizetype count, int estimate)
 {
+    Q_UNUSED(estimate);
     if (count <= 0 || index < 0 || index > m_count)
         return;
     const int inserted = int(qMin<qsizetype>(count, std::numeric_limits<int>::max()));
     m_estimatedSizes.insert(int(index), inserted, QSize());
     m_explicitHeights.insert(int(index), inserted, 0);
     m_count += inserted;
-    if (estimate > 0)
-        m_estimateHeight = estimate;
     rebuild();
 }
 

@@ -81,55 +81,105 @@ void VirtualMasonryView::setModel(QAbstractItemModel *newModel)
     for (const auto &connection : m_modelConnections)
         disconnect(connection);
     m_modelConnections.clear();
+    m_pendingItemSizes.clear();
+    m_savedItemSizes.clear();
+    m_sizeChangeAnchor = {};
+    m_columnChange = {};
     finishItemHeightAnimation();
     m_root = QModelIndex();
+    m_rootRemoving = false;
     ++m_revision;
     VirtualItemView::setModel(newModel);
     if (!self || request != m_modelRequest || !requested || model() != requested.data())
         return;
-    connectEstimateSignals(newModel);
-    refreshAdapterEstimates();
-    if (!self || request != m_modelRequest || !requested || model() != requested.data()
-        || !newModel)
-        return;
-
-    const auto changed = [this, requested, request]() {
+    const auto changed = [this, self, requested, request]() {
         if (!requested || model() != requested.data() || request != m_modelRequest)
             return;
+        restoreItemSizes();
         ++m_revision;
+        if (m_rootRemoving && !m_root.isValid()) {
+            m_rootRemoving = false;
+            m_pendingItemSizes.clear();
+            rekeyPersistentState();
+            cancelPendingAnchor();
+            resetLayoutForNewModel();
+            if (!self || !requested || model() != requested.data() || request != m_modelRequest)
+                return;
+            refreshAdapterEstimates();
+            if (!self || !requested || model() != requested.data() || request != m_modelRequest)
+                return;
+        }
         rekeyPersistentState();
         markDirty();
+    };
+    const auto reordered = [this, self, requested, request, changed]() {
+        const ScrollAnchor anchor = std::exchange(m_sizeChangeAnchor, {});
+        changed();
+        if (!self || !requested || model() != requested.data() || request != m_modelRequest)
+            return;
+        setPendingAnchor(anchor);
+        refreshAdapterEstimates(anchor);
     };
     m_modelConnections.append(connect(newModel, &QAbstractItemModel::rowsInserted,
                                       this, changed));
     m_modelConnections.append(connect(newModel, &QAbstractItemModel::rowsRemoved,
                                       this, changed));
     m_modelConnections.append(connect(newModel, &QAbstractItemModel::rowsAboutToBeInserted,
-        this, [this](const QModelIndex &, int, int) {
+        this, [this, self, requested, request](const QModelIndex &parent, int, int) {
             finishItemHeightAnimation();
+            if (!self || !requested || model() != requested.data() || request != m_modelRequest)
+                return;
+            m_sizeChangeAnchor = isLayoutParent(parent) ? captureAnchor() : ScrollAnchor();
         }));
     m_modelConnections.append(connect(newModel, &QAbstractItemModel::rowsAboutToBeRemoved,
-        this, [this](const QModelIndex &, int, int) {
+        this, [this, self, requested, request](const QModelIndex &parent, int first, int last) {
             finishItemHeightAnimation();
+            if (!self || !requested || model() != requested.data() || request != m_modelRequest)
+                return;
+            m_sizeChangeAnchor = isLayoutParent(parent) ? captureAnchor() : ScrollAnchor();
+            for (QModelIndex ancestor = m_root; ancestor.isValid(); ancestor = ancestor.parent()) {
+                if (ancestor.parent() == parent && ancestor.row() >= first && ancestor.row() <= last) {
+                    m_rootRemoving = true;
+                    ++m_revision;
+                    m_pendingItemSizes.clear();
+                    m_savedItemSizes.clear();
+                    m_sizeChangeAnchor = {};
+                    m_columnChange = {};
+                    cancelPendingAnchor();
+                    recycleAllItems();
+                    break;
+                }
+            }
         }));
     m_modelConnections.append(connect(newModel, &QAbstractItemModel::rowsAboutToBeMoved,
-        this, [this, requested, request]() {
-            if (!requested || model() != requested.data() || request != m_modelRequest)
+        this, [this, self, requested, request]() {
+            if (!self || !requested || model() != requested.data() || request != m_modelRequest)
                 return;
             finishItemHeightAnimation();
+            if (!self || !requested || model() != requested.data() || request != m_modelRequest)
+                return;
+            saveItemSizes();
             setPendingAnchor(captureAnchor());
         }));
     m_modelConnections.append(connect(newModel, &QAbstractItemModel::rowsMoved,
-                                      this, changed));
+                                      this, reordered));
     m_modelConnections.append(connect(newModel, &QAbstractItemModel::layoutAboutToBeChanged,
-        this, [this]() {
+        this, [this, self, requested, request]() {
             finishItemHeightAnimation();
+            if (!self || !requested || model() != requested.data() || request != m_modelRequest)
+                return;
+            saveItemSizes();
         }));
     m_modelConnections.append(connect(newModel, &QAbstractItemModel::layoutChanged,
-                                      this, changed));
+                                      this, reordered));
     m_modelConnections.append(connect(newModel, &QAbstractItemModel::modelAboutToBeReset,
         this, [this]() {
             finishItemHeightAnimation();
+            m_rootRemoving = false;
+            m_pendingItemSizes.clear();
+            m_savedItemSizes.clear();
+            m_sizeChangeAnchor = {};
+            m_columnChange = {};
         }));
     m_modelConnections.append(connect(newModel, &QAbstractItemModel::modelReset,
                                       this, changed));
@@ -138,10 +188,125 @@ void VirtualMasonryView::setModel(QAbstractItemModel *newModel)
             if (request != m_modelRequest)
                 return;
             m_root = QModelIndex();
+            m_rootRemoving = false;
+            m_savedItemSizes.clear();
+            m_sizeChangeAnchor = {};
+            m_columnChange = {};
             ++m_revision;
             rekeyPersistentState();
             markDirty();
         }));
+    const auto beginColumnChange = [this, self, requested, request](bool kernelRecycled) {
+        finishItemHeightAnimation();
+        if (!self || !requested || model() != requested.data() || request != m_modelRequest)
+            return;
+        const ScrollAnchor anchor = captureAnchor();
+        m_columnChange = {m_root, viewItemForIndex(anchor.index), anchor.offsetInsideItem, true};
+        m_pendingItemSizes.clear();
+        m_savedItemSizes.clear();
+        m_sizeChangeAnchor = {};
+        ++m_revision;
+        cancelPendingAnchor();
+        // The kernel handles top-level insert/remove and top-level-to-top-level
+        // moves. Root-local and cross-parent moves need Masonry's own release.
+        if (!kernelRecycled)
+            recycleItemsForColumnChange();
+    };
+    m_modelConnections.append(connect(newModel, &QAbstractItemModel::columnsAboutToBeInserted,
+        this, [this, beginColumnChange](const QModelIndex &parent, int first, int) {
+            if (isLayoutParent(parent) && first == 0)
+                beginColumnChange(!parent.isValid());
+        }));
+    m_modelConnections.append(connect(newModel, &QAbstractItemModel::columnsAboutToBeRemoved,
+        this, [this, self, requested, request, beginColumnChange](const QModelIndex &parent, int first, int last) {
+            for (QModelIndex ancestor = m_root; ancestor.isValid(); ancestor = ancestor.parent()) {
+                if (ancestor.parent() != parent || ancestor.column() < first || ancestor.column() > last)
+                    continue;
+                finishItemHeightAnimation();
+                if (!self || !requested || model() != requested.data() || request != m_modelRequest)
+                    return;
+                m_rootRemoving = true;
+                m_pendingItemSizes.clear();
+                m_savedItemSizes.clear();
+                m_sizeChangeAnchor = {};
+                m_columnChange = {};
+                ++m_revision;
+                cancelPendingAnchor();
+                // Consume the kernel's row-pin snapshot while it still names the
+                // old root; removed children must not be repinned at top level.
+                restoreItemsAfterColumnChange();
+                recycleAllItems();
+                return;
+            }
+            if (isLayoutParent(parent) && first == 0)
+                beginColumnChange(!parent.isValid());
+        }));
+    m_modelConnections.append(connect(newModel, &QAbstractItemModel::columnsAboutToBeMoved,
+        this, [this, beginColumnChange](const QModelIndex &source, int first, int,
+                                       const QModelIndex &destination, int column) {
+            if ((isLayoutParent(source) && first == 0)
+                || (isLayoutParent(destination) && column == 0))
+                beginColumnChange(!source.isValid() && !destination.isValid());
+        }));
+    const auto columnsChanged = [this, self, requested, request, changed]() {
+        if (!requested || model() != requested.data() || request != m_modelRequest)
+            return;
+        const ColumnChange columns = std::exchange(m_columnChange, {});
+        restoreItemsAfterColumnChange();
+        if (columns.pending && columns.root == m_root) {
+            const quint64 revision = m_revision;
+            resetLayoutForNewModel();
+            if (!self || !requested || model() != requested.data() || request != m_modelRequest
+                || revision != m_revision || columns.root != m_root)
+                return;
+            if (currentIndex().isValid() && viewItemForIndex(currentIndex()) < 0)
+                setCurrentIndex(QModelIndex());
+            if (!self || !requested || model() != requested.data() || request != m_modelRequest)
+                return;
+        }
+        changed();
+        if (!self || !requested || model() != requested.data() || request != m_modelRequest
+            || !columns.pending || columns.root != m_root)
+            return;
+        ScrollAnchor anchor;
+        anchor.index = QPersistentModelIndex(viewIndex(columns.anchorItem));
+        anchor.offsetInsideItem = columns.offsetInsideItem;
+        if (itemHeightMode() == ItemHeightMode::AdapterEstimate && adapter())
+            refreshAdapterEstimates(anchor);
+        else
+            reflow(anchor);
+    };
+    m_modelConnections.append(connect(newModel, &QAbstractItemModel::columnsInserted,
+                                      this, columnsChanged));
+    m_modelConnections.append(connect(newModel, &QAbstractItemModel::columnsRemoved,
+                                      this, columnsChanged));
+    m_modelConnections.append(connect(newModel, &QAbstractItemModel::columnsMoved,
+                                      this, columnsChanged));
+    // Restore persistent sizing before estimate callbacks can publish new geometry.
+    connectEstimateSignals(newModel);
+    refreshAdapterEstimates();
+}
+
+void VirtualMasonryView::setAdapter(WidgetAdapter *newAdapter, bool takeOwnership)
+{
+    if (adapter() == newAdapter) {
+        VirtualItemView::setAdapter(newAdapter, takeOwnership);
+        return;
+    }
+    const QPointer<VirtualMasonryView> self(this);
+    finishItemHeightAnimation();
+    if (!self)
+        return;
+    m_pendingItemSizes.clear();
+    m_savedItemSizes.clear();
+    m_sizeChangeAnchor = {};
+    m_columnChange = {};
+    if (!installAdapter(newAdapter, takeOwnership, false) || !self)
+        return;
+    ++m_revision;
+    refreshAdapterEstimates();
+    if (self)
+        markDirty();
 }
 
 void VirtualMasonryView::setRootIndex(const QModelIndex &index)
@@ -155,6 +320,11 @@ void VirtualMasonryView::setRootIndex(const QModelIndex &index)
     finishItemHeightAnimation();
     const ScrollAnchor anchor = captureAnchor();
     m_root = index;
+    m_rootRemoving = false;
+    m_pendingItemSizes.clear();
+    m_savedItemSizes.clear();
+    m_sizeChangeAnchor = {};
+    m_columnChange = {};
     ++m_revision;
     recycleAllItems();
     resetLayoutForNewModel();
@@ -165,7 +335,7 @@ void VirtualMasonryView::setRootIndex(const QModelIndex &index)
 
 qsizetype VirtualMasonryView::viewItemCount() const
 {
-    return model() ? model()->rowCount(m_root) : 0;
+    return model() && model()->columnCount(m_root) > 0 ? model()->rowCount(m_root) : 0;
 }
 
 QModelIndex VirtualMasonryView::viewIndex(qsizetype item, int column) const
@@ -182,7 +352,7 @@ qsizetype VirtualMasonryView::viewItemForIndex(const QModelIndex &index) const
 
 bool VirtualMasonryView::isLayoutParent(const QModelIndex &parent) const
 {
-    return parent == m_root;
+    return !m_rootRemoving && parent == m_root;
 }
 
 bool VirtualMasonryView::isPersistentRowStateValid(const QModelIndex &index) const
@@ -197,10 +367,9 @@ qsizetype VirtualMasonryView::anchorItemAtOffset(qint64 offset) const
         return -1;
     qsizetype best = candidates.first();
     for (qsizetype item : candidates) {
-        const QRect candidate = m_masonry->logicalItemRect(item);
-        const QRect current = m_masonry->logicalItemRect(best);
-        if (candidate.top() < current.top()
-            || (candidate.top() == current.top() && item < best))
+        const qint64 candidate = m_masonry->offsetOf(item);
+        const qint64 current = m_masonry->offsetOf(best);
+        if (candidate < current || (candidate == current && item < best))
             best = item;
     }
     return best;
@@ -256,6 +425,7 @@ void VirtualMasonryView::setRowSpacing(int pixels)
     const ScrollAnchor anchor = captureAnchor();
     m_masonry->setSpacing(pixels, columnSpacing());
     setPendingAnchor(anchor);
+    ++m_revision;
     VirtualItemView::setRowSpacing(pixels);
     viewport()->update();
     emit masonryLayoutChanged();
@@ -347,9 +517,54 @@ void VirtualMasonryView::invalidateItemSize(const QModelIndex &index)
 {
     if (!adapter() || viewItemForIndex(index) < 0)
         return;
+    m_pendingItemSizes.append(QPersistentModelIndex(index));
+    if (m_itemSizesScheduled)
+        return;
+    m_itemSizesScheduled = true;
+    QMetaObject::invokeMethod(this, [this]() { applyPendingItemSizes(); }, Qt::QueuedConnection);
+}
+
+void VirtualMasonryView::applyPendingItemSizes()
+{
+    m_itemSizesScheduled = false;
+    auto pending = std::exchange(m_pendingItemSizes, {});
+    if (pending.isEmpty() || !adapter() || !model())
+        return;
+    const QPointer<VirtualMasonryView> self(this);
     finishItemHeightAnimation();
+    if (!self || !adapter() || !model())
+        return;
+    const QPointer<QAbstractItemModel> activeModel(model());
+    WidgetAdapter *const activeAdapter = adapter();
+    const QPersistentModelIndex root = m_root;
+    const quint64 revision = m_revision;
     const ScrollAnchor anchor = captureAnchor();
-    m_masonry->setEstimatedSize(viewItemForIndex(index), adapter()->estimatedSize(index));
+    std::sort(pending.begin(), pending.end(), [](const QPersistentModelIndex &lhs,
+                                               const QPersistentModelIndex &rhs) {
+        return lhs.row() < rhs.row();
+    });
+    pending.erase(std::unique(pending.begin(), pending.end()), pending.end());
+    QVector<QPair<qsizetype, QSize>> estimates;
+    estimates.reserve(pending.size());
+    for (const QPersistentModelIndex &index : std::as_const(pending)) {
+        const qsizetype item = viewItemForIndex(index);
+        if (item < 0)
+            continue;
+        const QSize size = activeAdapter->estimatedSize(index);
+        if (!self || !activeModel || model() != activeModel.data()
+            || adapter() != activeAdapter || revision != m_revision) {
+            if (self && activeModel && model() == activeModel.data()
+                && adapter() == activeAdapter && m_root == root) {
+                for (const QPersistentModelIndex &retry : std::as_const(pending))
+                    invalidateItemSize(retry);
+            }
+            return;
+        }
+        estimates.append(qMakePair(item, size));
+    }
+    if (estimates.isEmpty())
+        return;
+    m_masonry->setItemEstimates(estimates);
     reflow(anchor);
 }
 
@@ -376,8 +591,10 @@ void VirtualMasonryView::setItemHeightAnimationDuration(int milliseconds)
 
 void VirtualMasonryView::applyItemHeight(qsizetype item, int height)
 {
-    if (item >= 0 && item < viewItemCount())
+    if (item >= 0 && item < viewItemCount()) {
         m_masonry->setItemSize(item, qMax(1, height));
+        ++m_revision;
+    }
 }
 
 void VirtualMasonryView::animateItemHeight(qsizetype item, int height)
@@ -553,11 +770,9 @@ void VirtualMasonryView::setHorizontalSpacingLineThroughColumnSpacing(bool enabl
 
 QVector<qsizetype> VirtualMasonryView::materializationItems(const QVector<VisibleRange> &ranges) const
 {
-    QVector<qsizetype> items;
-    const qint64 margin = qMax<qint64>(viewportMainExtent(), 1) * 2;
-    items = m_masonry->itemsInVerticalRange(
-        qMax<qint64>(0, verticalOffset() - margin),
-        verticalOffset() + viewportMainExtent() + margin);
+    QVector<qsizetype> items = m_masonry->itemsInVerticalRange(
+        verticalOffset(), verticalOffset() + viewportMainExtent() - 1,
+        overscanBefore(), overscanAfter());
     Q_UNUSED(ranges);
     for (const QPersistentModelIndex &index : explicitPinnedIndexes()) {
         const qsizetype item = viewItemForIndex(index);
@@ -821,16 +1036,59 @@ QRect VirtualMasonryView::resolveDropIndicatorRect(const DropTarget &target) con
     return QRect(itemRect.x(), y, itemRect.width(), 2).intersected(viewport()->rect());
 }
 
-void VirtualMasonryView::refreshAdapterEstimates()
+void VirtualMasonryView::saveItemSizes()
+{
+    m_sizeChangeAnchor = captureAnchor();
+    m_savedItemSizes.clear();
+    for (qsizetype item = 0; item < m_masonry->itemCount(); ++item) {
+        const QSize estimate = m_masonry->estimatedSize(item);
+        const int height = m_masonry->explicitItemHeight(item);
+        if (estimate != QSize() || height > 0)
+            m_savedItemSizes.append({QPersistentModelIndex(viewIndex(item)), estimate, height});
+    }
+}
+
+void VirtualMasonryView::restoreItemSizes()
+{
+    const auto saved = std::exchange(m_savedItemSizes, {});
+    if (saved.isEmpty())
+        return;
+    QVector<QSize> estimates;
+    estimates.resize(int(viewItemCount()));
+    QVector<int> heights(estimates.size(), 0);
+    for (const SavedItemSize &size : saved) {
+        const qsizetype item = viewItemForIndex(size.index);
+        if (item >= 0 && item < estimates.size()) {
+            estimates[int(item)] = size.estimate;
+            heights[int(item)] = size.height;
+        }
+    }
+    m_masonry->restoreItemSizes(estimates, heights);
+}
+
+void VirtualMasonryView::refreshAdapterEstimates(const ScrollAnchor &preservedAnchor)
 {
     if (itemHeightMode() != ItemHeightMode::AdapterEstimate || !adapter() || !model())
         return;
+    const QPointer<VirtualMasonryView> self(this);
     finishItemHeightAnimation();
+    if (!self || itemHeightMode() != ItemHeightMode::AdapterEstimate || !adapter() || !model())
+        return;
+    const QPointer<QAbstractItemModel> activeModel(model());
+    WidgetAdapter *const activeAdapter = adapter();
+    const quint64 revision = m_revision;
+    const qsizetype count = viewItemCount();
+    const ScrollAnchor anchor = preservedAnchor.isValid() ? preservedAnchor : captureAnchor();
+    m_pendingItemSizes.clear();
     QVector<QSize> estimates;
-    estimates.reserve(int(viewItemCount()));
-    for (qsizetype row = 0; row < viewItemCount(); ++row)
-        estimates.append(adapter()->estimatedSize(viewIndex(row)));
-    const ScrollAnchor anchor = captureAnchor();
+    estimates.reserve(int(count));
+    for (qsizetype row = 0; row < count; ++row) {
+        const QSize size = activeAdapter->estimatedSize(viewIndex(row));
+        if (!self || !activeModel || model() != activeModel.data()
+            || adapter() != activeAdapter || revision != m_revision)
+            return;
+        estimates.append(size);
+    }
     m_masonry->setEstimatedSizes(estimates);
     reflow(anchor);
 }
@@ -845,19 +1103,8 @@ void VirtualMasonryView::refreshAdapterEstimateRange(const QModelIndex &topLeft,
     const int last = qMin(int(viewItemCount()) - 1, bottomRight.row());
     if (first > last)
         return;
-    constexpr int kBatchRebuildThreshold = 32;
-    if (last - first + 1 > kBatchRebuildThreshold) {
-        refreshAdapterEstimates();
-        return;
-    }
-
-    finishItemHeightAnimation();
-    const ScrollAnchor anchor = captureAnchor();
-    for (int row = first; row <= last; ++row) {
-        const QModelIndex index = model()->index(row, 0, m_root);
-        m_masonry->setEstimatedSize(row, adapter()->estimatedSize(index));
-    }
-    reflow(anchor);
+    for (int row = first; row <= last; ++row)
+        invalidateItemSize(model()->index(row, 0, m_root));
 }
 
 void VirtualMasonryView::connectEstimateSignals(QAbstractItemModel *newModel)
@@ -868,8 +1115,8 @@ void VirtualMasonryView::connectEstimateSignals(QAbstractItemModel *newModel)
     if (!newModel)
         return;
     const auto refresh = [this](const QModelIndex &parent) {
-        if (parent == m_root)
-            refreshAdapterEstimates();
+        if (isLayoutParent(parent))
+            refreshAdapterEstimates(std::exchange(m_sizeChangeAnchor, {}));
     };
     m_estimateConnections.append(connect(newModel, &QAbstractItemModel::rowsInserted,
         this, [refresh](const QModelIndex &parent, int, int) { refresh(parent); }));
@@ -879,18 +1126,6 @@ void VirtualMasonryView::connectEstimateSignals(QAbstractItemModel *newModel)
         this, [this](const QModelIndex &, int, int) { finishItemHeightAnimation(); }));
     m_estimateConnections.append(connect(newModel, &QAbstractItemModel::rowsRemoved,
         this, [refresh](const QModelIndex &parent, int, int) { refresh(parent); }));
-    m_estimateConnections.append(connect(newModel, &QAbstractItemModel::rowsAboutToBeMoved,
-        this, [this](const QModelIndex &, int, int, const QModelIndex &, int) {
-            finishItemHeightAnimation();
-        }));
-    m_estimateConnections.append(connect(newModel, &QAbstractItemModel::rowsMoved,
-        this, [refresh](const QModelIndex &source, int, int, const QModelIndex &destination, int) {
-            refresh(source);
-            if (destination != source)
-                refresh(destination);
-        }));
-    m_estimateConnections.append(connect(newModel, &QAbstractItemModel::layoutChanged,
-        this, [this]() { refreshAdapterEstimates(); }));
     m_estimateConnections.append(connect(newModel, &QAbstractItemModel::modelReset,
         this, [this]() { refreshAdapterEstimates(); }));
     m_estimateConnections.append(connect(newModel, &QAbstractItemModel::dataChanged,

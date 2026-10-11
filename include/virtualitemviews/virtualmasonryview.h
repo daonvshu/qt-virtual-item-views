@@ -28,7 +28,10 @@ public:
 
     explicit VirtualMasonryView(QWidget *parent = nullptr);
     void setModel(QAbstractItemModel *model) override;
-    /// Shows the first-column children of this model index.
+    /// Installs the adapter and refreshes estimates for the current model.
+    void setAdapter(WidgetAdapter *adapter, bool takeOwnership = false) override;
+    /// Shows the first-column children of this model index. Removing the root
+    /// or one of its ancestors returns the view to top-level items.
     void setRootIndex(const QModelIndex &index);
     QModelIndex rootIndex() const { return m_root; }
 
@@ -57,7 +60,7 @@ public:
     void setItemEstimatedSizes(const QVector<QSize> &sizes);
     /// Supplies an actual/authoritative height and rebuilds affected geometry.
     void setItemHeight(const QModelIndex &index, int height);
-    /// Re-reads the adapter estimate for an item and rebuilds the layout.
+    /// Queues an adapter estimate refresh; notifications in one turn share a rebuild.
     void invalidateItemSize(const QModelIndex &index);
     /// Animates authoritative height changes when enabled; disabled by default.
     void setItemHeightAnimationEnabled(bool enabled);
@@ -111,6 +114,7 @@ protected:
     qsizetype viewItemForIndex(const QModelIndex &index) const override;
     bool isLayoutParent(const QModelIndex &parent) const override;
     bool preservesItemsOnLayoutChange() const override { return true; }
+    quint64 viewMappingSerial() const override { return m_revision; }
     bool isPersistentRowStateValid(const QModelIndex &index) const override;
     bool canMeasureItem(qsizetype) const override { return false; }
     bool supportsItemHeightConfiguration() const override { return false; }
@@ -130,8 +134,23 @@ protected:
     void paintGridLines(QPainter *painter) const;
 
 private:
+    struct SavedItemSize {
+        QPersistentModelIndex index;
+        QSize estimate;
+        int height = 0;
+    };
+    struct ColumnChange {
+        QPersistentModelIndex root;
+        qsizetype anchorItem = -1;
+        int offsetInsideItem = 0;
+        bool pending = false;
+    };
+
     void connectEstimateSignals(QAbstractItemModel *model);
-    void refreshAdapterEstimates();
+    void saveItemSizes();
+    void restoreItemSizes();
+    void refreshAdapterEstimates(const ScrollAnchor &preservedAnchor = ScrollAnchor());
+    void applyPendingItemSizes();
     void refreshAdapterEstimateRange(const QModelIndex &topLeft,
                                      const QModelIndex &bottomRight);
     void reflow(const ScrollAnchor &anchor);
@@ -140,9 +159,15 @@ private:
     void animateItemHeight(qsizetype item, int height);
     MasonryLayout *m_masonry = nullptr;
     QPersistentModelIndex m_root;
+    bool m_rootRemoving = false;
     quint64 m_modelRequest = 0;
     QVector<QMetaObject::Connection> m_modelConnections;
     QVector<QMetaObject::Connection> m_estimateConnections;
+    QVector<QPersistentModelIndex> m_pendingItemSizes;
+    QVector<SavedItemSize> m_savedItemSizes;
+    ScrollAnchor m_sizeChangeAnchor;
+    ColumnChange m_columnChange;
+    bool m_itemSizesScheduled = false;
     QVariantAnimation *m_heightAnimation = nullptr;
     qsizetype m_animatingItem = -1;
     int m_animationTargetHeight = 0;

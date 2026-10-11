@@ -1,7 +1,8 @@
 #include <virtualitemviews/virtualmasonryview.h>
 #include <virtualitemviews/widgetadapter.h>
+#include <virtualitemviews/accessibility.h>
 
-#include "../flow_table_view/thumbnailcache.h"
+#include "cards.h"
 
 #include <QAbstractListModel>
 #include <QAction>
@@ -9,6 +10,7 @@
 #include <QCheckBox>
 #include <QComboBox>
 #include <QDir>
+#include <QDoubleSpinBox>
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QImageReader>
@@ -17,261 +19,27 @@
 #include <QMimeData>
 #include <QPainter>
 #include <QPersistentModelIndex>
+#include <QResizeEvent>
 #include <QSpinBox>
 #include <QStatusBar>
 #include <QToolBar>
 
 namespace {
 
-const QString kMasonryRowFormat = QStringLiteral("application/x-viv-masonry-row");
-
-class MasonryModel : public QAbstractListModel
-{
-public:
-    explicit MasonryModel(int count) : m_sizes(count)
-    {
-        for (int row = 0; row < m_sizes.size(); ++row)
-            m_sizes[row] = QSize(150, 80 + (row * 47) % 220);
-    }
-
-    int rowCount(const QModelIndex &parent = {}) const override
-    {
-        return parent.isValid() ? 0 : m_sizes.size();
-    }
-
-    QVariant data(const QModelIndex &index, int role) const override
-    {
-        if (!index.isValid() || index.row() < 0 || index.row() >= m_sizes.size())
-            return {};
-        if (role == Qt::DisplayRole)
-            return m_imageMode ? QFileInfo(m_paths.at(index.row())).fileName()
-                               : QStringLiteral("项目 %1\n高度 %2")
-                                     .arg(index.row()).arg(m_sizes.at(index.row()).height());
-        if (role == Qt::UserRole)
-            return m_imageMode ? m_paths.at(index.row()) : QVariant();
-        if (role == Qt::UserRole + 1)
-            return m_sizes.at(index.row());
-        return {};
-    }
-
-    Qt::ItemFlags flags(const QModelIndex &index) const override
-    {
-        if (!index.isValid())
-            return Qt::ItemIsDropEnabled;
-        return Qt::ItemIsEnabled | Qt::ItemIsSelectable | Qt::ItemIsDragEnabled
-            | Qt::ItemIsDropEnabled;
-    }
-
-    QStringList mimeTypes() const override { return {kMasonryRowFormat}; }
-
-    QMimeData *mimeData(const QModelIndexList &indexes) const override
-    {
-        for (const QModelIndex &index : indexes) {
-            if (!index.isValid() || index.column() != 0)
-                continue;
-            auto *mime = new QMimeData;
-            mime->setData(kMasonryRowFormat, QByteArray::number(index.row()));
-            return mime;
-        }
-        return nullptr;
-    }
-
-    bool canDropMimeData(const QMimeData *data, Qt::DropAction action, int row, int column,
-                         const QModelIndex &parent) const override
-    {
-        if (!data || action != Qt::MoveAction || parent.isValid() || column > 0
-            || !data->hasFormat(kMasonryRowFormat))
-            return false;
-        return row >= 0 && row <= rowCount();
-    }
-
-    bool dropMimeData(const QMimeData *data, Qt::DropAction action, int row, int column,
-                      const QModelIndex &parent) override
-    {
-        if (!canDropMimeData(data, action, row, column, parent))
-            return false;
-        const int source = data->data(kMasonryRowFormat).toInt();
-        if (source < 0 || source >= rowCount() || row == source || row == source + 1)
-            return false;
-        if (!beginMoveRows(QModelIndex(), source, source, QModelIndex(), row))
-            return false;
-        m_sizes.move(source, row > source ? row - 1 : row);
-        if (m_imageMode)
-            m_paths.move(source, row > source ? row - 1 : row);
-        endMoveRows();
-        return true;
-    }
-
-    QSize estimatedSize(const QModelIndex &index) const
-    {
-        return index.isValid() && index.row() >= 0 && index.row() < m_sizes.size()
-            ? m_sizes.at(index.row()) : QSize(150, 120);
-    }
-
-    void setImages(const QStringList &paths)
-    {
-        beginResetModel();
-        m_paths = paths;
-        m_sizes.fill(QSize(150, 120), paths.size());
-        m_imageMode = true;
-        endResetModel();
-    }
-
-    void setImageSize(const QModelIndex &index, const QSize &size)
-    {
-        if (!m_imageMode || !index.isValid() || index.row() < 0 || index.row() >= m_sizes.size()
-            || size.width() <= 0 || size.height() <= 0 || m_sizes.at(index.row()) == size)
-            return;
-        m_sizes[index.row()] = size;
-        emit dataChanged(index, index, {Qt::UserRole + 1});
-    }
-
-private:
-    QVector<QSize> m_sizes;
-    QStringList m_paths;
-    bool m_imageMode = false;
-};
-
-class ImageWidget : public QWidget
-{
-public:
-    ImageWidget(MasonryModel *model, flowdemo::ThumbnailCache *thumbnails, QWidget *parent)
-        : QWidget(parent), m_model(model), m_thumbnails(thumbnails)
-    {
-        setAttribute(Qt::WA_OpaquePaintEvent);
-    }
-
-    void bind(const QModelIndex &index)
-    {
-        ++m_binding;
-        m_thumbnails->cancel(this);
-        m_index = QPersistentModelIndex(index);
-        m_path = index.data(Qt::UserRole).toString();
-        m_title = index.data().toString();
-        m_image = QPixmap();
-        setToolTip(m_path);
-        const quint64 binding = m_binding;
-        if (!m_path.isEmpty()) {
-            m_thumbnails->request(m_path, this,
-                [this, path = m_path, binding](const flowdemo::Thumbnail &thumbnail) {
-                    if (binding != m_binding || path != m_path)
-                        return;
-                    m_image = thumbnail.image;
-                    if (!m_image.isNull()) {
-                        m_model->setImageSize(QModelIndex(m_index), m_image.size());
-                        setToolTip(path);
-                    } else {
-                        setToolTip(path + QStringLiteral("\n无法读取图片：") + thumbnail.error);
-                    }
-                    update();
-                });
-        }
-        update();
-    }
-
-    void unbind()
-    {
-        ++m_binding;
-        m_thumbnails->cancel(this);
-        m_index = QPersistentModelIndex();
-        m_path.clear();
-        m_title.clear();
-        m_image = QPixmap();
-    }
-
-protected:
-    void paintEvent(QPaintEvent *) override
-    {
-        QPainter painter(this);
-        painter.fillRect(rect(), QColor(QStringLiteral("#eff6ff")));
-        painter.setPen(QColor(QStringLiteral("#60a5fa")));
-        painter.drawRect(rect().adjusted(0, 0, -1, -1));
-
-        const QFontMetrics metrics(font());
-        const int titleHeight = metrics.height() + 12;
-        const QRect imageArea = rect().adjusted(7, 7, -7, -titleHeight);
-        if (!m_image.isNull() && !imageArea.isEmpty()) {
-            const QSize size = m_image.size().scaled(imageArea.size(), Qt::KeepAspectRatio);
-            const QRect target(imageArea.x() + (imageArea.width() - size.width()) / 2,
-                               imageArea.y() + (imageArea.height() - size.height()) / 2,
-                               size.width(), size.height());
-            painter.setRenderHint(QPainter::SmoothPixmapTransform);
-            painter.drawPixmap(target, m_image);
-        } else {
-            painter.setPen(QColor(QStringLiteral("#64748b")));
-            painter.drawText(imageArea, Qt::AlignCenter, m_path.isEmpty()
-                ? QStringLiteral("等待图片") : QStringLiteral("加载中…"));
-        }
-
-        painter.setPen(QColor(QStringLiteral("#1e3a8a")));
-        painter.drawText(rect().adjusted(8, rect().height() - titleHeight, -8, -5),
-                         Qt::AlignLeft | Qt::AlignVCenter, metrics.elidedText(
-                             m_title, Qt::ElideMiddle, qMax(0, rect().width() - 16)));
-    }
-
-private:
-    MasonryModel *m_model = nullptr;
-    flowdemo::ThumbnailCache *m_thumbnails = nullptr;
-    QPersistentModelIndex m_index;
-    QPixmap m_image;
-    QString m_path;
-    QString m_title;
-    quint64 m_binding = 0;
-};
-
-class MasonryAdapter : public viv::WidgetAdapter
-{
-public:
-    MasonryAdapter(MasonryModel *model, flowdemo::ThumbnailCache *thumbnails)
-        : m_model(model), m_thumbnails(thumbnails) {}
-
-    QWidget *createWidget(viv::WidgetType, QWidget *parent) override
-    {
-        return new ImageWidget(m_model, m_thumbnails, parent);
-    }
-
-    void bindWidget(QWidget *widget, const QModelIndex &index) override
-    {
-        static_cast<ImageWidget *>(widget)->bind(index);
-    }
-
-    void unbindWidget(QWidget *widget, const QModelIndex &) override
-    {
-        static_cast<ImageWidget *>(widget)->unbind();
-    }
-
-    QSize estimatedSize(const QModelIndex &index) const override
-    {
-        return m_model->estimatedSize(index);
-    }
-
-private:
-    MasonryModel *m_model = nullptr;
-    flowdemo::ThumbnailCache *m_thumbnails = nullptr;
-};
-
-QStringList imageFilesInFolder(const QString &folder)
-{
-    QStringList filters;
-    for (const QByteArray &format : QImageReader::supportedImageFormats())
-        filters.append(QStringLiteral("*.%1").arg(QString::fromLatin1(format)));
-    const QFileInfoList files = QDir(folder).entryInfoList(
-        filters, QDir::Files | QDir::Readable, QDir::Name);
-    QStringList paths;
-    paths.reserve(files.size());
-    for (const QFileInfo &file : files)
-        paths.append(file.absoluteFilePath());
-    return paths;
-}
+using masonrydemo::MasonryModel;
+using masonrydemo::MasonryAdapter;
 
 } // namespace
 
 int main(int argc, char **argv)
 {
     QApplication app(argc, argv);
+    viv::installAccessibilityFactory();
     MasonryModel model(1000);
-    flowdemo::ThumbnailCache thumbnails;
+    vivdemo::ImageBackend thumbnails;
+    vivdemo::ImageCatalog catalog;
     MasonryAdapter adapter(&model, &thumbnails);
+    QMainWindow window;
     viv::VirtualMasonryView view;
     view.setAccessibleName(QStringLiteral("瀑布流视图"));
     view.setAdapter(&adapter);
@@ -284,22 +52,35 @@ int main(int argc, char **argv)
     view.setDragDropActions(Qt::MoveAction);
     view.setDefaultDropAction(Qt::MoveAction);
 
-    QMainWindow window;
     window.setCentralWidget(&view);
     window.setWindowTitle(QStringLiteral("VirtualMasonryView — 最短列瀑布流"));
     auto *toolbar = window.addToolBar(QStringLiteral("瀑布流"));
     auto *loadImages = toolbar->addAction(QStringLiteral("加载图片文件夹"));
     QObject::connect(loadImages, &QAction::triggered, &window,
-        [&window, &model, &thumbnails]() {
+        [&window, &model, &thumbnails, &catalog]() {
             const QString folder = QFileDialog::getExistingDirectory(
                 &window, QStringLiteral("选择图片文件夹"));
             if (folder.isEmpty())
                 return;
-            const QStringList paths = imageFilesInFolder(folder);
+            window.statusBar()->showMessage(QStringLiteral("正在读取图片尺寸：%1").arg(folder));
+            catalog.loadFolder(folder, [&window, &model, &thumbnails, folder](
+                const QVector<vivdemo::ImageEntry> &entries) {
+                thumbnails.reset();
+                model.setImages(entries);
+                window.statusBar()->showMessage(
+                    QStringLiteral("已加载 %1 张图片：%2").arg(entries.size()).arg(folder));
+            });
+        });
+    auto *resetDemo = toolbar->addAction(QStringLiteral("恢复示例"));
+    QObject::connect(resetDemo, &QAction::triggered, &window,
+        [&model, &thumbnails, &view, &catalog, &window]() {
+            catalog.cancel();
             thumbnails.reset();
-            model.setImages(paths);
-            window.statusBar()->showMessage(
-                QStringLiteral("已加载 %1 张图片：%2").arg(paths.size()).arg(folder));
+            model.setSyntheticItems(1000);
+            view.setCurrentIndex(model.index(0, 0));
+            view.scrollTo(model.index(0, 0), viv::VirtualItemView::PositionAtTop);
+            view.setFocus();
+            window.statusBar()->showMessage(QStringLiteral("已恢复示例"));
         });
 
     auto *dragEnabled = new QCheckBox(QStringLiteral("允许拖放"), &window);
@@ -315,10 +96,32 @@ int main(int argc, char **argv)
         &viv::VirtualItemView::setDropIndicatorShown);
     view.setDropIndicatorShown(true);
 
+    const auto spin = [&window, &toolbar](const QString &label, int value,
+                                         int minimum, int maximum) {
+        auto *caption = new QLabel(label, &window);
+        toolbar->addWidget(caption);
+        auto *control = new QSpinBox(&window);
+        control->setAccessibleName(label);
+        caption->setBuddy(control);
+        control->setRange(minimum, maximum);
+        control->setValue(value);
+        toolbar->addWidget(control);
+        return control;
+    };
+    const auto toggle = [&window, &toolbar](const QString &label, bool value) {
+        auto *control = new QCheckBox(label, &window);
+        control->setChecked(value);
+        toolbar->addWidget(control);
+        return control;
+    };
+    window.addToolBarBreak();
+    toolbar = window.addToolBar(QStringLiteral("布局与间距"));
     toolbar->addWidget(new QLabel(QStringLiteral("列数"), &window));
     auto *columns = new QSpinBox(&window);
     columns->setRange(0, 20);
     columns->setValue(0);
+    columns->setSpecialValueText(QStringLiteral("自动"));
+    columns->setAccessibleName(QStringLiteral("列数，零表示自动"));
     toolbar->addWidget(columns);
     QObject::connect(columns, QOverload<int>::of(&QSpinBox::valueChanged), &view,
         &viv::VirtualMasonryView::setColumnCount);
@@ -327,6 +130,7 @@ int main(int argc, char **argv)
     auto *mode = new QComboBox(&window);
     mode->addItems({QStringLiteral("固定"), QStringLiteral("宽高比"), QStringLiteral("估算")});
     mode->setCurrentIndex(2);
+    mode->setAccessibleName(QStringLiteral("高度模式"));
     toolbar->addWidget(mode);
     QObject::connect(mode, QOverload<int>::of(&QComboBox::currentIndexChanged), &view,
         [&view](int index) {
@@ -337,6 +141,7 @@ int main(int argc, char **argv)
     auto *columnSpacing = new QSpinBox(&window);
     columnSpacing->setRange(0, 100);
     columnSpacing->setValue(view.columnSpacing());
+    columnSpacing->setAccessibleName(QStringLiteral("列间距"));
     toolbar->addWidget(columnSpacing);
     QObject::connect(columnSpacing, QOverload<int>::of(&QSpinBox::valueChanged), &view,
         &viv::VirtualMasonryView::setColumnSpacing);
@@ -345,10 +150,13 @@ int main(int argc, char **argv)
     auto *rowSpacing = new QSpinBox(&window);
     rowSpacing->setRange(0, 100);
     rowSpacing->setValue(view.rowSpacing());
+    rowSpacing->setAccessibleName(QStringLiteral("行间距"));
     toolbar->addWidget(rowSpacing);
     QObject::connect(rowSpacing, QOverload<int>::of(&QSpinBox::valueChanged), &view,
         &viv::VirtualMasonryView::setRowSpacing);
 
+    window.addToolBarBreak();
+    toolbar = window.addToolBar(QStringLiteral("分割线"));
     auto *verticalLines = new QCheckBox(QStringLiteral("竖分割线"), &window);
     verticalLines->setChecked(view.verticalGridLinesVisible());
     toolbar->addWidget(verticalLines);
@@ -359,7 +167,37 @@ int main(int argc, char **argv)
     toolbar->addWidget(horizontalLines);
     QObject::connect(horizontalLines, &QCheckBox::toggled, &view,
         &viv::VirtualMasonryView::setHorizontalGridLinesVisible);
+    QObject::connect(toggle(QStringLiteral("横线穿列隙"),
+                           view.horizontalSpacingLineThroughColumnSpacing()),
+        &QCheckBox::toggled, &view,
+        &viv::VirtualMasonryView::setHorizontalSpacingLineThroughColumnSpacing);
+    QObject::connect(toggle(QStringLiteral("竖线穿行隙"),
+                           view.verticalSpacingLineThroughRowSpacing()),
+        &QCheckBox::toggled, &view,
+        &viv::VirtualMasonryView::setVerticalSpacingLineThroughRowSpacing);
+    QObject::connect(spin(QStringLiteral("横线 px"), view.horizontalGridLineWidth(), 0, 8),
+        QOverload<int>::of(&QSpinBox::valueChanged), &view,
+        &viv::VirtualMasonryView::setHorizontalGridLineWidth);
+    QObject::connect(spin(QStringLiteral("竖线 px"), view.verticalGridLineWidth(), 0, 8),
+        QOverload<int>::of(&QSpinBox::valueChanged), &view,
+        &viv::VirtualMasonryView::setVerticalGridLineWidth);
 
+    window.addToolBarBreak();
+    toolbar = window.addToolBar(QStringLiteral("高度与动画"));
+    QObject::connect(spin(QStringLiteral("固定高度"), view.fixedItemHeight(), 1, 2000),
+        QOverload<int>::of(&QSpinBox::valueChanged), &view,
+        &viv::VirtualMasonryView::setFixedItemHeight);
+    auto *ratioCaption = new QLabel(QStringLiteral("宽 / 高"), &window);
+    toolbar->addWidget(ratioCaption);
+    auto *ratio = new QDoubleSpinBox(&window);
+    ratio->setAccessibleName(QStringLiteral("宽高比"));
+    ratioCaption->setBuddy(ratio);
+    ratio->setRange(0.1, 10);
+    ratio->setSingleStep(0.1);
+    ratio->setValue(view.itemAspectRatio());
+    toolbar->addWidget(ratio);
+    QObject::connect(ratio, QOverload<double>::of(&QDoubleSpinBox::valueChanged), &view,
+        &viv::VirtualMasonryView::setItemAspectRatio);
     auto *heightAnimation = new QCheckBox(QStringLiteral("高度动画"), &window);
     heightAnimation->setChecked(view.itemHeightAnimationEnabled());
     toolbar->addWidget(heightAnimation);
@@ -369,24 +207,61 @@ int main(int argc, char **argv)
     auto *animationDuration = new QSpinBox(&window);
     animationDuration->setRange(0, 2000);
     animationDuration->setValue(view.itemHeightAnimationDuration());
+    animationDuration->setAccessibleName(QStringLiteral("高度动画时长，毫秒"));
     toolbar->addWidget(animationDuration);
     QObject::connect(animationDuration, QOverload<int>::of(&QSpinBox::valueChanged), &view,
         &viv::VirtualMasonryView::setItemHeightAnimationDuration);
+    auto *itemHeight = spin(QStringLiteral("当前项高度"), 240, 1, 2000);
+    auto *applyHeight = toolbar->addAction(QStringLiteral("应用高度"));
+    QObject::connect(applyHeight, &QAction::triggered, &window,
+        [&window, &view, itemHeight]() {
+            const QModelIndex current = view.currentIndex();
+            if (!current.isValid()) {
+                window.statusBar()->showMessage(QStringLiteral("先单击一个项目，再应用高度。"), 4000);
+                return;
+            }
+            view.scrollTo(current);
+            view.setItemHeight(current, itemHeight->value());
+            view.setFocus();
+        });
+
+    window.addToolBarBreak();
+    toolbar = window.addToolBar(QStringLiteral("状态背景"));
+    QObject::connect(toggle(QStringLiteral("状态背景"), view.visualStateBackgroundVisible()),
+        &QCheckBox::toggled, &view, &viv::VirtualMasonryView::setVisualStateBackgroundVisible);
+    QObject::connect(toggle(QStringLiteral("hover 行隙"), view.hoverBackgroundThroughRowSpacing()),
+        &QCheckBox::toggled, &view, &viv::VirtualMasonryView::setHoverBackgroundThroughRowSpacing);
+    QObject::connect(toggle(QStringLiteral("select 行隙"), view.selectedBackgroundThroughRowSpacing()),
+        &QCheckBox::toggled, &view, &viv::VirtualMasonryView::setSelectedBackgroundThroughRowSpacing);
+    QObject::connect(toggle(QStringLiteral("hover 列隙"), view.hoverBackgroundThroughColumnSpacing()),
+        &QCheckBox::toggled, &view, &viv::VirtualMasonryView::setHoverBackgroundThroughColumnSpacing);
+    QObject::connect(toggle(QStringLiteral("select 列隙"), view.selectedBackgroundThroughColumnSpacing()),
+        &QCheckBox::toggled, &view, &viv::VirtualMasonryView::setSelectedBackgroundThroughColumnSpacing);
+    QObject::connect(spin(QStringLiteral("圆角"), view.stateBackgroundCornerRadius(), 0, 100),
+        QOverload<int>::of(&QSpinBox::valueChanged), &view,
+        &viv::VirtualMasonryView::setStateBackgroundCornerRadius);
 
     auto *status = new QLabel(&window);
     window.statusBar()->addPermanentWidget(status);
     const auto updateStatus = [&view, &model, status]() {
         const auto stats = view.stats();
-        status->setText(QStringLiteral("列 %1 | 项目 %2 | 已物化 %3")
-            .arg(view.columnCount()).arg(model.rowCount()).arg(stats.materializedItems));
+        const QModelIndex current = view.currentIndex();
+        status->setText(QStringLiteral("列 %1 | 项目 %2 | 已物化 %3 | 当前项 %4 | 实际高度 %5")
+            .arg(view.columnCount()).arg(model.rowCount()).arg(stats.materializedItems)
+            .arg(current.isValid() ? QString::number(current.row()) : QStringLiteral("无"))
+            .arg(view.visualRect(current).height()));
     };
     QObject::connect(&view, &viv::VirtualItemView::virtualizationUpdated, &window,
         updateStatus);
     QObject::connect(&view, &viv::VirtualMasonryView::masonryLayoutChanged, &window,
         updateStatus);
+    QObject::connect(view.selectionModel(), &QItemSelectionModel::currentChanged, &window,
+        updateStatus);
     updateStatus();
 
     window.resize(900, 700);
     window.show();
+    view.setCurrentIndex(model.index(0, 0));
+    view.setFocus();
     return app.exec();
 }

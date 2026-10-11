@@ -4509,22 +4509,22 @@ void VirtualTableView::syncColumnSpacingWidgets()
                     const QRect rowRect = geometryForViewRow(row);
                     if (!rowRect.intersects(viewport()->rect()))
                         continue;
-                    const int spacing = m_rowLayout ? m_rowLayout->spacingAfter(row) : 0;
+                    const int rowSpacing = m_rowLayout ? m_rowLayout->spacingAfter(row) : 0;
                     const int first = viewportRect.y() + rowRect.bottom()
-                        + (spacing > 0 ? 1 : 1 - m_horizontalGridLineWidth) - widget->y();
+                        + (rowSpacing > 0 ? 1 : 1 - m_horizontalGridLineWidth) - widget->y();
                     const QRect paneRect = itemPaneRect(itemPaneForRow(row));
                     const int firstInViewport = first + widget->y() - viewportRect.y();
                     if (first >= host->bodyTop() && first < host->height()
                         && firstInViewport >= paneRect.top()
                         && firstInViewport + m_horizontalGridLineWidth <= paneRect.bottom() + 1)
                         horizontalLines.append(first);
-                    if (spacing > 0) {
-                        const int last = first + qMax(0, spacing - m_horizontalGridLineWidth);
-                        const int lastInViewport = last + widget->y() - viewportRect.y();
-                        if (last >= host->bodyTop() && last < host->height()
+                    if (rowSpacing > 0) {
+                        const int lastLine = first + qMax(0, rowSpacing - m_horizontalGridLineWidth);
+                        const int lastInViewport = lastLine + widget->y() - viewportRect.y();
+                        if (lastLine >= host->bodyTop() && lastLine < host->height()
                             && lastInViewport >= paneRect.top()
                             && lastInViewport + m_horizontalGridLineWidth <= paneRect.bottom() + 1)
-                            horizontalLines.append(last);
+                            horizontalLines.append(lastLine);
                     }
                 }
             }
