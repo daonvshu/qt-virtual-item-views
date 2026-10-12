@@ -202,17 +202,17 @@ public:
         return new ImageWidget(m_thumbnails, parent);
     }
 
-    void bindWidget(QWidget *widget, const QModelIndex &index) override
+    void bindWidget(viv::WidgetType, QWidget *widget, const QModelIndex &index) override
     {
         static_cast<ImageWidget *>(widget)->bind(index);
     }
 
-    void unbindWidget(QWidget *widget, const QModelIndex &) override
+    void unbindWidget(viv::WidgetType, QWidget *widget, const QModelIndex &) override
     {
         static_cast<ImageWidget *>(widget)->unbind();
     }
 
-    QSize estimatedSize(const QModelIndex &index) const override
+    QSize estimatedSize(viv::WidgetType, const QModelIndex &index) const override
     {
         return m_model->estimatedSize(index);
     }

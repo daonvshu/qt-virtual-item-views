@@ -46,11 +46,11 @@ public:
     {
         return new RowWidget(parent);
     }
-    void bindWidget(QWidget *widget, const QModelIndex &index) override
+    void bindWidget(viv::WidgetType, QWidget *widget, const QModelIndex &index) override
     {
         static_cast<RowWidget *>(widget)->bind(index);
     }
-    QSize estimatedSize(const QModelIndex &) const override { return QSize(0, 32); }
+    QSize estimatedSize(viv::WidgetType, const QModelIndex &) const override { return QSize(0, 32); }
 };
 
 int main(int argc, char **argv)

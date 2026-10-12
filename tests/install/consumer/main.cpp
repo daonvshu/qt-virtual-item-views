@@ -130,13 +130,13 @@ public:
         return new QLabel(parent);
     }
 
-    void bindWidget(QWidget *widget, const QModelIndex &index) override
+    void bindWidget(viv::WidgetType, QWidget *widget, const QModelIndex &index) override
     {
         if (auto *label = qobject_cast<QLabel *>(widget))
             label->setText(index.data(Qt::DisplayRole).toString());
     }
 
-    QSize estimatedSize(const QModelIndex &) const override { return QSize(320, 24); }
+    QSize estimatedSize(viv::WidgetType, const QModelIndex &) const override { return QSize(320, 24); }
 };
 
 /// Cell widget of the table's Cell Widget Mode: one label per visible cell.
@@ -170,13 +170,13 @@ public:
         return widget;
     }
 
-    void bindWidget(QWidget *widget, const QModelIndex &index) override
+    void bindWidget(viv::WidgetType, QWidget *widget, const QModelIndex &index) override
     {
         for (viv::ColumnHost *host : widget->findChildren<viv::ColumnHost *>())
             host->findChild<QLabel *>()->setText(index.siblingAtColumn(host->logicalColumn()).data().toString());
     }
 
-    QSize estimatedSize(const QModelIndex &) const override { return QSize(300, 24); }
+    QSize estimatedSize(viv::WidgetType, const QModelIndex &) const override { return QSize(300, 24); }
 };
 
 int failures = 0;

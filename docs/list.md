@@ -33,11 +33,11 @@ public:
     {
         return new WrappingRow(parent);
     }
-    void bindWidget(QWidget *widget, const QModelIndex &index) override
+    void bindWidget(viv::WidgetType, QWidget *widget, const QModelIndex &index) override
     {
         static_cast<WrappingRow *>(widget)->setText(index.data().toString());
     }
-    QSize estimatedSize(const QModelIndex &) const override { return QSize(320, 48); }
+    QSize estimatedSize(viv::WidgetType, const QModelIndex &) const override { return QSize(320, 48); }
 };
 
 QStringListModel model({QStringLiteral("短内容"), QStringLiteral("另一行")});
@@ -51,7 +51,7 @@ view.setModel(&model);
 view.show();
 ```
 
-adapter 的 `estimatedSize(index)` 用于新插入行的初始估计。下面用 `QStringListModel::setData()` 改变一行的内容；它会发出 `dataChanged`，视图重绑并测量。自己的模型也应在数据变化后发出对应信号。
+adapter 的 `estimatedSize(type, index)` 用于新插入行的初始估计。下面用 `QStringListModel::setData()` 改变一行的内容；它会发出 `dataChanged`，视图重绑并测量。自己的模型也应在数据变化后发出对应信号。
 
 ```cpp
 const QModelIndex first = model.index(0, 0);
@@ -92,7 +92,7 @@ private:
 };
 
 // 在 WidgetAdapter 子类中保存指向当前 view 的指针：
-void visualStateChanged(QWidget *widget, const QModelIndex &index) override {
+void visualStateChanged(viv::WidgetType, QWidget *widget, const QModelIndex &index) override {
     static_cast<StateRow *>(widget)->setState(view->visualState(index),
         view->hoverBackgroundColor(), view->selectedBackgroundColor());
 }

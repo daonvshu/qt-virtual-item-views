@@ -106,19 +106,19 @@ public:
         return new NodeRowWidget(parent);
     }
 
-    void bindWidget(QWidget *widget, const QModelIndex &index) override
+    void bindWidget(viv::WidgetType, QWidget *widget, const QModelIndex &index) override
     {
         auto *row = static_cast<NodeRowWidget *>(widget);
         row->setTexts(index.data(Qt::DisplayRole).toString(),
                       index.data(Qt::UserRole + 1).toString());
     }
 
-    void unbindWidget(QWidget *widget, const QModelIndex &) override
+    void unbindWidget(viv::WidgetType, QWidget *widget, const QModelIndex &) override
     {
         static_cast<NodeRowWidget *>(widget)->setTexts(QString(), QString());
     }
 
-    QSize estimatedSize(const QModelIndex &) const override
+    QSize estimatedSize(viv::WidgetType, const QModelIndex &) const override
     {
         return QSize(320, kTreeRowHeight);
     }
@@ -163,7 +163,7 @@ public:
         return new TableRowWidget(parent, m_columnCount);
     }
 
-    void bindWidget(QWidget *widget, const QModelIndex &index) override
+    void bindWidget(viv::WidgetType, QWidget *widget, const QModelIndex &index) override
     {
         auto *row = static_cast<TableRowWidget *>(widget);
         for (int column = 0; column < m_columnCount; ++column) {
@@ -172,14 +172,14 @@ public:
         }
     }
 
-    void unbindWidget(QWidget *widget, const QModelIndex &) override
+    void unbindWidget(viv::WidgetType, QWidget *widget, const QModelIndex &) override
     {
         auto *row = static_cast<TableRowWidget *>(widget);
         for (int column = 0; column < m_columnCount; ++column)
             row->label(column)->setText(QString());
     }
 
-    QSize estimatedSize(const QModelIndex &) const override
+    QSize estimatedSize(viv::WidgetType, const QModelIndex &) const override
     {
         return QSize(kTableColumnWidth * m_columnCount, kTableRowHeight);
     }

@@ -40,11 +40,11 @@ class ScrollAdapter : public viv::WidgetAdapter
 {
 public:
     QWidget *createWidget(viv::WidgetType, QWidget *parent) override { return new QLabel(parent); }
-    void bindWidget(QWidget *widget, const QModelIndex &index) override
+    void bindWidget(viv::WidgetType, QWidget *widget, const QModelIndex &index) override
     {
         static_cast<QLabel *>(widget)->setText(index.data().toString());
     }
-    QSize estimatedSize(const QModelIndex &) const override { return QSize(150, 40); }
+    QSize estimatedSize(viv::WidgetType, const QModelIndex &) const override { return QSize(150, 40); }
 };
 
 class DemoScrollingTest : public QObject
@@ -157,15 +157,15 @@ private slots:
             {
                 return new ScrollPaintLabel(parent);
             }
-            void bindWidget(QWidget *widget, const QModelIndex &index) override
+            void bindWidget(viv::WidgetType type, QWidget *widget, const QModelIndex &index) override
             {
-                ScrollAdapter::bindWidget(widget, index);
+                ScrollAdapter::bindWidget(type, widget, index);
                 static_cast<ScrollPaintLabel *>(widget)->checkPaint = [this, widget, index]() {
                     if (checkPaint)
                         checkPaint(widget, index);
                 };
             }
-            QSize estimatedSize(const QModelIndex &index) const override
+            QSize estimatedSize(viv::WidgetType, const QModelIndex &index) const override
             {
                 return QSize(150, 80 + (index.row() * 47) % 220);
             }

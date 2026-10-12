@@ -18,11 +18,11 @@ public:
     {
         return new QLabel(parent);
     }
-    void bindWidget(QWidget *widget, const QModelIndex &index) override
+    void bindWidget(viv::WidgetType, QWidget *widget, const QModelIndex &index) override
     {
         static_cast<QLabel *>(widget)->setText(index.data().toString());
     }
-    QSize estimatedSize(const QModelIndex &) const override { return QSize(300, 26); }
+    QSize estimatedSize(viv::WidgetType, const QModelIndex &) const override { return QSize(300, 26); }
 };
 
 QStandardItemModel model;
@@ -63,7 +63,7 @@ tree.setSelectedBackgroundThroughRowSpacing(false);
 
 `setVisualStateCornerRadius()` 同时设置 hover 和 selected 背景圆角，滚动裁剪不会改变完整背景的圆角形状。`tree_view` 示例默认演示 6 像素圆角，可用 `--corner-radius 0` 切回直角，或在“状态”工具栏调整半径。
 
-也可由节点控件自行绘制背景。树与列表使用同一接口：在 `WidgetAdapter::visualStateChanged(widget, index)` 中读取 `tree.visualState(index)`，把独立的 `hovered`、`selected` 标志交给节点控件，然后调用 `update()`。节点控件在 `paintEvent()` 中画自己的背景；回调也会在控件复用并绑定新节点后触发。两种状态可以同时为真，颜色优先级由业务决定。完整的自绘控件写法见 [列表的状态示例](list.md#自绘悬停与选中背景)。
+也可由节点控件自行绘制背景。树与列表使用同一接口：在 `WidgetAdapter::visualStateChanged(type, widget, index)` 中读取 `tree.visualState(index)`，把独立的 `hovered`、`selected` 标志交给节点控件，然后调用 `update()`。节点控件在 `paintEvent()` 中画自己的背景；回调也会在控件复用并绑定新节点后触发。两种状态可以同时为真，颜色优先级由业务决定。完整的自绘控件写法见 [列表的状态示例](list.md#自绘悬停与选中背景)。
 
 `setHoverBackgroundThroughRowSpacing()` 和 `setSelectedBackgroundThroughRowSpacing()` 分别控制内置背景是否覆盖节点拥有的行间距，默认均为 false。`NodeRowSpacingBelowRole` 的部分跟随上方节点，`NodeRowSpacingAboveRole` 的部分跟随下方节点；下间距 role 缺失、无效或负值时，默认行间距归上方节点。两部分各自使用所属节点的状态和覆盖范围，首行前、末行后不延伸，不跨越冻结行边界。分隔线仍显示，自定义间距控件仍可绘制自己的内容。
 
@@ -114,15 +114,15 @@ public:
         return new QLabel(parent);
     }
 
-    void bindWidget(QWidget *widget, const QModelIndex &index) override
+    void bindWidget(viv::WidgetType type, QWidget *widget, const QModelIndex &index) override
     {
-        if (widgetType(index) == 1)
+        if (type == 1)
             static_cast<QProgressBar *>(widget)->setValue(index.data().toInt());
         else
             static_cast<QLabel *>(widget)->setText(index.data().toString());
     }
 
-    QSize estimatedSize(const QModelIndex &) const override { return QSize(300, 26); }
+    QSize estimatedSize(viv::WidgetType, const QModelIndex &) const override { return QSize(300, 26); }
 };
 
 auto *tasks = new QStandardItem(QStringLiteral("任务"));
@@ -140,6 +140,8 @@ mixedTree.show();
 ```
 
 示例中根层行的 `parent()` 无效，因此仍分到文本池。类型应由稳定的模型数据决定；控件离屏后会在同类型节点之间复用，`bindWidget()` 必须完整刷新内容，与旧节点有关的任务在 `unbindWidget()` 中清理。
+
+`bindWidget(type, widget, index)`、`unbindWidget(type, widget, index)` 和 `visualStateChanged(type, widget, index)` 都传入控件创建时保存的 `WidgetType`，无需在回调中重新判断。`estimatedSize(type, index)` 的类型由 `widgetType(index)` 提供。类型不是自动生成的树深度；如果需要区分层级，可以在 `widgetType()` 中按 `view->itemDepth(index)` 返回不同类型。旧适配器的这四个重写函数需要同步增加首个 `WidgetType` 参数。
 
 ## 自定义分支图标
 

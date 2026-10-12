@@ -89,12 +89,12 @@ public:
         return new OrderCardWidget(parent);
     }
 
-    void bindWidget(QWidget *widget, const QModelIndex &index) override
+    void bindWidget(viv::WidgetType, QWidget *widget, const QModelIndex &index) override
     {
         static_cast<OrderCardWidget *>(widget)->bind(index);
     }
 
-    QSize estimatedSize(const QModelIndex &index) const override
+    QSize estimatedSize(viv::WidgetType, const QModelIndex &index) const override
     {
         Q_UNUSED(index);
         return QSize(600, 96);

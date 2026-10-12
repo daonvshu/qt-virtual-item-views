@@ -50,10 +50,10 @@ public:
         return new PaneRowWidget(parent, kColumns);
     }
 
-    void bindWidget(QWidget *, const QModelIndex &) override {}
-    void unbindWidget(QWidget *, const QModelIndex &) override {}
+    void bindWidget(viv::WidgetType, QWidget *, const QModelIndex &) override {}
+    void unbindWidget(viv::WidgetType, QWidget *, const QModelIndex &) override {}
 
-    QSize estimatedSize(const QModelIndex &) const override
+    QSize estimatedSize(viv::WidgetType, const QModelIndex &) const override
     {
         return QSize(kColumnWidth * kColumns, kRowHeight);
     }

@@ -85,12 +85,12 @@ public:
         return new TableRow(parent);
     }
 
-    void bindWidget(QWidget *widget, const QModelIndex &index) override
+    void bindWidget(viv::WidgetType, QWidget *widget, const QModelIndex &index) override
     {
         static_cast<TableRow *>(widget)->bind(index);
     }
 
-    QSize estimatedSize(const QModelIndex &) const override
+    QSize estimatedSize(viv::WidgetType, const QModelIndex &) const override
     {
         return QSize(1400, kRowHeight);
     }

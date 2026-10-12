@@ -842,7 +842,8 @@ void VirtualItemView::refreshVisualStates()
         const QModelIndex index = persistent;
         QPointer<QWidget> widget(index.isValid() ? widgetForIndex(index) : nullptr);
         if (widget)
-            activeAdapter->visualStateChanged(widget.data(), index);
+            activeAdapter->visualStateChanged(m_items.at(m_itemLookup.value(index)).type,
+                                             widget.data(), index);
     }
 }
 
@@ -872,7 +873,8 @@ void VirtualItemView::refreshVisualState(const QModelIndex &index)
             continue;
         QPointer<QWidget> widget(widgetForIndex(materialized));
         if (widget)
-            activeAdapter->visualStateChanged(widget.data(), materialized);
+            activeAdapter->visualStateChanged(m_items.at(m_itemLookup.value(materialized)).type,
+                                             widget.data(), materialized);
     }
 }
 
@@ -1212,7 +1214,20 @@ int VirtualItemView::estimateItemSize(qsizetype item) const
 
     const QModelIndex index = viewIndex(item);
     if (index.isValid() && m_adapter) {
-        const QSize hint = m_adapter->estimatedSize(index);
+        WidgetAdapter *const activeAdapter = m_adapter;
+        const QPointer<const VirtualItemView> self(this);
+        const int fallback = m_estimatedItemHeight;
+        const quint64 modelSerial = m_modelChangeSerial;
+        const quint64 mappingSerial = viewMappingSerial();
+        const QPersistentModelIndex persistent(index);
+        const WidgetType type = activeAdapter->widgetType(index);
+        if (!self || !persistent.isValid() || m_adapter != activeAdapter || persistent != index
+            || m_modelChangeSerial != modelSerial || viewMappingSerial() != mappingSerial)
+            return fallback;
+        const QSize hint = activeAdapter->estimatedSize(type, index);
+        if (!self || !persistent.isValid() || m_adapter != activeAdapter
+            || m_modelChangeSerial != modelSerial || viewMappingSerial() != mappingSerial)
+            return fallback;
         if (hint.height() > 0)
             return hint.height();
     }
@@ -2680,7 +2695,7 @@ MaterializedItem VirtualItemView::createItem(const QPersistentModelIndex &index)
         }
         return false;
     };
-    activeAdapter->bindWidget(widget, modelIndex);
+    activeAdapter->bindWidget(item.type, widget, modelIndex);
     if (!bindingIsCurrent()) {
         item.widget = nullptr;
         return item;
@@ -2690,7 +2705,7 @@ MaterializedItem VirtualItemView::createItem(const QPersistentModelIndex &index)
         item.widget = nullptr;
         return item;
     }
-    activeAdapter->visualStateChanged(widget, modelIndex);
+    activeAdapter->visualStateChanged(item.type, widget, modelIndex);
     if (!bindingIsCurrent()) {
         item.widget = nullptr;
         return item;
@@ -2710,7 +2725,7 @@ void VirtualItemView::recycleItem(MaterializedItem &item)
     const quint64 lifecycleSerial = m_itemLifecycleSerial;
     QPointer<QWidget> widget(item.widget);
     if (activeAdapter)
-        activeAdapter->unbindWidget(item.widget, QModelIndex(item.index));
+        activeAdapter->unbindWidget(item.type, item.widget, QModelIndex(item.index));
     clearVisualTransitionsForRow(QModelIndex(item.index));
     if (m_lifecycleLogEnabled)
         appendLifecycleLog(QStringLiteral("unbind row=%1").arg(item.index.row()));
@@ -2862,14 +2877,15 @@ void VirtualItemView::rebindItemsInModelRange(const QModelIndex &parent, int fir
         QPointer<QWidget> widget(widgetForIndex(index));
         if (!widget || m_bindingWidgets.contains(widget.data()))
             continue;
-        activeAdapter->bindWidget(widget.data(), index);
+        const WidgetType type = m_items.at(m_itemLookup.value(index)).type;
+        activeAdapter->bindWidget(type, widget.data(), index);
         if (!activeModel || m_modelChangeSerial != modelSerial
             || viewMappingSerial() != mappingSerial || m_itemLifecycleSerial != lifecycleSerial
             || m_adapter != activeAdapter)
             return;
         if (!widget || widgetForIndex(index) != widget.data())
             continue;
-        activeAdapter->visualStateChanged(widget.data(), index);
+        activeAdapter->visualStateChanged(type, widget.data(), index);
         if (!activeModel || m_modelChangeSerial != modelSerial
             || viewMappingSerial() != mappingSerial || m_itemLifecycleSerial != lifecycleSerial
             || m_adapter != activeAdapter)

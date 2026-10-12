@@ -21,11 +21,11 @@ class LabelAdapter : public WidgetAdapter
 {
 public:
     QWidget *createWidget(WidgetType, QWidget *parent) override { return new QLabel(parent); }
-    void bindWidget(QWidget *widget, const QModelIndex &index) override
+    void bindWidget(viv::WidgetType, QWidget *widget, const QModelIndex &index) override
     {
         static_cast<QLabel *>(widget)->setText(index.data(Qt::DisplayRole).toString());
     }
-    QSize estimatedSize(const QModelIndex &) const override { return QSize(200, 24); }
+    QSize estimatedSize(viv::WidgetType, const QModelIndex &) const override { return QSize(200, 24); }
 };
 
 /// Section widgets of the standalone header tests.

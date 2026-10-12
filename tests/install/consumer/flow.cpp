@@ -17,11 +17,11 @@ public:
         label->setAttribute(Qt::WA_TransparentForMouseEvents);
         return label;
     }
-    void bindWidget(QWidget *widget, const QModelIndex &index) override
+    void bindWidget(viv::WidgetType, QWidget *widget, const QModelIndex &index) override
     {
         static_cast<QLabel *>(widget)->setText(index.data().toString());
     }
-    QSize estimatedSize(const QModelIndex &) const override { return QSize(150, 100); }
+    QSize estimatedSize(viv::WidgetType, const QModelIndex &) const override { return QSize(150, 100); }
 };
 }
 

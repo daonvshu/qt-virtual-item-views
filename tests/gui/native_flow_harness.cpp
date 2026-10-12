@@ -80,7 +80,7 @@ public:
         if (created) created(card);
         return card;
     }
-    void bindWidget(QWidget *widget, const QModelIndex &index) override
+    void bindWidget(viv::WidgetType, QWidget *widget, const QModelIndex &index) override
     {
         auto *card = static_cast<Card *>(widget);
         card->bound = index;
@@ -88,11 +88,11 @@ public:
         card->editor->setText(index.data(Qt::UserRole).toString());
         card->combo->setCurrentIndex(index.data(Qt::UserRole + 1).toInt());
     }
-    void unbindWidget(QWidget *widget, const QModelIndex &) override
+    void unbindWidget(viv::WidgetType, QWidget *widget, const QModelIndex &) override
     {
         static_cast<Card *>(widget)->bound = QPersistentModelIndex();
     }
-    QSize estimatedSize(const QModelIndex &) const override { return QSize(150, 190); }
+    QSize estimatedSize(viv::WidgetType, const QModelIndex &) const override { return QSize(150, 190); }
 };
 }
 

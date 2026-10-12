@@ -139,7 +139,7 @@ public:
         return new SchemaRowWidget(parent);
     }
 
-    void bindWidget(QWidget *widget, const QModelIndex &index) override
+    void bindWidget(viv::WidgetType, QWidget *widget, const QModelIndex &index) override
     {
         ++bound;
         auto *row = static_cast<SchemaRowWidget *>(widget);
@@ -149,13 +149,13 @@ public:
             row->label(column)->setText(index.siblingAtColumn(column).data(Qt::DisplayRole).toString());
     }
 
-    void unbindWidget(QWidget *widget, const QModelIndex &) override
+    void unbindWidget(viv::WidgetType, QWidget *widget, const QModelIndex &) override
     {
         ++unbound;
         static_cast<SchemaRowWidget *>(widget)->clearTexts();
     }
 
-    QSize estimatedSize(const QModelIndex &) const override { return QSize(400, kRowHeight); }
+    QSize estimatedSize(viv::WidgetType, const QModelIndex &) const override { return QSize(400, kRowHeight); }
 
     int bound = 0;
     int unbound = 0;
@@ -174,13 +174,13 @@ public:
         return label;
     }
 
-    void bindWidget(QWidget *, const QModelIndex &index) override
+    void bindWidget(viv::WidgetType, QWidget *, const QModelIndex &index) override
     {
         ++bound;
         countIndex(index);
     }
 
-    void unbindWidget(QWidget *, const QModelIndex &) override { ++unbound; }
+    void unbindWidget(viv::WidgetType, QWidget *, const QModelIndex &) override { ++unbound; }
 
     void layoutRowWidget(QWidget *, const QModelIndex &rowIndex,
                          const TableRowLayoutContext &) override
@@ -192,7 +192,7 @@ public:
             ++layoutNonCanonical;
     }
 
-    QSize estimatedSize(const QModelIndex &) const override { return QSize(400, kRowHeight); }
+    QSize estimatedSize(viv::WidgetType, const QModelIndex &) const override { return QSize(400, kRowHeight); }
 
     void countIndex(const QModelIndex &index)
     {
@@ -226,7 +226,7 @@ public:
         return new TableRowWidget(parent, m_columnCount);
     }
 
-    void bindWidget(QWidget *widget, const QModelIndex &index) override
+    void bindWidget(viv::WidgetType, QWidget *widget, const QModelIndex &index) override
     {
         ++bound;
         auto *row = static_cast<TableRowWidget *>(widget);
@@ -236,7 +236,7 @@ public:
         }
     }
 
-    void unbindWidget(QWidget *widget, const QModelIndex &index) override
+    void unbindWidget(viv::WidgetType, QWidget *widget, const QModelIndex &index) override
     {
         Q_UNUSED(index);
         ++unbound;
@@ -245,7 +245,7 @@ public:
             row->label(column)->setText(QString());
     }
 
-    QSize estimatedSize(const QModelIndex &index) const override
+    QSize estimatedSize(viv::WidgetType, const QModelIndex &index) const override
     {
         Q_UNUSED(index);
         return QSize(400, kRowHeight);
@@ -453,7 +453,7 @@ public:
             : WidgetType(1);
     }
 
-    void bindWidget(QWidget *widget, const QModelIndex &index) override
+    void bindWidget(viv::WidgetType, QWidget *widget, const QModelIndex &index) override
     {
         ++bound;
         lastBoundWidget = widget;
@@ -464,7 +464,7 @@ public:
             ++typeMismatches;
     }
 
-    void unbindWidget(QWidget *widget, const QModelIndex &index) override
+    void unbindWidget(viv::WidgetType, QWidget *widget, const QModelIndex &index) override
     {
         ++unbound;
         lastUnboundWidget = widget;
@@ -473,7 +473,7 @@ public:
             ++nonCanonicalUnbinds;
     }
 
-    QSize estimatedSize(const QModelIndex &) const override { return QSize(400, kRowHeight); }
+    QSize estimatedSize(viv::WidgetType, const QModelIndex &) const override { return QSize(400, kRowHeight); }
 
     int created = 0;
     int bound = 0;
@@ -610,9 +610,9 @@ public:
         return new PaintedRowWidget(parent, m_columnCount);
     }
 
-    void bindWidget(QWidget *, const QModelIndex &) override {}
+    void bindWidget(viv::WidgetType, QWidget *, const QModelIndex &) override {}
 
-    QSize estimatedSize(const QModelIndex &) const override
+    QSize estimatedSize(viv::WidgetType, const QModelIndex &) const override
     {
         return QSize(kColumnWidth * 2, kRowHeight);
     }

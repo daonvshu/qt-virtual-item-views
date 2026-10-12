@@ -64,20 +64,20 @@ public:
         return widget;
     }
 
-    void bindWidget(QWidget *widget, const QModelIndex &index) override
+    void bindWidget(viv::WidgetType, QWidget *widget, const QModelIndex &index) override
     {
         if (auto *label = widget->findChild<QLabel *>(QStringLiteral("rowLabel")))
             label->setText(index.data(Qt::DisplayRole).toString());
     }
 
-    void unbindWidget(QWidget *widget, const QModelIndex &index) override
+    void unbindWidget(viv::WidgetType, QWidget *widget, const QModelIndex &index) override
     {
         Q_UNUSED(index);
         if (auto *label = widget->findChild<QLabel *>(QStringLiteral("rowLabel")))
             label->clear();
     }
 
-    QSize estimatedSize(const QModelIndex &index) const override
+    QSize estimatedSize(viv::WidgetType, const QModelIndex &index) const override
     {
         Q_UNUSED(index);
         return QSize(500, kRowHeight);

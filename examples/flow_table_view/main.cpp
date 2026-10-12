@@ -124,15 +124,15 @@ class Adapter : public viv::WidgetAdapter
 public:
     explicit Adapter(vivdemo::ImageBackend *thumbnails) : m_thumbnails(thumbnails) {}
     QWidget *createWidget(viv::WidgetType, QWidget *parent) override { return new ItemWidget(m_thumbnails, parent); }
-    void bindWidget(QWidget *widget, const QModelIndex &index) override
+    void bindWidget(viv::WidgetType, QWidget *widget, const QModelIndex &index) override
     {
         static_cast<ItemWidget *>(widget)->bind(index);
     }
-    void unbindWidget(QWidget *widget, const QModelIndex &) override
+    void unbindWidget(viv::WidgetType, QWidget *widget, const QModelIndex &) override
     {
         static_cast<ItemWidget *>(widget)->unbind();
     }
-    QSize estimatedSize(const QModelIndex &) const override { return QSize(150, 100); }
+    QSize estimatedSize(viv::WidgetType, const QModelIndex &) const override { return QSize(150, 100); }
 private:
     vivdemo::ImageBackend *m_thumbnails;
 };

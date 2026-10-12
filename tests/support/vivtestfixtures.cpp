@@ -312,7 +312,7 @@ QWidget *TestAdapter::createWidget(viv::WidgetType type, QWidget *parent)
     return widget;
 }
 
-void TestAdapter::bindWidget(QWidget *widget, const QModelIndex &index)
+void TestAdapter::bindWidget(viv::WidgetType, QWidget *widget, const QModelIndex &index)
 {
     auto *row = static_cast<TestRowWidget *>(widget);
     const QString text = index.data(Qt::DisplayRole).toString();
@@ -329,7 +329,7 @@ void TestAdapter::bindWidget(QWidget *widget, const QModelIndex &index)
     m_log.append(QStringLiteral("bind %1").arg(index.row()));
 }
 
-void TestAdapter::unbindWidget(QWidget *widget, const QModelIndex &index)
+void TestAdapter::unbindWidget(viv::WidgetType, QWidget *widget, const QModelIndex &index)
 {
     auto *row = static_cast<TestRowWidget *>(widget);
     // Stop everything that is tied to the old index: the label must not keep
@@ -342,7 +342,7 @@ void TestAdapter::unbindWidget(QWidget *widget, const QModelIndex &index)
     m_boundIndex.remove(widget);
 }
 
-QSize TestAdapter::estimatedSize(const QModelIndex &index) const
+QSize TestAdapter::estimatedSize(viv::WidgetType, const QModelIndex &index) const
 {
     if (m_heightProvider)
         return QSize(200, m_heightProvider(index));

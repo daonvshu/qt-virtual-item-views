@@ -63,7 +63,7 @@ public:
         return new TableRowWidget(parent, m_columnCount);
     }
 
-    void bindWidget(QWidget *widget, const QModelIndex &index) override
+    void bindWidget(viv::WidgetType, QWidget *widget, const QModelIndex &index) override
     {
         auto *row = static_cast<TableRowWidget *>(widget);
         for (int column = 0; column < m_columnCount; ++column) {
@@ -72,7 +72,7 @@ public:
         }
     }
 
-    void unbindWidget(QWidget *widget, const QModelIndex &index) override
+    void unbindWidget(viv::WidgetType, QWidget *widget, const QModelIndex &index) override
     {
         Q_UNUSED(index);
         auto *row = static_cast<TableRowWidget *>(widget);
@@ -80,7 +80,7 @@ public:
             row->label(column)->setText(QString());
     }
 
-    QSize estimatedSize(const QModelIndex &index) const override
+    QSize estimatedSize(viv::WidgetType, const QModelIndex &index) const override
     {
         Q_UNUSED(index);
         return QSize(400, kRowHeight);

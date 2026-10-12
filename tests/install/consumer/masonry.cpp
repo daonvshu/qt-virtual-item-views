@@ -13,11 +13,11 @@ class Adapter : public viv::WidgetAdapter
 {
 public:
     QWidget *createWidget(viv::WidgetType, QWidget *parent) override { return new QLabel(parent); }
-    void bindWidget(QWidget *widget, const QModelIndex &index) override
+    void bindWidget(viv::WidgetType, QWidget *widget, const QModelIndex &index) override
     {
         static_cast<QLabel *>(widget)->setText(index.data().toString());
     }
-    QSize estimatedSize(const QModelIndex &) const override { return QSize(160, 100); }
+    QSize estimatedSize(viv::WidgetType, const QModelIndex &) const override { return QSize(160, 100); }
 };
 
 } // namespace

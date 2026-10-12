@@ -550,7 +550,17 @@ void VirtualMasonryView::applyPendingItemSizes()
         const qsizetype item = viewItemForIndex(index);
         if (item < 0)
             continue;
-        const QSize size = activeAdapter->estimatedSize(index);
+        const WidgetType type = activeAdapter->widgetType(index);
+        if (!self || !activeModel || model() != activeModel.data()
+            || adapter() != activeAdapter || revision != m_revision) {
+            if (self && activeModel && model() == activeModel.data()
+                && adapter() == activeAdapter && m_root == root) {
+                for (const QPersistentModelIndex &retry : std::as_const(pending))
+                    invalidateItemSize(retry);
+            }
+            return;
+        }
+        const QSize size = activeAdapter->estimatedSize(type, index);
         if (!self || !activeModel || model() != activeModel.data()
             || adapter() != activeAdapter || revision != m_revision) {
             if (self && activeModel && model() == activeModel.data()
@@ -1083,7 +1093,12 @@ void VirtualMasonryView::refreshAdapterEstimates(const ScrollAnchor &preservedAn
     QVector<QSize> estimates;
     estimates.reserve(int(count));
     for (qsizetype row = 0; row < count; ++row) {
-        const QSize size = activeAdapter->estimatedSize(viewIndex(row));
+        const QModelIndex index = viewIndex(row);
+        const WidgetType type = activeAdapter->widgetType(index);
+        if (!self || !activeModel || model() != activeModel.data()
+            || adapter() != activeAdapter || revision != m_revision)
+            return;
+        const QSize size = activeAdapter->estimatedSize(type, index);
         if (!self || !activeModel || model() != activeModel.data()
             || adapter() != activeAdapter || revision != m_revision)
             return;

@@ -81,8 +81,8 @@ class RowAdapter : public TableWidgetAdapter
 {
 public:
     QWidget *createWidget(WidgetType, QWidget *parent) override { return new QWidget(parent); }
-    void bindWidget(QWidget *, const QModelIndex &) override {}
-    QSize estimatedSize(const QModelIndex &) const override { return QSize(0, 28); }
+    void bindWidget(viv::WidgetType, QWidget *, const QModelIndex &) override {}
+    QSize estimatedSize(viv::WidgetType, const QModelIndex &) const override { return QSize(0, 28); }
 };
 
 class PinWarningCapture
@@ -408,13 +408,13 @@ class MeasuredRowAdapter : public TableWidgetAdapter
 {
 public:
     QWidget *createWidget(WidgetType, QWidget *parent) override { return new MeasuredRow(parent); }
-    void bindWidget(QWidget *widget, const QModelIndex &index) override
+    void bindWidget(viv::WidgetType, QWidget *widget, const QModelIndex &index) override
     {
         const int height = index.data(Qt::UserRole).toInt();
         widget->setProperty("hintHeight", height > 0 ? height : 28);
         widget->updateGeometry();
     }
-    QSize estimatedSize(const QModelIndex &) const override { return QSize(0, 28); }
+    QSize estimatedSize(viv::WidgetType, const QModelIndex &) const override { return QSize(0, 28); }
 };
 
 class ColoredHost : public ColumnHost
@@ -473,8 +473,8 @@ public:
         return widget;
     }
 
-    void bindWidget(QWidget *, const QModelIndex &) override {}
-    QSize estimatedSize(const QModelIndex &) const override { return QSize(0, 28); }
+    void bindWidget(viv::WidgetType, QWidget *, const QModelIndex &) override {}
+    QSize estimatedSize(viv::WidgetType, const QModelIndex &) const override { return QSize(0, 28); }
 
 private:
     int m_columns = 3;
@@ -490,9 +490,9 @@ public:
         return new HostedRow(m_columns, parent);
     }
 
-    void bindWidget(QWidget *, const QModelIndex &) override {}
+    void bindWidget(viv::WidgetType, QWidget *, const QModelIndex &) override {}
 
-    QSize estimatedSize(const QModelIndex &) const override { return QSize(0, 28); }
+    QSize estimatedSize(viv::WidgetType, const QModelIndex &) const override { return QSize(0, 28); }
 
     void layoutRowWidget(QWidget *, const QModelIndex &rowIndex,
                          const TableRowLayoutContext &context) override
@@ -536,13 +536,13 @@ public:
         return widget;
     }
 
-    void bindWidget(QWidget *widget, const QModelIndex &index) override
+    void bindWidget(viv::WidgetType, QWidget *widget, const QModelIndex &index) override
     {
         widget->setProperty("boundIndex", QVariant::fromValue(QPersistentModelIndex(index)));
         widget->findChild<QLineEdit *>()->setText(index.siblingAtColumn(1).data().toString());
     }
 
-    QSize estimatedSize(const QModelIndex &) const override { return QSize(0, 28); }
+    QSize estimatedSize(viv::WidgetType, const QModelIndex &) const override { return QSize(0, 28); }
 };
 
 class EditorCellAdapter : public CellWidgetAdapter
@@ -571,12 +571,12 @@ public:
         editor->setGeometry(0, 0, 90, 24);
         return widget;
     }
-    void bindWidget(QWidget *widget, const QModelIndex &index) override
+    void bindWidget(viv::WidgetType, QWidget *widget, const QModelIndex &index) override
     {
         widget->setProperty("boundIndex", QVariant::fromValue(QPersistentModelIndex(index)));
         widget->findChild<QComboBox *>()->setCurrentIndex(0);
     }
-    QSize estimatedSize(const QModelIndex &) const override { return QSize(0, 28); }
+    QSize estimatedSize(viv::WidgetType, const QModelIndex &) const override { return QSize(0, 28); }
 };
 
 class PopupCellAdapter : public CellWidgetAdapter
@@ -643,19 +643,19 @@ public:
         return widget;
     }
 
-    void bindWidget(QWidget *widget, const QModelIndex &index) override
+    void bindWidget(viv::WidgetType, QWidget *widget, const QModelIndex &index) override
     {
         widget->setProperty("boundText", index.data());
         probe->invoke(CallbackStage::Bind);
         probe->invokeWidget(CallbackStage::Bind, widget);
     }
 
-    void unbindWidget(QWidget *, const QModelIndex &) override
+    void unbindWidget(viv::WidgetType, QWidget *, const QModelIndex &) override
     {
         probe->invoke(CallbackStage::Unbind);
     }
 
-    void visualStateChanged(QWidget *, const QModelIndex &) override
+    void visualStateChanged(viv::WidgetType, QWidget *, const QModelIndex &) override
     {
         probe->invoke(CallbackStage::State);
     }
@@ -665,7 +665,7 @@ public:
         probe->invoke(CallbackStage::Layout);
     }
 
-    QSize estimatedSize(const QModelIndex &) const override { return QSize(0, 28); }
+    QSize estimatedSize(viv::WidgetType, const QModelIndex &) const override { return QSize(0, 28); }
 
     CallbackProbe *probe;
     int owner;
@@ -717,7 +717,7 @@ public:
     AdapterDeletingRowAdapter(CallbackProbe *probe, int owner)
         : CallbackRowAdapter(probe, owner) {}
 
-    void bindWidget(QWidget *, const QModelIndex &) override
+    void bindWidget(viv::WidgetType, QWidget *, const QModelIndex &) override
     {
         // The callback may delete this adapter; keep it as the final operation.
         probe->invoke(CallbackStage::Bind);

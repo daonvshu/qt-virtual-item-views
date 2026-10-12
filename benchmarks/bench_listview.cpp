@@ -69,12 +69,12 @@ public:
         return new BenchRowWidget(parent);
     }
 
-    void bindWidget(QWidget *widget, const QModelIndex &index) override
+    void bindWidget(viv::WidgetType, QWidget *widget, const QModelIndex &index) override
     {
         static_cast<BenchRowWidget *>(widget)->setText(index.data(Qt::DisplayRole).toString());
     }
 
-    QSize estimatedSize(const QModelIndex &index) const override
+    QSize estimatedSize(viv::WidgetType, const QModelIndex &index) const override
     {
         Q_UNUSED(index);
         return QSize(400, 24);
@@ -288,12 +288,12 @@ public:
         return new BenchTableRowWidget(parent);
     }
 
-    void bindWidget(QWidget *widget, const QModelIndex &index) override
+    void bindWidget(viv::WidgetType, QWidget *widget, const QModelIndex &index) override
     {
         static_cast<BenchTableRowWidget *>(widget)->setText(index.data().toString());
     }
 
-    QSize estimatedSize(const QModelIndex &) const override { return QSize(200, 24); }
+    QSize estimatedSize(viv::WidgetType, const QModelIndex &) const override { return QSize(200, 24); }
 
     int created = 0;
 };

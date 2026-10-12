@@ -71,7 +71,7 @@ public:
         widget->editor->report = report;
         return widget;
     }
-    void bindWidget(QWidget *widget, const QModelIndex &index) override
+    void bindWidget(viv::WidgetType, QWidget *widget, const QModelIndex &index) override
     {
         auto *row = static_cast<InputRow *>(widget);
         row->labels[0]->setText(index.data().toString());
@@ -79,7 +79,7 @@ public:
         row->editor->boundIndex = index.siblingAtColumn(1);
         row->editor->setText(row->editor->boundIndex.data().toString());
     }
-    QSize estimatedSize(const QModelIndex &) const override { return QSize(0, 36); }
+    QSize estimatedSize(viv::WidgetType, const QModelIndex &) const override { return QSize(0, 36); }
 };
 
 class CellAdapter : public viv::CellWidgetAdapter

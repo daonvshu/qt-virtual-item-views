@@ -63,8 +63,8 @@ class RowAdapter : public TableWidgetAdapter
 {
 public:
     QWidget *createWidget(WidgetType, QWidget *parent) override { return new QLabel(parent); }
-    void bindWidget(QWidget *, const QModelIndex &) override {}
-    QSize estimatedSize(const QModelIndex &) const override { return QSize(400, kRowHeight); }
+    void bindWidget(viv::WidgetType, QWidget *, const QModelIndex &) override {}
+    QSize estimatedSize(viv::WidgetType, const QModelIndex &) const override { return QSize(400, kRowHeight); }
 };
 
 class CellAdapter : public CellWidgetAdapter

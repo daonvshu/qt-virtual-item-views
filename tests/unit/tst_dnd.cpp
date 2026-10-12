@@ -51,17 +51,17 @@ public:
         return new RowWidget(parent);
     }
 
-    void bindWidget(QWidget *widget, const QModelIndex &index) override
+    void bindWidget(viv::WidgetType, QWidget *widget, const QModelIndex &index) override
     {
         static_cast<RowWidget *>(widget)->setText(index.data(Qt::DisplayRole).toString());
     }
 
-    void unbindWidget(QWidget *widget, const QModelIndex &) override
+    void unbindWidget(viv::WidgetType, QWidget *widget, const QModelIndex &) override
     {
         static_cast<RowWidget *>(widget)->setText(QString());
     }
 
-    QSize estimatedSize(const QModelIndex &) const override
+    QSize estimatedSize(viv::WidgetType, const QModelIndex &) const override
     {
         return QSize(kViewWidth, kRowHeight);
     }
@@ -73,17 +73,17 @@ class TableRowAdapter : public TableWidgetAdapter
 public:
     QWidget *createWidget(WidgetType, QWidget *parent) override { return new RowWidget(parent); }
 
-    void bindWidget(QWidget *widget, const QModelIndex &index) override
+    void bindWidget(viv::WidgetType, QWidget *widget, const QModelIndex &index) override
     {
         static_cast<RowWidget *>(widget)->setText(index.data(Qt::DisplayRole).toString());
     }
 
-    void unbindWidget(QWidget *widget, const QModelIndex &) override
+    void unbindWidget(viv::WidgetType, QWidget *widget, const QModelIndex &) override
     {
         static_cast<RowWidget *>(widget)->setText(QString());
     }
 
-    QSize estimatedSize(const QModelIndex &) const override
+    QSize estimatedSize(viv::WidgetType, const QModelIndex &) const override
     {
         return QSize(kViewWidth, kRowHeight);
     }

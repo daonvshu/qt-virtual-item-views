@@ -27,11 +27,11 @@ class MasonryAdapter : public viv::WidgetAdapter
 {
 public:
     QWidget *createWidget(viv::WidgetType, QWidget *parent) override { return new QLabel(parent); }
-    void bindWidget(QWidget *widget, const QModelIndex &index) override
+    void bindWidget(viv::WidgetType, QWidget *widget, const QModelIndex &index) override
     {
         static_cast<QLabel *>(widget)->setText(index.data().toString());
     }
-    QSize estimatedSize(const QModelIndex &) const override { return QSize(120, 80); }
+    QSize estimatedSize(viv::WidgetType, const QModelIndex &) const override { return QSize(120, 80); }
 };
 
 class EstimatedAdapter : public MasonryAdapter
@@ -41,7 +41,7 @@ public:
     int sizeMultiplier = 1;
     mutable std::function<void()> onEstimate;
 
-    QSize estimatedSize(const QModelIndex &index) const override
+    QSize estimatedSize(viv::WidgetType, const QModelIndex &index) const override
     {
         ++estimateCalls;
         const QSize sourceSize = index.data(Qt::UserRole).toSize();
@@ -60,7 +60,7 @@ public:
     int childUnbinds = 0;
     bool invalidUnbind = false;
 
-    void unbindWidget(QWidget *, const QModelIndex &index) override
+    void unbindWidget(viv::WidgetType, QWidget *, const QModelIndex &index) override
     {
         invalidUnbind = invalidUnbind || !index.isValid();
         if (index.data().toString().startsWith(QStringLiteral("child-")))
@@ -87,14 +87,14 @@ public:
         widget->setProperty("columnType", type);
         return widget;
     }
-    void bindWidget(QWidget *widget, const QModelIndex &index) override
+    void bindWidget(viv::WidgetType type, QWidget *widget, const QModelIndex &index) override
     {
         badBinding = badBinding || !index.isValid() || index.column() != 0
             || widget->property("columnType").toInt() != widgetType(index);
         bindings.insert(widget, QPersistentModelIndex(index));
-        MasonryAdapter::bindWidget(widget, index);
+        MasonryAdapter::bindWidget(type, widget, index);
     }
-    void unbindWidget(QWidget *widget, const QModelIndex &index) override
+    void unbindWidget(viv::WidgetType, QWidget *widget, const QModelIndex &index) override
     {
         ++unbinds;
         badBinding = badBinding || !index.isValid() || !bindings.contains(widget)

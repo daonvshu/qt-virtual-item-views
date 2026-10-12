@@ -31,28 +31,31 @@ public:
     virtual QWidget *createWidget(WidgetType type, QWidget *parent) = 0;
 
     /// Fills \a widget with the data of \a index. Called before the widget is
-    /// shown, so implementations must not rely on being visible yet.
-    virtual void bindWidget(QWidget *widget, const QModelIndex &index) = 0;
+    /// shown, so implementations must not rely on being visible yet. The type
+    /// is the recycler type used to create this widget, not a new classification.
+    virtual void bindWidget(WidgetType type, QWidget *widget, const QModelIndex &index) = 0;
 
     /// Called after binding and when hover or selection changes. The widget can
     /// query the view's visualState() and paint its own background.
-    virtual void visualStateChanged(QWidget *widget, const QModelIndex &index)
+    virtual void visualStateChanged(WidgetType type, QWidget *widget, const QModelIndex &index)
     {
+        Q_UNUSED(type);
         Q_UNUSED(index);
         widget->update();
     }
 
     /// Detaches \a widget from \a index. Called before the widget is hidden and
     /// recycled, and before a widget is rebound to another index.
-    virtual void unbindWidget(QWidget *widget, const QModelIndex &index)
+    virtual void unbindWidget(WidgetType type, QWidget *widget, const QModelIndex &index)
     {
+        Q_UNUSED(type);
         Q_UNUSED(widget);
         Q_UNUSED(index);
     }
 
     /// Estimated size of an index before it is materialized. Used for newly
-    /// inserted rows in variable-height layouts.
-    virtual QSize estimatedSize(const QModelIndex &index) const = 0;
+    /// inserted rows in variable-height layouts. The type is widgetType(index).
+    virtual QSize estimatedSize(WidgetType type, const QModelIndex &index) const = 0;
 };
 
 } // namespace viv

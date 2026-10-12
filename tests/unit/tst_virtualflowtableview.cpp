@@ -150,14 +150,14 @@ class EditorAdapter : public viv::WidgetAdapter
 {
 public:
     QWidget *createWidget(viv::WidgetType, QWidget *parent) override { return new QLineEdit(parent); }
-    QSize estimatedSize(const QModelIndex &) const override { return QSize(100, 32); }
-    void bindWidget(QWidget *widget, const QModelIndex &index) override
+    QSize estimatedSize(viv::WidgetType, const QModelIndex &) const override { return QSize(100, 32); }
+    void bindWidget(viv::WidgetType, QWidget *widget, const QModelIndex &index) override
     {
         if (bindings.value(widget) != index)
             static_cast<QLineEdit *>(widget)->setText(index.data().toString());
         bindings.insert(widget, QPersistentModelIndex(index));
     }
-    void unbindWidget(QWidget *widget, const QModelIndex &) override { bindings.remove(widget); }
+    void unbindWidget(viv::WidgetType, QWidget *widget, const QModelIndex &) override { bindings.remove(widget); }
     QHash<QWidget *, QPersistentModelIndex> bindings;
 };
 
@@ -197,16 +197,16 @@ public:
         widget->setPalette(palette);
         return widget;
     }
-    void bindWidget(QWidget *, const QModelIndex &) override {}
-    QSize estimatedSize(const QModelIndex &) const override { return QSize(100, 30); }
+    void bindWidget(viv::WidgetType, QWidget *, const QModelIndex &) override {}
+    QSize estimatedSize(viv::WidgetType, const QModelIndex &) const override { return QSize(100, 30); }
 };
 
 class ReentrantAdapter : public vivtest::TestAdapter
 {
 public:
-    void bindWidget(QWidget *widget, const QModelIndex &index) override
+    void bindWidget(viv::WidgetType type, QWidget *widget, const QModelIndex &index) override
     {
-        TestAdapter::bindWidget(widget, index);
+        TestAdapter::bindWidget(type, widget, index);
         if (callback) {
             auto action = std::move(callback);
             callback = {};

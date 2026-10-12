@@ -105,9 +105,9 @@ public:
 
     viv::WidgetType widgetType(const QModelIndex &index) const override;
     QWidget *createWidget(viv::WidgetType type, QWidget *parent) override;
-    void bindWidget(QWidget *widget, const QModelIndex &index) override;
-    void unbindWidget(QWidget *widget, const QModelIndex &index) override;
-    QSize estimatedSize(const QModelIndex &index) const override;
+    void bindWidget(viv::WidgetType, QWidget *widget, const QModelIndex &index) override;
+    void unbindWidget(viv::WidgetType, QWidget *widget, const QModelIndex &index) override;
+    QSize estimatedSize(viv::WidgetType, const QModelIndex &index) const override;
 
     int createdCount() const { return m_createdCount; }
     int bindCount() const { return m_bindCount; }

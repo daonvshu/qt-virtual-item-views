@@ -34,17 +34,17 @@ public:
         return new TestRowWidget(parent, kRowHeight);
     }
 
-    void bindWidget(QWidget *widget, const QModelIndex &index) override
+    void bindWidget(viv::WidgetType, QWidget *widget, const QModelIndex &index) override
     {
         static_cast<TestRowWidget *>(widget)->setText(index.data(Qt::DisplayRole).toString());
     }
 
-    void unbindWidget(QWidget *widget, const QModelIndex &) override
+    void unbindWidget(viv::WidgetType, QWidget *widget, const QModelIndex &) override
     {
         static_cast<TestRowWidget *>(widget)->setText(QString());
     }
 
-    QSize estimatedSize(const QModelIndex &) const override
+    QSize estimatedSize(viv::WidgetType, const QModelIndex &) const override
     {
         return QSize(kColumnWidth * m_columnCount, kRowHeight);
     }
@@ -112,10 +112,10 @@ public:
         return new SpanRowWidget(parent, m_columnCount);
     }
 
-    void bindWidget(QWidget *, const QModelIndex &) override {}
-    void unbindWidget(QWidget *, const QModelIndex &) override {}
+    void bindWidget(viv::WidgetType, QWidget *, const QModelIndex &) override {}
+    void unbindWidget(viv::WidgetType, QWidget *, const QModelIndex &) override {}
 
-    QSize estimatedSize(const QModelIndex &) const override
+    QSize estimatedSize(viv::WidgetType, const QModelIndex &) const override
     {
         return QSize(kColumnWidth * m_columnCount, kRowHeight);
     }

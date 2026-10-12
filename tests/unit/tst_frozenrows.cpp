@@ -51,9 +51,9 @@ public:
     {
         return new FrozenRowWidget(parent);
     }
-    void bindWidget(QWidget *, const QModelIndex &) override {}
-    void unbindWidget(QWidget *, const QModelIndex &) override {}
-    QSize estimatedSize(const QModelIndex &) const override
+    void bindWidget(viv::WidgetType, QWidget *, const QModelIndex &) override {}
+    void unbindWidget(viv::WidgetType, QWidget *, const QModelIndex &) override {}
+    QSize estimatedSize(viv::WidgetType, const QModelIndex &) const override
     {
         return QSize(kColumnWidth * kColumns, kRowHeight);
     }

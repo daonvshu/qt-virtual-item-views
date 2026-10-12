@@ -35,13 +35,13 @@ class ListAdapterA : public WidgetAdapter
 {
 public:
     QWidget *createWidget(WidgetType, QWidget *parent) override { return new ListWidgetA(parent); }
-    void bindWidget(QWidget *widget, const QModelIndex &) override
+    void bindWidget(viv::WidgetType, QWidget *widget, const QModelIndex &) override
     {
         if (!dynamic_cast<ListWidgetA *>(widget))
             ++foreignWidgets;
         ++bound;
     }
-    QSize estimatedSize(const QModelIndex &) const override { return QSize(200, 24); }
+    QSize estimatedSize(viv::WidgetType, const QModelIndex &) const override { return QSize(200, 24); }
 
     int bound = 0;
     int foreignWidgets = 0;
@@ -51,7 +51,7 @@ class ListAdapterB : public ListAdapterA
 {
 public:
     QWidget *createWidget(WidgetType, QWidget *parent) override { return new ListWidgetB(parent); }
-    void bindWidget(QWidget *widget, const QModelIndex &) override
+    void bindWidget(viv::WidgetType, QWidget *widget, const QModelIndex &) override
     {
         // A widget of the previous adapter's class must never end up here.
         if (!dynamic_cast<ListWidgetB *>(widget))
@@ -79,12 +79,12 @@ public:
     {
         return new OwnedRowWidget(parent);
     }
-    void bindWidget(QWidget *, const QModelIndex &) override
+    void bindWidget(viv::WidgetType, QWidget *, const QModelIndex &) override
     {
         ++bound;
         ++liveWidgets;                // one widget currently carries data
     }
-    void unbindWidget(QWidget *, const QModelIndex &) override
+    void unbindWidget(viv::WidgetType, QWidget *, const QModelIndex &) override
     {
         if (destroyed)
             ++unboundAfterDestruction;
@@ -92,7 +92,7 @@ public:
         --liveWidgets;
         ++unboundTotal;
     }
-    QSize estimatedSize(const QModelIndex &) const override { return QSize(200, 30); }
+    QSize estimatedSize(viv::WidgetType, const QModelIndex &) const override { return QSize(200, 30); }
 
     /// Static counters: the view owns this adapter, so the test has to be able to
     /// read the result *after* the adapter was deleted.
@@ -114,13 +114,13 @@ class OtherTableAdapter : public TableWidgetAdapter
 {
 public:
     QWidget *createWidget(WidgetType, QWidget *parent) override { return new QWidget(parent); }
-    void bindWidget(QWidget *widget, const QModelIndex &) override
+    void bindWidget(viv::WidgetType, QWidget *widget, const QModelIndex &) override
     {
         if (dynamic_cast<OwnedRowWidget *>(widget))
             ++foreignWidgets;
         ++bound;
     }
-    QSize estimatedSize(const QModelIndex &) const override { return QSize(200, 30); }
+    QSize estimatedSize(viv::WidgetType, const QModelIndex &) const override { return QSize(200, 30); }
 
     int bound = 0;
     int foreignWidgets = 0;
@@ -204,19 +204,19 @@ class CountingListAdapter : public WidgetAdapter
 {
 public:
     QWidget *createWidget(WidgetType, QWidget *parent) override { return new QLabel(parent); }
-    void bindWidget(QWidget *widget, const QModelIndex &) override
+    void bindWidget(viv::WidgetType, QWidget *widget, const QModelIndex &) override
     {
         ++bound;
         // A dataChanged rebinds the same widget without an unbind first, so the
         // "still bound" state is per widget, not a counter.
         m_boundWidgets.insert(widget);
     }
-    void unbindWidget(QWidget *widget, const QModelIndex &) override
+    void unbindWidget(viv::WidgetType, QWidget *widget, const QModelIndex &) override
     {
         ++unbound;
         m_boundWidgets.remove(widget);
     }
-    QSize estimatedSize(const QModelIndex &) const override { return QSize(200, 24); }
+    QSize estimatedSize(viv::WidgetType, const QModelIndex &) const override { return QSize(200, 24); }
 
     int boundWidgetCount() const { return m_boundWidgets.size(); }
 

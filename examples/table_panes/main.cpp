@@ -110,7 +110,7 @@ public:
         return new PaneRowWidget(parent);
     }
 
-    void bindWidget(QWidget *widget, const QModelIndex &index) override
+    void bindWidget(viv::WidgetType, QWidget *widget, const QModelIndex &index) override
     {
         static_cast<PaneRowWidget *>(widget)->bind(index);
     }
@@ -125,7 +125,7 @@ public:
         }
     }
 
-    QSize estimatedSize(const QModelIndex &) const override
+    QSize estimatedSize(viv::WidgetType, const QModelIndex &) const override
     {
         return QSize(kColumnWidth * kColumns, kRowHeight);
     }

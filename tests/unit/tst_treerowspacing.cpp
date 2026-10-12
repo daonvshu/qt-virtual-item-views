@@ -20,14 +20,14 @@ public:
     {
         return new QLabel(parent);
     }
-    void bindWidget(QWidget *widget, const QModelIndex &index) override
+    void bindWidget(viv::WidgetType, QWidget *widget, const QModelIndex &index) override
     {
         static_cast<QLabel *>(widget)->setText(index.data().toString());
         const QColor color = index.data(Qt::BackgroundRole).value<QColor>();
         widget->setStyleSheet(color.isValid()
             ? QStringLiteral("background-color: %1;").arg(color.name()) : QString());
     }
-    QSize estimatedSize(const QModelIndex &) const override { return QSize(200, 24); }
+    QSize estimatedSize(viv::WidgetType, const QModelIndex &) const override { return QSize(200, 24); }
 };
 
 class RoundedBackgroundTable : public viv::VirtualTableView

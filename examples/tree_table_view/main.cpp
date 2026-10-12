@@ -53,12 +53,12 @@ public:
         return new TreeTableRow(parent);
     }
 
-    void bindWidget(QWidget *widget, const QModelIndex &index) override
+    void bindWidget(viv::WidgetType, QWidget *widget, const QModelIndex &index) override
     {
         static_cast<TreeTableRow *>(widget)->bind(index);
     }
 
-    QSize estimatedSize(const QModelIndex &) const override { return QSize(0, 32); }
+    QSize estimatedSize(viv::WidgetType, const QModelIndex &) const override { return QSize(0, 32); }
 };
 
 class TreeTableCellAdapter : public viv::CellWidgetAdapter

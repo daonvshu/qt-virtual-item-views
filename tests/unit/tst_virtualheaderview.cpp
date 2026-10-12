@@ -77,9 +77,9 @@ class PlainRowAdapter : public TableWidgetAdapter
 {
 public:
     QWidget *createWidget(WidgetType, QWidget *parent) override { return new QWidget(parent); }
-    void bindWidget(QWidget *, const QModelIndex &) override {}
-    void unbindWidget(QWidget *, const QModelIndex &) override {}
-    QSize estimatedSize(const QModelIndex &) const override { return QSize(640, 24); }
+    void bindWidget(viv::WidgetType, QWidget *, const QModelIndex &) override {}
+    void unbindWidget(viv::WidgetType, QWidget *, const QModelIndex &) override {}
+    QSize estimatedSize(viv::WidgetType, const QModelIndex &) const override { return QSize(640, 24); }
 };
 
 /// Row adapter that gives every column a framework-managed ColumnHost, so the *body*
@@ -101,9 +101,9 @@ public:
         return row;
     }
 
-    void bindWidget(QWidget *, const QModelIndex &) override {}
-    void unbindWidget(QWidget *, const QModelIndex &) override {}
-    QSize estimatedSize(const QModelIndex &) const override { return QSize(640, 24); }
+    void bindWidget(viv::WidgetType, QWidget *, const QModelIndex &) override {}
+    void unbindWidget(viv::WidgetType, QWidget *, const QModelIndex &) override {}
+    QSize estimatedSize(viv::WidgetType, const QModelIndex &) const override { return QSize(640, 24); }
 
     /// x of one column host inside \a rowWidget. The row widget covers the viewport, so
     /// this is the same x space the header sections report.

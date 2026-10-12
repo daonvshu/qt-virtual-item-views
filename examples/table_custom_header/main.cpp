@@ -129,12 +129,12 @@ public:
         return new RowWidget(parent, m_columnCount);
     }
 
-    void bindWidget(QWidget *widget, const QModelIndex &index) override
+    void bindWidget(viv::WidgetType, QWidget *widget, const QModelIndex &index) override
     {
         static_cast<RowWidget *>(widget)->bind(index);
     }
 
-    QSize estimatedSize(const QModelIndex &) const override
+    QSize estimatedSize(viv::WidgetType, const QModelIndex &) const override
     {
         return QSize(400, kRowHeight);
     }

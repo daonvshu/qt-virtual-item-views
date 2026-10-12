@@ -29,7 +29,7 @@ table.setVisualStateAnimationDuration(180);
 const auto state = table.visualState(model.index(2, 1));
 ```
 
-在行控件模式中，`TableWidgetAdapter::visualStateChanged(widget, rowIndex)` 通知整行控件重绘。若按格着色，在行控件的 `paintEvent()` 中逐列查询 `table.visualState(QModelIndex(rowIndex).siblingAtColumn(column))`，再按该列当前的 `columnGeometry(column)` 画背景；列顺序、宽度和冻结位置都应取当前几何。下面是关键绘制部分，`rowIndex` 是绑定时保存的 `QPersistentModelIndex`，`table` 是当前视图：
+在行控件模式中，`TableWidgetAdapter::visualStateChanged(type, widget, rowIndex)` 通知整行控件重绘。若按格着色，在行控件的 `paintEvent()` 中逐列查询 `table.visualState(QModelIndex(rowIndex).siblingAtColumn(column))`，再按该列当前的 `columnGeometry(column)` 画背景；列顺序、宽度和冻结位置都应取当前几何。下面是关键绘制部分，`rowIndex` 是绑定时保存的 `QPersistentModelIndex`，`table` 是当前视图：
 
 ```cpp
 QPainter painter(this);
@@ -152,13 +152,13 @@ public:
     {
         return new RowWidget(parent);
     }
-    void bindWidget(QWidget *widget, const QModelIndex &index) override
+    void bindWidget(viv::WidgetType, QWidget *widget, const QModelIndex &index) override
     {
         auto *row = static_cast<RowWidget *>(widget);
         row->name->setText(index.siblingAtColumn(0).data().toString());
         row->progress->setValue(index.siblingAtColumn(1).data().toInt());
     }
-    QSize estimatedSize(const QModelIndex &) const override { return QSize(300, 40); }
+    QSize estimatedSize(viv::WidgetType, const QModelIndex &) const override { return QSize(300, 40); }
 };
 
 QStandardItemModel model(2, 2);
@@ -285,15 +285,15 @@ public:
     {
         return new Row(view, parent);
     }
-    void bindWidget(QWidget *widget, const QModelIndex &index) override
+    void bindWidget(viv::WidgetType, QWidget *widget, const QModelIndex &index) override
     {
         static_cast<Row *>(widget)->bind(index);
     }
-    void unbindWidget(QWidget *widget, const QModelIndex &) override
+    void unbindWidget(viv::WidgetType, QWidget *widget, const QModelIndex &) override
     {
         static_cast<Row *>(widget)->unbindRow();
     }
-    QSize estimatedSize(const QModelIndex &) const override { return QSize(120, 28); }
+    QSize estimatedSize(viv::WidgetType, const QModelIndex &) const override { return QSize(120, 28); }
 
     viv::StyledTableView *view;
 };

@@ -88,7 +88,7 @@ public:
     {
         return new PlatformRow(parent);
     }
-    void bindWidget(QWidget *widget, const QModelIndex &index) override
+    void bindWidget(viv::WidgetType, QWidget *widget, const QModelIndex &index) override
     {
         auto *row = static_cast<PlatformRow *>(widget);
         for (int column : {0, 1, 3})
@@ -96,7 +96,7 @@ public:
         row->editor->setCurrentIndex(row->editor->findText(index.siblingAtColumn(2).data().toString()));
         row->editor->setProperty("boundIndex", QVariant::fromValue(QPersistentModelIndex(index.siblingAtColumn(2))));
     }
-    QSize estimatedSize(const QModelIndex &) const override { return QSize(0, 36); }
+    QSize estimatedSize(viv::WidgetType, const QModelIndex &) const override { return QSize(0, 36); }
 };
 
 class PlatformCells : public viv::CellWidgetAdapter
