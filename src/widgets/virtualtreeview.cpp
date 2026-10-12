@@ -87,6 +87,8 @@ void VirtualTreeView::setModel(QAbstractItemModel *model)
     if (previous)
         disconnect(previous, nullptr, this, nullptr);
 
+    m_siblingBranchCells.clear();
+
     m_visibility->setModel(model);
     m_rootIndex = QModelIndex();
     m_visibility->setRootIndex(m_rootIndex);
@@ -107,6 +109,16 @@ void VirtualTreeView::connectModelSignals(QAbstractItemModel *model)
 {
     if (!model)
         return;
+
+    const auto clearBranchCells = [this]() { m_siblingBranchCells.clear(); };
+    connect(model, &QAbstractItemModel::rowsAboutToBeInserted, this, clearBranchCells);
+    connect(model, &QAbstractItemModel::rowsAboutToBeRemoved, this, clearBranchCells);
+    connect(model, &QAbstractItemModel::rowsAboutToBeMoved, this, clearBranchCells);
+    connect(model, &QAbstractItemModel::columnsAboutToBeInserted, this, clearBranchCells);
+    connect(model, &QAbstractItemModel::columnsAboutToBeRemoved, this, clearBranchCells);
+    connect(model, &QAbstractItemModel::columnsAboutToBeMoved, this, clearBranchCells);
+    connect(model, &QAbstractItemModel::layoutAboutToBeChanged, this, clearBranchCells);
+    connect(model, &QAbstractItemModel::modelAboutToBeReset, this, clearBranchCells);
 
     connect(model, &QAbstractItemModel::dataChanged, this,
             [this](const QModelIndex &, const QModelIndex &, const QVector<int> &roles) {
@@ -169,6 +181,7 @@ void VirtualTreeView::onStructureChanged()
 
 void VirtualTreeView::onColumnStructureChanged()
 {
+    m_siblingBranchCells.clear();
     // Same reason as onStructureChanged(), minus the layout reset: the visible rows are
     // (row, 0) indexes, so a column change re-derives them - but the rows themselves did not
     // move, and their measured heights must survive. The expansion state names cells, not rows,
@@ -184,6 +197,7 @@ void VirtualTreeView::refreshVisibility(bool keepAnchor)
     if (m_updatingVisibility)
         return;
     m_updatingVisibility = true;
+    m_siblingBranchCells.clear();
     if (keepAnchor)
         setPendingAnchor(captureAnchor());
     // The visible row mapping changed: row sizes are keyed by view row, so they
@@ -329,9 +343,31 @@ void VirtualTreeView::setSelectedBackgroundThroughRowSpacing(bool enabled)
     viewport()->update();
 }
 
-int VirtualTreeView::rowGridLineInsetForDepth(int depth) const
+bool VirtualTreeView::hasOwnBranchCell(const QModelIndex &index) const
 {
-    const qint64 cells = m_rowGridLineExtent == RowGridLineExtent::NodeOnly ? qint64(depth) + 1
+    if (m_indentLeafItems || !index.isValid() || !model())
+        return true;
+    const QPersistentModelIndex parent(index.parent());
+    const auto cached = m_siblingBranchCells.constFind(parent);
+    if (cached != m_siblingBranchCells.cend())
+        return cached.value();
+    bool hasBranch = false;
+    const int count = model()->rowCount(parent);
+    for (int row = 0; row < count; ++row) {
+        if (hasChildren(model()->index(row, 0, parent))) {
+            hasBranch = true;
+            break;
+        }
+    }
+    m_siblingBranchCells.insert(parent, hasBranch);
+    return hasBranch;
+}
+
+int VirtualTreeView::rowGridLineInset(const QModelIndex &index) const
+{
+    const int depth = itemDepth(index);
+    const qint64 cells = m_rowGridLineExtent == RowGridLineExtent::NodeOnly
+        ? qint64(depth) + int(hasOwnBranchCell(index))
         : m_rowGridLineExtent == RowGridLineExtent::NodeAndIcon ? qint64(depth) : 0;
     return int(qMin<qint64>(qMax(0, viewport()->width()), qMax<qint64>(0, cells) * m_indentation));
 }
@@ -346,8 +382,8 @@ void VirtualTreeView::configureRowSpacingWidget(QWidget *widget) const
 {
     widget->setProperty("vivShowSpacingLines", m_rowGridLinesVisible);
     widget->setProperty("vivSpacingLineWidth", m_rowGridLineWidth);
-    const int depth = widget->property("vivSpacingDepth").toInt();
-    widget->setProperty("vivSpacingLineLeftInset", rowGridLineInsetForDepth(depth));
+    const QModelIndex index = widget->property("vivSpacingIndex").value<QModelIndex>();
+    widget->setProperty("vivSpacingLineLeftInset", rowGridLineInset(index));
     widget->setProperty("vivFillSpacingBackground", !m_visualStateBackgroundVisible
         || (!m_hoverBackgroundThroughRowSpacing && !m_selectedBackgroundThroughRowSpacing));
 }
@@ -537,6 +573,17 @@ void VirtualTreeView::setIndentation(int pixels)
     relayout();
 }
 
+void VirtualTreeView::setIndentLeafItems(bool enabled)
+{
+    if (m_indentLeafItems == enabled)
+        return;
+    m_expansionTransition->stop();
+    m_indentLeafItems = enabled;
+    m_siblingBranchCells.clear();
+    relayout();
+    viewport()->update();
+}
+
 void VirtualTreeView::setBranchIndicatorsVisible(bool visible)
 {
     if (m_branchIndicatorsVisible == visible)
@@ -591,8 +638,9 @@ QRect VirtualTreeView::geometryForViewRow(qsizetype row) const
     const QRect rowRect = VirtualItemView::geometryForViewRow(row);
     if (!rowRect.isValid())
         return rowRect;
-    // One indentation step per level plus one for the branch indicator.
-    const int left = m_indentation * (itemDepth(viewIndex(row)) + 1);
+    const QModelIndex index = viewIndex(row);
+    // All-leaf sibling groups can share the parent's content inset.
+    const int left = m_indentation * (itemDepth(index) + int(hasOwnBranchCell(index)));
     return QRect(rowRect.x() + left, rowRect.y(), qMax(0, rowRect.width() - left), rowRect.height());
 }
 
@@ -635,6 +683,9 @@ QRect VirtualTreeView::branchCellRect(qsizetype row, int cellDepth) const
 {
     const QRect rowRect = VirtualItemView::geometryForViewRow(row);
     if (!rowRect.isValid() || m_indentation <= 0 || cellDepth < 0)
+        return QRect();
+    const QModelIndex index = viewIndex(row);
+    if (cellDepth == itemDepth(index) && !hasOwnBranchCell(index))
         return QRect();
     return QRect(rowRect.x() + cellDepth * m_indentation, rowRect.y(), m_indentation,
                  rowRect.height());
@@ -698,7 +749,7 @@ void VirtualTreeView::syncRowGridLines()
                 const QRect rowRect = VirtualItemView::geometryForViewRow(row);
                 if (!rowRect.intersects(viewport()->rect()))
                     continue;
-                const int left = rowGridLineInsetForDepth(itemDepth(viewIndex(row)));
+                const int left = rowGridLineInset(viewIndex(row));
                 const QRect lineRect(viewportRect.x() + left,
                                      viewportRect.y() + rowRect.bottom() - m_rowGridLineWidth + 1,
                                      viewportRect.width() - left, m_rowGridLineWidth);
@@ -802,7 +853,7 @@ void VirtualTreeView::paintVisualStateBackgrounds(QPainter *painter, const QRect
             continue;
         const int depth = itemDepth(item.index);
         const qint64 cells = m_visualStateBackgroundExtent == VisualStateBackgroundExtent::NodeOnly
-            ? qint64(depth) + 1
+            ? qint64(depth) + int(hasOwnBranchCell(item.index))
             : m_visualStateBackgroundExtent == VisualStateBackgroundExtent::NodeAndIcon
                 ? qint64(depth) : 0;
         const int left = int(qMin<qint64>(viewportRect.width(),

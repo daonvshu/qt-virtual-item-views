@@ -1912,6 +1912,9 @@ void VirtualItemView::syncRowSpacingWidgets(const QVector<VisibleRange> &ranges)
             return false;
         };
         auto *host = static_cast<RowSpacingHost *>(widget);
+        host->setProperty("vivSpacingIndex", QVariant::fromValue(index));
+        if (!hostIsCurrent())
+            return;
         configureRowSpacingWidget(host);
         if (!hostIsCurrent())
             return;

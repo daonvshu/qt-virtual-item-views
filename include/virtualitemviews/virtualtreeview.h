@@ -69,6 +69,9 @@ public:
     // -- branch UI -----------------------------------------------------------
     void setIndentation(int pixels);
     int indentation() const { return m_indentation; }
+    /// Default true. When false, all-leaf sibling groups omit their own branch cell.
+    void setIndentLeafItems(bool enabled);
+    bool indentLeafItems() const { return m_indentLeafItems; }
     /// Model data on column zero: pixels below this node; missing/negative values
     /// use rowSpacing(). The last visible node has no trailing gap.
     static constexpr int NodeRowSpacingRole = Qt::UserRole + 0x100;
@@ -127,9 +130,10 @@ public:
     // -- branch decoration ---------------------------------------------------
     /// Custom indicator renderer; null (the default) uses the configured icons
     /// or built-in triangle. Icon settings do not affect custom renderers.
-    /// Every cell of every visible row is offered to the renderer, so
+    /// Every retained cell of every visible row is offered to the renderer, so
     /// it can also draw the ancestor connector cells (QTreeView::branch without
-    /// style sheets, see branchindicator.h for the state vocabulary).
+    /// style sheets, see branchindicator.h for the state vocabulary). All-leaf
+    /// groups omit their own cell when indentLeafItems() is false.
     void setBranchIndicatorRenderer(BranchIndicatorRenderer *renderer, bool takeOwnership = false);
     BranchIndicatorRenderer *branchIndicatorRenderer() const { return m_branchRenderer; }
 
@@ -193,8 +197,10 @@ private:
     /// invalidated strip too, so an indicator that scrolled away is erased).
     void invalidateBranchIndicators();
     void syncRowGridLines();
-    /// Left edge of a row line for a node at the given depth.
-    int rowGridLineInsetForDepth(int depth) const;
+    /// Whether this sibling group reserves a cell for its own branch indicators.
+    bool hasOwnBranchCell(const QModelIndex &index) const;
+    /// Left edge of a row line for a node, respecting leaf indentation.
+    int rowGridLineInset(const QModelIndex &index) const;
     /// Paints the indicators of every visible cell into \a painter.
     void paintBranchIndicators(QPainter *painter);
     /// Paints the configured expand/collapse icon or its built-in fallback.
@@ -219,6 +225,8 @@ private:
     ListLayout *m_rowLayout = nullptr;
     QPersistentModelIndex m_rootIndex;
     int m_indentation = 20;
+    bool m_indentLeafItems = true;
+    mutable QHash<QPersistentModelIndex, bool> m_siblingBranchCells;
     QHash<qsizetype, QWidget *> m_rowGridLines;
     QVector<QWidget *> m_rowGridLinePool;
     QColor m_rowGridLineColor;

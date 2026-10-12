@@ -332,6 +332,11 @@ int main(int argc, char **argv)
     indentation->setRange(0, 60);
     indentation->setValue(view->indentation());
     toolbar->addWidget(indentation);
+    auto *indentLeaves = new QCheckBox(QStringLiteral("缩进叶子项"), &window);
+    indentLeaves->setChecked(view->indentLeafItems());
+    toolbar->addWidget(indentLeaves);
+    QObject::connect(indentLeaves, &QCheckBox::toggled,
+                     view, &viv::VirtualTreeView::setIndentLeafItems);
     window.addToolBarBreak();
     auto *spacingToolbar = window.addToolBar(QStringLiteral("间距"));
     spacingToolbar->addWidget(new QLabel(QStringLiteral("默认行间距: "), &window));
