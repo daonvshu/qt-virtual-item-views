@@ -93,6 +93,9 @@ public:
     /// Optional animated hover/selection background, painted below branch icons.
     void setVisualStateBackgroundVisible(bool visible);
     bool visualStateBackgroundVisible() const { return m_visualStateBackgroundVisible; }
+    /// Radius of hover/selection backgrounds; negative values become zero (default zero).
+    void setVisualStateCornerRadius(int radius);
+    int visualStateCornerRadius() const { return m_visualStateCornerRadius; }
     /// Extends the corresponding background through owned row gaps (default false).
     void setHoverBackgroundThroughRowSpacing(bool enabled);
     bool hoverBackgroundThroughRowSpacing() const { return m_hoverBackgroundThroughRowSpacing; }
@@ -209,6 +212,7 @@ private:
     RowGridLineExtent m_rowGridLineExtent = RowGridLineExtent::FullWidth;
     VisualStateBackgroundExtent m_visualStateBackgroundExtent = VisualStateBackgroundExtent::FullWidth;
     bool m_visualStateBackgroundVisible = false;
+    int m_visualStateCornerRadius = 0;
     bool m_hoverBackgroundThroughRowSpacing = false;
     bool m_selectedBackgroundThroughRowSpacing = false;
     bool m_branchIndicatorsVisible = true;

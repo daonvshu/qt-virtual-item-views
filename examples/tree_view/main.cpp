@@ -266,6 +266,9 @@ int main(int argc, char **argv)
                                        QStringLiteral("pixels"), QStringLiteral("48"));
     QCommandLineOption customIconsOption(QStringLiteral("custom-icons"),
                                          QStringLiteral("启动时使用自定义分支图标渲染器"));
+    QCommandLineOption cornerRadiusOption(QStringLiteral("corner-radius"),
+                                         QStringLiteral("状态背景圆角半径（像素，0 为直角）"),
+                                         QStringLiteral("pixels"), QStringLiteral("6"));
     QCommandLineOption snapshotOption(QStringLiteral("snapshot"),
                                       QStringLiteral("渲染视口到 PNG 后退出"), QStringLiteral("file"));
     QCommandLineOption exitOption(QStringLiteral("exit-after"),
@@ -275,6 +278,7 @@ int main(int argc, char **argv)
     parser.addOption(indentationOption);
     parser.addOption(pixelStepOption);
     parser.addOption(customIconsOption);
+    parser.addOption(cornerRadiusOption);
     parser.addOption(snapshotOption);
     parser.addOption(exitOption);
     parser.process(app);
@@ -297,6 +301,7 @@ int main(int argc, char **argv)
     view->setWheelScrollPixels(parser.value(pixelStepOption).toInt());
     view->setModel(&model);
     view->setVisualStateBackgroundVisible(true);
+    view->setVisualStateCornerRadius(parser.value(cornerRadiusOption).toInt());
 
     window.setCentralWidget(view);
     window.setWindowTitle(QStringLiteral("VirtualItemViews · tree (%1 devices)").arg(deviceCount));
@@ -400,6 +405,14 @@ int main(int argc, char **argv)
     animationDuration->setSuffix(QStringLiteral(" ms"));
     animationDuration->setValue(view->visualStateAnimationDuration());
     stateToolbar->addWidget(animationDuration);
+    stateToolbar->addWidget(new QLabel(QStringLiteral("圆角: "), &window));
+    auto *cornerRadius = new QSpinBox(&window);
+    cornerRadius->setRange(0, qMax(100, view->visualStateCornerRadius()));
+    cornerRadius->setSuffix(QStringLiteral(" px"));
+    cornerRadius->setValue(view->visualStateCornerRadius());
+    stateToolbar->addWidget(cornerRadius);
+    QObject::connect(cornerRadius, QOverload<int>::of(&QSpinBox::valueChanged),
+                     view, &viv::VirtualTreeView::setVisualStateCornerRadius);
     auto *status = new QLabel(&window);
     window.statusBar()->addPermanentWidget(status);
 

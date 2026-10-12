@@ -287,6 +287,16 @@ void VirtualTreeView::setVisualStateBackgroundVisible(bool visible)
     viewport()->update();
 }
 
+void VirtualTreeView::setVisualStateCornerRadius(int radius)
+{
+    radius = qMax(0, radius);
+    if (m_visualStateCornerRadius == radius)
+        return;
+    m_visualStateCornerRadius = radius;
+    if (m_visualStateBackgroundVisible)
+        viewport()->update();
+}
+
 void VirtualTreeView::setVisualStateBackgroundExtent(VisualStateBackgroundExtent extent)
 {
     if (extent != VisualStateBackgroundExtent::NodeOnly
@@ -774,15 +784,15 @@ void VirtualTreeView::paintVisualStateBackgrounds(QPainter *painter, const QRect
             continue;
         painter->save();
         painter->setOpacity(state.hoverProgress);
-        fillPixelAlignedRegion(painter, QRegion(background.adjusted(0,
+        fillPixelAlignedRoundedRegion(painter, background.adjusted(0,
             m_hoverBackgroundThroughRowSpacing ? -spacing.first : 0,
-            0, m_hoverBackgroundThroughRowSpacing ? spacing.second : 0).intersected(clip)),
-            hoverBackgroundColor());
+            0, m_hoverBackgroundThroughRowSpacing ? spacing.second : 0), QRegion(clip),
+            m_visualStateCornerRadius, hoverBackgroundColor());
         painter->setOpacity(state.selectedProgress);
-        fillPixelAlignedRegion(painter, QRegion(background.adjusted(0,
+        fillPixelAlignedRoundedRegion(painter, background.adjusted(0,
             m_selectedBackgroundThroughRowSpacing ? -spacing.first : 0,
-            0, m_selectedBackgroundThroughRowSpacing ? spacing.second : 0).intersected(clip)),
-            selectedBackgroundColor());
+            0, m_selectedBackgroundThroughRowSpacing ? spacing.second : 0), QRegion(clip),
+            m_visualStateCornerRadius, selectedBackgroundColor());
         painter->restore();
     }
 }

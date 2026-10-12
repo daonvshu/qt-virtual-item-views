@@ -49,6 +49,7 @@ tree.show();
 
 ```cpp
 tree.setVisualStateBackgroundVisible(true);
+tree.setVisualStateCornerRadius(6); // 默认 0（直角），负数按 0 处理
 tree.setVisualStateBackgroundExtent(
     viv::VirtualTreeView::VisualStateBackgroundExtent::NodeAndIcon);
 tree.setHoverBackgroundColor(QColor("#e7f4ed"));
@@ -59,6 +60,8 @@ tree.setSelectedBackgroundThroughRowSpacing(false);
 ```
 
 `NodeOnly` 从节点内容左侧开始，`NodeAndIcon` 从当前节点图标格左侧开始，`FullWidth` 覆盖整行。背景在分支图标下方绘制，不遮住图标；行控件需要保持透明，才能看到其下方的状态背景。默认不启用内置背景。
+
+`setVisualStateCornerRadius()` 同时设置 hover 和 selected 背景圆角，滚动裁剪不会改变完整背景的圆角形状。`tree_view` 示例默认演示 6 像素圆角，可用 `--corner-radius 0` 切回直角，或在“状态”工具栏调整半径。
 
 也可由节点控件自行绘制背景。树与列表使用同一接口：在 `WidgetAdapter::visualStateChanged(widget, index)` 中读取 `tree.visualState(index)`，把独立的 `hovered`、`selected` 标志交给节点控件，然后调用 `update()`。节点控件在 `paintEvent()` 中画自己的背景；回调也会在控件复用并绑定新节点后触发。两种状态可以同时为真，颜色优先级由业务决定。完整的自绘控件写法见 [列表的状态示例](list.md#自绘悬停与选中背景)。
 
