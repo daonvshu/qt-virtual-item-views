@@ -11,6 +11,7 @@
 #include <QMouseEvent>
 #include <QPainter>
 #include <QPalette>
+#include <QPixmap>
 #include <limits>
 
 namespace viv {
@@ -595,6 +596,35 @@ QRect VirtualTreeView::geometryForViewRow(qsizetype row) const
     return QRect(rowRect.x() + left, rowRect.y(), qMax(0, rowRect.width() - left), rowRect.height());
 }
 
+void VirtualTreeView::setExpandedBranchIcon(const QIcon &icon)
+{
+    m_expandedBranchIcon = icon;
+    invalidateBranchIndicators();
+}
+
+void VirtualTreeView::setCollapsedBranchIcon(const QIcon &icon)
+{
+    m_collapsedBranchIcon = icon;
+    invalidateBranchIndicators();
+}
+
+void VirtualTreeView::setBranchIconSize(int pixels)
+{
+    pixels = qMax(1, pixels);
+    if (m_branchIconSize == pixels)
+        return;
+    m_branchIconSize = pixels;
+    invalidateBranchIndicators();
+}
+
+void VirtualTreeView::setBranchIconColor(const QColor &color)
+{
+    if (m_branchIconColor == color)
+        return;
+    m_branchIconColor = color;
+    invalidateBranchIndicators();
+}
+
 int VirtualTreeView::branchIndicatorX(qsizetype row) const
 {
     const int depth = itemDepth(viewIndex(row));
@@ -730,7 +760,8 @@ void VirtualTreeView::invalidateBranchIndicators()
         const int depth = itemDepth(item.index);
         width = qMax(width, (depth + 1) * m_indentation);
         if (!m_branchRenderer)
-            width = qMax(width, branchIndicatorX(row) + kBranchIndicatorSize + 1);
+            width = qMax(width, branchIndicatorX(row) + qMin(m_branchIconSize,
+                qMax(0, m_indentation - kBranchIndicatorMargin)) + 1);
     }
     // The strip invalidated by the previous pass is part of the region too: an
     // indicator that left the viewport must be erased where it was painted.
@@ -813,8 +844,8 @@ void VirtualTreeView::paintBranchIndicators(QPainter *painter)
         const int depth = itemDepth(index);
         if (!m_branchRenderer) {
             if (hasBranchIndicator(row))
-                BranchIndicatorRenderer::paintBuiltinBranch(
-                    painter, branchState(index, depth), branchCellRect(row, depth), palette());
+                paintDefaultBranchIndicator(
+                    painter, branchState(index, depth), branchCellRect(row, depth));
             continue;
         }
 
@@ -829,6 +860,42 @@ void VirtualTreeView::paintBranchIndicators(QPainter *painter)
             painter->restore();
         }
     }
+}
+
+void VirtualTreeView::paintDefaultBranchIndicator(QPainter *painter,
+                                                 const BranchIndicatorState &state,
+                                                 const QRect &cellRect)
+{
+    const QIcon &icon = state.isExpanded ? m_expandedBranchIcon : m_collapsedBranchIcon;
+    if (icon.isNull()) {
+        BranchIndicatorRenderer::paintBuiltinBranch(painter, state, cellRect, palette(),
+                                                    m_branchIconSize, m_branchIconColor);
+        return;
+    }
+    const int size = qMin(m_branchIconSize,
+                         qMin(cellRect.width() - kBranchIndicatorMargin, cellRect.height()));
+    if (!state.adjoinsItem || !state.hasChildren || size <= 0)
+        return;
+    const QRect target(cellRect.x() + kBranchIndicatorMargin,
+                       cellRect.y() + (cellRect.height() - size) / 2, size, size);
+    if (!m_branchIconColor.isValid()) {
+        icon.paint(painter, target);
+        return;
+    }
+    const qreal dpr = painter->device()->devicePixelRatioF();
+    QPixmap pixmap = icon.pixmap(QSize(qMax(1, qRound(size * dpr)),
+                                     qMax(1, qRound(size * dpr))));
+    if (pixmap.isNull())
+        return;
+    pixmap.setDevicePixelRatio(dpr);
+    {
+        QPainter tint(&pixmap);
+        tint.setCompositionMode(QPainter::CompositionMode_SourceIn);
+        tint.fillRect(pixmap.rect(), m_branchIconColor);
+    }
+    const QSizeF logicalSize(pixmap.width() / dpr, pixmap.height() / dpr);
+    painter->drawPixmap(QPointF(target.x() + (target.width() - logicalSize.width()) / 2,
+                               target.y() + (target.height() - logicalSize.height()) / 2), pixmap);
 }
 
 void VirtualTreeView::toggleIfBranchClicked(const QPoint &viewportPos, bool *handled)

@@ -9,6 +9,7 @@
 
 class QPainter;
 class QPalette;
+class QColor;
 
 namespace viv {
 
@@ -78,6 +79,10 @@ public:
     /// can call this for the states they do not customize.
     static void paintBuiltinBranch(QPainter *painter, const BranchIndicatorState &state,
                                    const QRect &cellRect, const QPalette &palette);
+    /// Configurable triangle; size is clamped to the cell, invalid color uses the palette.
+    static void paintBuiltinBranch(QPainter *painter, const BranchIndicatorState &state,
+                                   const QRect &cellRect, const QPalette &palette,
+                                   int size, const QColor &color);
     /// Same, using the application palette.
     static void paintBuiltinBranch(QPainter *painter, const BranchIndicatorState &state,
                                    const QRect &cellRect);

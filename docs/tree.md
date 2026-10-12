@@ -143,7 +143,18 @@ mixedTree.show();
 
 ## 自定义分支图标
 
-默认分支指示器由视图绘制，行控件无需自己画缩进。需要改变符号时实现 `BranchIndicatorRenderer`；下面用文本绘制展开和折叠标记：
+默认分支指示器由视图绘制，行控件无需自己画缩进。只替换展开/收起图标时，可以直接设置：
+
+```cpp
+tree.setExpandedBranchIcon(QIcon(":/icons/expanded.svg"));
+tree.setCollapsedBranchIcon(QIcon(":/icons/collapsed.svg"));
+tree.setBranchIconSize(12);
+tree.setBranchIconColor(QColor("#64748b"));
+```
+
+两种状态独立设置，传入空 `QIcon()` 恢复对应的默认三角。大小以逻辑像素计，默认 8，最小为 1；绘制时限制在当前 branch 格和行高内，左侧保留 4 像素边距，点击区域仍为整个 branch 格。颜色同时作用于默认三角和替换图标：替换图标按透明度染色，传入无效 `QColor()` 恢复图标原色，默认三角则使用调色板的 `WindowText`。
+
+这些设置仅作用于未安装自定义 renderer 的 `VirtualTreeView`。连接线、叶子标记、按节点改变装饰等其他类型仍由用户实现 `BranchIndicatorRenderer`；安装 renderer 后它完全接管分支绘制。下面用文本绘制展开和折叠标记：
 
 ```cpp
 #include <virtualitemviews/branchindicator.h>

@@ -112,10 +112,22 @@ public:
     /// Draws and handles the expand/collapse indicator of branch items.
     void setBranchIndicatorsVisible(bool visible);
     bool branchIndicatorsVisible() const { return m_branchIndicatorsVisible; }
+    /// Default renderer only: null icons restore the corresponding built-in triangle.
+    void setExpandedBranchIcon(const QIcon &icon);
+    QIcon expandedBranchIcon() const { return m_expandedBranchIcon; }
+    void setCollapsedBranchIcon(const QIcon &icon);
+    QIcon collapsedBranchIcon() const { return m_collapsedBranchIcon; }
+    /// Square logical-pixel size (default 8), clamped to at least one and to the cell when painted.
+    void setBranchIconSize(int pixels);
+    int branchIconSize() const { return m_branchIconSize; }
+    /// Tints icons and triangles; invalid color restores icon colors / palette WindowText.
+    void setBranchIconColor(const QColor &color);
+    QColor branchIconColor() const { return m_branchIconColor; }
 
     // -- branch decoration ---------------------------------------------------
-    /// Custom indicator renderer; null (the default) keeps the built-in
-    /// triangle. Every cell of every visible row is offered to the renderer, so
+    /// Custom indicator renderer; null (the default) uses the configured icons
+    /// or built-in triangle. Icon settings do not affect custom renderers.
+    /// Every cell of every visible row is offered to the renderer, so
     /// it can also draw the ancestor connector cells (QTreeView::branch without
     /// style sheets, see branchindicator.h for the state vocabulary).
     void setBranchIndicatorRenderer(BranchIndicatorRenderer *renderer, bool takeOwnership = false);
@@ -185,6 +197,9 @@ private:
     int rowGridLineInsetForDepth(int depth) const;
     /// Paints the indicators of every visible cell into \a painter.
     void paintBranchIndicators(QPainter *painter);
+    /// Paints the configured expand/collapse icon or its built-in fallback.
+    void paintDefaultBranchIndicator(QPainter *painter, const BranchIndicatorState &state,
+                                     const QRect &cellRect);
     void paintVisualStateBackgrounds(QPainter *painter, const QRect &dirty);
     /// Cell rect (viewport coordinates) of \a cellDepth of a view row.
     QRect branchCellRect(qsizetype row, int cellDepth) const;
@@ -216,6 +231,10 @@ private:
     bool m_hoverBackgroundThroughRowSpacing = false;
     bool m_selectedBackgroundThroughRowSpacing = false;
     bool m_branchIndicatorsVisible = true;
+    QIcon m_expandedBranchIcon;
+    QIcon m_collapsedBranchIcon;
+    int m_branchIconSize = kBranchIndicatorSize;
+    QColor m_branchIconColor;
     BranchIndicatorRenderer *m_branchRenderer = nullptr;
     bool m_ownBranchRenderer = false;
     /// Width of the strip invalidated for the branch indicators.

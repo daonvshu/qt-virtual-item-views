@@ -35,29 +35,41 @@ void BranchIndicatorRenderer::paintBranch(QPainter *painter, const BranchIndicat
 void BranchIndicatorRenderer::paintBuiltinBranch(QPainter *painter, const BranchIndicatorState &state,
                                                  const QRect &cellRect, const QPalette &palette)
 {
+    paintBuiltinBranch(painter, state, cellRect, palette, kBranchIndicatorSize, QColor());
+}
+
+void BranchIndicatorRenderer::paintBuiltinBranch(QPainter *painter, const BranchIndicatorState &state,
+                                                 const QRect &cellRect, const QPalette &palette,
+                                                 int size, const QColor &color)
+{
     if (!painter || cellRect.isEmpty())
         return;
     // Only the row's own cell carries the expand/collapse indicator.
     if (!state.adjoinsItem || !state.hasChildren)
         return;
 
+    size = qMin(size, qMin(cellRect.width() - kBranchIndicatorMargin, cellRect.height()));
+    if (size <= 0)
+        return;
+
     const int x = cellRect.x() + kBranchIndicatorMargin;
     const int centerY = cellRect.center().y();
     QPolygon arrow;
     if (state.isExpanded) {
-        arrow << QPoint(x, centerY - kBranchIndicatorSize / 2)
-              << QPoint(x + kBranchIndicatorSize, centerY - kBranchIndicatorSize / 2)
-              << QPoint(x + kBranchIndicatorSize / 2, centerY + kBranchIndicatorSize / 2);
+        arrow << QPoint(x, centerY - size / 2)
+              << QPoint(x + size, centerY - size / 2)
+              << QPoint(x + size / 2, centerY + size / 2);
     } else {
-        arrow << QPoint(x, centerY - kBranchIndicatorSize / 2)
-              << QPoint(x + kBranchIndicatorSize, centerY)
-              << QPoint(x, centerY + kBranchIndicatorSize / 2);
+        arrow << QPoint(x, centerY - size / 2)
+              << QPoint(x + size, centerY)
+              << QPoint(x, centerY + size / 2);
     }
 
     painter->save();
+    painter->setClipRect(cellRect, Qt::IntersectClip);
     painter->setRenderHint(QPainter::Antialiasing, true);
     painter->setPen(Qt::NoPen);
-    painter->setBrush(palette.color(QPalette::WindowText));
+    painter->setBrush(color.isValid() ? color : palette.color(QPalette::WindowText));
     painter->drawPolygon(arrow);
     painter->restore();
 }
