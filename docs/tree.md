@@ -71,6 +71,87 @@ tree.setSelectedBackgroundThroughRowSpacing(false);
 
 `tree.setHoverBackgroundColor(QColor("#e7f4ed"))` 和 `tree.setSelectedBackgroundColor(QColor("#b9d9f1"))` 分别设置业务控件可读取的颜色；更改后可见节点会收到重绘通知。
 
+## 行控件里的事件处理
+
+行控件中的按钮如果只在 hover 或 selected 时显示，可以在 `visualStateChanged()` 中读取当前状态，并让行控件控制按钮显隐：
+
+```cpp
+void ItemAdapter::visualStateChanged(viv::WidgetType type,
+                                     QWidget *widget,
+                                     const QModelIndex &index)
+{
+    Q_UNUSED(type);
+    auto *row = qobject_cast<ItemRowWidget *>(widget);
+    if (!row || !index.isValid())
+        return;
+
+    const auto state = view->visualState(index);
+    row->setActionsVisible(state.hovered || state.selected);
+}
+```
+
+按钮的 `clicked` 信号应在行控件构造时只连接一次。`bindWidget()` 每次控件创建或复用时更新行控件保存的索引和业务数据，按钮回调再读取这份当前绑定：
+
+```cpp
+class ItemRowWidget : public QWidget
+{
+    Q_OBJECT
+
+public:
+    void bindNode(const ItemData &item, const QModelIndex &index)
+    {
+        m_item = item;
+        m_index = QPersistentModelIndex(index);
+    }
+
+    void unbindNode()
+    {
+        m_item = {};
+        m_index = {};
+        setActionsVisible(false);
+    }
+
+    void setActionsVisible(bool visible) { ui.actionPanel->setVisible(visible); }
+
+signals:
+    void actionTriggered(ItemAction action,
+                         const ItemData &item,
+                         const QPersistentModelIndex &index);
+
+private:
+    void connectButtons()
+    {
+        connect(ui.btnStart, &QToolButton::clicked, this, [this] {
+            if (m_index.isValid())
+                emit actionTriggered(ItemAction::Primary, m_item, m_index);
+        });
+    }
+
+    ItemData m_item;
+    QPersistentModelIndex m_index;
+};
+```
+
+`QPersistentModelIndex` 表示模型中的项目身份。模型插入、删除、移动或排序时，它会跟随原项目更新；项目被删除后会自动失效，所以点击前仍要检查 `isValid()`。它不会自动知道某个控件当前绑定了哪个项目，正确性来自视图的生命周期：复用前调用 `unbindWidget()`，重新使用时调用 `bindWidget()`，行控件在这两个阶段清空或更新自己的 `m_index`。
+
+不要在 `bindWidget()` 中为每次绑定重新连接按钮并捕获当时的 `QModelIndex`：控件复用后旧的 lambda 仍然存在，可能拿到旧项目。应捕获行控件自身，在点击时读取当前保存的 persistent index。动作处理器可以从该 index 读取最新模型数据，也可以同时使用信号传出的业务快照 `item`：
+
+```cpp
+connect(row, &ItemRowWidget::actionTriggered,
+        this, &ItemAdapter::itemActionTriggered);
+
+void ItemAdapter::itemActionTriggered(ItemAction action,
+                                      const ItemData &item,
+                                      const QPersistentModelIndex &index)
+{
+    if (!index.isValid())
+        return;
+    // index.data(...) 是当前模型值；item 是 bind 时保存的业务快照。
+}
+```
+
+如果隐藏按钮后仍要保留它占用的布局空间，可给按钮容器设置 `QSizePolicy::setRetainSizeWhenHidden(true)`；如果希望行内容收缩，则直接使用 `setVisible()` 即可。
+
 ## 节点间距
 
 创建节点时由应用根据深度或业务属性计算间距，写入第 0 列的 `NodeRowSpacingRole`（两种树视图均为 `Qt::UserRole + 0x100`）：

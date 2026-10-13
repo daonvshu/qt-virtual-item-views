@@ -11,6 +11,7 @@
 #include <QPointer>
 #include <QRegion>
 #include <QScrollBar>
+#include <QTimer>
 #include <QVariantAnimation>
 #include <QVector>
 #include <QWidget>
@@ -132,8 +133,57 @@ public:
             return;
         const QPointer<TreeExpansionTransition> self(this);
         const quint64 revision = m_revision;
-        const auto afterRows = m_rows();
+        m_pendingBefore = before;
+        m_startPending = true;
+        m_before = before.pixels;
+        m_strips.clear();
+        m_opacity = 1;
+        setGeometry(m_view->rect());
+        QCoreApplication::instance()->installEventFilter(this);
+        show();
+        if (!self || m_revision != revision)
+            return;
+        raise();
+        // Keep the old frame visible until queued scrollbar/viewport layout settles.
+        scheduleStart(revision);
+    }
+
+private:
+    void scheduleStart(quint64 revision)
+    {
+        const quint64 layoutRevision = m_layoutRevision;
+        QTimer::singleShot(0, this, [this, revision, layoutRevision]() {
+            if (m_revision != revision || !m_startPending)
+                return;
+            if (m_layoutRevision != layoutRevision) {
+                scheduleStart(revision);
+                return;
+            }
+            finishStart(revision);
+        });
+    }
+
+    void finishStart(quint64 revision)
+    {
+        const QPointer<TreeExpansionTransition> self(this);
+        const Snapshot before = m_pendingBefore;
+        const quint64 layoutRevision = m_layoutRevision;
+        // Exclude the temporary old-frame overlay from the final snapshot.
+        hide();
+        if (!self || m_revision != revision)
+            return;
         const QPixmap after = m_view->grab();
+        if (!self || m_revision != revision)
+            return;
+        if (m_layoutRevision != layoutRevision) {
+            show();
+            if (!self || m_revision != revision)
+                return;
+            raise();
+            scheduleStart(revision);
+            return;
+        }
+        const auto afterRows = m_rows();
         if (!self || m_revision != revision)
             return;
         m_before = before.pixels;
@@ -182,15 +232,21 @@ public:
         m_opacity = 1;
         setGeometry(m_view->rect());
         show();
+        if (!self || m_revision != revision)
+            return;
         raise();
-        QCoreApplication::instance()->installEventFilter(this);
+        m_startPending = false;
+        m_pendingBefore = Snapshot();
         m_animation.setDuration(m_duration);
         m_animation.start();
     }
 
+public:
     void stop()
     {
         ++m_revision;
+        m_startPending = false;
+        m_pendingBefore = Snapshot();
         if (auto *app = QCoreApplication::instance())
             app->removeEventFilter(this);
         m_animation.stop();
@@ -214,7 +270,19 @@ protected:
             return false;
         switch (event->type()) {
         case QEvent::Resize:
+            if (widget == m_view)
+                stop();
+            else if (widget == m_view->viewport()) {
+                if (m_startPending)
+                    ++m_layoutRevision;
+                else
+                    stop();
+            }
+            break;
         case QEvent::Hide:
+            if (widget == m_view || widget == m_view->viewport())
+                stop();
+            break;
         case QEvent::Wheel:
         case QEvent::MouseButtonPress:
         case QEvent::KeyPress:
@@ -287,10 +355,13 @@ private:
     QPixmap m_after;
     QRect m_body;
     QVector<Strip> m_strips;
+    Snapshot m_pendingBefore;
     qreal m_opacity = 0;
+    bool m_startPending = false;
     bool m_enabled = false;
     int m_duration = 300;
     quint64 m_revision = 0;
+    quint64 m_layoutRevision = 0;
 };
 
 } // namespace viv
