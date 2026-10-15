@@ -33,7 +33,23 @@ public:
     /// Fills \a widget with the data of \a index. Called before the widget is
     /// shown, so implementations must not rely on being visible yet. The type
     /// is the recycler type used to create this widget, not a new classification.
-    virtual void bindWidget(WidgetType type, QWidget *widget, const QModelIndex &index) = 0;
+    ///
+    /// Kept as the compatibility entry point. New adapters can override the
+    /// ItemBindingContext overload below and receive the complete row/node
+    /// payload directly.
+    virtual void bindWidget(WidgetType type, QWidget *widget, const QModelIndex &index)
+    {
+        Q_UNUSED(type);
+        Q_UNUSED(widget);
+        Q_UNUSED(index);
+    }
+
+    /// Fills \a widget with the current row/node payload and binding metadata.
+    /// The default delegates to the index-only callback for existing adapters.
+    virtual void bindWidget(WidgetType type, QWidget *widget, const ItemBindingContext &context)
+    {
+        bindWidget(type, widget, context.index);
+    }
 
     /// Called after binding and when hover or selection changes. The widget can
     /// query the view's visualState() and paint its own background.
@@ -44,6 +60,13 @@ public:
         widget->update();
     }
 
+    /// Context-aware visual-state callback. Existing adapters continue to receive
+    /// the index-only callback through the default implementation.
+    virtual void visualStateChanged(WidgetType type, QWidget *widget, const ItemBindingContext &context)
+    {
+        visualStateChanged(type, widget, context.index);
+    }
+
     /// Detaches \a widget from \a index. Called before the widget is hidden and
     /// recycled, and before a widget is rebound to another index.
     virtual void unbindWidget(WidgetType type, QWidget *widget, const QModelIndex &index)
@@ -51,6 +74,13 @@ public:
         Q_UNUSED(type);
         Q_UNUSED(widget);
         Q_UNUSED(index);
+    }
+
+    /// Context-aware lifecycle callback. Existing adapters continue to receive
+    /// the index-only callback through the default implementation.
+    virtual void unbindWidget(WidgetType type, QWidget *widget, const ItemBindingContext &context)
+    {
+        unbindWidget(type, widget, context.index);
     }
 
     /// Estimated size of an index before it is materialized. Used for newly

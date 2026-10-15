@@ -250,6 +250,12 @@ public:
     WidgetAdapter *adapter() const { return m_adapter; }
     WidgetRecycler *recycler() const { return m_recycler; }
 
+    /// Model role containing one complete business payload for a row or tree node.
+    /// Cell widgets read this role from their row's canonical column (column 0).
+    /// Changing it rebinds materialized items. A negative role disables payload reads.
+    void setItemDataRole(int role);
+    int itemDataRole() const { return m_itemDataRole; }
+
     // -- virtualization ------------------------------------------------------
     /// Number of extra items materialized before/after the visible range.
     void setOverscan(int before, int after);
@@ -460,6 +466,15 @@ protected:
     QModelIndex dragSourceIndex() const { return QModelIndex(m_dragSourcePin); }
     /// Tree depth of an index; used by the future tree layout.
     virtual int itemDepth(const QModelIndex &index) const;
+    /// Canonical model index from which ItemBindingContext::rowData is read.
+    /// Tables use column 0 for every cell; lists and trees use the supplied index.
+    virtual QModelIndex bindingDataIndex(const QModelIndex &index) const;
+    /// Logical column reported to table adapters; -1 for list/tree row widgets.
+    virtual int bindingColumn(const QModelIndex &index) const;
+    /// Context passed to context-aware adapter lifecycle callbacks.
+    ItemBindingContext bindingContext(const QModelIndex &index) const;
+    /// Rebinds current widgets after changing the complete row/node payload role.
+    virtual void refreshItemData();
     /// Index used when the current item moves to \a item. The default is
     /// viewIndex(item); a table keeps the current column instead.
     virtual QModelIndex indexForNavigation(qsizetype item, const QModelIndex &current) const;
@@ -756,6 +771,7 @@ private:
     WidgetAdapter *m_adapter = nullptr;
     bool m_ownAdapter = false;
     quint64 m_adapterChangeSerial = 0;
+    int m_itemDataRole = kDefaultItemDataRole;
     LayoutPolicy *m_layout = nullptr;
     bool m_ownLayout = false;
     WidgetRecycler *m_recycler = nullptr;

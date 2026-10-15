@@ -2,6 +2,21 @@
 
 `VirtualTreeView` 使用标准树形 `QAbstractItemModel` 和与列表相同的 `WidgetAdapter`。只把当前展开路径中的可见节点映射为视图行，未展开的子树不会创建行控件。
 
+## 每个节点传递一个结构体
+
+每个节点可以在 `viv::kDefaultItemDataRole` 中保存自己的完整结构体，无需拆成多个字段 role。结构体在命名空间外声明 `Q_DECLARE_METATYPE(NodeData)` 后，创建节点时调用 `node->setData(QVariant::fromValue(data), viv::kDefaultItemDataRole)`；已有数据 role 则通过 `tree.setItemDataRole(MyNodeRole)` 指定。
+
+```cpp
+void bindWidget(viv::WidgetType type, QWidget *widget,
+                const viv::ItemBindingContext &context) override
+{
+    Q_UNUSED(type);
+    static_cast<NodeWidget *>(widget)->bind(context.rowData.value<NodeData>(), context.depth);
+}
+```
+
+`rowData` 是当前节点自身的数据，`index` 是该节点索引，`depth` 从当前显示根的下一层计为 0，`logicalColumn` 为 -1。不同深度可保存不同结构体，由 `WidgetType` 或 `rowData.canConvert<T>()` 区分；结构体类型本身不会自动决定控件复用池。完整的存储方式、更新通知和回调兼容约定见[表格的整行数据上下文](table.md#一行传递一个结构体)。行内事件处理仍需每次绑定时更新持久索引及数据快照。
+
 在已创建 `QApplication` 的程序中，可直接用 `QStandardItemModel` 建一棵小树：
 
 ```cpp

@@ -537,6 +537,9 @@ protected:
     void changeEvent(QEvent *event) override;
     void scrollContentsBy(int dx, int dy) override;
     void wheelEvent(QWheelEvent *event) override;
+    QModelIndex bindingDataIndex(const QModelIndex &index) const override;
+    int bindingColumn(const QModelIndex &index) const override;
+    void refreshItemData() override;
 
 private:
     /// Deletes a header renderer through its interface (a renderer does not have
@@ -708,7 +711,8 @@ private:
     void recycleCell(const QPersistentModelIndex &index, QWidget *widget);
     void discardCellWidget(QWidget *widget);
     /// Dispatches cell state callbacks from an index snapshot; an invalid row means all cells.
-    void notifyCellVisualStates(const QModelIndex &row);
+    /// With exactCell, only the supplied cell is notified.
+    void notifyCellVisualStates(const QModelIndex &row, bool exactCell = false);
     bool isCellPinned(const QPersistentModelIndex &index, const QWidget *widget) const;
     void updateCellGeometry();
 

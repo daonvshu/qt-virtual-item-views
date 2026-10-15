@@ -1,9 +1,29 @@
 #pragma once
 
 #include <QColor>
+#include <QModelIndex>
+#include <QVariant>
 #include <QtGlobal>
 
 namespace viv {
+
+/// Data and metadata supplied to adapter binding callbacks.
+///
+/// `index` remains the identity of the materialized item. `rowData` is read from
+/// `itemDataRole()` using the row's canonical column (column 0 for tables), so
+/// adapters do not have to unpack a business structure from every cell index.
+struct ItemBindingContext
+{
+    QModelIndex index;
+    QVariant rowData;
+    /// Logical model column for tables (including row widgets); -1 for lists/trees.
+    int logicalColumn = -1;
+    /// Node depth relative to the displayed root; flat items have depth 0.
+    int depth = -1;
+};
+
+/// Default model role used by VirtualItemView for one complete row/node payload.
+inline constexpr int kDefaultItemDataRole = Qt::UserRole + 0x200;
 
 /// Identifier used to classify the widgets produced by a WidgetAdapter.
 ///

@@ -17,6 +17,14 @@
 #include <QStandardItemModel>
 #include <QToolBar>
 
+struct NodeData
+{
+    QString name;
+    QString type;
+    QString state;
+};
+Q_DECLARE_METATYPE(NodeData)
+
 namespace {
 
 class TreeTableRow : public QWidget
@@ -33,12 +41,12 @@ public:
         }
     }
 
-    void bind(const QModelIndex &index)
+    void bind(const NodeData &data, int depth)
     {
-        for (int column = 0; column < 3; ++column) {
-            const QModelIndex cell = index.siblingAtColumn(column);
-            m_labels[column]->setText(cell.data().toString());
-        }
+        m_labels[0]->setText(data.name);
+        m_labels[1]->setText(data.type);
+        m_labels[2]->setText(data.state);
+        setToolTip(QStringLiteral("节点深度：%1").arg(depth));
     }
 
 private:
@@ -53,9 +61,10 @@ public:
         return new TreeTableRow(parent);
     }
 
-    void bindWidget(viv::WidgetType, QWidget *widget, const QModelIndex &index) override
+    void bindWidget(viv::WidgetType, QWidget *widget,
+                    const viv::ItemBindingContext &context) override
     {
-        static_cast<TreeTableRow *>(widget)->bind(index);
+        static_cast<TreeTableRow *>(widget)->bind(context.rowData.value<NodeData>(), context.depth);
     }
 
     QSize estimatedSize(viv::WidgetType, const QModelIndex &) const override { return QSize(0, 32); }
@@ -81,16 +90,23 @@ public:
         return new QLabel(parent);
     }
 
-    void bindCellWidget(QWidget *widget, const QModelIndex &index) override
+    void bindCellWidget(QWidget *widget, const viv::ItemBindingContext &context) override
     {
-        const QString text = index.data().toString();
-        if (cellWidgetType(index) == 1) {
-            auto *progress = static_cast<QProgressBar *>(widget);
+        const NodeData data = context.rowData.value<NodeData>();
+        QString text;
+        switch (context.logicalColumn) {
+        case 0: text = data.name; break;
+        case 1: text = data.type; break;
+        case 2: text = data.state; break;
+        }
+        if (auto *progress = qobject_cast<QProgressBar *>(widget)) {
             progress->setFormat(text);
             progress->setValue(text == QStringLiteral("正常") ? 100 : 0);
         } else {
             static_cast<QLabel *>(widget)->setText(text);
         }
+        widget->setToolTip(QStringLiteral("节点深度：%1，逻辑列：%2")
+                               .arg(context.depth).arg(context.logicalColumn));
     }
 };
 
@@ -101,6 +117,8 @@ QList<QStandardItem *> makeRow(const QString &name, const QString &type,
     row << new QStandardItem(name) << new QStandardItem(type);
     if (!state.isNull())
         row << new QStandardItem(state);
+    row.first()->setData(QVariant::fromValue(NodeData{name, type, state}),
+                         viv::kDefaultItemDataRole);
     return row;
 }
 

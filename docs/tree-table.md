@@ -2,6 +2,14 @@
 
 `VirtualTreeTableView` 使用树形 `QAbstractItemModel`，纵向只物化展开后的可见节点，横向沿用 `VirtualTableView` 的列布局、表头、控件模式和 pane。单列且不需要表格布局时使用 `VirtualTreeView`；没有父子节点时使用 `VirtualTableView`。
 
+## 节点的整行数据
+
+每个深度的节点都可以只保存一份完整结构体，放在该节点第 0 逻辑列的 `viv::kDefaultItemDataRole` 中。行控件及单元格控件分别重写接收 `const viv::ItemBindingContext &` 的 `bindWidget()` / `bindCellWidget()`，直接用 `context.rowData.value<NodeData>()` 获取数据；该自定义类型需在命名空间外声明 `Q_DECLARE_METATYPE(NodeData)`。可通过 `setItemDataRole()` 对接已有 role。
+
+`context.index` 保留当前节点或单元格的身份，`context.logicalColumn` 是当前逻辑列，`context.depth` 是相对当前显示根的节点深度。其他列读取同一行第 0 列的 payload，不会读到父节点或相同可见行号的其他节点；列隐藏、换序不会改变来源。第 0 列 payload 改变并发出该 role 的 `dataChanged` 后，该节点所有已物化单元格都会重新绑定。
+
+`tree_table_view` 示例在 `makeRow()` 中设置一份 `NodeData`，两种控件模式均使用上下文回调，并在提示中显示深度及单元格逻辑列。不同层级的 payload 类型可以不同，由 adapter 的控件类型及业务规则区分。完整 API 说明、旧回调兼容方式和大对象传递建议见[表格的整行数据上下文](table.md#一行传递一个结构体)。
+
 ## 最小用法
 
 每个节点由逻辑列 0 的索引标识。行控件用 `ColumnHost` 承载各列内容，视图负责列宽、滚动和换序；adapter 绑定时通过当前行索引的 `siblingAtColumn()` 读取其他列。

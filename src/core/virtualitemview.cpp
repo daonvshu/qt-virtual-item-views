@@ -378,6 +378,15 @@ void VirtualItemView::setModel(QAbstractItemModel *model)
     relayout();
 }
 
+void VirtualItemView::setItemDataRole(int role)
+{
+    if (m_itemDataRole == role)
+        return;
+    m_itemDataRole = role;
+    markDirty();
+    refreshItemData();
+}
+
 void VirtualItemView::connectModel(QAbstractItemModel *model)
 {
     if (!model)
@@ -841,9 +850,16 @@ void VirtualItemView::refreshVisualStates()
             return;
         const QModelIndex index = persistent;
         QPointer<QWidget> widget(index.isValid() ? widgetForIndex(index) : nullptr);
-        if (widget)
-            activeAdapter->visualStateChanged(m_items.at(m_itemLookup.value(index)).type,
-                                             widget.data(), index);
+        if (widget) {
+            const WidgetType type = m_items.at(m_itemLookup.value(index)).type;
+            const ItemBindingContext context = bindingContext(index);
+            if (!activeModel || m_model != activeModel.data()
+                || m_modelChangeSerial != modelSerial || viewMappingSerial() != mappingSerial
+                || m_itemLifecycleSerial != lifecycleSerial || m_adapter != activeAdapter)
+                return;
+            if (widget && widgetForIndex(persistent) == widget.data())
+                activeAdapter->visualStateChanged(type, widget.data(), context);
+        }
     }
 }
 
@@ -872,9 +888,16 @@ void VirtualItemView::refreshVisualState(const QModelIndex &index)
             || materialized.row() != target.row())
             continue;
         QPointer<QWidget> widget(widgetForIndex(materialized));
-        if (widget)
-            activeAdapter->visualStateChanged(m_items.at(m_itemLookup.value(materialized)).type,
-                                             widget.data(), materialized);
+        if (widget) {
+            const WidgetType type = m_items.at(m_itemLookup.value(materialized)).type;
+            const ItemBindingContext context = bindingContext(materialized);
+            if (!activeModel || m_model != activeModel.data()
+                || m_modelChangeSerial != modelSerial || viewMappingSerial() != mappingSerial
+                || m_itemLifecycleSerial != lifecycleSerial || m_adapter != activeAdapter)
+                return;
+            if (widget && widgetForIndex(persistent) == widget.data())
+                activeAdapter->visualStateChanged(type, widget.data(), context);
+        }
     }
 }
 
@@ -1303,6 +1326,50 @@ int VirtualItemView::itemDepth(const QModelIndex &index) const
     for (QModelIndex parent = index.parent(); parent.isValid(); parent = parent.parent())
         ++depth;
     return depth;
+}
+
+QModelIndex VirtualItemView::bindingDataIndex(const QModelIndex &index) const
+{
+    return index;
+}
+
+int VirtualItemView::bindingColumn(const QModelIndex &index) const
+{
+    Q_UNUSED(index);
+    return -1;
+}
+
+ItemBindingContext VirtualItemView::bindingContext(const QModelIndex &index) const
+{
+    ItemBindingContext context;
+    context.index = index;
+    if (!m_model || !index.isValid() || index.model() != m_model)
+        return context;
+    context.logicalColumn = bindingColumn(index);
+    context.depth = itemDepth(index);
+    const QModelIndex dataIndex = bindingDataIndex(index);
+    if (dataIndex.isValid() && m_itemDataRole >= 0)
+        context.rowData = dataIndex.data(m_itemDataRole);
+    return context;
+}
+
+void VirtualItemView::refreshItemData()
+{
+    const QPointer<QAbstractItemModel> activeModel(m_model);
+    const quint64 modelSerial = m_modelChangeSerial;
+    const quint64 mappingSerial = viewMappingSerial();
+    const int role = m_itemDataRole;
+    QSet<QPersistentModelIndex> parents;
+    for (const MaterializedItem &item : m_items) {
+        if (item.index.isValid())
+            parents.insert(item.index.parent());
+    }
+    for (const QPersistentModelIndex &parent : parents) {
+        if (!activeModel || m_model != activeModel.data() || m_modelChangeSerial != modelSerial
+            || viewMappingSerial() != mappingSerial || m_itemDataRole != role)
+            return;
+        rebindItemsInModelRange(parent, 0, std::numeric_limits<int>::max());
+    }
 }
 
 bool VirtualItemView::handleItemKeyPress(QKeyEvent *event)
@@ -2695,7 +2762,12 @@ MaterializedItem VirtualItemView::createItem(const QPersistentModelIndex &index)
         }
         return false;
     };
-    activeAdapter->bindWidget(item.type, widget, modelIndex);
+    const ItemBindingContext context = bindingContext(modelIndex);
+    if (!bindingIsCurrent()) {
+        item.widget = nullptr;
+        return item;
+    }
+    activeAdapter->bindWidget(item.type, widget, context);
     if (!bindingIsCurrent()) {
         item.widget = nullptr;
         return item;
@@ -2705,7 +2777,7 @@ MaterializedItem VirtualItemView::createItem(const QPersistentModelIndex &index)
         item.widget = nullptr;
         return item;
     }
-    activeAdapter->visualStateChanged(item.type, widget, modelIndex);
+    activeAdapter->visualStateChanged(item.type, widget, context);
     if (!bindingIsCurrent()) {
         item.widget = nullptr;
         return item;
@@ -2724,8 +2796,15 @@ void VirtualItemView::recycleItem(MaterializedItem &item)
     WidgetAdapter *const activeAdapter = m_adapter;
     const quint64 lifecycleSerial = m_itemLifecycleSerial;
     QPointer<QWidget> widget(item.widget);
-    if (activeAdapter)
-        activeAdapter->unbindWidget(item.type, item.widget, QModelIndex(item.index));
+    if (activeAdapter) {
+        const ItemBindingContext context = bindingContext(QModelIndex(item.index));
+        if (!widget || m_adapter != activeAdapter || m_itemLifecycleSerial != lifecycleSerial) {
+            m_recycler->discard(widget.data());
+            item.widget = nullptr;
+            return;
+        }
+        activeAdapter->unbindWidget(item.type, widget.data(), context);
+    }
     clearVisualTransitionsForRow(QModelIndex(item.index));
     if (m_lifecycleLogEnabled)
         appendLifecycleLog(QStringLiteral("unbind row=%1").arg(item.index.row()));
@@ -2878,14 +2957,21 @@ void VirtualItemView::rebindItemsInModelRange(const QModelIndex &parent, int fir
         if (!widget || m_bindingWidgets.contains(widget.data()))
             continue;
         const WidgetType type = m_items.at(m_itemLookup.value(index)).type;
-        activeAdapter->bindWidget(type, widget.data(), index);
+        const ItemBindingContext context = bindingContext(index);
+        if (!activeModel || m_modelChangeSerial != modelSerial
+            || viewMappingSerial() != mappingSerial || m_itemLifecycleSerial != lifecycleSerial
+            || m_adapter != activeAdapter)
+            return;
+        if (!widget || widgetForIndex(persistent) != widget.data())
+            continue;
+        activeAdapter->bindWidget(type, widget.data(), context);
         if (!activeModel || m_modelChangeSerial != modelSerial
             || viewMappingSerial() != mappingSerial || m_itemLifecycleSerial != lifecycleSerial
             || m_adapter != activeAdapter)
             return;
         if (!widget || widgetForIndex(index) != widget.data())
             continue;
-        activeAdapter->visualStateChanged(type, widget.data(), index);
+        activeAdapter->visualStateChanged(type, widget.data(), context);
         if (!activeModel || m_modelChangeSerial != modelSerial
             || viewMappingSerial() != mappingSerial || m_itemLifecycleSerial != lifecycleSerial
             || m_adapter != activeAdapter)
@@ -3967,7 +4053,6 @@ void VirtualItemView::extendSelectionTo(const QModelIndex &index)
 void VirtualItemView::onDataChanged(const QModelIndex &topLeft, const QModelIndex &bottomRight,
                                     const QVector<int> &roles)
 {
-    Q_UNUSED(roles);
     if (!topLeft.isValid() || !bottomRight.isValid())
         return;
     if (topLeft.parent() != bottomRight.parent())
@@ -3979,8 +4064,18 @@ void VirtualItemView::onDataChanged(const QModelIndex &topLeft, const QModelInde
         return;
     }
 
+    // A row payload role belongs to the whole row. A cell-mode adapter therefore
+    // needs every visible cell rebound even when the model changed only column 0.
+    QModelIndex bindingTopLeft = topLeft;
+    QModelIndex bindingBottomRight = bottomRight;
+    if (roles.isEmpty() || roles.contains(m_itemDataRole)) {
+        bindingTopLeft = topLeft.siblingAtColumn(0);
+        const int columns = model() ? model()->columnCount(topLeft.parent()) : 1;
+        bindingBottomRight = bottomRight.siblingAtColumn(qMax(0, columns - 1));
+    }
+
     // Identities are unchanged: rebind only the affected materialized items.
-    rebindItemsInRange(topLeft, bottomRight);
+    rebindItemsInRange(bindingTopLeft, bindingBottomRight);
     // Item sizes may have changed, so keep the visual position stable.
     setPendingAnchor(captureAnchor());
     markDirty();

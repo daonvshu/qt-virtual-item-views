@@ -23,6 +23,11 @@ function(viv_add_test name)
     set_tests_properties(${name} PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 endfunction()
 
+# Adapter dispatch is checked without a QApplication, widgets or a platform plugin.
+add_executable(tst_bindingcontext unit/tst_bindingcontext.cpp)
+target_link_libraries(tst_bindingcontext PRIVATE VirtualItemViews Qt${QT_VERSION_MAJOR}::Test)
+add_test(NAME tst_bindingcontext COMMAND tst_bindingcontext)
+
 viv_add_test(tst_sizeindex unit/tst_sizeindex.cpp)
 viv_add_test(tst_scrollmapper unit/tst_scrollmapper.cpp)
 viv_add_test(tst_widgetrecycler unit/tst_widgetrecycler.cpp)

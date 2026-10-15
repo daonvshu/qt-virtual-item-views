@@ -263,8 +263,20 @@ public:
     virtual QWidget *createCellWidget(WidgetType type, QWidget *parent) = 0;
 
     /// Fills \a widget with the data of \a index; called before the widget is
-    /// shown and every time the cell is reused.
-    virtual void bindCellWidget(QWidget *widget, const QModelIndex &index) = 0;
+    /// shown and every time the cell is reused. New adapters can override the
+    /// ItemBindingContext overload below to receive the complete row payload.
+    virtual void bindCellWidget(QWidget *widget, const QModelIndex &index)
+    {
+        Q_UNUSED(widget);
+        Q_UNUSED(index);
+    }
+
+    /// Fills a cell from the complete row/node payload and cell metadata. The
+    /// default delegates to the index-only callback for existing adapters.
+    virtual void bindCellWidget(QWidget *widget, const ItemBindingContext &context)
+    {
+        bindCellWidget(widget, context.index);
+    }
 
     /// Called after binding and when hover or selection changes.
     virtual void visualStateChanged(QWidget *widget, const QModelIndex &index)
@@ -273,11 +285,23 @@ public:
         widget->update();
     }
 
+    /// Context-aware visual-state callback for a cell.
+    virtual void visualStateChanged(QWidget *widget, const ItemBindingContext &context)
+    {
+        visualStateChanged(widget, context.index);
+    }
+
     /// Detaches \a widget from \a index (stop timers, animations, subscriptions).
     virtual void unbindCellWidget(QWidget *widget, const QModelIndex &index)
     {
         Q_UNUSED(widget);
         Q_UNUSED(index);
+    }
+
+    /// Context-aware lifecycle callback for a cell.
+    virtual void unbindCellWidget(QWidget *widget, const ItemBindingContext &context)
+    {
+        unbindCellWidget(widget, context.index);
     }
 };
 

@@ -980,6 +980,43 @@ qsizetype VirtualTableView::viewItemForIndex(const QModelIndex &index) const
     return index.row();
 }
 
+QModelIndex VirtualTableView::bindingDataIndex(const QModelIndex &index) const
+{
+    return index.isValid() ? index.siblingAtColumn(0) : QModelIndex();
+}
+
+int VirtualTableView::bindingColumn(const QModelIndex &index) const
+{
+    return index.isValid() ? index.column() : -1;
+}
+
+void VirtualTableView::refreshItemData()
+{
+    if (m_materializationMode != MaterializationMode::CellWidgets) {
+        VirtualItemView::refreshItemData();
+        return;
+    }
+    const QPointer<QAbstractItemModel> activeModel(model());
+    const quint64 modelSerial = modelChangeSerial();
+    const quint64 mappingSerial = viewMappingSerial();
+    const int role = itemDataRole();
+    QSet<QPersistentModelIndex> parents;
+    for (auto it = m_cells.constBegin(); it != m_cells.constEnd(); ++it) {
+        if (it.key().isValid())
+            parents.insert(it.key().parent());
+    }
+    for (const QPersistentModelIndex &parent : parents) {
+        if (!activeModel || model() != activeModel.data() || modelChangeSerial() != modelSerial
+            || viewMappingSerial() != mappingSerial || itemDataRole() != role)
+            return;
+        const int rows = activeModel->rowCount(parent);
+        const int columns = activeModel->columnCount(parent);
+        if (rows > 0 && columns > 0)
+            rebindItemsInRange(activeModel->index(0, 0, parent),
+                              activeModel->index(rows - 1, columns - 1, parent));
+    }
+}
+
 bool VirtualTableView::isLayoutParent(const QModelIndex &parent) const
 {
     return !parent.isValid();
@@ -3116,13 +3153,16 @@ QWidget *VirtualTableView::createCellWidget(const QPersistentModelIndex &index)
         }
         return false;
     };
-    activeAdapter->bindCellWidget(widget, modelIndex);
+    const ItemBindingContext context = bindingContext(modelIndex);
+    if (!bindingIsCurrent())
+        return nullptr;
+    activeAdapter->bindCellWidget(widget, context);
     if (!bindingIsCurrent())
         return nullptr;
     prepareHoverTracking(widget);
     if (!bindingIsCurrent())
         return nullptr;
-    activeAdapter->visualStateChanged(widget, modelIndex);
+    activeAdapter->visualStateChanged(widget, context);
     if (!bindingIsCurrent())
         return nullptr;
     ++m_cellBindCount;
@@ -3141,7 +3181,13 @@ void VirtualTableView::recycleCell(const QPersistentModelIndex &index, QWidget *
     const quint64 configurationSerial = m_cellConfigurationSerial;
     QPointer<QWidget> guardedWidget(widget);
     ++m_cellRecycleCount;
-    activeAdapter->unbindCellWidget(widget, QModelIndex(index));
+    const ItemBindingContext context = bindingContext(QModelIndex(index));
+    if (!guardedWidget || m_cellAdapter != activeAdapter
+        || m_cellConfigurationSerial != configurationSerial) {
+        recycler()->discard(guardedWidget.data());
+        return;
+    }
+    activeAdapter->unbindCellWidget(widget, context);
     if (isLifecycleLoggingEnabled())
         appendLifecycleLog(QStringLiteral("unbind cell row=%1 column=%2")
                                .arg(index.row()).arg(index.column()));
@@ -3579,12 +3625,17 @@ void VirtualTableView::rebindItemsInRange(const QModelIndex &topLeft, const QMod
         QPointer<QWidget> widget(m_cells.value(persistent));
         if (!widget)
             continue;
-        activeAdapter->bindCellWidget(widget.data(), index);
+        const ItemBindingContext context = bindingContext(index);
         if (!current())
             return;
         if (!widget || m_cells.value(persistent) != widget.data())
             continue;
-        activeAdapter->visualStateChanged(widget.data(), index);
+        activeAdapter->bindCellWidget(widget.data(), context);
+        if (!current())
+            return;
+        if (!widget || m_cells.value(persistent) != widget.data())
+            continue;
+        activeAdapter->visualStateChanged(widget.data(), context);
         if (!current())
             return;
         ++m_cellBindCount;
@@ -3837,15 +3888,13 @@ void VirtualTableView::refreshVisualState(const QModelIndex &index)
     if (!m_cellAdapter || !index.isValid())
         return;
     if (m_visualStateScope == VisualStateScope::Cell) {
-        auto it = m_cells.constFind(QPersistentModelIndex(index));
-        if (it != m_cells.constEnd())
-            m_cellAdapter->visualStateChanged(it.value(), QModelIndex(it.key()));
+        notifyCellVisualStates(index, true);
         return;
     }
     notifyCellVisualStates(index);
 }
 
-void VirtualTableView::notifyCellVisualStates(const QModelIndex &row)
+void VirtualTableView::notifyCellVisualStates(const QModelIndex &row, bool exactCell)
 {
     if (!m_cellAdapter)
         return;
@@ -3857,7 +3906,8 @@ void VirtualTableView::notifyCellVisualStates(const QModelIndex &row)
     const quint64 lifecycleSerial = m_cellLifecycleSerial;
     const QPointer<QAbstractItemModel> activeModel(model());
     CellWidgetAdapter *const activeAdapter = m_cellAdapter;
-    const QList<QPersistentModelIndex> indexes = m_cells.keys();
+    const QList<QPersistentModelIndex> indexes = exactCell
+        ? QList<QPersistentModelIndex>{target} : m_cells.keys();
     for (const QPersistentModelIndex &persistent : indexes) {
         if (!activeModel || model() != activeModel.data()
             || modelChangeSerial() != modelSerial || viewMappingSerial() != mappingSerial
@@ -3870,9 +3920,20 @@ void VirtualTableView::notifyCellVisualStates(const QModelIndex &row)
             && (!target.isValid() || cell.parent() != target.parent()
                 || cell.row() != target.row())))
             continue;
+        if (exactCell && cell != target)
+            continue;
         QPointer<QWidget> widget(m_cells.value(persistent));
-        if (widget)
-            activeAdapter->visualStateChanged(widget.data(), cell);
+        if (widget) {
+            const ItemBindingContext context = bindingContext(cell);
+            if (!activeModel || model() != activeModel.data()
+                || modelChangeSerial() != modelSerial || viewMappingSerial() != mappingSerial
+                || m_cellConfigurationSerial != configurationSerial
+                || m_cellLifecycleSerial != lifecycleSerial || m_cellAdapter != activeAdapter
+                || m_materializationMode != MaterializationMode::CellWidgets)
+                return;
+            if (widget && m_cells.value(persistent) == widget.data())
+                activeAdapter->visualStateChanged(widget.data(), context);
+        }
     }
 }
 

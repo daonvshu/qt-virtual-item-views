@@ -2,6 +2,73 @@
 
 `VirtualTableView` 使用 `QAbstractItemModel` 的行列数据。表格有两种物化模式；模型、adapter 与视图的生命周期约定见 [入门](getting-started.md)。
 
+## 一行传递一个结构体
+
+可以把整行数据放在第 0 逻辑列的一个 role 中。框架读取它并通过 `ItemBindingContext` 交给 adapter，不需要为每个字段分配 role，也不需要在绑定回调里逐列查询模型。默认 role 为 `viv::kDefaultItemDataRole`（`Qt::UserRole + 0x200`），列表和两种树视图也支持该接口。
+
+下面使用 `QStandardItemModel` 保存数据；自定义模型只需在 `data(index, role)` 中为第 0 列的相应 role 返回整行的 `QVariant`。
+
+```cpp
+#include <virtualitemviews/tablewidgetadapter.h>
+#include <QStandardItemModel>
+
+struct RowData
+{
+    QString title;
+    QString owner;
+    int progress = 0;
+};
+Q_DECLARE_METATYPE(RowData) // 放在类型定义之后、命名空间之外
+
+QStandardItemModel model;
+model.setColumnCount(3);
+model.insertRow(0);
+model.setData(model.index(0, 0),
+              QVariant::fromValue(RowData{QStringLiteral("条目"), QStringLiteral("负责人"), 60}),
+              viv::kDefaultItemDataRole);
+```
+
+行控件模式的 adapter 可以只重写新的绑定回调，行控件的 `bind()` 接收业务结构体：
+
+```cpp
+void bindWidget(viv::WidgetType, QWidget *widget,
+                const viv::ItemBindingContext &context) override
+{
+    static_cast<RowWidget *>(widget)->bind(context.rowData.value<RowData>());
+}
+```
+
+单元格模式同样收到完整结构体，再按逻辑列选择要显示的字段。列换序不会改变 `logicalColumn`：
+
+```cpp
+void bindCellWidget(QWidget *widget, const viv::ItemBindingContext &context) override
+{
+    const RowData data = context.rowData.value<RowData>();
+    auto *label = static_cast<QLabel *>(widget); // 本例的所有格都由 QLabel 承载
+    switch (context.logicalColumn) {
+    case 0: label->setText(data.title); break;
+    case 1: label->setText(data.owner); break;
+    case 2: label->setText(QString::number(data.progress)); break;
+    default: label->clear(); break;
+    }
+}
+```
+
+| 上下文字段 | 含义 |
+| --- | --- |
+| `index` | 当前绑定的模型索引；单元格模式保留该格自己的行列及父节点 |
+| `rowData` | 整行或当前节点的数据；表格总从同一父节点、同一行的第 0 逻辑列读取，隐藏或换序第 0 列也不改变来源 |
+| `logicalColumn` | 表格中的逻辑列号，行控件通常为 0；列表及单列树为 -1 |
+| `depth` | 平面行是 0；树节点相对当前显示根的深度，根下第一层为 0 |
+
+已有 role 可通过 `view.setItemDataRole(MyRowRole)` 指定；切换 role 会重新绑定当前物化的控件。负数关闭 payload 读取；role 缺失时 `rowData` 是无效 `QVariant`，业务应自行处理，必要时先检查 `canConvert<RowData>()`。框架不修改模型的 `DisplayRole`、排序、编辑或可访问性数据；这些能力需要时仍由模型提供。
+
+更新数据时仍用模型的正常通知机制。`QStandardItemModel::setData()` 自动发出 `dataChanged`；自定义模型更新内部结构体后发出包含该 role 的 `dataChanged`。即使通知范围只有第 0 列，框架也会重新绑定该行所有已物化的单元格。空 roles 表示所有 role 改变，同样刷新整行；其他 role 保持原通知范围。
+
+`visualStateChanged()` 和 `unbindWidget()` / `unbindCellWidget()` 也有接收 `ItemBindingContext` 的重载。旧的 index 回调继续可用，框架默认把新回调转发给旧回调；同一回调同时重写两个版本时，以 context 版本为入口，由它决定是否调用旧版。上下文只在回调期间有效，不要保存其引用。行内事件处理需要在每次绑定时保存业务数据及 `QPersistentModelIndex(context.index)`，解绑时清空；索引失效后 `rowData` 也可能为空，不能把解绑回调当作最后一次读取业务数据的机会。
+
+较大的结构体可用 `QSharedPointer<const RowData>` 作为 payload，在命名空间外为该指针类型声明 `Q_DECLARE_METATYPE`，再通过 `context.rowData.value<QSharedPointer<const RowData>>()` 取出并检查非空。更新时换成新的不可变数据指针并发出通知，避免每格解包都复制大对象。`Q_DECLARE_METATYPE` 足以用于这里的 `QVariant` 存取；若业务还通过排队信号传递该类型，另按 Qt 要求注册元类型。
+
 ## 如何选择控件模式
 
 | | `TableWidgetAdapter`：行控件模式（默认） | `CellWidgetAdapter`：单元格控件模式 |
