@@ -2508,6 +2508,13 @@ QWidget *VirtualTableView::dragSourceWidget(const QModelIndex &index) const
     return VirtualItemView::dragSourceWidget(index);
 }
 
+QModelIndex VirtualTableView::dragSourcePinIndex(const QModelIndex &index) const
+{
+    if (m_materializationMode == MaterializationMode::CellWidgets)
+        return anchorIndex(index);
+    return VirtualItemView::dragSourcePinIndex(index);
+}
+
 QRect VirtualTableView::dragPixmapRect(const QModelIndex &index) const
 {
     // Per-cell drags preview the dragged cell; a row drag (SelectionBehavior::SelectRows) keeps the

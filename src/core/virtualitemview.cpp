@@ -1,5 +1,6 @@
 #include <virtualitemviews/virtualitemview.h>
 #include "pixelalignedlines_p.h"
+#include "dragpreview_p.h"
 
 #include <virtualitemviews/widgetadapter.h>
 #include <virtualitemviews/layoutpolicy.h>
@@ -25,6 +26,7 @@
 #include <QPointF>
 #include <QResizeEvent>
 #include <QScrollBar>
+#include <QScopeGuard>
 #include <QShowEvent>
 #include <QTimer>
 #include <QVariantAnimation>
@@ -3205,6 +3207,7 @@ void VirtualItemView::mousePressEvent(QMouseEvent *event)
     setFocus(Qt::MouseFocusReason);
     const QModelIndex index = indexAt(mousePosition(event));
     m_dragStartPos = mousePosition(event);
+    m_dragGlobalStartPos = viewport()->mapToGlobal(m_dragStartPos);
     m_pressedIndex = index.isValid() ? QPersistentModelIndex(index) : QPersistentModelIndex();
     updateSelectionForClick(index, event->modifiers());
     event->accept();
@@ -3268,6 +3271,14 @@ void VirtualItemView::setDragEnabled(bool enabled)
     viewport()->setAcceptDrops(enabled);
     if (!enabled)
         finishDrag();
+}
+
+void VirtualItemView::setDragStartMode(DragStartMode mode)
+{
+    if (m_dragStartMode == mode)
+        return;
+    m_dragStartMode = mode;
+    m_pressedIndex = QPersistentModelIndex();
 }
 
 bool VirtualItemView::canStartDrag(const QModelIndex &index) const
@@ -3344,9 +3355,34 @@ void VirtualItemView::setMoveRemovesSourceRows(bool enabled)
 
 Qt::DropAction VirtualItemView::startDrag(const QModelIndex &index)
 {
-    if (!m_model || !m_dragSourceIndexes.isEmpty())
+    return startDragImpl(index, DragOptions{}, true);
+}
+
+Qt::DropAction VirtualItemView::startDrag(const QModelIndex &index, const DragOptions &options)
+{
+    return startDragImpl(index, options, false);
+}
+
+Qt::DropAction VirtualItemView::startDragImpl(const QModelIndex &index, const DragOptions &options,
+                                            bool useDefaultPreview)
+{
+    if (!m_model || m_dragInProgress || !m_dragSourceIndexes.isEmpty())
         return Qt::IgnoreAction;
     const QPointer<VirtualItemView> self(this);
+    m_dragInProgress = true;
+    bool dragStateStarted = false;
+    const auto cleanup = qScopeGuard([self, &dragStateStarted]() {
+        if (self) {
+            if (dragStateStarted)
+                self->finishDrag();
+            if (self)
+                self->m_dragInProgress = false;
+        }
+    });
+    const DragOptions previewOptions = options;
+    const QPoint cursorPosition = QCursor::pos();
+    const bool customPreview = previewOptions.previewWidget != nullptr;
+    QPointer<QWidget> previewWidget(previewOptions.previewWidget);
     const QPointer<QAbstractItemModel> sourceModel = m_model;
     const quint64 modelSerial = m_modelChangeSerial;
     const quint64 mappingSerial = viewMappingSerial();
@@ -3358,6 +3394,9 @@ Qt::DropAction VirtualItemView::startDrag(const QModelIndex &index)
             dragIndex = QModelIndex(m_pressedIndex);
     }
     const QPersistentModelIndex sourceIndex(dragIndex);
+    const QPoint globalPressPosition = previewOptions.globalPressPosition.value_or(
+        m_pressedIndex.isValid() && m_pressedIndex == sourceIndex
+            ? m_dragGlobalStartPos : cursorPosition);
     const auto requestIsCurrent = [&]() {
         return self && sourceModel && self->modelChangeSerial() == modelSerial
             && self->viewMappingSerial() == mappingSerial && sourceIndex.isValid()
@@ -3386,40 +3425,78 @@ Qt::DropAction VirtualItemView::startDrag(const QModelIndex &index)
         return Qt::IgnoreAction;
     }
 
-    // Keep the actual materialized source alive without taking ownership of a user pin.
-    const QPointer<QWidget> sourceWidget(dragSourceWidget(dragIndex));
+    // Resolve the materialized identity independently of any business screenshot widget.
+    const QPersistentModelIndex sourcePin(dragSourcePinIndex(dragIndex));
     if (!requestIsCurrent()) {
         delete mime;
         return Qt::IgnoreAction;
     }
-    m_dragSourceWidget = sourceWidget;
-    m_dragSourcePin = m_dragSourceWidget
-        ? QPersistentModelIndex(indexForWidget(m_dragSourceWidget)) : QPersistentModelIndex();
+    if (!customPreview)
+        previewWidget = dragSourceWidget(dragIndex);
+    if (!requestIsCurrent()) {
+        delete mime;
+        return Qt::IgnoreAction;
+    }
+    m_dragSourcePin = sourcePin;
+    dragStateStarted = true;
+    m_pressedIndex = QPersistentModelIndex();
     // The sources are remembered so the drag can refuse to drop onto itself.
     m_dragSourceIndexes.clear();
     for (const QModelIndex &source : indexes)
         m_dragSourceIndexes.append(QPersistentModelIndex(source));
 
-    QDrag drag(this);
-    drag.setMimeData(mime);
-    if (m_dragSourceWidget) {
-        // The preview is what the drop moves: a row widget (list / tree / a table row drag), or
-        // just the dragged cell when the table works per cell - dragPixmapRect() names the part of
-        // the widget that belongs to the dragged index.
-        const QRect part = dragPixmapRect(dragIndex);
-        const QPixmap pixmap = part.isEmpty() ? m_dragSourceWidget->grab()
-                                              : m_dragSourceWidget->grab(part);
-        drag.setPixmap(pixmap);
-        drag.setHotSpot(pixmap.rect().center());
+    QPixmap pixmap;
+    QPoint hotSpot;
+    if (previewWidget) {
+        const QRect requestedRect = useDefaultPreview ? dragPixmapRect(dragIndex)
+                                                      : previewOptions.previewRect;
+        if (!requestIsCurrent()) {
+            delete mime;
+            return Qt::IgnoreAction;
+        }
+        if (previewWidget) {
+            const QRect capture = dragPreviewRect(previewWidget->rect(), requestedRect);
+            if (!capture.isEmpty()) {
+                if (previewOptions.usePressPosition) {
+                    hotSpot = dragPreviewHotSpot(capture,
+                        previewWidget->mapFromGlobal(globalPressPosition));
+                }
+                pixmap = previewWidget->grab(capture);
+                if (!previewOptions.usePressPosition && !pixmap.isNull())
+                    hotSpot = dragPreviewCenter(pixmap.size(), pixmap.devicePixelRatio());
+            }
+        }
     }
-    const Qt::DropAction action = drag.exec(actions, m_defaultDropAction);
+    if (!requestIsCurrent()) {
+        delete mime;
+        return Qt::IgnoreAction;
+    }
+    // The native nested event loop may destroy the view; do not put its QDrag child on the stack.
+    const QPointer<QDrag> drag = new QDrag(this);
+    const auto disposeDrag = qScopeGuard([drag]() {
+        if (drag)
+            drag->deleteLater();
+    });
+    if (!requestIsCurrent() || !drag) {
+        delete mime;
+        return Qt::IgnoreAction;
+    }
+    drag->setMimeData(mime);
+    if (!pixmap.isNull()) {
+        drag->setPixmap(pixmap);
+        drag->setHotSpot(hotSpot);
+    }
+    const Qt::DropAction action = drag->exec(actions, m_defaultDropAction);
+    if (!self)
+        return action;
 
     // A drag that ended in a *move* moved the item somewhere else: if the application asked this
     // view to own that cleanup (setMoveRemovesSourceRows()), the dragged rows go now - exactly
     // when QAbstractItemView does it (after QDrag::exec(), before the drag state is released).
     const QList<QPersistentModelIndex> sources = m_dragSourceIndexes;
     finishDrag();
-    if (action == Qt::MoveAction && m_moveRemovesSourceRows
+    dragStateStarted = false;
+    if (self && action == Qt::MoveAction && m_moveRemovesSourceRows
         && sourceModel && m_modelChangeSerial == modelSerial)
         removeDraggedSourceRows(sources);
     return action;
@@ -3465,6 +3542,12 @@ QWidget *VirtualItemView::dragSourceWidget(const QModelIndex &index) const
 {
     const qsizetype item = viewItemForIndex(index);
     return item >= 0 ? widgetForIndex(viewIndex(item, 0)) : nullptr;
+}
+
+QModelIndex VirtualItemView::dragSourcePinIndex(const QModelIndex &index) const
+{
+    const qsizetype item = viewItemForIndex(index);
+    return item >= 0 ? viewIndex(item, 0) : QModelIndex();
 }
 
 QRect VirtualItemView::dragPixmapRect(const QModelIndex &index) const
@@ -3537,7 +3620,6 @@ void VirtualItemView::removeDraggedSourceRows(const QList<QPersistentModelIndex>
 void VirtualItemView::finishDrag()
 {
     const bool hadSourcePin = m_dragSourcePin.isValid();
-    m_dragSourceWidget = nullptr;
     m_dragSourcePin = QPersistentModelIndex();
     if (hadSourcePin)
         markDirty();
@@ -3574,7 +3656,8 @@ bool VirtualItemView::isDropOnItself(const DropTarget &target, Qt::DropAction ac
 
 void VirtualItemView::mouseMoveEvent(QMouseEvent *event)
 {
-    if (!m_dragEnabled || !(event->buttons() & Qt::LeftButton) || !m_pressedIndex.isValid()) {
+    if (!m_dragEnabled || m_dragStartMode == DragStartMode::Manual
+        || !(event->buttons() & Qt::LeftButton) || !m_pressedIndex.isValid()) {
         QAbstractScrollArea::mouseMoveEvent(event);
         return;
     }
@@ -3587,10 +3670,12 @@ void VirtualItemView::mouseMoveEvent(QMouseEvent *event)
     // The pressed index (not the position) carries the gesture: it survives
     // model mutations between press and move.
     const QModelIndex index(m_pressedIndex);
+    DragOptions options;
+    options.globalPressPosition = m_dragGlobalStartPos;
     m_pressedIndex = QPersistentModelIndex();
     event->accept();
     if (canStartDrag(index))
-        startDrag(index);
+        startDragImpl(index, options, true);
 }
 
 void VirtualItemView::dragEnterEvent(QDragEnterEvent *event)

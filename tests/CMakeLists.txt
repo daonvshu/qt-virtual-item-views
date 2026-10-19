@@ -28,6 +28,11 @@ add_executable(tst_bindingcontext unit/tst_bindingcontext.cpp)
 target_link_libraries(tst_bindingcontext PRIVATE VirtualItemViews Qt${QT_VERSION_MAJOR}::Test)
 add_test(NAME tst_bindingcontext COMMAND tst_bindingcontext)
 
+# Pure preview geometry needs neither widgets nor a platform drag session.
+add_executable(tst_dragpreview unit/tst_dragpreview.cpp)
+target_link_libraries(tst_dragpreview PRIVATE Qt${QT_VERSION_MAJOR}::Test)
+add_test(NAME tst_dragpreview COMMAND tst_dragpreview)
+
 viv_add_test(tst_sizeindex unit/tst_sizeindex.cpp)
 viv_add_test(tst_scrollmapper unit/tst_scrollmapper.cpp)
 viv_add_test(tst_widgetrecycler unit/tst_widgetrecycler.cpp)

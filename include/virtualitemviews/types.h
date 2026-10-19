@@ -2,10 +2,30 @@
 
 #include <QColor>
 #include <QModelIndex>
+#include <QPoint>
+#include <QRect>
 #include <QVariant>
 #include <QtGlobal>
+#include <optional>
+
+class QWidget;
 
 namespace viv {
+
+/// Optional screenshot source and pointer position for a manually started drag.
+struct DragOptions
+{
+    /// Uses dragSourceWidget() when null; ownership stays with the caller.
+    QWidget *previewWidget = nullptr;
+    /// Widget-local logical pixels; empty captures the whole widget.
+    /// Nonempty rectangles are clipped to the widget's bounds.
+    QRect previewRect;
+    /// Anchors the preview at the mouse position by default; false centres it.
+    bool usePressPosition = true;
+    /// Explicit global press position, including (0, 0). When omitted, the view
+    /// uses its matching recorded press or the cursor position at drag entry.
+    std::optional<QPoint> globalPressPosition;
+};
 
 /// Data and metadata supplied to adapter binding callbacks.
 ///

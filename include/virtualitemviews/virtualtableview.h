@@ -702,6 +702,8 @@ private:
     QRect dragPixmapRect(const QModelIndex &index) const override;
     /// Uses the span anchor's cell widget in Cell Widget Mode, otherwise the row widget.
     QWidget *dragSourceWidget(const QModelIndex &index) const override;
+    /// Pins the span anchor in cell mode, or the canonical row in row mode.
+    QModelIndex dragSourcePinIndex(const QModelIndex &index) const override;
     void scrollToColumn(int logicalIndex);
     void onSortIndicatorChanged(int logicalIndex, Qt::SortOrder order);
 

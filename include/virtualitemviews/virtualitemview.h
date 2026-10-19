@@ -203,11 +203,21 @@ public:
     /// and the item flags decide what may be dragged or dropped onto.
     void setDragEnabled(bool enabled);
     bool isDragEnabled() const { return m_dragEnabled; }
+    /// Automatic starts after the mouse crosses the drag distance; Manual leaves
+    /// initiation to startDrag(). Neither mode changes model/drop permissions.
+    enum class DragStartMode { Automatic, Manual };
+    Q_ENUM(DragStartMode)
+    void setDragStartMode(DragStartMode mode);
+    DragStartMode dragStartMode() const { return m_dragStartMode; }
     /// True when \a index would start a drag right now.
     bool canStartDrag(const QModelIndex &index) const;
     /// Starts a drag for the current selection (or \a index). Returns the action
     /// the drop target reported; Qt::IgnoreAction when nothing was dragged.
+    /// The preview is anchored at the matching mouse press, or the current cursor.
     Qt::DropAction startDrag(const QModelIndex &index = QModelIndex());
+    /// Starts with a business-supplied preview. An empty previewRect captures the
+    /// whole chosen widget; pinning and MIME still use the drag source index.
+    Qt::DropAction startDrag(const QModelIndex &index, const DragOptions &options);
 
     /// Draws the drop indicator (a line between rows, or a frame around the item
     /// a tree would drop into).
@@ -557,9 +567,12 @@ protected:
     /// a row selection carries the whole row, like Qt), otherwise just \a dragIndex. Kernel API:
     /// a real drag (QDrag::exec) cannot run offscreen, so subclasses and tests use this.
     QModelIndexList dragSourceIndexes(const QModelIndex &dragIndex) const;
-    /// Materialized widget retained and captured for a drag of \a index.
+    /// Default screenshot widget for a drag of \a index.
     /// The default resolves the canonical row; cell views override this lookup.
     virtual QWidget *dragSourceWidget(const QModelIndex &index) const;
+    /// Materialized identity retained during a drag, independent of its preview.
+    /// The default is the canonical row; cell views use the span anchor.
+    virtual QModelIndex dragSourcePinIndex(const QModelIndex &index) const;
     /// Part of the drag source widget that shows \a index, empty for "the whole widget". A
     /// subclass with a finer drag granularity than its materialized widget overrides this (the
     /// table cuts the row widget down to the dragged cell), so the drag preview shows what the
@@ -727,6 +740,9 @@ private:
     bool isDropOnItself(const DropTarget &target, Qt::DropAction action) const;
     /// Releases the state of a finished drag (source pin, autoscroll, indicator).
     void finishDrag();
+    /// Shared drag lifecycle; the legacy entry uses dragPixmapRect().
+    Qt::DropAction startDragImpl(const QModelIndex &index, const DragOptions &options,
+                                bool useDefaultPreview);
     /// Qt 5 declares the roles argument of
     /// QAbstractItemModel::dataChanged() as QVector<int>, Qt 6 as QList<int>.
     /// QVector is an alias of QList in Qt 6, so this signature matches both.
@@ -816,11 +832,14 @@ private:
     QStringList m_lifecycleLog;
 
     bool m_dragEnabled = false;
+    DragStartMode m_dragStartMode = DragStartMode::Automatic;
+    bool m_dragInProgress = false;
     bool m_dropIndicatorShown = true;
     Qt::DropAction m_defaultDropAction = Qt::CopyAction;
     Qt::DropActions m_dragDropActions = Qt::IgnoreAction; // IgnoreAction = derive
     bool m_moveRemovesSourceRows = false;
     QPoint m_dragStartPos;
+    QPoint m_dragGlobalStartPos;
     /// Sources of the drag in flight (empty for drags started elsewhere).
     QList<QPersistentModelIndex> m_dragSourceIndexes;
     /// Last drag position in viewport coordinates; autoscroll re-resolves the
@@ -828,7 +847,6 @@ private:
     QPoint m_dragHoverPos;
     bool m_dragHoverValid = false;
     QWidget *m_dropIndicator = nullptr;
-    QPointer<QWidget> m_dragSourceWidget;
     QPersistentModelIndex m_dragSourcePin;
     QTimer *m_dragAutoscrollTimer = nullptr;
     int m_dragAutoscrollDelta = 0;
