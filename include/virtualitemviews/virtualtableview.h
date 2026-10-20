@@ -68,6 +68,22 @@ public:
     };
     Q_ENUM(MaterializationMode)
 
+    /// Drop locations for SelectItems; SelectRows always inserts between rows.
+    /// VirtualTreeTableView retains its hierarchical node drop locations.
+    enum class DropTargetMode {
+        BetweenRows,
+        OnCell,
+        BetweenRowsOrOnCell,
+    };
+    Q_ENUM(DropTargetMode)
+
+    /// Default BetweenRows preserves insertion-only drops. In combined mode,
+    /// the top/bottom quarter inserts and the middle targets the existing cell.
+    /// OnCell calls the model with parent = cell and row = column = -1;
+    /// the model decides whether to fill, replace or reject its data.
+    void setDropTargetMode(DropTargetMode mode);
+    DropTargetMode dropTargetMode() const { return m_dropTargetMode; }
+
     explicit VirtualTableView(QWidget *parent = nullptr);
     ~VirtualTableView() override;
 
@@ -719,6 +735,7 @@ private:
     void updateCellGeometry();
 
     ListLayout *m_rowLayout = nullptr;
+    DropTargetMode m_dropTargetMode = DropTargetMode::BetweenRows;
     VisualStateScope m_visualStateScope = VisualStateScope::Row;
     HeaderGeometry *m_columns = nullptr;
     /// Compresses the 64-bit horizontal offset into the int-only scroll bar (the

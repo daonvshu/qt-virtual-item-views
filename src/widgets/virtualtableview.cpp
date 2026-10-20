@@ -4839,8 +4839,32 @@ void VirtualTableView::scrollToColumn(int logicalIndex)
 // Drag & drop (§38): row drops and cell drops
 // ---------------------------------------------------------------------------
 
+void VirtualTableView::setDropTargetMode(DropTargetMode mode)
+{
+    m_dropTargetMode = mode;
+}
+
 VirtualItemView::DropTarget VirtualTableView::resolveDropTarget(const QPoint &viewportPos) const
 {
+    if (selectionBehavior() != SelectionBehavior::SelectRows
+        && m_dropTargetMode != DropTargetMode::BetweenRows) {
+        if (!viewport()->rect().contains(viewportPos))
+            return {};
+        const QModelIndex cell = indexAt(viewportPos);
+        const QRect rect = cell.isValid() ? cellRect(cell) : QRect();
+        if (rect.isEmpty() || !rect.contains(viewportPos))
+            return {};
+        const int edge = qMax(1, rect.height() / 4);
+        const int localY = viewportPos.y() - rect.top();
+        if (m_dropTargetMode == DropTargetMode::OnCell
+            || (localY >= edge && localY < rect.height() - edge)) {
+            DropTarget target;
+            target.parent = cell;
+            target.ontoItem = true;
+            target.cellDrop = true;
+            return target;
+        }
+    }
     DropTarget target = VirtualItemView::resolveDropTarget(viewportPos);
     if (!target.isValid() || !m_columns)
         return target;
@@ -4849,6 +4873,7 @@ VirtualItemView::DropTarget VirtualTableView::resolveDropTarget(const QPoint &vi
     // cursor and the drop lands inside that column.
     if (selectionBehavior() == SelectionBehavior::SelectRows)
         return target;
+    target.cellDrop = true;
     const int column = columnAtViewportX(viewportPos.x());
     if (column >= 0 && !m_columns->isSectionHidden(column))
         target.column = column;
@@ -4865,6 +4890,17 @@ VirtualItemView::DropTarget VirtualTableView::resolveDropTarget(const QPoint &vi
 
 QRect VirtualTableView::resolveDropIndicatorRect(const DropTarget &target) const
 {
+    if (!target.isValid())
+        return {};
+    if (target.cellDrop && target.ontoItem) {
+        if (!target.parent.isValid() || target.parent.model() != model())
+            return {};
+        const int pane = m_panes.paneIndexOfColumn(target.parent.column());
+        if (pane < 0)
+            return {};
+        return cellRect(target.parent).intersected(m_panes.paneAt(pane).viewportRect)
+            .intersected(viewport()->rect());
+    }
     const QRect line = VirtualItemView::resolveDropIndicatorRect(target);
     if (line.isEmpty() || target.column < 0)
         return line;
@@ -4873,16 +4909,20 @@ QRect VirtualTableView::resolveDropIndicatorRect(const DropTarget &target) const
     // ignores the horizontal offset, like their geometry).
     const ColumnGeometry column = columnGeometry(target.column);
     if (!column.isValid() || column.hidden || column.width <= 0)
-        return line;
+        return {};
+    const int pane = m_panes.paneIndexOfColumn(target.column);
+    if (pane < 0)
+        return {};
+    QRect rect(column.viewportX, line.y(), column.width, line.height());
     // An anchored merge marks the whole merged rectangle (which is clipped to
     // the pane by spanRect()), not just its first column.
     if (model() && m_spanProvider) {
         const QModelIndex anchor = anchorIndex(model()->index(target.row, target.column, target.parent));
         const QRect merged = anchor.isValid() ? spanRect(anchor) : QRect();
         if (!merged.isEmpty())
-            return QRect(merged.x(), line.y(), merged.width(), line.height());
+            rect = QRect(merged.x(), line.y(), merged.width(), line.height());
     }
-    return QRect(column.viewportX, line.y(), column.width, line.height());
+    return rect.intersected(m_panes.paneAt(pane).viewportRect).intersected(viewport()->rect());
 }
 
 } // namespace viv

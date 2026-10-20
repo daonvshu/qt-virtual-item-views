@@ -168,21 +168,31 @@ public:
     /// item is expressed as (item, item.rowCount()) - the same convention
     /// QAbstractItemModel::dropMimeData() uses - and is flagged through
     /// \a ontoItem so the view paints a frame instead of an insertion line.
-    /// \a column is -1 unless the view resolves a cell (tables).
+    /// A table may instead target an existing cell: parent is that cell,
+    /// row and column are -1, and both ontoItem and cellDrop are true.
+    /// Otherwise \a column is -1 unless the view resolves a cell (tables).
     struct DropTarget
     {
         QModelIndex parent;
         int row = -1;
         int column = -1;
-        /// True when the drop lands *into* \a parent instead of between its
-        /// children (a tree row in the middle of the indicator band).
+        /// True when the drop lands onto \a parent (a tree node or table cell)
+        /// instead of between rows.
         bool ontoItem = false;
         /// True when the drop landed in the empty area below the last visible
         /// row: the indicator marks the end of the content, and \a row is the
         /// insertion index after the parent's last child.
         bool trailing = false;
 
-        bool isValid() const { return row >= 0; }
+        /// Cell payload rather than a whole row. Insertion beside a source row
+        /// is allowed because the model may insert cells while keeping that row.
+        bool cellDrop = false;
+
+        bool isValid() const
+        {
+            return row >= 0 || (cellDrop && ontoItem && parent.isValid()
+                                && row == -1 && column == -1);
+        }
     };
 
     /// How the drop indicator is painted (§38). A subclass chooses by filling
@@ -699,6 +709,8 @@ private:
     void connectSelectionModel();
     void retireOwnedSelectionModel();
     void updateHoveredIndex(const QModelIndex &index);
+    /// Clears ordinary hover after the drag preview, preserving selection transitions.
+    void clearDragHover();
     void disconnectModel(QAbstractItemModel *model);
     void scheduleRelayout();
     void applyPendingAnchor();
@@ -833,6 +845,7 @@ private:
 
     bool m_dragEnabled = false;
     DragStartMode m_dragStartMode = DragStartMode::Automatic;
+    /// Also suspends ordinary hover updates until native drag and source cleanup finish.
     bool m_dragInProgress = false;
     bool m_dropIndicatorShown = true;
     Qt::DropAction m_defaultDropAction = Qt::CopyAction;

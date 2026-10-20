@@ -28,6 +28,7 @@
 #include <QScrollBar>
 #include <QScopeGuard>
 #include <QShowEvent>
+#include <QSignalBlocker>
 #include <QTimer>
 #include <QVariantAnimation>
 #include <QVector>
@@ -811,7 +812,7 @@ void VirtualItemView::setSelectedBackgroundColor(const QColor &color)
 
 void VirtualItemView::updateHoveredIndex(const QModelIndex &index)
 {
-    if (m_hoveredIndex == index)
+    if (m_destroying || m_dragInProgress || m_hoveredIndex == index)
         return;
     const QPersistentModelIndex previous = m_hoveredIndex;
     m_hoveredIndex = QPersistentModelIndex(index);
@@ -823,6 +824,8 @@ void VirtualItemView::updateHoveredIndex(const QModelIndex &index)
 
 void VirtualItemView::refreshHoveredIndex()
 {
+    if (m_dragInProgress || m_destroying)
+        return;
     QWidget *target = QApplication::widgetAt(QCursor::pos());
     if (target != viewport() && !viewport()->isAncestorOf(target)) {
         updateHoveredIndex(QModelIndex());
@@ -830,6 +833,29 @@ void VirtualItemView::refreshHoveredIndex()
     }
     const QPoint pos = viewport()->mapFromGlobal(QCursor::pos());
     updateHoveredIndex(viewport()->rect().contains(pos) ? indexAt(pos) : QModelIndex());
+}
+
+void VirtualItemView::clearDragHover()
+{
+    m_hoveredIndex = QPersistentModelIndex();
+    // Include rows already fading out, not just the last hovered identity.
+    for (auto it = m_visualTransitions.begin(); it != m_visualTransitions.end(); ++it) {
+        VisualTransition &transition = it.value();
+        transition.hoverProgress = 0.0;
+        transition.hoverTarget = false;
+        if (QVariantAnimation *animation = transition.animation) {
+            // Flatten only the hover component. Selection keeps its curve and clock,
+            // and this animation cannot revive stale hover after the drag returns.
+            const QSignalBlocker blocker(animation);
+            QPointF start = animation->startValue().toPointF();
+            QPointF end = animation->endValue().toPointF();
+            start.setX(0.0);
+            end.setX(0.0);
+            animation->setStartValue(start);
+            animation->setEndValue(end);
+        }
+    }
+    refreshVisualStates();
 }
 
 void VirtualItemView::refreshVisualStates()
@@ -3366,17 +3392,21 @@ Qt::DropAction VirtualItemView::startDrag(const QModelIndex &index, const DragOp
 Qt::DropAction VirtualItemView::startDragImpl(const QModelIndex &index, const DragOptions &options,
                                             bool useDefaultPreview)
 {
-    if (!m_model || m_dragInProgress || !m_dragSourceIndexes.isEmpty())
+    if (m_destroying || !m_model || m_dragInProgress || !m_dragSourceIndexes.isEmpty())
         return Qt::IgnoreAction;
     const QPointer<VirtualItemView> self(this);
     m_dragInProgress = true;
     bool dragStateStarted = false;
     const auto cleanup = qScopeGuard([self, &dragStateStarted]() {
-        if (self) {
+        if (self && !self->m_destroying) {
             if (dragStateStarted)
                 self->finishDrag();
-            if (self)
+            if (self && !self->m_destroying) {
                 self->m_dragInProgress = false;
+                self->refreshHoveredIndex();
+                if (self && !self->m_destroying)
+                    self->refreshVisualStates();
+            }
         }
     });
     const DragOptions previewOptions = options;
@@ -3467,6 +3497,13 @@ Qt::DropAction VirtualItemView::startDragImpl(const QModelIndex &index, const Dr
             }
         }
     }
+    if (!requestIsCurrent()) {
+        delete mime;
+        return Qt::IgnoreAction;
+    }
+    // Keep the preview's normal appearance, then clear ordinary hover for the
+    // native loop. Child events and scroll/materialization refreshes stay paused.
+    clearDragHover();
     if (!requestIsCurrent()) {
         delete mime;
         return Qt::IgnoreAction;
@@ -3647,7 +3684,7 @@ bool VirtualItemView::isDropOnItself(const DropTarget &target, Qt::DropAction ac
                 return true;
         }
         // Between the dragged item and itself: the item would not move.
-        if (target.parent == source.parent()
+        if (!target.cellDrop && target.parent == source.parent()
             && (target.row == source.row() || target.row == source.row() + 1))
             return true;
     }

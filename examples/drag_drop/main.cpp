@@ -14,14 +14,14 @@
 //   最后一行之下 —— 追加到根
 // 表格（右）：
 //   工具条上的"整行拖动"复选框（等价于启动参数 --row-drop）切换粒度：
-//     不勾 = 条目语义 SelectItems：按单元格拖动 —— 载荷只有被拖的那一格，
-//            插入线只跨目标列，拖动预览也是那一格
+//     不勾 = 条目语义 SelectItems：行的上下 1/4 区域插入，空白格中间区域直接填格；
+//            单格插入线或边框标记目标，移动只清空源格，Ctrl 复制保留源格
 //     勾选 = 行语义 SelectRows：按整行拖动 —— 载荷是整行的每一列（落下去是完整一行、
 //            列一一对应），插入线跨整个视口，拖动预览是整行
-//   冻结列不参与横向滚动，插入线依然落在冻结 pane 内
+//   冻结列不参与横向滚动，目标标记依然落在冻结 pane 内
 //
 // 三个视图都是 Move 语义（按住 Ctrl 拖 = 复制）：
-//   源视图在拖放结束后删掉自己拖动的行（setMoveRemovesSourceRows(true)），
+//   行拖动结束后，源视图删掉自己拖动的行（setMoveRemovesSourceRows(true)），
 //   因为跨视图的移动模型自己做不到 —— 这正是 QAbstractItemView 的做法。
 //   表格还演示了应用层怎么让**行高跟着行走**：载荷里带上"源行|显式高度"，模型自己删源行
 //   （§6 方法 1），再通知视图把高度给新行 —— 库不认识行高，这是应用状态。
@@ -43,8 +43,12 @@
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QMainWindow>
+#include <QMap>
 #include <QMimeData>
+#include <QPainter>
+#include <QPointer>
 #include <QScopedPointer>
+#include <QSet>
 #include <QSplitter>
 #include <QStandardItemModel>
 #include <QStatusBar>
@@ -53,11 +57,28 @@
 #include <QTimer>
 #include <QVBoxLayout>
 
+#include <limits>
+
 namespace {
 
 constexpr int kTreeRowHeight = 30;
 constexpr int kTableRowHeight = 28;
 constexpr int kTableColumnWidth = 120;
+
+/// 表格使用框架计算的行状态区域绘制背景，覆盖冻结列和滚动列。
+class DragDropTableView : public viv::VirtualTableView
+{
+public:
+    using viv::VirtualTableView::VirtualTableView;
+
+protected:
+    void paintStateBackgroundLayer(QPainter *painter, const QRect &extended,
+                                  const QRegion &clip, const QRegion &,
+                                  const QColor &color) const override
+    {
+        paintRoundedStateBackgroundLayer(painter, extended, clip, color, 0);
+    }
+};
 
 /// 树的行控件：标题 + 副标题。
 class NodeRowWidget : public QWidget
@@ -86,6 +107,23 @@ public:
     }
 
 protected:
+    void paintEvent(QPaintEvent *) override
+    {
+        // 树由视图统一绘制（包括 branch 区域）；列表由行控件绘制。
+        for (QWidget *ancestor = parentWidget(); ancestor; ancestor = ancestor->parentWidget()) {
+            auto *view = qobject_cast<viv::VirtualListView *>(ancestor);
+            if (!view)
+                continue;
+            const auto state = view->visualState(view->indexForWidget(this));
+            QPainter painter(this);
+            painter.setOpacity(state.hoverProgress);
+            painter.fillRect(rect(), view->hoverBackgroundColor());
+            painter.setOpacity(state.selectedProgress);
+            painter.fillRect(rect(), view->selectedBackgroundColor());
+            break;
+        }
+    }
+
     void resizeEvent(QResizeEvent *event) override
     {
         QWidget::resizeEvent(event);
@@ -200,6 +238,22 @@ Qt::ItemFlags dndFlags()
 const QString kRowFormat = QStringLiteral("application/x-viv-drag-drop-row");
 /// 表格自己加的载荷：每行 "源行|显式高度"（-1 = 该行没被调过高度），用来让行高跟着行走。
 const QString kTableRowFormat = QStringLiteral("application/x-viv-drag-drop-table-row");
+const QString kTableCellFormat = QStringLiteral("application/x-viv-drag-drop-table-cell");
+
+/// 本表内部的单元格载荷：保存角色数据、权限和可跟随行变化的源索引。
+class TableCellMimeData : public QMimeData
+{
+public:
+    struct Cell {
+        QPersistentModelIndex source;
+        QMap<int, QVariant> roles;
+        Qt::ItemFlags flags;
+        int rowOffset = 0;
+        int columnOffset = 0;
+    };
+    QPointer<const QStandardItemModel> sourceModel;
+    QList<Cell> cells;
+};
 
 /// 列表模型：§38 的 model 侧由应用实现（MIME 载荷 + 插入/移动/拒绝），视图只把
 /// (row, column, parent) 交过来。用 removeRows() + insertRows() 组合，Qt 5 与
@@ -289,9 +343,9 @@ QStandardItemModel *buildTreeModel(QObject *parent)
     return model;
 }
 
-/// 表格模型：应用层的"移动 + 行高跟随"（§38 §6 方法 1）。
+/// 表格模型：单元格支持行间插入和填空格，整行使用"移动 + 行高跟随"（§38 §6 方法 1）。
 ///
-/// 库只负责"落到哪里、插什么"；**行高是视图状态**，库不认识，所以"拖动一行后它还是原来那么高"
+/// 整行拖放时，库只负责"落到哪里、插什么"；**行高是视图状态**，库不认识，所以"拖动一行后它还是原来那么高"
 /// 这件事必须由应用决定：拖放本身是"插入一份副本 + 删掉源行"，新行是另一行、按默认高度。
 /// 这里演示做法 —— 模型把"源行 + 该行高度"写进自己的载荷，移动时自己删源行（同一个模型内部才
 /// 做得到，像列表示例那样），再用信号告诉视图：新行应该用什么高度。
@@ -305,6 +359,20 @@ public:
     {
     }
 
+    /// 与视图的整行拖动开关同步，决定载荷和目标接收语义。
+    void setRowDropEnabled(bool enabled) { m_rowDropEnabled = enabled; }
+
+    Qt::ItemFlags flags(const QModelIndex &index) const override
+    {
+        Qt::ItemFlags result = QStandardItemModel::flags(index);
+        if (!m_rowDropEnabled && index.isValid()) {
+            const QStandardItem *cell = item(index.row(), index.column());
+            if (isEmptyCell(index.row(), index.column()) || (cell && cell->hasChildren()))
+                result &= ~Qt::ItemIsDragEnabled;
+        }
+        return result;
+    }
+
     /// 视图的行高变化镜像进来：视图是行高的事实来源，模型只是为了把它写进载荷。
     void rememberRowHeight(qsizetype row, int height)
     {
@@ -316,12 +384,39 @@ public:
     QStringList mimeTypes() const override
     {
         QStringList types = QStandardItemModel::mimeTypes();
-        types << kTableRowFormat;
+        types << kTableRowFormat << kTableCellFormat;
         return types;
     }
 
     QMimeData *mimeData(const QModelIndexList &indexes) const override
     {
+        if (!m_rowDropEnabled) {
+            auto *data = new TableCellMimeData;
+            data->sourceModel = this;
+            int top = rowCount();
+            int left = columnCount();
+            QSet<QPersistentModelIndex> seen;
+            for (const QModelIndex &index : indexes) {
+                if (!index.isValid() || index.model() != this || index.parent().isValid()
+                    || seen.contains(index) || !(flags(index) & Qt::ItemIsDragEnabled))
+                    continue;
+                seen.insert(index);
+                data->cells.append({QPersistentModelIndex(index), itemData(index), flags(index)});
+                top = qMin(top, index.row());
+                left = qMin(left, index.column());
+            }
+            if (data->cells.isEmpty()) {
+                delete data;
+                return nullptr;
+            }
+            for (TableCellMimeData::Cell &cell : data->cells) {
+                cell.rowOffset = cell.source.row() - top;
+                cell.columnOffset = cell.source.column() - left;
+            }
+            // 专用格式仅供本表接收，避免其他视图把单元格误当整行移动。
+            data->setData(kTableCellFormat, QByteArrayLiteral("1"));
+            return data;
+        }
         QMimeData *data = QStandardItemModel::mimeData(indexes);
         if (!data)
             return nullptr;
@@ -342,9 +437,78 @@ public:
         return data;
     }
 
+    bool canDropMimeData(const QMimeData *data, Qt::DropAction action, int row, int column,
+                         const QModelIndex &parent) const override
+    {
+        if (!m_rowDropEnabled) {
+            const auto *cells = dynamic_cast<const TableCellMimeData *>(data);
+            if (!cells || cells->sourceModel != this || cells->cells.isEmpty()
+                || (action != Qt::MoveAction && action != Qt::CopyAction))
+                return false;
+            const bool fillCell = parent.isValid();
+            if (fillCell) {
+                if (parent.model() != this || parent.parent().isValid() || row != -1 || column != -1)
+                    return false;
+            } else if (row < 0 || row > rowCount() || column < 0 || column >= columnCount()) {
+                return false;
+            }
+            const int targetRow = fillCell ? parent.row() : row;
+            const int targetColumn = fillCell ? parent.column() : column;
+            for (const TableCellMimeData::Cell &cell : cells->cells) {
+                if (!cell.source.isValid() || cell.source.model() != this
+                    || cell.source.parent().isValid()
+                    || !(flags(cell.source) & Qt::ItemIsDragEnabled)
+                    || itemData(cell.source) != cell.roles)
+                    return false;
+                const int rowOffset = cell.rowOffset;
+                const int columnOffset = cell.columnOffset;
+                if (rowOffset < 0 || columnOffset < 0
+                    || columnOffset >= columnCount() - targetColumn)
+                    return false;
+                if (fillCell) {
+                    if (rowOffset >= rowCount() - targetRow
+                        || !isEmptyCell(targetRow + rowOffset, targetColumn + columnOffset))
+                        return false;
+                } else if (rowOffset >= std::numeric_limits<int>::max() - rowCount()) {
+                    return false;
+                }
+            }
+            return true;
+        }
+        return data && !data->hasFormat(kTableCellFormat) && !parent.isValid()
+            && QStandardItemModel::canDropMimeData(data, action, row, column, parent);
+    }
+
     bool dropMimeData(const QMimeData *data, Qt::DropAction action, int row, int column,
                       const QModelIndex &parent) override
     {
+        if (!canDropMimeData(data, action, row, column, parent))
+            return false;
+        if (!m_rowDropEnabled) {
+            const auto *cells = static_cast<const TableCellMimeData *>(data);
+            const int targetRow = parent.isValid() ? parent.row() : row;
+            const int targetColumn = parent.isValid() ? parent.column() : column;
+            if (!parent.isValid()) {
+                int rowsToInsert = 0;
+                for (const TableCellMimeData::Cell &cell : cells->cells)
+                    rowsToInsert = qMax(rowsToInsert, cell.rowOffset + 1);
+                if (!insertRows(row, rowsToInsert))
+                    return false;
+            }
+            for (const TableCellMimeData::Cell &cell : cells->cells) {
+                auto *copy = new QStandardItem;
+                copy->setFlags(cell.flags);
+                for (auto role = cell.roles.cbegin(); role != cell.roles.cend(); ++role)
+                    copy->setData(role.value(), role.key());
+                setItem(targetRow + cell.rowOffset, targetColumn + cell.columnOffset, copy);
+            }
+            if (action == Qt::MoveAction) {
+                // 插入后用持续索引读取源位置，避免清空行号已经变化的其他格。
+                for (const TableCellMimeData::Cell &cell : cells->cells)
+                    setItem(cell.source.row(), cell.source.column(), nullptr);
+            }
+            return true;
+        }
         // 源行必须在插入之前读出来（插入之后行号就变了）。
         QList<QPair<int, int>> sources;   // (源行, 该行显式高度；-1 = 没调过)
         if (action == Qt::MoveAction && data && data->hasFormat(kTableRowFormat)) {
@@ -395,6 +559,14 @@ signals:
     void insertedRowHeights(const QList<QPair<int, int>> &rowsAndHeights);
 
 private:
+    /// 没有角色数据和子项的格子可接收投放，包含 Qt 按需创建的空 item。
+    bool isEmptyCell(int row, int column) const
+    {
+        const QStandardItem *cell = item(row, column);
+        return itemData(index(row, column)).isEmpty() && (!cell || !cell->hasChildren());
+    }
+
+    bool m_rowDropEnabled = false;
     /// 行 -> 用户显式设置的高度（按行身份，插入/删除后自动跟着走）。
     QHash<QPersistentModelIndex, int> m_heights;
 };
@@ -408,6 +580,9 @@ DraggableTableModel *buildTableModel(int rows, int columns, QObject *parent)
     model->setHorizontalHeaderLabels(labels);
     for (int row = 0; row < rows; ++row) {
         for (int column = 0; column < columns; ++column) {
+            // 留出空白格，直接演示单元格移动和 Ctrl 复制。
+            if ((row + column) % 5 == 4)
+                continue;
             auto *item = new QStandardItem(QStringLiteral("r%1c%2").arg(row).arg(column + 1));
             item->setFlags(dndFlags());
             model->setItem(row, column, item);
@@ -421,8 +596,16 @@ DraggableTableModel *buildTableModel(int rows, int columns, QObject *parent)
 bool hoverDrop(viv::VirtualItemView *view, const QPoint &viewportPos)
 {
     view->setDragEnabled(true);
-    const QModelIndex hovered = view->indexAt(viewportPos);
-    const QModelIndex source = hovered.isValid() ? hovered : view->model()->index(0, 0);
+    QModelIndex source;
+    for (int row = 0; row < view->model()->rowCount() && !source.isValid(); ++row) {
+        for (int column = 0; column < view->model()->columnCount(); ++column) {
+            const QModelIndex candidate = view->model()->index(row, column);
+            if (view->model()->flags(candidate) & Qt::ItemIsDragEnabled) {
+                source = candidate;
+                break;
+            }
+        }
+    }
     if (!source.isValid())
         return false;
     QScopedPointer<QMimeData> data(view->model()->mimeData({source}));
@@ -551,6 +734,7 @@ int main(int argc, char **argv)
     tree->setAdapter(&nodeAdapter);
     tree->setUniformItemHeight(kTreeRowHeight);
     tree->setModel(treeModel);
+    tree->setVisualStateBackgroundVisible(true);
     tree->setDragEnabled(true);
     // 三个视图统一是 Move 语义：拖动 = 把项移到目标位置。跨视图的移动没法由模型自己完成
     // （源模型不知道"外部的 drop 被接受了"），所以这里按 QAbstractItemView 的做法让**源视图**
@@ -559,15 +743,18 @@ int main(int argc, char **argv)
     tree->setMoveRemovesSourceRows(true);
     splitter->addWidget(tree);
 
-    auto *table = new viv::VirtualTableView(splitter);
+    auto *table = new DragDropTableView(splitter);
     table->setObjectName(QStringLiteral("table"));
     table->setTableAdapter(&tableAdapter);
     table->setUniformItemHeight(kTableRowHeight);
     table->setDefaultColumnWidth(kTableColumnWidth);
     table->setModel(tableModel);
+    table->setVisualStateScope(viv::VirtualTableView::VisualStateScope::Row);
     table->setDragEnabled(true);
+    table->setDropTargetMode(viv::VirtualTableView::DropTargetMode::BetweenRowsOrOnCell);
     table->setDefaultDropAction(Qt::MoveAction);
-    table->setMoveRemovesSourceRows(true);
+    table->setMoveRemovesSourceRows(rowDrop);
+    tableModel->setRowDropEnabled(rowDrop);
     // 应用层接线（§6 方法 1）：视图的行高变化镜像进模型；模型完成一次"内部移动"后告诉视图
     // 新行要用什么高度。于是被拖高的行移动之后还是那么高（库本身不参与这件事）。
     QObject::connect(table, &viv::VirtualTableView::rowHeightChanged, tableModel,
@@ -583,9 +770,7 @@ int main(int argc, char **argv)
             frozen.append(column);
         table->setFrozenColumns(frozen);
     }
-    // 表格的拖放粒度跟着选择语义走：SelectRows（默认）整行拖放，SelectItems
-    // 按单元格拖放 —— 与 QTableView 的 dropOn() 一致。（枚举写属主全名：VC 14.50
-    // 在 Qt 5 配置下出现过用派生类别名限定枚举常量时整条调用被丢掉的情况。）
+    // 整行使用默认的插入落点；单元格按鼠标位置区分行间插入和空白格投放。
     table->setSelectionBehavior(rowDrop ? viv::VirtualItemView::SelectionBehavior::SelectRows
                                         : viv::VirtualItemView::SelectionBehavior::SelectItems);
     splitter->addWidget(table);
@@ -614,7 +799,7 @@ int main(int argc, char **argv)
     rowDropCheck->setChecked(rowDrop);
     rowDropCheck->setToolTip(QStringLiteral(
         "勾选 = 行语义（SelectionBehavior::SelectRows）：载荷是整行每一列、插入线跨整个视口、"
-        "预览是整行；不勾 = 单元格语义（SelectItems）：只拖被点的那一格"));
+        "预览是整行；不勾 = 本表内上下 1/4 区域插入，中间区域填空白格，Ctrl 复制"));
     auto *status = new QLabel(central);
     status->setObjectName(QStringLiteral("statusLabel"));
     toolbar->addWidget(dragCheck);
@@ -663,12 +848,11 @@ int main(int argc, char **argv)
     QObject::connect(tree, &viv::VirtualItemView::virtualizationUpdated, &window, updateStatus);
     QObject::connect(table, &viv::VirtualItemView::virtualizationUpdated, &window, updateStatus);
     QObject::connect(list, &viv::VirtualItemView::virtualizationUpdated, &window, updateStatus);
-    // 表格的拖放粒度就是选择语义（§38 "row/cell drop semantics"）：这个 checkbox 只是把
-    // setSelectionBehavior() 拿到界面上，方便对比"整行载荷 + 整行指示器 + 整行预览"与
-    // "单元格载荷 + 单格指示线 + 单格预览"。（枚举写属主全名：VC 14.50 在 Qt 5 配置下出现过
-    // 用派生类别名限定枚举常量时整条调用被丢掉。）
+    // 单元格移动由模型清空源格，不能启用框架的整行删除。
     QObject::connect(rowDropCheck, &QCheckBox::toggled, &window,
-                     [table, updateStatus](bool rows) {
+                     [table, tableModel, updateStatus](bool rows) {
+                         tableModel->setRowDropEnabled(rows);
+                         table->setMoveRemovesSourceRows(rows);
                          table->setSelectionBehavior(
                              rows ? viv::VirtualItemView::SelectionBehavior::SelectRows
                                   : viv::VirtualItemView::SelectionBehavior::SelectItems);
