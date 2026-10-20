@@ -1,4 +1,5 @@
 #include "../../src/core/dragpreview_p.h"
+#include <virtualitemviews/types.h>
 
 #include <QtTest>
 
@@ -7,6 +8,10 @@ class TestDragPreview : public QObject
     Q_OBJECT
 
 private slots:
+    void omittedPressPositionUsesFallback();
+    void explicitPressPosition_data();
+    void explicitPressPosition();
+    void pressPositionCopiesAndResets();
     void emptyRectCapturesWholeWidget();
     void captureClipsToWidgetBounds();
     void disjointRectDoesNotBecomeWholeWidget();
@@ -15,6 +20,49 @@ private slots:
     void centerUsesLogicalPixels_data();
     void centerUsesLogicalPixels();
 };
+
+void TestDragPreview::omittedPressPositionUsesFallback()
+{
+    const viv::DragOptions options;
+    QVERIFY(!options.globalPressPosition.has_value());
+    QCOMPARE(options.globalPressPosition.value_or(QPoint(42, 81)), QPoint(42, 81));
+}
+
+void TestDragPreview::explicitPressPosition_data()
+{
+    QTest::addColumn<QPoint>("position");
+    QTest::newRow("origin") << QPoint(0, 0);
+    QTest::newRow("negative") << QPoint(-1920, -240);
+    QTest::newRow("positive") << QPoint(42, 81);
+}
+
+void TestDragPreview::explicitPressPosition()
+{
+    QFETCH(QPoint, position);
+    viv::DragOptions options;
+    options.globalPressPosition = position;
+    QVERIFY(options.globalPressPosition.has_value());
+    QCOMPARE(options.globalPressPosition.value_or(QPoint(12, 34)), position);
+    const viv::OptionalPoint constructed(position);
+    QVERIFY(constructed.has_value());
+    QCOMPARE(constructed.value_or(QPoint(12, 34)), position);
+}
+
+void TestDragPreview::pressPositionCopiesAndResets()
+{
+    viv::DragOptions original;
+    original.globalPressPosition = QPoint(0, 0);
+    viv::DragOptions copy = original;
+    original.globalPressPosition.reset();
+    QVERIFY(!original.globalPressPosition.has_value());
+    QCOMPARE(original.globalPressPosition.value_or(QPoint(12, 34)), QPoint(12, 34));
+    QVERIFY(copy.globalPressPosition.has_value());
+    QCOMPARE(copy.globalPressPosition.value_or(QPoint(12, 34)), QPoint(0, 0));
+    copy = original;
+    QVERIFY(!copy.globalPressPosition.has_value());
+    copy.globalPressPosition = QPoint(-5, 9);
+    QCOMPARE(copy.globalPressPosition.value_or(QPoint(12, 34)), QPoint(-5, 9));
+}
 
 void TestDragPreview::emptyRectCapturesWholeWidget()
 {

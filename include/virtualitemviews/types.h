@@ -6,11 +6,38 @@
 #include <QRect>
 #include <QVariant>
 #include <QtGlobal>
-#include <optional>
 
 class QWidget;
 
 namespace viv {
+
+/// A point that can be omitted, including on C++14 toolchains.
+class OptionalPoint
+{
+public:
+    /// Starts without a point; value_or() returns its fallback.
+    OptionalPoint() = default;
+    /// Stores any coordinate, including the origin and negative coordinates.
+    OptionalPoint(const QPoint &point) : m_point(point), m_hasValue(true) {}
+
+    /// Replaces the stored point and marks it present.
+    OptionalPoint &operator=(const QPoint &point)
+    {
+        m_point = point;
+        m_hasValue = true;
+        return *this;
+    }
+    /// Whether a point was explicitly supplied.
+    bool has_value() const { return m_hasValue; }
+    /// Returns the stored point, or the fallback when omitted.
+    QPoint value_or(const QPoint &fallback) const { return m_hasValue ? m_point : fallback; }
+    /// Clears the supplied point so the fallback is used again.
+    void reset() { m_hasValue = false; }
+
+private:
+    QPoint m_point;
+    bool m_hasValue = false;
+};
 
 /// Optional screenshot source and pointer position for a manually started drag.
 struct DragOptions
@@ -24,7 +51,7 @@ struct DragOptions
     bool usePressPosition = true;
     /// Explicit global press position, including (0, 0). When omitted, the view
     /// uses its matching recorded press or the cursor position at drag entry.
-    std::optional<QPoint> globalPressPosition;
+    OptionalPoint globalPressPosition;
 };
 
 /// Data and metadata supplied to adapter binding callbacks.
@@ -43,7 +70,7 @@ struct ItemBindingContext
 };
 
 /// Default model role used by VirtualItemView for one complete row/node payload.
-inline constexpr int kDefaultItemDataRole = Qt::UserRole + 0x200;
+constexpr int kDefaultItemDataRole = Qt::UserRole + 0x200;
 
 /// Identifier used to classify the widgets produced by a WidgetAdapter.
 ///
@@ -53,7 +80,7 @@ inline constexpr int kDefaultItemDataRole = Qt::UserRole + 0x200;
 using WidgetType = int;
 
 /// Widget type used when an adapter does not classify its widgets.
-inline constexpr WidgetType kDefaultWidgetType = 0;
+constexpr WidgetType kDefaultWidgetType = 0;
 
 /// Look of the line that separates two panes (§31). Shared by the column panes
 /// (VirtualTableView) and the row panes (VirtualItemView), so both boundaries look

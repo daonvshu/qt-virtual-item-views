@@ -1,5 +1,6 @@
 #include <virtualitemviews/headergeometry.h>
 #include <virtualitemviews/tablepane.h>
+#include "../../src/core/datastreamversion_p.h"
 
 #include <QtTest>
 #include <QDataStream>
@@ -21,6 +22,8 @@ private slots:
     void moveLogicalSectionsFollowsModel();
     void sortIndicatorRoundTrip();
     void saveRestoreRoundTrip();
+    void stateUsesQt512CompatibleEncoding_data();
+    void stateUsesQt512CompatibleEncoding();
     void restoreRejectsMismatchedState();
     void sectionCountChangeKeepsState();
     void shrinkingTheSectionSetClearsAnOutOfRangeSortIndicator();
@@ -454,6 +457,50 @@ void TestHeaderGeometry::saveRestoreRoundTrip()
     HeaderGeometry vertical(Qt::Vertical);
     vertical.setSectionCount(4);
     QVERIFY(!vertical.restoreState(state));
+}
+
+void TestHeaderGeometry::stateUsesQt512CompatibleEncoding_data()
+{
+    QTest::addColumn<bool>("compact");
+    QTest::newRow("dense") << false;
+    QTest::newRow("compact") << true;
+}
+
+void TestHeaderGeometry::stateUsesQt512CompatibleEncoding()
+{
+    QFETCH(bool, compact);
+    const auto encodeState = [compact](int streamVersion) {
+        QByteArray state;
+        QDataStream stream(&state, QIODevice::WriteOnly);
+        stream.setVersion(streamVersion);
+        stream << HeaderGeometry::kStateMagic << HeaderGeometry::kStateVersion
+               << qint32(1) << qint32(3) << quint8(compact ? 1 : 0);
+        if (compact) {
+            stream << QVector<qint32>({1}) << QVector<qint32>({150})
+                   << QVector<qreal>({1.5});
+        } else {
+            stream << QVector<qint32>({2, 0, 1}) << QVector<qint32>({90, 150, 90})
+                   << QVector<quint8>({0, 0, 1}) << QVector<qint32>({1})
+                   << QVector<qreal>({1.5});
+        }
+        stream << qint32(90) << qint32(10) << qint32(1000) << qint64(77)
+               << qint32(1) << qint32(Qt::DescendingOrder) << quint8(0);
+        return state;
+    };
+
+    // Both stream versions must encode every persisted field identically, including
+    // the real-valued stretch factors and the compact/dense container payloads.
+    const QByteArray legacyState = encodeState(QDataStream::Qt_5_12);
+    QCOMPARE(encodeState(stateDataStreamVersion()), legacyState);
+    HeaderGeometry restored;
+    restored.setSectionCount(3);
+    QVERIFY(restored.restoreState(legacyState));
+    QCOMPARE(restored.sectionSize(1), 150);
+    QCOMPARE(restored.sectionStretchFactor(1), qreal(1.5));
+    QCOMPARE(restored.viewportOffset(), qint64(77));
+    QCOMPARE(restored.sortIndicatorSection(), 1);
+    QCOMPARE(restored.sortIndicatorOrder(), Qt::DescendingOrder);
+    QCOMPARE(restored.saveState(), legacyState);
 }
 
 void TestHeaderGeometry::restoreRejectsMismatchedState()
@@ -1171,7 +1218,7 @@ void TestHeaderGeometry::versionTwoStateStillRestores()
 {
     QByteArray state;
     QDataStream stream(&state, QIODevice::WriteOnly);
-    stream.setVersion(QDataStream::Qt_5_15);
+    stream.setVersion(stateDataStreamVersion());
     stream << HeaderGeometry::kStateMagic << quint32(2) << qint32(1) << qint32(2);
     stream << QVector<qint32>({0, 1}) << QVector<qint32>({100, 150})
            << QVector<quint8>({0, 0}) << QVector<qint32>() << QVector<qreal>();

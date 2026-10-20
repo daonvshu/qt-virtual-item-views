@@ -537,7 +537,7 @@ void TestVirtualItemView::publicConstantsAreAddressableFromAConsumer()
         &HeaderGeometry::kStateVersion,
         &HeaderViewInterface::kFollowGeometryOffset,
     };
-    QCOMPARE(int(std::size(constants)), 7);
+    QCOMPARE(int(sizeof(constants) / sizeof(constants[0])), 7);
     for (const void *constant : constants)
         QVERIFY(constant != nullptr);
 }

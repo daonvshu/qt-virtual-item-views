@@ -4,9 +4,11 @@
 
 namespace viv {
 
+constexpr qsizetype BlockSizeIndex::kDefaultBlockCapacity;
+
 // A shared build has to export this public constant (see virtualitemview.cpp).
 namespace {
-[[maybe_unused]] const void *const volatile kExportedConstants[] = {
+Q_DECL_UNUSED const void *const volatile kExportedConstants[] = {
     &BlockSizeIndex::kDefaultBlockCapacity,
 };
 } // namespace

@@ -4,6 +4,7 @@
 #include <virtualitemviews/virtuallistview.h>
 #include <virtualitemviews/virtualtableview.h>
 #include <virtualitemviews/virtualheaderview.h>
+#include "../../src/core/datastreamversion_p.h"
 
 #include "vivtestfixtures.h"
 
@@ -586,7 +587,7 @@ void TestFrozenRows::frozenRowsSurviveTheStateRoundTrip()
     QBuffer buffer(&legacy);
     QVERIFY(buffer.open(QIODevice::ReadWrite));
     QDataStream patch(&buffer);
-    patch.setVersion(QDataStream::Qt_5_15);
+    patch.setVersion(stateDataStreamVersion());
     patch.skipRawData(4); // magic
     patch << quint32(1);  // version
     buffer.close();

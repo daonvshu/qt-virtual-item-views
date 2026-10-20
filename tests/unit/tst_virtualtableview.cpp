@@ -6,6 +6,7 @@
 #include <virtualitemviews/virtualheaderview.h>
 #include <virtualitemviews/headerwidgetadapter.h>
 #include "vivtestfixtures.h"
+#include "../../src/core/datastreamversion_p.h"
 
 #include <QtTest>
 
@@ -2394,7 +2395,7 @@ void TestVirtualTableView::aBrokenStateLeavesTheViewUntouched()
 
     // (b) A negative count where the frozen-left set begins.
     QDataStream header(good);
-    header.setVersion(QDataStream::Qt_5_15);
+    header.setVersion(stateDataStreamVersion());
     quint32 magic = 0;
     quint32 version = 0;
     quint32 columnStateSize = 0;

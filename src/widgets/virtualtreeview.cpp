@@ -16,6 +16,10 @@
 
 namespace viv {
 
+constexpr int VirtualTreeView::NodeRowSpacingRole;
+constexpr int VirtualTreeView::NodeRowSpacingBelowRole;
+constexpr int VirtualTreeView::NodeRowSpacingAboveRole;
+
 namespace {
 inline QPoint eventPosition(const QMouseEvent *event)
 {

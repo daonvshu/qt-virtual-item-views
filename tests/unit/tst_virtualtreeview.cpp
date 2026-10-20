@@ -45,7 +45,11 @@ QStandardItemModel *buildTree(QObject *parent)
 
 QModelIndex indexOf(QStandardItemModel *model, const QString &path)
 {
+#if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
     const QStringList parts = path.split(QLatin1Char('/'), Qt::SkipEmptyParts);
+#else
+    const QStringList parts = path.split(QLatin1Char('/'), QString::SkipEmptyParts);
+#endif
     if (parts.isEmpty())
         return QModelIndex();
     QStandardItem *item = model->findItems(parts.first(), Qt::MatchExactly).value(0);

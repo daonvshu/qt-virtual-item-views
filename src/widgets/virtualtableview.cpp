@@ -1,5 +1,6 @@
 #include <virtualitemviews/virtualtableview.h>
 #include "../core/pixelalignedlines_p.h"
+#include "../core/datastreamversion_p.h"
 
 #include <virtualitemviews/virtualheaderview.h>
 #include <virtualitemviews/labelheaderview.h>
@@ -31,12 +32,14 @@
 
 namespace viv {
 
+constexpr qint64 HeaderViewInterface::kFollowGeometryOffset;
+
 // A shared build has to export this public constant (see virtualitemview.cpp): a consumer
 // that odr-uses it links against `__imp_...`, and MinGW/GCC only emits the symbol in a TU
 // that odr-uses it. The pane-offset sentinel used to be addressed by the removed
 // nativeheader implementation.
 namespace {
-[[maybe_unused]] const void *const volatile kExportedConstants[] = {
+Q_DECL_UNUSED const void *const volatile kExportedConstants[] = {
     &HeaderViewInterface::kFollowGeometryOffset,
 };
 } // namespace
@@ -2405,7 +2408,7 @@ QByteArray VirtualTableView::saveHeaderState() const
 
     QByteArray state;
     QDataStream stream(&state, QIODevice::WriteOnly);
-    stream.setVersion(QDataStream::Qt_5_15);
+    stream.setVersion(stateDataStreamVersion());
     stream << kTableStateMagic << kTableStateVersion;
     stream << quint32(columnState.size());
     stream.writeRawData(columnState.constData(), int(columnState.size()));
@@ -2424,7 +2427,7 @@ QByteArray VirtualTableView::saveHeaderState() const
 bool VirtualTableView::restoreHeaderState(const QByteArray &state)
 {
     QDataStream stream(state);
-    stream.setVersion(QDataStream::Qt_5_15);
+    stream.setVersion(stateDataStreamVersion());
 
     quint32 magic = 0;
     quint32 version = 0;

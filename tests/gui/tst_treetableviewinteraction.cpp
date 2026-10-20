@@ -115,8 +115,10 @@ private:
     }
 
     QtMessageHandler previous = nullptr;
-    inline static PinWarningCapture *active = nullptr;
+    static PinWarningCapture *active;
 };
+
+PinWarningCapture *PinWarningCapture::active = nullptr;
 
 class SolidBranchRenderer : public BranchIndicatorRenderer
 {

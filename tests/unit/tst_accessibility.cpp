@@ -168,7 +168,11 @@ private:
 /// Index of a node by its path ("A/a0") in a QStandardItemModel tree.
 QModelIndex treeIndex(QStandardItemModel *model, const QString &path)
 {
+#if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
     const QStringList parts = path.split(QLatin1Char('/'), Qt::SkipEmptyParts);
+#else
+    const QStringList parts = path.split(QLatin1Char('/'), QString::SkipEmptyParts);
+#endif
     if (parts.isEmpty())
         return QModelIndex();
     QStandardItem *item = nullptr;

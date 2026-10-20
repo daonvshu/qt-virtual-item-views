@@ -20,6 +20,8 @@
 
 namespace viv {
 
+constexpr int VirtualHeaderView::kSectionNotShown;
+
 namespace {
 /// Pixels at a section edge that start a resize instead of a click/move (§25).
 constexpr int kResizeMargin = 3;

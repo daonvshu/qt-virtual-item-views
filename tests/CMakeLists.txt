@@ -28,9 +28,9 @@ add_executable(tst_bindingcontext unit/tst_bindingcontext.cpp)
 target_link_libraries(tst_bindingcontext PRIVATE VirtualItemViews Qt${QT_VERSION_MAJOR}::Test)
 add_test(NAME tst_bindingcontext COMMAND tst_bindingcontext)
 
-# Pure preview geometry needs neither widgets nor a platform drag session.
+# Preview geometry and optional coordinates need neither widgets nor a platform drag session.
 add_executable(tst_dragpreview unit/tst_dragpreview.cpp)
-target_link_libraries(tst_dragpreview PRIVATE Qt${QT_VERSION_MAJOR}::Test)
+target_link_libraries(tst_dragpreview PRIVATE VirtualItemViews Qt${QT_VERSION_MAJOR}::Test)
 add_test(NAME tst_dragpreview COMMAND tst_dragpreview)
 
 viv_add_test(tst_sizeindex unit/tst_sizeindex.cpp)
@@ -51,7 +51,13 @@ viv_add_test(tst_virtuallistview unit/tst_virtuallistview.cpp)
 viv_add_test(tst_virtualtableview unit/tst_virtualtableview.cpp)
 viv_add_test(tst_tablecellmode unit/tst_tablecellmode.cpp)
 viv_add_test(tst_virtualtreeview unit/tst_virtualtreeview.cpp)
-viv_add_test(tst_treerowspacing unit/tst_treerowspacing.cpp)
+# This test's generic helpers use C++17 if constexpr, unavailable in GCC 5/6.
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 7)
+    message(STATUS "Skipping tst_treerowspacing: its helpers require GCC 7+ for C++17")
+else()
+    viv_add_test(tst_treerowspacing unit/tst_treerowspacing.cpp)
+    target_compile_features(tst_treerowspacing PRIVATE cxx_std_17)
+endif()
 viv_add_test(tst_virtualheaderview unit/tst_virtualheaderview.cpp)
 viv_add_test(tst_dnd unit/tst_dnd.cpp)
 viv_add_test(tst_accessibility unit/tst_accessibility.cpp)

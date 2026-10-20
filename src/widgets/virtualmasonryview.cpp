@@ -544,9 +544,10 @@ void VirtualMasonryView::applyPendingItemSizes()
         return lhs.row() < rhs.row();
     });
     pending.erase(std::unique(pending.begin(), pending.end()), pending.end());
+    const auto &pendingIndexes = pending;
     QVector<QPair<qsizetype, QSize>> estimates;
     estimates.reserve(pending.size());
-    for (const QPersistentModelIndex &index : std::as_const(pending)) {
+    for (const QPersistentModelIndex &index : pendingIndexes) {
         const qsizetype item = viewItemForIndex(index);
         if (item < 0)
             continue;
@@ -555,7 +556,7 @@ void VirtualMasonryView::applyPendingItemSizes()
             || adapter() != activeAdapter || revision != m_revision) {
             if (self && activeModel && model() == activeModel.data()
                 && adapter() == activeAdapter && m_root == root) {
-                for (const QPersistentModelIndex &retry : std::as_const(pending))
+                for (const QPersistentModelIndex &retry : pendingIndexes)
                     invalidateItemSize(retry);
             }
             return;
@@ -565,7 +566,7 @@ void VirtualMasonryView::applyPendingItemSizes()
             || adapter() != activeAdapter || revision != m_revision) {
             if (self && activeModel && model() == activeModel.data()
                 && adapter() == activeAdapter && m_root == root) {
-                for (const QPersistentModelIndex &retry : std::as_const(pending))
+                for (const QPersistentModelIndex &retry : pendingIndexes)
                     invalidateItemSize(retry);
             }
             return;

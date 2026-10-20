@@ -41,6 +41,8 @@
 
 namespace viv {
 
+constexpr qsizetype VirtualItemView::kLifecycleLogCapacity;
+
 // Out-of-line definition of a public constant: a *shared* build has to export a symbol
 // for it. A consumer that odr-uses the member (QTest's QCOMPARE binds it to a const&)
 // needs one, while an inline constexpr member that the library itself only reads as a
@@ -55,7 +57,7 @@ namespace viv {
 // lives next to the other public constants (ScrollMapper, BlockSizeIndex, WidgetRecycler,
 // HeaderGeometry, HeaderViewInterface).
 namespace {
-[[maybe_unused]] const void *const volatile kExportedConstants[] = {
+Q_DECL_UNUSED const void *const volatile kExportedConstants[] = {
     &VirtualItemView::kLifecycleLogCapacity,
 };
 } // namespace

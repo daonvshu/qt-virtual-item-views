@@ -1,4 +1,5 @@
 #include <virtualitemviews/headergeometry.h>
+#include "../core/datastreamversion_p.h"
 
 #include <QDataStream>
 #include <QIODevice>
@@ -8,9 +9,12 @@
 
 namespace viv {
 
+constexpr quint32 HeaderGeometry::kStateMagic;
+constexpr quint32 HeaderGeometry::kStateVersion;
+
 // A shared build has to export these public constants (see virtualitemview.cpp).
 namespace {
-[[maybe_unused]] const void *const volatile kExportedConstants[] = {
+Q_DECL_UNUSED const void *const volatile kExportedConstants[] = {
     &HeaderGeometry::kStateMagic,
     &HeaderGeometry::kStateVersion,
 };
@@ -1519,7 +1523,7 @@ QByteArray HeaderGeometry::saveState() const
 {
     QByteArray state;
     QDataStream stream(&state, QIODevice::WriteOnly);
-    stream.setVersion(QDataStream::Qt_5_15);
+    stream.setVersion(stateDataStreamVersion());
     stream << kStateMagic << kStateVersion;
     stream << qint32(m_orientation == Qt::Horizontal ? 1 : 0);
     stream << qint32(sectionCount());
@@ -1575,7 +1579,7 @@ bool HeaderGeometry::restoreState(const QByteArray &state)
     const int sortBeforeRestore = m_sortIndicatorSection;
     const Qt::SortOrder orderBeforeRestore = m_sortIndicatorOrder;
     QDataStream stream(state);
-    stream.setVersion(QDataStream::Qt_5_15);
+    stream.setVersion(stateDataStreamVersion());
 
     quint32 magic = 0;
     quint32 version = 0;

@@ -22,6 +22,10 @@
 #include <functional>
 
 namespace viv {
+constexpr int VirtualTreeTableView::NodeRowSpacingRole;
+constexpr int VirtualTreeTableView::NodeRowSpacingBelowRole;
+constexpr int VirtualTreeTableView::NodeRowSpacingAboveRole;
+
 namespace {
 
 QPoint mousePosition(const QMouseEvent *event)

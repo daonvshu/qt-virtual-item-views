@@ -8,7 +8,6 @@ project(VirtualItemViews
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 
-set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_AUTOMOC ON)
@@ -30,7 +29,7 @@ option(VIRTUALITEMVIEWS_BUILD_BENCHMARKS "Build VirtualItemViews benchmarks" ON)
 option(VIRTUALITEMVIEWS_BUILD_GUI_TESTS "Build tests that synthesize mouse/keyboard input" ON)
 
 # ---------------------------------------------------------------------------
-# Qt: Qt 6.2+ is preferred, Qt 5.15+ is supported as well.
+# Qt: Qt 6.2+ is preferred, Qt 5.12.3+ is supported as well.
 #
 # Qt5Config.cmake does not define QT_VERSION_MAJOR, so the major version is
 # derived from the targets that were actually found.
@@ -55,8 +54,10 @@ set(VIRTUALITEMVIEWS_QT_TARGETS
 
 if(QT_VERSION_MAJOR EQUAL 6)
     set(VIRTUALITEMVIEWS_QT_MINIMUM_VERSION 6.2)
+    set(CMAKE_CXX_STANDARD 17)
 else()
-    set(VIRTUALITEMVIEWS_QT_MINIMUM_VERSION 5.15)
+    set(VIRTUALITEMVIEWS_QT_MINIMUM_VERSION 5.12.3)
+    set(CMAKE_CXX_STANDARD 14)
 endif()
 
 find_package(${VIRTUALITEMVIEWS_QT_PACKAGE} ${VIRTUALITEMVIEWS_QT_MINIMUM_VERSION}
@@ -133,7 +134,7 @@ endif()
 add_library(VirtualItemViews ${VIRTUALITEMVIEWS_LIBRARY_TYPE} ${VIRTUALITEMVIEWS_SOURCES})
 add_library(VirtualItemViews::VirtualItemViews ALIAS VirtualItemViews)
 
-target_compile_features(VirtualItemViews PUBLIC cxx_std_17)
+target_compile_features(VirtualItemViews PUBLIC cxx_std_${CMAKE_CXX_STANDARD})
 target_include_directories(VirtualItemViews
     PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
