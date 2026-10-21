@@ -4,7 +4,6 @@
 #include <virtualitemviews/virtuallistview.h>
 #include <virtualitemviews/virtualtableview.h>
 #include <QLabel>
-#include <QPainter>
 #include <QResizeEvent>
 
 namespace dragdemo {
@@ -13,18 +12,31 @@ constexpr int kTreeRowHeight = 30;
 constexpr int kTableRowHeight = 28;
 constexpr int kTableColumnWidth = 120;
 
-/// 表格使用框架计算的行状态区域绘制背景，覆盖冻结列和滚动列。
+/// 表格在单元格物化时使用 viewport 的整行区域作为拖动预览。
 class DragDropTableView : public viv::VirtualTableView
 {
 public:
     using viv::VirtualTableView::VirtualTableView;
 
 protected:
-    void paintStateBackgroundLayer(QPainter *painter, const QRect &extended,
-                                  const QRegion &clip,
-                                  const QColor &color) const override
+    /// 单元格物化的整行预览由示例选择 viewport 截图；框架只管理反馈动画。
+    QWidget *dragSourceWidget(const QModelIndex &index) const override
     {
-        paintRoundedStateBackgroundLayer(painter, extended, clip, color, 0);
+        if (materializationMode() == MaterializationMode::CellWidgets
+            && selectionBehavior() == SelectionBehavior::SelectRows)
+            return viewport();
+        return VirtualTableView::dragSourceWidget(index);
+    }
+
+    /// 截图区域使用 viewport 坐标，包含冻结列和当前可见的滚动列。
+    QRect dragPixmapRect(const QModelIndex &index) const override
+    {
+        if (materializationMode() == MaterializationMode::CellWidgets
+            && selectionBehavior() == SelectionBehavior::SelectRows) {
+            const QRect cell = cellRect(index);
+            return QRect(0, cell.y(), viewport()->width(), cell.height());
+        }
+        return VirtualTableView::dragPixmapRect(index);
     }
 };
 
@@ -55,23 +67,6 @@ public:
     }
 
 protected:
-    void paintEvent(QPaintEvent *) override
-    {
-        // 树由视图统一绘制（包括 branch 区域）；列表由行控件绘制。
-        for (QWidget *ancestor = parentWidget(); ancestor; ancestor = ancestor->parentWidget()) {
-            auto *view = qobject_cast<viv::VirtualListView *>(ancestor);
-            if (!view)
-                continue;
-            const auto state = view->visualState(view->indexForWidget(this));
-            QPainter painter(this);
-            painter.setOpacity(state.hoverProgress);
-            painter.fillRect(rect(), view->hoverBackgroundColor());
-            painter.setOpacity(state.selectedProgress);
-            painter.fillRect(rect(), view->selectedBackgroundColor());
-            break;
-        }
-    }
-
     void resizeEvent(QResizeEvent *event) override
     {
         QWidget::resizeEvent(event);
@@ -174,6 +169,28 @@ public:
 
 private:
     int m_columnCount = 0;
+};
+
+/// 单元格物化时，每格独立创建与绑定；拖放的数据语义仍由视图和模型设置决定。
+class TableCellAdapter : public viv::CellWidgetAdapter
+{
+public:
+    QWidget *createCellWidget(viv::WidgetType, QWidget *parent) override
+    {
+        auto *label = new QLabel(parent);
+        label->setMargin(6);
+        return label;
+    }
+
+    void bindCellWidget(QWidget *widget, const QModelIndex &index) override
+    {
+        static_cast<QLabel *>(widget)->setText(index.data().toString());
+    }
+
+    void unbindCellWidget(QWidget *widget, const QModelIndex &) override
+    {
+        static_cast<QLabel *>(widget)->clear();
+    }
 };
 
 } // namespace dragdemo

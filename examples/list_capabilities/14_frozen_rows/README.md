@@ -2,6 +2,8 @@
 
 setFrozenRows 固定前 N 行，setFrozenBottomRows 固定后 N 行。PaneSeparatorStyle 配置宽度、颜色、线型；宽度为 0 隐藏区域分隔线。冻结行同时保留普通 hover / selection。有效冻结数受视口高度限制；visibleItemRanges 可查询冻结区与滚动区，单个 visibleItemRange 仅描述滚动窗口。
 
+行控件使用透明 `QLabel`，adapter 只绑定文本。冻结区和滚动区的 hover / selected 背景及动画都由框架绘制，通过 `setVisualStateCornerRadius(8)` 和背景颜色接口配置，无需自绘或保存状态。
+
 分隔线宽度同时控制实线、虚线和点线的实际粗细，单位为物理像素。普通行分割线与冻结分隔线重叠时，由冻结分隔线统一呈现，避免虚线下方露出额外灰线；宽度设为 0 后恢复普通行分割线。
 
 ## 阅读入口

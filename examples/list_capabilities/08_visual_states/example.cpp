@@ -64,9 +64,15 @@ private:
         m_easing->addItem(QStringLiteral("OutCubic"), int(QEasingCurve::OutCubic));
         m_easing->addItem(QStringLiteral("InOutCubic"), int(QEasingCurve::InOutCubic));
         m_easing->addItem(QStringLiteral("Linear"), int(QEasingCurve::Linear));
+        m_radius = new QSpinBox(this);
+        m_radius->setRange(0, 24);
+        m_radius->setValue(8);
+        m_radius->setPrefix(QStringLiteral("圆角 "));
+        m_radius->setSuffix(QStringLiteral(" px"));
         controls->addWidget(m_duration);
         controls->addWidget(m_colors);
         controls->addWidget(m_easing);
+        controls->addWidget(m_radius);
         layout->addLayout(controls);
         m_view = new viv::VirtualListView(this);
         layout->addWidget(m_view, 1);
@@ -97,6 +103,9 @@ private:
         // Duration is shared by hover and selection transitions; 0 switches immediately.
         connect(m_duration, QOverload<int>::of(&QSpinBox::valueChanged),
                 m_view, &viv::VirtualItemView::setVisualStateAnimationDuration);
+        // Zero gives square corners; the radius applies to both visual states.
+        connect(m_radius, QOverload<int>::of(&QSpinBox::valueChanged),
+                m_view, &viv::VirtualListView::setVisualStateCornerRadius);
         connect(m_easing, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int) {
             // The same curve controls hover and selection, including fade-out.
             const auto type = static_cast<QEasingCurve::Type>(m_easing->currentData().toInt());
@@ -111,6 +120,7 @@ private:
 
     viv::VirtualListView *m_view = nullptr;
     QSpinBox *m_duration = nullptr;
+    QSpinBox *m_radius = nullptr;
     QComboBox *m_colors = nullptr;
     QComboBox *m_easing = nullptr;
 };

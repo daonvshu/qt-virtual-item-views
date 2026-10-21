@@ -1,6 +1,6 @@
 # 示例导航
 
-列表能力从 [VirtualListView 独立能力示例](list_capabilities/README.md)进入：一个 `list_capabilities` 进程切换 17 项基础能力，检测到 SmoothScrollbar 时额外加入第 18 项平滑滚动。每项单独一个目录，完整包含自己的 model、adapter、行控件和说明，各目录不共用实现代码。
+`VirtualListView` 按功能查找源码见 [docs/list.md](../docs/list.md)，路径均相对于仓库根目录。基础接入直接阅读 [examples/list_capabilities/01_basic/example.cpp](list_capabilities/01_basic/example.cpp)。一个 `list_capabilities` 进程演示各项功能，每个目录包含自己的 model、adapter 和行控件；构建、启动与复制方式见 [examples/list_capabilities/README.md](list_capabilities/README.md)。
 
 其他视图保留最小参考程序和综合演示。最小参考程序的配置直接写在各自的 `main()` 中；综合演示用于参数比较和功能组合。
 
@@ -8,7 +8,7 @@
 
 | 视图 | 首先阅读 | Adapter / 控件 | 后续参考 |
 | --- | --- | --- | --- |
-| `VirtualListView` | [独立能力示例](list_capabilities/README.md)、[基础列表](list_capabilities/01_basic/example.cpp) | 各能力目录自行定义 | [行高](list_capabilities/06_item_heights/README.md)、[状态背景](list_capabilities/08_visual_states/README.md)、[行内事件](list_capabilities/11_item_events/README.md)、[可选平滑滚动](list_capabilities/18_smooth_scrolling/README.md) |
+| `VirtualListView` | [独立能力示例](list_capabilities/README.md)、[基础列表](list_capabilities/01_basic/example.cpp) | 各能力目录自行定义 | [行高](list_capabilities/06_item_heights/README.md)、[状态背景](list_capabilities/08_visual_states/README.md)、[行内事件](list_capabilities/11_item_events/README.md)、[可选平滑滚动](list_capabilities/19_smooth_scrolling/README.md) |
 | `VirtualTableView` 行物化 | [行控件](reference/table/row_widgets.cpp) | [TextRow / TextRowAdapter](reference/table/textadapters.h) | [整行结构体](reference/table/binding_context.cpp)、[行表头换序](reference/table/reorder_rows.cpp) |
 | `VirtualTableView` cell 物化 | [单元格控件](reference/table/cell_widgets.cpp) | [TextCellAdapter](reference/table/textadapters.h) | [圆角行 hover](reference/table/state.cpp)、[冻结与间距](reference/table/layout.cpp) |
 | `VirtualTreeView` | [展开与收起](reference/tree/basic.cpp) | [文本 adapter](reference/list/textadapter.h) | [branch 设置](reference/tree/branch.cpp)、[节点类型与结构体](reference/tree/binding_context.cpp) |
@@ -29,7 +29,7 @@
 | 拖行表头排序 | [table/reorder_rows.cpp](reference/table/reorder_rows.cpp) |
 | 原生整行拖放、Ctrl 复制 | [drag_drop/rows.cpp](reference/drag_drop/rows.cpp) |
 | cell 行间插入和空白格放下 | [drag_drop/cells.cpp](reference/drag_drop/cells.cpp)、[数据模型](reference/drag_drop/cellmodel.h) |
-| 仅从手柄启动拖动、自定义预览 | [drag_drop/manual.cpp](reference/drag_drop/manual.cpp)、[手柄事件](reference/drag_drop/draghandle.h) |
+| 仅从手柄启动拖动、自定义预览 | [列表手柄起拖](list_capabilities/15_drag_drop/example.cpp)、[预览参数](../docs/interaction.md#手动触发与自定义预览) |
 
 完整的目标名称、构建方式、文件依赖和模型责任见 [reference/README.md](reference/README.md)。
 
@@ -39,10 +39,6 @@
 
 | 目标 | 用途 / 源码 |
 | --- | --- |
-| `simple_list` | [列表状态、颜色、圆角及统计](simple_list/main.cpp) |
-| `dynamic_height` | [定时数据变化、自动测高和滚动锚定](dynamic_height/main.cpp) |
-| `million_rows` | [超大模型与物化统计](million_rows/main.cpp) |
-| `order_cards` | [包含多种业务控件的卡片](order_cards/main.cpp) |
 | `table_row_widgets` | [行物化、ColumnHost 和参数控制](table_row_widgets/main.cpp) |
 | `table_many_columns` | [多列 cell 物化和复用](table_many_columns/main.cpp) |
 | `tree_view` | [展开动画、branch renderer、行间距与状态](tree_view/main.cpp) |
@@ -57,4 +53,4 @@
 | `table_header_persistence` | [保存 / 恢复列布局](table_header_persistence/main.cpp) |
 | `smooth_scroll_table` | [可选平滑滚动集成](smooth_scroll_table/README.md)，仅依赖可用时构建 |
 
-现有目标名称和启动参数保留。`viv_examples` 构建所有示例，`viv_reference_examples` 只构建原有最小参考程序，`list_capabilities` 单独构建列表能力演示。
+`list_capabilities` 构建列表功能示例，`viv_reference_examples` 构建其他视图的最小参考程序，`viv_examples` 构建全部示例。

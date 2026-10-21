@@ -25,6 +25,7 @@ class QWheelEvent;
 namespace viv {
 
 class VirtualHeaderView;
+class RowDragPreview;
 
 class ListLayout;
 
@@ -83,6 +84,21 @@ public:
     /// the model decides whether to fill, replace or reject its data.
     void setDropTargetMode(DropTargetMode mode);
     DropTargetMode dropTargetMode() const { return m_dropTargetMode; }
+
+    /// Native body-drag presentation, independent of model/drop semantics.
+    enum class DragFeedbackMode { Indicator, RowMoveAnimation };
+    Q_ENUM(DragFeedbackMode)
+    /// Default RowMoveAnimation. Previews an internal single-row Move
+    /// in SelectRows, in the scrolling row pane, without a span provider. Other
+    /// drops use the indicator. Model order changes only when the model accepts.
+    void setDragFeedbackMode(DragFeedbackMode mode);
+    DragFeedbackMode dragFeedbackMode() const { return m_dragFeedbackMode; }
+    /// Row-reorder tween duration in milliseconds (default 180); zero is immediate.
+    void setDragReorderAnimationDuration(int milliseconds);
+    int dragReorderAnimationDuration() const { return m_dragReorderAnimationDuration; }
+    /// Curve for rows making room (default OutCubic); separate from header animation.
+    void setDragReorderAnimationEasingCurve(const QEasingCurve &curve);
+    QEasingCurve dragReorderAnimationEasingCurve() const { return m_dragReorderEasingCurve; }
 
     explicit VirtualTableView(QWidget *parent = nullptr);
     ~VirtualTableView() override;
@@ -545,6 +561,15 @@ protected:
     /// column of the target is -1 when the whole row is the drop unit.
     VirtualItemView::DropTarget resolveDropTarget(const QPoint &viewportPos) const override;
     QRect resolveDropIndicatorRect(const DropTarget &target) const override;
+    /// Cell granularity (SelectionBehavior::SelectItems) previews only the dragged cell: the
+    /// materialized widget is the whole row, so the host the framework placed for that column is
+    /// what the pixmap is cut down to.
+    QRect dragPixmapRect(const QModelIndex &index) const override;
+    /// Uses the span anchor's cell widget in Cell Widget Mode, otherwise the row widget.
+    QWidget *dragSourceWidget(const QModelIndex &index) const override;
+    bool updateDragFeedback(const DropTarget &target, const QPoint &position, Qt::DropAction action,
+                            const QList<QPersistentModelIndex> &sources) override;
+    void clearDragFeedback() override;
     void resizeEvent(QResizeEvent *event) override;
     void showEvent(QShowEvent *event) override;
     void changeEvent(QEvent *event) override;
@@ -555,6 +580,10 @@ protected:
     void refreshItemData() override;
 
 private:
+    /// Current elapsed-time sample, so a fast retarget does not start from a stale tick.
+    qreal dragReorderProgress() const;
+    /// Repositions widgets, row gaps, state backgrounds and grid lines in one frame.
+    void applyDragReorderFrame();
     /// Deletes a header renderer through its interface (a renderer does not have
     /// to be a QWidget itself, so deleting `headerWidget()` would leak the
     /// wrapper) and clears the pointer.
@@ -663,6 +692,8 @@ private:
     /// Lifts the body lines above the (re)materialized items.
     void raisePaneSeparatorLines();
     void syncColumnSpacingWidgets();
+    /// Updates existing column-gap hosts for moving row gaps and horizontal lines.
+    void updateColumnSpacingVisualRows();
     void applyGridLineVisibilityToHeaders();
     QColor resolvedVerticalGridLineColor() const;
     QColor resolvedHorizontalGridLineColor() const;
@@ -709,12 +740,6 @@ private:
     void updateRowHeaderGeometry();
     /// Re-applies the heights the user set (m_explicitRowHeights, keyed by row identity) after a
     /// layout change rebuilt every derived size from the estimate.
-    /// Cell granularity (SelectionBehavior::SelectItems) previews only the dragged cell: the
-    /// materialized widget is the whole row, so the host the framework placed for that column is
-    /// what the pixmap is cut down to.
-    QRect dragPixmapRect(const QModelIndex &index) const override;
-    /// Uses the span anchor's cell widget in Cell Widget Mode, otherwise the row widget.
-    QWidget *dragSourceWidget(const QModelIndex &index) const override;
     /// Pins the span anchor in cell mode, or the canonical row in row mode.
     QModelIndex dragSourcePinIndex(const QModelIndex &index) const override;
     void scrollToColumn(int logicalIndex);
@@ -783,6 +808,14 @@ private:
     bool m_rowFollowsHeaderVisual = true;
     /// True while the rows carry a preview offset (see updateVisualRowGeometry()).
     bool m_rowVisualOffsetsActive = false;
+    DragFeedbackMode m_dragFeedbackMode = DragFeedbackMode::RowMoveAnimation;
+    int m_dragReorderAnimationDuration = 180;
+    QEasingCurve m_dragReorderEasingCurve = QEasingCurve::OutCubic;
+    std::unique_ptr<RowDragPreview> m_dragRowPreview;
+    QPersistentModelIndex m_dragPreviewSource;
+    QVariantAnimation *m_dragReorderAnimation = nullptr;
+    QElapsedTimer m_dragReorderClock;
+    bool m_dragReorderFrameActive = false;
     /// Re-entrancy guard: a visual frame must not start another one.
     bool m_visualGeometryFrameActive = false;
     struct PreviewSpanCache {

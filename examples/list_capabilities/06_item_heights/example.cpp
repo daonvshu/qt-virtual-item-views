@@ -1,11 +1,13 @@
 #include "example.h"
 #include <virtualitemviews/virtuallistview.h>
 #include <virtualitemviews/widgetadapter.h>
+#include <QCheckBox>
 #include <QComboBox>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QPushButton>
 #include <QStandardItemModel>
+#include <QTimer>
 #include <QVBoxLayout>
 
 namespace list_item_heights {
@@ -67,8 +69,10 @@ private:
         m_mode = new QComboBox(this);
         m_mode->addItems({QStringLiteral("固定 44 px"), QStringLiteral("按首个物化项测量统一高度"), QStringLiteral("每行动态高度")});
         m_first = new QPushButton(QStringLiteral("切换首行详情"), this);
+        m_async = new QCheckBox(QStringLiteral("模拟后台更新高度"), this);
         controls->addWidget(m_mode);
         controls->addWidget(m_first);
+        controls->addWidget(m_async);
         layout->addLayout(controls);
         m_view = new viv::VirtualListView(this);
         layout->addWidget(m_view, 1);
@@ -92,11 +96,31 @@ private:
             const QModelIndex index = m_model->index(0, 0);
             m_model->setData(index, !index.data(ExpandedRole).toBool(), ExpandedRole);
         });
+        auto *updates = new QTimer(this);
+        updates->setInterval(400);
+        connect(updates, &QTimer::timeout, this, [this, row = 0]() mutable {
+            if (!isVisible() || m_mode->currentIndex() != 2)
+                return;
+            // Simulate data arriving later on the GUI thread. Only update the
+            // model; dataChanged drives rebind, measurement and scroll anchoring.
+            const QModelIndex index = m_model->index(row, 0);
+            m_model->setData(index, !index.data(ExpandedRole).toBool(), ExpandedRole);
+            row = (row + 17) % m_model->rowCount();
+        });
+        connect(m_async, &QCheckBox::toggled, updates, [updates](bool enabled) {
+            if (enabled)
+                updates->start();
+            else
+                updates->stop();
+        });
         m_mode->setCurrentIndex(2);
     }
 
     void applyHeightMode(int mode)
     {
+        m_async->setEnabled(mode == 2);
+        if (mode != 2)
+            m_async->setChecked(false);
         using Mode = viv::VirtualItemView::ItemHeightMode;
         // Auto measurement reads the bound widget's sizeHint after binding.
         m_view->setAutoMeasureItemHeight(mode != 0);
@@ -116,6 +140,7 @@ private:
     QStandardItemModel *m_model = nullptr;
     QComboBox *m_mode = nullptr;
     QPushButton *m_first = nullptr;
+    QCheckBox *m_async = nullptr;
 };
 
 QWidget *createExample(QWidget *parent)

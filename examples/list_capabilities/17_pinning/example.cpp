@@ -83,7 +83,7 @@ private:
     void setupUi()
     {
         auto *layout = new QVBoxLayout(this);
-        auto *intro = new QLabel(QStringLiteral("16 屏外保留：保留某行后滚动离开再返回，控件编号保持不变。编辑器持有焦点时，框架也会暂时保留它。"), this);
+        auto *intro = new QLabel(QStringLiteral("17 屏外保留：保留某行后滚动离开再返回，控件编号保持不变。编辑器持有焦点时，框架也会暂时保留它。"), this);
         intro->setWordWrap(true);
         layout->addWidget(intro);
         auto *target = new QHBoxLayout;

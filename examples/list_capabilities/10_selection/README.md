@@ -2,6 +2,8 @@
 
 两个 view 使用同一个 model 和 QItemSelectionModel，各自拥有自己的 adapter。下拉框切换四种选择手势模式。程序选择使用 QItemSelection + ClearAndSelect；再通过 selectionModel()->setCurrentIndex(index, QItemSelectionModel::NoUpdate) 更新当前项，保留已选范围。因此四种模式下点击按钮都会选中第 2～5 行，当前项为第 5 行。模式约束鼠标 / 键盘选择手势，直接调用 selectionModel 仍可程序选择多项。
 
+行控件使用普通透明 `QLabel`，`TextAdapter` 只绑定和清理文本。hover、selected 背景及过渡动画由框架绘制，圆角通过 `setVisualStateCornerRadius(8)` 配置，颜色使用对应的背景颜色接口。共享选择模型同步选中项和当前项，hover 则由每个 view 独立维护，无需自绘或重写 `visualStateChanged()`。
+
 ## 阅读入口
 
 - [example.cpp](example.cpp)：本例的所有 model、adapter、行控件和页面装配。

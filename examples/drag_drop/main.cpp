@@ -35,6 +35,7 @@
 #include <QApplication>
 #include <QCheckBox>
 #include <QCommandLineParser>
+#include <QComboBox>
 #include <QDebug>
 #include <QDragEnterEvent>
 #include <QDragMoveEvent>
@@ -42,6 +43,7 @@
 #include <QMainWindow>
 #include <QScopedPointer>
 #include <QSplitter>
+#include <QSpinBox>
 #include <QStatusBar>
 #include <QTimer>
 #include <QVBoxLayout>
@@ -140,6 +142,8 @@ int main(int argc, char **argv)
     QCommandLineOption rowSnapOption(
         QStringLiteral("row-drop"),
         QStringLiteral("表格按行语义拖放（默认按单元格语义）"));
+    QCommandLineOption rowAnimationOption(QStringLiteral("row-animation"),
+        QStringLiteral("表格启用整行拖放与行移动动画"));
     QCommandLineOption hoverOption(
         QStringLiteral("hover"),
         QStringLiteral("合成一次悬停并显示插入指示器：tree|table|list:<y>[:<x>]"),
@@ -154,6 +158,7 @@ int main(int argc, char **argv)
     parser.addOption(columnsOption);
     parser.addOption(frozenOption);
     parser.addOption(rowSnapOption);
+    parser.addOption(rowAnimationOption);
     parser.addOption(hoverOption);
     parser.addOption(snapshotOption);
     parser.addOption(exitOption);
@@ -162,7 +167,7 @@ int main(int argc, char **argv)
     const int tableRows = qMax(1, parser.value(rowsOption).toInt());
     const int tableColumns = qMax(2, parser.value(columnsOption).toInt());
     const int frozenColumns = qBound(0, parser.value(frozenOption).toInt(), tableColumns);
-    const bool rowDrop = parser.isSet(rowSnapOption);
+    const bool rowDrop = parser.isSet(rowSnapOption) || parser.isSet(rowAnimationOption);
 
     // 模型/适配器先于窗口构造，析构顺序上晚于视图：视图析构时仍能安全 unbind。
     auto *treeModel = buildTreeModel(&app);
@@ -175,6 +180,7 @@ int main(int argc, char **argv)
     auto *listModel = new DraggableListModel(listRows, &app);
     NodeAdapter nodeAdapter;
     TableRowAdapter tableAdapter(tableColumns);
+    TableCellAdapter cellAdapter;
 
     QMainWindow window;
     auto *central = new QWidget(&window);
@@ -205,14 +211,22 @@ int main(int argc, char **argv)
     auto *table = new DragDropTableView(splitter);
     table->setObjectName(QStringLiteral("table"));
     table->setTableAdapter(&tableAdapter);
+    table->setCellAdapter(&cellAdapter);
     table->setUniformItemHeight(kTableRowHeight);
     table->setDefaultColumnWidth(kTableColumnWidth);
     table->setModel(tableModel);
     table->setVisualStateScope(viv::VirtualTableView::VisualStateScope::Row);
+    // 默认状态背景覆盖冻结列和滚动列，无需重写绘制函数。
+    table->setVisualStateBackgroundVisible(true);
+    table->setVisualStateCornerRadius(0);
     table->setDragEnabled(true);
     table->setDropTargetMode(viv::VirtualTableView::DropTargetMode::BetweenRowsOrOnCell);
     table->setDefaultDropAction(Qt::MoveAction);
     table->setMoveRemovesSourceRows(rowDrop);
+    // 默认使用行移动动画；单元格投放等不支持动画的场景自动使用指示器。
+    // 反馈模式只控制拖动时的显示；是否允许移动与如何更新数据仍由 model 决定。
+    table->setDragReorderAnimationDuration(180);
+    table->setDragReorderAnimationEasingCurve(QEasingCurve::OutCubic);
     tableModel->setRowDropEnabled(rowDrop);
     // 应用层接线（§6 方法 1）：视图的行高变化镜像进模型；模型完成一次"内部移动"后告诉视图
     // 新行要用什么高度。于是被拖高的行移动之后还是那么高（库本身不参与这件事）。
@@ -238,8 +252,8 @@ int main(int argc, char **argv)
 
     auto *list = new viv::VirtualListView(vertical);
     list->setObjectName(QStringLiteral("list"));
-    // This example paints state inside its row widget.
-    list->setVisualStateBackgroundVisible(false);
+    // 状态由框架统一绘制，行控件只显示内容。
+    list->setVisualStateBackgroundVisible(true);
     list->setAdapter(&nodeAdapter);
     list->setUniformItemHeight(kTableRowHeight);
     list->setModel(listModel);
@@ -261,11 +275,30 @@ int main(int argc, char **argv)
     rowDropCheck->setToolTip(QStringLiteral(
         "勾选 = 行语义（SelectionBehavior::SelectRows）：载荷是整行每一列、插入线跨整个视口、"
         "预览是整行；不勾 = 本表内上下 1/4 区域插入，中间区域填空白格，Ctrl 复制"));
+    auto *feedback = new QComboBox(central);
+    feedback->addItems({QStringLiteral("表格：指示器"), QStringLiteral("表格：行移动动画")});
+    feedback->setCurrentIndex(table->dragFeedbackMode()
+        == viv::VirtualTableView::DragFeedbackMode::RowMoveAnimation ? 1 : 0);
+    feedback->setToolTip(QStringLiteral("行移动动画用于本表单行 Move；请勾选整行拖动，Ctrl 复制等场景沿用指示器"));
+    auto *cellWidgetsCheck = new QCheckBox(QStringLiteral("单元格物化"), central);
+    auto *duration = new QSpinBox(central);
+    duration->setRange(0, 2000);
+    duration->setValue(180);
+    duration->setSuffix(QStringLiteral(" ms"));
+    duration->setToolTip(QStringLiteral("行移动动画时长，0 表示立即让位"));
+    auto *easing = new QComboBox(central);
+    easing->addItem(QStringLiteral("OutCubic"), int(QEasingCurve::OutCubic));
+    easing->addItem(QStringLiteral("Linear"), int(QEasingCurve::Linear));
+    easing->addItem(QStringLiteral("InOutCubic"), int(QEasingCurve::InOutCubic));
     auto *status = new QLabel(central);
     status->setObjectName(QStringLiteral("statusLabel"));
     toolbar->addWidget(dragCheck);
     toolbar->addWidget(indicatorCheck);
     toolbar->addWidget(rowDropCheck);
+    toolbar->addWidget(feedback);
+    toolbar->addWidget(cellWidgetsCheck);
+    toolbar->addWidget(duration);
+    toolbar->addWidget(easing);
     window.statusBar()->addWidget(status);
 
     QObject::connect(dragCheck, &QCheckBox::toggled, &window, [tree, table, list](bool enabled) {
@@ -278,6 +311,25 @@ int main(int argc, char **argv)
         table->setDropIndicatorShown(shown);
         list->setDropIndicatorShown(shown);
     });
+    QObject::connect(feedback, QOverload<int>::of(&QComboBox::currentIndexChanged), table,
+                     [table](int index) {
+                         table->setDragFeedbackMode(index == 1
+                             ? viv::VirtualTableView::DragFeedbackMode::RowMoveAnimation
+                             : viv::VirtualTableView::DragFeedbackMode::Indicator);
+                     });
+    QObject::connect(cellWidgetsCheck, &QCheckBox::toggled, table, [table](bool cells) {
+        // 只切换物化粒度，整行选择、落点与动画配置继续使用当前设置。
+        table->setMaterializationMode(cells
+            ? viv::VirtualTableView::MaterializationMode::CellWidgets
+            : viv::VirtualTableView::MaterializationMode::RowWidgets);
+    });
+    QObject::connect(duration, QOverload<int>::of(&QSpinBox::valueChanged), table,
+                     &viv::VirtualTableView::setDragReorderAnimationDuration);
+    QObject::connect(easing, QOverload<int>::of(&QComboBox::currentIndexChanged), table,
+                     [table, easing](int index) {
+                         table->setDragReorderAnimationEasingCurve(
+                             QEasingCurve(QEasingCurve::Type(easing->itemData(index).toInt())));
+                     });
     // 展开整棵树，让"插入线 / 成为子节点"两种情况都能演示。
     for (int row = 0; row < treeModel->rowCount(); ++row)
         tree->expandRecursively(treeModel->index(row, 0));

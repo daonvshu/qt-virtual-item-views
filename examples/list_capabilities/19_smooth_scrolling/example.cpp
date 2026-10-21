@@ -54,7 +54,7 @@ private:
     {
         auto *layout = new QVBoxLayout(this);
         auto *intro = new QLabel(QStringLiteral(
-            "18 平滑滚动：在列表中滚动鼠标滚轮，切换开关比较平滑滚动与原生滚动。"), this);
+            "19 平滑滚动：在列表中滚动鼠标滚轮，切换开关比较平滑滚动与原生滚动。"), this);
         intro->setWordWrap(true);
         layout->addWidget(intro);
 

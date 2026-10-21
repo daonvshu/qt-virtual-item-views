@@ -346,13 +346,14 @@ void VirtualItemView::setModel(QAbstractItemModel *model)
 {
     if (m_model.data() == model)
         return;
+    const QPointer<VirtualItemView> self(this);
     const quint64 changeSerial = ++m_modelChangeSerial;
     const QPointer<QAbstractItemModel> requestedModel(model);
 
     disconnectModel(m_model.data());
     // A drag or drop in flight refers to the outgoing model (§38).
     finishDrag();
-    if (m_modelChangeSerial != changeSerial)
+    if (!self || m_modelChangeSerial != changeSerial)
         return;
     clearVisualTransitions();
     if (m_selectionModel)
@@ -1082,7 +1083,10 @@ void VirtualItemView::setSelectionMode(SelectionMode mode)
 
 void VirtualItemView::setSelectionBehavior(SelectionBehavior behavior)
 {
+    if (m_selectionBehavior == behavior)
+        return;
     m_selectionBehavior = behavior;
+    clearDragFeedback();
 }
 
 void VirtualItemView::setCurrentIndex(const QModelIndex &index)
@@ -1683,6 +1687,10 @@ void VirtualItemView::setFrozenRows(int count)
     const int clamped = qMax(0, count);
     if (m_frozenRows == clamped)
         return;
+    const QPointer<VirtualItemView> self(this);
+    clearDragFeedback();
+    if (!self)
+        return;
     m_frozenRows = clamped;
     markDirty();
 }
@@ -1695,6 +1703,10 @@ void VirtualItemView::setFrozenBottomRows(int count)
     }
     const int clamped = qMax(0, count);
     if (m_frozenBottomRows == clamped)
+        return;
+    const QPointer<VirtualItemView> self(this);
+    clearDragFeedback();
+    if (!self)
         return;
     m_frozenBottomRows = clamped;
     markDirty();
@@ -2158,6 +2170,44 @@ void VirtualItemView::syncRowSpacingWidgets(const QVector<VisibleRange> &ranges)
             return;
     }
     raiseItemPaneSeparatorLines();
+}
+
+void VirtualItemView::updateRowSpacingVisualGeometry(const std::function<int(qsizetype)> &offset)
+{
+    const QPointer<VirtualItemView> self(this);
+    const quint64 modelSerial = m_modelChangeSerial;
+    const quint64 spacingSerial = m_rowSpacingStateSerial;
+    QHash<qsizetype, QPointer<QWidget>> hosts;
+    for (auto it = m_rowSpacingWidgets.cbegin(); it != m_rowSpacingWidgets.cend(); ++it)
+        hosts.insert(it.key(), it.value());
+    for (auto it = hosts.cbegin(); it != hosts.cend(); ++it) {
+        if (!self || m_modelChangeSerial != modelSerial || m_rowSpacingStateSerial != spacingSerial)
+            return;
+        const QPointer<QWidget> widget = it.value();
+        if (!widget || m_rowSpacingWidgets.value(it.key()) != widget.data()
+            || it.key() < 0 || it.key() >= viewItemCount())
+            continue;
+        const QRect rowRect = geometryForViewRow(it.key());
+        const int delta = offset(it.key());
+        if (!self || !widget || m_modelChangeSerial != modelSerial || m_rowSpacingStateSerial != spacingSerial)
+            return;
+        QWidget *parent = widget->parentWidget();
+        const int parentY = parent && parent != viewport() ? parent->y() : 0;
+        const QRect geometry(0, rowRect.bottom() + 1 + delta, viewport()->width(), widget->height());
+        widget->setGeometry(geometry.translated(0, -parentY));
+        if (!self || !widget || m_modelChangeSerial != modelSerial || m_rowSpacingStateSerial != spacingSerial)
+            return;
+        const QRegion mask = rowSpacingWidgetMask(it.key(), geometry);
+        if (!self || !widget || m_modelChangeSerial != modelSerial || m_rowSpacingStateSerial != spacingSerial)
+            return;
+        if (mask == QRegion(widget->rect()))
+            widget->clearMask();
+        else
+            widget->setMask(mask);
+        if (!self || !widget)
+            return;
+        widget->setVisible(!mask.isEmpty());
+    }
 }
 
 void VirtualItemView::applyItemPaneGeometry(MaterializedItem &item, qsizetype row)
@@ -3463,7 +3513,7 @@ void VirtualItemView::setDropIndicatorShown(bool shown)
     if (m_dropIndicatorShown == shown)
         return;
     m_dropIndicatorShown = shown;
-    refreshDropIndicator();
+    refreshDragFeedback();
 }
 
 void VirtualItemView::setDropIndicatorColor(const QColor &color)
@@ -3471,7 +3521,7 @@ void VirtualItemView::setDropIndicatorColor(const QColor &color)
     if (m_dropIndicatorColor == color)
         return;
     m_dropIndicatorColor = color;
-    refreshDropIndicator();
+    refreshDragFeedback();
 }
 
 void VirtualItemView::setDropIndicatorWidth(int width)
@@ -3480,7 +3530,7 @@ void VirtualItemView::setDropIndicatorWidth(int width)
     if (m_dropIndicatorWidth == width)
         return;
     m_dropIndicatorWidth = width;
-    refreshDropIndicator();
+    refreshDragFeedback();
 }
 
 void VirtualItemView::setDropIndicatorPenStyle(Qt::PenStyle style)
@@ -3490,7 +3540,7 @@ void VirtualItemView::setDropIndicatorPenStyle(Qt::PenStyle style)
     if (m_dropIndicatorPenStyle == style)
         return;
     m_dropIndicatorPenStyle = style;
-    refreshDropIndicator();
+    refreshDragFeedback();
 }
 
 void VirtualItemView::setDefaultDropAction(Qt::DropAction action)
@@ -3800,11 +3850,13 @@ void VirtualItemView::finishDrag()
     if (hadSourcePin)
         markDirty();
     stopDragAutoscroll();
-    hideDropIndicator();
     m_dragSourceIndexes.clear();
     m_dragMoveSelection.clear();
     m_dragSelectionTargetView.clear();
     m_dragHoverValid = false;
+    m_dragHoverInternal = false;
+    m_dragHoverAction = Qt::IgnoreAction;
+    hideDropIndicator();
 }
 
 bool VirtualItemView::isDropOnItself(const DropTarget &target, Qt::DropAction action) const
@@ -3872,6 +3924,7 @@ void VirtualItemView::dragEnterEvent(QDragEnterEvent *event)
 
 void VirtualItemView::dragMoveEvent(QDragMoveEvent *event)
 {
+    const QPointer<VirtualItemView> self(this);
     if (!m_model || !event->mimeData()) {
         event->ignore();
         return;
@@ -3886,33 +3939,53 @@ void VirtualItemView::dragMoveEvent(QDragMoveEvent *event)
     const Qt::DropAction action = event->dropAction() != Qt::IgnoreAction
         ? event->dropAction()
         : event->proposedAction();
+    m_dragHoverInternal = event->source() == this;
+    m_dragHoverAction = action;
     const bool canDrop = target.isValid() && !isDropOnItself(target, action)
         && dropModel->canDropMimeData(event->mimeData(), action, target.row, target.column,
                                       target.parent);
+    if (!self) {
+        event->ignore();
+        return;
+    }
     if (!canDrop || !dropModel || m_modelChangeSerial != modelSerial
         || (target.parent.isValid() && !parent.isValid())) {
         hideDropIndicator();
-        stopDragAutoscroll();
+        if (self)
+            stopDragAutoscroll();
         event->ignore();
         return;
     }
     showDropIndicator(target);
+    if (!self)
+        return;
+    if (!dropModel || m_modelChangeSerial != modelSerial || !m_dragHoverValid) {
+        event->ignore();
+        return;
+    }
     updateDragAutoscroll(pos);
     event->accept();
 }
 
 void VirtualItemView::dragLeaveEvent(QDragLeaveEvent *event)
 {
-    hideDropIndicator();
     stopDragAutoscroll();
     m_dragHoverValid = false;
+    m_dragHoverInternal = false;
+    m_dragHoverAction = Qt::IgnoreAction;
     event->accept();
+    hideDropIndicator();
 }
 
 void VirtualItemView::dropEvent(QDropEvent *event)
 {
+    const QPointer<VirtualItemView> self(this);
     stopDragAutoscroll();
     hideDropIndicator();
+    if (!self) {
+        event->ignore();
+        return;
+    }
     m_dragHoverValid = false;
     if (!m_model || !event->mimeData()) {
         event->ignore();
@@ -3933,7 +4006,6 @@ void VirtualItemView::dropEvent(QDropEvent *event)
         event->ignore();
         return;
     }
-    const QPointer<VirtualItemView> self(this);
     const QPointer<VirtualItemView> sourceView(qobject_cast<VirtualItemView *>(event->source()));
     QSharedPointer<DragMoveSelection> moveSelection;
     if (sourceView && sourceView->m_dragInProgress && sourceView->m_moveRemovesSourceRows
@@ -4057,6 +4129,18 @@ VirtualItemView::dropIndicatorStyle(const DropTarget &target) const
 void VirtualItemView::showDropIndicator(const DropTarget &target)
 {
     m_dropIndicatorTargetValid = true;
+    const QPointer<VirtualItemView> self(this);
+    const quint64 modelSerial = m_modelChangeSerial;
+    const QList<QPersistentModelIndex> sources = m_dragHoverInternal
+        ? m_dragSourceIndexes : QList<QPersistentModelIndex>();
+    const bool custom = updateDragFeedback(target, m_dragHoverPos, m_dragHoverAction, sources);
+    if (!self || m_modelChangeSerial != modelSerial || !m_dropIndicatorTargetValid)
+        return;
+    if (custom) {
+        if (m_dropIndicator)
+            m_dropIndicator->hide();
+        return;
+    }
     if (!m_dropIndicatorShown || m_dropIndicatorWidth <= 0 || m_dropIndicatorPenStyle == Qt::NoPen) {
         if (m_dropIndicator)
             m_dropIndicator->hide();
@@ -4084,9 +4168,10 @@ void VirtualItemView::hideDropIndicator()
     m_dropIndicatorTargetValid = false;
     if (m_dropIndicator)
         m_dropIndicator->hide();
+    clearDragFeedback();
 }
 
-void VirtualItemView::refreshDropIndicator()
+void VirtualItemView::refreshDragFeedback()
 {
     // Do not create an indicator before a drag has a position, or resurrect one
     // at a rejected target just because its appearance was changed.
@@ -4115,9 +4200,10 @@ void VirtualItemView::updateDragAutoscroll(const QPoint &viewportPos)
         m_dragAutoscrollTimer = new QTimer(this);
         m_dragAutoscrollTimer->setInterval(40);
         connect(m_dragAutoscrollTimer, &QTimer::timeout, this, [this]() {
+            const QPointer<VirtualItemView> self(this);
             const qint64 before = m_scrollOffset;
             scrollByPixels(qBound(-40, m_dragAutoscrollDelta, 40));
-            if (m_scrollOffset == before || !m_dragHoverValid)
+            if (!self || m_scrollOffset == before || !m_dragHoverValid)
                 return;
             // The rows below the cursor moved with the content: re-resolve the
             // target so the indicator stays glued to the insertion point (and

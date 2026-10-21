@@ -1,169 +1,31 @@
-# 列表、行高与滚动
+# VirtualListView 功能示例
 
-`VirtualListView` 接受普通 `QAbstractItemModel` 和 `WidgetAdapter`；入门代码见 [入门](getting-started.md)。默认只显示根节点下的行，可用 `setRootIndex()` 指向某个子树。
+按功能直接阅读下面的示例源码。表中的路径均相对于仓库根目录，每个 `example.cpp` 包含该功能使用的 model、adapter、行控件和视图配置，可单独参考或复制所在目录。
 
-## 固定与动态行高
+| 编号 | 功能 | 源码相对路径 |
+| --- | --- | --- |
+| 01 | 基础列表：model、adapter 接入和 rootIndex 切换 | [examples/list_capabilities/01_basic/example.cpp](../examples/list_capabilities/01_basic/example.cpp) |
+| 02 | 自定义行控件：组合控件、数据回写和信号阻断 | [examples/list_capabilities/02_row_widgets/example.cpp](../examples/list_capabilities/02_row_widgets/example.cpp) |
+| 03 | 多种行类型：WidgetType 分类和独立复用池 | [examples/list_capabilities/03_widget_types/example.cpp](../examples/list_capabilities/03_widget_types/example.cpp) |
+| 04 | 整行数据绑定：结构体 role 和 ItemBindingContext | [examples/list_capabilities/04_binding_context/example.cpp](../examples/list_capabilities/04_binding_context/example.cpp) |
+| 05 | 数据更新：修改、增删、移动、重置、排序和过滤 | [examples/list_capabilities/05_model_updates/example.cpp](../examples/list_capabilities/05_model_updates/example.cpp) |
+| 06 | 行高：固定、首项测量、动态更新和锚点补偿 | [examples/list_capabilities/06_item_heights/example.cpp](../examples/list_capabilities/06_item_heights/example.cpp) |
+| 07 | 行间距和分割线：间距、线宽、颜色和自定义间距控件 | [examples/list_capabilities/07_row_spacing/example.cpp](../examples/list_capabilities/07_row_spacing/example.cpp) |
+| 08 | Hover 和选中背景：圆角、颜色、动画时长和曲线 | [examples/list_capabilities/08_visual_states/example.cpp](../examples/list_capabilities/08_visual_states/example.cpp) |
+| 09 | 状态关联内容：根据 hover / selected 显示操作区 | [examples/list_capabilities/09_state_content/example.cpp](../examples/list_capabilities/09_state_content/example.cpp) |
+| 10 | 选择与当前项：选择模式、程序选择和共享选择模型 | [examples/list_capabilities/10_selection/example.cpp](../examples/list_capabilities/10_selection/example.cpp) |
+| 11 | 行内事件处理：行信号、键盘、当前绑定索引和选中项查询 | [examples/list_capabilities/11_item_events/example.cpp](../examples/list_capabilities/11_item_events/example.cpp) |
+| 12 | 滚动与定位：百万行、自动滚动、定位和 64 位偏移 | [examples/list_capabilities/12_scrolling/example.cpp](../examples/list_capabilities/12_scrolling/example.cpp) |
+| 13 | 虚拟化与复用：overscan、可见范围、复用池限制与清理 | [examples/list_capabilities/13_virtualization/example.cpp](../examples/list_capabilities/13_virtualization/example.cpp) |
+| 14 | 冻结行：顶部、底部冻结和区域分隔线 | [examples/list_capabilities/14_frozen_rows/example.cpp](../examples/list_capabilities/14_frozen_rows/example.cpp) |
+| 15 | 指示器拖动：自动 / 手动起拖、Move / Copy 和指示器样式 | [examples/list_capabilities/15_drag_drop/example.cpp](../examples/list_capabilities/15_drag_drop/example.cpp) |
+| 16 | 行移动动画拖动：自动 / 手动起拖、让位时长和曲线 | [examples/list_capabilities/16_drag_animation/example.cpp](../examples/list_capabilities/16_drag_animation/example.cpp) |
+| 17 | 屏外保留：按 index / widget 保留和释放控件 | [examples/list_capabilities/17_pinning/example.cpp](../examples/list_capabilities/17_pinning/example.cpp) |
+| 18 | 运行诊断：统计快照和生命周期日志 | [examples/list_capabilities/18_diagnostics/example.cpp](../examples/list_capabilities/18_diagnostics/example.cpp) |
+| 19（可选） | 平滑滚动：SmoothScrollbar 接入、启停和滚轮步长 | [examples/list_capabilities/19_smooth_scrolling/example.cpp](../examples/list_capabilities/19_smooth_scrolling/example.cpp) |
 
-行高一致时设置 `setUniformItemHeight()`。行高由内容决定时，行控件必须根据当前内容返回尺寸。下面的文本控件按 300 px 文本宽度计算高度；代码放在已有 `QApplication` 的程序中：
+阅读时先看 `Example::setupExample()` 中的 `VirtualListView` 配置和信号连接，再看本文件的 adapter 与行控件。`setupUi()` 负责演示页面布局，各目录的 `README.md` 提供该功能的说明和独立运行入口。
 
-```cpp
-#include <virtualitemviews/virtuallistview.h>
-#include <virtualitemviews/widgetadapter.h>
-#include <QColor>
-#include <QLabel>
-#include <QPainter>
-#include <QStringListModel>
+Hover 和选中背景默认由框架绘制，普通圆角、颜色和动画直接配置视图接口，行控件保持透明。状态关联控件的显隐与行内事件处理分别参考第 09、11 项。
 
-class WrappingRow : public QLabel
-{
-public:
-    explicit WrappingRow(QWidget *parent) : QLabel(parent) { setWordWrap(true); }
-    QSize sizeHint() const override
-    {
-        const QRect textRect = fontMetrics().boundingRect(
-            QRect(0, 0, 300, 100000), Qt::TextWordWrap, text());
-        return QSize(320, qMax(32, textRect.height() + 12));
-    }
-};
-
-class WrappingAdapter : public viv::WidgetAdapter
-{
-public:
-    QWidget *createWidget(viv::WidgetType, QWidget *parent) override
-    {
-        return new WrappingRow(parent);
-    }
-    void bindWidget(viv::WidgetType, QWidget *widget, const QModelIndex &index) override
-    {
-        static_cast<WrappingRow *>(widget)->setText(index.data().toString());
-    }
-    QSize estimatedSize(viv::WidgetType, const QModelIndex &) const override { return QSize(320, 48); }
-};
-
-QStringListModel model({QStringLiteral("短内容"), QStringLiteral("另一行")});
-WrappingAdapter adapter;
-viv::VirtualListView view;
-view.setAdapter(&adapter);
-view.setItemHeightMode(viv::VirtualItemView::ItemHeightMode::Variable);
-view.setEstimatedItemHeight(48);
-view.setAutoMeasureItemHeight(true);
-view.setModel(&model);
-view.show();
-```
-
-adapter 的 `estimatedSize(type, index)` 用于新插入行的初始估计。下面用 `QStringListModel::setData()` 改变一行的内容；它会发出 `dataChanged`，视图重绑并测量。自己的模型也应在数据变化后发出对应信号。
-
-```cpp
-const QModelIndex first = model.index(0, 0);
-model.setData(first, QStringLiteral("更新后的多行内容，可以因文本变长而增加行高"),
-              Qt::EditRole);
-```
-
-视口上方的高度变化会通过滚动锚点补偿，减少内容跳动。若高度来自异步图片或展开状态，先更新模型数据，再发出该行的 `dataChanged`；`bindWidget()` 应刷新控件内容和尺寸提示。
-
-## 自绘悬停与选中背景
-
-`view.visualState(index)` 返回独立的 `hovered` 和 `selected` 目标标志，以及 0–1 的 `hoverProgress`、`selectedProgress`。两种状态可以同时存在，进度从当前值平滑过渡到目标值，离开和取消选中时也会淡出。默认过渡时间为 180 ms；`setVisualStateAnimationDuration(0)` 可关闭动画。`setHoverBackgroundColor()` 与 `setSelectedBackgroundColor()` 分别设置内置背景和业务控件可读取的颜色。列表默认绘制 item 背景，保持行控件透明即可显示；`setVisualStateCornerRadius()` 配置圆角。完全自绘时，先调用 `setVisualStateBackgroundVisible(false)`，再由业务控件绘制。适配器绑定新行、状态、颜色或动画帧变化时会收到 `visualStateChanged()`；默认实现调用 `widget->update()`，若控件直接保存状态，可重写它：
-
-```cpp
-class StateRow : public QWidget {
-public:
-    using QWidget::QWidget;
-    void setState(viv::VirtualItemView::VisualState state,
-                  const QColor &hoverColor, const QColor &selectedColor) {
-        state_ = state;
-        hoverColor_ = hoverColor;
-        selectedColor_ = selectedColor;
-        update();
-    }
-protected:
-    void paintEvent(QPaintEvent *) override {
-        QPainter painter(this);
-        painter.fillRect(rect(), palette().color(QPalette::Base));
-        painter.setOpacity(state_.hoverProgress);
-        painter.fillRect(rect(), hoverColor_);
-        painter.setOpacity(state_.selectedProgress);
-        painter.fillRect(rect(), selectedColor_);
-    }
-private:
-    viv::VirtualItemView::VisualState state_;
-    QColor hoverColor_;
-    QColor selectedColor_;
-};
-
-// 在 WidgetAdapter 子类中保存指向当前 view 的指针：
-void visualStateChanged(viv::WidgetType, QWidget *widget, const QModelIndex &index) override {
-    static_cast<StateRow *>(widget)->setState(view->visualState(index),
-        view->hoverBackgroundColor(), view->selectedBackgroundColor());
-}
-```
-
-```cpp
-view.setVisualStateBackgroundVisible(false); // 此示例由 StateRow 自绘背景
-view.setHoverBackgroundColor(QColor("#e7f4ed"));
-view.setSelectedBackgroundColor(QColor("#b9d9f1"));
-view.setVisualStateAnimationDuration(180);
-view.setVisualStateAnimationEasingCurve(QEasingCurve::OutCubic);
-```
-
-hover 身份变化时框架立即启动过渡；快速离开会先采样实际经过时间，再从当前进度淡出。`setVisualStateAnimationEasingCurve()` 设置 hover 和 selected 共用的进入、离开曲线，默认使用 `OutCubic`、时长 180 ms，可用 `visualStateAnimationEasingCurve()` 读取曲线。`OutCubic` 起步更快，适合需要明显响应快速经过的场景；修改曲线会重置当前过渡。
-
-控件复用时会重新绑定并重新通知状态。若自定义行控件包含不透明子控件，背景只会显示在未被子控件覆盖的区域；需要整行着色时，也要处理这些子控件的背景。
-
-## 行间距
-
-悬停和选中背景始终限制在 item 范围，不覆盖行间距；间距及自定义间距控件保持自身外观。
-
-```cpp
-view.setVisualStateCornerRadius(6);
-```
-
-`setRowSpacing()` 在相邻行之间留白，默认间距为 0，末行后不加间距。行控件高度不包含间距，点击留白不会命中行。默认显示分割线：间距为 0 时绘制在相邻行的边界；有间距时绘制在留白的上下边缘。分割线宽度按物理像素绘制并对齐屏幕像素网格，默认 1 个物理像素；行高与间距仍使用逻辑像素。
-
-```cpp
-view.setRowSpacing(12);
-view.setRowGridLinesVisible(true);
-view.setRowGridLineWidth(2);
-view.setRowGridLineColor(QColor("#5b7280"));
-```
-
-留白默认没有内容。需要在可见留白中放控件时，提供创建和重新绑定回调；控件离屏后会复用，绑定回调必须完整刷新它的内容。下面的 `view` 和 `model` 沿用本页前面的最小示例：
-
-```cpp
-view.setRowSpacingFactory(
-    [](const QModelIndex &, QWidget *parent) -> QWidget * {
-        return new QLabel(parent);
-    },
-    [](QWidget *widget, const QModelIndex &above) {
-        static_cast<QLabel *>(widget)->setText(above.data().toString());
-    });
-```
-
-工厂收到的是留白上方的行索引；控件被放在两条分割线之间，需要至少 `2 * 线宽 + 1` px 的间距才有可用高度。`setRowGridLinesVisible(false)` 可同时隐藏零间距行线和留白边线。
-
-## 滚动与物化窗口
-
-```cpp
-view.setOverscan(2, 2); // 可见区上下各预加载两行
-view.setWheelScrollMode(viv::VirtualItemView::WheelScrollMode::Pixels);
-view.setWheelScrollPixels(48);
-view.scrollTo(model.index(1, 0), viv::VirtualItemView::ScrollHint::PositionAtCenter);
-view.scrollByPixels(24);
-```
-
-滚轮默认按像素滚动；也可设置 `WheelScrollMode::Items`。`setVerticalOffset()` 使用像素偏移，逻辑滚动空间支持大于 32 位的内容高度。`visibleItemRange()` 返回当前滚动窗口，不包含 overscan。
-
-## 屏外保留与诊断
-
-编辑器、弹窗或异步任务仍需使用原控件时，可在离开视口前 pin；任务结束务必 unpin，否则每个 pin 都会持续占用一个控件。
-
-```cpp
-view.setItemPinned(model.index(0, 0), true);
-view.setItemPinned(model.index(0, 0), false);
-view.setMaxPinnedItems(50); // 超限时给出诊断警告
-const viv::VirtualViewStats snapshot = view.stats();
-```
-
-也可用 `pinWidget()` / `unpinWidget()` 针对当前控件操作。`setLifecycleLoggingEnabled(true)` 可记录有界的 create/bind/unbind/recycle/pin 事件。解绑时 adapter 应停止与旧模型项关联的定时器和异步任务；正在编辑、持有焦点或打开弹窗的控件应在操作结束后及时解除 pin。
-
-大量逻辑行仍使用相同接口；模型不必预先生成每一行的文本。例如自己的 `QAbstractListModel::rowCount()` 返回逻辑行数，而 `data()` 按 `index.row()` 即时生成显示内容。控件数量可通过 `view.stats()` 观察。
+所有示例由一个 `list_capabilities` 程序演示，启动器位于 [examples/list_capabilities/main.cpp](../examples/list_capabilities/main.cpp)。构建、启动和复制方式见 [examples/list_capabilities/README.md](../examples/list_capabilities/README.md)。第 19 项仅在检测到与当前 Qt 主版本匹配的 SmoothScrollbar 时编译和显示。

@@ -6,7 +6,6 @@
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QMouseEvent>
-#include <QPainter>
 #include <QPushButton>
 #include <QSpinBox>
 #include <QStandardItemModel>
@@ -61,26 +60,6 @@ public:
     DragHandle *handle = nullptr;
     QLabel *title = nullptr;
 
-    void setState(const viv::VirtualItemView::VisualState &state)
-    {
-        m_state = state;
-        update();
-    }
-
-protected:
-    void paintEvent(QPaintEvent *) override
-    {
-        QPainter painter(this);
-        painter.setRenderHint(QPainter::Antialiasing);
-        painter.setPen(Qt::NoPen);
-        painter.setOpacity(m_state.hoverProgress);
-        painter.setBrush(QColor(QStringLiteral("#e4effb")));
-        painter.drawRoundedRect(QRectF(rect()), 6, 6);
-        painter.setOpacity(m_state.selectedProgress);
-        painter.setBrush(QColor(QStringLiteral("#b8d5f3")));
-        painter.drawRoundedRect(QRectF(rect()), 6, 6);
-    }
-
 private:
     void setupUi()
     {
@@ -91,8 +70,6 @@ private:
         layout->addWidget(handle);
         layout->addWidget(title, 1);
     }
-
-    viv::VirtualItemView::VisualState m_state;
 };
 
 class DragAdapter : public viv::WidgetAdapter
@@ -128,15 +105,10 @@ public:
     {
         static_cast<DragRow *>(widget)->title->setText(index.data().toString());
     }
-    void visualStateChanged(viv::WidgetType, QWidget *widget, const QModelIndex &index) override
-    {
-        static_cast<DragRow *>(widget)->setState(m_view.visualState(index));
-    }
     void unbindWidget(viv::WidgetType, QWidget *widget, const QModelIndex &) override
     {
         auto *row = static_cast<DragRow *>(widget);
         row->title->clear();
-        row->setState({});
     }
     QSize estimatedSize(viv::WidgetType, const QModelIndex &) const override { return QSize(500, 44); }
 
@@ -157,7 +129,7 @@ private:
     void setupUi()
     {
         auto *layout = new QVBoxLayout(this);
-        auto *intro = new QLabel(QStringLiteral("15 拖放：Automatic 从行内容起拖，Manual 只从手柄起拖。拖到行边缘插入，靠近视口边缘自动滚动；Esc 取消。"), this);
+        auto *intro = new QLabel(QStringLiteral("15 指示器拖动：Automatic 从行内容起拖，Manual 只从手柄起拖。插入线标记落点，可调整颜色、线宽和线型；靠近边缘自动滚动，Esc 取消。"), this);
         intro->setWordWrap(true);
         layout->addWidget(intro);
         auto *controls = new QHBoxLayout;
@@ -209,9 +181,12 @@ private:
         }
         model->invisibleRootItem()->setDropEnabled(true);
         auto *adapter = new DragAdapter(*m_view);
+        // Use built-in hover/selection backgrounds instead of custom row painting.
+        m_view->setVisualStateBackgroundVisible(true);
+        m_view->setVisualStateCornerRadius(6);
+        m_view->setHoverBackgroundColor(QColor(QStringLiteral("#e4effb")));
+        m_view->setSelectedBackgroundColor(QColor(QStringLiteral("#b8d5f3")));
         // Keep the view-referencing adapter alive through row teardown callbacks.
-        // This example paints state inside its row widget.
-        m_view->setVisualStateBackgroundVisible(false);
         m_view->setAdapter(adapter, true);
         m_view->setUniformItemHeight(44);
         // This example drags one row. The model owns the MIME/data semantics.
@@ -231,6 +206,8 @@ private:
         // For this row-insertion model, the view also transfers selection/current
         // to the inserted counterpart after deleting the selected source row.
         m_view->setMoveRemovesSourceRows(true);
+        // Keep this chapter on insertion indicators; the next chapter shows row animation.
+        m_view->setDragFeedbackMode(viv::VirtualListView::DragFeedbackMode::Indicator);
         // Indicator visibility changes presentation only; model drop permissions still apply.
         m_view->setDropIndicatorShown(true);
         // An invalid QColor follows QPalette::Highlight, including later palette changes.

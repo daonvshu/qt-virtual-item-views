@@ -17,7 +17,6 @@
 #include <QIcon>
 #include <QLabel>
 #include <QMainWindow>
-#include <QPainter>
 #include <QProgressBar>
 #include <QPushButton>
 #include <QPixmap>
@@ -102,29 +101,6 @@ private:
     int m_rowCount = 0;
 };
 
-class OrderTableView : public viv::VirtualTableView
-{
-public:
-    using viv::VirtualTableView::VirtualTableView;
-
-    void setCornerRadius(int radius)
-    {
-        m_cornerRadius = radius;
-        viewport()->update();
-    }
-
-protected:
-    void paintStateBackgroundLayer(QPainter *painter, const QRect &extended,
-                                  const QRegion &clip,
-                                  const QColor &color) const override
-    {
-        paintRoundedStateBackgroundLayer(painter, extended, clip, color, m_cornerRadius);
-    }
-
-private:
-    int m_cornerRadius = 8;
-};
-
 class OrderRowWidget : public QWidget
 {
 public:
@@ -189,15 +165,7 @@ public:
         return QSize(700, kRowHeight);
     }
 
-    void setCornerRadius(int radius)
-    {
-        cornerRadius = radius;
-        view->setCornerRadius(radius);
-    }
-
     int created = 0;
-    int cornerRadius = 8;
-    OrderTableView *view = nullptr;
 };
 
 } // namespace
@@ -235,8 +203,10 @@ int main(int argc, char **argv)
     QMainWindow window;
 
     // 视图由窗口持有；模型/适配器先声明，生命周期覆盖视图。
-    auto *view = new OrderTableView(&window);
-    adapter.view = view;
+    auto *view = new viv::VirtualTableView(&window);
+    // 状态背景、圆角和动画由框架绘制，adapter 只绑定行内容。
+    view->setVisualStateBackgroundVisible(true);
+    view->setVisualStateCornerRadius(8);
     view->setTableAdapter(&adapter);
     view->setUniformItemHeight(kRowHeight);
     view->setDefaultColumnWidth(150);
@@ -313,10 +283,10 @@ int main(int argc, char **argv)
     auto *cornerRadius = new QSpinBox(&window);
     cornerRadius->setRange(0, 20);
     cornerRadius->setSuffix(QStringLiteral(" px"));
-    cornerRadius->setValue(adapter.cornerRadius);
+    cornerRadius->setValue(view->visualStateCornerRadius());
     stateToolbar->addWidget(cornerRadius);
     QObject::connect(cornerRadius, QOverload<int>::of(&QSpinBox::valueChanged), view,
-                     [&adapter](int radius) { adapter.setCornerRadius(radius); });
+                     &viv::VirtualTableView::setVisualStateCornerRadius);
     const auto setStateSwatch = [](QPushButton *button, const QColor &color) {
         QPixmap swatch(16, 16);
         swatch.fill(color);

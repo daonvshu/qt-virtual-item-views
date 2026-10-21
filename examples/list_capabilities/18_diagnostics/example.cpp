@@ -51,7 +51,7 @@ private:
     void setupUi()
     {
         auto *layout = new QVBoxLayout(this);
-        auto *intro = new QLabel(QStringLiteral("17 诊断：滚动列表后查看统计和生命周期日志；日志有界，默认最多 400 条。"), this);
+        auto *intro = new QLabel(QStringLiteral("18 诊断：滚动列表后查看统计和生命周期日志；日志有界，默认最多 400 条。"), this);
         intro->setWordWrap(true);
         layout->addWidget(intro);
         auto *controls = new QHBoxLayout;

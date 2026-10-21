@@ -2,6 +2,8 @@
 
 框架默认绘制 hover 和 selected 背景，adapter 只绑定透明标签文本。使用 `setVisualStateCornerRadius()`、颜色和动画接口即可配置外观，无需重写 paintEvent 或 visualStateChanged。状态背景只在 item 内绘制，行间距保持中性；动画时长为 0 时立即切换。
 
+圆角控件可在 0–24 个逻辑像素之间调节，0 为直角；同一个半径作用于 hover 和 selected 背景。
+
 hover 身份变化时框架立即更新动画目标，不依赖绘制或 adapter 查询状态。快速离开时按实际经过的时间计算进度，再从当前位置淡出。
 
 `setVisualStateAnimationEasingCurve()` 配置 hover 和 selected 共用的缓动曲线，getter 为 `visualStateAnimationEasingCurve()`。框架和本例默认使用起步更快的 `OutCubic`、时长 180 ms，下拉框可切换 `OutCubic`、`InOutCubic`、`Linear`，与时长控件配合比较快速扫过时的效果。修改曲线会重置当前过渡，与修改动画时长的行为一致。

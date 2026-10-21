@@ -1,12 +1,12 @@
-# 18 平滑滚动（可选）
+# 19 平滑滚动（可选）
 
 独立演示 `VirtualListView` 接入 `sscroll::SmoothScrollController`，包括开关、滚轮步长和停止当前动画。关闭控制器后由列表处理原生滚轮事件；两种模式使用相同的像素步长。
 
 ## 编译和显示条件
 
-项目启用 `VIRTUALITEMVIEWS_BUILD_EXAMPLES`、保持 `VIRTUALITEMVIEWS_EXAMPLES_USE_SMOOTH_SCROLLBAR=ON`，并检测到与当前 Qt 主版本匹配的 `SmoothScrollbar::SmoothScrollbar` 时，才编译本目录并在左侧显示第 18 项。通过 `SmoothScrollbar_DIR` 或 `CMAKE_PREFIX_PATH` 指向已安装的包。
+项目启用 `VIRTUALITEMVIEWS_BUILD_EXAMPLES`、保持 `VIRTUALITEMVIEWS_EXAMPLES_USE_SMOOTH_SCROLLBAR=ON`，并检测到与当前 Qt 主版本匹配的 `SmoothScrollbar::SmoothScrollbar` 时，才编译本目录并在左侧显示第 19 项。通过 `SmoothScrollbar_DIR` 或 `CMAKE_PREFIX_PATH` 指向已安装的包。
 
-缺少依赖、Qt 主版本不匹配或显式关闭可选集成时，启动器只保留原来的 17 项，不编译本目录，也不会显示占位页面。
+缺少依赖、Qt 主版本不匹配或显式关闭可选集成时，启动器只保留原来的 18 项，不编译本目录，也不会显示占位页面。
 
 ## 阅读入口
 
@@ -16,7 +16,7 @@
 
 控制器由 view 持有。每个列表只需创建一个控制器，不需要改动 model、adapter 或 VirtualItemViews 框架。
 
-在统一程序中选择本项，或启动时使用 `list_capabilities --example 18`。
+在统一程序中选择本项，或启动时使用 `list_capabilities --example 19`。
 
 ## 复制本例独立运行
 

@@ -25,6 +25,14 @@ const QString kRowFormat = QStringLiteral("application/x-viv-drag-drop-row");
 const QString kTableRowFormat = QStringLiteral("application/x-viv-drag-drop-table-row");
 const QString kTableCellFormat = QStringLiteral("application/x-viv-drag-drop-table-cell");
 
+/// 整行载荷保留源模型与行身份，插入后也能准确删除原行。
+class TableRowMimeData : public QMimeData
+{
+public:
+    QPointer<const QStandardItemModel> sourceModel;
+    QList<QPersistentModelIndex> sources;
+};
+
 /// 本表内部的单元格载荷：保存角色数据、权限和可跟随行变化的源索引。
 class TableCellMimeData : public QMimeData
 {
@@ -173,9 +181,14 @@ public:
             data->setData(kTableCellFormat, QByteArrayLiteral("1"));
             return data;
         }
-        QMimeData *data = QStandardItemModel::mimeData(indexes);
-        if (!data)
+        QMimeData *encoded = QStandardItemModel::mimeData(indexes);
+        if (!encoded)
             return nullptr;
+        auto *data = new TableRowMimeData;
+        data->sourceModel = this;
+        for (const QString &format : encoded->formats())
+            data->setData(format, encoded->data(format));
+        delete encoded;
         QList<int> rows;
         for (const QModelIndex &index : indexes) {
             if (index.isValid() && !rows.contains(index.row()))
@@ -184,6 +197,7 @@ public:
         std::sort(rows.begin(), rows.end());
         QStringList entries;
         for (int row : rows) {
+            data->sources.append(QPersistentModelIndex(index(row, 0)));
             const auto height = m_heights.constFind(QPersistentModelIndex(index(row, 0)));
             entries << QStringLiteral("%1|%2")
                            .arg(row)
@@ -265,9 +279,10 @@ public:
             }
             return true;
         }
-        // 源行必须在插入之前读出来（插入之后行号就变了）。
+        // 数字行号用于计算最终位置；持续索引用于插入之后准确删除源行。
         QList<QPair<int, int>> sources;   // (源行, 该行显式高度；-1 = 没调过)
-        if (action == Qt::MoveAction && data && data->hasFormat(kTableRowFormat)) {
+        const auto *rowData = dynamic_cast<const TableRowMimeData *>(data);
+        if (action == Qt::MoveAction && rowData && rowData->sourceModel == this) {
 #if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
             const auto skipEmptyParts = Qt::SkipEmptyParts;
 #else
@@ -299,17 +314,22 @@ public:
         QList<QPair<int, int>> heights;
         if (inserted == sources.size()) {
             int destination = row >= 0 ? row : rowsBefore;
+            int removedBefore = 0;
             for (const QPair<int, int> &source : sources) {
                 if (source.first < destination)
-                    --destination;
+                    ++removedBefore;
             }
+            destination -= removedBefore;
             for (int i = 0; i < sources.size(); ++i) {
                 if (sources.at(i).second > 0)
                     heights.append({destination + i, sources.at(i).second});
             }
         }
-        for (int i = sources.size() - 1; i >= 0; --i)
-            removeRow(sources.at(i).first, parent);
+        for (int i = rowData->sources.size() - 1; i >= 0; --i) {
+            const QPersistentModelIndex source = rowData->sources.at(i);
+            if (source.isValid() && source.model() == this)
+                removeRow(source.row(), parent);
+        }
         if (!heights.isEmpty())
             emit insertedRowHeights(heights);
         return true;

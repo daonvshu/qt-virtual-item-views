@@ -1,6 +1,7 @@
 #include <virtualitemviews/virtualtableview.h>
 #include "../core/pixelalignedlines_p.h"
 #include "../core/datastreamversion_p.h"
+#include "../core/rowdragpreview_p.h"
 
 #include <virtualitemviews/virtualheaderview.h>
 #include <virtualitemviews/labelheaderview.h>
@@ -20,10 +21,12 @@
 #include <QPointer>
 #include <QRegion>
 #include <QScrollBar>
+#include <QScopeGuard>
 #include <QSet>
 #include <QHeaderView>
 #include <QShowEvent>
 #include <QWheelEvent>
+#include <QVariantAnimation>
 #include <QDebug>
 
 #include <algorithm>
@@ -326,7 +329,7 @@ private:
 } // namespace
 
 VirtualTableView::VirtualTableView(QWidget *parent)
-    : VirtualItemView(parent)
+    : VirtualItemView(parent), m_dragRowPreview(new RowDragPreview)
 {
     // Tables select whole rows by default (§45: row selection).
     setSelectionBehavior(SelectionBehavior::SelectRows);
@@ -339,6 +342,16 @@ VirtualTableView::VirtualTableView(QWidget *parent)
 
     m_rowLayout = new ListLayout(Qt::Vertical);
     setLayoutPolicy(m_rowLayout, true);
+
+    m_dragReorderAnimation = new QVariantAnimation(this);
+    m_dragReorderAnimation->setStartValue(0.0);
+    m_dragReorderAnimation->setEndValue(1.0);
+    connect(m_dragReorderAnimation, &QVariantAnimation::valueChanged, this,
+            [this](const QVariant &) { applyDragReorderFrame(); });
+    connect(m_dragReorderAnimation, &QVariantAnimation::finished, this, [this]() {
+        m_dragReorderClock.invalidate();
+        applyDragReorderFrame();
+    });
 
     // The recycler creates both row widgets and cell widgets, so the table owns
     // the factory and dispatches on the current materialization mode.
@@ -364,6 +377,8 @@ VirtualTableView::VirtualTableView(QWidget *parent)
 
 VirtualTableView::~VirtualTableView()
 {
+    m_dragReorderAnimation->stop();
+    m_dragRowPreview->clear();
     for (QWidget *widget : m_columnSpacingWidgets)
         delete widget;
     qDeleteAll(m_columnSpacingPool);
@@ -676,6 +691,7 @@ void VirtualTableView::layoutVerticalHeaderStrips()
 
 void VirtualTableView::setModel(QAbstractItemModel *model)
 {
+    const QPointer<VirtualTableView> self(this);
     QAbstractItemModel *previous = VirtualItemView::model();
     if (previous == model)
         return;
@@ -689,7 +705,7 @@ void VirtualTableView::setModel(QAbstractItemModel *model)
 
     const quint64 previousChangeSerial = modelChangeSerial();
     VirtualItemView::setModel(model);
-    if (modelChangeSerial() != previousChangeSerial + 1)
+    if (!self || modelChangeSerial() != previousChangeSerial + 1)
         return;
     // Persistent cell indexes of the old model are invalid now.
     recycleAllCells();
@@ -761,6 +777,18 @@ void VirtualTableView::connectColumnSignals(QAbstractItemModel *model)
 {
     if (!model)
         return;
+    // Preview offsets use row positions, so discard them before any structural
+    // mutation. The drop itself still belongs to the model.
+    const auto discardPreview = [this]() { clearDragFeedback(); };
+    connect(model, &QAbstractItemModel::rowsAboutToBeInserted, this, discardPreview);
+    connect(model, &QAbstractItemModel::rowsAboutToBeRemoved, this, discardPreview);
+    connect(model, &QAbstractItemModel::rowsAboutToBeMoved, this, discardPreview);
+    connect(model, &QAbstractItemModel::columnsAboutToBeInserted, this, discardPreview);
+    connect(model, &QAbstractItemModel::columnsAboutToBeRemoved, this, discardPreview);
+    connect(model, &QAbstractItemModel::columnsAboutToBeMoved, this, discardPreview);
+    connect(model, &QAbstractItemModel::layoutAboutToBeChanged, this, discardPreview);
+    connect(model, &QAbstractItemModel::modelAboutToBeReset, this, discardPreview);
+    connect(model, &QObject::destroyed, this, discardPreview);
     connect(model, &QAbstractItemModel::columnsInserted, this, &VirtualTableView::onColumnsInserted);
     connect(model, &QAbstractItemModel::columnsRemoved, this, &VirtualTableView::onColumnsRemoved);
     connect(model, &QAbstractItemModel::columnsMoved, this, &VirtualTableView::onColumnsMoved);
@@ -1609,6 +1637,14 @@ VirtualHeaderView *VirtualTableView::visualRowStrip() const
 
 bool VirtualTableView::rowVisualY(qsizetype row, int *viewportY) const
 {
+    if (m_dragRowPreview->isActive() && !isRowFrozen(row)) {
+        const QRect rect = geometryForViewRow(row);
+        // QDrag owns the floating preview. Move the retained source widget out
+        // of sight while preserving its identity and focus/pin lifecycle.
+        *viewportY = row == m_dragRowPreview->source() ? -rect.height() - rowSpacing() - 1
+            : rect.y() + qRound(m_dragRowPreview->offset(row, dragReorderProgress()));
+        return true;
+    }
     if (!m_rowFollowsHeaderVisual || isRowFrozen(row))
         return false;
     VirtualHeaderView *strip = visualRowStrip();
@@ -1618,18 +1654,31 @@ bool VirtualTableView::rowVisualY(qsizetype row, int *viewportY) const
 void VirtualTableView::updateVisualRowGeometry()
 {
     VirtualHeaderView *strip = m_rowFollowsHeaderVisual ? visualRowStrip() : nullptr;
-    if (!strip && !m_rowVisualOffsetsActive)
+    const bool bodyPreview = m_dragRowPreview->isActive();
+    if (!strip && !bodyPreview && !m_rowVisualOffsetsActive)
         return;                       // nothing is dragging and nothing was offset
-    m_rowVisualOffsetsActive = strip != nullptr;
+    m_rowVisualOffsetsActive = strip != nullptr || bodyPreview;
     if (m_materializationMode == MaterializationMode::CellWidgets) {
         updateCellGeometry();
         return;
     }
 
-    for (const MaterializedItem &item : materializedItems()) {
-        QWidget *widget = item.widget;
+    const QPointer<VirtualTableView> self(this);
+    const quint64 modelSerial = modelChangeSerial();
+    const quint64 configurationSerial = m_cellConfigurationSerial;
+    const auto items = materializedItems();
+    QVector<QPointer<QWidget>> widgets;
+    widgets.reserve(items.size());
+    for (const MaterializedItem &item : items)
+        widgets.append(item.widget);
+    for (qsizetype i = 0; i < items.size(); ++i) {
+        if (!self || modelChangeSerial() != modelSerial || m_cellConfigurationSerial != configurationSerial)
+            return;
+        const MaterializedItem &item = items.at(i);
+        const QPointer<QWidget> widget = widgets.at(i);
         const qsizetype row = viewItemForIndex(item.index);
-        if (!widget || row < 0 || isRowFrozen(row))
+        if (!widget || !item.index.isValid() || widgetForIndex(item.index) != widget.data()
+            || row < 0 || isRowFrozen(row))
             continue;                 // frozen rows stay where the layout pinned them
         // The kernel puts the widget at `geometry - the pane's origin`; the parent is the
         // scrolling pane's clip container (or the viewport when nothing is clipped).
@@ -1638,8 +1687,59 @@ void VirtualTableView::updateVisualRowGeometry()
         int visualY = item.geometry.y();
         rowVisualY(row, &visualY);
         widget->move(widget->x(), visualY - parentY);
-
     }
+}
+
+qreal VirtualTableView::dragReorderProgress() const
+{
+    if (!m_dragReorderClock.isValid() || m_dragReorderAnimation->state() != QAbstractAnimation::Running
+        || m_dragReorderAnimationDuration <= 0)
+        return 1.0;
+    const qint64 elapsed = qMax<qint64>(m_dragReorderClock.elapsed(), m_dragReorderAnimation->currentTime());
+    return m_dragReorderEasingCurve.valueForProgress(qBound<qreal>(0,
+        qreal(elapsed) / m_dragReorderAnimationDuration, 1));
+}
+
+void VirtualTableView::applyDragReorderFrame()
+{
+    if (m_dragReorderFrameActive)
+        return;
+    const QPointer<VirtualTableView> self(this);
+    const QPointer<QAbstractItemModel> activeModel(model());
+    const quint64 modelSerial = modelChangeSerial();
+    const quint64 configurationSerial = m_cellConfigurationSerial;
+    const auto isCurrent = [=]() {
+        return self && activeModel && self->model() == activeModel.data()
+            && self->modelChangeSerial() == modelSerial
+            && self->m_cellConfigurationSerial == configurationSerial;
+    };
+    if (!isCurrent())
+        return;
+    m_dragReorderFrameActive = true;
+    const auto cleanup = qScopeGuard([self]() {
+        if (self)
+            self->m_dragReorderFrameActive = false;
+    });
+    updateVisualRowGeometry();
+    if (!isCurrent())
+        return;
+    updateRowSpacingVisualGeometry([this](qsizetype row) {
+        const int committedY = geometryForViewRow(row).y();
+        int visualY = committedY;
+        rowVisualY(row, &visualY);
+        return visualY - committedY;
+    });
+    if (!isCurrent())
+        return;
+    syncRowGridLines();
+    if (!isCurrent())
+        return;
+    updateColumnSpacingVisualRows();
+    if (!isCurrent())
+        return;
+    viewport()->update();
+    raisePaneSeparatorLines();
+    raiseItemPaneSeparatorLines();
 }
 
 void VirtualTableView::updatePaneLayout()
@@ -2581,6 +2681,10 @@ void VirtualTableView::setMaterializationMode(MaterializationMode mode)
 {
     if (m_materializationMode == mode)
         return;
+    const QPointer<VirtualTableView> self(this);
+    clearDragFeedback();
+    if (!self)
+        return;
     const quint64 changeSerial = ++m_cellConfigurationSerial;
     const quint64 modelSerial = modelChangeSerial();
     const quint64 mappingSerial = viewMappingSerial();
@@ -2816,6 +2920,10 @@ QVector<QRect> VirtualTableView::paneSeparatorRects() const
 
 void VirtualTableView::setSpanProvider(TableSpanProvider *provider, bool takeOwnership)
 {
+    const QPointer<VirtualTableView> self(this);
+    clearDragFeedback();
+    if (!self)
+        return;
     ++m_spanProviderSerial;
     std::shared_ptr<TableSpanProvider> previousOwner;
     if (m_spanProvider != provider) {
@@ -4324,10 +4432,13 @@ void VirtualTableView::syncRowGridLines()
     if (m_horizontalGridLinesVisible && viewportRect.width() > 0) {
         for (const VisibleRange &range : visibleItemRanges()) {
             for (qsizetype row = range.first; row >= 0 && row <= range.last; ++row) {
-                if (row + 1 >= viewItemCount()
+                if ((row + 1 >= viewItemCount() && !m_dragRowPreview->isActive())
                     || (m_rowLayout && m_rowLayout->spacingAfter(row) > 0))
                     continue;
-                const QRect rowRect = geometryForViewRow(row);
+                QRect rowRect = geometryForViewRow(row);
+                int visualY = rowRect.y();
+                if (rowVisualY(row, &visualY))
+                    rowRect.moveTop(visualY);
                 if (!rowRect.intersects(viewport()->rect()))
                     continue;
                 const int y = viewportRect.y() + rowRect.bottom() - m_horizontalGridLineWidth + 1;
@@ -4510,6 +4621,29 @@ void VirtualTableView::syncColumnSpacingWidgets()
         } else {
             widget->clearMask();
         }
+        configureColumnSpacingWidget(host);
+        widget->show();
+        widget->raise();
+    }
+    updateColumnSpacingVisualRows();
+    raisePaneSeparatorLines();
+}
+
+void VirtualTableView::updateColumnSpacingVisualRows()
+{
+    const QPointer<VirtualTableView> self(this);
+    const quint64 modelSerial = modelChangeSerial();
+    const int spacing = columnSpacing();
+    const QRect viewportRect = viewport()->geometry();
+    QVector<QPointer<QWidget>> widgets;
+    for (QWidget *widget : m_columnSpacingWidgets)
+        widgets.append(widget);
+    for (const QPointer<QWidget> &widget : widgets) {
+        if (!self || modelChangeSerial() != modelSerial)
+            return;
+        if (!widget)
+            continue;
+        auto *host = static_cast<ColumnSpacingHost *>(widget.data());
         QVector<QRect> localGaps;
         for (const QRect &gap : rowSpacingWidgetRectsInView()) {
             const QRect local = gap.translated(-widget->pos());
@@ -4523,7 +4657,10 @@ void VirtualTableView::syncColumnSpacingWidgets()
             && spacing > 0) {
             for (const VisibleRange &range : visibleItemRanges()) {
                 for (qsizetype row = range.first; row >= 0 && row <= range.last; ++row) {
-                    const QRect rowRect = geometryForViewRow(row);
+                    QRect rowRect = geometryForViewRow(row);
+                    int visualY = rowRect.y();
+                    if (rowVisualY(row, &visualY))
+                        rowRect.moveTop(visualY);
                     if (!rowRect.intersects(viewport()->rect()))
                         continue;
                     const int rowSpacing = m_rowLayout ? m_rowLayout->spacingAfter(row) : 0;
@@ -4547,11 +4684,7 @@ void VirtualTableView::syncColumnSpacingWidgets()
             }
         }
         host->setRowGaps(localGaps, horizontalLines, m_verticalSpacingLineThroughRowSpacing);
-        configureColumnSpacingWidget(host);
-        widget->show();
-        widget->raise();
     }
-    raisePaneSeparatorLines();
 }
 
 void VirtualTableView::onHeaderGeometryChanged()
@@ -4572,11 +4705,16 @@ void VirtualTableView::onHeaderGeometryChanged()
 
 void VirtualTableView::afterMaterialize()
 {
+    const QPointer<VirtualTableView> self(this);
     VirtualItemView::afterMaterialize();
     updateRowHeaderOffset();
     updateRowHeaderGeometry();
     syncRowGridLines();
     updateColumnLayout();
+    if (m_dragRowPreview->isActive())
+        applyDragReorderFrame();
+    if (!self)
+        return;
     raisePaneSeparatorLines();
     syncHorizontalScrollBar();
 }
@@ -4782,7 +4920,117 @@ void VirtualTableView::scrollToColumn(int logicalIndex)
 
 void VirtualTableView::setDropTargetMode(DropTargetMode mode)
 {
+    if (m_dropTargetMode == mode)
+        return;
     m_dropTargetMode = mode;
+    clearDragFeedback();
+}
+
+void VirtualTableView::setDragFeedbackMode(DragFeedbackMode mode)
+{
+    if (m_dragFeedbackMode == mode)
+        return;
+    m_dragFeedbackMode = mode;
+    const QPointer<VirtualTableView> self(this);
+    clearDragFeedback();
+    if (self)
+        refreshDragFeedback();
+}
+
+void VirtualTableView::setDragReorderAnimationDuration(int milliseconds)
+{
+    milliseconds = qMax(0, milliseconds);
+    if (m_dragReorderAnimationDuration == milliseconds)
+        return;
+    m_dragReorderAnimationDuration = milliseconds;
+    m_dragReorderAnimation->stop();
+    m_dragReorderClock.invalidate();
+    if (m_dragRowPreview->isActive())
+        applyDragReorderFrame();
+}
+
+void VirtualTableView::setDragReorderAnimationEasingCurve(const QEasingCurve &curve)
+{
+    if (m_dragReorderEasingCurve == curve)
+        return;
+    m_dragReorderEasingCurve = curve;
+    m_dragReorderAnimation->stop();
+    m_dragReorderClock.invalidate();
+    if (m_dragRowPreview->isActive())
+        applyDragReorderFrame();
+}
+
+bool VirtualTableView::updateDragFeedback(const DropTarget &target, const QPoint &position,
+                                         Qt::DropAction action,
+                                         const QList<QPersistentModelIndex> &sources)
+{
+    const auto useIndicator = [this]() {
+        clearDragFeedback();
+        return false;
+    };
+    if (m_dragFeedbackMode != DragFeedbackMode::RowMoveAnimation || action != Qt::MoveAction
+        || selectionBehavior() != SelectionBehavior::SelectRows || sources.isEmpty() || !model()
+        || managesVisibleRows() || m_spanProvider || target.parent.isValid() || target.ontoItem
+        || target.cellDrop || target.column >= 0 || !target.isValid()
+        || !viewport()->rect().contains(position)
+        || itemPaneAtY(position.y()) != ItemPane::Type::Scrollable)
+        return useIndicator();
+    const QPersistentModelIndex source = sources.first();
+    if (!source.isValid() || source.model() != model() || source.parent().isValid())
+        return useIndicator();
+    for (const QPersistentModelIndex &index : sources) {
+        if (!index.isValid() || index.model() != model() || index.parent().isValid()
+            || index.row() != source.row())
+            return useIndicator();
+    }
+    const qsizetype sourceRow = viewItemForIndex(source);
+    const qsizetype lastScrollable = viewItemCount() - frozenBottomRows();
+    if (sourceRow < 0 || isRowFrozen(sourceRow) || target.row < frozenRows()
+        || target.row > lastScrollable)
+        return useIndicator();
+    const qreal extent = qreal(rowHeight(sourceRow)) + rowSpacing();
+    if (m_dragRowPreview->isActive() && m_dragPreviewSource == source
+        && m_dragRowPreview->destination() == target.row && m_dragRowPreview->extent() == extent) {
+        applyDragReorderFrame();
+        return true;
+    }
+
+    QVector<qsizetype> rows;
+    for (const VisibleRange &range : visibleItemRanges()) {
+        for (qsizetype row = range.first; row >= 0 && row <= range.last; ++row)
+            rows.append(row);
+    }
+    const qreal progress = dragReorderProgress();
+    m_dragReorderAnimation->stop();
+    m_dragRowPreview->retarget(sourceRow, target.row, extent, rows, progress);
+    m_dragPreviewSource = source;
+    m_dragReorderClock.invalidate();
+    if (m_dragReorderAnimationDuration > 0) {
+        m_dragReorderAnimation->setDuration(m_dragReorderAnimationDuration);
+        m_dragReorderAnimation->setEasingCurve(m_dragReorderEasingCurve);
+        m_dragReorderClock.start();
+        const QPointer<VirtualTableView> self(this);
+        m_dragReorderAnimation->start();
+        if (!self)
+            return true;
+    }
+    applyDragReorderFrame();
+    return true;
+}
+
+void VirtualTableView::clearDragFeedback()
+{
+    if (!m_dragRowPreview->isActive())
+        return;
+    m_dragReorderAnimation->stop();
+    m_dragReorderClock.invalidate();
+    m_dragRowPreview->clear();
+    m_dragPreviewSource = QPersistentModelIndex();
+    if (m_dragReorderFrameActive) {
+        markDirty();
+        return;
+    }
+    applyDragReorderFrame();
 }
 
 VirtualItemView::DropTarget VirtualTableView::resolveDropTarget(const QPoint &viewportPos) const

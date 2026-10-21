@@ -33,6 +33,19 @@ add_executable(tst_dragpreview unit/tst_dragpreview.cpp)
 target_link_libraries(tst_dragpreview PRIVATE VirtualItemViews Qt${QT_VERSION_MAJOR}::Test)
 add_test(NAME tst_dragpreview COMMAND tst_dragpreview)
 
+# Row animation calculations are independent of widgets and native drag sessions.
+add_executable(tst_rowdragpreview unit/tst_rowdragpreview.cpp)
+target_link_libraries(tst_rowdragpreview PRIVATE VirtualItemViews Qt${QT_VERSION_MAJOR}::Test)
+add_test(NAME tst_rowdragpreview COMMAND tst_rowdragpreview)
+
+# Verify the demo's persistent source identity with a model-only Qt application.
+add_executable(tst_dragdroprows unit/tst_dragdroprows.cpp ../examples/drag_drop/dragmodels.h)
+target_link_libraries(tst_dragdroprows PRIVATE VirtualItemViews Qt${QT_VERSION_MAJOR}::Test)
+if(MSVC)
+    target_compile_options(tst_dragdroprows PRIVATE /utf-8)
+endif()
+add_test(NAME tst_dragdroprows COMMAND tst_dragdroprows)
+
 # Selection transfer is model-only and does not start a native drag or create widgets.
 add_executable(tst_dragmoveselection unit/tst_dragmoveselection.cpp)
 target_link_libraries(tst_dragmoveselection PRIVATE VirtualItemViews Qt${QT_VERSION_MAJOR}::Test)

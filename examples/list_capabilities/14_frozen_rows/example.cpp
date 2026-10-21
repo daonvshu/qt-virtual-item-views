@@ -3,85 +3,36 @@
 #include <virtualitemviews/widgetadapter.h>
 #include <QHBoxLayout>
 #include <QLabel>
-#include <QPainter>
 #include <QSpinBox>
 #include <QStringListModel>
 #include <QVBoxLayout>
 
 namespace list_frozen_rows {
 
-class StateRow : public QLabel
+class TextAdapter : public viv::WidgetAdapter
 {
 public:
-    explicit StateRow(QWidget *parent) : QLabel(parent) { setMargin(8); }
-
-    void setState(const viv::VirtualItemView::VisualState &state,
-                  const QColor &hover, const QColor &selected)
-    {
-        m_state = state;
-        m_hover = hover;
-        m_selected = selected;
-        update();
-    }
-
-protected:
-    void paintEvent(QPaintEvent *event) override
-    {
-        {
-            QPainter painter(this);
-            painter.setRenderHint(QPainter::Antialiasing);
-            painter.setPen(Qt::NoPen);
-            painter.setOpacity(m_state.hoverProgress);
-            painter.setBrush(m_hover);
-            painter.drawRoundedRect(QRectF(rect()).adjusted(1, 1, -1, -1), 8, 8);
-            painter.setOpacity(m_state.selectedProgress);
-            painter.setBrush(m_selected);
-            painter.drawRoundedRect(QRectF(rect()).adjusted(1, 1, -1, -1), 8, 8);
-        }
-        QLabel::paintEvent(event);
-    }
-
-private:
-    viv::VirtualItemView::VisualState m_state;
-    QColor m_hover;
-    QColor m_selected;
-};
-
-class StateAdapter : public viv::WidgetAdapter
-{
-public:
-    explicit StateAdapter(viv::VirtualListView &view) : m_view(view) {}
-
     QWidget *createWidget(viv::WidgetType, QWidget *parent) override
     {
-        return new StateRow(parent);
+        auto *label = new QLabel(parent);
+        label->setMargin(8);
+        return label;
     }
 
     void bindWidget(viv::WidgetType, QWidget *widget, const QModelIndex &index) override
     {
-        static_cast<StateRow *>(widget)->setText(index.data().toString());
-    }
-
-    void visualStateChanged(viv::WidgetType, QWidget *widget, const QModelIndex &index) override
-    {
-        static_cast<StateRow *>(widget)->setState(m_view.visualState(index),
-            m_view.hoverBackgroundColor(), m_view.selectedBackgroundColor());
+        static_cast<QLabel *>(widget)->setText(index.data().toString());
     }
 
     void unbindWidget(viv::WidgetType, QWidget *widget, const QModelIndex &) override
     {
-        auto *row = static_cast<StateRow *>(widget);
-        row->clear();
-        row->setState({}, {}, {});
+        static_cast<QLabel *>(widget)->clear();
     }
 
     QSize estimatedSize(viv::WidgetType, const QModelIndex &) const override
     {
         return QSize(400, 36);
     }
-
-private:
-    viv::VirtualListView &m_view;
 };
 
 class Example : public QWidget
@@ -123,10 +74,11 @@ private:
         QStringList records;
         for (int row = 0; row < 100; ++row)
             records.append(QStringLiteral("条目 %1").arg(row + 1));
-        // The row adapter draws state backgrounds in every pane, including frozen rows.
-        // This example paints state inside its row widget.
-        m_view->setVisualStateBackgroundVisible(false);
-        m_view->setAdapter(new StateAdapter(*m_view), true);
+        // The framework paints rounded hover/selection backgrounds in every pane,
+        // including frozen rows; the adapter only binds transparent label text.
+        m_view->setVisualStateBackgroundVisible(true);
+        m_view->setVisualStateCornerRadius(8);
+        m_view->setAdapter(new TextAdapter, true);
         m_view->setUniformItemHeight(36);
         m_view->setHoverBackgroundColor(QColor(QStringLiteral("#e4effb")));
         m_view->setSelectedBackgroundColor(QColor(QStringLiteral("#b8d5f3")));

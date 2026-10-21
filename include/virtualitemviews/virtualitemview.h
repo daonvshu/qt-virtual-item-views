@@ -646,6 +646,14 @@ protected:
     virtual QRect resolveDropIndicatorRect(const DropTarget &target) const;
     /// Direction of an insertion line; frames ignore this value.
     virtual Qt::Orientation dropIndicatorOrientation() const { return Qt::Horizontal; }
+    /// Accepted native-drag feedback. Sources are supplied only for a drag from
+    /// this view. Returning true replaces the default line/frame indicator.
+    virtual bool updateDragFeedback(const DropTarget &, const QPoint &, Qt::DropAction,
+                                    const QList<QPersistentModelIndex> &) { return false; }
+    /// Clears custom feedback on leave, rejection, drop and source cleanup.
+    virtual void clearDragFeedback() {}
+    /// Refreshes the current accepted target after a presentation setting changes.
+    void refreshDragFeedback();
 
     // -- kernel API for subclasses -------------------------------------------
     LayoutPolicy *layoutPolicy() const { return m_layout; }
@@ -713,6 +721,8 @@ protected:
     /// Whether a view-coordinate row grid line overlaps a visible pane divider.
     bool isRowGridLineCoveredByPaneSeparator(const QRect &rect) const;
     void syncRowSpacingWidgets(const QVector<VisibleRange> &ranges);
+    /// Moves existing gap hosts with visual rows, without invoking factories or binders.
+    void updateRowSpacingVisualGeometry(const std::function<int(qsizetype)> &offset);
     /// Records a derived view lifecycle event when logging is enabled.
     void appendLifecycleLog(const QString &entry);
 
@@ -771,8 +781,6 @@ private:
     qint64 scrollBarSingleStepPixels() const;
     void showDropIndicator(const DropTarget &target);
     void hideDropIndicator();
-    /// Applies changed appearance to the current drag target, when one is active.
-    void refreshDropIndicator();
     void updateDragAutoscroll(const QPoint &viewportPos);
     void stopDragAutoscroll();
     /// True when the drag started in this view and a move to \a target would
@@ -898,6 +906,8 @@ private:
     /// target from it because the rows below the cursor move while scrolling.
     QPoint m_dragHoverPos;
     bool m_dragHoverValid = false;
+    bool m_dragHoverInternal = false;
+    Qt::DropAction m_dragHoverAction = Qt::IgnoreAction;
     /// Retains an accepted target while appearance settings hide its indicator.
     bool m_dropIndicatorTargetValid = false;
     QWidget *m_dropIndicator = nullptr;

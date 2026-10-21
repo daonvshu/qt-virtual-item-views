@@ -1,6 +1,6 @@
-# 17 运行诊断
+# 17 屏外保留
 
-stats 是即时快照，create / bind / recycle 是累计计数，不能与当前物化数混为一谈。定时器仅刷新统计文本，日志通过按钮取得快照，便于阅读。生命周期记录可开关和清空；kLifecycleLogCapacity 限制框架日志条数。修改当前行可观察重绑，滚动可观察回收和复用。
+按 index 保留能直接物化屏外项；按 widget 保留先定位、完成待处理布局并取出 widget。解除使用 unpinWidget 或 setItemPinned(false)。本例用 QSet<QPersistentModelIndex> 记录显式请求，不与焦点 / 弹窗保留混淆。setMaxPinnedItems 是诊断软上限，0 关闭检查，不会强制释放。编辑器在 editingFinished 时提交数据；异步操作应由业务在完成、取消或失败时配对解除保留。
 
 ## 阅读入口
 
@@ -22,7 +22,7 @@ stats 是即时快照，create / bind / recycle 是累计计数，不能与当�
 int main(int argc, char **argv)
 {
     QApplication app(argc, argv);
-    QWidget *page = list_diagnostics::createExample();
+    QWidget *page = list_pinning::createExample();
     page->resize(900, 640);
     page->show();
     const int result = app.exec();

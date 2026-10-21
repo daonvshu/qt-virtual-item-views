@@ -92,6 +92,26 @@ table.setMoveRemovesSourceRows(false);
 
 `drag_drop` 示例使用组合模式：中间区域仅接受空白格，目标有数据或越界时拒绝；边缘投放插入新行并放入单元格。两种方式移动后都只清空源格，Ctrl 复制保留源格，多格选择保持相对位置；插入后的源位置通过持续索引确定。此模式使用本表内部的专用 MIME，并关闭 `setMoveRemovesSourceRows()`。示例的表格子类只保留背景绘制；勾选“整行拖动”后仍使用框架的行插入和源行清理。
 
+### 列表与表格的行移动动画
+
+`VirtualListView` 和 `VirtualTableView` 默认使用行移动动画，让经过的行滑动让位，留下源行大小的空位。表格需要使用整行选择；也可显式配置动画参数：
+
+```cpp
+table.setSelectionBehavior(viv::VirtualItemView::SelectionBehavior::SelectRows);
+table.setDragFeedbackMode(viv::VirtualTableView::DragFeedbackMode::RowMoveAnimation);
+table.setDragReorderAnimationDuration(180); // 默认 180ms；0 表示立即让位
+table.setDragReorderAnimationEasingCurve(QEasingCurve::OutCubic); // 默认曲线
+// 切回指示器：setDragFeedbackMode(DragFeedbackMode::Indicator)
+```
+
+动画用于同一表格内的单行 Move，支持 `RowWidgets`、`CellWidgets` 及冻结列；源行和落点须位于滚动行区域。复制、多行、跨视图、单元格投放、跨冻结行区域、有 span provider 的表格及树表沿用指示器。模式独立于 `setDropIndicatorShown()` 和指示器颜色、线宽、线型设置；这些设置只作用于指示器。
+
+拖动过程中只改变控件、状态背景和分隔线的显示位置，不提前修改 model 顺序。放下仍调用 model 的 `dropMimeData()`；取消、离开或拒绝落点后恢复原位置。`Automatic` 与 `Manual` 共用同一逻辑。动画配置不会改变 MIME、选择或源行删除规则，也不改变拖动截图来源；单元格物化下需要整行预览时，由业务提供 viewport 行区域截图，参见下节。
+
+`drag_drop` 工具栏可切换反馈模式、物化方式、时长与曲线；勾选“整行拖动”后拖动表格的一行即可对比。启动参数 `--row-animation` 会同时启用整行语义与行移动动画。
+
+`VirtualListView` 提供同名接口，默认模式同样为 `VirtualListView::DragFeedbackMode::RowMoveAnimation`，可用 `Indicator` 切回插入指示器。列表无需设置 `SelectRows`；动画适用于本视图当前 `rootIndex()` 下滚动区域内的单行 Move，复制、多行、跨视图及跨冻结行区域沿用指示器。根节点、模型或模型结构改变时清理当前动画。`list_capabilities --example 15` 单独演示指示器拖动与样式配置，`--example 16` 单独演示行移动动画及时长、曲线配置。
+
 ### 手动触发与自定义预览
 
 `DragStartMode::Automatic` 是默认模式，鼠标按下后移动超过 Qt 的拖动距离就开始拖动。只允许从业务手柄启动时，保留 `setDragEnabled(true)`，再设置手动模式：

@@ -1,6 +1,6 @@
 # 最小参考程序
 
-列表的新学习入口是 [17 项独立能力示例](../list_capabilities/README.md)：一个进程切换能力，每个目录自带所有实现代码。下面的原有独立程序继续保留。
+`VirtualListView` 功能示例源码路径见 [docs/list.md](../../docs/list.md)，基础接入位于 [examples/list_capabilities/01_basic/example.cpp](../list_capabilities/01_basic/example.cpp)。本目录提供表格、树、树表、流式表格和瀑布流的独立参考程序。
 
 每个 `.cpp` 都是一个独立程序入口，只展示一个使用主题。先读入口里的模型、adapter、视图装配顺序，再按 `#include` 阅读对应的控件或模型。没有示例注册器、隐藏初始化流程或可选图片 / 滚动组件。
 
@@ -26,9 +26,6 @@ target_link_libraries(your_example PRIVATE VirtualItemViews::VirtualItemViews)
 
 | 目标 | 入口 | 核心写法 / 需要一起阅读的文件 |
 | --- | --- | --- |
-| `ref_list_basic` | [list/basic.cpp](list/basic.cpp) | `setAdapter()`、固定行高、`setModel()`；[TextAdapter](list/textadapter.h) |
-| `ref_list_dynamic_height` | [list/dynamic_height.cpp](list/dynamic_height.cpp) | `Variable`、`estimatedSize()`、自动测高、`dataChanged` |
-| `ref_list_state_events` | [list/state_events.cpp](list/state_events.cpp) | `visualStateChanged()`、动画背景、hover / selected 显示控件、事件内查询当前绑定 |
 | `ref_table_rows` | [table/row_widgets.cpp](table/row_widgets.cpp) | `TableWidgetAdapter`、一行一个 QWidget；[TextRow / ColumnHost](table/textadapters.h) |
 | `ref_table_cells` | [table/cell_widgets.cpp](table/cell_widgets.cpp) | `CellWidgets`、`CellWidgetAdapter`、多列二维物化；[TextCellAdapter](table/textadapters.h) |
 | `ref_table_binding_context` | [table/binding_context.cpp](table/binding_context.cpp) | 第一列存一份结构体，`ItemBindingContext::rowData` 直接绑定 |
@@ -45,7 +42,6 @@ target_link_libraries(your_example PRIVATE VirtualItemViews::VirtualItemViews)
 | `ref_masonry_basic` | [masonry/basic.cpp](masonry/basic.cpp) | `AdapterEstimate`、每张卡片的独立估算高度 |
 | `ref_drag_rows` | [drag_drop/rows.cpp](drag_drop/rows.cpp) | 整行 Move / Copy，QStandardItemModel 提供 MIME，视图删除源行 |
 | `ref_drag_cells` | [drag_drop/cells.cpp](drag_drop/cells.cpp) | 框架组合落点；[CellModel](drag_drop/cellmodel.h) 实现空白判断、插入和源格清理 |
-| `ref_drag_manual` | [drag_drop/manual.cpp](drag_drop/manual.cpp) | 手动起拖、按事件发生时的绑定取 index、自定义截图；[DragHandle](drag_drop/draghandle.h) 只负责手势 |
 
 更复杂的合并格、自定义表头、多 pane 和参数比较见 [综合演示索引](../README.md#综合演示)。
 

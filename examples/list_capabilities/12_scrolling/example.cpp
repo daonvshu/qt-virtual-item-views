@@ -107,10 +107,12 @@ private:
         m_setOffset = new QPushButton(QStringLiteral("设置偏移"), this);
         m_up = new QPushButton(QStringLiteral("上移 24 px"), this);
         m_down = new QPushButton(QStringLiteral("下移 24 px"), this);
+        m_autoScroll = new QCheckBox(QStringLiteral("像素自动滚动"), this);
         pixels->addWidget(m_offset, 1);
         pixels->addWidget(m_setOffset);
         pixels->addWidget(m_up);
         pixels->addWidget(m_down);
+        pixels->addWidget(m_autoScroll);
         layout->addLayout(pixels);
         m_view = new viv::VirtualListView(this);
         layout->addWidget(m_view, 1);
@@ -159,11 +161,31 @@ private:
         // Negative moves upward, positive downward; both clamp at the content edges.
         connect(m_up, &QPushButton::clicked, this, [this] { m_view->scrollByPixels(-24); });
         connect(m_down, &QPushButton::clicked, this, [this] { m_view->scrollByPixels(24); });
+        auto *autoScroll = new QTimer(this);
+        autoScroll->setInterval(16);
+        connect(autoScroll, &QTimer::timeout, this, [this] {
+            if (!isVisible())
+                return;
+            // Repeated pixel movement uses the same 64-bit offset as manual
+            // positioning; reaching the bottom restarts at the first row.
+            if (m_view->verticalOffset() >= m_view->maximumVerticalOffset())
+                m_view->setVerticalOffset(0);
+            else
+                m_view->scrollByPixels(24);
+        });
+        connect(m_autoScroll, &QCheckBox::toggled, autoScroll, [autoScroll](bool enabled) {
+            if (enabled)
+                autoScroll->start();
+            else
+                autoScroll->stop();
+        });
         auto *timer = new QTimer(this);
         connect(timer, &QTimer::timeout, this, [this] {
             // Extent is total content height; maximum offset accounts for viewport height.
-            m_status->setText(QStringLiteral("offset=%1 / maximum=%2 / extent=%3")
-                .arg(m_view->verticalOffset()).arg(m_view->maximumVerticalOffset()).arg(m_view->contentExtent()));
+            const auto stats = m_view->stats();
+            m_status->setText(QStringLiteral("offset=%1 / maximum=%2 / extent=%3\n逻辑行=%4 / 物化=%5 / 池内=%6 / 累计创建=%7")
+                .arg(m_view->verticalOffset()).arg(m_view->maximumVerticalOffset()).arg(m_view->contentExtent())
+                .arg(stats.logicalItems).arg(stats.materializedItems).arg(stats.pooledWidgets).arg(stats.createCount));
         });
         timer->start(200);
         applyWheel();
@@ -194,6 +216,7 @@ private:
     QPushButton *m_setOffset = nullptr;
     QPushButton *m_up = nullptr;
     QPushButton *m_down = nullptr;
+    QCheckBox *m_autoScroll = nullptr;
     QLabel *m_status = nullptr;
 };
 

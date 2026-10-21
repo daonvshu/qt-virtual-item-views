@@ -22,10 +22,11 @@
 #include "13_virtualization/example.h"
 #include "14_frozen_rows/example.h"
 #include "15_drag_drop/example.h"
-#include "16_pinning/example.h"
-#include "17_diagnostics/example.h"
+#include "16_drag_animation/example.h"
+#include "17_pinning/example.h"
+#include "18_diagnostics/example.h"
 #ifdef VIV_LIST_HAS_SMOOTH_SCROLLBAR
-#include "18_smooth_scrolling/example.h"
+#include "19_smooth_scrolling/example.h"
 #endif
 
 namespace {
@@ -51,11 +52,12 @@ const ExampleEntry entries[] = {
     {u8"12 滚动与定位", list_scrolling::createExample},
     {u8"13 虚拟化与复用", list_virtualization::createExample},
     {u8"14 冻结行", list_frozen_rows::createExample},
-    {u8"15 拖放", list_drag_drop::createExample},
-    {u8"16 屏外保留", list_pinning::createExample},
-    {u8"17 运行诊断", list_diagnostics::createExample},
+    {u8"15 指示器拖动", list_drag_drop::createExample},
+    {u8"16 行移动动画拖动", list_drag_animation::createExample},
+    {u8"17 屏外保留", list_pinning::createExample},
+    {u8"18 运行诊断", list_diagnostics::createExample},
 #ifdef VIV_LIST_HAS_SMOOTH_SCROLLBAR
-    {u8"18 平滑滚动（SmoothScrollbar）", list_smooth_scrolling::createExample},
+    {u8"19 平滑滚动（SmoothScrollbar）", list_smooth_scrolling::createExample},
 #endif
 };
 

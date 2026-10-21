@@ -1,9 +1,11 @@
 #include "example.h"
 #include <virtualitemviews/virtuallistview.h>
 #include <virtualitemviews/widgetadapter.h>
+#include <virtualitemviews/widgetrecycler.h>
 #include <QAbstractListModel>
 #include <QHBoxLayout>
 #include <QLabel>
+#include <QPushButton>
 #include <QSpinBox>
 #include <QTimer>
 #include <QVBoxLayout>
@@ -79,6 +81,18 @@ private:
         controls->addWidget(m_before);
         controls->addWidget(m_after);
         layout->addLayout(controls);
+        auto *poolControls = new QHBoxLayout;
+        m_poolLimit = new QSpinBox(this);
+        m_poolLimit->setRange(-1, 256);
+        m_poolLimit->setValue(256);
+        m_poolLimit->setPrefix(QStringLiteral("空闲池上限 "));
+        m_poolLimit->setSpecialValueText(QStringLiteral("空闲池不限量"));
+        m_trim = new QPushButton(QStringLiteral("按上限裁剪池"), this);
+        m_clearPool = new QPushButton(QStringLiteral("清空空闲池"), this);
+        poolControls->addWidget(m_poolLimit);
+        poolControls->addWidget(m_trim);
+        poolControls->addWidget(m_clearPool);
+        layout->addLayout(poolControls);
         m_view = new viv::VirtualListView(this);
         layout->addWidget(m_view, 1);
         m_status = new QLabel(this);
@@ -98,15 +112,29 @@ private:
         m_view->setModel(new LogicalModel(m_view));
         connect(m_before, QOverload<int>::of(&QSpinBox::valueChanged), this, [this] { applyOverscan(); });
         connect(m_after, QOverload<int>::of(&QSpinBox::valueChanged), this, [this] { applyOverscan(); });
+        connect(m_poolLimit, QOverload<int>::of(&QSpinBox::valueChanged), this, [this](int limit) {
+            // Limits apply per WidgetType to idle widgets, not visible or pinned
+            // rows. Zero disables pooling; a negative value removes the limit.
+            m_view->recycler()->setMaxPoolSize(viv::kDefaultWidgetType, limit);
+        });
+        connect(m_trim, &QPushButton::clicked, this, [this] {
+            // Retire idle widgets above each type's configured pool limit.
+            m_view->recycler()->trim();
+        });
+        connect(m_clearPool, &QPushButton::clicked, this, [this] {
+            // Clear only idle widgets. Materialized rows remain bound and usable.
+            m_view->recycler()->clear();
+        });
         auto *timer = new QTimer(this);
         connect(timer, &QTimer::timeout, this, [this] {
             // The inclusive visible range excludes overscan. For an empty view
             // it is invalid; stats includes materialized overscan and pinned rows.
             const auto range = m_view->visibleItemRange();
             const auto stats = m_view->stats();
-            m_status->setText(QStringLiteral("可见范围（不含预加载）：%1–%2；逻辑行=%3；物化=%4；池内=%5；累计创建=%6")
+            m_status->setText(QStringLiteral("可见范围（不含预加载）：%1–%2；逻辑行=%3；物化=%4；池内=%5；累计创建=%6；累计销毁=%7；复用命中=%8")
                 .arg(range.first).arg(range.last).arg(stats.logicalItems)
-                .arg(stats.materializedItems).arg(stats.pooledWidgets).arg(stats.createCount));
+                .arg(stats.materializedItems).arg(stats.pooledWidgets).arg(stats.createCount)
+                .arg(m_view->destroyedWidgetCount()).arg(m_view->recycler()->reuseCount()));
         });
         timer->start(200);
     }
@@ -121,6 +149,9 @@ private:
     viv::VirtualListView *m_view = nullptr;
     QSpinBox *m_before = nullptr;
     QSpinBox *m_after = nullptr;
+    QSpinBox *m_poolLimit = nullptr;
+    QPushButton *m_trim = nullptr;
+    QPushButton *m_clearPool = nullptr;
     QLabel *m_status = nullptr;
 };
 

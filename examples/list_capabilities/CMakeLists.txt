@@ -16,12 +16,13 @@ add_executable(list_capabilities
     13_virtualization/example.cpp
     14_frozen_rows/example.cpp
     15_drag_drop/example.cpp
-    16_pinning/example.cpp
-    17_diagnostics/example.cpp
+    16_drag_animation/example.cpp
+    17_pinning/example.cpp
+    18_diagnostics/example.cpp
 )
 target_link_libraries(list_capabilities PRIVATE VirtualItemViews Qt${QT_VERSION_MAJOR}::Widgets)
 if(_viv_demo_smooth_enabled AND TARGET SmoothScrollbar::SmoothScrollbar)
-    target_sources(list_capabilities PRIVATE 18_smooth_scrolling/example.cpp)
+    target_sources(list_capabilities PRIVATE 19_smooth_scrolling/example.cpp)
     target_link_libraries(list_capabilities PRIVATE SmoothScrollbar::SmoothScrollbar)
     target_compile_definitions(list_capabilities PRIVATE VIV_LIST_HAS_SMOOTH_SCROLLBAR=1)
 endif()
