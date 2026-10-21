@@ -6824,6 +6824,7 @@ void TestTreeTableViewInteraction::mergedCellsMaskInternalGridPixels()
         const QPoint origin = view.viewport()->geometry().topLeft();
         const QImage baseline = view.grab().toImage();
         QVERIFY(!view.visualState(anchor).hovered);
+        view.setVisualStateAnimationEasingCurve(QEasingCurve::InOutCubic);
         view.setVisualStateAnimationDuration(1000);
         QVERIFY(!view.visualState(anchor).hovered);
         const auto advance = [&](int time) {
@@ -10734,6 +10735,7 @@ void TestTreeTableViewInteraction::animatedBackgroundsPreserveGridPixels()
     QCursor::setPos(view.viewport()->mapToGlobal(QPoint(400, 220)));
     sendHeaderMouse(view.viewport(), QEvent::MouseMove, QPoint(400, 220), Qt::NoButton, Qt::NoButton);
     settle();
+    view.setVisualStateAnimationEasingCurve(QEasingCurve::InOutCubic);
     view.setVisualStateAnimationDuration(1000);
     const QRect rowRect = view.visualRect(node);
     const int gridColumn = spacing == 0 && columnLayout != 0 ? 2 : 1;

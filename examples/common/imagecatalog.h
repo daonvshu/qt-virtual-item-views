@@ -50,7 +50,7 @@ public:
         cancel();
         m_cancelled = std::make_shared<std::atomic_bool>(false);
         const auto cancelled = m_cancelled;
-        m_pool.start(QRunnable::create([this, folder, completed = std::move(completed), cancelled]() {
+        auto scanFolder = [this, folder, completed = std::move(completed), cancelled]() {
             QStringList filters;
             for (const QByteArray &format : QImageReader::supportedImageFormats())
                 filters.append(QStringLiteral("*.%1").arg(QString::fromLatin1(format)));
@@ -75,10 +75,27 @@ public:
                     if (!cancelled->load() && completed)
                         completed(entries);
                 }, Qt::QueuedConnection);
-        }));
+        };
+#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
+        m_pool.start(QRunnable::create(std::move(scanFolder)));
+#else
+        m_pool.start(new FolderScanTask(std::move(scanFolder)));
+#endif
     }
 
 private:
+#if QT_VERSION < QT_VERSION_CHECK(5, 15, 0)
+    class FolderScanTask : public QRunnable
+    {
+    public:
+        explicit FolderScanTask(std::function<void()> scan) : m_scan(std::move(scan)) {}
+        void run() override { m_scan(); }
+
+    private:
+        std::function<void()> m_scan;
+    };
+#endif
+
     QThreadPool m_pool;
     std::shared_ptr<std::atomic_bool> m_cancelled;
 };

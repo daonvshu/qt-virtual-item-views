@@ -188,6 +188,8 @@ int main(int argc, char **argv)
     // 而 delete 一个栈对象正是"退出时报异常"的典型原因。
     auto *view = new viv::VirtualListView(&window);
     adapter.view = view;
+    // This example paints state inside its row widget.
+    view->setVisualStateBackgroundVisible(false);
     view->setAdapter(&adapter);
     view->setUniformItemHeight(28);
     view->setOverscan(2, 2);
@@ -244,16 +246,6 @@ int main(int argc, char **argv)
     window.insertToolBarBreak(stateToolbar);
     stateToolbar->addWidget(hoverColor);
     stateToolbar->addWidget(selectedColor);
-    auto *hoverRowSpacing = new QCheckBox(QStringLiteral("悬停覆盖行间距"), &window);
-    hoverRowSpacing->setChecked(view->hoverBackgroundThroughRowSpacing());
-    stateToolbar->addWidget(hoverRowSpacing);
-    QObject::connect(hoverRowSpacing, &QCheckBox::toggled, view,
-                     &viv::VirtualListView::setHoverBackgroundThroughRowSpacing);
-    auto *selectedRowSpacing = new QCheckBox(QStringLiteral("选中覆盖行间距"), &window);
-    selectedRowSpacing->setChecked(view->selectedBackgroundThroughRowSpacing());
-    stateToolbar->addWidget(selectedRowSpacing);
-    QObject::connect(selectedRowSpacing, &QCheckBox::toggled, view,
-                     &viv::VirtualListView::setSelectedBackgroundThroughRowSpacing);
     stateToolbar->addWidget(new QLabel(QStringLiteral("过渡: "), &window));
     auto *animationDuration = new QSpinBox(&window);
     animationDuration->setRange(0, 1000);

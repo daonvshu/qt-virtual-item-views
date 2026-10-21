@@ -740,42 +740,33 @@ private slots:
             for (bool selected : {false, true}) {
                 view.hovered = selected ? QModelIndex() : model.index(0, 0);
                 view.selected = selected ? model.index(0, 0) : QModelIndex();
-                for (bool throughRows : {false, true}) {
-                    for (bool throughColumns : {false, true}) {
-                        view.setHoverBackgroundThroughRowSpacing(throughRows);
-                        view.setSelectedBackgroundThroughRowSpacing(throughRows);
-                        view.setHoverBackgroundThroughColumnSpacing(throughColumns);
-                        view.setSelectedBackgroundThroughColumnSpacing(throughColumns);
-                        const QRect cell = view.visualRect(model.index(0, 0));
-                        const QRect expected = cell.adjusted(0, 0, throughColumns ? gap : 0,
-                                                            throughRows ? gap : 0);
-                        for (int radius : {0, 9}) {
-                            view.setStateBackgroundCornerRadius(radius);
-                            for (qreal scale : {1.0, 1.25, 1.5, 1.75}) {
-                                QImage image(qCeil(601 * scale), qCeil(240 * scale), QImage::Format_ARGB32_Premultiplied);
-                                image.setDevicePixelRatio(scale);
-                                image.fill(Qt::white);
-                                QPainter painter(&image);
-                                view.paintVisualStateBackgrounds(&painter, view.viewport()->rect());
-                                painter.end();
-                                const QRect pixels(qRound(expected.x() * scale), qRound(expected.y() * scale),
-                                    qRound((expected.x() + expected.width()) * scale) - qRound(expected.x() * scale),
-                                    qRound((expected.y() + expected.height()) * scale) - qRound(expected.y() * scale));
-                                int colored = 0;
-                                for (int y = 0; y < image.height(); ++y) {
-                                    for (int x = 0; x < image.width(); ++x) {
-                                        if (image.pixelColor(x, y) != QColor(Qt::white)) {
-                                            QVERIFY2(pixels.contains(x, y), "Background leaked beyond its exclusive device edges");
-                                            ++colored;
-                                        }
-                                    }
+                const QRect cell = view.visualRect(model.index(0, 0));
+                const QRect expected = cell;
+                for (int radius : {0, 9}) {
+                    view.setStateBackgroundCornerRadius(radius);
+                    for (qreal scale : {1.0, 1.25, 1.5, 1.75}) {
+                        QImage image(qCeil(601 * scale), qCeil(240 * scale), QImage::Format_ARGB32_Premultiplied);
+                        image.setDevicePixelRatio(scale);
+                        image.fill(Qt::white);
+                        QPainter painter(&image);
+                        view.paintVisualStateBackgrounds(&painter, view.viewport()->rect());
+                        painter.end();
+                        const QRect pixels(qRound(expected.x() * scale), qRound(expected.y() * scale),
+                            qRound((expected.x() + expected.width()) * scale) - qRound(expected.x() * scale),
+                            qRound((expected.y() + expected.height()) * scale) - qRound(expected.y() * scale));
+                        int colored = 0;
+                        for (int y = 0; y < image.height(); ++y) {
+                            for (int x = 0; x < image.width(); ++x) {
+                                if (image.pixelColor(x, y) != QColor(Qt::white)) {
+                                    QVERIFY2(pixels.contains(x, y), "Background leaked beyond its exclusive device edges");
+                                    ++colored;
                                 }
-                                QVERIFY(colored > 0);
-                                QCOMPARE(image.pixelColor(pixels.center()), QColor(Qt::red));
-                                if (radius == 0)
-                                    QCOMPARE(colored, pixels.width() * pixels.height());
                             }
                         }
+                        QVERIFY(colored > 0);
+                        QCOMPARE(image.pixelColor(pixels.center()), QColor(Qt::red));
+                        if (radius == 0)
+                            QCOMPARE(colored, pixels.width() * pixels.height());
                     }
                 }
             }
@@ -783,7 +774,6 @@ private slots:
         view.hovered = QModelIndex();
         view.selected = model.index(9, 0);
         view.setStateBackgroundCornerRadius(0);
-        view.setSelectedBackgroundThroughColumnSpacing(true);
         QImage image(601, 240, QImage::Format_ARGB32_Premultiplied);
         image.fill(Qt::white);
         QPainter painter(&image);
@@ -836,60 +826,51 @@ private slots:
                         view.hovered = target;
                         view.selected = target;
                         const QRect cell = view.visualRect(target);
-                        for (bool throughRows : {false, true}) {
-                            for (bool throughColumns : {false, true}) {
-                                view.setHoverBackgroundThroughRowSpacing(throughRows);
-                                view.setSelectedBackgroundThroughRowSpacing(throughRows);
-                                view.setHoverBackgroundThroughColumnSpacing(throughColumns);
-                                view.setSelectedBackgroundThroughColumnSpacing(throughColumns);
-                                const QRect shape = cell.adjusted(0, 0, throughColumns ? gap : 0,
-                                    throughRows ? rowHeight - cell.height() + gap : 0);
-                                for (int radius : {0, 9}) {
-                                    view.setStateBackgroundCornerRadius(radius);
-                                    for (qreal scale : {1.0, 1.25, 1.5, 1.75}) {
-                                        const QSize size(qCeil(view.viewport()->width() * scale),
-                                                         qCeil(view.viewport()->height() * scale));
-                                        QImage full(size, QImage::Format_ARGB32_Premultiplied);
-                                        full.setDevicePixelRatio(scale);
-                                        full.fill(Qt::white);
-                                        QPainter painter(&full);
-                                        view.paintVisualStateBackgrounds(&painter, view.viewport()->rect());
-                                        painter.end();
-                                        const QRect expected = deviceRect(shape.intersected(view.viewport()->rect()), scale);
-                                        int colored = 0;
-                                        for (int y = 0; y < full.height(); ++y) {
-                                            const auto *pixels = reinterpret_cast<const QRgb *>(full.constScanLine(y));
-                                            for (int x = 0; x < full.width(); ++x) {
-                                                if (pixels[x] != qRgb(255, 255, 255)) {
-                                                    QVERIFY2(expected.contains(x, y),
-                                                        "Animated proportional background leaked into another item or gap");
-                                                    ++colored;
-                                                }
-                                            }
+                        const QRect shape = cell;
+                        for (int radius : {0, 9}) {
+                            view.setStateBackgroundCornerRadius(radius);
+                            for (qreal scale : {1.0, 1.25, 1.5, 1.75}) {
+                                const QSize size(qCeil(view.viewport()->width() * scale),
+                                                 qCeil(view.viewport()->height() * scale));
+                                QImage full(size, QImage::Format_ARGB32_Premultiplied);
+                                full.setDevicePixelRatio(scale);
+                                full.fill(Qt::white);
+                                QPainter painter(&full);
+                                view.paintVisualStateBackgrounds(&painter, view.viewport()->rect());
+                                painter.end();
+                                const QRect expected = deviceRect(shape.intersected(view.viewport()->rect()), scale);
+                                int colored = 0;
+                                for (int y = 0; y < full.height(); ++y) {
+                                    const auto *pixels = reinterpret_cast<const QRgb *>(full.constScanLine(y));
+                                    for (int x = 0; x < full.width(); ++x) {
+                                        if (pixels[x] != qRgb(255, 255, 255)) {
+                                            QVERIFY2(expected.contains(x, y),
+                                                "Animated proportional background leaked into another item or gap");
+                                            ++colored;
                                         }
-                                        QVERIFY(colored > 0);
-                                        if (radius == 0) QCOMPARE(colored, expected.width() * expected.height());
-                                        const QColor mixed = full.pixelColor(expected.center());
-                                        QVERIFY(mixed.red() > mixed.green());
-                                        QVERIFY(mixed.blue() > mixed.red());
+                                    }
+                                }
+                                QVERIFY(colored > 0);
+                                if (radius == 0) QCOMPARE(colored, expected.width() * expected.height());
+                                const QColor mixed = full.pixelColor(expected.center());
+                                QVERIFY(mixed.red() > mixed.green());
+                                QVERIFY(mixed.blue() > mixed.red());
 
-                                        const QRect dirty(0, 17, view.viewport()->width(), 101);
-                                        QImage partial(size, QImage::Format_ARGB32_Premultiplied);
-                                        partial.setDevicePixelRatio(scale);
-                                        partial.fill(Qt::white);
-                                        QPainter partialPainter(&partial);
-                                        view.paintVisualStateBackgrounds(&partialPainter, dirty);
-                                        partialPainter.end();
-                                        const QRect dirtyPixels = deviceRect(dirty, scale);
-                                        for (int y = 0; y < partial.height(); ++y) {
-                                            const auto *actual = reinterpret_cast<const QRgb *>(partial.constScanLine(y));
-                                            const auto *reference = reinterpret_cast<const QRgb *>(full.constScanLine(y));
-                                            for (int x = 0; x < partial.width(); ++x) {
-                                                const QRgb expectedPixel = dirtyPixels.contains(x, y)
-                                                    ? reference[x] : qRgb(255, 255, 255);
-                                                if (actual[x] != expectedPixel) QCOMPARE(actual[x], expectedPixel);
-                                            }
-                                        }
+                                const QRect dirty(0, 17, view.viewport()->width(), 101);
+                                QImage partial(size, QImage::Format_ARGB32_Premultiplied);
+                                partial.setDevicePixelRatio(scale);
+                                partial.fill(Qt::white);
+                                QPainter partialPainter(&partial);
+                                view.paintVisualStateBackgrounds(&partialPainter, dirty);
+                                partialPainter.end();
+                                const QRect dirtyPixels = deviceRect(dirty, scale);
+                                for (int y = 0; y < partial.height(); ++y) {
+                                    const auto *actual = reinterpret_cast<const QRgb *>(partial.constScanLine(y));
+                                    const auto *reference = reinterpret_cast<const QRgb *>(full.constScanLine(y));
+                                    for (int x = 0; x < partial.width(); ++x) {
+                                        const QRgb expectedPixel = dirtyPixels.contains(x, y)
+                                            ? reference[x] : qRgb(255, 255, 255);
+                                        if (actual[x] != expectedPixel) QCOMPARE(actual[x], expectedPixel);
                                     }
                                 }
                             }

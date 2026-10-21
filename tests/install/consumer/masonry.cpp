@@ -58,11 +58,9 @@ int main(int argc, char **argv)
     check(view.visualRect(identity).height() == 180, "installed Masonry authoritative height API");
     view.setItemHeightAnimationDuration(0);
     view.setItemHeightAnimationEnabled(true);
-    view.setSelectedBackgroundThroughRowSpacing(true);
-    view.setSelectedBackgroundThroughColumnSpacing(false);
+    view.setStateBackgroundCornerRadius(8);
     check(view.itemHeightAnimationDuration() == 0
-              && view.selectedBackgroundThroughRowSpacing()
-              && !view.selectedBackgroundThroughColumnSpacing(),
+              && view.visualStateBackgroundVisible() && view.stateBackgroundCornerRadius() == 8,
           "installed Masonry state and animation APIs");
     std::printf("MASONRY_CONSUMER_RESULT %s failures=%d\n",
                  failures ? "FAILED" : "PASSED", failures);

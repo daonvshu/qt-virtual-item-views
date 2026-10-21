@@ -21,10 +21,12 @@
 
 每篇文档直接给出最小用法和适用边界；从[快速开始](docs/getting-started.md)进入即可，不需要阅读演示程序。
 
+需要可编译、可直接参考的代码时，从 [examples 导航](examples/README.md)进入。列表提供 [17 项独立能力示例](examples/list_capabilities/README.md)，在同一进程切换演示，每个能力目录自带全部实现；其他视图的[最小参考示例](examples/reference/README.md)按视图和功能组织。原有综合演示用于调整参数和观察多种功能组合。
+
 ## 适用场景
 
 适合在长列表、表格或树中使用按钮、开关、编辑器、异步图片等真实控件，尤其适合内容高度会变化的业务视图。控件数量主要随可见范围变化，而非随模型总行数变化。
 
 如果只需要绘制文本和图形，Qt 原生 Item View 配合 `QStyledItemDelegate` 通常更轻量。本库使用 QWidget 与 QPainter，不提供 GPU 渲染；同时显示大量重型控件仍有相应成本。
 
-需要 C++17、CMake 3.16+、Qt 6.2+ 或 Qt 5.15+。安装与消费端的 `find_package()` 示例见 [快速开始](docs/getting-started.md)。
+需要 CMake 3.16+、Qt 6.2+ 或 Qt 5.12.3+。Qt5 构建使用 C++14，Qt6 构建使用 C++17。安装与消费端的 `find_package()` 示例见 [快速开始](docs/getting-started.md)。

@@ -161,16 +161,6 @@ public:
     /// Blank pixels between visible columns, including pane boundaries.
     void setColumnSpacing(int pixels);
     int columnSpacing() const { return m_columns ? m_columns->sectionSpacing() : 0; }
-    /// Extends hover/selection backgrounds through row gaps (default false).
-    void setHoverBackgroundThroughRowSpacing(bool enabled);
-    bool hoverBackgroundThroughRowSpacing() const { return m_hoverBackgroundThroughRowSpacing; }
-    void setSelectedBackgroundThroughRowSpacing(bool enabled);
-    bool selectedBackgroundThroughRowSpacing() const { return m_selectedBackgroundThroughRowSpacing; }
-    /// Extends hover/selection backgrounds through column gaps (default true).
-    void setHoverBackgroundThroughColumnSpacing(bool enabled);
-    bool hoverBackgroundThroughColumnSpacing() const { return m_hoverBackgroundThroughColumnSpacing; }
-    void setSelectedBackgroundThroughColumnSpacing(bool enabled);
-    bool selectedBackgroundThroughColumnSpacing() const { return m_selectedBackgroundThroughColumnSpacing; }
     /// Optional content for visible column gaps; the binder refreshes reused widgets.
     void setColumnSpacingFactory(ColumnSpacingFactory factory, ColumnSpacingBinder binder = {});
     void setHeaderColumnSpacingFactory(ColumnSpacingFactory factory, ColumnSpacingBinder binder = {});
@@ -461,6 +451,15 @@ public:
     Q_ENUM(VisualStateScope)
     void setVisualStateScope(VisualStateScope scope);
     VisualStateScope visualStateScope() const { return m_visualStateScope; }
+    /// Paints complete hover/selection backgrounds below transparent row/cell widgets.
+    /// Enabled by default; state backgrounds never cover row or column spacing.
+    /// Colors and animation use VirtualItemView's visual-state settings.
+    virtual void setVisualStateBackgroundVisible(bool visible);
+    bool visualStateBackgroundVisible() const { return m_visualStateBackgroundVisible; }
+    /// Shared hover/selection radius in logical pixels; negative values become zero.
+    /// Default zero. Set background visibility separately; scope may be Row or Cell.
+    void setVisualStateCornerRadius(int radius);
+    int visualStateCornerRadius() const { return m_visualStateCornerRadius; }
     VisualState visualState(const QModelIndex &index) const override;
     QModelIndex indexForWidget(const QWidget *widget) const override;
     QModelIndex cellIndexForWidget(const QWidget *widget) const;
@@ -478,17 +477,15 @@ signals:
     void rowHeightChanged(qsizetype row, int height);
 
 protected:
-    bool m_hoverBackgroundThroughRowSpacing = false;
-    bool m_selectedBackgroundThroughRowSpacing = false;
-    bool m_hoverBackgroundThroughColumnSpacing = true;
-    bool m_selectedBackgroundThroughColumnSpacing = true;
+    bool m_visualStateBackgroundVisible = true;
     void paintEvent(QPaintEvent *event) override;
-    /// Paints state backgrounds only within row and column spacing regions.
-    void paintSpacingBackgrounds(QPainter *painter, const QRect &dirtyRect) const;
-    /// Paints one state layer. The default paints spacing only; overrides may paint
-    /// the full extended rectangle when adapter widgets leave their background transparent.
+    /// Paints visible item state layers, excluding row and column spacing.
+    void paintVisualStateBackgrounds(QPainter *painter, const QRect &dirtyRect) const;
+    /// Paints one state layer using the configured visibility and corner radius.
+    /// Override for custom shapes; the clip excludes all item spacing.
+    /// Adapter widgets must leave their background transparent.
     virtual void paintStateBackgroundLayer(QPainter *painter, const QRect &extended,
-                                          const QRegion &clip, const QRegion &spacingClip,
+                                          const QRegion &clip,
                                           const QColor &color) const;
     /// Draws a rounded layer with shape and clip edges aligned to physical pixels.
     void paintRoundedStateBackgroundLayer(QPainter *painter, const QRect &extended,
@@ -737,6 +734,7 @@ private:
     ListLayout *m_rowLayout = nullptr;
     DropTargetMode m_dropTargetMode = DropTargetMode::BetweenRows;
     VisualStateScope m_visualStateScope = VisualStateScope::Row;
+    int m_visualStateCornerRadius = 0;
     HeaderGeometry *m_columns = nullptr;
     /// Compresses the 64-bit horizontal offset into the int-only scroll bar (the
     /// vertical axis has the same mapper in the kernel).

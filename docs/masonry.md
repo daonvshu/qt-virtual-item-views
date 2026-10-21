@@ -41,7 +41,7 @@ view.show();
 
 仓库中的 `masonry_view` 示例启动时显示合成卡片，工具栏的“加载图片文件夹”可以切换到真实图片清单。图片只在项目进入物化范围后异步读取，缩略图回调会把原图尺寸写回模型并触发 `AdapterEstimate` 重排；未加载完成的项目使用 `150x120` 的回退估算，因此加载大量图片时不会在主线程同步解码整目录。
 
-示例工具栏分行提供布局、分割线、高度动画和状态背景设置。卡片保留透明背景，以便直接观察 hover/select 的圆角和间距覆盖。单击一个项目，设置“当前项高度”后点击“应用高度”，即可触发该源项目的权威高度更新；勾选“高度动画”后可观察逐帧重排，状态栏显示当前项目序号及实际高度。“恢复示例”会回到 1000 个合成卡片并清除逐项高度设置，工具栏配置继续保留。
+示例工具栏分行提供布局、分割线、高度动画和状态背景设置。卡片保留透明背景，以便直接观察 item 内的 hover/select 圆角背景。单击一个项目，设置“当前项高度”后点击“应用高度”，即可触发该源项目的权威高度更新；勾选“高度动画”后可观察逐帧重排，状态栏显示当前项目序号及实际高度。“恢复示例”会回到 1000 个合成卡片并清除逐项高度设置，工具栏配置继续保留。
 
 示例已启用无障碍工厂，启动时当前项位于第一个卡片。开启 Windows 讲述人后，单击卡片取得视图焦点即可用方向键验证名称和几何导航，无需修改示例源码。图片内容会遮住自身区域的背景颜色，背景覆盖边界可先用合成卡片验收。
 
@@ -103,17 +103,13 @@ view.setItemHeightAnimationEnabled(true); // 默认关闭
 
 ```cpp
 view.setStateBackgroundCornerRadius(8);
-view.setHoverBackgroundThroughRowSpacing(false);
-view.setSelectedBackgroundThroughRowSpacing(false);
-view.setHoverBackgroundThroughColumnSpacing(true);
-view.setSelectedBackgroundThroughColumnSpacing(true);
 view.setVerticalGridLinesVisible(true);
 view.setHorizontalGridLinesVisible(true);
 ```
 
 背景只按真实项目矩形绘制，分割线也只绘制真实项目边界；没有项目的位置不会补线。非零间距会在两侧分别绘制边线，零间距共享一条线。分割线使用物理像素对齐并位于业务控件上方，因此可在 100%、125% 和 150% 缩放下保持一致线宽。
 
-沿用其他控件的默认设置：hover/select 各自不覆盖纵向项目间距、覆盖列间距；两种状态的两个方向均可独立切换。覆盖范围延伸到同列下一项目顶部和下一列左边，圆角按扩展后的整体矩形绘制。
+hover/select 背景默认显示，只绘制真实 item 矩形，不覆盖纵向或列间距；圆角也限制在 item 内。
 
 ## 可访问性
 

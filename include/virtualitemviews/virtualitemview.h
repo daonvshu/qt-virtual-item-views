@@ -8,6 +8,8 @@
 
 #include <QAbstractScrollArea>
 #include <QColor>
+#include <QEasingCurve>
+#include <QElapsedTimer>
 #include <QHash>
 #include <QItemSelectionModel>
 #include <QList>
@@ -15,6 +17,7 @@
 #include <QPointer>
 #include <QRegion>
 #include <QSet>
+#include <QSharedPointer>
 #include <QVector>
 #include <functional>
 
@@ -37,6 +40,7 @@ namespace viv {
 class LayoutPolicy;
 class WidgetAdapter;
 class WidgetRecycler;
+class DragMoveSelection;
 
 /// Snapshot of the virtualization state.
 ///
@@ -129,9 +133,13 @@ public:
     QColor hoverBackgroundColor() const { return m_hoverBackgroundColor; }
     void setSelectedBackgroundColor(const QColor &color);
     QColor selectedBackgroundColor() const { return m_selectedBackgroundColor; }
-    /// Duration of hover/selection color transitions; zero disables animation.
+    /// Duration of hover/selection color transitions (default 180 ms); zero disables animation.
     void setVisualStateAnimationDuration(int milliseconds);
     int visualStateAnimationDuration() const { return m_visualStateAnimationDuration; }
+    /// Curve shared by hover/selection transitions (default OutCubic).
+    /// Changing it resets the current transitions, like changing their duration.
+    void setVisualStateAnimationEasingCurve(const QEasingCurve &curve);
+    QEasingCurve visualStateAnimationEasingCurve() const { return m_visualStateAnimationEasingCurve; }
 
     QModelIndex currentIndex() const;
     void setCurrentIndex(const QModelIndex &index);
@@ -198,7 +206,7 @@ public:
     /// How the drop indicator is painted (§38). A subclass chooses by filling
     /// DropTarget::ontoItem; an unknown target still gets the insertion line.
     enum class DropIndicatorStyle {
-        /// 2 px line between the two rows the drop is inserted between.
+        /// Line between items, with the configured width (2 logical pixels by default).
         Line,
         /// Frame around the item the drop lands into.
         Frame,
@@ -233,6 +241,18 @@ public:
     /// a tree would drop into).
     void setDropIndicatorShown(bool shown);
     bool isDropIndicatorShown() const { return m_dropIndicatorShown; }
+    /// Color shared by insertion lines and target frames. An invalid color
+    /// (the default) follows QPalette::Highlight; the getter returns that setting.
+    void setDropIndicatorColor(const QColor &color);
+    QColor dropIndicatorColor() const { return m_dropIndicatorColor; }
+    /// Stroke width in logical pixels (default 2). Negative values become zero;
+    /// zero hides the indicator without changing drop permissions.
+    void setDropIndicatorWidth(int width);
+    int dropIndicatorWidth() const { return m_dropIndicatorWidth; }
+    /// Built-in pen style shared by lines and frames (default SolidLine).
+    /// NoPen hides the indicator; unsupported/custom styles use SolidLine.
+    void setDropIndicatorPenStyle(Qt::PenStyle style);
+    Qt::PenStyle dropIndicatorPenStyle() const { return m_dropIndicatorPenStyle; }
     /// Action used for drags started by this view (CopyAction by default).
     void setDefaultDropAction(Qt::DropAction action);
     Qt::DropAction defaultDropAction() const { return m_defaultDropAction; }
@@ -248,6 +268,9 @@ public:
     /// remove + insert is not touched twice). A model that implements a move while *keeping* the
     /// row identities (e.g. `moveRows()`) must keep this off - it would look like an untouched,
     /// still-present source row and be removed a second time.
+    /// For row-insertion drops between these views, selected source cells transfer
+    /// to their inserted counterparts after source deletion. This requires sibling
+    /// source rows inserted in order as one block; ambiguous drops are left to the model.
     void setMoveRemovesSourceRows(bool enabled);
     bool moveRemovesSourceRows() const { return m_moveRemovesSourceRows; }
     /// Actions a drop from this view offers; by default the model's
@@ -256,6 +279,7 @@ public:
     Qt::DropActions dragDropActions() const;
     /// Target a drop at \a viewportPos would use (diagnostics/subclasses).
     DropTarget dropTargetAt(const QPoint &viewportPos) const;
+    /// Indicator geometry after applying the configured insertion-line width.
     QRect dropIndicatorRect(const DropTarget &target) const;
     /// Style used to paint the indicator of \a target.
     DropIndicatorStyle dropIndicatorStyle(const DropTarget &target) const;
@@ -617,8 +641,11 @@ protected:
     /// default inserts between rows (top half = before, bottom half = after the
     /// row); a tree also resolves a drop *into* a row and a table a cell (§38).
     virtual DropTarget resolveDropTarget(const QPoint &viewportPos) const;
-    /// Subclass hook (§38): interaction rectangle of a drop target (indicator).
+    /// Subclass hook (§38): indicator frame, or a reference 2-pixel insertion
+    /// band. dropIndicatorRect() applies the configured insertion-line width.
     virtual QRect resolveDropIndicatorRect(const DropTarget &target) const;
+    /// Direction of an insertion line; frames ignore this value.
+    virtual Qt::Orientation dropIndicatorOrientation() const { return Qt::Horizontal; }
 
     // -- kernel API for subclasses -------------------------------------------
     LayoutPolicy *layoutPolicy() const { return m_layout; }
@@ -683,6 +710,8 @@ protected:
     void applyItemPaneGeometry(MaterializedItem &item, qsizetype row);
     /// Raises the boundary lines above the (re)materialized items.
     void raiseItemPaneSeparatorLines() const;
+    /// Whether a view-coordinate row grid line overlaps a visible pane divider.
+    bool isRowGridLineCoveredByPaneSeparator(const QRect &rect) const;
     void syncRowSpacingWidgets(const QVector<VisibleRange> &ranges);
     /// Records a derived view lifecycle event when logging is enabled.
     void appendLifecycleLog(const QString &entry);
@@ -742,6 +771,8 @@ private:
     qint64 scrollBarSingleStepPixels() const;
     void showDropIndicator(const DropTarget &target);
     void hideDropIndicator();
+    /// Applies changed appearance to the current drag target, when one is active.
+    void refreshDropIndicator();
     void updateDragAutoscroll(const QPoint &viewportPos);
     void stopDragAutoscroll();
     /// True when the drag started in this view and a move to \a target would
@@ -786,13 +817,16 @@ private:
         bool hoverTarget = false;
         bool selectedTarget = false;
         QVariantAnimation *animation = nullptr;
+        QElapsedTimer clock;
     };
+    void sampleVisualTransition(VisualTransition &transition) const;
     void stopVisualTransition(VisualTransition &transition);
     void scheduleVisualStateRefresh(const QPersistentModelIndex &index);
     mutable QHash<QPersistentModelIndex, VisualTransition> m_visualTransitions;
     QSet<QPersistentModelIndex> m_pendingVisualRefreshes;
     bool m_visualRefreshScheduled = false;
     int m_visualStateAnimationDuration = 180;
+    QEasingCurve m_visualStateAnimationEasingCurve = QEasingCurve::OutCubic;
     QColor m_hoverBackgroundColor = QColor(QStringLiteral("#e7f4ed"));
     QColor m_selectedBackgroundColor = QColor(QStringLiteral("#b9d9f1"));
     bool m_ownSelectionModel = false;
@@ -848,6 +882,9 @@ private:
     /// Also suspends ordinary hover updates until native drag and source cleanup finish.
     bool m_dragInProgress = false;
     bool m_dropIndicatorShown = true;
+    QColor m_dropIndicatorColor;
+    int m_dropIndicatorWidth = 2;
+    Qt::PenStyle m_dropIndicatorPenStyle = Qt::SolidLine;
     Qt::DropAction m_defaultDropAction = Qt::CopyAction;
     Qt::DropActions m_dragDropActions = Qt::IgnoreAction; // IgnoreAction = derive
     bool m_moveRemovesSourceRows = false;
@@ -855,10 +892,14 @@ private:
     QPoint m_dragGlobalStartPos;
     /// Sources of the drag in flight (empty for drags started elsewhere).
     QList<QPersistentModelIndex> m_dragSourceIndexes;
+    QSharedPointer<DragMoveSelection> m_dragMoveSelection;
+    QPointer<VirtualItemView> m_dragSelectionTargetView;
     /// Last drag position in viewport coordinates; autoscroll re-resolves the
     /// target from it because the rows below the cursor move while scrolling.
     QPoint m_dragHoverPos;
     bool m_dragHoverValid = false;
+    /// Retains an accepted target while appearance settings hide its indicator.
+    bool m_dropIndicatorTargetValid = false;
     QWidget *m_dropIndicator = nullptr;
     QPersistentModelIndex m_dragSourcePin;
     QTimer *m_dragAutoscrollTimer = nullptr;

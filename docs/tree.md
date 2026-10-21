@@ -70,17 +70,15 @@ tree.setVisualStateBackgroundExtent(
 tree.setHoverBackgroundColor(QColor("#e7f4ed"));
 tree.setSelectedBackgroundColor(QColor("#b9d9f1"));
 tree.setVisualStateAnimationDuration(150);
-tree.setHoverBackgroundThroughRowSpacing(true);
-tree.setSelectedBackgroundThroughRowSpacing(false);
 ```
 
-`NodeOnly` 从节点内容左侧开始，`NodeAndIcon` 从当前节点图标格左侧开始，`FullWidth` 覆盖整行。背景在分支图标下方绘制，不遮住图标；行控件需要保持透明，才能看到其下方的状态背景。默认不启用内置背景。
+`NodeOnly` 从节点内容左侧开始，`NodeAndIcon` 从当前节点图标格左侧开始，`FullWidth` 覆盖整行。背景在分支图标下方绘制，不遮住图标；行控件需要保持透明，才能看到其下方的状态背景。默认启用内置背景，状态颜色不会延伸到间距。
 
 `setVisualStateCornerRadius()` 同时设置 hover 和 selected 背景圆角，滚动裁剪不会改变完整背景的圆角形状。`tree_view` 示例默认演示 6 像素圆角，可用 `--corner-radius 0` 切回直角，或在“状态”工具栏调整半径。
 
 也可由节点控件自行绘制背景。树与列表使用同一接口：在 `WidgetAdapter::visualStateChanged(type, widget, index)` 中读取 `tree.visualState(index)`，把独立的 `hovered`、`selected` 标志交给节点控件，然后调用 `update()`。节点控件在 `paintEvent()` 中画自己的背景；回调也会在控件复用并绑定新节点后触发。两种状态可以同时为真，颜色优先级由业务决定。完整的自绘控件写法见 [列表的状态示例](list.md#自绘悬停与选中背景)。
 
-`setHoverBackgroundThroughRowSpacing()` 和 `setSelectedBackgroundThroughRowSpacing()` 分别控制内置背景是否覆盖节点拥有的行间距，默认均为 false。`NodeRowSpacingBelowRole` 的部分跟随上方节点，`NodeRowSpacingAboveRole` 的部分跟随下方节点；下间距 role 缺失、无效或负值时，默认行间距归上方节点。两部分各自使用所属节点的状态和覆盖范围，首行前、末行后不延伸，不跨越冻结行边界。分隔线仍显示，自定义间距控件仍可绘制自己的内容。
+状态背景默认开启，只绘制 item 范围，不覆盖任何行间距；节点上下间距 role 仅影响布局。自绘行背景时，先调用 `setVisualStateBackgroundVisible(false)` 关闭框架背景。
 
 节点控件按 `hoverProgress`、`selectedProgress` 混合背景颜色即可得到进入和离开动画；`setVisualStateAnimationDuration()` 控制过渡时间。
 

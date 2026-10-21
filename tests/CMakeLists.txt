@@ -33,6 +33,14 @@ add_executable(tst_dragpreview unit/tst_dragpreview.cpp)
 target_link_libraries(tst_dragpreview PRIVATE VirtualItemViews Qt${QT_VERSION_MAJOR}::Test)
 add_test(NAME tst_dragpreview COMMAND tst_dragpreview)
 
+# Selection transfer is model-only and does not start a native drag or create widgets.
+add_executable(tst_dragmoveselection unit/tst_dragmoveselection.cpp)
+target_link_libraries(tst_dragmoveselection PRIVATE VirtualItemViews Qt${QT_VERSION_MAJOR}::Test)
+if(MSVC)
+    target_compile_options(tst_dragmoveselection PRIVATE /utf-8)
+endif()
+add_test(NAME tst_dragmoveselection COMMAND tst_dragmoveselection)
+
 viv_add_test(tst_sizeindex unit/tst_sizeindex.cpp)
 viv_add_test(tst_scrollmapper unit/tst_scrollmapper.cpp)
 viv_add_test(tst_widgetrecycler unit/tst_widgetrecycler.cpp)

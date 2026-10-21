@@ -94,7 +94,7 @@ struct PaneSeparatorStyle
     /// current style paints separators with", so the boundary line matches the
     /// lines between items instead of a guessed palette role.
     QColor color;
-    /// Solid by default; dashed/dotted lines are centred on the band.
+    /// Solid by default; every line style uses width as its physical-pixel stroke width.
     Qt::PenStyle lineStyle = Qt::SolidLine;
 
     bool isVisible() const { return width > 0; }

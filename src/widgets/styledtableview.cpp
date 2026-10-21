@@ -106,7 +106,20 @@ void StyledTableRowWidget::paintEvent(QPaintEvent *)
         background.adjust(m_view->hasLeftRowEdge() ? 0.0 : -extension, 0.0,
                           m_view->hasRightRowEdge() ? 0.0 : extension, 0.0);
     }
-    painter.setClipRect(rect());
+    QRegion clip(rect());
+    const QPoint viewportOrigin = mapFromGlobal(m_view->viewport()->mapToGlobal(QPoint()));
+    const auto panes = m_view->panes();
+    for (int logical : m_view->visibleColumnLogicalIndexes()) {
+        const ColumnGeometry column = m_view->columnGeometry(logical);
+        const int paneIndex = m_view->paneIndexOfColumn(logical);
+        if (!column.isValid() || paneIndex < 0 || paneIndex >= panes.size())
+            continue;
+        const QRect gap = QRect(column.viewportX + column.width, 0,
+                                m_view->columnSpacing(), m_view->viewport()->height())
+            .intersected(panes.at(paneIndex).viewportRect);
+        clip -= gap.translated(viewportOrigin);
+    }
+    painter.setClipRegion(clip);
     m_view->paintVisualStateBackground(&painter, background, QModelIndex(m_index));
 }
 
@@ -125,6 +138,8 @@ public:
 protected:
     void paintEvent(QPaintEvent *event) override
     {
+        if (!m_view->visualStateBackgroundVisible())
+            return;
         QRegion grid;
         if (m_view->verticalGridLinesVisible()) {
             const int lineWidth = m_view->verticalGridLineWidth();
@@ -146,6 +161,15 @@ protected:
         }
         for (const QRect &separator : m_view->paneSeparatorRects())
             grid += separator.translated(-pos());
+        const auto columnPanes = m_view->panes();
+        for (int logical : m_view->visibleColumnLogicalIndexes()) {
+            const ColumnGeometry column = m_view->columnGeometry(logical);
+            const int paneIndex = m_view->paneIndexOfColumn(logical);
+            if (!column.isValid() || paneIndex < 0 || paneIndex >= columnPanes.size())
+                continue;
+            grid -= QRect(column.viewportX + column.width, 0, m_view->columnSpacing(), height())
+                .intersected(columnPanes.at(paneIndex).viewportRect);
+        }
         if (grid.isEmpty())
             return;
 
@@ -240,6 +264,8 @@ QPainterPath StyledTableView::visualStateBackgroundPath(const QRectF &rect) cons
 void StyledTableView::paintVisualStateBackground(QPainter *painter, const QRectF &rect,
                                                   const QModelIndex &index) const
 {
+    if (!visualStateBackgroundVisible())
+        return;
     const VisualState state = visualState(index);
     if (state.hoverProgress <= 0.0 && state.selectedProgress <= 0.0)
         return;
@@ -296,6 +322,12 @@ void StyledTableView::refreshRoundedEdges()
                 item.widget->update();
         }
     }
+}
+
+void StyledTableView::paintEvent(QPaintEvent *event)
+{
+    // Styled row/cell hosts paint their own item backgrounds.
+    VirtualItemView::paintEvent(event);
 }
 
 void StyledTableView::refreshVisualStates()

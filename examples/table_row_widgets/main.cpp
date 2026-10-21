@@ -115,7 +115,7 @@ public:
 
 protected:
     void paintStateBackgroundLayer(QPainter *painter, const QRect &extended,
-                                  const QRegion &clip, const QRegion &,
+                                  const QRegion &clip,
                                   const QColor &color) const override
     {
         paintRoundedStateBackgroundLayer(painter, extended, clip, color, m_cornerRadius);
@@ -301,28 +301,6 @@ int main(int argc, char **argv)
     auto *selectedColor = new QPushButton(QStringLiteral("选中颜色"), &window);
     stateToolbar->addWidget(hoverColor);
     stateToolbar->addWidget(selectedColor);
-    auto *backgroundToolbar = window.addToolBar(QStringLiteral("背景间距"));
-    window.insertToolBarBreak(backgroundToolbar);
-    auto *hoverRowSpacing = new QCheckBox(QStringLiteral("悬停覆盖行间距"), &window);
-    hoverRowSpacing->setChecked(view->hoverBackgroundThroughRowSpacing());
-    backgroundToolbar->addWidget(hoverRowSpacing);
-    QObject::connect(hoverRowSpacing, &QCheckBox::toggled, view,
-                     &viv::VirtualTableView::setHoverBackgroundThroughRowSpacing);
-    auto *selectedRowSpacing = new QCheckBox(QStringLiteral("选中覆盖行间距"), &window);
-    selectedRowSpacing->setChecked(view->selectedBackgroundThroughRowSpacing());
-    backgroundToolbar->addWidget(selectedRowSpacing);
-    QObject::connect(selectedRowSpacing, &QCheckBox::toggled, view,
-                     &viv::VirtualTableView::setSelectedBackgroundThroughRowSpacing);
-    auto *hoverColumnSpacing = new QCheckBox(QStringLiteral("悬停覆盖列间距"), &window);
-    hoverColumnSpacing->setChecked(view->hoverBackgroundThroughColumnSpacing());
-    backgroundToolbar->addWidget(hoverColumnSpacing);
-    QObject::connect(hoverColumnSpacing, &QCheckBox::toggled, view,
-                     &viv::VirtualTableView::setHoverBackgroundThroughColumnSpacing);
-    auto *selectedColumnSpacing = new QCheckBox(QStringLiteral("选中覆盖列间距"), &window);
-    selectedColumnSpacing->setChecked(view->selectedBackgroundThroughColumnSpacing());
-    backgroundToolbar->addWidget(selectedColumnSpacing);
-    QObject::connect(selectedColumnSpacing, &QCheckBox::toggled, view,
-                     &viv::VirtualTableView::setSelectedBackgroundThroughColumnSpacing);
     stateToolbar->addWidget(new QLabel(QStringLiteral("过渡: "), &window));
     auto *animationDuration = new QSpinBox(&window);
     animationDuration->setRange(0, 1000);

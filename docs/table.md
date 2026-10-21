@@ -117,17 +117,14 @@ for (int column = 0; column < table->model()->columnCount(); ++column) {
 
 ## 行列间距
 
-悬停与选中各自提供行、列间距覆盖开关：默认不覆盖行间距、覆盖列间距。行间距归属上方行，列间距归属左侧显示列；整行与单元格状态范围、两种物化模式均支持。视图负责间距背景，行内背景保留 adapter 的绘制；自定义间距控件的不透明内容可能遮住背景。`StyledTableView` 和 `VirtualTreeTableView` 也继承这些设置。
+表格默认绘制 hover 和选中背景，只在 item 范围着色，行列间距始终保持自身外观。两种物化模式及整行/单元格状态范围都遵循此规则。
 
-自定义圆角背景需把行内容与覆盖的间距作为同一个形状绘制。可继承 `VirtualTableView` 并覆写 `paintStateBackgroundLayer()`：`extended` 是当前 hover/select 开关对应的完整区域，`clip` 已裁去不覆盖的列间距和 pane 边界，`spacingClip` 只含间距。默认实现只绘制 `spacingClip`；改为绘制完整形状时，adapter 的行控件应保持背景透明，避免重复绘制。`table_row_widgets` 示例采用这种方式，圆角位于包含间距后的外边缘。
+普通圆角和颜色直接使用 `setVisualStateCornerRadius()`、`setHoverBackgroundColor()`、`setSelectedBackgroundColor()`。仅完全自定义时重写 `paintStateBackgroundLayer(painter, rect, clip, color)`；`clip` 已排除间距并按 pane 裁剪。自绘行控件应关闭框架背景，避免重复绘制。
 
-覆写中可调用 `paintRoundedStateBackgroundLayer(painter, extended, clip, color, radius)`；它同时对齐圆角形状和裁剪区域的物理像素边界，避免 125% 等缩放下抗锯齿颜色进入下一行。
+覆写中可调用 `paintRoundedStateBackgroundLayer(painter, rect, clip, color, radius)`；它同时对齐圆角形状和裁剪区域的物理像素边界，避免 125% 等缩放下抗锯齿颜色进入下一行。
 
 ```cpp
-table.setHoverBackgroundThroughRowSpacing(false);
-table.setSelectedBackgroundThroughRowSpacing(false);
-table.setHoverBackgroundThroughColumnSpacing(true);
-table.setSelectedBackgroundThroughColumnSpacing(true);
+table.setVisualStateCornerRadius(6);
 ```
 
 两种控件模式都可设置行间距和列间距，默认均为 0；末行、末列之后不加间距。空白区域不命中行或列，行间距上下、列间距左右都有分割线。列间距跟随列的显示顺序、隐藏状态和冻结 pane。间距设为 0 时仍显示单元格分割线。

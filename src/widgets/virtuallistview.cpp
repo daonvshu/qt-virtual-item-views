@@ -34,20 +34,22 @@ void VirtualListView::setRowGridLinesVisible(bool visible)
     relayout();
 }
 
-void VirtualListView::setHoverBackgroundThroughRowSpacing(bool enabled)
+void VirtualListView::setVisualStateBackgroundVisible(bool visible)
 {
-    if (m_hoverBackgroundThroughRowSpacing == enabled)
+    if (m_visualStateBackgroundVisible == visible)
         return;
-    m_hoverBackgroundThroughRowSpacing = enabled;
+    m_visualStateBackgroundVisible = visible;
     viewport()->update();
 }
 
-void VirtualListView::setSelectedBackgroundThroughRowSpacing(bool enabled)
+void VirtualListView::setVisualStateCornerRadius(int radius)
 {
-    if (m_selectedBackgroundThroughRowSpacing == enabled)
+    radius = qMax(0, radius);
+    if (m_visualStateCornerRadius == radius)
         return;
-    m_selectedBackgroundThroughRowSpacing = enabled;
-    viewport()->update();
+    m_visualStateCornerRadius = radius;
+    if (m_visualStateBackgroundVisible)
+        viewport()->update();
 }
 
 void VirtualListView::refreshVisualStates()
@@ -59,34 +61,32 @@ void VirtualListView::refreshVisualStates()
 void VirtualListView::refreshVisualState(const QModelIndex &index)
 {
     VirtualItemView::refreshVisualState(index);
-    if (m_hoverBackgroundThroughRowSpacing || m_selectedBackgroundThroughRowSpacing)
+    if (m_visualStateBackgroundVisible)
         viewport()->update();
 }
 
 void VirtualListView::paintEvent(QPaintEvent *event)
 {
     VirtualItemView::paintEvent(event);
-    if (!m_hoverBackgroundThroughRowSpacing && !m_selectedBackgroundThroughRowSpacing)
+    if (!m_visualStateBackgroundVisible)
         return;
     QPainter painter(viewport());
     for (const MaterializedItem &item : materializedItems()) {
         const qsizetype row = viewItemForIndex(item.index);
-        if (row < 0 || row + 1 >= viewItemCount())
+        if (row < 0)
             continue;
         const QRect rect = geometryForViewRow(row);
-        const QRect gap = QRect(0, rect.bottom() + 1, viewport()->width(), m_listLayout->spacingAfter(row))
-            .intersected(itemPaneRect(itemPaneForRow(row))).intersected(event->rect());
-        if (gap.isEmpty())
+        const QRegion clip(rect.intersected(itemPaneRect(itemPaneForRow(row)))
+            .intersected(viewport()->rect()).intersected(event->rect()));
+        if (clip.isEmpty())
             continue;
         const VisualState state = visualState(item.index);
-        if (m_hoverBackgroundThroughRowSpacing) {
-            painter.setOpacity(state.hoverProgress);
-            fillPixelAlignedRegion(&painter, QRegion(gap), hoverBackgroundColor());
-        }
-        if (m_selectedBackgroundThroughRowSpacing) {
-            painter.setOpacity(state.selectedProgress);
-            fillPixelAlignedRegion(&painter, QRegion(gap), selectedBackgroundColor());
-        }
+        painter.setOpacity(state.hoverProgress);
+        fillPixelAlignedRoundedRegion(&painter, rect, clip, m_visualStateCornerRadius,
+                                      hoverBackgroundColor());
+        painter.setOpacity(state.selectedProgress);
+        fillPixelAlignedRoundedRegion(&painter, rect, clip, m_visualStateCornerRadius,
+                                      selectedBackgroundColor());
     }
 }
 
@@ -143,7 +143,7 @@ void VirtualListView::syncRowGridLines()
                 const QRect paneRect = itemPaneRect(itemPaneForRow(row))
                     .translated(viewportRect.topLeft());
                 const QRect clipped = lineRect.intersected(paneRect);
-                if (!clipped.isEmpty())
+                if (!clipped.isEmpty() && !isRowGridLineCoveredByPaneSeparator(clipped))
                     desired.insert(row, clipped);
             }
         }

@@ -42,19 +42,9 @@ public:
     /// Built-in item backgrounds; business widgets should be transparent to show them.
     void setVisualStateBackgroundVisible(bool visible);
     bool visualStateBackgroundVisible() const { return m_backgroundVisible; }
-    /// Rounded shape applies to the complete background, including covered gaps.
+    /// Rounded shape stays within the item rectangle; spacing is never painted.
     void setStateBackgroundCornerRadius(int pixels);
     int stateBackgroundCornerRadius() const { return m_cornerRadius; }
-    /// Row gaps belong to the preceding display row; coverage defaults to false.
-    void setHoverBackgroundThroughRowSpacing(bool enabled);
-    bool hoverBackgroundThroughRowSpacing() const { return m_hoverThroughRows; }
-    void setSelectedBackgroundThroughRowSpacing(bool enabled);
-    bool selectedBackgroundThroughRowSpacing() const { return m_selectedThroughRows; }
-    /// Column gaps belong to the preceding item; coverage defaults to true.
-    void setHoverBackgroundThroughColumnSpacing(bool enabled);
-    bool hoverBackgroundThroughColumnSpacing() const { return m_hoverThroughColumns; }
-    void setSelectedBackgroundThroughColumnSpacing(bool enabled);
-    bool selectedBackgroundThroughColumnSpacing() const { return m_selectedThroughColumns; }
     /// Separators remain visible at zero spacing and overlay business widgets.
     void setVerticalGridLinesVisible(bool visible);
     bool verticalGridLinesVisible() const { return m_verticalLines; }
@@ -111,6 +101,7 @@ protected:
     bool handleItemKeyPress(QKeyEvent *event) override;
     DropTarget resolveDropTarget(const QPoint &position) const override;
     QRect resolveDropIndicatorRect(const DropTarget &target) const override;
+    Qt::Orientation dropIndicatorOrientation() const override { return Qt::Vertical; }
 
 private:
     void reflow(const ScrollAnchor &anchor);
@@ -134,10 +125,6 @@ private:
     int m_horizontalLineWidth = 1;
     int m_cornerRadius = 0;
     bool m_backgroundVisible = true;
-    bool m_hoverThroughRows = false;
-    bool m_selectedThroughRows = false;
-    bool m_hoverThroughColumns = true;
-    bool m_selectedThroughColumns = true;
     bool m_verticalLines = true;
     bool m_horizontalLines = true;
     bool m_verticalThroughRows = true;

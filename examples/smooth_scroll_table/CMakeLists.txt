@@ -2,10 +2,10 @@ cmake_minimum_required(VERSION 3.21)
 
 project(SmoothScrollTableExample LANGUAGES CXX)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(Qt5 5.15.2 REQUIRED COMPONENTS Widgets)
+find_package(Qt5 5.12.3 REQUIRED COMPONENTS Widgets)
 find_package(VirtualItemViews CONFIG REQUIRED)
 find_package(SmoothScrollbar CONFIG REQUIRED)
 

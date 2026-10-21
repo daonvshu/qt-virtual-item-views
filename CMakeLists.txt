@@ -23,10 +23,10 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
 
 option(VIRTUALITEMVIEWS_BUILD_SHARED "Build VirtualItemViews as a shared library" OFF)
-option(VIRTUALITEMVIEWS_BUILD_EXAMPLES "Build VirtualItemViews examples" ON)
-option(VIRTUALITEMVIEWS_BUILD_TESTS "Build VirtualItemViews tests" ON)
-option(VIRTUALITEMVIEWS_BUILD_BENCHMARKS "Build VirtualItemViews benchmarks" ON)
-option(VIRTUALITEMVIEWS_BUILD_GUI_TESTS "Build tests that synthesize mouse/keyboard input" ON)
+option(VIRTUALITEMVIEWS_BUILD_EXAMPLES "Build VirtualItemViews examples" OFF)
+option(VIRTUALITEMVIEWS_BUILD_TESTS "Build VirtualItemViews tests" OFF)
+option(VIRTUALITEMVIEWS_BUILD_BENCHMARKS "Build VirtualItemViews benchmarks" OFF)
+option(VIRTUALITEMVIEWS_BUILD_GUI_TESTS "Build tests that synthesize mouse/keyboard input" OFF)
 
 # ---------------------------------------------------------------------------
 # Qt: Qt 6.2+ is preferred, Qt 5.12.3+ is supported as well.

@@ -250,30 +250,6 @@ void VirtualFlowTableView::setStateBackgroundCornerRadius(int pixels)
     viewport()->update();
 }
 
-void VirtualFlowTableView::setHoverBackgroundThroughRowSpacing(bool enabled)
-{
-    m_hoverThroughRows = enabled;
-    viewport()->update();
-}
-
-void VirtualFlowTableView::setSelectedBackgroundThroughRowSpacing(bool enabled)
-{
-    m_selectedThroughRows = enabled;
-    viewport()->update();
-}
-
-void VirtualFlowTableView::setHoverBackgroundThroughColumnSpacing(bool enabled)
-{
-    m_hoverThroughColumns = enabled;
-    viewport()->update();
-}
-
-void VirtualFlowTableView::setSelectedBackgroundThroughColumnSpacing(bool enabled)
-{
-    m_selectedThroughColumns = enabled;
-    viewport()->update();
-}
-
 void VirtualFlowTableView::setVerticalGridLinesVisible(bool visible)
 {
     m_verticalLines = visible;
@@ -350,27 +326,16 @@ void VirtualFlowTableView::paintVisualStateBackgrounds(QPainter *painter, const 
         if (ordinal < 0)
             continue;
         const QRect rect = m_flow->itemRect(ordinal, verticalOffset());
-        const bool hasNextColumn = ordinal % columnCount() + 1 < columnCount()
-            && ordinal + 1 < viewItemCount();
-        const bool hasNextRow = ordinal / columnCount() + 1 < displayRowCount();
+        const QRegion clip(rect.intersected(viewport()->rect()).intersected(dirty));
+        if (clip.isEmpty())
+            continue;
         const VisualState state = visualState(item.index);
-        const auto paint = [&](bool throughRow, bool throughColumn, qreal opacity, const QColor &color) {
-            if (opacity <= 0)
-                return;
-            const QRect extended = rect.adjusted(0, 0,
-                throughColumn && hasNextColumn ? columnSpacing() : 0,
-                throughRow && hasNextRow ? m_flow->rowHeight() - rect.height() + rowSpacing() : 0);
-            // Keep the complete shape while clipping only its visible part.
-            const QRegion clip(extended.intersected(viewport()->rect()).intersected(dirty));
-            if (clip.isEmpty())
-                return;
-            painter->save();
-            painter->setOpacity(opacity);
-            fillPixelAlignedRoundedRegion(painter, extended, clip, m_cornerRadius, color);
-            painter->restore();
-        };
-        paint(m_hoverThroughRows, m_hoverThroughColumns, state.hoverProgress, hoverBackgroundColor());
-        paint(m_selectedThroughRows, m_selectedThroughColumns, state.selectedProgress, selectedBackgroundColor());
+        painter->save();
+        painter->setOpacity(state.hoverProgress);
+        fillPixelAlignedRoundedRegion(painter, rect, clip, m_cornerRadius, hoverBackgroundColor());
+        painter->setOpacity(state.selectedProgress);
+        fillPixelAlignedRoundedRegion(painter, rect, clip, m_cornerRadius, selectedBackgroundColor());
+        painter->restore();
     }
 }
 

@@ -74,7 +74,7 @@ public:
     void setRowGridLineExtent(RowGridLineExtent extent);
     RowGridLineExtent rowGridLineExtent() const { return m_rowGridLineExtent; }
     /// Optional viewport-painted hover and selection backgrounds.
-    void setVisualStateBackgroundVisible(bool visible);
+    void setVisualStateBackgroundVisible(bool visible) override;
     bool visualStateBackgroundVisible() const { return m_visualStateBackgroundVisible; }
     enum class VisualStateBackgroundExtent { NodeOnly, NodeAndIcon, FullWidth };
     Q_ENUM(VisualStateBackgroundExtent)
@@ -113,7 +113,6 @@ protected:
     bool usesExplicitRowSelection() const override { return true; }
     void applyRowSpacingOverrides() override;
     void configureRowSpacingWidget(QWidget *widget) const override;
-    void configureColumnSpacingWidget(QWidget *widget) const override;
     void afterMaterialize() override;
     void visualColumnGeometryChanged() override;
     void moveRowsForStripDrag(int fromRow, int toRow) override;
@@ -169,7 +168,6 @@ private:
     VisualStateBackgroundExtent m_visualStateBackgroundExtent = VisualStateBackgroundExtent::FullWidth;
     bool m_ownBranchRenderer = false;
     bool m_branchIndicatorsVisible = true;
-    bool m_visualStateBackgroundVisible = false;
     bool m_indicatorPressToggled = false;
     bool m_updatingVisibility = false;
     bool m_visibilityRefreshPending = false;

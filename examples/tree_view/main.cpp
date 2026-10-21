@@ -376,16 +376,6 @@ int main(int argc, char **argv)
     auto *stateBackground = new QCheckBox(QStringLiteral("状态背景"), &window);
     stateBackground->setChecked(view->visualStateBackgroundVisible());
     stateToolbar->addWidget(stateBackground);
-    auto *hoverThrough = new QCheckBox(QStringLiteral("悬停覆盖行间距"), &window);
-    hoverThrough->setChecked(view->hoverBackgroundThroughRowSpacing());
-    stateToolbar->addWidget(hoverThrough);
-    auto *selectedThrough = new QCheckBox(QStringLiteral("选中覆盖行间距"), &window);
-    selectedThrough->setChecked(view->selectedBackgroundThroughRowSpacing());
-    stateToolbar->addWidget(selectedThrough);
-    QObject::connect(hoverThrough, &QCheckBox::toggled,
-                     view, &viv::VirtualTreeView::setHoverBackgroundThroughRowSpacing);
-    QObject::connect(selectedThrough, &QCheckBox::toggled,
-                     view, &viv::VirtualTreeView::setSelectedBackgroundThroughRowSpacing);
     stateToolbar->addWidget(new QLabel(QStringLiteral("覆盖范围: "), &window));
     auto *backgroundExtent = new QComboBox(&window);
     backgroundExtent->addItem(QStringLiteral("仅内容"));

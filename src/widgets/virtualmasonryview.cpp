@@ -681,38 +681,6 @@ void VirtualMasonryView::setStateBackgroundCornerRadius(int pixels)
     viewport()->update();
 }
 
-void VirtualMasonryView::setHoverBackgroundThroughRowSpacing(bool enabled)
-{
-    if (m_hoverThroughRows == enabled)
-        return;
-    m_hoverThroughRows = enabled;
-    viewport()->update();
-}
-
-void VirtualMasonryView::setSelectedBackgroundThroughRowSpacing(bool enabled)
-{
-    if (m_selectedThroughRows == enabled)
-        return;
-    m_selectedThroughRows = enabled;
-    viewport()->update();
-}
-
-void VirtualMasonryView::setHoverBackgroundThroughColumnSpacing(bool enabled)
-{
-    if (m_hoverThroughColumns == enabled)
-        return;
-    m_hoverThroughColumns = enabled;
-    viewport()->update();
-}
-
-void VirtualMasonryView::setSelectedBackgroundThroughColumnSpacing(bool enabled)
-{
-    if (m_selectedThroughColumns == enabled)
-        return;
-    m_selectedThroughColumns = enabled;
-    viewport()->update();
-}
-
 void VirtualMasonryView::setVerticalGridLinesVisible(bool visible)
 {
     if (m_verticalLines == visible)
@@ -898,6 +866,20 @@ void VirtualMasonryView::paintGridLines(QPainter *painter) const
     }
 }
 
+void VirtualMasonryView::refreshVisualStates()
+{
+    VirtualItemView::refreshVisualStates();
+    if (m_backgroundVisible)
+        viewport()->update();
+}
+
+void VirtualMasonryView::refreshVisualState(const QModelIndex &index)
+{
+    VirtualItemView::refreshVisualState(index);
+    if (m_backgroundVisible)
+        viewport()->update();
+}
+
 void VirtualMasonryView::paintVisualStateBackgrounds(QPainter *painter, const QRect &dirty) const
 {
     for (const MaterializedItem &item : materializedItems()) {
@@ -905,30 +887,16 @@ void VirtualMasonryView::paintVisualStateBackgrounds(QPainter *painter, const QR
         if (ordinal < 0)
             continue;
         const QRect rect = m_masonry->itemRect(ordinal, verticalOffset());
-        const qsizetype next = m_masonry->nextItemInColumn(ordinal);
-        const QRect nextRect = next >= 0 ? m_masonry->itemRect(next, verticalOffset()) : QRect();
+        const QRegion clip(rect.intersected(viewport()->rect()).intersected(dirty));
+        if (clip.isEmpty())
+            continue;
         const VisualState state = visualState(item.index);
-        const auto paint = [&](bool throughRows, bool throughColumns, qreal opacity,
-                               const QColor &color) {
-            if (opacity <= 0)
-                return;
-            QRect extended = rect;
-            if (throughColumns && m_masonry->itemColumn(ordinal) + 1 < m_masonry->columnCount())
-                extended.setRight(extended.right() + m_masonry->columnSpacing());
-            if (throughRows && !nextRect.isEmpty())
-                extended.setBottom(nextRect.top() - 1);
-            const QRegion clip(extended.intersected(viewport()->rect()).intersected(dirty));
-            if (clip.isEmpty())
-                return;
-            painter->save();
-            painter->setOpacity(opacity);
-            fillPixelAlignedRoundedRegion(painter, extended, clip, m_cornerRadius, color);
-            painter->restore();
-        };
-        paint(m_hoverThroughRows, m_hoverThroughColumns, state.hoverProgress,
-              hoverBackgroundColor());
-        paint(m_selectedThroughRows, m_selectedThroughColumns, state.selectedProgress,
-              selectedBackgroundColor());
+        painter->save();
+        painter->setOpacity(state.hoverProgress);
+        fillPixelAlignedRoundedRegion(painter, rect, clip, m_cornerRadius, hoverBackgroundColor());
+        painter->setOpacity(state.selectedProgress);
+        fillPixelAlignedRoundedRegion(painter, rect, clip, m_cornerRadius, selectedBackgroundColor());
+        painter->restore();
     }
 }
 

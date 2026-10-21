@@ -76,14 +76,6 @@ public:
     bool visualStateBackgroundVisible() const { return m_backgroundVisible; }
     void setStateBackgroundCornerRadius(int pixels);
     int stateBackgroundCornerRadius() const { return m_cornerRadius; }
-    void setHoverBackgroundThroughRowSpacing(bool enabled);
-    bool hoverBackgroundThroughRowSpacing() const { return m_hoverThroughRows; }
-    void setSelectedBackgroundThroughRowSpacing(bool enabled);
-    bool selectedBackgroundThroughRowSpacing() const { return m_selectedThroughRows; }
-    void setHoverBackgroundThroughColumnSpacing(bool enabled);
-    bool hoverBackgroundThroughColumnSpacing() const { return m_hoverThroughColumns; }
-    void setSelectedBackgroundThroughColumnSpacing(bool enabled);
-    bool selectedBackgroundThroughColumnSpacing() const { return m_selectedThroughColumns; }
 
     /// Separators are painted above materialized item widgets.
     void setVerticalGridLinesVisible(bool visible);
@@ -128,6 +120,8 @@ protected:
     DropTarget resolveDropTarget(const QPoint &position) const override;
     QRect resolveDropIndicatorRect(const DropTarget &target) const override;
     void paintEvent(QPaintEvent *event) override;
+    void refreshVisualStates() override;
+    void refreshVisualState(const QModelIndex &index) override;
     /// Uses the same exclusive pixel edges for the complete state shape and clip.
     void paintVisualStateBackgrounds(QPainter *painter, const QRect &dirty) const;
     /// Paints visible item boundaries once, without outer or absent-item borders.
@@ -181,10 +175,6 @@ private:
     int m_horizontalLineWidth = 1;
     int m_cornerRadius = 0;
     bool m_backgroundVisible = true;
-    bool m_hoverThroughRows = false;
-    bool m_selectedThroughRows = false;
-    bool m_hoverThroughColumns = true;
-    bool m_selectedThroughColumns = true;
     bool m_verticalLines = true;
     bool m_horizontalLines = true;
     bool m_verticalThroughRows = true;

@@ -54,11 +54,12 @@ public:
     /// An invalid color restores the palette's mid color.
     void setRowGridLineColor(const QColor &color);
     QColor rowGridLineColor() const { return m_rowGridLineColor; }
-    /// Extends hover/selection backgrounds through row gaps (default false).
-    void setHoverBackgroundThroughRowSpacing(bool enabled);
-    bool hoverBackgroundThroughRowSpacing() const { return m_hoverBackgroundThroughRowSpacing; }
-    void setSelectedBackgroundThroughRowSpacing(bool enabled);
-    bool selectedBackgroundThroughRowSpacing() const { return m_selectedBackgroundThroughRowSpacing; }
+    /// Built-in hover/selection backgrounds are enabled by default; widgets stay transparent.
+    void setVisualStateBackgroundVisible(bool visible);
+    bool visualStateBackgroundVisible() const { return m_visualStateBackgroundVisible; }
+    /// Radius in logical pixels, clamped to zero; item spacing remains unpainted.
+    void setVisualStateCornerRadius(int radius);
+    int visualStateCornerRadius() const { return m_visualStateCornerRadius; }
     QColor itemPaneSeparatorColor() const override;
 
 protected:
@@ -82,8 +83,8 @@ private:
     QColor m_rowGridLineColor;
     int m_rowGridLineWidth = 1;
     bool m_rowGridLinesVisible = true;
-    bool m_hoverBackgroundThroughRowSpacing = false;
-    bool m_selectedBackgroundThroughRowSpacing = false;
+    bool m_visualStateBackgroundVisible = true;
+    int m_visualStateCornerRadius = 0;
 };
 
 } // namespace viv

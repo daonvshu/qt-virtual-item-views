@@ -96,10 +96,6 @@ resize、排序、插删和移动可能改变项目的显示行列。业务回�
 ```cpp
 view.setVisualStateBackgroundVisible(true);
 view.setStateBackgroundCornerRadius(8);
-view.setHoverBackgroundThroughRowSpacing(false);
-view.setSelectedBackgroundThroughRowSpacing(false);
-view.setHoverBackgroundThroughColumnSpacing(true);
-view.setSelectedBackgroundThroughColumnSpacing(true);
 view.setVisualStateAnimationDuration(180);
 
 view.setVerticalGridLinesVisible(true);
@@ -112,7 +108,7 @@ view.setVerticalSpacingLineThroughRowSpacing(true);
 view.setHorizontalSpacingLineThroughColumnSpacing(true);
 ```
 
-默认显示内置背景，圆角为 0；hover/select 各自默认不覆盖行间距、覆盖列间距。行间距归属前一显示行，列间距归属前一个真实项目；缺项位置不继承状态。圆角应用于含已覆盖间距的完整形状。
+默认显示内置背景，圆角为 0。hover/select 只绘制真实 item 矩形，不覆盖行列间距，也不会着色缺项位置。
 
 横竖分割线默认显示、宽度为 1 个物理像素，最小为 1，默认穿过另一方向的间距。非零行间距上下、列间距左右均有边线；零间距共享一条分割线。分割线在业务控件上方绘制，不添加外框或空缺格边框。线宽与格子几何单位不同：例如 125% 缩放时仍画指定物理像素线宽，不扩大格子。
 
@@ -136,4 +132,4 @@ Windows 讲述人在手动调整窗口宽度后，导航框可能保留原位置
 
 布局使用常量存储，不缓存全部项目矩形；重排只更新布局算式与可见控件，不遍历全模型。物化数量主要随可见范围、预加载和 pin 增长，业务控件自身的耗时仍由应用承担。
 
-示例目标 `flow_table_view` 支持 `--items N`（默认 10000），提供宽度范围、高度模式、行列间距、背景覆盖和分割线控制；`--accessibility-trace` 输出当前项目与辅助几何诊断。当前 Qt5/Qt6 定向验证与原生人工验收分开记录，原生未测项目不视为通过。
+示例目标 `flow_table_view` 支持 `--items N`（默认 10000），提供宽度范围、高度模式、行列间距、背景颜色、圆角和分割线控制；`--accessibility-trace` 输出当前项目与辅助几何诊断。当前 Qt5/Qt6 定向验证与原生人工验收分开记录，原生未测项目不视为通过。

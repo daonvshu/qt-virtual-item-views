@@ -69,6 +69,7 @@ public:
                                              const QModelIndex &index) const;
 
 protected:
+    void paintEvent(QPaintEvent *event) override;
     void refreshVisualStates() override;
     void refreshVisualState(const QModelIndex &index) override;
     void resizeEvent(QResizeEvent *event) override;

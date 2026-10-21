@@ -87,13 +87,7 @@ int main(int argc, char **argv)
               == qRound(view.visualRect(identity).width() / 1.5), "proportional height configuration");
     view.setVisualStateBackgroundVisible(false);
     view.setStateBackgroundCornerRadius(8);
-    view.setHoverBackgroundThroughRowSpacing(true);
-    view.setSelectedBackgroundThroughRowSpacing(true);
-    view.setHoverBackgroundThroughColumnSpacing(false);
-    view.setSelectedBackgroundThroughColumnSpacing(false);
-    check(!view.visualStateBackgroundVisible() && view.stateBackgroundCornerRadius() == 8
-              && view.hoverBackgroundThroughRowSpacing() && view.selectedBackgroundThroughRowSpacing()
-              && !view.hoverBackgroundThroughColumnSpacing() && !view.selectedBackgroundThroughColumnSpacing(),
+    check(!view.visualStateBackgroundVisible() && view.stateBackgroundCornerRadius() == 8,
           "exported state background APIs");
     view.setVerticalGridLinesVisible(false);
     view.setHorizontalGridLinesVisible(false);

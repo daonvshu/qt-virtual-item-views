@@ -4,6 +4,8 @@ VirtualItemViews 使用 Qt 的 `QAbstractItemModel` 提供数据，用 adapter �
 
 ## 最小列表
 
+完整可运行的列表接入代码见 [基础列表示例](../examples/list_capabilities/01_basic/example.cpp)，model、adapter 和页面装配都在同一个文件中。更多列表能力见 [17 项独立示例](../examples/list_capabilities/README.md)；其他视图从 [examples 导航](../examples/README.md)查找。
+
 以下是完整的 `main.cpp`。需要 `QApplication`，并让模型和 adapter 比视图活得更久。
 
 ```cpp
@@ -48,7 +50,11 @@ int main(int argc, char **argv)
 
 ## 构建与链接
 
-需要 C++17、CMake 3.16+、Qt 6.2+ 或 Qt 5.15+（Core、Gui、Widgets）。仓库默认构建静态库、示例、测试和基准程序。
+需要 CMake 3.16+、Qt 6.2+ 或 Qt 5.12.3+（Core、Gui、Widgets）。Qt5 构建使用 C++14，Qt6 构建使用 C++17，链接导出的 CMake target 会自动传递相应标准要求。仓库默认构建静态库、示例、测试和基准程序。
+
+源码通过 `QT_VERSION` / `QT_VERSION_CHECK` 选择兼容写法：旧 Qt 使用可用的状态流版本、`QString::SkipEmptyParts` 和自定义 `QRunnable`，新 Qt 保留对应的新 API。安装包也会按构建时选择的 Qt 主版本传递最低版本要求。
+
+Qt5 配合旧版交叉编译工具链时，不需要 `<optional>` 等 C++17 标准库头文件。GCC 7 之前会跳过使用 C++17 测试助手的 `tst_treerowspacing` 目标，并在配置输出中说明；库、示例和其他测试仍按 C++14 构建。
 
 ```bash
 cmake -S . -B build -DCMAKE_PREFIX_PATH=/path/to/Qt

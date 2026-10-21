@@ -226,14 +226,6 @@ int main(int argc, char **argv)
     };
     QObject::connect(toggle(QStringLiteral("状态背景"), true), &QCheckBox::toggled,
         view, &viv::VirtualFlowTableView::setVisualStateBackgroundVisible);
-    QObject::connect(toggle(QStringLiteral("hover 行隙"), false), &QCheckBox::toggled,
-        view, &viv::VirtualFlowTableView::setHoverBackgroundThroughRowSpacing);
-    QObject::connect(toggle(QStringLiteral("select 行隙"), false), &QCheckBox::toggled,
-        view, &viv::VirtualFlowTableView::setSelectedBackgroundThroughRowSpacing);
-    QObject::connect(toggle(QStringLiteral("hover 列隙"), true), &QCheckBox::toggled,
-        view, &viv::VirtualFlowTableView::setHoverBackgroundThroughColumnSpacing);
-    QObject::connect(toggle(QStringLiteral("select 列隙"), true), &QCheckBox::toggled,
-        view, &viv::VirtualFlowTableView::setSelectedBackgroundThroughColumnSpacing);
     QObject::connect(spin(QStringLiteral("圆角"), 0, 0, 100), QOverload<int>::of(&QSpinBox::valueChanged),
         view, &viv::VirtualFlowTableView::setStateBackgroundCornerRadius);
     QObject::connect(spin(QStringLiteral("动画 ms"), view->visualStateAnimationDuration(), 0, 2000),

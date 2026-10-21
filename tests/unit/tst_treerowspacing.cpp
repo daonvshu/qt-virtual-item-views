@@ -34,7 +34,7 @@ class RoundedBackgroundTable : public viv::VirtualTableView
 {
 protected:
     void paintStateBackgroundLayer(QPainter *painter, const QRect &extended,
-                                  const QRegion &clip, const QRegion &,
+                                  const QRegion &clip,
                                   const QColor &color) const override
     {
         paintRoundedStateBackgroundLayer(painter, extended, clip, color, 10);
@@ -581,22 +581,16 @@ private slots:
     {
         QTest::addColumn<int>("mode");
         QTest::addColumn<bool>("frozen");
-        QTest::addColumn<int>("columnMask");
         for (int mode = 0; mode < 6; ++mode) {
-            for (int columns = 0; columns < (mode == 0 || mode == 3 ? 1 : 4); ++columns) {
-                QTest::newRow(qPrintable(QStringLiteral("mode-%1-columns-%2").arg(mode).arg(columns)))
-                    << mode << false << columns;
-                QTest::newRow(qPrintable(QStringLiteral("mode-%1-columns-%2-frozen").arg(mode).arg(columns)))
-                    << mode << true << columns;
-            }
+            QTest::newRow(qPrintable(QStringLiteral("mode-%1").arg(mode))) << mode << false;
+            QTest::newRow(qPrintable(QStringLiteral("mode-%1-frozen").arg(mode))) << mode << true;
         }
     }
     void stateBackgroundSpacing()
     {
         QFETCH(int, mode);
         QFETCH(bool, frozen);
-        QFETCH(int, columnMask);
-        const auto verify = [frozen, columnMask](auto &view, bool cells) {
+        const auto verify = [frozen](auto &view, bool cells) {
             using View = std::decay_t<decltype(view)>;
             constexpr bool tree = std::is_same_v<View, viv::VirtualTreeView>
                 || std::is_same_v<View, viv::VirtualTreeTableView>;
@@ -625,24 +619,11 @@ private slots:
                 view.setFrozenRows(1);
             const QColor hover(25, 180, 70);
             const QColor selected(190, 40, 90);
-            if constexpr (std::is_same_v<View, viv::VirtualTableView>) {
-                if (!cells)
-                    model.setData(model.index(0, 0), selected, Qt::BackgroundRole);
-            }
             view.setHoverBackgroundColor(hover);
             view.setSelectedBackgroundColor(selected);
             view.setVisualStateAnimationDuration(0);
-            if constexpr (tree)
-                view.setVisualStateBackgroundVisible(true);
+            QVERIFY(view.visualStateBackgroundVisible());
             vivtest::showView(&view, QSize(420, 240));
-            QVERIFY(!view.hoverBackgroundThroughRowSpacing());
-            QVERIFY(!view.selectedBackgroundThroughRowSpacing());
-            if constexpr (std::is_base_of_v<viv::VirtualTableView, View>) {
-                QVERIFY(view.hoverBackgroundThroughColumnSpacing());
-                QVERIFY(view.selectedBackgroundThroughColumnSpacing());
-                view.setHoverBackgroundThroughColumnSpacing(columnMask & 1);
-                view.setSelectedBackgroundThroughColumnSpacing(columnMask & 2);
-            }
             const QModelIndex node = model.index(0, 0);
             const QRect rect = [&]() {
                 if constexpr (std::is_base_of_v<viv::VirtualTableView, View>)
@@ -650,7 +631,7 @@ private slots:
                 else
                     return view.visualRect(node);
             }();
-            const auto check = [&](const QColor &color, bool through, bool throughColumns) {
+            const auto check = [&](const QColor &color) {
                 view.flushPendingRelayout();
                 const QImage image = view.grab().toImage();
                 const auto sample = [&](const QPoint &point) {
@@ -658,58 +639,44 @@ private slots:
                     return image.pixelColor(qRound(p.x() * image.devicePixelRatio()),
                                             qRound(p.y() * image.devicePixelRatio()));
                 };
-                if constexpr (std::is_same_v<View, viv::VirtualTreeView>
-                              || std::is_same_v<View, viv::VirtualTreeTableView>)
-                    QCOMPARE(sample(rect.center()), color);
-                QCOMPARE(sample(QPoint(rect.center().x(), rect.bottom() + 6)) == color, through);
+                QCOMPARE(sample(rect.center()), color);
+                QVERIFY(sample(QPoint(rect.center().x(), rect.bottom() + 6)) != color);
                 if constexpr (std::is_base_of_v<viv::VirtualTableView, View>) {
-                    QCOMPARE(sample(QPoint(rect.right() + 7, rect.center().y())) == color, throughColumns);
-                    QCOMPARE(sample(QPoint(rect.right() + 7, rect.bottom() + 6)) == color, through && throughColumns);
+                    QVERIFY(sample(QPoint(rect.right() + 7, rect.center().y())) != color);
+                    QVERIFY(sample(QPoint(rect.right() + 7, rect.bottom() + 6)) != color);
                 }
             };
-            for (bool hoverThrough : {false, true}) {
-                for (bool selectedThrough : {false, true}) {
-                    view.setHoverBackgroundThroughRowSpacing(hoverThrough);
-                    view.setSelectedBackgroundThroughRowSpacing(selectedThrough);
-                    QTest::mouseMove(view.viewport(), QPoint(300, 180));
-                    view.selectionModel()->clearSelection();
-                    QTest::mouseMove(view.viewport(), rect.center());
-                    QTRY_COMPARE(view.hoveredIndex(), node);
-                    check(hover, hoverThrough, columnMask & 1);
-                    QTest::mouseMove(view.viewport(), QPoint(300, 180));
-                    QTRY_VERIFY(!view.hoveredIndex().isValid());
-                    view.selectionModel()->select(node, QItemSelectionModel::ClearAndSelect);
-                    check(selected, selectedThrough, columnMask & 2);
-                }
-            }
+            QTest::mouseMove(view.viewport(), QPoint(300, 180));
+            view.selectionModel()->clearSelection();
+            QTest::mouseMove(view.viewport(), rect.center());
+            QTRY_COMPARE(view.hoveredIndex(), node);
+            check(hover);
+            QTest::mouseMove(view.viewport(), QPoint(300, 180));
+            QTRY_VERIFY(!view.hoveredIndex().isValid());
+            view.selectionModel()->select(node, QItemSelectionModel::ClearAndSelect);
+            check(selected);
             if constexpr (tree) {
                 if (!frozen) {
-                model.setData(node, 6, View::NodeRowSpacingBelowRole);
-                const QModelIndex next = model.index(1, 0);
-                model.setData(next, 10, View::NodeRowSpacingAboveRole);
-                view.flushPendingRelayout();
-                const QPoint nextCenter(rect.center().x(), view.visualRect(next).center().y());
-                QTest::mouseMove(view.viewport(), nextCenter);
-                QTRY_COMPARE(view.hoveredIndex(), next);
-                view.selectionModel()->select(node, QItemSelectionModel::ClearAndSelect);
-                for (bool hoverThrough : {false, true}) {
-                    for (bool selectedThrough : {false, true}) {
-                        view.setHoverBackgroundThroughRowSpacing(hoverThrough);
-                        view.setSelectedBackgroundThroughRowSpacing(selectedThrough);
-                        view.flushPendingRelayout();
-                        const QImage image = view.grab().toImage();
-                        const auto sample = [&](int offset) {
-                            const QPoint point = view.viewport()->pos()
-                                + QPoint(rect.center().x(), rect.bottom() + offset);
-                            return image.pixelColor(qRound(point.x() * image.devicePixelRatio()),
-                                                    qRound(point.y() * image.devicePixelRatio()));
-                        };
-                        QCOMPARE(sample(3) == selected, selectedThrough);
-                        QCOMPARE(sample(11) == hover, hoverThrough);
-                        QVERIFY(sample(3) != hover);
-                        QVERIFY(sample(11) != selected);
-                    }
-                }
+                    model.setData(node, 6, View::NodeRowSpacingBelowRole);
+                    const QModelIndex next = model.index(1, 0);
+                    model.setData(next, 10, View::NodeRowSpacingAboveRole);
+                    view.flushPendingRelayout();
+                    const QPoint nextCenter(rect.center().x(), view.visualRect(next).center().y());
+                    QTest::mouseMove(view.viewport(), nextCenter);
+                    QTRY_COMPARE(view.hoveredIndex(), next);
+                    view.selectionModel()->select(node, QItemSelectionModel::ClearAndSelect);
+                    view.flushPendingRelayout();
+                    const QImage image = view.grab().toImage();
+                    const auto sample = [&](int offset) {
+                        const QPoint point = view.viewport()->pos()
+                            + QPoint(rect.center().x(), rect.bottom() + offset);
+                        return image.pixelColor(qRound(point.x() * image.devicePixelRatio()),
+                                                qRound(point.y() * image.devicePixelRatio()));
+                    };
+                    QCOMPARE(sample(3) == selected, false);
+                    QCOMPARE(sample(11) == hover, false);
+                    QVERIFY(sample(3) != hover);
+                    QVERIFY(sample(11) != selected);
                 }
                 view.setVisualStateBackgroundVisible(false);
             }
@@ -804,39 +771,25 @@ private slots:
                     QTest::mouseMove(view.viewport(), hoverPoint);
                     QTRY_COMPARE(view.hoveredIndex(), lower);
                     view.selectionModel()->select(upper, QItemSelectionModel::ClearAndSelect);
-                    for (bool hoverThrough : {false, true}) {
-                        for (bool selectedThrough : {false, true}) {
-                            view.setHoverBackgroundThroughRowSpacing(hoverThrough);
-                            view.setSelectedBackgroundThroughRowSpacing(selectedThrough);
-                            view.flushPendingRelayout();
-                            const QImage image = view.viewport()->grab().toImage();
-                            const qreal dpr = image.devicePixelRatio();
-                            const auto bounds = [dpr, gap](const QRect &rect, int row, bool through) {
-                                if constexpr (std::is_same_v<View, viv::VirtualTreeView>
-                                              || std::is_same_v<View, viv::VirtualTreeTableView>) {
-                                    const int above = through ? (row + gap) % 5 : 0;
-                                    const int below = through ? (2 * row + gap) % 7 : 0;
-                                    return qMakePair(qRound((rect.top() - above) * dpr),
-                                                     qRound((rect.bottom() + 1 + below) * dpr));
-                                } else {
-                                    return qMakePair(qRound((rect.bottom() + 1) * dpr),
-                                                     qRound((rect.bottom() + 1 + (through ? gap : 0)) * dpr));
-                                }
-                            };
-                            const auto selectedBounds = bounds(upperRect, 3, selectedThrough);
-                            const auto hoverBounds = bounds(lowerRect, 4, hoverThrough);
-                            const int x = qRound(hoverPoint.x() * dpr);
-                            for (int y = 0; y < image.height(); ++y) {
-                                const QColor actual = image.pixelColor(x, y);
-                                const bool expectSelected = y >= selectedBounds.first && y < selectedBounds.second;
-                                const bool expectHover = y >= hoverBounds.first && y < hoverBounds.second;
-                                QVERIFY2((actual == selected) == expectSelected && (actual == hover) == expectHover,
-                                    qPrintable(QStringLiteral("gap=%1 offset=%2 hover=%3 selected=%4 dpr=%5 y=%6 actual=%7 selected=[%8,%9) hover=[%10,%11)")
-                                        .arg(gap).arg(offset).arg(hoverThrough).arg(selectedThrough).arg(dpr)
-                                        .arg(y).arg(actual.name()).arg(selectedBounds.first).arg(selectedBounds.second)
-                                        .arg(hoverBounds.first).arg(hoverBounds.second)));
-                            }
-                        }
+                    view.flushPendingRelayout();
+                    const QImage image = view.viewport()->grab().toImage();
+                    const qreal dpr = image.devicePixelRatio();
+                    const auto bounds = [dpr](const QRect &rect) {
+                        return qMakePair(qRound(rect.top() * dpr),
+                                         qRound((rect.bottom() + 1) * dpr));
+                    };
+                    const auto selectedBounds = bounds(upperRect);
+                    const auto hoverBounds = bounds(lowerRect);
+                    const int x = qRound(hoverPoint.x() * dpr);
+                    for (int y = 0; y < image.height(); ++y) {
+                        const QColor actual = image.pixelColor(x, y);
+                        const bool expectSelected = y >= selectedBounds.first && y < selectedBounds.second;
+                        const bool expectHover = y >= hoverBounds.first && y < hoverBounds.second;
+                        QVERIFY2((actual == selected) == expectSelected && (actual == hover) == expectHover,
+                            qPrintable(QStringLiteral("gap=%1 offset=%2 dpr=%3 y=%4 actual=%5 selected=[%6,%7) hover=[%8,%9)")
+                                .arg(gap).arg(offset).arg(dpr)
+                                .arg(y).arg(actual.name()).arg(selectedBounds.first).arg(selectedBounds.second)
+                                .arg(hoverBounds.first).arg(hoverBounds.second)));
                     }
                 }
             }
@@ -924,39 +877,35 @@ private slots:
                                           : viv::VirtualTableView::VisualStateScope::Row);
             view.setSelectionBehavior(viv::VirtualItemView::SelectionBehavior::SelectItems);
             for (bool select : {false, true}) {
-                for (bool through : {false, true}) {
-                    view.setHoverBackgroundThroughRowSpacing(!select && through);
-                    view.setSelectedBackgroundThroughRowSpacing(select && through);
-                    view.flushPendingRelayout();
-                    const QRect cell = view.spanRect(index);
-                    const QRect body = cells ? cell : QRect(0, cell.y(), view.viewport()->width(), cell.height());
-                    view.selectionModel()->clearSelection();
-                    QTest::mouseMove(view.viewport(), select ? QPoint(2, view.viewport()->height() - 2)
-                                                            : cell.center());
-                    if (select)
-                        view.selectionModel()->select(index, QItemSelectionModel::ClearAndSelect);
-                    else
-                        QTRY_COMPARE(view.hoveredIndex(), index);
-                    const QImage image = view.viewport()->grab().toImage();
-                    const qreal dpr = image.devicePixelRatio();
-                    const QColor color = select ? selected : hover;
-                    const auto pixel = [&](int x, int y) {
-                        return image.pixelColor(qRound(x * dpr), qRound(y * dpr));
-                    };
-                    const int x = body.left() + 3;
-                    // Covering the gap moves the lower corner below the original row body.
-                    QCOMPARE(pixel(x, body.bottom() - 2) == color, through);
-                    QCOMPARE(pixel(body.center().x(), body.bottom() + 6) == color, through);
-                    const int bottom = body.bottom() + (through ? 12 : 0);
-                    QVERIFY(pixel(x, bottom - 1) != color);
-                    QVERIFY(pixel(body.center().x(), bottom + 2) != color);
-                    QCOMPARE(pixel(body.center().x(), body.center().y()), color);
-                    const int physicalBottom = qRound((bottom + 1) * dpr);
-                    const int sampleX = qRound(body.center().x() * dpr);
-                    const QColor base = view.palette().color(QPalette::Base);
-                    for (int y = physicalBottom; y < physicalBottom + 3; ++y)
-                        QCOMPARE(image.pixelColor(sampleX, y), base);
-                }
+                view.flushPendingRelayout();
+                const QRect cell = view.spanRect(index);
+                const QRect body = cells ? cell : QRect(0, cell.y(), view.viewport()->width(), cell.height());
+                view.selectionModel()->clearSelection();
+                QTest::mouseMove(view.viewport(), select ? QPoint(2, view.viewport()->height() - 2)
+                                                        : cell.center());
+                if (select)
+                    view.selectionModel()->select(index, QItemSelectionModel::ClearAndSelect);
+                else
+                    QTRY_COMPARE(view.hoveredIndex(), index);
+                const QImage image = view.viewport()->grab().toImage();
+                const qreal dpr = image.devicePixelRatio();
+                const QColor color = select ? selected : hover;
+                const auto pixel = [&](int x, int y) {
+                    return image.pixelColor(qRound(x * dpr), qRound(y * dpr));
+                };
+                const int x = body.left() + 3;
+                // Rounded corners stay within the item and leave the following gap unpainted.
+                QCOMPARE(pixel(x, body.bottom() - 2) == color, false);
+                QCOMPARE(pixel(body.center().x(), body.bottom() + 6) == color, false);
+                const int bottom = body.bottom();
+                QVERIFY(pixel(x, bottom - 1) != color);
+                QVERIFY(pixel(body.center().x(), bottom + 2) != color);
+                QCOMPARE(pixel(body.center().x(), body.center().y()), color);
+                const int physicalBottom = qRound((bottom + 1) * dpr);
+                const int sampleX = qRound(body.center().x() * dpr);
+                const QColor base = view.palette().color(QPalette::Base);
+                for (int y = physicalBottom; y < physicalBottom + 3; ++y)
+                    QCOMPARE(image.pixelColor(sampleX, y), base);
             }
         }
     }
@@ -1038,8 +987,6 @@ private slots:
         view.setVisualStateAnimationDuration(0);
         view.setHoverBackgroundColor(QColor(25, 180, 70));
         view.setSelectedBackgroundColor(QColor(190, 40, 90));
-        view.setHoverBackgroundThroughRowSpacing(true);
-        view.setSelectedBackgroundThroughRowSpacing(true);
         view.setModel(&model);
         vivtest::showView(&view, QSize(420, 260));
         view.expand(parent->index());
@@ -1061,7 +1008,7 @@ private slots:
                               childRect.bottom() + 3 + view.viewport()->y());
         QCOMPARE(hoverImage.pixelColor(gapPoint.x() * hoverImage.devicePixelRatio(),
                                        gapPoint.y() * hoverImage.devicePixelRatio()),
-                 view.hoverBackgroundColor());
+                 view.palette().color(QPalette::Base));
         const int sampleX = qRound(gapPoint.x() * hoverImage.devicePixelRatio());
         const int nextRowTop = qRound((view.viewport()->y() + siblingRect.top())
                                       * hoverImage.devicePixelRatio());
@@ -1072,7 +1019,7 @@ private slots:
         QCOMPARE(pixelAt(selectedImage, rowPoint), view.selectedBackgroundColor());
         QCOMPARE(selectedImage.pixelColor(gapPoint.x() * selectedImage.devicePixelRatio(),
                                           gapPoint.y() * selectedImage.devicePixelRatio()),
-                 view.selectedBackgroundColor());
+                 view.palette().color(QPalette::Base));
         for (int y = nextRowTop; y < nextRowTop + 3; ++y)
             QVERIFY(selectedImage.pixelColor(sampleX, y) != view.selectedBackgroundColor());
     }

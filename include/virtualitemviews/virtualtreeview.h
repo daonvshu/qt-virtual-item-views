@@ -93,17 +93,12 @@ public:
     enum class RowGridLineExtent { NodeOnly, NodeAndIcon, FullWidth };
     void setRowGridLineExtent(RowGridLineExtent extent);
     RowGridLineExtent rowGridLineExtent() const { return m_rowGridLineExtent; }
-    /// Optional animated hover/selection background, painted below branch icons.
+    /// Animated hover/selection background, enabled by default and painted below branch icons.
     void setVisualStateBackgroundVisible(bool visible);
     bool visualStateBackgroundVisible() const { return m_visualStateBackgroundVisible; }
     /// Radius of hover/selection backgrounds; negative values become zero (default zero).
     void setVisualStateCornerRadius(int radius);
     int visualStateCornerRadius() const { return m_visualStateCornerRadius; }
-    /// Extends the corresponding background through owned row gaps (default false).
-    void setHoverBackgroundThroughRowSpacing(bool enabled);
-    bool hoverBackgroundThroughRowSpacing() const { return m_hoverBackgroundThroughRowSpacing; }
-    void setSelectedBackgroundThroughRowSpacing(bool enabled);
-    bool selectedBackgroundThroughRowSpacing() const { return m_selectedBackgroundThroughRowSpacing; }
     /// Left edge of the background for each node depth, independent of grid lines.
     enum class VisualStateBackgroundExtent { NodeOnly, NodeAndIcon, FullWidth };
     void setVisualStateBackgroundExtent(VisualStateBackgroundExtent extent);
@@ -234,10 +229,8 @@ private:
     bool m_rowGridLinesVisible = true;
     RowGridLineExtent m_rowGridLineExtent = RowGridLineExtent::FullWidth;
     VisualStateBackgroundExtent m_visualStateBackgroundExtent = VisualStateBackgroundExtent::FullWidth;
-    bool m_visualStateBackgroundVisible = false;
+    bool m_visualStateBackgroundVisible = true;
     int m_visualStateCornerRadius = 0;
-    bool m_hoverBackgroundThroughRowSpacing = false;
-    bool m_selectedBackgroundThroughRowSpacing = false;
     bool m_branchIndicatorsVisible = true;
     QIcon m_expandedBranchIcon;
     QIcon m_collapsedBranchIcon;

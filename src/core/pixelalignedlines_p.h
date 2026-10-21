@@ -112,6 +112,43 @@ inline void fillVerticalPixelLines(QPainter *painter, const QVector<QRect> &line
     fillPixelLines(painter, lines, pixelWidth, color, Qt::Vertical);
 }
 
+// Use the same physical-pixel thickness and leading edge for every separator style.
+inline void drawPixelAlignedSeparator(QPainter *painter, const QRect &rect,
+                                      int pixelWidth, const QColor &color,
+                                      Qt::PenStyle style, Qt::Orientation orientation)
+{
+    if (rect.isEmpty() || pixelWidth <= 0 || style == Qt::NoPen || color.alpha() == 0)
+        return;
+    if (style == Qt::SolidLine) {
+        fillPixelLines(painter, {rect}, pixelWidth, color, orientation);
+        return;
+    }
+    const QTransform transform = painter->deviceTransform();
+    bool invertible = false;
+    const QTransform inverse = transform.inverted(&invertible);
+    if (!invertible)
+        return;
+    const QRectF device = transform.mapRect(QRectF(rect));
+    QPointF start;
+    QPointF end;
+    if (orientation == Qt::Horizontal) {
+        const int y = qRound(device.top()) + pixelWidth / 2;
+        start = QPointF(qRound(device.left()), y);
+        end = QPointF(qRound(device.right()), y);
+    } else {
+        const int x = qRound(device.left()) + pixelWidth / 2;
+        start = QPointF(x, qRound(device.top()));
+        end = QPointF(x, qRound(device.bottom()));
+    }
+    QPen pen(color, pixelWidth, style, Qt::FlatCap);
+    pen.setCosmetic(true);
+    painter->save();
+    painter->setRenderHint(QPainter::Antialiasing, false);
+    painter->setPen(pen);
+    painter->drawLine(inverse.map(start), inverse.map(end));
+    painter->restore();
+}
+
 class PixelAlignedHorizontalLine : public QWidget
 {
 public:

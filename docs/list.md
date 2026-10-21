@@ -63,7 +63,7 @@ model.setData(first, QStringLiteral("更新后的多行内容，可以因文本�
 
 ## 自绘悬停与选中背景
 
-`view.visualState(index)` 返回独立的 `hovered` 和 `selected` 目标标志，以及 0–1 的 `hoverProgress`、`selectedProgress`。两种状态可以同时存在，进度从当前值平滑过渡到目标值，离开和取消选中时也会淡出。默认过渡时间为 180 ms；`setVisualStateAnimationDuration(0)` 可关闭动画。`setHoverBackgroundColor()` 与 `setSelectedBackgroundColor()` 分别设置提供给业务控件的颜色；视图不代替业务控件绘制背景。适配器绑定新行、状态、颜色或动画帧变化时会收到 `visualStateChanged()`；默认实现调用 `widget->update()`，若控件直接保存状态，可重写它：
+`view.visualState(index)` 返回独立的 `hovered` 和 `selected` 目标标志，以及 0–1 的 `hoverProgress`、`selectedProgress`。两种状态可以同时存在，进度从当前值平滑过渡到目标值，离开和取消选中时也会淡出。默认过渡时间为 180 ms；`setVisualStateAnimationDuration(0)` 可关闭动画。`setHoverBackgroundColor()` 与 `setSelectedBackgroundColor()` 分别设置内置背景和业务控件可读取的颜色。列表默认绘制 item 背景，保持行控件透明即可显示；`setVisualStateCornerRadius()` 配置圆角。完全自绘时，先调用 `setVisualStateBackgroundVisible(false)`，再由业务控件绘制。适配器绑定新行、状态、颜色或动画帧变化时会收到 `visualStateChanged()`；默认实现调用 `widget->update()`，若控件直接保存状态，可重写它：
 
 ```cpp
 class StateRow : public QWidget {
@@ -99,20 +99,23 @@ void visualStateChanged(viv::WidgetType, QWidget *widget, const QModelIndex &ind
 ```
 
 ```cpp
+view.setVisualStateBackgroundVisible(false); // 此示例由 StateRow 自绘背景
 view.setHoverBackgroundColor(QColor("#e7f4ed"));
 view.setSelectedBackgroundColor(QColor("#b9d9f1"));
 view.setVisualStateAnimationDuration(180);
+view.setVisualStateAnimationEasingCurve(QEasingCurve::OutCubic);
 ```
+
+hover 身份变化时框架立即启动过渡；快速离开会先采样实际经过时间，再从当前进度淡出。`setVisualStateAnimationEasingCurve()` 设置 hover 和 selected 共用的进入、离开曲线，默认使用 `OutCubic`、时长 180 ms，可用 `visualStateAnimationEasingCurve()` 读取曲线。`OutCubic` 起步更快，适合需要明显响应快速经过的场景；修改曲线会重置当前过渡。
 
 控件复用时会重新绑定并重新通知状态。若自定义行控件包含不透明子控件，背景只会显示在未被子控件覆盖的区域；需要整行着色时，也要处理这些子控件的背景。
 
 ## 行间距
 
-悬停与选中背景可分别延伸到行间距，默认均关闭。间距归属上方的行；视图使用配置的状态颜色和动画进度绘制间距，行内背景仍由业务控件绘制。自定义间距控件的不透明内容可能遮住背景。
+悬停和选中背景始终限制在 item 范围，不覆盖行间距；间距及自定义间距控件保持自身外观。
 
 ```cpp
-view.setHoverBackgroundThroughRowSpacing(true);
-view.setSelectedBackgroundThroughRowSpacing(true);
+view.setVisualStateCornerRadius(6);
 ```
 
 `setRowSpacing()` 在相邻行之间留白，默认间距为 0，末行后不加间距。行控件高度不包含间距，点击留白不会命中行。默认显示分割线：间距为 0 时绘制在相邻行的边界；有间距时绘制在留白的上下边缘。分割线宽度按物理像素绘制并对齐屏幕像素网格，默认 1 个物理像素；行高与间距仍使用逻辑像素。

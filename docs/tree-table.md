@@ -182,15 +182,11 @@ view.setVisualStateBackgroundExtent(
     viv::VirtualTreeTableView::VisualStateBackgroundExtent::NodeOnly);
 view.setHoverBackgroundColor(QColor("#e7f4ed"));
 view.setSelectedBackgroundColor(QColor("#b9d9f1"));
-view.setHoverBackgroundThroughRowSpacing(false);    // 默认不覆盖行间距
-view.setSelectedBackgroundThroughRowSpacing(false);
-view.setHoverBackgroundThroughColumnSpacing(true);  // 默认覆盖列间距
-view.setSelectedBackgroundThroughColumnSpacing(true);
 ```
 
-`RowGridLineExtent` 和 `VisualStateBackgroundExtent` 分别选择只覆盖节点内容（`NodeOnly`）、图标加内容（`NodeAndIcon`）或整行（`FullWidth`）。范围只扣除第 0 逻辑列中的树装饰区域，其他列仍正常绘制。分割线的颜色、宽度、显隐、是否穿过行列间距，以及自定义间距控件均沿用[表格设置](table.md)。状态背景默认关闭；行控件需要保持透明，才能看到视图在其下方绘制的背景。也可以使用 adapter 的状态回调自行绘制。
+`RowGridLineExtent` 和 `VisualStateBackgroundExtent` 分别选择只覆盖节点内容（`NodeOnly`）、图标加内容（`NodeAndIcon`）或整行（`FullWidth`）。范围只扣除第 0 逻辑列中的树装饰区域，其他列仍正常绘制。分割线的颜色、宽度、显隐、是否穿过行列间距，以及自定义间距控件均沿用[表格设置](table.md)。状态背景默认开启；行控件需要保持透明，才能看到视图在其下方绘制的背景。也可以使用 adapter 的状态回调自行绘制。
 
-hover 和 select 分别通过 `setHoverBackgroundThroughRowSpacing()` / `setSelectedBackgroundThroughRowSpacing()` 控制行间距覆盖，默认关闭；通过 `setHoverBackgroundThroughColumnSpacing()` / `setSelectedBackgroundThroughColumnSpacing()` 控制列间距覆盖，默认开启。行间距按 role 分段归属：`NodeRowSpacingBelowRole` 的部分跟随上方节点，`NodeRowSpacingAboveRole` 的部分跟随下方节点；下间距 role 缺失、无效或负值时，默认行间距归上方节点。单元格模式的列间距跟随左侧单元格，合并单元格从其外边缘延伸。首行前、末行及末列后不延伸，不跨越冻结行或列 pane 边界。分隔线仍显示，自定义间距控件仍可绘制自己的内容。
+hover 和 selected 默认启用，只在 item 范围绘制，不覆盖行列间距；间距 role 只影响布局，不参与状态着色。自定义间距控件仍可绘制自己的内容。
 
 与 `VirtualTreeView` 相同，创建节点时将根据深度或业务属性计算的间距写入第 0 列的 `NodeRowSpacingRole`（`Qt::UserRole + 0x100`）。间距属于上方节点，0 表示没有间距，缺失/无效/负值回退到 `rowSpacing()`。该 role 的 dataChanged 会更新布局；表头、单元格和间距命中使用同一几何，末行后不额外留白。模型移动或切换显示根不会自动修改节点保存的间距；旧的按深度、同级和层级设置接口已移除。
 

@@ -1,6 +1,5 @@
 #include <virtualitemviews/virtualtreetableview.h>
 #include "treeexpansiontransition_p.h"
-#include "nodebackgroundspacing_p.h"
 #include "../core/pixelalignedlines_p.h"
 
 #include <virtualitemviews/listlayout.h>
@@ -991,17 +990,7 @@ void VirtualTreeTableView::configureRowSpacingWidget(QWidget *widget) const
     widget->setProperty("vivSpacingLineLeftInset", 0);
     widget->setProperty("vivSpacingLineSkipX", excluded.x());
     widget->setProperty("vivSpacingLineSkipWidth", excluded.width());
-    widget->setProperty("vivFillSpacingBackground", !verticalSpacingLineThroughRowSpacing()
-        && (!m_visualStateBackgroundVisible
-            || (!m_hoverBackgroundThroughRowSpacing && !m_selectedBackgroundThroughRowSpacing)));
-}
-
-void VirtualTreeTableView::configureColumnSpacingWidget(QWidget *widget) const
-{
-    VirtualTableView::configureColumnSpacingWidget(widget);
-    widget->setProperty("vivPaintSpacingStates", false);
-    widget->setProperty("vivFillSpacingBackground", !m_visualStateBackgroundVisible
-        || (!m_hoverBackgroundThroughColumnSpacing && !m_selectedBackgroundThroughColumnSpacing));
+    widget->setProperty("vivFillSpacingBackground", !verticalSpacingLineThroughRowSpacing());
 }
 
 void VirtualTreeTableView::setRowGridLineExtent(RowGridLineExtent extent)
@@ -1068,11 +1057,6 @@ void VirtualTreeTableView::refreshVisualState(const QModelIndex &index)
 {
     VirtualTableView::refreshVisualState(index);
     if (m_visualStateBackgroundVisible && index.isValid()) {
-        if (m_hoverBackgroundThroughRowSpacing || m_selectedBackgroundThroughRowSpacing
-            || m_hoverBackgroundThroughColumnSpacing || m_selectedBackgroundThroughColumnSpacing) {
-            viewport()->update();
-            return;
-        }
         const QModelIndex anchor = visualStateScope() == VisualStateScope::Cell
             ? anchorIndex(index) : index;
         const QRect rect = visualStateScope() == VisualStateScope::Cell
@@ -1102,15 +1086,7 @@ void VirtualTreeTableView::paintVisualStateBackgrounds(QPainter *painter,
     };
     const QVector<int> columns = rowScope ? QVector<int>() : visibleColumnLogicalIndexes();
     const QVector<TablePane> currentPanes = panes();
-    const auto *layout = dynamic_cast<const ListLayout *>(layoutPolicy());
-    const bool throughSpacing = m_hoverBackgroundThroughRowSpacing || m_selectedBackgroundThroughRowSpacing;
-    const auto ownedSpacing = [this, layout](qsizetype row) {
-        return nodeBackgroundSpacing(viewIndex(row), row > 0 ? viewIndex(row - 1) : QModelIndex(),
-            NodeRowSpacingBelowRole, rowSpacing(), layout && row > 0 ? layout->spacingAfter(row - 1) : 0,
-            layout && row + 1 < viewItemCount() ? layout->spacingAfter(row) : 0);
-    };
     QRegion columnGaps;
-    QHash<int, int> spacingAtColumnEnd;
     int terminalColumn = -1;
     for (const TablePane &pane : currentPanes) {
         if (!pane.logicalColumns.isEmpty())
@@ -1123,33 +1099,25 @@ void VirtualTreeTableView::paintVisualStateBackgrounds(QPainter *painter,
             const ColumnGeometry column = columnGeometry(logical);
             int x = column.viewportX;
             columnVisualX(logical, &x);
-            spacingAtColumnEnd.insert(x + column.width, columnSpacing());
             columnGaps += QRect(x + column.width, 0, columnSpacing(), viewport()->height())
                 .intersected(pane.viewportRect);
         }
     }
     QSet<QModelIndex> paintedCells;
-    const auto paintState = [this, painter, rowScope, &columnGaps](const QRegion &clip, const QRect &rect,
-                                            const QModelIndex &index, const QPair<int, int> &rowGaps, int columnGap) {
+    const auto paintState = [this, painter, rowScope, &columnGaps](QRegion clip, const QRect &rect,
+                                                                 const QModelIndex &index) {
         const VisualState state = visualState(index);
+        if (rowScope)
+            clip -= columnGaps;
+        clip &= QRegion(rect);
         if (clip.isEmpty() || (state.hoverProgress <= 0.0 && state.selectedProgress <= 0.0))
             return;
-        const auto paint = [&](bool throughRow, bool throughColumn, qreal opacity, const QColor &color) {
-            const QRect background = rect.adjusted(0, throughRow ? -rowGaps.first : 0,
-                throughColumn ? columnGap : 0, throughRow ? rowGaps.second : 0);
-            QRegion stateClip = clip;
-            stateClip &= background;
-            if (rowScope && !throughColumn)
-                stateClip -= columnGaps;
-            painter->save();
-            painter->setOpacity(opacity);
-            fillPixelAlignedRegion(painter, stateClip, color);
-            painter->restore();
-        };
-        paint(m_hoverBackgroundThroughRowSpacing, m_hoverBackgroundThroughColumnSpacing,
-              state.hoverProgress, hoverBackgroundColor());
-        paint(m_selectedBackgroundThroughRowSpacing, m_selectedBackgroundThroughColumnSpacing,
-              state.selectedProgress, selectedBackgroundColor());
+        painter->save();
+        painter->setOpacity(state.hoverProgress);
+        paintRoundedStateBackgroundLayer(painter, rect, clip, hoverBackgroundColor(), visualStateCornerRadius());
+        painter->setOpacity(state.selectedProgress);
+        paintRoundedStateBackgroundLayer(painter, rect, clip, selectedBackgroundColor(), visualStateCornerRadius());
+        painter->restore();
     };
     for (const VisibleRange &range : visibleItemRanges()) {
         for (qsizetype row = range.first; row >= 0 && row <= range.last; ++row) {
@@ -1158,20 +1126,16 @@ void VirtualTreeTableView::paintVisualStateBackgrounds(QPainter *painter,
             int visualY = rowRect.y();
             if (rowVisualY(row, &visualY))
                 rowRect.moveTop(visualY);
-            const auto rowGaps = ownedSpacing(row);
-            if (!node.isValid() || !rowRect.adjusted(0, throughSpacing ? -rowGaps.first : 0,
-                0, throughSpacing ? rowGaps.second : 0).intersects(dirty))
+            if (!node.isValid() || !rowRect.intersects(dirty))
                 continue;
             const QRect fullRow(0, rowRect.y(), viewportWidth, rowRect.height());
             const QRect pane = itemPaneRect(itemPaneForRow(row));
             const QRect excluded = decorationExclusion(cells(itemDepth(node)));
             if (rowScope) {
-                const QRect expanded = fullRow.adjusted(0, throughSpacing ? -rowGaps.first : 0,
-                    0, throughSpacing ? rowGaps.second : 0);
-                QRegion clip(expanded.intersected(pane).intersected(viewport()->rect()));
+                QRegion clip(fullRow.intersected(pane).intersected(viewport()->rect()).intersected(dirty));
                 if (!excluded.isEmpty())
-                    clip -= QRect(excluded.x(), expanded.y(), excluded.width(), expanded.height());
-                paintState(clip, fullRow, node, rowGaps, 0);
+                    clip -= QRect(excluded.x(), fullRow.y(), excluded.width(), fullRow.height());
+                paintState(clip, fullRow, node);
                 continue;
             }
             for (int logical : columns) {
@@ -1194,21 +1158,14 @@ void VirtualTreeTableView::paintVisualStateBackgrounds(QPainter *painter,
                 if (rect.isEmpty() || anchorRow < 0
                     || columnPane < 0 || columnPane >= currentPanes.size())
                     continue;
-                const TableSpan span = spanAt(anchor);
-                const QPair<int, int> cellRowGaps(ownedSpacing(anchorRow).first,
-                    ownedSpacing(anchorRow + span.rowSpan - 1).second);
-                const int cellColumnGap = spacingAtColumnEnd.value(rect.right() + 1, 0);
-                const bool throughColumn = m_hoverBackgroundThroughColumnSpacing || m_selectedBackgroundThroughColumnSpacing;
-                const QRect expanded = rect.adjusted(0, throughSpacing ? -cellRowGaps.first : 0,
-                    throughColumn ? cellColumnGap : 0, throughSpacing ? cellRowGaps.second : 0);
-                if (!expanded.intersects(dirty))
+                if (!rect.intersects(dirty))
                     continue;
-                QRegion clip(expanded.intersected(itemPaneRect(itemPaneForRow(anchorRow)))
+                QRegion clip(rect.intersected(itemPaneRect(itemPaneForRow(anchorRow)))
                     .intersected(currentPanes.at(columnPane).viewportRect)
-                    .intersected(viewport()->rect()));
+                    .intersected(viewport()->rect()).intersected(dirty));
                 if (!excluded.isEmpty() && anchorIndex(viewIndex(row, 0)) == anchor)
-                    clip -= QRect(excluded.x(), expanded.y(), excluded.width(), expanded.height());
-                paintState(clip, rect, anchor, cellRowGaps, cellColumnGap);
+                    clip -= QRect(excluded.x(), rect.y(), excluded.width(), rect.height());
+                paintState(clip, rect, anchor);
             }
         }
     }

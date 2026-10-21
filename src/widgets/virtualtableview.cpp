@@ -108,7 +108,7 @@ public:
     int paneIndex() const { return property(paneIndexProperty()).toInt(); }
 };
 
-/// The vertical line between two panes in the body (§31). It is a 1 px overlay:
+/// The vertical line between two panes in the body (§31). It is an overlay:
 /// the row widgets/cells cover the viewport, so a line painted by the viewport
 /// itself would be hidden behind them. Input passes through.
 class PaneSeparatorLine : public QWidget
@@ -176,11 +176,6 @@ public:
     }
     QWidget *headerContent() const { return m_headerContent; }
     int bodyTop() const { return m_bodyTop; }
-    void setBackgroundPainter(std::function<void(QPainter *)> paint)
-    {
-        m_backgroundPainter = std::move(paint);
-        update();
-    }
     void setLineColors(const QColor &vertical, const QColor &horizontal)
     {
         m_verticalColor = vertical;
@@ -233,12 +228,6 @@ protected:
         if (property("vivFillSpacingBackground").toBool())
             painter.fillRect(QRect(0, m_bodyTop, width(), height() - m_bodyTop),
                              palette().brush(QPalette::Base));
-        if (property("vivPaintSpacingStates").toBool() && m_backgroundPainter) {
-            painter.save();
-            painter.setClipRect(QRect(0, m_bodyTop, width(), height() - m_bodyTop));
-            m_backgroundPainter(&painter);
-            painter.restore();
-        }
         QVector<QRect> verticalLines;
         appendBodyEdges(verticalLines, 0, m_bodyTop);
         if (m_horizontalGridLinesVisible && m_bodyTop > 0)
@@ -320,7 +309,6 @@ private:
 
     QWidget *m_content = nullptr;
     QWidget *m_headerContent = nullptr;
-    std::function<void(QPainter *)> m_backgroundPainter;
     QColor m_verticalColor;
     QColor m_horizontalColor;
     int m_verticalWidth = 1;
@@ -2762,16 +2750,8 @@ void VirtualTableView::drawPaneSeparator(QPainter *painter, const QRect &rect,
     const QColor color = style.effectiveColor(styleSeparatorColor);
     if (!color.isValid())
         return;
-    if (style.lineStyle == Qt::SolidLine) {
-        fillVerticalPixelLines(painter, {rect}, qMax(1, style.width), color);
-        return;
-    }
-    QPen pen(color, qMax(1, style.width), style.lineStyle);
-    painter->save();
-    painter->setPen(pen);
-    const int x = rect.center().x();
-    painter->drawLine(x, rect.top(), x, rect.bottom());
-    painter->restore();
+    drawPixelAlignedSeparator(painter, rect, style.width, color,
+                              style.lineStyle, Qt::Vertical);
 }
 
 QColor VirtualTableView::sectionSeparatorColor(const QWidget *context)
@@ -3714,6 +3694,24 @@ void VirtualTableView::setVisualStateScope(VisualStateScope scope)
     refreshVisualStates();
 }
 
+void VirtualTableView::setVisualStateBackgroundVisible(bool visible)
+{
+    if (m_visualStateBackgroundVisible == visible)
+        return;
+    m_visualStateBackgroundVisible = visible;
+    refreshVisualStates();
+}
+
+void VirtualTableView::setVisualStateCornerRadius(int radius)
+{
+    radius = qMax(0, radius);
+    if (m_visualStateCornerRadius == radius)
+        return;
+    m_visualStateCornerRadius = radius;
+    if (m_visualStateBackgroundVisible)
+        refreshVisualStates();
+}
+
 VirtualItemView::VisualState VirtualTableView::visualState(const QModelIndex &index) const
 {
     if (m_visualStateScope == VisualStateScope::Cell || !index.isValid()
@@ -3727,54 +3725,19 @@ VirtualItemView::VisualState VirtualTableView::visualState(const QModelIndex &in
     return animatedVisualState(index.siblingAtColumn(0), hoveredRow, selectedRow);
 }
 
-void VirtualTableView::setHoverBackgroundThroughRowSpacing(bool enabled)
-{
-    if (m_hoverBackgroundThroughRowSpacing == enabled)
-        return;
-    m_hoverBackgroundThroughRowSpacing = enabled;
-    relayout();
-    viewport()->update();
-}
-
-void VirtualTableView::setSelectedBackgroundThroughRowSpacing(bool enabled)
-{
-    if (m_selectedBackgroundThroughRowSpacing == enabled)
-        return;
-    m_selectedBackgroundThroughRowSpacing = enabled;
-    relayout();
-    viewport()->update();
-}
-
-void VirtualTableView::setHoverBackgroundThroughColumnSpacing(bool enabled)
-{
-    if (m_hoverBackgroundThroughColumnSpacing == enabled)
-        return;
-    m_hoverBackgroundThroughColumnSpacing = enabled;
-    relayout();
-    viewport()->update();
-}
-
-void VirtualTableView::setSelectedBackgroundThroughColumnSpacing(bool enabled)
-{
-    if (m_selectedBackgroundThroughColumnSpacing == enabled)
-        return;
-    m_selectedBackgroundThroughColumnSpacing = enabled;
-    relayout();
-    viewport()->update();
-}
-
 void VirtualTableView::paintEvent(QPaintEvent *event)
 {
     VirtualItemView::paintEvent(event);
+    if (!m_visualStateBackgroundVisible)
+        return;
     QPainter painter(viewport());
-    paintSpacingBackgrounds(&painter, event->rect());
+    paintVisualStateBackgrounds(&painter, event->rect());
 }
 
-void VirtualTableView::paintSpacingBackgrounds(QPainter *target, const QRect &dirtyRect) const
+void VirtualTableView::paintVisualStateBackgrounds(QPainter *target, const QRect &dirtyRect) const
 {
     const bool rowScope = visualStateScope() == VisualStateScope::Row;
     QRegion columnGaps;
-    QHash<int, int> spacingAtColumnEnd;
     const auto currentPanes = panes();
     int terminal = -1;
     for (const TablePane &pane : currentPanes) {
@@ -3788,38 +3751,28 @@ void VirtualTableView::paintSpacingBackgrounds(QPainter *target, const QRect &di
             const ColumnGeometry column = columnGeometry(logical);
             int x = column.viewportX;
             columnVisualX(logical, &x);
-            spacingAtColumnEnd.insert(x + column.width, columnSpacing());
             columnGaps += QRect(x + column.width, 0, columnSpacing(), viewport()->height())
                 .intersected(pane.viewportRect);
         }
     }
     QPainter &painter = *target;
-    const auto paint = [&](const QModelIndex &index, const QRect &rect, const QRect &pane,
-                           int rowGap, int columnGap) {
+    const auto paint = [&](const QModelIndex &index, const QRect &rect, const QRect &pane) {
         const VisualState state = visualState(index);
-        const auto layer = [&](bool throughRow, bool throughColumn, qreal opacity, const QColor &color) {
+        QRegion clip(rect.intersected(pane).intersected(viewport()->rect()).intersected(dirtyRect));
+        if (rowScope)
+            clip -= columnGaps;
+        if (clip.isEmpty())
+            return;
+        const auto layer = [&](qreal opacity, const QColor &color) {
             if (opacity <= 0.0)
                 return;
-            const QRect extended = rect.adjusted(0, 0, throughColumn ? columnGap : 0,
-                                                throughRow ? rowGap : 0);
-            QRegion clip(extended);
-            if (rowScope) {
-                if (!throughColumn)
-                    clip -= columnGaps;
-            }
-            clip &= QRegion(pane.intersected(viewport()->rect()).intersected(dirtyRect));
-            QRegion spacingClip = clip - QRegion(rect);
-            if (rowScope && throughColumn)
-                spacingClip += columnGaps.intersected(clip);
             painter.save();
             painter.setOpacity(opacity);
-            paintStateBackgroundLayer(&painter, extended, clip, spacingClip, color);
+            paintStateBackgroundLayer(&painter, rect, clip, color);
             painter.restore();
         };
-        layer(m_hoverBackgroundThroughRowSpacing, m_hoverBackgroundThroughColumnSpacing,
-              state.hoverProgress, hoverBackgroundColor());
-        layer(m_selectedBackgroundThroughRowSpacing, m_selectedBackgroundThroughColumnSpacing,
-              state.selectedProgress, selectedBackgroundColor());
+        layer(state.hoverProgress, hoverBackgroundColor());
+        layer(state.selectedProgress, selectedBackgroundColor());
     };
     QSet<QModelIndex> painted;
     for (const VisibleRange &range : visibleItemRanges()) {
@@ -3830,8 +3783,7 @@ void VirtualTableView::paintSpacingBackgrounds(QPainter *target, const QRect &di
                 int y = rect.y();
                 rowVisualY(row, &y);
                 rect = QRect(0, y, viewport()->width(), rect.height());
-                const int gap = row + 1 < viewItemCount() ? m_rowLayout->spacingAfter(row) : 0;
-                paint(node, rect, itemPaneRect(itemPaneForRow(row)), gap, 0);
+                paint(node, rect, itemPaneRect(itemPaneForRow(row)));
                 continue;
             }
             for (int logical : visibleColumnLogicalIndexes()) {
@@ -3848,23 +3800,17 @@ void VirtualTableView::paintSpacingBackgrounds(QPainter *target, const QRect &di
                 int y = committedY;
                 rowVisualY(anchorRow, &y);
                 rect.translate(0, y - committedY);
-                const qsizetype lastRow = anchorRow + spanAt(anchor).rowSpan - 1;
-                const int gap = lastRow + 1 < viewItemCount() ? m_rowLayout->spacingAfter(lastRow) : 0;
                 paint(anchor, rect, itemPaneRect(itemPaneForRow(anchorRow))
-                    .intersected(currentPanes.at(pane).viewportRect), gap,
-                    spacingAtColumnEnd.value(rect.right() + 1, 0));
+                    .intersected(currentPanes.at(pane).viewportRect));
             }
         }
     }
 }
 
-void VirtualTableView::paintStateBackgroundLayer(QPainter *painter, const QRect &extended,
-                                                const QRegion &clip, const QRegion &spacingClip,
-                                                const QColor &color) const
+void VirtualTableView::paintStateBackgroundLayer(QPainter *painter, const QRect &rect,
+                                                const QRegion &clip, const QColor &color) const
 {
-    Q_UNUSED(extended);
-    Q_UNUSED(clip);
-    fillPixelAlignedRegion(painter, spacingClip, color);
+    paintRoundedStateBackgroundLayer(painter, rect, clip, color, m_visualStateCornerRadius);
 }
 
 void VirtualTableView::paintRoundedStateBackgroundLayer(QPainter *painter, const QRect &extended,
@@ -4390,7 +4336,7 @@ void VirtualTableView::syncRowGridLines()
                 const QRect paneRect = itemPaneRect(itemPaneForRow(row))
                     .translated(viewportRect.topLeft());
                 const QRect clipped = lineRect.intersected(paneRect);
-                if (!clipped.isEmpty())
+                if (!clipped.isEmpty() && !isRowGridLineCoveredByPaneSeparator(clipped))
                     desired.insert(row, clipped);
             }
         }
@@ -4644,8 +4590,7 @@ void VirtualTableView::applyRowSpacingOverrides()
 void VirtualTableView::configureRowSpacingWidget(QWidget *widget) const
 {
     if (widget) {
-        widget->setProperty("vivFillSpacingBackground", !m_verticalSpacingLineThroughRowSpacing
-            && !m_hoverBackgroundThroughRowSpacing && !m_selectedBackgroundThroughRowSpacing);
+        widget->setProperty("vivFillSpacingBackground", !m_verticalSpacingLineThroughRowSpacing);
         widget->setProperty("vivShowSpacingLines", m_horizontalGridLinesVisible);
         widget->setProperty("vivSpacingLineWidth", m_horizontalGridLineWidth);
     }
@@ -4654,13 +4599,6 @@ void VirtualTableView::configureRowSpacingWidget(QWidget *widget) const
 void VirtualTableView::configureColumnSpacingWidget(QWidget *widget) const
 {
     widget->setProperty("vivFillSpacingBackground", true);
-    widget->setProperty("vivPaintSpacingStates", true);
-    auto *host = static_cast<ColumnSpacingHost *>(widget);
-    host->setBackgroundPainter([this, host](QPainter *painter) {
-        const QPoint origin = host->pos() - viewport()->pos();
-        painter->translate(-origin);
-        paintSpacingBackgrounds(painter, host->rect().translated(origin));
-    });
     widget->update();
 }
 

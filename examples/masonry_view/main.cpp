@@ -229,14 +229,6 @@ int main(int argc, char **argv)
     toolbar = window.addToolBar(QStringLiteral("状态背景"));
     QObject::connect(toggle(QStringLiteral("状态背景"), view.visualStateBackgroundVisible()),
         &QCheckBox::toggled, &view, &viv::VirtualMasonryView::setVisualStateBackgroundVisible);
-    QObject::connect(toggle(QStringLiteral("hover 行隙"), view.hoverBackgroundThroughRowSpacing()),
-        &QCheckBox::toggled, &view, &viv::VirtualMasonryView::setHoverBackgroundThroughRowSpacing);
-    QObject::connect(toggle(QStringLiteral("select 行隙"), view.selectedBackgroundThroughRowSpacing()),
-        &QCheckBox::toggled, &view, &viv::VirtualMasonryView::setSelectedBackgroundThroughRowSpacing);
-    QObject::connect(toggle(QStringLiteral("hover 列隙"), view.hoverBackgroundThroughColumnSpacing()),
-        &QCheckBox::toggled, &view, &viv::VirtualMasonryView::setHoverBackgroundThroughColumnSpacing);
-    QObject::connect(toggle(QStringLiteral("select 列隙"), view.selectedBackgroundThroughColumnSpacing()),
-        &QCheckBox::toggled, &view, &viv::VirtualMasonryView::setSelectedBackgroundThroughColumnSpacing);
     QObject::connect(spin(QStringLiteral("圆角"), view.stateBackgroundCornerRadius(), 0, 100),
         QOverload<int>::of(&QSpinBox::valueChanged), &view,
         &viv::VirtualMasonryView::setStateBackgroundCornerRadius);

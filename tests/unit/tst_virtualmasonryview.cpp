@@ -2224,14 +2224,9 @@ void VirtualMasonryViewTest::stateBackgroundsRespectSpacingAndDpr()
     const QPoint columnGap(columnItem.right() + 1, columnItem.center().y());
     QVERIFY(columnGap.x() < view.viewport()->width());
     for (const qreal dpr : {1.0, 1.25, 1.5, 1.75}) {
-        view.setSelectedBackgroundThroughColumnSpacing(false);
         const auto withoutGap = paint(dpr);
         QCOMPARE(withoutGap.pixelColor(qRound(columnGap.x() * dpr),
                                        qRound(columnGap.y() * dpr)), QColor(Qt::white));
-        view.setSelectedBackgroundThroughColumnSpacing(true);
-        const auto withGap = paint(dpr);
-        QCOMPARE(withGap.pixelColor(qRound(columnGap.x() * dpr),
-                                    qRound(columnGap.y() * dpr)), QColor(Qt::red));
     }
 
     view.setColumnCount(1);
@@ -2240,14 +2235,9 @@ void VirtualMasonryViewTest::stateBackgroundsRespectSpacingAndDpr()
     const QPoint rowGap(rowItem.center().x(), rowItem.bottom() + 1);
     QVERIFY(rowGap.y() < view.viewport()->height());
     for (const qreal dpr : {1.0, 1.25, 1.5, 1.75}) {
-        view.setSelectedBackgroundThroughRowSpacing(false);
         const auto withoutGap = paint(dpr);
         QCOMPARE(withoutGap.pixelColor(qRound(rowGap.x() * dpr),
                                        qRound(rowGap.y() * dpr)), QColor(Qt::white));
-        view.setSelectedBackgroundThroughRowSpacing(true);
-        const auto withGap = paint(dpr);
-        QCOMPARE(withGap.pixelColor(qRound(rowGap.x() * dpr),
-                                    qRound(rowGap.y() * dpr)), QColor(Qt::red));
     }
 }
 

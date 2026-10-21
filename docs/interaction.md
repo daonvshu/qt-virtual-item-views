@@ -14,6 +14,28 @@ view.scrollTo(first);
 
 `selectionModel()` 返回 Qt 的 `QItemSelectionModel`；也可通过 `setSelectionModel()` 共享一个与当前模型匹配的选择模型。视图发出 `clicked`、`doubleClicked` 和 `activated`。表格按行还是按单元格选择由 `SelectionBehavior` 控制。
 
+## Hover、选中背景与圆角
+
+`VirtualTableView` 可以直接绘制完整的 hover 和选中背景，无需为常用圆角样式继承视图：
+
+```cpp
+table.setVisualStateBackgroundVisible(true);
+table.setVisualStateScope(viv::VirtualTableView::VisualStateScope::Row);
+table.setVisualStateCornerRadius(6); // 逻辑像素；0 为直角，负数按 0 处理
+table.setHoverBackgroundColor(QColor(235, 240, 247));
+table.setSelectedBackgroundColor(QColor(190, 215, 245));
+table.setVisualStateAnimationDuration(120); // 0 关闭过渡动画
+table.setVisualStateAnimationEasingCurve(QEasingCurve::OutCubic); // 快速起步
+```
+
+`VisualStateScope::Row` 绘制整行，`Cell` 按单元格绘制，与物化方式独立。行和单元格控件应保持背景透明；自绘时可调用 `setVisualStateBackgroundVisible(false)` 关闭框架背景。
+
+hover 身份变化会立即驱动动画，不依赖后续绘制或 adapter 主动查询状态；快速离开时从实际经过时间对应的进度继续淡出。所有视图共用 `setVisualStateAnimationEasingCurve(const QEasingCurve &)` 与 `visualStateAnimationEasingCurve()`，控制 hover 和 selected 的进入、离开曲线，默认使用 `OutCubic`、时长 180 ms。修改曲线会重置当前过渡，与修改时长的行为一致。
+
+所有视图默认启用框架 hover/selected 背景，普通视图的圆角默认为 0，`StyledTableView` 保留默认 6 像素圆角。状态背景只在 item 内绘制，所有间距保持自身外观。颜色和动画继续使用基类现有接口。表格需要完全自定义形状或绘制方式时，可重写 `paintStateBackgroundLayer()`。
+
+`VirtualTreeTableView` 同样支持上述背景开关、圆角和颜色接口，树的背景范围继续由 `setVisualStateBackgroundExtent()` 控制。`VirtualTreeView` 已提供同名的背景开关、圆角和颜色接口。最小参考代码见 [表格状态示例](../examples/reference/table/state.cpp)。
+
 ## 拖放
 
 模型必须提供 `flags()` 中的 `ItemIsDragEnabled` / `ItemIsDropEnabled`、MIME 数据和 `dropMimeData()`；视图只负责手势、目标命中、指示器和边缘自动滚动。最简单的复制拖放可直接使用 Qt 已实现 MIME 处理的 `QStandardItemModel`：
@@ -31,7 +53,19 @@ view.setDragDropActions(Qt::CopyAction);
 view.setDefaultDropAction(Qt::CopyAction);
 ```
 
+拖动指示器的常见样式可直接配置，所有视图共用这些接口，同时作用于插入线和落点边框：
+
+```cpp
+view.setDropIndicatorColor(QColor("#409eff"));
+view.setDropIndicatorWidth(2);
+view.setDropIndicatorPenStyle(Qt::DashLine);
+```
+
+默认颜色为 `QPalette::Highlight`，传入无效 `QColor()` 可恢复跟随调色板；`dropIndicatorColor()` 返回配置值，因此默认返回无效颜色。默认宽度为 2 个逻辑像素，默认线型为 `Qt::SolidLine`。宽度为 0（负数归零）或 `Qt::NoPen` 时不绘制，落点接收和自动滚动照常工作。支持 Qt 内置实线、虚线、点线、点划线和双点划线；`Qt::CustomDashLine` 或其他不支持的值回退为实线。插入线的实际区域随宽度调整，落点边框向内绘制；颜色、宽度、线型的修改也会更新当前有效落点的指示器。
+
 目标规则：列表按行上/下半段插入；表格按当前选择行为按行或单元格定位；树既可插在节点之间，也可放到节点上成为子节点。自定义模型需在 `canDropMimeData()` 中校验目标，并在 `dropMimeData()` 中修改数据。成功后视图发出 `itemDropped(parent, row, column, action)`。`MoveAction` 的源行通常由模型移动；跨视图拖放若需视图删除源行，可启用 `setMoveRemovesSourceRows(true)`，但模型已自行移动行时不要启用，以免重复删除。
+
+启用源行删除后，两个 `VirtualItemView` 之间（含同一视图）的成功 Move 若将同级源行按顺序插入为一个新行块，框架会在源行删除后把原有选择及当前项转移到新条目。记录的是实际插入行的持续索引，源行删除引起的行号变化不会影响对应关系；其他选中项保留。Automatic、Manual 和两个 `startDrag()` 重载共用此逻辑。复制、取消、拒绝、源行删除失败不会转移选择；覆盖已有单元格、多父节点、模型重置或无法确定映射的自定义落点不自动推断。`itemDropped()` 在源清理前发出，最终选择以 `startDrag()` 返回后为准。
 
 ### 表格的单元格落点
 
@@ -91,7 +125,7 @@ if (source.isValid()) {
 | `previewWidget` | 不接管所有权；为空时使用原有 `dragSourceWidget(index)` |
 | `previewRect` | 截图控件的局部逻辑像素坐标；空矩形截整个控件，非空矩形与控件边界求交，完全无交集时不设置预览图 |
 | `usePressPosition` | 默认 true，使用鼠标抓取点；设为 false 切回居中热点 |
-| `globalPressPosition` | 可选的全局按下位置，赋值 `QPoint` 即可；不传时使用匹配的按下记录或起拖时的鼠标位置，`QPoint(0, 0)` 也是有效值。转为截图控件局部坐标后减去实际裁剪区域左上角，无需乘以缩放比例，位置在截图外时保留该偏移 |
+| `globalPressPosition` | `OptionalPoint` 类型的可选全局按下位置，赋值 `QPoint` 即可，调用 `reset()` 可清除；不传时使用匹配的按下记录或起拖时的鼠标位置，`QPoint(0, 0)` 也是有效值。转为截图控件局部坐标后减去实际裁剪区域左上角，无需乘以缩放比例，位置在截图外时保留该偏移 |
 
 新重载的空 `previewRect` 始终表示整个所选控件，不自动套用旧入口的单元格裁剪。预览只影响图像和热点，不改变选择集、MIME 或落点的行/单元格语义；若要改变这些语义，仍使用选择行为及模型接口。
 
