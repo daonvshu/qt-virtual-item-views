@@ -30,8 +30,14 @@ add_executable(table_capabilities
     26_cell_drop/example.cpp
     27_pinning/example.cpp
     28_diagnostics/example.cpp
+    30_borders/example.cpp
+    30_borders/example.ui
+    30_borders/borderdemo.cpp
+    30_borders/cornercover.cpp
+    30_borders/alphaframe.cpp
 )
 
+set_target_properties(table_capabilities PROPERTIES AUTOUIC ON)
 target_link_libraries(table_capabilities PRIVATE VirtualItemViews Qt${QT_VERSION_MAJOR}::Widgets)
 if(_viv_demo_smooth_enabled AND TARGET SmoothScrollbar::SmoothScrollbar)
     target_sources(table_capabilities PRIVATE 29_smooth_scrolling/example.cpp)

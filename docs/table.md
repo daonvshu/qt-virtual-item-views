@@ -1,6 +1,6 @@
 # VirtualTableView 功能示例
 
-表中路径均相对于仓库根目录。每个编号目录独立包含 model、adapter、控件和页面配置，不引用其他示例实现；可直接复制当前目录。一个 `table_capabilities` 进程切换 28 项基础功能，检测到与当前 Qt 主版本匹配的 SmoothScrollbar 时显示第 29 项。
+表中路径均相对于仓库根目录。每个编号目录独立包含 model、adapter、控件和页面配置，不引用其他示例实现；可直接复制当前目录。一个 `table_capabilities` 进程切换第 01–28、30 项，检测到与当前 Qt 主版本匹配的 SmoothScrollbar 时额外显示第 29 项。
 
 | 编号 | 功能 | 源码相对路径 |
 | --- | --- | --- |
@@ -33,6 +33,7 @@
 | 27 | 屏外保留：编辑或异步活动需要控件时显式保留，用完释放，索引不随屏外回收失去身份 | [examples/table_capabilities/27_pinning/example.cpp](../examples/table_capabilities/27_pinning/example.cpp) |
 | 28 | 运行统计与生命周期：读取统计快照和有界日志，区分累计创建次数与当前物化数量 | [examples/table_capabilities/28_diagnostics/example.cpp](../examples/table_capabilities/28_diagnostics/example.cpp) |
 | 29 | 平滑滚动（可选）：检测到匹配的 SmoothScrollbar 后才编译和显示，开关对比原生双向滚动 | [examples/table_capabilities/29_smooth_scrolling/example.cpp](../examples/table_capabilities/29_smooth_scrolling/example.cpp) |
+| 30 | 外边框与圆角：方案 2 四角覆盖与方案 3 整体 Alpha 合成对比，最终方案待确认 | [examples/table_capabilities/30_borders/README.md](../examples/table_capabilities/30_borders/README.md) |
 
 先看 `Example::setupExample()` 中的视图配置与信号连接，再看本文件的 model、adapter 和控件。`setupUi()` 只处理页面布局。Hover 与 selected 背景由框架绘制，圆角、颜色、时长和曲线直接调用接口配置。
 

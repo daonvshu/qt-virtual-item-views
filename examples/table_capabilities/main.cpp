@@ -38,47 +38,50 @@
 #ifdef VIV_TABLE_HAS_SMOOTH_SCROLLBAR
 #include "29_smooth_scrolling/example.h"
 #endif
+#include "30_borders/example.h"
 
 namespace {
 
 struct ExampleEntry
 {
+    int number;
     const char *title;
     QWidget *(*create)(QWidget *);
 };
 
 const ExampleEntry entries[] = {
-    {u8"01 行控件与 ColumnHost", table_row_widgets::createExample},
-    {u8"02 单元格物化", table_cell_widgets::createExample},
-    {u8"03 多种控件类型", table_widget_types::createExample},
-    {u8"04 整行结构体绑定", table_binding_context::createExample},
-    {u8"05 模型更新", table_model_updates::createExample},
-    {u8"06 固定与动态行高", table_row_heights::createExample},
-    {u8"07 列宽、隐藏与换序", table_columns::createExample},
-    {u8"08 比例列宽与填满视图", table_stretch_columns::createExample},
-    {u8"09 间距与分割线", table_spacing::createExample},
-    {u8"10 Hover 与选中背景", table_visual_states::createExample},
-    {u8"11 状态关联控件", table_state_content::createExample},
-    {u8"12 选择与当前项", table_selection::createExample},
-    {u8"13 行内事件与几何查询", table_item_events::createExample},
-    {u8"14 双向滚动与定位", table_scrolling::createExample},
-    {u8"15 二维虚拟化与复用", table_virtualization::createExample},
-    {u8"16 冻结行列与分隔线", table_frozen_areas::createExample},
-    {u8"17 多区域与独立滚动组", table_panes::createExample},
-    {u8"18 表头与换序动画", table_headers::createExample},
-    {u8"19 自定义表头控件", table_custom_header::createExample},
-    {u8"20 列布局保存与恢复", table_header_persistence::createExample},
-    {u8"21 排序与代理模型", table_sorting::createExample},
-    {u8"22 行号拖动排序", table_row_reordering::createExample},
-    {u8"23 合并单元格", table_spans::createExample},
-    {u8"24 整行指示器拖动", table_drag_indicator::createExample},
-    {u8"25 整行移动动画拖动", table_drag_animation::createExample},
-    {u8"26 单格插入与空白格投放", table_cell_drop::createExample},
-    {u8"27 屏外保留", table_pinning::createExample},
-    {u8"28 运行统计与生命周期", table_diagnostics::createExample},
+    {1, u8"01 行控件与 ColumnHost", table_row_widgets::createExample},
+    {2, u8"02 单元格物化", table_cell_widgets::createExample},
+    {3, u8"03 多种控件类型", table_widget_types::createExample},
+    {4, u8"04 整行结构体绑定", table_binding_context::createExample},
+    {5, u8"05 模型更新", table_model_updates::createExample},
+    {6, u8"06 固定与动态行高", table_row_heights::createExample},
+    {7, u8"07 列宽、隐藏与换序", table_columns::createExample},
+    {8, u8"08 比例列宽与填满视图", table_stretch_columns::createExample},
+    {9, u8"09 间距与分割线", table_spacing::createExample},
+    {10, u8"10 Hover 与选中背景", table_visual_states::createExample},
+    {11, u8"11 状态关联控件", table_state_content::createExample},
+    {12, u8"12 选择与当前项", table_selection::createExample},
+    {13, u8"13 行内事件与几何查询", table_item_events::createExample},
+    {14, u8"14 双向滚动与定位", table_scrolling::createExample},
+    {15, u8"15 二维虚拟化与复用", table_virtualization::createExample},
+    {16, u8"16 冻结行列与分隔线", table_frozen_areas::createExample},
+    {17, u8"17 多区域与独立滚动组", table_panes::createExample},
+    {18, u8"18 表头与换序动画", table_headers::createExample},
+    {19, u8"19 自定义表头控件", table_custom_header::createExample},
+    {20, u8"20 列布局保存与恢复", table_header_persistence::createExample},
+    {21, u8"21 排序与代理模型", table_sorting::createExample},
+    {22, u8"22 行号拖动排序", table_row_reordering::createExample},
+    {23, u8"23 合并单元格", table_spans::createExample},
+    {24, u8"24 整行指示器拖动", table_drag_indicator::createExample},
+    {25, u8"25 整行移动动画拖动", table_drag_animation::createExample},
+    {26, u8"26 单格插入与空白格投放", table_cell_drop::createExample},
+    {27, u8"27 屏外保留", table_pinning::createExample},
+    {28, u8"28 运行统计与生命周期", table_diagnostics::createExample},
 #ifdef VIV_TABLE_HAS_SMOOTH_SCROLLBAR
-    {u8"29 平滑滚动（可选）", table_smooth_scrolling::createExample},
+    {29, u8"29 平滑滚动（可选）", table_smooth_scrolling::createExample},
 #endif
+    {30, u8"30 外边框与圆角", table_borders::createExample},
 };
 
 constexpr int kExampleCount = int(sizeof(entries) / sizeof(entries[0]));
@@ -131,16 +134,23 @@ int main(int argc, char **argv)
     QCommandLineParser parser;
     parser.setApplicationDescription(QStringLiteral("一个进程演示 VirtualTableView 的 %1 项能力").arg(kExampleCount));
     parser.addHelpOption();
-    parser.addOption({QStringLiteral("example"), QStringLiteral("启动时选择示例（1–%1）").arg(kExampleCount),
+    parser.addOption({QStringLiteral("example"), QStringLiteral("启动时选择章节编号（1–30；29 需要 SmoothScrollbar）"),
                       QStringLiteral("number"), QStringLiteral("1")});
     parser.process(app);
     bool ok = false;
-    const int initial = parser.value(QStringLiteral("example")).toInt(&ok);
-    if (!ok || initial < 1 || initial > kExampleCount) {
-        qCritical() << "--example must be between 1 and" << kExampleCount;
+    const int number = parser.value(QStringLiteral("example")).toInt(&ok);
+    int initial = -1;
+    for (int i = 0; ok && i < kExampleCount; ++i) {
+        if (entries[i].number == number) {
+            initial = i;
+            break;
+        }
+    }
+    if (initial < 0) {
+        qCritical() << "--example must name an available chapter (1-28, optional 29, or 30)";
         return 1;
     }
-    Browser browser(initial - 1);
+    Browser browser(initial);
     browser.show();
     return app.exec();
 }
