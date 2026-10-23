@@ -14,14 +14,14 @@
 | 瀑布流 | 最短列布局、独立项目高度、图片估算和动态列数 | [瀑布流](docs/masonry.md) |
 | 表格布局 | 列宽比例分配、左右冻结列、上下冻结行、多滚动组、合并单元格 | [布局与合并](docs/table-layout-guide.md) |
 | 表头 | 排序、自定义控件、行列拖动换序、动画与状态恢复 | [表头与排序](docs/headers.md)、[列布局持久化](docs/header-persistence.md) |
-| 树 | 展开/折叠、按深度设置行间距、键盘导航、缩进和分支图标 | [树视图](docs/tree.md) |
+| 树 | 展开/折叠、节点上下间距、键盘导航、缩进和分支图标 | [VirtualTreeView 功能示例源码](docs/tree.md) |
 | 多列表格树 | 树节点展开、表格列布局、表头、冻结 pane 与单元格控件 | [多列表格树](docs/tree-table.md) |
 | 通用交互 | 选择、拖放、编辑器焦点与弹窗 | [选择与拖放](docs/interaction.md) |
 | 可访问性与诊断 | 可见项接口、物化统计和生命周期日志 | [可访问性与诊断](docs/accessibility-guide.md) |
 
-从[快速开始](docs/getting-started.md)完成构建与接入。列表与表格的用法按功能列在 [VirtualListView](docs/list.md) 和 [VirtualTableView](docs/table.md) 源码路径索引中，所有路径均相对于仓库根目录。
+从[快速开始](docs/getting-started.md)完成构建与接入。列表、表格与树的用法按功能列在 [VirtualListView](docs/list.md)、[VirtualTableView](docs/table.md) 和 [VirtualTreeView](docs/tree.md) 源码路径索引中，所有路径均相对于仓库根目录。
 
-列表从 [examples/list_capabilities/01_basic/example.cpp](examples/list_capabilities/01_basic/example.cpp) 开始阅读；每个功能单独一个目录，包含完整实现，由同一进程演示。构建和运行方式见 [examples/list_capabilities/README.md](examples/list_capabilities/README.md)。表格从 [行控件](examples/table_capabilities/01_row_widgets/example.cpp) 或 [单元格控件](examples/table_capabilities/02_cell_widgets/example.cpp) 开始阅读，统一程序为 [table_capabilities](examples/table_capabilities/README.md)。其他视图见 [examples 导航](examples/README.md)。
+列表从 [examples/list_capabilities/01_basic/example.cpp](examples/list_capabilities/01_basic/example.cpp) 开始阅读；每个功能单独一个目录，包含完整实现，由同一进程演示。构建和运行方式见 [examples/list_capabilities/README.md](examples/list_capabilities/README.md)。表格从 [行控件](examples/table_capabilities/01_row_widgets/example.cpp) 或 [单元格控件](examples/table_capabilities/02_cell_widgets/example.cpp) 开始阅读，统一程序为 [table_capabilities](examples/table_capabilities/README.md)。树从 [基础接入](examples/tree_capabilities/01_basic/example.cpp) 开始阅读，统一程序为 [tree_capabilities](examples/tree_capabilities/README.md)。其他视图见 [examples 导航](examples/README.md)。
 
 ## 适用场景
 

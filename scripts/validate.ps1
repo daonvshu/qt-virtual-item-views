@@ -162,7 +162,7 @@ if ($QtBin.Count -gt 0) {
     Write-Host "  no MSVC combo requested: vcvars is not imported"
 }
 
-$examples = @('tree_view', 'drag_drop')
+$examples = @('tree_capabilities', 'drag_drop')
 
 $benchmarks = @(
     [pscustomobject]@{ Name = 'list 1M rows';  Args = @('--rows', '1000000', '--steps', '200') },

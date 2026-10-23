@@ -1,275 +1,45 @@
-# 树视图
-
-`VirtualTreeView` 使用标准树形 `QAbstractItemModel` 和与列表相同的 `WidgetAdapter`。只把当前展开路径中的可见节点映射为视图行，未展开的子树不会创建行控件。
-
-## 每个节点传递一个结构体
-
-每个节点可以在 `viv::kDefaultItemDataRole` 中保存自己的完整结构体，无需拆成多个字段 role。结构体在命名空间外声明 `Q_DECLARE_METATYPE(NodeData)` 后，创建节点时调用 `node->setData(QVariant::fromValue(data), viv::kDefaultItemDataRole)`；已有数据 role 则通过 `tree.setItemDataRole(MyNodeRole)` 指定。
-
-```cpp
-void bindWidget(viv::WidgetType type, QWidget *widget,
-                const viv::ItemBindingContext &context) override
-{
-    Q_UNUSED(type);
-    static_cast<NodeWidget *>(widget)->bind(context.rowData.value<NodeData>(), context.depth);
-}
-```
-
-`rowData` 是当前节点自身的数据，`index` 是该节点索引，`depth` 从当前显示根的下一层计为 0，`logicalColumn` 为 -1。不同深度可保存不同结构体，由 `WidgetType` 或 `rowData.canConvert<T>()` 区分；结构体类型本身不会自动决定控件复用池。完整的存储方式、更新通知和回调兼容约定见[表格的整行数据上下文](table.md#一行传递一个结构体)。行内事件处理仍需每次绑定时更新持久索引及数据快照。
-
-在已创建 `QApplication` 的程序中，可直接用 `QStandardItemModel` 建一棵小树：
-
-```cpp
-#include <virtualitemviews/virtualtreeview.h>
-#include <virtualitemviews/widgetadapter.h>
-#include <QColor>
-#include <QLabel>
-#include <QStandardItemModel>
-
-class TreeAdapter : public viv::WidgetAdapter
-{
-public:
-    QWidget *createWidget(viv::WidgetType, QWidget *parent) override
-    {
-        return new QLabel(parent);
-    }
-    void bindWidget(viv::WidgetType, QWidget *widget, const QModelIndex &index) override
-    {
-        static_cast<QLabel *>(widget)->setText(index.data().toString());
-    }
-    QSize estimatedSize(viv::WidgetType, const QModelIndex &) const override { return QSize(300, 26); }
-};
-
-QStandardItemModel model;
-auto *group = new QStandardItem(QStringLiteral("分组"));
-group->appendRow(new QStandardItem(QStringLiteral("子项")));
-model.appendRow(group);
-TreeAdapter adapter;
-viv::VirtualTreeView tree;
-tree.setAdapter(&adapter);
-tree.setUniformItemHeight(26);
-tree.setIndentation(20);
-tree.setModel(&model);
-tree.expand(model.index(0, 0));
-tree.show();
-```
-
-还可用 `setRootIndex()` 只显示一棵子树，`isExpanded()` 查询状态，`visibleRowCount()` 查询展开后的行数。分支指示器可点击，双击和方向键也可展开/收起。
-
-两种树视图均支持展开/收起的高度、位置和淡入淡出过渡：`setExpansionAnimationEnabled(true)` 开启，`setExpansionAnimationDuration(300)` 设置毫秒时长（默认 300 ms，0 关闭过渡）。组件默认关闭，示例开启。子节点画面连同节点间距逐渐展开或收拢，后续行同步上下移动；节点映射、逻辑几何和信号立即更新，视觉动画按节点身份插值当前视图大小的前后画面，不修改模型、显式行高或虚拟化布局。连续操作替换旧过渡；滚动、窗口缩放、模型变化、更换显示根或鼠标/键盘操作取消过渡，输入按最终布局处理。启用冻结行时使用淡入淡出，避免行画面跨越冻结边界。
-
-## 悬停与选中背景
-
-树可以直接绘制带过渡动画的状态背景。覆盖范围按当前节点深度计算，和分割线范围独立设置：
-
-```cpp
-tree.setVisualStateBackgroundVisible(true);
-tree.setVisualStateCornerRadius(6); // 默认 0（直角），负数按 0 处理
-tree.setVisualStateBackgroundExtent(
-    viv::VirtualTreeView::VisualStateBackgroundExtent::NodeAndIcon);
-tree.setHoverBackgroundColor(QColor("#e7f4ed"));
-tree.setSelectedBackgroundColor(QColor("#b9d9f1"));
-tree.setVisualStateAnimationDuration(150);
-```
-
-`NodeOnly` 从节点内容左侧开始，`NodeAndIcon` 从当前节点图标格左侧开始，`FullWidth` 覆盖整行。背景在分支图标下方绘制，不遮住图标；行控件需要保持透明，才能看到其下方的状态背景。默认启用内置背景，状态颜色不会延伸到间距。
-
-`setVisualStateCornerRadius()` 同时设置 hover 和 selected 背景圆角，滚动裁剪不会改变完整背景的圆角形状。`tree_view` 示例默认演示 6 像素圆角，可用 `--corner-radius 0` 切回直角，或在“状态”工具栏调整半径。
-
-也可由节点控件自行绘制背景。树与列表使用同一接口：在 `WidgetAdapter::visualStateChanged(type, widget, index)` 中读取 `tree.visualState(index)`，把独立的 `hovered`、`selected` 标志交给节点控件，然后调用 `update()`。节点控件在 `paintEvent()` 中画自己的背景；回调也会在控件复用并绑定新节点后触发。两种状态可以同时为真，颜色优先级由业务决定。框架状态背景的接口用法见 [examples/list_capabilities/08_visual_states/example.cpp](../examples/list_capabilities/08_visual_states/example.cpp)。
-
-状态背景默认开启，只绘制 item 范围，不覆盖任何行间距；节点上下间距 role 仅影响布局。自绘行背景时，先调用 `setVisualStateBackgroundVisible(false)` 关闭框架背景。
-
-节点控件按 `hoverProgress`、`selectedProgress` 混合背景颜色即可得到进入和离开动画；`setVisualStateAnimationDuration()` 控制过渡时间。
-
-`tree.setHoverBackgroundColor(QColor("#e7f4ed"))` 和 `tree.setSelectedBackgroundColor(QColor("#b9d9f1"))` 分别设置业务控件可读取的颜色；更改后可见节点会收到重绘通知。
-
-## 行控件里的事件处理
-
-行控件中的按钮如果只在 hover 或 selected 时显示，可以在 `visualStateChanged()` 中读取当前状态，并让行控件控制按钮显隐：
-
-```cpp
-void ItemAdapter::visualStateChanged(viv::WidgetType type,
-                                     QWidget *widget,
-                                     const QModelIndex &index)
-{
-    Q_UNUSED(type);
-    auto *row = qobject_cast<ItemRowWidget *>(widget);
-    if (!row || !index.isValid())
-        return;
-
-    const auto state = view->visualState(index);
-    row->setActionsVisible(state.hovered || state.selected);
-}
-```
-
-按钮的 `clicked` 信号应在行控件构造时只连接一次。`bindWidget()` 每次控件创建或复用时更新行控件保存的索引和业务数据，按钮回调再读取这份当前绑定：
-
-```cpp
-class ItemRowWidget : public QWidget
-{
-    Q_OBJECT
-
-public:
-    void bindNode(const ItemData &item, const QModelIndex &index)
-    {
-        m_item = item;
-        m_index = QPersistentModelIndex(index);
-    }
-
-    void unbindNode()
-    {
-        m_item = {};
-        m_index = {};
-        setActionsVisible(false);
-    }
-
-    void setActionsVisible(bool visible) { ui.actionPanel->setVisible(visible); }
-
-signals:
-    void actionTriggered(ItemAction action,
-                         const ItemData &item,
-                         const QPersistentModelIndex &index);
-
-private:
-    void connectButtons()
-    {
-        connect(ui.btnStart, &QToolButton::clicked, this, [this] {
-            if (m_index.isValid())
-                emit actionTriggered(ItemAction::Primary, m_item, m_index);
-        });
-    }
-
-    ItemData m_item;
-    QPersistentModelIndex m_index;
-};
-```
-
-`QPersistentModelIndex` 表示模型中的项目身份。模型插入、删除、移动或排序时，它会跟随原项目更新；项目被删除后会自动失效，所以点击前仍要检查 `isValid()`。它不会自动知道某个控件当前绑定了哪个项目，正确性来自视图的生命周期：复用前调用 `unbindWidget()`，重新使用时调用 `bindWidget()`，行控件在这两个阶段清空或更新自己的 `m_index`。
-
-不要在 `bindWidget()` 中为每次绑定重新连接按钮并捕获当时的 `QModelIndex`：控件复用后旧的 lambda 仍然存在，可能拿到旧项目。应捕获行控件自身，在点击时读取当前保存的 persistent index。动作处理器可以从该 index 读取最新模型数据，也可以同时使用信号传出的业务快照 `item`：
-
-```cpp
-connect(row, &ItemRowWidget::actionTriggered,
-        this, &ItemAdapter::itemActionTriggered);
-
-void ItemAdapter::itemActionTriggered(ItemAction action,
-                                      const ItemData &item,
-                                      const QPersistentModelIndex &index)
-{
-    if (!index.isValid())
-        return;
-    // index.data(...) 是当前模型值；item 是 bind 时保存的业务快照。
-}
-```
-
-如果隐藏按钮后仍要保留它占用的布局空间，可给按钮容器设置 `QSizePolicy::setRetainSizeWhenHidden(true)`；如果希望行内容收缩，则直接使用 `setVisible()` 即可。
-
-## 节点间距
-
-创建节点时由应用根据深度或业务属性计算间距，写入第 0 列的 `NodeRowSpacingRole`（两种树视图均为 `Qt::UserRole + 0x100`）：
-
-```cpp
-const int spacing = depth == 0 ? 18 : depth == 1 ? 4 : 0;
-item->setData(spacing, viv::VirtualTreeView::NodeRowSpacingRole);
-item->setData(8, viv::VirtualTreeView::NodeRowSpacingAboveRole); // 节点上方
-// 自定义模型在 data(index, NodeRowSpacingRole) 中返回节点保存的间距。
-tree.setRowSpacing(6); // 节点未提供间距时的回退值
-```
-
-`NodeRowSpacingBelowRole` 是原 `NodeRowSpacingRole` 的明确别名（下方间距），`NodeRowSpacingAboveRole` 为 `Qt::UserRole + 0x101`（上方间距）。相邻可见节点间距为前一节点下方值加后一节点上方值；下方缺失/无效/负值回退到 `rowSpacing()`，上方缺失/无效/负值为 0。第一可见节点上方和末节点下方不额外留白。修改任一 role 并发送 dataChanged 后更新布局。
-
-仅在第二个及后续根节点上方留白，创建节点时设置 `depth == 0 && rootRow > 0 ? 12 : 0` 到 `NodeRowSpacingAboveRole`，并将默认及节点下方间距设为 0。展开后，留白仍位于根节点之前。节点移动或更换显示根不会改写模型保存的间距。旧的按深度、同级和层级统一设置接口已移除。
-
-分割线默认显示，绘制范围默认为 `FullWidth`（整行）。`NodeOnly` 仅从上方节点的内容区域左侧开始，`NodeAndIcon` 从该节点的图标格左侧开始；三种模式都绘制连续横线，起点随上方节点深度变化。间距为 0 时绘制单条行线，有间距时在留白上下边缘绘制，范围设置对两者都生效。`setRowGridLinesVisible(false)` 可隐藏这些线。默认间距为空白；自定义间距控件使用列表相同的 `setRowSpacingFactory()`；创建与绑定回调收到的是上方节点的索引，可用 `tree.itemDepth(index)` 区分深度。控件按可见范围创建，并在同一深度内复用。
-
-## 不同父节点使用不同控件
-
-`widgetType(index)` 决定行控件进入哪个复用池。把父节点的类别存在模型角色中，就能让一组子节点显示文本、另一组子节点显示进度；父节点本身仍使用文本控件。下面沿用上面的 `model`，以 `MixedTreeAdapter` 替换 `TreeAdapter`：
-
-```cpp
-#include <QProgressBar>
-
-class MixedTreeAdapter : public viv::WidgetAdapter
-{
-public:
-    viv::WidgetType widgetType(const QModelIndex &index) const override
-    {
-        return index.parent().data(Qt::UserRole).toInt() == 1 ? 1 : 0;
-    }
-
-    QWidget *createWidget(viv::WidgetType type, QWidget *parent) override
-    {
-        if (type == 1) {
-            auto *bar = new QProgressBar(parent);
-            bar->setRange(0, 100);
-            return bar;
-        }
-        return new QLabel(parent);
-    }
-
-    void bindWidget(viv::WidgetType type, QWidget *widget, const QModelIndex &index) override
-    {
-        if (type == 1)
-            static_cast<QProgressBar *>(widget)->setValue(index.data().toInt());
-        else
-            static_cast<QLabel *>(widget)->setText(index.data().toString());
-    }
-
-    QSize estimatedSize(viv::WidgetType, const QModelIndex &) const override { return QSize(300, 26); }
-};
-
-auto *tasks = new QStandardItem(QStringLiteral("任务"));
-tasks->setData(1, Qt::UserRole);
-tasks->appendRow(new QStandardItem(QStringLiteral("65")));
-model.appendRow(tasks);
-
-MixedTreeAdapter mixedAdapter;
-viv::VirtualTreeView mixedTree;
-mixedTree.setAdapter(&mixedAdapter);
-mixedTree.setUniformItemHeight(26);
-mixedTree.setModel(&model);
-mixedTree.expand(model.index(1, 0));
-mixedTree.show();
-```
-
-示例中根层行的 `parent()` 无效，因此仍分到文本池。类型应由稳定的模型数据决定；控件离屏后会在同类型节点之间复用，`bindWidget()` 必须完整刷新内容，与旧节点有关的任务在 `unbindWidget()` 中清理。
-
-`bindWidget(type, widget, index)`、`unbindWidget(type, widget, index)` 和 `visualStateChanged(type, widget, index)` 都传入控件创建时保存的 `WidgetType`，无需在回调中重新判断。`estimatedSize(type, index)` 的类型由 `widgetType(index)` 提供。类型不是自动生成的树深度；如果需要区分层级，可以在 `widgetType()` 中按 `view->itemDepth(index)` 返回不同类型。旧适配器的这四个重写函数需要同步增加首个 `WidgetType` 参数。
-
-## 自定义分支图标
-
-`setIndentLeafItems(bool)` 默认 `true`，所有行保留自己的 branch 格。设置为 `false` 时，同一父项下如果所有子项都没有子节点，它们省略自己的 branch 格，内容直接对齐父项内容；如果同级中任意一项有子节点，所有同级项仍保留 branch 格并相互对齐。判断依据是能否展开，而不是当前展开/收起状态；根层全部为叶子时内容从左侧开始。隐藏 branch 图标不会改变这个规则。背景、分割线和行间距分割线随内容对齐，自定义 renderer 不会收到被省略的本行 branch 格。示例工具栏的“缩进叶子项”可以切换此设置。
-
-默认分支指示器由视图绘制，行控件无需自己画缩进。只替换展开/收起图标时，可以直接设置：
-
-```cpp
-tree.setExpandedBranchIcon(QIcon(":/icons/expanded.svg"));
-tree.setCollapsedBranchIcon(QIcon(":/icons/collapsed.svg"));
-tree.setBranchIconSize(12);
-tree.setBranchIconColor(QColor("#64748b"));
-```
-
-两种状态独立设置，传入空 `QIcon()` 恢复对应的默认三角。大小以逻辑像素计，默认 8，最小为 1；绘制时限制在当前 branch 格和行高内，左侧保留 4 像素边距，点击区域仍为整个 branch 格。颜色同时作用于默认三角和替换图标：替换图标按透明度染色，传入无效 `QColor()` 恢复图标原色，默认三角则使用调色板的 `WindowText`。
-
-这些设置仅作用于未安装自定义 renderer 的 `VirtualTreeView`。连接线、叶子标记、按节点改变装饰等其他类型仍由用户实现 `BranchIndicatorRenderer`；安装 renderer 后它完全接管分支绘制。下面用文本绘制展开和折叠标记：
-
-```cpp
-#include <virtualitemviews/branchindicator.h>
-#include <QPainter>
-
-class TextBranches : public viv::BranchIndicatorRenderer
-{
-public:
-    void paintBranch(QPainter *painter, const viv::BranchIndicatorState &state,
-                     const QModelIndex &, const QRect &rect) const override
-    {
-        if (state.adjoinsItem && state.hasChildren)
-            painter->drawText(rect, Qt::AlignCenter, state.isExpanded ? "-" : "+");
-    }
-};
-
-tree.setBranchIndicatorRenderer(new TextBranches, true); // tree 接管所有权
-```
-
-`branchIcon(state, index)` 也可按展开状态返回 `QIcon`；调用 `setBranchIndicatorRenderer(nullptr)` 恢复默认样式。树的拖放落点与普通列表不同，见 [选择与拖放](interaction.md)。
+# VirtualTreeView 功能示例源码
+
+`VirtualTreeView` 使用标准层级模型与 `WidgetAdapter`，每个节点物化一个真实行控件。只把展开路径中的节点映射为布局行，折叠的子树不创建控件。以下路径均相对于仓库根目录，每个目录可独立复制，统一由 `tree_capabilities` 进程演示。
+
+| 编号 | 能力 | 源码相对路径 |
+| --- | --- | --- |
+| 01 | 基础接入 | [examples/tree_capabilities/01_basic/example.cpp](../examples/tree_capabilities/01_basic/example.cpp) |
+| 02 | 组合行控件与数据回写 | [examples/tree_capabilities/02_row_widgets/example.cpp](../examples/tree_capabilities/02_row_widgets/example.cpp) |
+| 03 | 不同节点类型与复用池 | [examples/tree_capabilities/03_widget_types/example.cpp](../examples/tree_capabilities/03_widget_types/example.cpp) |
+| 04 | 节点结构体与绑定上下文 | [examples/tree_capabilities/04_binding_context/example.cpp](../examples/tree_capabilities/04_binding_context/example.cpp) |
+| 05 | 层级模型更新 | [examples/tree_capabilities/05_model_updates/example.cpp](../examples/tree_capabilities/05_model_updates/example.cpp) |
+| 06 | 固定、首项测量与动态行高 | [examples/tree_capabilities/06_item_heights/example.cpp](../examples/tree_capabilities/06_item_heights/example.cpp) |
+| 07 | 展开收起与过渡动画 | [examples/tree_capabilities/07_expansion/example.cpp](../examples/tree_capabilities/07_expansion/example.cpp) |
+| 08 | 切换显示根与相对深度 | [examples/tree_capabilities/08_root_index/example.cpp](../examples/tree_capabilities/08_root_index/example.cpp) |
+| 09 | 分支格宽与叶子对齐 | [examples/tree_capabilities/09_indentation/example.cpp](../examples/tree_capabilities/09_indentation/example.cpp) |
+| 10 | 内置分支图标配置 | [examples/tree_capabilities/10_branch_icons/example.cpp](../examples/tree_capabilities/10_branch_icons/example.cpp) |
+| 11 | 自定义分支渲染器 | [examples/tree_capabilities/11_branch_renderer/example.cpp](../examples/tree_capabilities/11_branch_renderer/example.cpp) |
+| 12 | 节点间距与分割线 | [examples/tree_capabilities/12_row_spacing/example.cpp](../examples/tree_capabilities/12_row_spacing/example.cpp) |
+| 13 | 状态背景、范围与圆角 | [examples/tree_capabilities/13_visual_states/example.cpp](../examples/tree_capabilities/13_visual_states/example.cpp) |
+| 14 | 状态关联内容 | [examples/tree_capabilities/14_state_content/example.cpp](../examples/tree_capabilities/14_state_content/example.cpp) |
+| 15 | 选择、当前项与键盘导航 | [examples/tree_capabilities/15_selection/example.cpp](../examples/tree_capabilities/15_selection/example.cpp) |
+| 16 | 行事件、正确索引与几何查询 | [examples/tree_capabilities/16_item_events/example.cpp](../examples/tree_capabilities/16_item_events/example.cpp) |
+| 17 | 大树滚动、定位与可见映射 | [examples/tree_capabilities/17_scrolling/example.cpp](../examples/tree_capabilities/17_scrolling/example.cpp) |
+| 18 | 可见行映射与控件复用 | [examples/tree_capabilities/18_virtualization/example.cpp](../examples/tree_capabilities/18_virtualization/example.cpp) |
+| 19 | 顶部底部冻结与区域分隔线 | [examples/tree_capabilities/19_frozen_rows/example.cpp](../examples/tree_capabilities/19_frozen_rows/example.cpp) |
+| 20 | 节点拖放与手动起拖 | [examples/tree_capabilities/20_drag_drop/example.cpp](../examples/tree_capabilities/20_drag_drop/example.cpp) |
+| 21 | 层级排序与递归过滤 | [examples/tree_capabilities/21_sorting_filtering/example.cpp](../examples/tree_capabilities/21_sorting_filtering/example.cpp) |
+| 22 | 业务驱动的延迟加载 | [examples/tree_capabilities/22_lazy_loading/example.cpp](../examples/tree_capabilities/22_lazy_loading/example.cpp) |
+| 23 | 屏外保留与编辑生命周期 | [examples/tree_capabilities/23_pinning/example.cpp](../examples/tree_capabilities/23_pinning/example.cpp) |
+| 24 | 统计与生命周期日志 | [examples/tree_capabilities/24_diagnostics/example.cpp](../examples/tree_capabilities/24_diagnostics/example.cpp) |
+| 25（可选） | 平滑滚动（可选） | [examples/tree_capabilities/25_smooth_scrolling/example.cpp](../examples/tree_capabilities/25_smooth_scrolling/example.cpp) |
+
+先看各章的 `Example::setupExample()`，再看本目录的 model、adapter 和节点控件；`setupUi()` 只创建页面布局。普通数据直接创建 `QStandardItemModel` 填充，不为简单数据额外派生模型类。每个目录都有英文代码注释和独立运行入口，构建与启动见 [examples/tree_capabilities/README.md](../examples/tree_capabilities/README.md)。
+
+## 节点身份与生命周期
+
+模型 `row()` 只在同一 parent 下有意义，完整 `QModelIndex` 才能定位层级节点；可见映射行和 `itemDepth()` 另有用途，见第 08、17、18 章。`setRootIndex()` 只改变显示范围，节点索引仍属于原模型。结构变化使用 Qt model 信号，普通更新无需重新设置模型。
+
+节点可通过 `kDefaultItemDataRole` 存完整结构体，bind 回调直接取 `context.rowData`；不同层级可用不同结构体和 `WidgetType`，见第 04 章。持久索引不会自动跟随控件复用，必须每次绑定更新、解绑清空；行内事件的两种正确写法见第 14、16 章。
+
+## 绘制与交互
+
+默认 hover／selected 背景在透明行控件和 branch 图标下方绘制。圆角、颜色、范围和动画直接配置函数，见第 13 章；状态不覆盖行间距。分支格宽由 `setIndentation()` 控制，默认图标大小、颜色、替换和隐藏见第 10 章；只有连接线等完全自定义装饰才需要第 11 章的 renderer。
+
+展开动画默认关闭，第 07 章显式启用；冻结行情况下使用淡入淡出。树只提供插入线／目标框拖放，手动起拖和模型移动责任见第 20 章。业务异步加载、节点保留和诊断分别见第 22–24 章。

@@ -1,0 +1,30 @@
+# 03 不同节点类型与复用池
+
+节点类型：分组用文本，叶子用进度条，复用池按 WidgetType 隔离。
+
+源码相对路径：`examples/tree_capabilities/03_widget_types/example.cpp`。
+
+`widgetType()` 决定复用池，不必等同于树深度。`bindWidget()`、`unbindWidget()` 收到的是创建控件时存储的类型；`context.depth` 提供相对于显示根的深度。
+
+先看 `Example::setupExample()` 中的视图配置和信号连接，再看本目录的 adapter、model 和节点控件。`setupUi()` 仅创建页面布局，hover／selected 背景由框架绘制。
+
+运行 `tree_capabilities --example 3` 进入本章。复制本目录即可使用，不依赖其他能力目录或 `examples/common`。独立入口如下，将 `example.cpp` 一起编译并链接 VirtualItemViews 与 Qt Widgets：
+
+```cpp
+#include "example.h"
+#include <QApplication>
+#include <QWidget>
+
+int main(int argc, char **argv)
+{
+    QApplication app(argc, argv);
+    QWidget *page = tree_widget_types::createExample();
+    page->resize(980, 680);
+    page->show();
+    const int result = app.exec();
+    delete page;
+    return result;
+}
+```
+
+[全部树功能](../README.md)
