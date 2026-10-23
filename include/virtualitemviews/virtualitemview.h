@@ -13,6 +13,7 @@
 #include <QHash>
 #include <QItemSelectionModel>
 #include <QList>
+#include <QPair>
 #include <QPersistentModelIndex>
 #include <QPointer>
 #include <QRegion>
@@ -158,8 +159,8 @@ public:
     Q_ENUM(SelectionMode)
 
     /// Which part of an item gets selected: the item, or its whole row. There is
-    /// deliberately no SelectColumns: rows are the materialized unit, and a
-    /// column has no selection gesture of its own.
+    /// deliberately no SelectColumns: table header selection is configured separately
+    /// from body gestures through VirtualTableView.
     enum class SelectionBehavior {
         SelectItems,
         SelectRows,
@@ -168,6 +169,7 @@ public:
 
     void setSelectionMode(SelectionMode mode);
     SelectionMode selectionMode() const { return m_selectionMode; }
+    /// Tables use the same row/cell choice for hover and selected visual states.
     void setSelectionBehavior(SelectionBehavior behavior);
     SelectionBehavior selectionBehavior() const { return m_selectionBehavior; }
 
@@ -233,8 +235,8 @@ public:
     /// the drop target reported; Qt::IgnoreAction when nothing was dragged.
     /// The preview is anchored at the matching mouse press, or the current cursor.
     Qt::DropAction startDrag(const QModelIndex &index = QModelIndex());
-    /// Starts with a business-supplied preview. An empty previewRect captures the
-    /// whole chosen widget; pinning and MIME still use the drag source index.
+    /// Starts with optional preview overrides; no widget/rectangle uses the default view preview.
+    /// An explicit widget with an empty rectangle is captured whole; pinning and MIME use the source index.
     Qt::DropAction startDrag(const QModelIndex &index, const DragOptions &options);
 
     /// Draws the drop indicator (a line between rows, or a frame around the item
@@ -311,6 +313,10 @@ public:
     /// Gap below a row; the last row has no trailing gap. Zero disables it.
     virtual void setRowSpacing(int pixels);
     int rowSpacing() const { return m_rowSpacing; }
+    /// Background of row gaps. An invalid color preserves the default palette behavior.
+    /// The getter returns the configured color, including an invalid default.
+    virtual void setSpacingBackgroundColor(const QColor &color);
+    QColor spacingBackgroundColor() const { return m_spacingBackgroundColor; }
     /// Optional content for visible gaps. The binder refreshes a reused widget.
     void setRowSpacingFactory(RowSpacingFactory factory, RowSpacingBinder binder = {});
 
@@ -566,10 +572,19 @@ protected:
     virtual void refreshVisualState(const QModelIndex &index);
     /// Re-evaluates the index under the stationary pointer after scrolling.
     void refreshHoveredIndex();
+    /// Retains the current hover identity during view-specific pointer gestures.
+    virtual bool isHoverTrackingLocked() const { return false; }
+    /// Resolves normal hover, including view-specific decorations outside the viewport.
+    virtual QModelIndex hoverIndexAtGlobalPosition(const QPoint &position) const;
+    /// Keeps subsequent keyboard range selection anchored to an external selection gesture.
+    void setSelectionAnchor(const QModelIndex &index) { m_selectionAnchor = index; }
     /// Enables move/hover delivery for an item widget and its current children.
     void prepareHoverTracking(QWidget *widget);
-    /// Applies per-index interpolation to a row or cell's target state.
-    VisualState animatedVisualState(const QModelIndex &index, bool hovered, bool selected) const;
+    /// Separates item selection from complete row/column selection in the headers.
+    enum class VisualStateChannel { Item, RowHeader, ColumnHeader };
+    /// Applies per-index interpolation within the requested visual state channel.
+    VisualState animatedVisualState(const QModelIndex &index, bool hovered, bool selected,
+                                   VisualStateChannel channel = VisualStateChannel::Item) const;
     void clearVisualTransition(const QModelIndex &index);
     void clearVisualTransitionsForRow(const QModelIndex &index);
     void clearVisualTransitions();
@@ -598,7 +613,8 @@ protected:
     void rebindItemsInModelRange(const QModelIndex &parent, int first, int last);
     /// Indexes a drag started on \a dragIndex hands to the model's `mimeData()`: the selected,
     /// drag-enabled indexes when the dragged item is part of the selection (column for column -
-    /// a row selection carries the whole row, like Qt), otherwise just \a dragIndex. Kernel API:
+    /// a row selection carries the whole row, like Qt). Otherwise SelectRows carries the
+    /// dragged row's drag-enabled columns; SelectItems carries just \a dragIndex. Kernel API:
     /// a real drag (QDrag::exec) cannot run offscreen, so subclasses and tests use this.
     QModelIndexList dragSourceIndexes(const QModelIndex &dragIndex) const;
     /// Default screenshot widget for a drag of \a index.
@@ -612,6 +628,10 @@ protected:
     /// table cuts the row widget down to the dragged cell), so the drag preview shows what the
     /// drop would move.
     virtual QRect dragPixmapRect(const QModelIndex &index) const;
+    /// Captures the default preview in source-widget coordinates. Derived views may
+    /// include decorations outside that widget's child hierarchy. An explicit
+    /// DragOptions::previewWidget uses that widget's own screenshot instead.
+    virtual QPixmap grabDragPreview(QWidget *sourceWidget, const QRect &capture);
     /// Identity used when checking whether a move drops onto its source or descendant.
     virtual QModelIndex dragNodeIndex(const QModelIndex &index) const;
     /// Removes the rows a finished drag dragged (see setMoveRemovesSourceRows()). Parents are
@@ -654,6 +674,8 @@ protected:
     virtual void clearDragFeedback() {}
     /// Refreshes the current accepted target after a presentation setting changes.
     void refreshDragFeedback();
+    /// Positions and clips the active indicator to the viewport, above view-owned overlays.
+    void raiseDropIndicator() const;
 
     // -- kernel API for subclasses -------------------------------------------
     LayoutPolicy *layoutPolicy() const { return m_layout; }
@@ -830,7 +852,8 @@ private:
     void sampleVisualTransition(VisualTransition &transition) const;
     void stopVisualTransition(VisualTransition &transition);
     void scheduleVisualStateRefresh(const QPersistentModelIndex &index);
-    mutable QHash<QPersistentModelIndex, VisualTransition> m_visualTransitions;
+    using VisualTransitionKey = QPair<QPersistentModelIndex, int>;
+    mutable QHash<VisualTransitionKey, VisualTransition> m_visualTransitions;
     QSet<QPersistentModelIndex> m_pendingVisualRefreshes;
     bool m_visualRefreshScheduled = false;
     int m_visualStateAnimationDuration = 180;
@@ -868,6 +891,7 @@ private:
     RowSpacingBinder m_rowSpacingBinder;
     quint64 m_rowSpacingStateSerial = 0;
     int m_rowSpacing = 0;
+    QColor m_spacingBackgroundColor;
     PaneSeparatorStyle m_itemPaneSeparatorStyle;
     ScrollAnchor m_pendingAnchor;
     bool m_anchorPending = false;
@@ -911,6 +935,7 @@ private:
     /// Retains an accepted target while appearance settings hide its indicator.
     bool m_dropIndicatorTargetValid = false;
     QWidget *m_dropIndicator = nullptr;
+    QRect m_dropIndicatorViewportRect;
     QPersistentModelIndex m_dragSourcePin;
     QTimer *m_dragAutoscrollTimer = nullptr;
     int m_dragAutoscrollDelta = 0;

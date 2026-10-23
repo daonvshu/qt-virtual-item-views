@@ -108,11 +108,18 @@ public:
     // -- headers -------------------------------------------------------------
     HeaderGeometry *horizontalHeaderGeometry() const { return m_columns; }
     HeaderGeometry *verticalHeaderGeometry() const { return m_rowHeaders; }
-    /// Takes ownership of \a header; nullptr selects the default LabelHeaderView.
+    /// Takes ownership of \a header; nullptr selects the default VirtualHeaderView.
     void setHorizontalHeader(HeaderViewInterface *header);
     HeaderViewInterface *horizontalHeader() const { return m_horizontalHeader; }
     void setVerticalHeader(HeaderViewInterface *header);
     HeaderViewInterface *verticalHeader() const { return m_verticalHeader; }
+    /// Takes ownership of the widget at the top-left header intersection.
+    /// Replacing it hides and schedules deletion of the previous widget.
+    /// nullptr restores the default widget, styled like the built-in headers.
+    /// The view sizes it to the row-header width and column-header height,
+    /// and shows it only while both header strips are shown.
+    void setHeaderCornerWidget(QWidget *widget);
+    QWidget *headerCornerWidget() const { return m_headerCornerWidget.data(); }
     void setHorizontalHeaderVisible(bool visible);
     bool isHorizontalHeaderVisible() const { return m_horizontalHeaderVisible; }
     void setVerticalHeaderVisible(bool visible);
@@ -128,6 +135,38 @@ public:
     int headerHeight() const { return m_headerHeight; }
     void setVerticalHeaderWidth(int width);
     int verticalHeaderWidth() const { return m_verticalHeaderWidth; }
+
+    /// Shows built-in header base backgrounds, including pane clones and the default corner.
+    /// On by default. False exposes the parent background while retaining state layers,
+    /// text and separators. Convenience setter for both installed headers.
+    /// The getter reports the horizontal header; configure each header directly for axis styles.
+    void setHeaderBackgroundVisible(bool visible);
+    bool headerBackgroundVisible() const;
+    /// Flat base color for built-in headers, pane clones and the default corner.
+    /// Invalid restores native panels. Background visibility takes precedence;
+    /// hover/selection layers and explicit gap colors remain independent.
+    /// Convenience setter for both axes; the getter reports the horizontal header.
+    void setHeaderBackgroundColor(const QColor &color);
+    QColor headerBackgroundColor() const;
+
+    /// Click a column header to select its complete column. Off by default.
+    /// While enabled, a plain header click selects instead of requesting a sort.
+    /// Body selection gestures and the visual state scope are unchanged.
+    void setHorizontalHeaderSelectionEnabled(bool enabled);
+    bool isHorizontalHeaderSelectionEnabled() const { return m_horizontalHeaderSelectionEnabled; }
+    /// Click a row header to select its complete row. On by default.
+    /// Both axes respect SelectionMode, Ctrl/Shift and model item flags.
+    void setVerticalHeaderSelectionEnabled(bool enabled);
+    bool isVerticalHeaderSelectionEnabled() const { return m_verticalHeaderSelectionEnabled; }
+    /// Shows built-in header hover/selection backgrounds for one axis. On by default.
+    /// Independent of body backgrounds, header click selection and state queries.
+    void setHeaderVisualStateBackgroundVisible(Qt::Orientation orientation, bool visible);
+    bool headerVisualStateBackgroundVisible(Qt::Orientation orientation) const;
+    /// Row headers require a complete row; column headers require a complete column.
+    /// Row headers also follow row-scope hover, including its animation.
+    /// Both axes fade selection with the view's visual state duration and easing curve.
+    /// Row section numbers refer to view rows, including flattened tree rows.
+    VisualState headerVisualState(Qt::Orientation orientation, int logicalIndex) const;
 
     // -- header drag gestures ------------------------------------------------
     /// Drag a column to a new position (the column header's reorder gesture). **Off by
@@ -160,9 +199,8 @@ public:
     bool isVerticalHeaderDragEnabled() const { return m_verticalHeaderDragEnabled; }
 
     /// Drag a section edge to resize it - the column width, or the row height when the
-    /// switch is about the row-number strip. **On by default** (a header is expected to be
-    /// resizable, like QHeaderView's Interactive mode); switching it off leaves the size
-    /// APIs untouched and only removes the gesture (and the resize cursor).
+    /// switch is about the row-number strip. Both gestures are off by default;
+    /// enabling one adds its resize handle and cursor. The size APIs are unaffected.
     void setColumnResizeEnabled(bool enabled);
     bool isColumnResizeEnabled() const { return m_columnResizeEnabled; }
     void setVerticalHeaderResizeEnabled(bool enabled);
@@ -177,6 +215,17 @@ public:
     /// Blank pixels between visible columns, including pane boundaries.
     void setColumnSpacing(int pixels);
     int columnSpacing() const { return m_columns ? m_columns->sectionSpacing() : 0; }
+    /// Background of body row and column gaps; invalid restores palette defaults.
+    void setSpacingBackgroundColor(const QColor &color) override;
+    /// Extends whole-row hover/selection backgrounds across column gaps. Default true.
+    /// SelectItems stays cell-local; row gaps and header gaps are never covered.
+    void setVisualStateThroughColumnSpacing(bool enabled);
+    bool visualStateThroughColumnSpacing() const { return m_visualStateThroughColumnSpacing; }
+    /// Background of gaps in both widget headers, including frozen panes.
+    /// Invalid follows the header base background setting; custom renderers own their painting.
+    /// Convenience setter for both axes; the getter reports the horizontal header.
+    void setHeaderSpacingBackgroundColor(const QColor &color);
+    QColor headerSpacingBackgroundColor() const;
     /// Optional content for visible column gaps; the binder refreshes reused widgets.
     void setColumnSpacingFactory(ColumnSpacingFactory factory, ColumnSpacingBinder binder = {});
     void setHeaderColumnSpacingFactory(ColumnSpacingFactory factory, ColumnSpacingBinder binder = {});
@@ -215,6 +264,13 @@ public:
 
     // -- column state (all writes go to HeaderGeometry) -----------------------
     void setColumnWidth(int logicalIndex, int width);
+    /// FitViewport keeps visible column widths plus gaps equal to the viewport width.
+    /// Edge drags compensate on that side using press-time width proportions. Extreme
+    /// viewport sizes relax width limits as needed. The default is Independent.
+    enum class ColumnResizeMode { Independent, FitViewport };
+    Q_ENUM(ColumnResizeMode)
+    void setColumnResizeMode(ColumnResizeMode mode);
+    ColumnResizeMode columnResizeMode() const;
     void setColumnHidden(int logicalIndex, bool hidden);
     bool isColumnHidden(int logicalIndex) const;
     /// Moves \a fromLogicalIndex to the visual position of \a toLogicalIndex.
@@ -239,10 +295,10 @@ public:
     /// Share of the leftover width this column takes: the columns with a factor > 0 split
     /// "viewport width - the widths the other visible columns keep" in proportion to their
     /// factors, so 1 : 2 : 1 makes the third column twice as wide as the first. A factor of
-    /// 0 - the default - is a column that keeps its own width, and a column the user
-    /// drags to a new width becomes fixed again (see HeaderGeometry::
-    /// setSectionStretchFactor(), which is where the widths themselves live: the header
-    /// and the body both read them, so they can never disagree).
+    /// 0 - the default - is a column that keeps its own width. Dragging any column edge
+    /// or calling setColumnWidth() clears all factors and disables last-
+    /// column stretching. Other columns keep their current widths until the application
+    /// sets positive factors again (see HeaderGeometry::setSectionStretchFactor()).
     ///
     /// The columns fill the viewport, so a table whose columns all stretch has nothing to
     /// scroll horizontally. The factors are part of the saved header state; the viewport
@@ -461,21 +517,23 @@ public:
     /// Cell diagnostics (Cell Widget Mode).
     qsizetype materializedCellCount() const { return m_cells.size(); }
     QWidget *cellWidget(const QModelIndex &index) const;
-    /// Whether hover and selection backgrounds are queried per row or per cell.
-    /// This is independent of RowWidgets/CellWidgets materialization.
-    enum class VisualStateScope { Row, Cell };
-    Q_ENUM(VisualStateScope)
-    void setVisualStateScope(VisualStateScope scope);
-    VisualStateScope visualStateScope() const { return m_visualStateScope; }
     /// Paints complete hover/selection backgrounds below transparent row/cell widgets.
-    /// Enabled by default; state backgrounds never cover row or column spacing.
+    /// Enabled by default; row gaps stay clear and column gaps follow visualStateThroughColumnSpacing().
+    /// Hover and selection follow SelectionBehavior, independently of materialization.
     /// Colors and animation use VirtualItemView's visual-state settings.
     virtual void setVisualStateBackgroundVisible(bool visible);
     bool visualStateBackgroundVisible() const { return m_visualStateBackgroundVisible; }
     /// Shared hover/selection radius in logical pixels; negative values become zero.
-    /// Default zero. Set background visibility separately; scope may be Row or Cell.
+    /// Default zero. Applies to row or cell backgrounds according to SelectionBehavior.
+    /// Corners follow the complete row or cell bounds, including offscreen ends.
     void setVisualStateCornerRadius(int radius);
     int visualStateCornerRadius() const { return m_visualStateCornerRadius; }
+    /// Extends the state radius to built-in headers. Enabled by default.
+    /// SelectRows rounds only the row header's left corners; row content joins with square left corners.
+    /// SelectItems rounds all four corners of row headers and cells independently.
+    /// Column headers round all four corners. Hidden header backgrounds leave body corners intact.
+    void setVisualStateCornerRadiusIncludesHeaders(bool enabled);
+    bool visualStateCornerRadiusIncludesHeaders() const { return m_visualStateCornerRadiusIncludesHeaders; }
     VisualState visualState(const QModelIndex &index) const override;
     QModelIndex indexForWidget(const QWidget *widget) const override;
     QModelIndex cellIndexForWidget(const QWidget *widget) const;
@@ -495,10 +553,12 @@ signals:
 protected:
     bool m_visualStateBackgroundVisible = true;
     void paintEvent(QPaintEvent *event) override;
-    /// Paints visible item state layers, excluding row and column spacing.
-    void paintVisualStateBackgrounds(QPainter *painter, const QRect &dirtyRect) const;
+    /// Paints visible item state layers, always excluding row gaps.
+    /// Column gap hosts call with paintColumnSpacing=true; the viewport excludes their bands.
+    virtual void paintVisualStateBackgrounds(QPainter *painter, const QRect &dirtyRect,
+                                            bool paintColumnSpacing = false) const;
     /// Paints one state layer using the configured visibility and corner radius.
-    /// Override for custom shapes; the clip excludes all item spacing.
+    /// Override for custom shapes; the clip includes column gaps only when configured.
     /// Adapter widgets must leave their background transparent.
     virtual void paintStateBackgroundLayer(QPainter *painter, const QRect &extended,
                                           const QRegion &clip,
@@ -507,6 +567,8 @@ protected:
     void paintRoundedStateBackgroundLayer(QPainter *painter, const QRect &extended,
                                           const QRegion &clip, const QColor &color,
                                           int radius) const;
+    /// Whether a row state layer joins a visible row-header background at its left edge.
+    bool rowVisualStateIncludesHeader() const;
     /// Parent whose columns define the shared table schema.
     virtual QModelIndex columnSchemaParent() const;
     virtual bool isColumnSchemaParent(const QModelIndex &parent) const;
@@ -548,6 +610,8 @@ protected:
     void rebindItemsInRange(const QModelIndex &topLeft, const QModelIndex &bottomRight) override;
     void refreshVisualStates() override;
     void refreshVisualState(const QModelIndex &index) override;
+    bool isHoverTrackingLocked() const override;
+    QModelIndex hoverIndexAtGlobalPosition(const QPoint &position) const override;
     QModelIndex indexAt(const QPoint &viewportPos) const override;
     bool canMeasureItem(qsizetype item) const override;
     void afterMaterialize() override;
@@ -561,12 +625,15 @@ protected:
     /// column of the target is -1 when the whole row is the drop unit.
     VirtualItemView::DropTarget resolveDropTarget(const QPoint &viewportPos) const override;
     QRect resolveDropIndicatorRect(const DropTarget &target) const override;
-    /// Cell granularity (SelectionBehavior::SelectItems) previews only the dragged cell: the
-    /// materialized widget is the whole row, so the host the framework placed for that column is
-    /// what the pixmap is cut down to.
+    /// Row selection captures the whole row; cell selection captures the dragged cell.
+    /// In cell-widget mode a row preview uses the visible viewport band.
     QRect dragPixmapRect(const QModelIndex &index) const override;
-    /// Uses the span anchor's cell widget in Cell Widget Mode, otherwise the row widget.
+    /// Cell-widget mode uses the viewport for row selection and the anchor widget for cells.
+    /// Row-widget mode uses the materialized row, cropped by dragPixmapRect() for cell selection.
     QWidget *dragSourceWidget(const QModelIndex &index) const override;
+    /// Captures the composed table, including grid and pane separators, clipped to
+    /// the source widget's viewport, pane and masks.
+    QPixmap grabDragPreview(QWidget *sourceWidget, const QRect &capture) override;
     bool updateDragFeedback(const DropTarget &target, const QPoint &position, Qt::DropAction action,
                             const QList<QPersistentModelIndex> &sources) override;
     void clearDragFeedback() override;
@@ -580,6 +647,10 @@ protected:
     void refreshItemData() override;
 
 private:
+    /// Visible viewport band of a row preview, clipped to its frozen or scrolling pane.
+    QRect rowDragPreviewRect(const QModelIndex &index) const;
+    /// Viewport bands occupied by actual columns, clipped to their owning panes.
+    QRegion columnContentRegion() const;
     /// Current elapsed-time sample, so a fast retarget does not start from a stale tick.
     qreal dragReorderProgress() const;
     /// Repositions widgets, row gaps, state backgrounds and grid lines in one frame.
@@ -613,6 +684,8 @@ private:
     void layoutHeaderWidgets();
     void connectColumnSignals(QAbstractItemModel *model);
     void onColumnsInserted(const QModelIndex &parent, int first, int last);
+    /// Includes inserted cells only in rows whose existing columns are fully selected.
+    void extendRowSelectionForInsertedColumns(const QModelIndex &parent, int first, int last);
     void onColumnsRemoved(const QModelIndex &parent, int first, int last);
     void onColumnsMoved(const QModelIndex &parent, int start, int end,
                         const QModelIndex &destinationParent, int destinationColumn);
@@ -639,10 +712,9 @@ private:
     /// Pane header of the same kind as the installed horizontal header.
     HeaderViewInterface *createHorizontalPaneHeader();
     /// Renderer the view installs for the horizontal header when the application
-    /// does not install one: a LabelHeaderView (a widget header with the built-in
-    /// label-only adapter). See the class comment of LabelHeaderView.
+    /// does not install one: a VirtualHeaderView with its built-in LabelHeaderAdapter.
     HeaderViewInterface *createDefaultHorizontalHeader();
-    /// Same for the row-number strip: a LabelHeaderView(Qt::Vertical) - the same widget
+    /// Same for the row-number strip: a VirtualHeaderView(Qt::Vertical) - the same widget
     /// renderer as the column header, other axis, so it virtualizes (a ten-million-row
     /// uniform table materializes only its window) and supports the same gestures.
     HeaderViewInterface *createDefaultVerticalHeader();
@@ -655,6 +727,17 @@ private:
     /// is not a VirtualHeaderView (a business' own HeaderViewInterface) has no such
     /// switches and keeps its own behaviour.
     void applyHeaderGestureSettings();
+    /// Connects click selection and pointer refresh for an installed or cloned header.
+    void watchHeaderSelection(HeaderViewInterface *header);
+    /// Refreshes the default corner and column-gap hosts after a header appearance change.
+    void refreshHeaderAppearance();
+    /// Handles a completed click without interfering with resize or reorder gestures.
+    void onHeaderSectionClicked(int logicalIndex, Qt::KeyboardModifiers modifiers);
+    /// Builds model ranges for row/column headers using the current visual mapping.
+    QItemSelection headerSelectionRange(Qt::Orientation orientation,
+                                       qsizetype first, qsizetype last) const;
+    /// Repaints materialized sections after hover, selection or color changes.
+    void refreshHeaderVisualStates();
     /// Row-number strip of a frozen row pane (§31 row direction): same kind as the
     /// installed vertical header. Null when the installed one cannot be cloned (a custom
     /// renderer that is not a VirtualHeaderView), in which case the strip stays single.
@@ -683,9 +766,9 @@ private:
     /// the framework-managed column hosts / cells, without running an adapter hook,
     /// creating or recycling widgets (only x changes).
     void updateVisualColumnGeometry();
-    /// Row-number strip that is currently drawing a visual (preview) geometry, or null.
-    /// The frozen band strips are deliberately not asked: their rows stay pinned.
-    VirtualHeaderView *visualRowStrip() const;
+    /// Active preview strip for the pane containing \a row, or null.
+    /// A negative row queries any active row strip, including frozen bands.
+    VirtualHeaderView *visualRowStrip(qsizetype row = -1) const;
     /// Puts every materialized row widget on its visual y - the committed one while no
     /// strip is dragging, which is also how the rows come back after a commit/cancel.
     void updateVisualRowGeometry();
@@ -694,9 +777,13 @@ private:
     void syncColumnSpacingWidgets();
     /// Updates existing column-gap hosts for moving row gaps and horizontal lines.
     void updateColumnSpacingVisualRows();
+    /// Visual row bounds for grid lines; the hidden drag source supplies the
+    /// insertion placeholder's trailing boundary instead of leaving it open.
+    QRect rowGridGeometry(qsizetype row) const;
     void applyGridLineVisibilityToHeaders();
     QColor resolvedVerticalGridLineColor() const;
     QColor resolvedHorizontalGridLineColor() const;
+    QColor resolvedHeaderSpacingBackgroundColor() const;
     /// Column hosts of a row widget (direct children plus the clip host's).
     QList<ColumnHost *> rowColumnHosts(QWidget *rowWidget) const;
     /// Clip containers of a row widget, one per scrolling pane (empty when the
@@ -758,8 +845,8 @@ private:
 
     ListLayout *m_rowLayout = nullptr;
     DropTargetMode m_dropTargetMode = DropTargetMode::BetweenRows;
-    VisualStateScope m_visualStateScope = VisualStateScope::Row;
     int m_visualStateCornerRadius = 0;
+    bool m_visualStateCornerRadiusIncludesHeaders = true;
     HeaderGeometry *m_columns = nullptr;
     /// Compresses the 64-bit horizontal offset into the int-only scroll bar (the
     /// vertical axis has the same mapper in the kernel).
@@ -776,6 +863,7 @@ private:
     /// a pane shows its own columns at its own viewport x, so it needs its own
     /// renderer of the same geometry. The primary pane uses m_horizontalHeader.
     QVector<HeaderViewInterface *> m_paneHeaders;
+    QPointer<QWidget> m_headerCornerWidget;
     /// Framework containers that clip the cell widgets, keyed by
     /// cellClipKey(row pane, column pane) (§43 "advanced panes" + §31 row
     /// direction: several groups scroll independently, so each pane intersection
@@ -793,6 +881,7 @@ private:
     ColumnSpacingBinder m_headerColumnSpacingBinder;
     bool m_verticalSpacingLineThroughRowSpacing = true;
     bool m_horizontalSpacingLineThroughColumnSpacing = true;
+    bool m_visualStateThroughColumnSpacing = true;
     bool m_verticalGridLinesVisible = true;
     bool m_horizontalGridLinesVisible = true;
     QColor m_verticalGridLineColor;
@@ -874,9 +963,16 @@ private:
     /// Opt-in drag gestures (see setColumnDragEnabled() / setVerticalHeaderDragEnabled()).
     bool m_columnDragEnabled = false;
     bool m_verticalHeaderDragEnabled = false;
-    /// Resize gestures, on unless switched off (see setColumnResizeEnabled()).
-    bool m_columnResizeEnabled = true;
-    bool m_verticalHeaderResizeEnabled = true;
+    /// Opt-in resize gestures (see setColumnResizeEnabled()).
+    bool m_columnResizeEnabled = false;
+    bool m_verticalHeaderResizeEnabled = false;
+    bool m_horizontalHeaderSelectionEnabled = false;
+    bool m_verticalHeaderSelectionEnabled = true;
+    bool m_horizontalHeaderVisualStateBackgroundVisible = true;
+    bool m_verticalHeaderVisualStateBackgroundVisible = true;
+    QPersistentModelIndex m_headerSelectionAnchor;
+    QPersistentModelIndex m_headerSelectionCurrent;
+    Qt::Orientation m_headerSelectionAnchorAxis = Qt::Vertical;
     /// Set once the application installed a model of its own: from then on the view never
     /// instantiates the row-drag model, whatever the switch does.
     bool m_applicationModelSeen = false;

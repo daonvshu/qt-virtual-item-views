@@ -44,7 +44,8 @@ struct DragOptions
 {
     /// Uses dragSourceWidget() when null; ownership stays with the caller.
     QWidget *previewWidget = nullptr;
-    /// Widget-local logical pixels; empty captures the whole widget.
+    /// Widget-local logical pixels; empty uses the default view preview when no widget is given,
+    /// or captures the whole explicitly supplied widget.
     /// Nonempty rectangles are clipped to the widget's bounds.
     QRect previewRect;
     /// Anchors the preview at the mouse position by default; false centres it.

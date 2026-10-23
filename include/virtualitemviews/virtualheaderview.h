@@ -1,6 +1,7 @@
 #pragma once
 
 #include <virtualitemviews/global.h>
+#include <virtualitemviews/headergeometry.h>
 #include <virtualitemviews/headerwidgetadapter.h>
 #include <virtualitemviews/headerview.h>
 
@@ -55,6 +56,7 @@ public:
     /// \a orientation must match the HeaderGeometry it is bound to: a horizontal
     /// renderer packs its sections along x, a vertical one along y. Binding the other
     /// axis' geometry is refused (see setGeometryModel()).
+    /// Installs and owns a LabelHeaderAdapter by default; setAdapter() replaces it.
     explicit VirtualHeaderView(Qt::Orientation orientation = Qt::Horizontal,
                                QWidget *parent = nullptr);
     ~VirtualHeaderView() override;
@@ -65,6 +67,7 @@ public:
     void setGeometryModel(HeaderGeometry *geometry) override;
     HeaderGeometry *geometryModel() const override { return m_geometry; }
     QWidget *headerWidget() override { return this; }
+    const QWidget *headerWidget() const override { return this; }
     Qt::Orientation orientation() const override { return m_orientation; }
     void setLabelModel(QAbstractItemModel *model) override;
     QAbstractItemModel *labelModel() const { return m_labelModel; }
@@ -131,12 +134,14 @@ public:
     void setSectionDragEnabled(bool enabled) { m_sectionDragEnabled = enabled; }
     bool isSectionDragEnabled() const { return m_sectionDragEnabled; }
     /// Resize a section by dragging its leading/trailing edge (both axes: column width,
-    /// row height). **On by default** - that is the gesture a header is expected to have
-    /// (QHeaderView's Interactive mode) - and off means the edge is not special any more:
+    /// row height). Off by default. While disabled, the edge is not a resize handle:
     /// the press behaves like one anywhere else in the section, and the resize cursor is
     /// not shown. The size APIs (`setColumnWidth()` / `setRowHeight()`) are unaffected.
     void setSectionResizeEnabled(bool enabled);
     bool isSectionResizeEnabled() const { return m_sectionResizeEnabled; }
+    /// Gives click selection priority over sorting; resizing and dragging stay independent.
+    void setSectionSelectionEnabled(bool enabled) { m_sectionSelectionEnabled = enabled; }
+    bool isSectionSelectionEnabled() const { return m_sectionSelectionEnabled; }
     /// Tells the renderer that the section order does **not** belong to it: a committed
     /// drag then reports where the section would land (sectionMoveRequested()) instead
     /// of moving HeaderGeometry.
@@ -151,6 +156,30 @@ public:
     /// positions can be derived from HeaderGeometry (viewport coordinates).
     void setViewportOrigin(const QPoint &origin) override;
     void setPaneTerminalColumn(int logicalIndex);
+    /// Shows the container fill and built-in section panels. On by default.
+    /// False exposes the parent's background; state layers and separators remain visible.
+    /// Explicit gap colors and custom section painting are independent.
+    void setBackgroundVisible(bool visible) override;
+    bool backgroundVisible() const override { return m_backgroundVisible; }
+    /// Flat container and built-in section base color; invalid restores native panels.
+    /// Background visibility takes precedence; state layers and explicit gaps are independent.
+    void setBackgroundColor(const QColor &color) override;
+    QColor backgroundColor() const override { return m_backgroundColor; }
+    /// Default label color; invalid uses the widget palette. Model ForegroundRole wins.
+    void setForegroundColor(const QColor &color) override;
+    QColor foregroundColor() const override { return m_foregroundColor; }
+    /// Default label alignment; an empty alignment restores centered text.
+    void setTextAlignment(Qt::Alignment alignment) override;
+    Qt::Alignment textAlignment() const override { return m_textAlignment; }
+    /// Additional content insets; negative margins are clamped to zero.
+    void setContentPadding(const QMargins &padding) override;
+    QMargins contentPadding() const override { return m_contentPadding; }
+    /// Uses QWidget font inheritance and notifies this header's pane clones on changes.
+    void setFont(const QFont &font) override;
+    const QFont &font() const override { return QWidget::font(); }
+    /// Background of section gaps only; invalid uses the container's background setting.
+    void setSpacingBackgroundColor(const QColor &color) override;
+    QColor spacingBackgroundColor() const override { return m_spacingBackgroundColor; }
     /// Controls the trailing edge of the built-in section widgets and spacing gaps.
     void setSectionSeparatorsVisible(bool visible);
     bool sectionSeparatorsVisible() const { return m_sectionSeparatorsVisible; }
@@ -179,8 +208,8 @@ public:
     void refreshSectionLabels() override;
 
     // -- adapter / diagnostics ----------------------------------------------
-    void setAdapter(HeaderWidgetAdapter *adapter, bool takeOwnership = false);
-    HeaderWidgetAdapter *adapter() const { return m_adapter; }
+    void setAdapter(HeaderWidgetAdapter *adapter, bool takeOwnership = false) override;
+    HeaderWidgetAdapter *adapter() const override { return m_adapter; }
     WidgetRecycler *recycler() const { return m_recycler; }
 
     /// Sections that currently own a QWidget.
@@ -201,6 +230,12 @@ public:
     int sectionOverscan() const { return m_overscan; }
 
 signals:
+    /// Base/content style changed; derived pane headers and the table's corner follow it.
+    void appearanceChanged();
+    /// A left click completed on the same section without a resize or reorder gesture.
+    void sectionClicked(int logicalIndex, Qt::KeyboardModifiers modifiers);
+    /// Pointer delivery from the header or its section children changed normal hover.
+    void sectionHoverChanged();
     /// Emitted *before* the current adapter is released (and before it is deleted when this
     /// renderer owns it). A collaborator that borrowed `adapter()` - the table's derived
     /// pane renderers do - has to drop its sections here, while the adapter is still alive.
@@ -215,6 +250,8 @@ signals:
     void sectionMoveRequested(int fromVisual, int toVisual);
 
 protected:
+    void changeEvent(QEvent *event) override;
+    bool event(QEvent *event) override;
     void paintEvent(QPaintEvent *event) override;
     void resizeEvent(QResizeEvent *event) override;
     void mousePressEvent(QMouseEvent *event) override;
@@ -226,6 +263,15 @@ protected:
 
 private:
     friend class VirtualTableView;
+    /// Connects a table-owned clone to the installed header's current and future styles.
+    void setAppearanceSource(VirtualHeaderView *source);
+    /// Copies resolved widget defaults and explicit content/base settings without rebinding.
+    void copyAppearanceFrom(const VirtualHeaderView *source);
+    /// Repaints materialized sections and notifies appearance dependents.
+    void notifyAppearanceChanged();
+    /// Table-owned pane gaps can differ from the flat geometry after freezing columns.
+    void setPaneSpacingProvider(std::function<int(int)> provider);
+    std::function<int(int)> m_paneSpacingProvider;
     /// Restricts a row strip to its pane without allocating a per-row filter.
     void setRowPaneRange(int first, int last);
     // -- axis helpers (§45: one renderer, two axes) ---------------------------
@@ -300,6 +346,9 @@ private:
     void beginSectionDrag(int logicalIndex, int pos);
     void updateSectionDrag(int pos);
     void finishSectionDrag(bool commit);
+    /// Ends resizing, pending clicks and reorder previews, then releases our mouse grab.
+    /// Interrupted gestures cancel order changes; already applied widths are retained.
+    void finishPointerInteraction(bool commit);
     /// The index the dragged section would land on, in final-order terms - that is the
     /// `to` argument of moveSection().
     int dragTargetIndex() const;
@@ -347,7 +396,7 @@ private:
     bool showsSection(int logicalIndex) const;
     int sectionAt(const QPoint &pos) const;
     /// Logical section whose leading/trailing edge is under \a pos (or -1).
-    int resizeEdgeAt(const QPoint &pos) const;
+    int resizeEdgeAt(const QPoint &pos, bool *leading = nullptr) const;
     bool isSectionPinned(int logicalIndex) const;
     bool isFiltered(int logicalIndex) const;
 
@@ -374,8 +423,14 @@ private:
     int m_paneTerminalColumn = -1;
     bool m_sectionSeparatorsVisible = true;
     bool m_crossAxisSeparatorVisible = true;
+    bool m_backgroundVisible = true;
+    QColor m_backgroundColor;
+    QColor m_foregroundColor;
+    Qt::Alignment m_textAlignment = Qt::AlignCenter;
+    QMargins m_contentPadding;
     QColor m_sectionSeparatorColor;
     QColor m_crossAxisSeparatorColor;
+    QColor m_spacingBackgroundColor;
     int m_sectionSeparatorWidth = 1;
     int m_crossAxisSeparatorWidth = 1;
     /// Pane cache (§31/§43, P1-8 of the second review): the pane's columns in committed
@@ -443,12 +498,17 @@ private:
     bool m_sortInteractionEnabled = false;
     /// See setSectionDragEnabled(): the reorder gesture is opt-in.
     bool m_sectionDragEnabled = false;
-    /// See setSectionResizeEnabled(): resizing stays on unless it is switched off.
-    bool m_sectionResizeEnabled = true;
+    /// See setSectionResizeEnabled(): resizing is opt-in on both axes.
+    bool m_sectionResizeEnabled = false;
+    bool m_sectionSelectionEnabled = false;
 
+    /// Bottom/right-anchored panes grow from their leading edge.
+    bool m_resizeFromLeadingEdge = false;
     int m_resizeSection = -1;
     int m_resizeStartSize = 0;
-    int m_resizeStartPos = 0;
+    int m_resizeStartGlobalPos = 0;
+    bool m_resizeLeading = false;
+    HeaderGeometry::ResizeSnapshot m_resizeSnapshot;
     int m_pressedSection = -1;
     int m_pressedPos = 0;
     bool m_moved = false;

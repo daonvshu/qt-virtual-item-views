@@ -4,7 +4,7 @@
 #include "../core/rowdragpreview_p.h"
 
 #include <virtualitemviews/virtualheaderview.h>
-#include <virtualitemviews/labelheaderview.h>
+#include <virtualitemviews/headercornerwidget.h>
 #include <virtualitemviews/reorderabletablemodel.h>
 
 #include <virtualitemviews/listlayout.h>
@@ -151,6 +151,11 @@ private:
 class ColumnSpacingHost : public QWidget
 {
 public:
+    struct HorizontalLine {
+        int y;
+        QRect clip;
+    };
+
     explicit ColumnSpacingHost(QWidget *parent = nullptr) : QWidget(parent)
     {
         setObjectName(QStringLiteral("vivColumnSpacingHost"));
@@ -179,6 +184,17 @@ public:
     }
     QWidget *headerContent() const { return m_headerContent; }
     int bodyTop() const { return m_bodyTop; }
+    void setBackgroundColors(const QColor &body, const QColor &header)
+    {
+        m_bodyBackground = body;
+        m_headerBackground = header;
+        update();
+    }
+    void setBodyStatePainter(std::function<void(QPainter *, const QRect &)> paint)
+    {
+        m_bodyStatePainter = std::move(paint);
+        update();
+    }
     void setLineColors(const QColor &vertical, const QColor &horizontal)
     {
         m_verticalColor = vertical;
@@ -207,11 +223,11 @@ public:
         layoutContent();
         update();
     }
-    void setRowGaps(const QVector<QRect> &gaps, const QVector<int> &horizontalLines,
+    void setRowGaps(const QVector<QRect> &gaps, const QVector<HorizontalLine> &horizontalLines,
                     bool verticalThrough)
     {
         m_rowGaps = gaps;
-        m_horizontalLineYs = horizontalLines;
+        m_horizontalLineBands = horizontalLines;
         m_verticalThrough = verticalThrough;
         syncHorizontalLines();
         update();
@@ -224,19 +240,29 @@ protected:
         layoutContent();
     }
 
-    void paintEvent(QPaintEvent *) override
+    void paintEvent(QPaintEvent *event) override
     {
         QPainter painter(this);
-        painter.fillRect(QRect(0, 0, width(), m_bodyTop), palette().brush(QPalette::Button));
-        if (property("vivFillSpacingBackground").toBool())
-            painter.fillRect(QRect(0, m_bodyTop, width(), height() - m_bodyTop),
-                             palette().brush(QPalette::Base));
+        painter.fillRect(QRect(0, 0, width(), m_bodyTop), m_headerBackground.isValid()
+            ? QBrush(m_headerBackground) : palette().brush(QPalette::Button));
+        const QRect body(0, m_bodyTop, width(), height() - m_bodyTop);
+        // Reset underlying item layers before compositing translucent gap colors and states.
+        if (m_bodyBackground.isValid() || property("vivFillSpacingBackground").toBool())
+            painter.fillRect(body, palette().brush(QPalette::Base));
+        if (m_bodyBackground.isValid())
+            painter.fillRect(body, m_bodyBackground);
+        if (m_bodyStatePainter) {
+            painter.save();
+            painter.setClipRect(body, Qt::IntersectClip);
+            m_bodyStatePainter(&painter, event->rect().intersected(body));
+            painter.restore();
+        }
         QVector<QRect> verticalLines;
         appendBodyEdges(verticalLines, 0, m_bodyTop);
         if (m_horizontalGridLinesVisible && m_bodyTop > 0)
             fillHorizontalPixelLines(&painter,
                 {QRect(0, m_bodyTop - m_horizontalWidth, width(), m_horizontalWidth)},
-                m_horizontalWidth, m_horizontalColor);
+                m_horizontalWidth, m_horizontalColor, true);
         int from = m_bodyTop;
         for (const QRect &gap : m_rowGaps) {
             if (!m_verticalThrough && gap.top() > from)
@@ -247,7 +273,7 @@ protected:
         if (from < height())
             appendBodyEdges(verticalLines, from, height() - from);
         if (m_horizontalGridLinesVisible && !m_verticalThrough
-            && m_horizontalLineYs.isEmpty()) {
+            && m_horizontalLineBands.isEmpty()) {
             for (const QRect &gap : m_rowGaps) {
                 for (int y : {gap.top(), gap.bottom()}) {
                     if (y < m_bodyTop || y >= height())
@@ -260,7 +286,7 @@ protected:
                 }
             }
         }
-        fillVerticalPixelLines(&painter, verticalLines, m_verticalWidth, m_verticalColor);
+        fillVerticalPixelLines(&painter, verticalLines, m_verticalWidth, m_verticalColor, true);
     }
 
 private:
@@ -290,7 +316,7 @@ private:
 
     void syncHorizontalLines()
     {
-        const int count = m_horizontalLineYs.size();
+        const int count = m_horizontalLineBands.size();
         while (m_horizontalLines.size() > count)
             delete m_horizontalLines.takeLast();
         while (m_horizontalLines.size() < count) {
@@ -300,12 +326,19 @@ private:
         }
         for (int i = 0; i < count; ++i) {
             QWidget *line = m_horizontalLines.at(i);
-            line->setGeometry(0, m_horizontalLineYs.at(i), width(), m_horizontalWidth);
+            const HorizontalLine &band = m_horizontalLineBands.at(i);
+            line->setGeometry(0, band.y, width(), m_horizontalWidth);
+            const QRect clip = band.clip.intersected(rect()).translated(-line->pos())
+                .intersected(line->rect());
+            if (clip == line->rect())
+                line->clearMask();
+            else
+                line->setMask(QRegion(clip));
             QPalette colors = line->palette();
             colors.setColor(QPalette::Window, m_horizontalColor);
             line->setPalette(colors);
             line->setAutoFillBackground(false);
-            line->show();
+            line->setVisible(!clip.isEmpty());
             line->raise();
         }
     }
@@ -314,13 +347,16 @@ private:
     QWidget *m_headerContent = nullptr;
     QColor m_verticalColor;
     QColor m_horizontalColor;
+    QColor m_bodyBackground;
+    QColor m_headerBackground;
+    std::function<void(QPainter *, const QRect &)> m_bodyStatePainter;
     int m_verticalWidth = 1;
     int m_horizontalWidth = 1;
     bool m_left = true;
     bool m_right = true;
     int m_bodyTop = 0;
     QVector<QRect> m_rowGaps;
-    QVector<int> m_horizontalLineYs;
+    QVector<HorizontalLine> m_horizontalLineBands;
     QVector<QWidget *> m_horizontalLines;
     bool m_verticalThrough = true;
     bool m_horizontalGridLinesVisible = true;
@@ -373,6 +409,11 @@ VirtualTableView::VirtualTableView(QWidget *parent)
             &VirtualTableView::onVerticalSectionResized);
     connect(m_columns, &HeaderGeometry::sortIndicatorChanged, this,
             &VirtualTableView::onSortIndicatorChanged);
+    connect(this, &VirtualItemView::selectionModelChanged, this, [this]() {
+        m_headerSelectionAnchor = QPersistentModelIndex();
+        m_headerSelectionCurrent = QPersistentModelIndex();
+        refreshHeaderVisualStates();
+    });
 }
 
 VirtualTableView::~VirtualTableView()
@@ -439,6 +480,12 @@ void VirtualTableView::ensureHeaders()
     if (!m_horizontalHeader) {
         m_horizontalHeader = createDefaultHorizontalHeader();
         m_ownHorizontalHeader = true;
+        if (auto *widgetHeader = dynamic_cast<VirtualHeaderView *>(m_horizontalHeader)) {
+            connect(widgetHeader, &VirtualHeaderView::adapterAboutToChange, this,
+                    &VirtualTableView::dropDerivedPaneHeaders, Qt::UniqueConnection);
+            connect(widgetHeader, &VirtualHeaderView::adapterChanged, this,
+                    &VirtualTableView::rebuildDerivedPaneHeaders, Qt::UniqueConnection);
+        }
         m_horizontalHeader->setGeometryModel(m_columns);
         m_horizontalHeader->setLabelModel(model());
         m_horizontalHeader->setSortInteractionEnabled(m_sortingEnabled);
@@ -464,6 +511,8 @@ void VirtualTableView::ensureHeaders()
         m_verticalHeader->headerWidget()->setParent(this);
         watchRowStrip(m_verticalHeader);
     }
+    if (!m_headerCornerWidget)
+        m_headerCornerWidget = new HeaderCornerWidget(this);
     applyHeaderAnimationSettings();
     applyHeaderGestureSettings();
 }
@@ -571,6 +620,34 @@ void VirtualTableView::setVerticalHeaderVisible(bool visible)
     relayout();
 }
 
+void VirtualTableView::setHeaderBackgroundVisible(bool visible)
+{
+    ensureHeaders();
+    const QPointer<VirtualTableView> self(this);
+    m_horizontalHeader->setBackgroundVisible(visible);
+    if (self)
+        m_verticalHeader->setBackgroundVisible(visible);
+}
+
+bool VirtualTableView::headerBackgroundVisible() const
+{
+    return !m_horizontalHeader || m_horizontalHeader->backgroundVisible();
+}
+
+void VirtualTableView::setHeaderBackgroundColor(const QColor &color)
+{
+    ensureHeaders();
+    const QPointer<VirtualTableView> self(this);
+    m_horizontalHeader->setBackgroundColor(color);
+    if (self)
+        m_verticalHeader->setBackgroundColor(color);
+}
+
+QColor VirtualTableView::headerBackgroundColor() const
+{
+    return m_horizontalHeader ? m_horizontalHeader->backgroundColor() : QColor();
+}
+
 void VirtualTableView::setHeaderHeight(int height)
 {
     const int clamped = qMax(0, height);
@@ -589,6 +666,334 @@ void VirtualTableView::setVerticalHeaderWidth(int width)
     m_verticalHeaderWidth = clamped;
     layoutHeaderWidgets();
     relayout();
+}
+
+void VirtualTableView::setHeaderCornerWidget(QWidget *widget)
+{
+    if (widget && widget == m_headerCornerWidget)
+        return;
+    if (widget && (widget == this || widget == viewport() || widget->isAncestorOf(this))) {
+        qWarning("VirtualTableView::setHeaderCornerWidget(): a view or its ancestor cannot be a corner; ignored");
+        return;
+    }
+    const QPointer<VirtualTableView> self(this);
+    const QPointer<QWidget> replacement(widget ? widget : new HeaderCornerWidget(this));
+    QPointer<QWidget> previous(m_headerCornerWidget);
+    m_headerCornerWidget = replacement;
+    // Reparent first so a replacement nested in the old widget survives its deletion.
+    replacement->setParent(this);
+    if (previous && (!self || m_headerCornerWidget != previous)) {
+        previous->hide();
+        if (previous && (!self || m_headerCornerWidget != previous))
+            previous->deleteLater();
+    }
+    if (!self || !replacement || m_headerCornerWidget != replacement)
+        return;
+    layoutHeaderWidgets();
+}
+
+void VirtualTableView::setHorizontalHeaderSelectionEnabled(bool enabled)
+{
+    if (m_horizontalHeaderSelectionEnabled == enabled)
+        return;
+    m_horizontalHeaderSelectionEnabled = enabled;
+    m_headerSelectionAnchor = QPersistentModelIndex();
+    applyHeaderGestureSettings();
+}
+
+void VirtualTableView::setVerticalHeaderSelectionEnabled(bool enabled)
+{
+    if (m_verticalHeaderSelectionEnabled == enabled)
+        return;
+    m_verticalHeaderSelectionEnabled = enabled;
+    m_headerSelectionAnchor = QPersistentModelIndex();
+    applyHeaderGestureSettings();
+}
+
+void VirtualTableView::setHeaderVisualStateBackgroundVisible(Qt::Orientation orientation, bool visible)
+{
+    bool &current = orientation == Qt::Horizontal
+        ? m_horizontalHeaderVisualStateBackgroundVisible : m_verticalHeaderVisualStateBackgroundVisible;
+    if (current == visible)
+        return;
+    current = visible;
+    refreshVisualStates();
+}
+
+bool VirtualTableView::headerVisualStateBackgroundVisible(Qt::Orientation orientation) const
+{
+    return orientation == Qt::Horizontal
+        ? m_horizontalHeaderVisualStateBackgroundVisible : m_verticalHeaderVisualStateBackgroundVisible;
+}
+
+QItemSelection VirtualTableView::headerSelectionRange(Qt::Orientation orientation,
+                                                     qsizetype first, qsizetype last) const
+{
+    if (!model() || viewItemCount() <= 0 || columnCount() <= 0)
+        return {};
+    QVector<QPair<int, int>> columns;
+    qsizetype firstRow = 0;
+    qsizetype lastRow = viewItemCount() - 1;
+    if (orientation == Qt::Vertical) {
+        firstRow = qMax<qsizetype>(0, qMin(first, last));
+        lastRow = qMin(lastRow, qMax(first, last));
+        columns.append(qMakePair(0, columnCount() - 1));
+    } else {
+        if (first < 0 || last < 0 || first >= columnCount() || last >= columnCount())
+            return {};
+        // Shift spans the displayed columns, even after hiding or reordering them.
+        const int firstVisual = m_columns->visualIndex(int(first));
+        const int lastVisual = m_columns->visualIndex(int(last));
+        QVector<int> logicals;
+        for (int visual = qMin(firstVisual, lastVisual); visual <= qMax(firstVisual, lastVisual); ++visual) {
+            const int logical = m_columns->logicalIndex(visual);
+            if (logical >= 0 && !isColumnHidden(logical))
+                logicals.append(logical);
+        }
+        std::sort(logicals.begin(), logicals.end());
+        for (int logical : logicals) {
+            if (!columns.isEmpty() && columns.last().second + 1 == logical)
+                columns.last().second = logical;
+            else
+                columns.append(qMakePair(logical, logical));
+        }
+    }
+    QItemSelection result;
+    if (firstRow > lastRow)
+        return result;
+    if (!managesVisibleRows()) {
+        // A flat table needs one range per column run, independent of its row count.
+        for (const auto &run : columns)
+            result.select(viewIndex(firstRow, run.first), viewIndex(lastRow, run.second));
+        return result;
+    }
+    // Tree tables map header row numbers to visible nodes with different parents.
+    for (const auto &columnsRun : columns) {
+        QModelIndex runFirst;
+        QModelIndex runLast;
+        int runEndColumn = -1;
+        const auto flush = [&]() {
+            if (runFirst.isValid())
+                result.select(runFirst.siblingAtColumn(columnsRun.first),
+                              runLast.siblingAtColumn(runEndColumn));
+            runFirst = QModelIndex();
+        };
+        for (qsizetype row = firstRow; row <= lastRow; ++row) {
+            const QModelIndex node = viewIndex(row);
+            const int available = node.isValid()
+                ? qMin(columnCount(), model()->columnCount(node.parent())) : 0;
+            if (available <= columnsRun.first) {
+                flush();
+                continue;
+            }
+            const int endColumn = qMin(columnsRun.second, available - 1);
+            if (runFirst.isValid() && runLast.parent() == node.parent()
+                && runLast.row() + 1 == node.row() && runEndColumn == endColumn) {
+                runLast = node;
+            } else {
+                flush();
+                runFirst = node;
+                runLast = node;
+                runEndColumn = endColumn;
+            }
+        }
+        flush();
+    }
+    return result;
+}
+
+VirtualItemView::VisualState VirtualTableView::headerVisualState(Qt::Orientation orientation,
+                                                               int logicalIndex) const
+{
+    VisualState state;
+    if (!model() || logicalIndex < 0)
+        return state;
+    if (orientation == Qt::Vertical) {
+        const QModelIndex index = viewIndex(logicalIndex);
+        if (!index.isValid())
+            return state;
+        if (selectionBehavior() == SelectionBehavior::SelectRows) {
+            const VisualState row = visualState(index);
+            state.hovered = row.hovered;
+            state.hoverProgress = row.hoverProgress;
+        }
+        if (selectionModel()) {
+            if (columnCount() >= model()->columnCount(index.parent())) {
+                state.selected = selectionModel()->isRowSelected(index.row(), index.parent());
+            } else {
+                QItemSelection remaining = headerSelectionRange(orientation, logicalIndex, logicalIndex);
+                const bool hasCells = !remaining.isEmpty();
+                remaining.merge(selectionModel()->selection(), QItemSelectionModel::Deselect);
+                state.selected = hasCells && remaining.isEmpty();
+            }
+        }
+        // Cell/column selection can highlight a partial body row without selecting
+        // its header. Keep that target separate while sharing animation settings.
+        state.selectedProgress = animatedVisualState(index, state.hovered, state.selected,
+            VisualStateChannel::RowHeader).selectedProgress;
+        return state;
+    } else if (logicalIndex < columnCount() && viewItemCount() > 0) {
+        QModelIndex index = viewIndex(0, logicalIndex);
+        // A tree column can exist only below nodes whose parents expose fewer columns.
+        if (!index.isValid() && managesVisibleRows()) {
+            for (qsizetype row = 1; row < viewItemCount() && !index.isValid(); ++row)
+                index = viewIndex(row, logicalIndex);
+        }
+        if (!index.isValid())
+            return state;
+        if (!managesVisibleRows()) {
+            state.selected = selectionModel()
+                && selectionModel()->isColumnSelected(logicalIndex, QModelIndex());
+        } else if (selectionModel()) {
+            QItemSelection remaining = headerSelectionRange(orientation, logicalIndex, logicalIndex);
+            const bool hasCells = !remaining.isEmpty();
+            remaining.merge(selectionModel()->selection(), QItemSelectionModel::Deselect);
+            state.selected = hasCells && remaining.isEmpty();
+        }
+        // All pane clones use the same identity, independent of the scrolled rows.
+        state.selectedProgress = animatedVisualState(index, false, state.selected,
+            VisualStateChannel::ColumnHeader).selectedProgress;
+    }
+    return state;
+}
+
+void VirtualTableView::watchHeaderSelection(HeaderViewInterface *header)
+{
+    auto *widgetHeader = dynamic_cast<VirtualHeaderView *>(header);
+    if (!widgetHeader)
+        return;
+    connect(widgetHeader, &VirtualHeaderView::sectionClicked, this,
+            &VirtualTableView::onHeaderSectionClicked, Qt::UniqueConnection);
+    connect(widgetHeader, &VirtualHeaderView::sectionHoverChanged, this,
+            &VirtualTableView::refreshHoveredIndex, Qt::UniqueConnection);
+    connect(widgetHeader, &VirtualHeaderView::appearanceChanged, this,
+            &VirtualTableView::refreshHeaderAppearance, Qt::UniqueConnection);
+}
+
+void VirtualTableView::refreshHeaderAppearance()
+{
+    if (m_headerCornerWidget)
+        m_headerCornerWidget->update();
+    for (QWidget *widget : m_columnSpacingWidgets)
+        static_cast<ColumnSpacingHost *>(widget)->setBackgroundColors(
+            spacingBackgroundColor(), resolvedHeaderSpacingBackgroundColor());
+}
+
+void VirtualTableView::onHeaderSectionClicked(int logicalIndex, Qt::KeyboardModifiers modifiers)
+{
+    const auto *header = qobject_cast<VirtualHeaderView *>(sender());
+    if (!header || !isEnabled() || !model() || !selectionModel()
+        || selectionMode() == SelectionMode::NoSelection || viewItemCount() <= 0)
+        return;
+    const Qt::Orientation axis = header->orientation();
+    if (!(axis == Qt::Horizontal ? m_horizontalHeaderSelectionEnabled : m_verticalHeaderSelectionEnabled))
+        return;
+    if (logicalIndex < 0 || (axis == Qt::Horizontal ? logicalIndex >= columnCount()
+                                                 : logicalIndex >= viewItemCount()))
+        return;
+    const QModelIndex current = currentIndex();
+    const qsizetype currentRow = viewItemForIndex(current);
+    const QModelIndex index = axis == Qt::Vertical ? viewIndex(logicalIndex)
+        : viewIndex(currentRow >= 0 ? currentRow : 0, logicalIndex);
+    if (!index.isValid())
+        return;
+
+    const bool multiple = selectionMode() != SelectionMode::SingleSelection;
+    const bool extend = multiple && (modifiers & Qt::ShiftModifier);
+    QModelIndex anchor = extend && m_headerSelectionAnchorAxis == axis
+        && m_headerSelectionAnchor.isValid() && m_headerSelectionCurrent == current
+        ? QModelIndex(m_headerSelectionAnchor) : (extend ? current : index);
+    if (!anchor.isValid() || anchor.model() != model() || viewItemForIndex(anchor) < 0)
+        anchor = index;
+    const qsizetype first = axis == Qt::Vertical ? viewItemForIndex(anchor) : anchor.column();
+    const QItemSelection range = headerSelectionRange(axis, first, logicalIndex);
+    if (range.isEmpty())
+        return;
+    auto command = QItemSelectionModel::SelectionFlags(QItemSelectionModel::ClearAndSelect);
+    if (multiple && !extend && (selectionMode() == SelectionMode::MultiSelection
+                               || (modifiers & Qt::ControlModifier))) {
+        command = headerVisualState(axis, logicalIndex).selected
+            ? QItemSelectionModel::Deselect : QItemSelectionModel::Select;
+    } else if (extend && (modifiers & Qt::ControlModifier)) {
+        command = QItemSelectionModel::Select;
+    }
+    const QPointer<VirtualTableView> self(this);
+    const QPointer<QItemSelectionModel> selection(selectionModel());
+    const QPersistentModelIndex target(index);
+    const quint64 modelSerial = modelChangeSerial();
+    const quint64 mappingSerial = viewMappingSerial();
+    const auto stillCurrent = [&]() {
+        return self && selection && selection == selectionModel()
+            && modelChangeSerial() == modelSerial && viewMappingSerial() == mappingSerial
+            && target.isValid() && target.model() == model();
+    };
+    m_headerSelectionAnchor = anchor;
+    m_headerSelectionAnchorAxis = axis;
+    m_headerSelectionCurrent = target;
+    setSelectionAnchor(anchor);
+    selection->select(range, command);
+    if (!stillCurrent())
+        return;
+    selection->setCurrentIndex(target, QItemSelectionModel::NoUpdate);
+    if (!stillCurrent())
+        return;
+    setFocus(Qt::MouseFocusReason);
+}
+
+bool VirtualTableView::isHoverTrackingLocked() const
+{
+    // Row and column boundaries move under the pointer while resizing in any pane.
+    const auto isResizing = [](const HeaderViewInterface *header) {
+        const auto *strip = dynamic_cast<const VirtualHeaderView *>(header);
+        return strip && strip->m_resizeSection >= 0;
+    };
+    for (HeaderViewInterface *header : {m_horizontalHeader, m_verticalHeader,
+                                      m_frozenTopRowsHeader, m_frozenBottomRowsHeader}) {
+        if (isResizing(header))
+            return true;
+    }
+    for (HeaderViewInterface *header : m_paneHeaders) {
+        if (isResizing(header))
+            return true;
+    }
+    return VirtualItemView::isHoverTrackingLocked();
+}
+
+QModelIndex VirtualTableView::hoverIndexAtGlobalPosition(const QPoint &position) const
+{
+    if (selectionBehavior() == SelectionBehavior::SelectRows) {
+        QWidget *target = QApplication::widgetAt(position);
+        for (HeaderViewInterface *header : {m_verticalHeader, m_frozenTopRowsHeader, m_frozenBottomRowsHeader}) {
+            auto *strip = dynamic_cast<VirtualHeaderView *>(header);
+            if (strip && strip->isVisible() && strip->isEnabled()
+                && (target == strip || strip->isAncestorOf(target))) {
+                const QPoint pos = strip->mapFromGlobal(position);
+                return strip->rect().contains(pos) ? viewIndex(strip->sectionAt(pos)) : QModelIndex();
+            }
+        }
+    }
+    return VirtualItemView::hoverIndexAtGlobalPosition(position);
+}
+
+void VirtualTableView::refreshHeaderVisualStates()
+{
+    const auto refresh = [this](HeaderViewInterface *header) {
+        auto *widgetHeader = dynamic_cast<VirtualHeaderView *>(header);
+        if (!widgetHeader)
+            return;
+        for (int logical : widgetHeader->materializedSections()) {
+            // Retarget at the state change, before the body and header repaint.
+            headerVisualState(widgetHeader->orientation(), logical);
+            if (QWidget *section = widgetHeader->sectionWidget(logical))
+                section->update();
+        }
+    };
+    refresh(m_horizontalHeader);
+    for (HeaderViewInterface *pane : m_paneHeaders)
+        refresh(pane);
+    refresh(m_verticalHeader);
+    refresh(m_frozenTopRowsHeader);
+    refresh(m_frozenBottomRowsHeader);
 }
 
 void VirtualTableView::layoutHeaderWidgets()
@@ -645,6 +1050,13 @@ void VirtualTableView::layoutHeaderWidgets()
     if (m_verticalHeader) {
         layoutVerticalHeaderStrips();
     }
+    if (m_headerCornerWidget) {
+        m_headerCornerWidget->setGeometry(viewportRect.x() - rowHeaderWidth,
+                                          viewportRect.y() - headerHeight,
+                                          rowHeaderWidth, headerHeight);
+        m_headerCornerWidget->setVisible(rowHeaderWidth > 0 && headerHeight > 0);
+        m_headerCornerWidget->raise();
+    }
     applyGridLineVisibilityToHeaders();
     m_headersLaidOut = true;
 }
@@ -683,6 +1095,8 @@ void VirtualTableView::layoutVerticalHeaderStrips()
         if (header != m_verticalHeader)
             strip->raise();
     }
+    // Frozen strips were raised above their siblings; keep row separators over the headers.
+    raiseItemPaneSeparatorLines();
 }
 
 // ---------------------------------------------------------------------------
@@ -903,8 +1317,10 @@ void VirtualTableView::rekeyPersistentTableState()
 
 void VirtualTableView::onColumnsInserted(const QModelIndex &parent, int first, int last)
 {
-    if (!isColumnSchemaParent(parent))
+    if (!isColumnSchemaParent(parent)) {
+        extendRowSelectionForInsertedColumns(parent, first, last);
         return;
+    }
     // The inserted columns carry the default state; every column after them keeps
     // its own width / visibility / explicit size, and the frozen sets, the pane
     // specs and the sort indicator follow the columns they name.
@@ -920,10 +1336,11 @@ void VirtualTableView::onColumnsInserted(const QModelIndex &parent, int first, i
     // just changed. bindWidget() is the only hook the business gets for it; the pane and
     // geometry update below then positions the hosts it (re)created (P1-2 of the second
     // review).
+    const QPointer<VirtualTableView> self(this);
     const quint64 modelSerial = modelChangeSerial();
     const QPointer<QAbstractItemModel> activeModel(model());
     rebindMaterializedRows();
-    if (!activeModel || modelChangeSerial() != modelSerial || model() != activeModel.data()
+    if (!self || !activeModel || modelChangeSerial() != modelSerial || model() != activeModel.data()
         || !isColumnSchemaParent(parent))
         return;
     m_panes.insertLogicalColumns(first, count);
@@ -932,7 +1349,76 @@ void VirtualTableView::onColumnsInserted(const QModelIndex &parent, int first, i
     // The model already inserted the column, so there is nothing to sort here.
     m_sortGuard = true;
     m_columns->insertLogicalSections(first, count);
+    if (!self)
+        return;
     m_sortGuard = false;
+    if (activeModel && modelChangeSerial() == modelSerial && model() == activeModel.data())
+        extendRowSelectionForInsertedColumns(parent, first, last);
+}
+
+void VirtualTableView::extendRowSelectionForInsertedColumns(const QModelIndex &parent,
+                                                          int first, int last)
+{
+    if (selectionBehavior() != SelectionBehavior::SelectRows || first < 0 || last < first)
+        return;
+    const QPointer<VirtualTableView> self(this);
+    const QPointer<QAbstractItemModel> activeModel(model());
+    const QPointer<QItemSelectionModel> selection(selectionModel());
+    const quint64 modelSerial = modelChangeSerial();
+    const auto stillCurrent = [self, activeModel, selection, modelSerial]() {
+        return self && activeModel && selection && self->model() == activeModel.data()
+            && self->selectionModel() == selection.data() && selection->model() == activeModel.data()
+            && self->modelChangeSerial() == modelSerial;
+    };
+    if (!stillCurrent())
+        return;
+    const int columns = activeModel->columnCount(parent);
+    if (!stillCurrent() || last >= columns || columns == last - first + 1)
+        return;
+    const auto append = [&](QItemSelection &ranges, int top, int left, int bottom, int right) {
+        if (!stillCurrent())
+            return false;
+        const QModelIndex topLeft = activeModel->index(top, left, parent);
+        if (!stillCurrent())
+            return false;
+        const QModelIndex bottomRight = activeModel->index(bottom, right, parent);
+        if (!stillCurrent())
+            return false;
+        ranges.select(topLeft, bottomRight);
+        return true;
+    };
+
+    // Work with ranges, not selectedIndexes(): selecting a million rows must not
+    // allocate one index per cell. Qt has already remapped the existing ranges.
+    const QItemSelection selected = selection->selection();
+    QItemSelection inserted;
+    for (const QItemSelectionRange &range : selected) {
+        if (range.parent() != parent)
+            continue;
+        QItemSelection candidate;
+        if (!append(candidate, range.top(), first, range.bottom(), last))
+            return;
+        inserted.merge(candidate, QItemSelectionModel::Select);
+    }
+    QItemSelection missing;
+    for (const QItemSelectionRange &range : inserted) {
+        if (first > 0 && !append(missing, range.top(), 0, range.bottom(), first - 1))
+            return;
+        if (last + 1 < columns && !append(missing, range.top(), last + 1, range.bottom(), columns - 1))
+            return;
+    }
+    missing.merge(selected, QItemSelectionModel::Deselect);
+    // Any unselected pre-existing cell means this was a partial row selection,
+    // such as a header-selected column. Never promote it to a complete row.
+    for (const QItemSelectionRange &range : missing) {
+        QItemSelection partialRows;
+        if (!append(partialRows, range.top(), first, range.bottom(), last))
+            return;
+        inserted.merge(partialRows, QItemSelectionModel::Deselect);
+    }
+    inserted.merge(selected, QItemSelectionModel::Deselect);
+    if (stillCurrent() && !inserted.isEmpty())
+        selection->select(inserted, QItemSelectionModel::Select);
 }
 
 void VirtualTableView::onColumnsRemoved(const QModelIndex &parent, int first, int last)
@@ -1092,6 +1578,41 @@ void VirtualTableView::setColumnSpacing(int pixels)
         m_columns->setSectionSpacing(pixels);
 }
 
+void VirtualTableView::setSpacingBackgroundColor(const QColor &color)
+{
+    if (spacingBackgroundColor() == color)
+        return;
+    const QPointer<VirtualTableView> self(this);
+    VirtualItemView::setSpacingBackgroundColor(color);
+    if (!self)
+        return;
+    for (QWidget *widget : m_columnSpacingWidgets)
+        static_cast<ColumnSpacingHost *>(widget)->setBackgroundColors(
+            spacingBackgroundColor(), resolvedHeaderSpacingBackgroundColor());
+}
+
+void VirtualTableView::setVisualStateThroughColumnSpacing(bool enabled)
+{
+    if (m_visualStateThroughColumnSpacing == enabled)
+        return;
+    m_visualStateThroughColumnSpacing = enabled;
+    refreshVisualStates();
+}
+
+void VirtualTableView::setHeaderSpacingBackgroundColor(const QColor &color)
+{
+    ensureHeaders();
+    const QPointer<VirtualTableView> self(this);
+    m_horizontalHeader->setSpacingBackgroundColor(color);
+    if (self)
+        m_verticalHeader->setSpacingBackgroundColor(color);
+}
+
+QColor VirtualTableView::headerSpacingBackgroundColor() const
+{
+    return m_horizontalHeader ? m_horizontalHeader->spacingBackgroundColor() : QColor();
+}
+
 void VirtualTableView::setColumnSpacingFactory(ColumnSpacingFactory factory,
                                                ColumnSpacingBinder binder)
 {
@@ -1206,6 +1727,14 @@ QColor VirtualTableView::resolvedHorizontalGridLineColor() const
     return m_horizontalGridLineColor.isValid() ? m_horizontalGridLineColor : sectionSeparatorColor(this);
 }
 
+QColor VirtualTableView::resolvedHeaderSpacingBackgroundColor() const
+{
+    const QColor spacing = headerSpacingBackgroundColor();
+    if (spacing.isValid())
+        return spacing;
+    return headerBackgroundVisible() ? headerBackgroundColor() : QColor(Qt::transparent);
+}
+
 void VirtualTableView::applyGridLineVisibilityToHeaders()
 {
     const QColor verticalColor = resolvedVerticalGridLineColor();
@@ -1227,6 +1756,7 @@ void VirtualTableView::applyGridLineVisibilityToHeaders()
     configure(m_verticalHeader, false, m_horizontalGridLinesVisible, m_verticalGridLinesVisible);
     configure(m_frozenTopRowsHeader, false, m_horizontalGridLinesVisible, m_verticalGridLinesVisible);
     configure(m_frozenBottomRowsHeader, false, m_horizontalGridLinesVisible, m_verticalGridLinesVisible);
+    refreshHeaderAppearance();
 }
 
 VisibleRange VirtualTableView::visibleColumns() const
@@ -1258,6 +1788,18 @@ void VirtualTableView::setColumnOverscan(int columns)
 void VirtualTableView::setColumnWidth(int logicalIndex, int width)
 {
     m_columns->resizeSection(logicalIndex, width);
+}
+
+void VirtualTableView::setColumnResizeMode(ColumnResizeMode mode)
+{
+    m_columns->setResizeMode(mode == ColumnResizeMode::FitViewport
+        ? HeaderGeometry::ResizeMode::FitExtent : HeaderGeometry::ResizeMode::Independent);
+}
+
+VirtualTableView::ColumnResizeMode VirtualTableView::columnResizeMode() const
+{
+    return m_columns->resizeMode() == HeaderGeometry::ResizeMode::FitExtent
+        ? ColumnResizeMode::FitViewport : ColumnResizeMode::Independent;
 }
 
 void VirtualTableView::setColumnHidden(int logicalIndex, bool hidden)
@@ -1370,12 +1912,17 @@ void VirtualTableView::setVerticalHeaderResizeEnabled(bool enabled)
 
 void VirtualTableView::applyHeaderGestureSettings()
 {
-    const auto apply = [](HeaderViewInterface *header, bool dragEnabled, bool resizeEnabled) {
+    const auto apply = [this](HeaderViewInterface *header, bool dragEnabled, bool resizeEnabled) {
+        if (header && header->orientation() == Qt::Horizontal)
+            header->setSortInteractionEnabled(m_sortingEnabled && !m_horizontalHeaderSelectionEnabled);
         auto *widgetHeader = dynamic_cast<VirtualHeaderView *>(header);
         if (!widgetHeader)
             return;
         widgetHeader->setSectionDragEnabled(dragEnabled);
         widgetHeader->setSectionResizeEnabled(resizeEnabled);
+        widgetHeader->setSectionSelectionEnabled(widgetHeader->orientation() == Qt::Horizontal
+            ? m_horizontalHeaderSelectionEnabled : m_verticalHeaderSelectionEnabled);
+        watchHeaderSelection(header);
     };
     // The column side: the installed header and every pane clone (a drag inside a frozen
     // pane reorders like one in the scrolling pane).
@@ -1581,17 +2128,27 @@ void VirtualTableView::onHeaderVisualGeometryFrame()
 {
     if (m_visualGeometryFrameActive)
         return;
+    const QPointer<VirtualTableView> self(this);
     m_visualGeometryFrameActive = true;
+    const auto cleanup = qScopeGuard([self]() {
+        if (self)
+            self->m_visualGeometryFrameActive = false;
+    });
     const bool hadRowPreview = m_rowVisualOffsetsActive;
     if (m_columnFollowsHeaderVisual)
         updateVisualColumnGeometry();
+    if (!self)
+        return;
     visualColumnGeometryChanged();
-    if (m_rowFollowsHeaderVisual)
-        updateVisualRowGeometry();
+    if (!self)
+        return;
+    if (m_rowFollowsHeaderVisual && (hadRowPreview || visualRowStrip()))
+        applyDragReorderFrame();
+    if (!self)
+        return;
     if (m_spanProvider && (hadRowPreview || m_rowVisualOffsetsActive)) {
         refreshPreviewGridMasks();
     }
-    m_visualGeometryFrameActive = false;
 }
 
 void VirtualTableView::updateVisualColumnGeometry()
@@ -1616,23 +2173,37 @@ void VirtualTableView::setRowFollowsHeaderVisual(bool follows)
     m_rowFollowsHeaderVisual = follows;
     // Turning it off has to put the rows back on the committed layout *now*: the running
     // strip will not send another frame.
-    updateVisualRowGeometry();
+    const QPointer<VirtualTableView> self(this);
+    applyDragReorderFrame();
+    if (!self)
+        return;
     visualColumnGeometryChanged();
+    if (!self)
+        return;
     if (m_spanProvider) {
         refreshPreviewGridMasks();
     }
 }
 
-VirtualHeaderView *VirtualTableView::visualRowStrip() const
+VirtualHeaderView *VirtualTableView::visualRowStrip(qsizetype row) const
 {
-    // Only the installed strip (the scrolling band) drives the rows: a frozen band's rows
-    // are pinned at the edge, so letting them follow a preview would move them off it.
-    auto *strip = dynamic_cast<VirtualHeaderView *>(m_verticalHeader);
-    if (!strip || !strip->hasVisualSectionGeometry())
-        return nullptr;
-    if (strip->headerWidget()->isHidden())
-        return nullptr;
-    return strip;
+    HeaderViewInterface *rowHeader = m_verticalHeader;
+    if (row >= 0) {
+        const ItemPane::Type pane = itemPaneForRow(row);
+        if (pane == ItemPane::Type::FrozenTop)
+            rowHeader = m_frozenTopRowsHeader;
+        else if (pane == ItemPane::Type::FrozenBottom)
+            rowHeader = m_frozenBottomRowsHeader;
+    }
+    for (HeaderViewInterface *header : {m_verticalHeader, m_frozenTopRowsHeader,
+                                       m_frozenBottomRowsHeader}) {
+        if (row >= 0 && header != rowHeader)
+            continue;
+        auto *strip = dynamic_cast<VirtualHeaderView *>(header);
+        if (strip && !strip->isHidden() && strip->hasVisualSectionGeometry())
+            return strip;
+    }
+    return nullptr;
 }
 
 bool VirtualTableView::rowVisualY(qsizetype row, int *viewportY) const
@@ -1645,9 +2216,9 @@ bool VirtualTableView::rowVisualY(qsizetype row, int *viewportY) const
             : rect.y() + qRound(m_dragRowPreview->offset(row, dragReorderProgress()));
         return true;
     }
-    if (!m_rowFollowsHeaderVisual || isRowFrozen(row))
+    if (!m_rowFollowsHeaderVisual)
         return false;
-    VirtualHeaderView *strip = visualRowStrip();
+    VirtualHeaderView *strip = visualRowStrip(row);
     return strip && strip->sectionVisualX(int(row), viewportY);
 }
 
@@ -1671,6 +2242,8 @@ void VirtualTableView::updateVisualRowGeometry()
     widgets.reserve(items.size());
     for (const MaterializedItem &item : items)
         widgets.append(item.widget);
+    const int draggedRow = strip && strip->m_dragging ? strip->m_dragSection : -1;
+    QPointer<QWidget> draggedWidget;
     for (qsizetype i = 0; i < items.size(); ++i) {
         if (!self || modelChangeSerial() != modelSerial || m_cellConfigurationSerial != configurationSerial)
             return;
@@ -1678,8 +2251,8 @@ void VirtualTableView::updateVisualRowGeometry()
         const QPointer<QWidget> widget = widgets.at(i);
         const qsizetype row = viewItemForIndex(item.index);
         if (!widget || !item.index.isValid() || widgetForIndex(item.index) != widget.data()
-            || row < 0 || isRowFrozen(row))
-            continue;                 // frozen rows stay where the layout pinned them
+            || row < 0)
+            continue;
         // The kernel puts the widget at `geometry - the pane's origin`; the parent is the
         // scrolling pane's clip container (or the viewport when nothing is clipped).
         QWidget *parent = widget->parentWidget();
@@ -1687,7 +2260,12 @@ void VirtualTableView::updateVisualRowGeometry()
         int visualY = item.geometry.y();
         rowVisualY(row, &visualY);
         widget->move(widget->x(), visualY - parentY);
+        if (row == draggedRow)
+            draggedWidget = widget;
     }
+    if (self && modelChangeSerial() == modelSerial
+        && m_cellConfigurationSerial == configurationSerial && draggedWidget)
+        draggedWidget->raise();
 }
 
 qreal VirtualTableView::dragReorderProgress() const
@@ -1857,16 +2435,25 @@ void VirtualTableView::syncHeaderPanes()
         // than the primary one follows its own group offset (§43 "advanced
         // panes"), so its header stays aligned with the body.
         header->setPaneFilter(pane.logicalColumns, pane.isFrozen());
-        if (auto *widgetHeader = dynamic_cast<VirtualHeaderView *>(header))
+        if (auto *widgetHeader = dynamic_cast<VirtualHeaderView *>(header)) {
+            widgetHeader->m_resizeFromLeadingEdge = pane.type == TablePane::Type::FrozenRight;
             widgetHeader->setPaneTerminalColumn(terminalColumn);
+            widgetHeader->setPaneSpacingProvider([this](int logical) {
+                return m_panes.columnSpacingAfter(logical);
+            });
+        }
         header->setPaneOffset(pane.isFrozen() ? 0 : m_panes.groupOffset(pane.scrollGroup));
         anyOtherPane = true;
     }
     if (!m_horizontalHeader)
         return;
     if (primaryIndex >= 0 && anyOtherPane) {
-        if (auto *widgetHeader = dynamic_cast<VirtualHeaderView *>(m_horizontalHeader))
+        if (auto *widgetHeader = dynamic_cast<VirtualHeaderView *>(m_horizontalHeader)) {
             widgetHeader->setPaneTerminalColumn(terminalColumn);
+            widgetHeader->setPaneSpacingProvider([this](int logical) {
+                return m_panes.columnSpacingAfter(logical);
+            });
+        }
         m_horizontalHeader->setPaneFilter(panes.at(primaryIndex).logicalColumns, false);
         // ... and it packs its own columns too, exactly like the pane clones above. A
         // pane's columns are not necessarily a contiguous slice of the committed order
@@ -1939,6 +2526,7 @@ HeaderViewInterface *VirtualTableView::createHorizontalPaneHeader()
         auto *header = new VirtualHeaderView(Qt::Horizontal, this);
         header->setAdapter(widgetHeader->adapter());
         header->setSectionOverscan(widgetHeader->sectionOverscan());
+        header->setAppearanceSource(widgetHeader);
         return header;
     }
     // A renderer this table cannot reproduce (an application's own HeaderViewInterface
@@ -1953,7 +2541,7 @@ HeaderViewInterface *VirtualTableView::createDefaultHorizontalHeader()
     // out-of-the-box header looks like the style-painted one but supports
     // everything a widget header supports: the resize cursor, drag reordering, the
     // section transition and the body following it, and pane clones).
-    return new LabelHeaderView(Qt::Horizontal, this);
+    return new VirtualHeaderView(Qt::Horizontal, this);
 }
 
 HeaderViewInterface *VirtualTableView::createVerticalPaneHeader()
@@ -1966,6 +2554,7 @@ HeaderViewInterface *VirtualTableView::createVerticalPaneHeader()
         auto *header = new VirtualHeaderView(Qt::Vertical, this);
         header->setAdapter(widgetStrip->adapter());
         header->setSectionOverscan(widgetStrip->sectionOverscan());
+        header->setAppearanceSource(widgetStrip);
         header->setGeometryModel(m_rowHeaders);
         header->setLabelModel(model());
         watchRowStrip(header);
@@ -1983,7 +2572,7 @@ HeaderViewInterface *VirtualTableView::createDefaultVerticalHeader()
     // O(visible + overscan) - and the strip supports the same gestures as the column
     // header: drag a row boundary to set the row height, drag a row number to move the row
     // (reported through rowMoveRequested() and applied with model()->moveRows()).
-    return new LabelHeaderView(Qt::Vertical, this);
+    return new VirtualHeaderView(Qt::Vertical, this);
 }
 void VirtualTableView::watchRowStrip(HeaderViewInterface *strip)
 {
@@ -2024,7 +2613,8 @@ bool VirtualTableView::isSpanValid(const QModelIndex &, const TableSpan &) const
 
 QRect VirtualTableView::spanRowRect(qsizetype row) const
 {
-    return m_rowLayout ? m_rowLayout->itemRect(row, verticalOffset()) : QRect();
+    // Frozen rows use their own pane offset, just like row widgets and hit testing.
+    return geometryForViewRow(row);
 }
 
 int VirtualTableView::leadingCellInset(const QModelIndex &) const
@@ -2057,8 +2647,11 @@ void VirtualTableView::syncVerticalPaneHeaders()
         top = createVerticalPaneHeader();
     if (!wantsBottom)
         drop(bottom);
-    else if (!bottom)
+    else if (!bottom) {
         bottom = createVerticalPaneHeader();
+        if (auto *strip = dynamic_cast<VirtualHeaderView *>(bottom))
+            strip->m_resizeFromLeadingEdge = true;
+    }
 
     // The installed strip goes back to following the geometry when nothing is frozen:
     // an unused feature must change nothing at all.
@@ -2132,10 +2725,11 @@ void VirtualTableView::syncPaneSeparatorLines()
 void VirtualTableView::raisePaneSeparatorLines()
 {
     // The items are (re)created by every materialization pass, so the lines have
-    // to be lifted above them again. They are 1 px wide, paint nothing else and
-    // let input through, so they can sit on top of everything.
+    // to be lifted above them again. The input-transparent drag indicator stays
+    // above these lines.
     for (QWidget *line : m_paneSeparatorLines)
         line->raise();
+    raiseDropIndicator();
 }
 
 void VirtualTableView::syncHorizontalScrollBar()
@@ -2447,7 +3041,7 @@ void VirtualTableView::setSortingEnabled(bool enabled)
         return;
     m_sortingEnabled = enabled;
     ensureHeaders();
-    m_horizontalHeader->setSortInteractionEnabled(enabled);
+    applyHeaderGestureSettings();
     if (!enabled)
         m_columns->setSortIndicator(-1, Qt::AscendingOrder);
 }
@@ -2594,9 +3188,49 @@ bool VirtualTableView::restoreHeaderState(const QByteArray &state)
 
 QWidget *VirtualTableView::dragSourceWidget(const QModelIndex &index) const
 {
-    if (m_materializationMode == MaterializationMode::CellWidgets)
+    if (m_materializationMode == MaterializationMode::CellWidgets) {
+        if (selectionBehavior() == SelectionBehavior::SelectRows)
+            return rowDragPreviewRect(index).isEmpty() ? nullptr : viewport();
         return cellWidget(anchorIndex(index));
+    }
     return VirtualItemView::dragSourceWidget(index);
+}
+
+QPixmap VirtualTableView::grabDragPreview(QWidget *sourceWidget, const QRect &capture)
+{
+    if (!sourceWidget || (sourceWidget != viewport() && !viewport()->isAncestorOf(sourceWidget)))
+        return VirtualItemView::grabDragPreview(sourceWidget, capture);
+
+    const QRect viewCapture = capture.translated(sourceWidget->mapTo(this, QPoint()));
+    QRegion visible(viewCapture.intersected(viewport()->geometry()));
+    // Retain the source clipping: hidden parts of scrolling rows/cells must not pick up
+    // header content or a neighbouring frozen pane from the composed table.
+    for (QWidget *widget = sourceWidget; widget && widget != this; widget = widget->parentWidget()) {
+        const QPoint origin = widget->mapTo(this, QPoint());
+        visible &= QRect(origin, widget->size());
+        const QRegion mask = widget->mask();
+        if (!mask.isEmpty())
+            visible &= mask.translated(origin);
+    }
+    if (visible.isEmpty())
+        return QPixmap();
+
+    // Separators are siblings of the viewport, so grabbing only the source widget
+    // omits them. Keep the original capture size and origin for the drag hotspot.
+    QPixmap pixmap = grab(viewCapture);
+    const QRegion outside = QRegion(QRect(QPoint(), capture.size()))
+        .subtracted(visible.translated(-viewCapture.topLeft()));
+    if (pixmap.isNull() || outside.isEmpty())
+        return pixmap;
+    QPixmap clipped(pixmap.size());
+    clipped.setDevicePixelRatio(pixmap.devicePixelRatio());
+    clipped.fill(Qt::transparent);
+    {
+        QPainter painter(&clipped);
+        painter.setClipRegion(visible.translated(-viewCapture.topLeft()));
+        painter.drawPixmap(QPoint(), pixmap);
+    }
+    return clipped;
 }
 
 QModelIndex VirtualTableView::dragSourcePinIndex(const QModelIndex &index) const
@@ -2606,11 +3240,26 @@ QModelIndex VirtualTableView::dragSourcePinIndex(const QModelIndex &index) const
     return VirtualItemView::dragSourcePinIndex(index);
 }
 
+QRect VirtualTableView::rowDragPreviewRect(const QModelIndex &index) const
+{
+    if (!index.isValid() || index.model() != model())
+        return QRect();
+    const qsizetype row = viewItemForIndex(index);
+    if (row < 0 || row >= viewItemCount())
+        return QRect();
+    const QRect geometry = geometryForViewRow(row);
+    // Include every visible column pane, but exclude neighbouring frozen row bands.
+    return QRect(0, geometry.y(), viewport()->width(), geometry.height())
+        .intersected(itemPaneRect(itemPaneForRow(row))).intersected(viewport()->rect());
+}
+
 QRect VirtualTableView::dragPixmapRect(const QModelIndex &index) const
 {
-    // Per-cell drags preview the dragged cell; a row drag (SelectionBehavior::SelectRows) keeps the
-    // whole row, which is exactly what Row Widget Mode materializes. Cell Widget Mode captures
-    // the complete anchor widget, so it needs no cropping rectangle.
+    if (m_materializationMode == MaterializationMode::CellWidgets
+        && selectionBehavior() == SelectionBehavior::SelectRows)
+        return rowDragPreviewRect(index);
+    // A row widget already contains the whole row; a cell widget contains its span anchor.
+    // Only cell selection in row-widget mode needs to crop its screenshot to one column.
     if (!index.isValid() || m_materializationMode != MaterializationMode::RowWidgets
         || selectionBehavior() != SelectionBehavior::SelectItems) {
         return QRect();
@@ -3289,7 +3938,7 @@ void VirtualTableView::recycleCell(const QPersistentModelIndex &index, QWidget *
     if (isLifecycleLoggingEnabled())
         appendLifecycleLog(QStringLiteral("unbind cell row=%1 column=%2")
                                .arg(index.row()).arg(index.column()));
-    if (m_visualStateScope == VisualStateScope::Cell)
+    if (selectionBehavior() == SelectionBehavior::SelectItems)
         clearVisualTransition(QModelIndex(index));
     if (!guardedWidget)
         return;
@@ -3617,6 +4266,7 @@ void VirtualTableView::updateCellGeometry()
 
     // Restoring a popup highlight can synchronously replace the model or root.
     const auto cells = m_cells;
+    QVector<QPointer<QWidget>> draggedRowCells;
     for (auto it = cells.constBegin(); it != cells.constEnd(); ++it) {
         if (!requestIsCurrent())
             return;
@@ -3678,12 +4328,24 @@ void VirtualTableView::updateCellGeometry()
             // stays visible when a scrolling cell passes behind it.
             if (frozen || isRowFrozen(viewRow))
                 widget->raise();
+            if (!requestIsCurrent() || !widget)
+                return;
+            VirtualHeaderView *strip = m_rowFollowsHeaderVisual ? visualRowStrip(viewRow) : nullptr;
+            if (strip && strip->m_dragging && strip->m_dragSection == viewRow)
+                draggedRowCells.append(widget);
         } else {
             if (isCellPinned(it.key(), widget))
                 widget->move(-qMax(1, widget->width()), -qMax(1, widget->height()));
             else
                 widget->hide();
         }
+    }
+    // Raise the dragged row after all neighbours have been positioned, matching its header.
+    for (const QPointer<QWidget> &widget : draggedRowCells) {
+        if (!requestIsCurrent())
+            return;
+        if (widget)
+            widget->raise();
     }
 }
 
@@ -3793,15 +4455,6 @@ QWidget *VirtualTableView::cellWidget(const QModelIndex &index) const
     return m_cells.value(QPersistentModelIndex(index), nullptr);
 }
 
-void VirtualTableView::setVisualStateScope(VisualStateScope scope)
-{
-    if (m_visualStateScope == scope)
-        return;
-    m_visualStateScope = scope;
-    clearVisualTransitions();
-    refreshVisualStates();
-}
-
 void VirtualTableView::setVisualStateBackgroundVisible(bool visible)
 {
     if (m_visualStateBackgroundVisible == visible)
@@ -3816,13 +4469,20 @@ void VirtualTableView::setVisualStateCornerRadius(int radius)
     if (m_visualStateCornerRadius == radius)
         return;
     m_visualStateCornerRadius = radius;
-    if (m_visualStateBackgroundVisible)
-        refreshVisualStates();
+    refreshVisualStates();
+}
+
+void VirtualTableView::setVisualStateCornerRadiusIncludesHeaders(bool enabled)
+{
+    if (m_visualStateCornerRadiusIncludesHeaders == enabled)
+        return;
+    m_visualStateCornerRadiusIncludesHeaders = enabled;
+    refreshVisualStates();
 }
 
 VirtualItemView::VisualState VirtualTableView::visualState(const QModelIndex &index) const
 {
-    if (m_visualStateScope == VisualStateScope::Cell || !index.isValid()
+    if (selectionBehavior() == SelectionBehavior::SelectItems || !index.isValid()
         || index.model() != model())
         return VirtualItemView::visualState(index);
     const QModelIndex hovered = hoveredIndex();
@@ -3835,42 +4495,86 @@ VirtualItemView::VisualState VirtualTableView::visualState(const QModelIndex &in
 
 void VirtualTableView::paintEvent(QPaintEvent *event)
 {
-    VirtualItemView::paintEvent(event);
-    if (!m_visualStateBackgroundVisible)
-        return;
     QPainter painter(viewport());
-    paintVisualStateBackgrounds(&painter, event->rect());
+    painter.fillRect(event->rect(), palette().brush(QPalette::Window));
+    painter.save();
+    painter.setClipRegion(columnContentRegion());
+    painter.fillRect(event->rect(), palette().brush(QPalette::Base));
+    painter.restore();
+    if (m_visualStateBackgroundVisible)
+        paintVisualStateBackgrounds(&painter, event->rect());
 }
 
-void VirtualTableView::paintVisualStateBackgrounds(QPainter *target, const QRect &dirtyRect) const
+QRegion VirtualTableView::columnContentRegion() const
 {
-    const bool rowScope = visualStateScope() == VisualStateScope::Row;
+    QRegion content;
+    for (const TablePane &pane : m_panes.panes()) {
+        if (pane.logicalColumns.isEmpty() || pane.viewportRect.isEmpty())
+            continue;
+        const int first = pane.logicalColumns.first();
+        const int last = pane.logicalColumns.last();
+        const qint64 left = qMax<qint64>(pane.viewportRect.left(), m_panes.columnViewportX(first));
+        const qint64 right = qMin<qint64>(qint64(pane.viewportRect.right()) + 1,
+            qint64(m_panes.columnViewportX(last)) + m_columns->sectionSize(last));
+        if (right > left)
+            content += QRect(int(left), 0, int(right - left), viewport()->height());
+    }
+    return content.intersected(viewport()->rect());
+}
+
+void VirtualTableView::paintVisualStateBackgrounds(QPainter *target, const QRect &dirtyRect,
+                                                 bool paintColumnSpacing) const
+{
+    const bool rowScope = selectionBehavior() == SelectionBehavior::SelectRows;
+    if (paintColumnSpacing && (!m_visualStateBackgroundVisible
+        || !m_visualStateThroughColumnSpacing || !rowScope || dirtyRect.isEmpty()))
+        return;
+    // Gap hosts already clip to their panes, including the trailing gap at a pane boundary.
+    const QRegion content = paintColumnSpacing ? QRegion(viewport()->rect()) : columnContentRegion();
     QRegion columnGaps;
     const auto currentPanes = panes();
+    int first = -1;
     int terminal = -1;
     for (const TablePane &pane : currentPanes) {
-        if (!pane.logicalColumns.isEmpty())
+        if (!pane.logicalColumns.isEmpty()) {
+            if (first < 0)
+                first = pane.logicalColumns.first();
             terminal = pane.logicalColumns.last();
+        }
     }
-    for (const TablePane &pane : currentPanes) {
-        for (int logical : pane.logicalColumns) {
-            if (logical == terminal)
-                continue;
-            const ColumnGeometry column = columnGeometry(logical);
-            int x = column.viewportX;
-            columnVisualX(logical, &x);
-            columnGaps += QRect(x + column.width, 0, columnSpacing(), viewport()->height())
-                .intersected(pane.viewportRect);
+    // Shape bounds retain the real row ends; only the paint clip follows the viewport.
+    // Use the outer panes so scrolling columns cannot move a frozen row edge.
+    int rowLeft = 0;
+    int rowWidth = 0;
+    if (rowScope && first >= 0) {
+        rowLeft = m_panes.columnViewportX(first);
+        const qint64 right = qMin<qint64>(std::numeric_limits<int>::max(),
+            qint64(m_panes.columnViewportX(terminal)) + m_columns->sectionSize(terminal));
+        rowWidth = int(qBound<qint64>(qint64(0), right - rowLeft,
+                                     qint64(std::numeric_limits<int>::max())));
+    }
+    if (rowScope && !paintColumnSpacing) {
+        for (const TablePane &pane : currentPanes) {
+            for (int logical : pane.logicalColumns) {
+                if (logical == terminal)
+                    continue;
+                const ColumnGeometry column = columnGeometry(logical);
+                int x = column.viewportX;
+                columnVisualX(logical, &x);
+                columnGaps += QRect(x + column.width, 0, m_panes.columnSpacingAfter(logical), viewport()->height())
+                    .intersected(pane.viewportRect);
+            }
         }
     }
     QPainter &painter = *target;
     const auto paint = [&](const QModelIndex &index, const QRect &rect, const QRect &pane) {
-        const VisualState state = visualState(index);
         QRegion clip(rect.intersected(pane).intersected(viewport()->rect()).intersected(dirtyRect));
-        if (rowScope)
+        clip &= content;
+        if (rowScope && !paintColumnSpacing)
             clip -= columnGaps;
         if (clip.isEmpty())
             return;
+        const VisualState state = visualState(index);
         const auto layer = [&](qreal opacity, const QColor &color) {
             if (opacity <= 0.0)
                 return;
@@ -3890,7 +4594,7 @@ void VirtualTableView::paintVisualStateBackgrounds(QPainter *target, const QRect
                 QRect rect = geometryForViewRow(row);
                 int y = rect.y();
                 rowVisualY(row, &y);
-                rect = QRect(0, y, viewport()->width(), rect.height());
+                rect = QRect(rowLeft, y, rowWidth, rect.height());
                 paint(node, rect, itemPaneRect(itemPaneForRow(row)));
                 continue;
             }
@@ -3925,11 +4629,21 @@ void VirtualTableView::paintRoundedStateBackgroundLayer(QPainter *painter, const
                                                        const QRegion &clip, const QColor &color,
                                                        int radius) const
 {
-    fillPixelAlignedRoundedRegion(painter, extended, clip, radius, color);
+    fillPixelAlignedRoundedRegion(painter, extended, clip, radius, color,
+                                 !rowVisualStateIncludesHeader());
+}
+
+bool VirtualTableView::rowVisualStateIncludesHeader() const
+{
+    return m_visualStateCornerRadiusIncludesHeaders
+        && selectionBehavior() == SelectionBehavior::SelectRows
+        && isVerticalHeaderShown() && m_verticalHeader && m_verticalHeaderWidth > 0
+        && headerVisualStateBackgroundVisible(Qt::Vertical);
 }
 
 void VirtualTableView::refreshVisualStates()
 {
+    refreshHeaderVisualStates();
     viewport()->update();
     for (QWidget *widget : m_columnSpacingWidgets)
         widget->update();
@@ -3942,6 +4656,7 @@ void VirtualTableView::refreshVisualStates()
 
 void VirtualTableView::refreshVisualState(const QModelIndex &index)
 {
+    refreshHeaderVisualStates();
     viewport()->update();
     for (QWidget *widget : m_columnSpacingWidgets)
         widget->update();
@@ -3951,7 +4666,7 @@ void VirtualTableView::refreshVisualState(const QModelIndex &index)
     }
     if (!m_cellAdapter || !index.isValid())
         return;
-    if (m_visualStateScope == VisualStateScope::Cell) {
+    if (selectionBehavior() == SelectionBehavior::SelectItems) {
         notifyCellVisualStates(index, true);
         return;
     }
@@ -4331,6 +5046,8 @@ void VirtualTableView::updateColumnLayout()
     m_columnUpdateActive = false;
     updateRowSpacingWidgetMasks();
     syncColumnSpacingWidgets();
+    syncRowGridLines();
+    viewport()->update();
 }
 
 void VirtualTableView::refreshPreviewGridMasks()
@@ -4425,20 +5142,43 @@ QVector<QRect> VirtualTableView::previewSpanRects() const
     return rectangles;
 }
 
+QRect VirtualTableView::rowGridGeometry(qsizetype row) const
+{
+    QRect rect = geometryForViewRow(row);
+    if (m_dragRowPreview->isActive() && row == m_dragRowPreview->source()) {
+        const qsizetype destination = m_dragRowPreview->destination();
+        if (destination > row) {
+            // Insert-before destinations include the space vacated by the source.
+            // The preceding row's committed bottom also handles insertion at the end.
+            rect.moveBottom(geometryForViewRow(destination - 1).bottom());
+        } else if (destination < row) {
+            int followingY = geometryForViewRow(destination).y();
+            rowVisualY(destination, &followingY);
+            rect.moveBottom(followingY - rowSpacing() - 1);
+        }
+        return rect;
+    }
+    int visualY = rect.y();
+    if (rowVisualY(row, &visualY))
+        rect.moveTop(visualY);
+    return rect;
+}
+
 void VirtualTableView::syncRowGridLines()
 {
     QHash<qsizetype, QRect> desired;
     const QRect viewportRect = viewport()->geometry();
+    const QRegion content = columnContentRegion();
+    const QRect contentBounds = content.boundingRect().translated(viewportRect.topLeft());
     if (m_horizontalGridLinesVisible && viewportRect.width() > 0) {
         for (const VisibleRange &range : visibleItemRanges()) {
             for (qsizetype row = range.first; row >= 0 && row <= range.last; ++row) {
+                const bool placeholder = m_dragRowPreview->isActive()
+                    && row == m_dragRowPreview->source();
                 if ((row + 1 >= viewItemCount() && !m_dragRowPreview->isActive())
-                    || (m_rowLayout && m_rowLayout->spacingAfter(row) > 0))
+                    || (!placeholder && m_rowLayout && m_rowLayout->spacingAfter(row) > 0))
                     continue;
-                QRect rowRect = geometryForViewRow(row);
-                int visualY = rowRect.y();
-                if (rowVisualY(row, &visualY))
-                    rowRect.moveTop(visualY);
+                const QRect rowRect = rowGridGeometry(row);
                 if (!rowRect.intersects(viewport()->rect()))
                     continue;
                 const int y = viewportRect.y() + rowRect.bottom() - m_horizontalGridLineWidth + 1;
@@ -4446,10 +5186,29 @@ void VirtualTableView::syncRowGridLines()
                                      m_horizontalGridLineWidth);
                 const QRect paneRect = itemPaneRect(itemPaneForRow(row))
                     .translated(viewportRect.topLeft());
-                const QRect clipped = lineRect.intersected(paneRect);
+                const QRect clipped = lineRect.intersected(paneRect)
+                    .intersected(contentBounds);
                 if (!clipped.isEmpty() && !isRowGridLineCoveredByPaneSeparator(clipped))
                     desired.insert(row, clipped);
             }
+        }
+    }
+    if (m_dragRowPreview->isActive()) {
+        const qsizetype source = m_dragRowPreview->source();
+        const auto placeholder = desired.constFind(source);
+        if (placeholder != desired.cend()) {
+            const QRect boundary = placeholder.value();
+            bool duplicate = false;
+            for (auto it = desired.cbegin(); it != desired.cend(); ++it) {
+                if (it.key() != source && it.value() == boundary) {
+                    duplicate = true;
+                    break;
+                }
+            }
+            // At an animation endpoint the two borders can coincide.
+            // Paint a translucent grid color only once at that position.
+            if (duplicate)
+                desired.remove(source);
         }
     }
     for (auto it = m_rowGridLines.begin(); it != m_rowGridLines.end();) {
@@ -4479,6 +5238,7 @@ void VirtualTableView::syncRowGridLines()
         line->setPalette(colors);
         line->setGeometry(it.value());
         QRegion mask(line->rect());
+        mask &= content.translated(viewportRect.topLeft() - line->pos());
         const QRect excluded = rowGridLineExclusion(itemDepth(viewIndex(it.key())));
         if (!excluded.isEmpty())
             mask -= excluded.translated(viewportRect.x() - line->x(), 0);
@@ -4505,6 +5265,7 @@ void VirtualTableView::syncRowGridLines()
         line->show();
         line->raise();
     }
+    raiseDropIndicator();
 }
 
 void VirtualTableView::syncColumnSpacingWidgets()
@@ -4538,9 +5299,9 @@ void VirtualTableView::syncColumnSpacingWidgets()
             const QRect pane = m_panes.paneAt(paneIndex).viewportRect;
             const bool terminal = logical == last;
             const int columnEnd = x + m_columns->sectionSize(logical);
-            if (terminal && (!m_verticalGridLinesVisible || columnEnd >= pane.right() + 1))
+            if (terminal && (!m_verticalGridLinesVisible || columnEnd > pane.right() + 1))
                 continue;
-            const int boundarySpacing = terminal ? 0 : spacing;
+            const int boundarySpacing = m_panes.columnSpacingAfter(logical);
             const int verticalBand = m_verticalGridLinesVisible ? m_verticalGridLineWidth : 1;
             const QRect full(viewportRect.x() + columnEnd - verticalBand,
                              headerTop, boundarySpacing + verticalBand, bottom - headerTop);
@@ -4564,12 +5325,23 @@ void VirtualTableView::syncColumnSpacingWidgets()
     for (auto it = desired.cbegin(); it != desired.cend(); ++it) {
         QWidget *widget = m_columnSpacingWidgets.value(it.key(), nullptr);
         if (!widget) {
-            widget = m_columnSpacingPool.isEmpty()
-                ? new ColumnSpacingHost(this) : m_columnSpacingPool.takeLast();
+            if (m_columnSpacingPool.isEmpty()) {
+                auto *host = new ColumnSpacingHost(this);
+                host->setBodyStatePainter([this, host](QPainter *painter, const QRect &dirty) {
+                    // Both widgets are children of the view; map sibling coordinates without mapTo().
+                    const QPoint origin = viewport()->pos() - host->pos();
+                    painter->translate(origin);
+                    paintVisualStateBackgrounds(painter, dirty.translated(-origin), true);
+                });
+                widget = host;
+            } else {
+                widget = m_columnSpacingPool.takeLast();
+            }
             m_columnSpacingWidgets.insert(it.key(), widget);
         }
         auto *host = static_cast<ColumnSpacingHost *>(widget);
         const bool terminal = it.key() == last;
+        host->setBackgroundColors(spacingBackgroundColor(), resolvedHeaderSpacingBackgroundColor());
         if (spacing > 0 && !terminal && m_columnSpacingFactory && !host->content())
             host->setContent(m_columnSpacingFactory(it.key(), host));
         if (spacing > 0 && !terminal && m_headerColumnSpacingFactory && !host->headerContent())
@@ -4652,33 +5424,40 @@ void VirtualTableView::updateColumnSpacingVisualRows()
         }
         std::sort(localGaps.begin(), localGaps.end(),
                   [](const QRect &a, const QRect &b) { return a.top() < b.top(); });
-        QVector<int> horizontalLines;
+        QVector<ColumnSpacingHost::HorizontalLine> horizontalLines;
         if (m_horizontalGridLinesVisible && m_horizontalSpacingLineThroughColumnSpacing
             && spacing > 0) {
             for (const VisibleRange &range : visibleItemRanges()) {
                 for (qsizetype row = range.first; row >= 0 && row <= range.last; ++row) {
-                    QRect rowRect = geometryForViewRow(row);
-                    int visualY = rowRect.y();
-                    if (rowVisualY(row, &visualY))
-                        rowRect.moveTop(visualY);
-                    if (!rowRect.intersects(viewport()->rect()))
-                        continue;
-                    const int rowSpacing = m_rowLayout ? m_rowLayout->spacingAfter(row) : 0;
+                    const QRect rowRect = rowGridGeometry(row);
+                    const bool placeholder = m_dragRowPreview->isActive()
+                        && row == m_dragRowPreview->source();
+                    // A visible trailing gap still needs lines after its row body scrolls out.
+                    const int rowSpacing = !placeholder && m_rowLayout
+                        ? m_rowLayout->spacingAfter(row) : 0;
                     const int first = viewportRect.y() + rowRect.bottom()
                         + (rowSpacing > 0 ? 1 : 1 - m_horizontalGridLineWidth) - widget->y();
-                    const QRect paneRect = itemPaneRect(itemPaneForRow(row));
-                    const int firstInViewport = first + widget->y() - viewportRect.y();
-                    if (first >= host->bodyTop() && first < host->height()
-                        && firstInViewport >= paneRect.top()
-                        && firstInViewport + m_horizontalGridLineWidth <= paneRect.bottom() + 1)
-                        horizontalLines.append(first);
+                    const QRect clip = itemPaneRect(itemPaneForRow(row))
+                        .intersected(viewport()->rect())
+                        .translated(viewportRect.topLeft() - widget->pos())
+                        .intersected(widget->rect());
+                    const auto appendLine = [&](int y) {
+                        const QRect band(0, y, host->width(), m_horizontalGridLineWidth);
+                        const QRect visible = band.intersected(clip);
+                        if (visible.isEmpty())
+                            return;
+                        if (m_dragRowPreview->isActive()
+                            && std::any_of(horizontalLines.cbegin(), horizontalLines.cend(),
+                                [&](const ColumnSpacingHost::HorizontalLine &line) {
+                                    return line.y == y && line.clip == visible;
+                                }))
+                            return;
+                        horizontalLines.append(ColumnSpacingHost::HorizontalLine{y, visible});
+                    };
+                    appendLine(first);
                     if (rowSpacing > 0) {
                         const int lastLine = first + qMax(0, rowSpacing - m_horizontalGridLineWidth);
-                        const int lastInViewport = lastLine + widget->y() - viewportRect.y();
-                        if (lastLine >= host->bodyTop() && lastLine < host->height()
-                            && lastInViewport >= paneRect.top()
-                            && lastInViewport + m_horizontalGridLineWidth <= paneRect.bottom() + 1)
-                            horizontalLines.append(lastLine);
+                        appendLine(lastLine);
                     }
                 }
             }
@@ -4695,9 +5474,10 @@ void VirtualTableView::onHeaderGeometryChanged()
         m_horizontalHeader->headerWidget()->update();
     syncHorizontalScrollBar();
     updateColumnLayout();
-    if (m_materializationMode == MaterializationMode::CellWidgets) {
-        // Column geometry changes also change which cells belong to the
-        // materialized region, so the cell set has to be recomputed.
+    if (m_materializationMode == MaterializationMode::CellWidgets
+        || (autoMeasureItemHeight() && itemHeightMode() == ItemHeightMode::Variable)) {
+        // Recompute the cell window, or remeasure row widgets after their column
+        // widths change. Reuse the normal measurement policy and scroll anchor.
         markDirty();
     }
     emit columnGeometryChanged();
@@ -4717,6 +5497,7 @@ void VirtualTableView::afterMaterialize()
         return;
     raisePaneSeparatorLines();
     syncHorizontalScrollBar();
+    refreshHeaderVisualStates();
 }
 
 void VirtualTableView::applyRowSpacingOverrides()
@@ -4743,6 +5524,7 @@ void VirtualTableView::configureColumnSpacingWidget(QWidget *widget) const
 QRegion VirtualTableView::rowSpacingWidgetMask(qsizetype row, const QRect &geometry) const
 {
     QRegion mask = VirtualItemView::rowSpacingWidgetMask(row, geometry);
+    mask &= columnContentRegion().translated(-geometry.topLeft());
     if (!m_spanProvider || !model())
         return mask;
     if (m_rowFollowsHeaderVisual && visualRowStrip()) {
@@ -4840,7 +5622,24 @@ void VirtualTableView::wheelEvent(QWheelEvent *event)
             delta = qint64(horizontal != 0 ? angle.x() : angle.y()) * m_horizontalWheelPixels / 120;
         }
         if (delta != 0) {
-            scrollByHorizontalPixels(-delta);
+            // Route by pane bounds, including gaps and empty cells, rather than an item hit.
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+            const QPoint globalPosition = event->globalPosition().toPoint();
+#else
+            const QPoint globalPosition = event->globalPos();
+#endif
+            const int viewportX = viewport()->mapFromGlobal(globalPosition).x();
+            int scrollGroup = m_panes.primaryScrollGroup();
+            for (const TablePane &pane : m_panes.panes()) {
+                if (pane.viewportRect.width() <= 0 || viewportX < pane.viewportRect.left()
+                    || viewportX > pane.viewportRect.right())
+                    continue;
+                // Frozen areas retain the primary-group behavior.
+                if (!pane.isFrozen())
+                    scrollGroup = pane.scrollGroup;
+                break;
+            }
+            setHorizontalOffset(scrollGroup, horizontalOffset(scrollGroup) - delta);
             event->accept();
             return;
         }

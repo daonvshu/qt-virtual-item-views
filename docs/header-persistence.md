@@ -2,6 +2,8 @@
 
 `VirtualTableView::saveHeaderState()` 返回 `QByteArray`，`restoreHeaderState()` 用该数据恢复表格状态。可直接把字节数组存入 `QSettings` 的 INI 文件，无需自行序列化列号。保存内容包括视觉列顺序、列宽、隐藏状态、排序指示器、水平滚动偏移以及冻结的行列；它不会保存模型数据，也不会替模型执行排序。
 
+完整可运行写法见 [examples/table_capabilities/20_header_persistence/example.cpp](../examples/table_capabilities/20_header_persistence/example.cpp)，演示内存保存、改变布局与恢复；路径相对于仓库根目录。
+
 ## 保存到 INI
 
 下面代码放在创建 `QApplication app`、模型 `model` 和表格 `table` 的同一作用域中。`settings` 应存活到事件循环退出；表格也应在退出回调执行时仍然存在。

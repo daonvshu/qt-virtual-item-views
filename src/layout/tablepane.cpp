@@ -223,10 +223,8 @@ qint64 TablePaneLayout::extentOf(const QVector<int> &logicalColumns) const
         return 0;
     qint64 extent = 0;
     for (int logical : logicalColumns)
-        extent += m_geometry->sectionSize(logical);
-    if (!logicalColumns.isEmpty()) {
-        extent += qint64(logicalColumns.size()) * m_geometry->sectionSpacing();
-    }
+        extent += qint64(m_geometry->sectionSize(logical))
+            + columnSpacingAfter(logical);
     return extent;
 }
 
@@ -272,6 +270,7 @@ bool TablePaneLayout::update(int viewportWidth, int viewportHeight)
     m_panes.clear();
     m_panePrefixX.clear();
     m_paneSlotByLogical.fill(-1, count);
+    m_columnSpacings.fill(0, count);
     m_paneSlotWindows.clear();
     m_paneByLogical.fill(int(TablePane::Type::Scrollable), count);
     m_paneIndexByLogical.fill(-1, count);
@@ -365,11 +364,24 @@ bool TablePaneLayout::update(int viewportWidth, int viewportHeight)
             break;
         }
     }
+    QVector<int> fittedGaps;
+    if (m_geometry->resizeMode() == HeaderGeometry::ResizeMode::FitExtent) {
+        const QVector<int> order = m_geometry->visibleSectionsInVisualOrder();
+        for (int logical : order)
+            fittedGaps.append(m_geometry->sectionSpacingAfter(logical));
+    }
+    int gapSlot = 0;
+    for (const ResolvedPane &pane : resolved) {
+        for (int logical : pane.pane.logicalColumns) {
+            m_columnSpacings[logical] = logical == terminalColumn ? 0
+                : (fittedGaps.isEmpty() ? m_geometry->sectionSpacingAfter(logical)
+                                       : fittedGaps.value(gapSlot, 0));
+            ++gapSlot;
+        }
+    }
     for (int index = 0; index < resolved.size(); ++index) {
         ResolvedPane &pane = resolved[index];
         pane.extent = extentOf(pane.pane.logicalColumns);
-        if (pane.pane.logicalColumns.contains(terminalColumn))
-            pane.extent -= m_geometry->sectionSpacing();
         if (pane.pane.type == TablePane::Type::Scrollable)
             continue;
         pane.pane.type = primaryIndex < 0 || index < primaryIndex ? TablePane::Type::FrozenLeft
@@ -472,7 +484,7 @@ bool TablePaneLayout::update(int viewportWidth, int viewportHeight)
             m_groupByLogical[logical] = frozen ? -1 : pane.pane.scrollGroup;
             m_paneSlotByLogical[logical] = slot;
             contentX += m_geometry->sectionSize(logical)
-                + (logical == terminalColumn ? 0 : m_geometry->sectionSpacing());
+                + columnSpacingAfter(logical);
             prefix.append(contentX);
             ++m_columnVisits;
         }

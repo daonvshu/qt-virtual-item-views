@@ -14,27 +14,32 @@ view.scrollTo(first);
 
 `selectionModel()` 返回 Qt 的 `QItemSelectionModel`；也可通过 `setSelectionModel()` 共享一个与当前模型匹配的选择模型。视图发出 `clicked`、`doubleClicked` 和 `activated`。表格按行还是按单元格选择由 `SelectionBehavior` 控制。
 
+表格的行号点击选择默认开启，列头点击选择默认关闭，分别通过 `setVerticalHeaderSelectionEnabled()` 和 `setHorizontalHeaderSelectionEnabled()` 配置。它们与主体选择行为独立，支持当前选择模式和 Ctrl/Shift，结果仍写入同一个选择模型。启用列头选择后，点击列头优先选择而不排序。参考 [表头选择说明](headers.md#点击表头选择) 和 [第 12 节源码](../examples/table_capabilities/12_selection/example.cpp)。
+
 ## Hover、选中背景与圆角
 
 `VirtualTableView` 可以直接绘制完整的 hover 和选中背景，无需为常用圆角样式继承视图：
 
 ```cpp
 table.setVisualStateBackgroundVisible(true);
-table.setVisualStateScope(viv::VirtualTableView::VisualStateScope::Row);
+table.setSelectionBehavior(viv::VirtualItemView::SelectionBehavior::SelectRows);
 table.setVisualStateCornerRadius(6); // 逻辑像素；0 为直角，负数按 0 处理
+table.setVisualStateCornerRadiusIncludesHeaders(true); // Default: true.
 table.setHoverBackgroundColor(QColor(235, 240, 247));
 table.setSelectedBackgroundColor(QColor(190, 215, 245));
 table.setVisualStateAnimationDuration(120); // 0 关闭过渡动画
 table.setVisualStateAnimationEasingCurve(QEasingCurve::OutCubic); // 快速起步
 ```
 
-`VisualStateScope::Row` 绘制整行，`Cell` 按单元格绘制，与物化方式独立。行和单元格控件应保持背景透明；自绘时可调用 `setVisualStateBackgroundVisible(false)` 关闭框架背景。
+`SelectionBehavior::SelectRows` 下，hover 和 selected 都按整行显示；`SelectItems` 下都按单元格显示。只需设置选择行为，无需单独设置背景范围；`visualState()` 和 adapter 收到的状态也遵循相同规则，与整行或单元格物化方式独立。行和单元格控件应保持背景透明；自绘时可调用 `setVisualStateBackgroundVisible(false)` 关闭框架背景。
+
+圆角默认扩展到内置表头：按行高亮时，行号条绘制左侧圆角，内容区绘制右侧圆角；列表头选中背景绘制四角圆角。行号条隐藏或关闭状态背景时，内容区恢复自身的左右圆角。调用 `setVisualStateCornerRadiusIncludesHeaders(false)` 可让表头状态背景保持直角，内容区仍使用配置的圆角。按格高亮时，行号条和各单元格分别绘制完整四角圆角。参考 [第 19 节表头样式源码](../examples/table_capabilities/19_custom_header/styled_headers.cpp) 的圆角与列头选择开关。
 
 hover 身份变化会立即驱动动画，不依赖后续绘制或 adapter 主动查询状态；快速离开时从实际经过时间对应的进度继续淡出。所有视图共用 `setVisualStateAnimationEasingCurve(const QEasingCurve &)` 与 `visualStateAnimationEasingCurve()`，控制 hover 和 selected 的进入、离开曲线，默认使用 `OutCubic`、时长 180 ms。修改曲线会重置当前过渡，与修改时长的行为一致。
 
-所有视图默认启用框架 hover/selected 背景，普通视图的圆角默认为 0，`StyledTableView` 保留默认 6 像素圆角。状态背景只在 item 内绘制，所有间距保持自身外观。颜色和动画继续使用基类现有接口。表格需要完全自定义形状或绘制方式时，可重写 `paintStateBackgroundLayer()`。
+所有视图默认启用框架 hover/selected 背景，普通视图的圆角默认为 0，`StyledTableView` 保留默认 6 像素圆角。表格按行选择时，状态背景默认贯通横向列间距，可通过 `setVisualStateThroughColumnSpacing(false)` 关闭，参考 [第 09 节源码](../examples/table_capabilities/09_spacing/example.cpp)。按单元格选择时只绘制单元格背景；纵向行间距和表头间距保持自身外观。其他视图仍只在 item 内绘制状态背景。颜色和动画继续使用基类现有接口。表格需要完全自定义形状或绘制方式时，可重写 `paintStateBackgroundLayer()`。
 
-`VirtualTreeTableView` 同样支持上述背景开关、圆角和颜色接口，树的背景范围继续由 `setVisualStateBackgroundExtent()` 控制。`VirtualTreeView` 已提供同名的背景开关、圆角和颜色接口。最小参考代码见 [表格状态示例](../examples/reference/table/state.cpp)。
+`VirtualTreeTableView` 同样支持上述背景开关、圆角和颜色接口，树的背景范围继续由 `setVisualStateBackgroundExtent()` 控制。`VirtualTreeView` 已提供同名的背景开关、圆角和颜色接口。最小参考代码见 [表格状态示例](../examples/table_capabilities/10_visual_states/example.cpp)。
 
 ## 拖放
 
@@ -106,7 +111,7 @@ table.setDragReorderAnimationEasingCurve(QEasingCurve::OutCubic); // 默认曲�
 
 动画用于同一表格内的单行 Move，支持 `RowWidgets`、`CellWidgets` 及冻结列；源行和落点须位于滚动行区域。复制、多行、跨视图、单元格投放、跨冻结行区域、有 span provider 的表格及树表沿用指示器。模式独立于 `setDropIndicatorShown()` 和指示器颜色、线宽、线型设置；这些设置只作用于指示器。
 
-拖动过程中只改变控件、状态背景和分隔线的显示位置，不提前修改 model 顺序。放下仍调用 model 的 `dropMimeData()`；取消、离开或拒绝落点后恢复原位置。`Automatic` 与 `Manual` 共用同一逻辑。动画配置不会改变 MIME、选择或源行删除规则，也不改变拖动截图来源；单元格物化下需要整行预览时，由业务提供 viewport 行区域截图，参见下节。
+拖动过程中只改变控件、状态背景和分隔线的显示位置，不提前修改 model 顺序。放下仍调用 model 的 `dropMimeData()`；取消、离开或拒绝落点后恢复原位置。`Automatic` 与 `Manual` 共用同一逻辑。动画配置不会改变 MIME、选择或源行删除规则。表格默认预览跟随选择行为：`SelectRows` 截取整行可见内容，`SelectItems` 截取起拖单元格，与物化方式无关；单元格物化的整行预览由框架截取 viewport 中该行所属区域，包含冻结列和当前可见的滚动列。
 
 `drag_drop` 工具栏可切换反馈模式、物化方式、时长与曲线；勾选“整行拖动”后拖动表格的一行即可对比。启动参数 `--row-animation` 会同时启用整行语义与行移动动画。
 
@@ -123,7 +128,11 @@ view.setDragStartMode(viv::VirtualItemView::DragStartMode::Manual);
 
 `Manual` 只关闭框架根据鼠标移动自动启动的入口。业务自行处理手柄按下、拖动距离及权限，在满足条件后调用 `startDrag()`。模型的 `ItemIsDragEnabled`、MIME、落点检查、指示器和边缘自动滚动继续生效；无需通过临时 role 切换拖动权限。切换触发模式会清除尚未开始的鼠标按下记录。
 
-`startDrag(index)` 沿用原来的截图控件及行/单元格裁剪规则，热点默认位于鼠标按下的位置，让预览跟随原有抓取点移动。自动模式记录按下时的全局位置；手动调用有匹配的按下记录时使用该记录，否则使用起拖入口处的鼠标位置。需要整行截图或组合预览时，使用 `viv::DragOptions` 重载：
+起拖项已选中时，框架传递选择集中允许拖动的索引；未选中时，`SelectRows` 传递源行所有允许拖动的列（包括隐藏和屏外列），`SelectItems` 只传递起拖单元格。手动手柄无需先选中源行，框架也不会为收集 MIME 修改选择集。树节点使用该节点父项下的列范围。
+
+表格默认预览包含对应区域实际显示的网格线、间距边界和冻结区域分隔线，适用于行与单元格物化模式；超出 viewport、所属 pane 或控件遮罩的部分保持透明。显式指定 `previewWidget` 时仍直接截取业务提供的控件。
+
+`startDrag(index)` 使用默认的行／单元格预览。`DragOptions` 未指定截图控件和区域时也使用同一默认规则，只传 `globalPressPosition` 即可保留手柄的抓取点。热点默认位于鼠标按下的位置，让预览跟随原有抓取点移动。自动模式记录按下时的全局位置；手动调用有匹配的按下记录时使用该记录，否则使用起拖入口处的鼠标位置。需要覆盖默认截图或提供组合预览时，使用 `viv::DragOptions` 指定来源和区域：
 
 ```cpp
 // 业务手柄超过拖动距离后调用；以下变量由业务保存/计算。
@@ -142,12 +151,12 @@ if (source.isValid()) {
 
 | 参数 | 规则 |
 | --- | --- |
-| `previewWidget` | 不接管所有权；为空时使用原有 `dragSourceWidget(index)` |
-| `previewRect` | 截图控件的局部逻辑像素坐标；空矩形截整个控件，非空矩形与控件边界求交，完全无交集时不设置预览图 |
+| `previewWidget` | 不接管所有权；为空时使用视图默认的 `dragSourceWidget(index)` |
+| `previewRect` | 截图控件的局部逻辑像素坐标；未指定控件且矩形为空时使用默认行／单元格预览，显式指定控件且矩形为空时截取整个控件；非空矩形与控件边界求交，完全无交集时不设置预览图 |
 | `usePressPosition` | 默认 true，使用鼠标抓取点；设为 false 切回居中热点 |
 | `globalPressPosition` | `OptionalPoint` 类型的可选全局按下位置，赋值 `QPoint` 即可，调用 `reset()` 可清除；不传时使用匹配的按下记录或起拖时的鼠标位置，`QPoint(0, 0)` 也是有效值。转为截图控件局部坐标后减去实际裁剪区域左上角，无需乘以缩放比例，位置在截图外时保留该偏移 |
 
-新重载的空 `previewRect` 始终表示整个所选控件，不自动套用旧入口的单元格裁剪。预览只影响图像和热点，不改变选择集、MIME 或落点的行/单元格语义；若要改变这些语义，仍使用选择行为及模型接口。
+显式指定 `previewWidget` 或非空 `previewRect` 时，以业务提供的截图配置为准。预览只影响图像和热点，不改变选择集、MIME 或落点的行/单元格语义；若要改变这些语义，仍使用选择行为及模型接口。
 
 框架按源索引临时 pin 对应的物化项：行模式使用整行身份，单元格模式使用合并格锚点。即使截图来自 viewport，也不会把 viewport 当作 pin 对象。其他行或单元格不会因为被截入预览而固定。业务已有的显式 pin 会保留，拖动结束只释放本次临时 pin，同时清除指示器并停止边缘自动滚动。准备 MIME、截图和执行原生拖动期间的重复 `startDrag()` 请求会返回 `IgnoreAction`。
 

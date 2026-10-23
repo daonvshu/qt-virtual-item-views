@@ -16,7 +16,7 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 # Executables land in <build>/bin and libraries in <build>/lib, for the static
 # and the shared build alike: a shared library is then found next to the
 # executables (Windows does not look into a sibling directory), so CTest and a
-# plain `bin/table_spans` run need no PATH juggling. Multi-config generators add
+# plain `bin/table_capabilities` run need no PATH juggling. Multi-config generators add
 # their own per-config subdirectory below these.
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
@@ -70,7 +70,9 @@ set(VIRTUALITEMVIEWS_PUBLIC_HEADERS
     include/virtualitemviews/accessibility.h
     include/virtualitemviews/branchindicator.h
     include/virtualitemviews/global.h
+    include/virtualitemviews/headercornerwidget.h
     include/virtualitemviews/headergeometry.h
+    include/virtualitemviews/headersection.h
     include/virtualitemviews/headerwidgetadapter.h
     include/virtualitemviews/itempane.h
     include/virtualitemviews/labelheaderview.h
@@ -81,6 +83,7 @@ set(VIRTUALITEMVIEWS_PUBLIC_HEADERS
     include/virtualitemviews/reorderabletablemodel.h
     include/virtualitemviews/scrollmapper.h
     include/virtualitemviews/sizeindex.h
+    include/virtualitemviews/styledheadersection.h
     include/virtualitemviews/styledtableview.h
     include/virtualitemviews/tablewidgetadapter.h
     include/virtualitemviews/tablespan.h
@@ -115,7 +118,10 @@ set(VIRTUALITEMVIEWS_SOURCES
     src/widgets/accessibility.cpp
     src/widgets/branchindicator.cpp
     src/widgets/columnhost.cpp
+    src/widgets/headercornerwidget.cpp
+    src/widgets/headersection.cpp
     src/widgets/labelheaderview.cpp
+    src/widgets/styledheadersection.cpp
     src/widgets/styledtableview.cpp
     src/widgets/virtuallistview.cpp
     src/widgets/virtualflowtableview.cpp

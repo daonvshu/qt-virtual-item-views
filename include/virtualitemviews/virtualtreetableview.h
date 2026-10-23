@@ -151,7 +151,8 @@ private:
     QRect decorationExclusion(int cells) const;
     bool isIndicatorPosition(const QModelIndex &index, const QPoint &position) const;
     void paintBranches(QPainter *painter) const;
-    void paintVisualStateBackgrounds(QPainter *painter, const QRect &dirty) const;
+    void paintVisualStateBackgrounds(QPainter *painter, const QRect &dirty,
+                                    bool paintColumnSpacing = false) const override;
     void invalidateBranches();
     QRect insertionLineRect(const DropTarget &target) const;
 

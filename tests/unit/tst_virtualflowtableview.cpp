@@ -642,7 +642,7 @@ private slots:
             const QPoint gap(first.right() + 3, first.center().y());
             QSignalSpy submitted(&view, &viv::VirtualItemView::itemDropped);
             QVERIFY(hover(gap));
-            QWidget *indicator = view.viewport()->findChild<QWidget *>(QStringLiteral("vivDropIndicator"));
+            QWidget *indicator = view.findChild<QWidget *>(QStringLiteral("vivDropIndicator"));
             QVERIFY(indicator && indicator->isVisible());
             QVERIFY(drop(gap));
             vivtest::settle();

@@ -9,7 +9,7 @@
 | 入门与集成 | 模型、adapter、控件生命周期、构建和链接 | [快速开始](docs/getting-started.md) |
 | 模型接入 | 数据变更通知、代理模型、排序、行移动 | [模型与更新](docs/models.md) |
 | 列表 | 行控件、数据绑定、行高、状态、选择、拖放、滚动与复用 | [VirtualListView 功能示例源码](docs/list.md) |
-| 表格 | 行控件与单元格控件两种模式、行列间距、行高与选择 | [表格与单元格](docs/table.md) |
+| 表格 | 行控件与单元格控件两种模式、行列间距、行高与选择 | [VirtualTableView 功能示例源码](docs/table.md) |
 | 流式表格 | 随窗口宽度动态换列、均分铺满列宽、固定高度或宽高比 | [流式表格](docs/flow-table.md) |
 | 瀑布流 | 最短列布局、独立项目高度、图片估算和动态列数 | [瀑布流](docs/masonry.md) |
 | 表格布局 | 列宽比例分配、左右冻结列、上下冻结行、多滚动组、合并单元格 | [布局与合并](docs/table-layout-guide.md) |
@@ -19,9 +19,9 @@
 | 通用交互 | 选择、拖放、编辑器焦点与弹窗 | [选择与拖放](docs/interaction.md) |
 | 可访问性与诊断 | 可见项接口、物化统计和生命周期日志 | [可访问性与诊断](docs/accessibility-guide.md) |
 
-从[快速开始](docs/getting-started.md)完成构建与接入。`VirtualListView` 的用法按功能列在[源码路径索引](docs/list.md)中，所有路径均相对于仓库根目录。
+从[快速开始](docs/getting-started.md)完成构建与接入。列表与表格的用法按功能列在 [VirtualListView](docs/list.md) 和 [VirtualTableView](docs/table.md) 源码路径索引中，所有路径均相对于仓库根目录。
 
-列表从 [examples/list_capabilities/01_basic/example.cpp](examples/list_capabilities/01_basic/example.cpp) 开始阅读；每个功能单独一个目录，包含完整实现，由同一进程演示。构建和运行方式见 [examples/list_capabilities/README.md](examples/list_capabilities/README.md)。其他视图见 [examples 导航](examples/README.md)。
+列表从 [examples/list_capabilities/01_basic/example.cpp](examples/list_capabilities/01_basic/example.cpp) 开始阅读；每个功能单独一个目录，包含完整实现，由同一进程演示。构建和运行方式见 [examples/list_capabilities/README.md](examples/list_capabilities/README.md)。表格从 [行控件](examples/table_capabilities/01_row_widgets/example.cpp) 或 [单元格控件](examples/table_capabilities/02_cell_widgets/example.cpp) 开始阅读，统一程序为 [table_capabilities](examples/table_capabilities/README.md)。其他视图见 [examples 导航](examples/README.md)。
 
 ## 适用场景
 

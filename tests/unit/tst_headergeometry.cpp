@@ -42,7 +42,10 @@ private slots:
     void stretchFactorsShareTheLeftoverExtent();
     void stretchWithoutAnExtentChangesNothing();
     void stretchFollowsVisibilityAndTheSizeRange();
-    void resizingAStretchingSectionFixesItsWidth();
+    void resizingAnySectionDisablesStretch_data();
+    void resizingAnySectionDisablesStretch();
+    void resizingAnySectionDisablesLastStretch_data();
+    void resizingAnySectionDisablesLastStretch();
     void stretchFactorsSurviveTheStateRoundTrip();
     void sparseStretchKeepsTheLargeCountCompact();
     void sparseStructuralChangesStayCompact();
@@ -53,6 +56,16 @@ private slots:
     void perSectionSpacingKeepsPositionsAndGapsAligned();
     void sparseSpacingKeepsLargeUniformGeometryCompact();
     void panePositionsIncludeColumnSpacing();
+    void fitExtentRedistributesFromEitherEdge();
+    void fitExtentDragUsesOriginalSnapshot();
+    void fitExtentPreservesRatiosAcrossViewportLimits();
+    void fitExtentFollowsHiddenAndReorderedSections();
+    void fitExtentRejectsStaleSnapshots_data();
+    void fitExtentRejectsStaleSnapshots();
+    void fitExtentFitsGapsAndPanes();
+    void fitExtentSupportsProgrammaticWidthsAndEmptyModels();
+    void fitExtentRestoresWidthsAndExitsForOrdinaryStretch();
+    void fitExtentCommitsSizesBeforeNotifying();
 };
 
 void TestHeaderGeometry::defaultSectionGeometry()
@@ -1030,7 +1043,13 @@ void TestHeaderGeometry::stretchFollowsVisibilityAndTheSizeRange()
     geometry.setMaximumSectionSize(100000);
     geometry.setMinimumSectionSize(24);
     geometry.setStretchExtent(600);
-    geometry.resizeSection(3, 100);              // pin the last column at its own width
+    geometry.resizeSection(3, 100); // A fixed-column resize also freezes all participants.
+    QCOMPARE(geometry.sectionStretchFactor(1), 0.0);
+    QCOMPARE(geometry.sectionStretchFactor(2), 0.0);
+    geometry.setSectionStretchFactor(1, 1.0);
+    geometry.setSectionStretchFactor(2, 1.0);
+    QCOMPARE(geometry.sectionStretchFactor(1), 1.0);
+    QCOMPARE(geometry.sectionStretchFactor(2), 1.0);
     geometry.setDefaultSectionSize(50);
     QCOMPARE(geometry.sectionSize(0), 50);
     QCOMPARE(geometry.sectionSize(1), 225);      // 600 - 50 - 100 (col 3 keeps its own)
@@ -1038,46 +1057,149 @@ void TestHeaderGeometry::stretchFollowsVisibilityAndTheSizeRange()
     QCOMPARE(geometry.totalExtent(), qint64(600));
 }
 
-void TestHeaderGeometry::resizingAStretchingSectionFixesItsWidth()
+void TestHeaderGeometry::resizingAnySectionDisablesStretch_data()
 {
-    // QHeaderView's "Stretch becomes Interactive": the user drags a section edge, and from
-    // then on that section keeps the dragged width while the others share the leftover.
+    QTest::addColumn<bool>("indexed");
+    QTest::addColumn<bool>("withExtent");
+    QTest::addColumn<int>("logical");
+    QTest::addColumn<int>("delta");
+    for (bool indexed : {false, true}) {
+        for (bool withExtent : {false, true}) {
+            for (int logical : {0, 1, 2, 3}) {
+                for (int delta : {-40, 0, 40}) {
+                    const QByteArray name = QByteArray(indexed ? "indexed" : "compact")
+                        + (withExtent ? "-active" : "-pending") + "-section-"
+                        + QByteArray::number(logical) + "-delta-" + QByteArray::number(delta);
+                    QTest::newRow(name.constData()) << indexed << withExtent << logical << delta;
+                }
+            }
+        }
+    }
+}
+
+void TestHeaderGeometry::resizingAnySectionDisablesStretch()
+{
+    QFETCH(bool, indexed);
+    QFETCH(bool, withExtent);
+    QFETCH(int, logical);
+    QFETCH(int, delta);
+
     HeaderGeometry geometry;
     geometry.setDefaultSectionSize(100);
-    geometry.setSectionCount(3);
+    geometry.setSectionCount(4);
+    geometry.resizeSection(0, 120);
     geometry.setSectionStretchFactor(1, 1.0);
-    geometry.setSectionStretchFactor(2, 1.0);
-    geometry.setStretchExtent(900);
-    QCOMPARE(geometry.sectionSize(1), 400);
-    QCOMPARE(geometry.sectionSize(2), 400);
+    geometry.setSectionStretchFactor(2, 2.0);
+    geometry.setSectionStretchFactor(3, 1.0);
+    if (withExtent)
+        geometry.setStretchExtent(900);
+    if (indexed) {
+        geometry.moveSection(3, 1);
+        geometry.setSectionHidden(0, true);
+    }
+    QCOMPARE(geometry.isUniform(), !indexed);
+    QVector<int> widths;
+    for (int section = 0; section < 4; ++section)
+        widths.append(geometry.storedSectionSize(section));
+    const qint64 left = geometry.sectionPosition(logical);
 
     QSignalSpy stretchSpy(&geometry, &HeaderGeometry::sectionStretchFactorChanged);
     QSignalSpy resizeSpy(&geometry, &HeaderGeometry::sectionResized);
-    geometry.resizeSection(1, 300);
-    QCOMPARE(geometry.sectionStretchFactor(1), 0.0);
-    QCOMPARE(stretchSpy.count(), 0);             // a resize reports sizes, not factors
-    QVERIFY(resizeSpy.count() >= 1);
-    QVERIFY(geometry.isSectionSizeExplicit(1));
-    QCOMPARE(geometry.sectionSize(1), 300);
-    QCOMPARE(geometry.sectionSize(2), 500);      // the only participant takes the rest
-    QCOMPARE(geometry.totalExtent(), qint64(900));
+    QSignalSpy geometrySpy(&geometry, &HeaderGeometry::geometryChanged);
+    widths[logical] += delta;
+    geometry.resizeSection(logical, widths.at(logical));
+    QCOMPARE(stretchSpy.count(), 0); // A resize reports sizes, not individual factor changes.
+    QCOMPARE(resizeSpy.count(), delta == 0 ? 0 : 1);
+    QCOMPARE(geometrySpy.count(), 1);
+    QCOMPARE(geometry.sectionPosition(logical), left);
+    QVERIFY(!geometry.hasStretchSections());
+    QVERIFY(!geometry.stretchLastSection());
 
-    // Dragging the same width again still leaves the pass (the factor is gone for good).
-    geometry.setSectionStretchFactor(1, 1.0);
-    QCOMPARE(geometry.sectionSize(1), 400);
-    QCOMPARE(geometry.sectionSize(2), 400);
-    geometry.resizeSection(1, geometry.sectionSize(1));
-    QCOMPARE(geometry.sectionStretchFactor(1), 0.0);
-    QCOMPARE(geometry.sectionSize(1), 400);
+    // Other widths stay fixed through subsequent viewport changes and state restoration.
+    const QByteArray state = geometry.saveState();
+    HeaderGeometry restored;
+    restored.setSectionCount(4);
+    restored.setStretchExtent(1600);
+    QVERIFY(restored.restoreState(state));
+    geometry.setStretchExtent(1200);
+    for (int section = 0; section < 4; ++section) {
+        QCOMPARE(geometry.sectionStretchFactor(section), 0.0);
+        QCOMPARE(geometry.storedSectionSize(section), widths.at(section));
+        QCOMPARE(restored.storedSectionSize(section), widths.at(section));
+        QCOMPARE(restored.sectionStretchFactor(section), 0.0);
+        if (indexed || widths.at(section) != geometry.defaultSectionSize())
+            QVERIFY(geometry.isSectionSizeExplicit(section));
+    }
 
-    // The setter is the only way back in, and it is idempotent.
-    QSignalSpy factorSpy(&geometry, &HeaderGeometry::sectionStretchFactorChanged);
+    // Explicitly setting positive factors is the only way back to proportional sizing.
     geometry.setSectionStretchFactor(1, 1.0);
-    QCOMPARE(factorSpy.count(), 1);
-    QCOMPARE(geometry.sectionSize(1), 400);
-    QCOMPARE(geometry.sectionSize(2), 400);
-    geometry.setSectionStretchFactor(1, 1.0);
-    QCOMPARE(factorSpy.count(), 1);
+    geometry.setSectionStretchFactor(2, 2.0);
+    geometry.setSectionStretchFactor(3, 1.0);
+    QVERIFY(geometry.hasStretchSections());
+    QCOMPARE(geometry.totalExtent(), qint64(1200));
+}
+
+void TestHeaderGeometry::resizingAnySectionDisablesLastStretch_data()
+{
+    QTest::addColumn<bool>("indexed");
+    QTest::addColumn<bool>("withFactors");
+    QTest::addColumn<bool>("resizeLast");
+    QTest::addColumn<int>("delta");
+    for (bool indexed : {false, true}) {
+        for (bool withFactors : {false, true}) {
+            for (bool resizeLast : {false, true}) {
+                for (int delta : {0, 40}) {
+                    const QByteArray name = QByteArray(indexed ? "indexed" : "compact")
+                        + (withFactors ? "-with-factors" : "-last-only")
+                        + (resizeLast ? "-resize-last" : "-resize-fixed")
+                        + "-delta-" + QByteArray::number(delta);
+                    QTest::newRow(name.constData()) << indexed << withFactors << resizeLast << delta;
+                }
+            }
+        }
+    }
+}
+
+void TestHeaderGeometry::resizingAnySectionDisablesLastStretch()
+{
+    QFETCH(bool, indexed);
+    QFETCH(bool, withFactors);
+    QFETCH(bool, resizeLast);
+    QFETCH(int, delta);
+
+    HeaderGeometry geometry;
+    geometry.setSectionCount(4);
+    if (withFactors) {
+        geometry.setSectionStretchFactor(1, 1.0);
+        geometry.setSectionStretchFactor(2, 2.0);
+    }
+    geometry.setStretchLastSection(true);
+    geometry.setStretchExtent(900);
+    if (indexed) {
+        geometry.moveSection(3, 1);
+        geometry.setSectionHidden(2, true);
+    }
+    const int last = geometry.visibleSectionsInVisualOrder().last();
+    const int resized = resizeLast ? last : 0;
+    QVector<int> widths;
+    for (int section = 0; section < 4; ++section)
+        widths.append(geometry.storedSectionSize(section));
+    const qint64 left = geometry.sectionPosition(resized);
+    QSignalSpy lastSpy(&geometry, &HeaderGeometry::stretchLastSectionChanged);
+
+    widths[resized] += delta;
+    geometry.resizeSection(resized, widths.at(resized));
+    QCOMPARE(lastSpy.count(), 1);
+    QCOMPARE(lastSpy.at(0).at(0).toBool(), false);
+    QVERIFY(!geometry.stretchLastSection());
+    QVERIFY(!geometry.hasStretchSections());
+    QCOMPARE(geometry.sectionPosition(resized), left);
+    geometry.setStretchExtent(1200);
+    geometry.setSectionHidden(2, false);
+    for (int section = 0; section < 4; ++section) {
+        QCOMPARE(geometry.sectionStretchFactor(section), 0.0);
+        QCOMPARE(geometry.storedSectionSize(section), widths.at(section));
+    }
 }
 
 void TestHeaderGeometry::stretchFactorsSurviveTheStateRoundTrip()
@@ -1143,6 +1265,18 @@ void TestHeaderGeometry::sparseStretchKeepsTheLargeCountCompact()
     QCOMPARE(geometry.sectionAtOffset(qint64(3) * kSize + 599), 2);
     QCOMPARE(geometry.sectionAtOffset(qint64(3) * kSize + 600), 3);
     QCOMPARE(geometry.sectionAtOffset(geometry.totalExtent() - 1), kSections - 1);
+
+    // Leaving stretch mode keeps sparse storage compact and freezes the other participant.
+    geometry.resizeSection(2, 500);
+    QVERIFY(!geometry.hasStretchSections());
+    QVERIFY(geometry.isUniform());
+    QCOMPARE(geometry.storedSectionStateCount(), 2);
+    QCOMPARE(geometry.sectionSize(1), 200);
+    QCOMPARE(geometry.sectionStretchFactor(1), 0.0);
+    QCOMPARE(geometry.sectionStretchFactor(2), 0.0);
+    geometry.setStretchExtent(qint64(kSections) * kSize + 1200);
+    QCOMPARE(geometry.sectionSize(1), 200);
+    QCOMPARE(geometry.sectionSize(2), 500);
 
     // A structural edit materialises the per-section state (here on a small geometry - the
     // 10M one would allocate ten million Sections for the same assertion) and keeps the
@@ -1335,6 +1469,271 @@ void TestHeaderGeometry::panePositionsIncludeColumnSpacing()
     QCOMPARE(panes.columnViewportX(1), 220);
     QCOMPARE(panes.groupExtent(0), qint64(210));
 }
+void TestHeaderGeometry::fitExtentRedistributesFromEitherEdge()
+{
+    HeaderGeometry geometry;
+    geometry.setSectionCount(4);
+    for (int column = 0; column < 4; ++column)
+        geometry.resizeSection(column, (column + 1) * 100);
+    geometry.setStretchExtent(1000);
+    geometry.setResizeMode(HeaderGeometry::ResizeMode::FitExtent);
+    const auto snapshot = geometry.resizeSnapshot();
+
+    geometry.resizeSectionFromEdge(2, 400, Qt::LeftEdge, snapshot);
+    QCOMPARE(geometry.resizeSnapshot().sizes, QVector<int>({67, 133, 400, 400}));
+    QCOMPARE(geometry.sectionPosition(2) + geometry.sectionSize(2), qint64(600));
+    geometry.resizeSectionFromEdge(1, 300, Qt::RightEdge, snapshot);
+    QCOMPARE(geometry.resizeSnapshot().sizes, QVector<int>({100, 300, 257, 343}));
+    QCOMPARE(geometry.totalExtent(), qint64(1000));
+
+    geometry.setMinimumSectionSize(80);
+    geometry.setMaximumSectionSize(500);
+    const auto bounded = geometry.resizeSnapshot();
+    geometry.resizeSectionFromEdge(1, 900, Qt::RightEdge, bounded);
+    QCOMPARE(geometry.sectionSize(1), 500);
+    QCOMPARE(geometry.sectionSize(0), 100);
+    QCOMPARE(geometry.totalExtent(), qint64(1000));
+    geometry.resizeSectionFromEdge(1, -100, Qt::RightEdge, bounded);
+    QCOMPARE(geometry.sectionSize(1), 80);
+    for (int column = 0; column < 4; ++column) {
+        QVERIFY(geometry.sectionSize(column) >= 80);
+        QVERIFY(geometry.sectionSize(column) <= 500);
+    }
+    QCOMPARE(geometry.totalExtent(), qint64(1000));
+    const auto outer = geometry.resizeSnapshot();
+    geometry.resizeSectionFromEdge(0, 300, Qt::LeftEdge, outer);
+    geometry.resizeSectionFromEdge(3, 300, Qt::RightEdge, outer);
+    QCOMPARE(geometry.resizeSnapshot().sizes, outer.sizes);
+}
+
+void TestHeaderGeometry::fitExtentDragUsesOriginalSnapshot()
+{
+    HeaderGeometry geometry;
+    geometry.setSectionCount(4);
+    for (int column = 0; column < 4; ++column)
+        geometry.resizeSection(column, (column + 1) * 100);
+    geometry.setStretchExtent(1000);
+    geometry.setResizeMode(HeaderGeometry::ResizeMode::FitExtent);
+    const auto snapshot = geometry.resizeSnapshot();
+    for (int width : {401, 199, 305, 117, 300}) {
+        geometry.resizeSectionFromEdge(2, width, Qt::LeftEdge, snapshot);
+        QCOMPARE(geometry.totalExtent(), qint64(1000));
+        QCOMPARE(geometry.sectionSize(3), 400);
+    }
+    QCOMPARE(geometry.resizeSnapshot().sizes, snapshot.sizes);
+    geometry.setStretchExtent(3);
+    const auto narrow = geometry.resizeSnapshot();
+    geometry.resizeSectionFromEdge(2, 2, Qt::LeftEdge, narrow);
+    geometry.resizeSectionFromEdge(2, narrow.sizes.at(2), Qt::LeftEdge, narrow);
+    QCOMPARE(geometry.resizeSnapshot().sizes, narrow.sizes);
+}
+
+void TestHeaderGeometry::fitExtentPreservesRatiosAcrossViewportLimits()
+{
+    HeaderGeometry geometry;
+    geometry.setSectionCount(4);
+    for (int column = 0; column < 4; ++column)
+        geometry.resizeSection(column, (column + 1) * 100);
+    geometry.setMinimumSectionSize(80);
+    geometry.setMaximumSectionSize(500);
+    geometry.setStretchExtent(1000);
+    geometry.setResizeMode(HeaderGeometry::ResizeMode::FitExtent);
+    const auto original = geometry.resizeSnapshot().sizes;
+    geometry.setStretchExtent(100);
+    QCOMPARE(geometry.resizeSnapshot().sizes, QVector<int>({25, 25, 25, 25}));
+    geometry.setStretchExtent(5000);
+    QCOMPARE(geometry.resizeSnapshot().sizes, QVector<int>({1250, 1250, 1250, 1250}));
+    geometry.setStretchExtent(0);
+    QCOMPARE(geometry.totalExtent(), qint64(0));
+    geometry.setStretchExtent(1000);
+    QCOMPARE(geometry.resizeSnapshot().sizes, original);
+    geometry.setStretchExtent(3);
+    QCOMPARE(geometry.totalExtent(), qint64(3));
+    geometry.setStretchExtent(1000);
+    QCOMPARE(geometry.resizeSnapshot().sizes, original);
+}
+
+void TestHeaderGeometry::fitExtentFollowsHiddenAndReorderedSections()
+{
+    HeaderGeometry geometry;
+    geometry.setSectionCount(4);
+    for (int column = 0; column < 4; ++column)
+        geometry.resizeSection(column, (column + 1) * 100);
+    geometry.setStretchExtent(1000);
+    geometry.setResizeMode(HeaderGeometry::ResizeMode::FitExtent);
+    geometry.setSectionHidden(1, true);
+    geometry.moveSection(3, 0);
+    const auto snapshot = geometry.resizeSnapshot();
+    QCOMPARE(geometry.visibleSectionsInVisualOrder(), QVector<int>({3, 0, 2}));
+    geometry.resizeSectionFromEdge(0, 200, Qt::LeftEdge, snapshot);
+    QCOMPARE(geometry.sectionSize(0), 200);
+    QCOMPARE(geometry.sectionSize(2), snapshot.sizes.at(2));
+    QCOMPARE(geometry.storedSectionSize(1), snapshot.sizes.at(1));
+    QCOMPARE(geometry.totalExtent(), qint64(1000));
+    geometry.setSectionHidden(1, false);
+    QCOMPARE(geometry.totalExtent(), qint64(1000));
+    geometry.insertLogicalSections(1, 1);
+    QCOMPARE(geometry.totalExtent(), qint64(1000));
+    geometry.removeLogicalSections(2, 2);
+    QCOMPARE(geometry.totalExtent(), qint64(1000));
+    geometry.setAllSectionsHidden(true);
+    QCOMPARE(geometry.totalExtent(), qint64(0));
+    geometry.setAllSectionsHidden(false);
+    QCOMPARE(geometry.totalExtent(), qint64(1000));
+}
+
+void TestHeaderGeometry::fitExtentRejectsStaleSnapshots_data()
+{
+    QTest::addColumn<int>("change");
+    QTest::newRow("viewport") << 0;
+    QTest::newRow("order") << 1;
+    QTest::newRow("visibility") << 2;
+    QTest::newRow("insert") << 3;
+    QTest::newRow("spacing") << 4;
+    QTest::newRow("minimum") << 5;
+    QTest::newRow("maximum") << 6;
+    QTest::newRow("mode-round-trip") << 7;
+    QTest::newRow("viewport-round-trip") << 8;
+    QTest::newRow("restore") << 9;
+}
+
+void TestHeaderGeometry::fitExtentRejectsStaleSnapshots()
+{
+    QFETCH(int, change);
+    HeaderGeometry geometry;
+    geometry.setSectionCount(4);
+    geometry.setStretchExtent(1000);
+    geometry.setResizeMode(HeaderGeometry::ResizeMode::FitExtent);
+    const auto snapshot = geometry.resizeSnapshot();
+    switch (change) {
+    case 0: geometry.setStretchExtent(900); break;
+    case 1: geometry.moveSection(0, 3); break;
+    case 2: geometry.setSectionHidden(0, true); break;
+    case 3: geometry.insertLogicalSections(0, 1); break;
+    case 4: geometry.setSectionSpacing(10); break;
+    case 5: geometry.setMinimumSectionSize(60); break;
+    case 6: geometry.setMaximumSectionSize(600); break;
+    case 7:
+        geometry.setResizeMode(HeaderGeometry::ResizeMode::Independent);
+        geometry.setResizeMode(HeaderGeometry::ResizeMode::FitExtent);
+        break;
+    case 8:
+        geometry.setStretchExtent(900);
+        geometry.setStretchExtent(1000);
+        break;
+    case 9: QVERIFY(geometry.restoreState(geometry.saveState())); break;
+    }
+    const auto current = geometry.resizeSnapshot().sizes;
+    geometry.resizeSectionFromEdge(1, 120, Qt::RightEdge, snapshot);
+    QCOMPARE(geometry.resizeSnapshot().sizes, current);
+}
+
+void TestHeaderGeometry::fitExtentFitsGapsAndPanes()
+{
+    HeaderGeometry geometry;
+    geometry.setSectionCount(4);
+    geometry.setSectionSpacing(10);
+    geometry.setStretchExtent(1000);
+    geometry.setResizeMode(HeaderGeometry::ResizeMode::FitExtent);
+    QCOMPARE(geometry.totalExtent(), qint64(1000));
+    TablePaneLayout panes;
+    panes.setGeometry(&geometry);
+    for (int extent : {1000, 5, 0, 1000}) {
+        geometry.setStretchExtent(extent);
+        for (int frozen : {-1, 0, 3}) {
+            panes.setFrozenColumns(frozen < 0 ? QVector<int>() : QVector<int>({frozen}));
+            panes.update(extent, 200);
+            QCOMPARE(geometry.totalExtent(), qint64(extent));
+            QCOMPARE(panes.maximumOffset(), qint64(0));
+            qint64 content = 0;
+            for (const TablePane &pane : panes.panes()) {
+                for (int logical : pane.logicalColumns)
+                    content += geometry.sectionSize(logical) + panes.columnSpacingAfter(logical);
+            }
+            QCOMPARE(content, qint64(extent));
+        }
+    }
+    geometry.setSectionSpacingOverrides({4, 9, 16, 0});
+    panes.setFrozenColumns({3});
+    panes.update(1000, 200);
+    QCOMPARE(panes.maximumOffset(), qint64(0));
+    geometry.resizeSectionFromEdge(1, 320, Qt::RightEdge, geometry.resizeSnapshot());
+    QCOMPARE(geometry.totalExtent(), qint64(1000));
+
+    TablePaneSpec first;
+    first.logicalColumns = {0, 1};
+    TablePaneSpec second;
+    second.logicalColumns = {2, 3};
+    second.scrollGroup = 1;
+    panes.setPaneSpecs({first, second});
+    panes.update(1000, 200);
+    QCOMPARE(panes.maximumGroupOffset(0), qint64(0));
+    QCOMPARE(panes.maximumGroupOffset(1), qint64(0));
+}
+
+void TestHeaderGeometry::fitExtentSupportsProgrammaticWidthsAndEmptyModels()
+{
+    HeaderGeometry geometry;
+    geometry.setStretchExtent(1000);
+    geometry.setResizeMode(HeaderGeometry::ResizeMode::FitExtent);
+    geometry.setSectionCount(4);
+    QCOMPARE(geometry.totalExtent(), qint64(1000));
+    geometry.resizeSection(1, 400);
+    QCOMPARE(geometry.resizeSnapshot().sizes, QVector<int>({250, 400, 175, 175}));
+    geometry.resizeSection(3, 400);
+    QCOMPARE(geometry.sectionSize(3), 400);
+    QCOMPARE(geometry.totalExtent(), qint64(1000));
+    geometry.setSectionCount(1);
+    geometry.resizeSection(0, 200);
+    QCOMPARE(geometry.sectionSize(0), 1000);
+    geometry.setSectionCount(0);
+    geometry.setSectionCount(3);
+    QCOMPARE(geometry.totalExtent(), qint64(1000));
+}
+
+void TestHeaderGeometry::fitExtentRestoresWidthsAndExitsForOrdinaryStretch()
+{
+    HeaderGeometry geometry;
+    geometry.setSectionCount(3);
+    geometry.setStretchExtent(600);
+    geometry.setResizeMode(HeaderGeometry::ResizeMode::FitExtent);
+    geometry.resizeSection(0, 300);
+    const QByteArray state = geometry.saveState();
+    geometry.resizeSection(0, 200);
+    QVERIFY(geometry.restoreState(state));
+    QCOMPARE(geometry.resizeMode(), HeaderGeometry::ResizeMode::FitExtent);
+    QCOMPARE(geometry.resizeSnapshot().sizes, QVector<int>({300, 150, 150}));
+    geometry.setSectionStretchFactor(1, 1);
+    QCOMPARE(geometry.resizeMode(), HeaderGeometry::ResizeMode::Independent);
+    geometry.setResizeMode(HeaderGeometry::ResizeMode::FitExtent);
+    QCOMPARE(geometry.sectionStretchFactor(1), qreal(0));
+    geometry.setStretchLastSection(true);
+    QCOMPARE(geometry.resizeMode(), HeaderGeometry::ResizeMode::Independent);
+    geometry.setResizeMode(HeaderGeometry::ResizeMode::FitExtent);
+    QVERIFY(!geometry.stretchLastSection());
+    const auto sizes = geometry.resizeSnapshot().sizes;
+    geometry.setResizeMode(HeaderGeometry::ResizeMode::Independent);
+    geometry.setStretchExtent(900);
+    for (int column = 0; column < 3; ++column)
+        QCOMPARE(geometry.sectionSize(column), sizes.at(column));
+}
+
+void TestHeaderGeometry::fitExtentCommitsSizesBeforeNotifying()
+{
+    HeaderGeometry geometry;
+    geometry.setSectionCount(4);
+    geometry.setStretchExtent(1000);
+    geometry.setResizeMode(HeaderGeometry::ResizeMode::FitExtent);
+    int notifications = 0;
+    connect(&geometry, &HeaderGeometry::sectionResized, this, [&](int, int, int) {
+        ++notifications;
+        QCOMPARE(geometry.totalExtent(), geometry.stretchExtent());
+    });
+    geometry.resizeSectionFromEdge(1, 400, Qt::RightEdge, geometry.resizeSnapshot());
+    geometry.setStretchExtent(1200);
+    QVERIFY(notifications > 0);
+}
+
 QTEST_APPLESS_MAIN(TestHeaderGeometry)
 
 #include "tst_headergeometry.moc"

@@ -282,7 +282,7 @@ void TestTablePanes::everyPaneHasItsOwnHeader()
 
     // Pane renderers are clones of the installed header; this test asserts the native
     // flavour (QHeaderView pane clones), so ask for it explicitly. The default header is
-    // a widget header (LabelHeaderView) whose pane clones are widget renderers too.
+    // a widget header (VirtualHeaderView) whose pane clones are widget renderers too.
 
     view.setPanes({frozenPane({0}), scrollablePane({1, 2, 3, 4, 5, 6}), frozenPane({7}),
                    frozenPane({8, 9})});

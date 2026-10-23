@@ -2,6 +2,7 @@
 
 #include <virtualitemviews/global.h>
 #include <virtualitemviews/headerwidgetadapter.h>
+#include <virtualitemviews/styledheadersection.h>
 #include <virtualitemviews/virtualheaderview.h>
 
 #include <QPointer>
@@ -14,16 +15,10 @@ namespace viv {
 
 class HeaderGeometry;
 
-/// Section widget of the built-in label header: one label, painted the way the
-/// current style paints a `QHeaderView` section (panel, label, sort indicator), so
-/// a widget based header looks like the native one out of the box.
-///
-/// The widget is passive on purpose: a header section must not consume mouse
-/// events, because `VirtualHeaderView` derives "resize the column" / "drag the
-/// column" from the pointer position it sees through its own filters on the
-/// section widgets (§25). It only repaints itself on hover / style / palette /
-/// font changes.
-class VIRTUALITEMVIEWS_EXPORT LabelHeaderSection : public QWidget
+/// Text and sort-indicator content for the built-in label header.
+/// StyledHeaderSection supplies its panel, state backgrounds, corners and separators;
+/// HeaderSection supplies binding identity, owner/state queries and passive input behavior.
+class VIRTUALITEMVIEWS_EXPORT LabelHeaderSection : public StyledHeaderSection
 {
     Q_OBJECT
 
@@ -36,31 +31,33 @@ public:
 
     void setText(const QString &text);
     void setSortOrder(int order);
-    void setLogicalIndex(int logicalIndex);
+    /// Model-specific alignment; empty falls back to the owning header's default.
+    void setTextAlignment(Qt::Alignment alignment);
+    /// Model-specific foreground; NoBrush falls back to the owning header's default.
+    void setForegroundBrush(const QBrush &brush);
 
 protected:
-    void paintEvent(QPaintEvent *event) override;
-    void changeEvent(QEvent *event) override;
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-    void enterEvent(QEnterEvent *event) override;
-#else
-    void enterEvent(QEvent *event) override;
-#endif
-    void leaveEvent(QEvent *event) override;
+    /// Adds label and sort-indicator data to the inherited panel option.
+    void initStyleOption(QStyleOptionHeader *option) const override;
+    /// Prepares content geometry with header padding; never changes the panel rectangle.
+    void initContentStyleOption(QStyleOptionHeader *option) const;
+    /// Draws only the text and sort indicator, between background and separators.
+    void paintContent(QPainter *painter) override;
 
 private:
     QString m_text;
     int m_sortOrder = -1;
-    int m_logicalIndex = -1;
+    Qt::Alignment m_textAlignment;
+    QBrush m_foregroundBrush;
 };
 
 /// The header adapter of the built-in label header: one label per section, taken
 /// from the label model's `headerData()` (§19).
 ///
-/// It is a normal HeaderWidgetAdapter, so it works for a hand-built
-/// VirtualHeaderView too, and it is meant to be extended: override labelText() or
+/// VirtualHeaderView installs and owns this adapter by default. It can be extended:
+/// override labelText() or
 /// sortOrderFor() to change what a section shows without writing a section widget.
-class VIRTUALITEMVIEWS_EXPORT LabelHeaderAdapter : public HeaderWidgetAdapter
+class VIRTUALITEMVIEWS_EXPORT LabelHeaderAdapter : public HeaderSectionAdapter
 {
 public:
     QWidget *createSection(WidgetType type, QWidget *parent) override;
@@ -85,35 +82,6 @@ private:
     /// model or geometry the application drops cannot be dereferenced here.
     QPointer<QAbstractItemModel> m_model;
     QPointer<HeaderGeometry> m_geometry;
-};
-
-/// The header a table installs when the application does not install one: a
-/// VirtualHeaderView that already carries the built-in LabelHeaderAdapter.
-///
-/// It is a widget header, so everything that needs real section widgets works on
-/// it too: hit testing and the resize cursor (§25), drag reordering with the "make
-/// room" tween (§22), the visual transition of a section move and the body
-/// following it (§23/§24), and the frozen / extra panes, which the table renders
-/// with clones of the same kind (§43). Use `setHorizontalHeader(nullptr)` to get
-/// back to it, `setHorizontalHeaderVisible(false)` to hide the header completely,
-/// and `setVerticalHeader(new LabelHeaderView(Qt::Vertical))` for a different kind of
-/// strip (the row-number strip uses the same renderer on the other axis).
-class VIRTUALITEMVIEWS_EXPORT LabelHeaderView : public VirtualHeaderView
-{
-    Q_OBJECT
-
-public:
-    explicit LabelHeaderView(Qt::Orientation orientation = Qt::Horizontal,
-                            QWidget *parent = nullptr);
-    ~LabelHeaderView() override;
-
-    /// The adapter the sections are built with. Replacing it (setAdapter()) is
-    /// allowed; a subclassed LabelHeaderAdapter is the cheap way to change what a
-    /// label shows without building section widgets.
-    LabelHeaderAdapter *labelAdapter() const
-    {
-        return dynamic_cast<LabelHeaderAdapter *>(adapter());
-    }
 };
 
 } // namespace viv

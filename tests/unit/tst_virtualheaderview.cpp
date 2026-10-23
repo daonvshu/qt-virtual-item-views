@@ -258,7 +258,7 @@ private slots:
     void frozenPaneHeaderKeepsItsColumnsAfterAReorder();
     void standaloneHeaderStretchesItsSectionsToItsWidth();
     void sectionDragIsOffByDefault();
-    void sectionResizeIsOnByDefaultAndCanBeTurnedOff();
+    void sectionResizeIsOffByDefaultAndCanBeEnabled();
 
 private:
     QStandardItemModel *m_model = nullptr;
@@ -287,6 +287,8 @@ void TestVirtualHeaderView::init()
     // The reorder gesture is opt-in (1.0): the suite exercises it, so the fixture turns it
     // on - sectionDragIsOffByDefault() checks the default on a header of its own.
     m_header->setSectionDragEnabled(true);
+    // The fixture exercises resizing; the dedicated default test uses its own header.
+    m_header->setSectionResizeEnabled(true);
     m_header->show();
     QApplication::processEvents();
 }
@@ -546,6 +548,7 @@ void TestVirtualHeaderView::verticalWidgetHeaderPacksAlongY()
     strip.setGeometryModel(&rows);
     strip.setLabelModel(m_model);   // headerData(row, Qt::Vertical)
     strip.setSectionDragEnabled(true);   // the reorder gesture is opt-in (1.0)
+    strip.setSectionResizeEnabled(true);
     strip.show();
     QApplication::processEvents();
 
@@ -1763,6 +1766,7 @@ void TestVirtualHeaderView::sectionDragIsOffByDefault()
 
     // The resize gesture is not gated by it: an edge drag still changes the size.
     header.setSectionDragEnabled(false);
+    header.setSectionResizeEnabled(true);
     const int before = geometry.sectionSize(1);
     sendMouse(&header, QEvent::MouseButtonPress, QPoint(kSectionWidth, kHeaderHeight / 2),
               Qt::LeftButton, Qt::LeftButton);
@@ -1773,11 +1777,9 @@ void TestVirtualHeaderView::sectionDragIsOffByDefault()
     QCOMPARE(geometry.sectionSize(1), before + 30);
 }
 
-void TestVirtualHeaderView::sectionResizeIsOnByDefaultAndCanBeTurnedOff()
+void TestVirtualHeaderView::sectionResizeIsOffByDefaultAndCanBeEnabled()
 {
-    // Resizing a section is the gesture a header is expected to have, so it is on by
-    // default; switching it off only removes the gesture (and its cursor) - the size API
-    // keeps working, and the section edge stops being a handle.
+    // Resizing is opt-in; disabling it removes the handle and cursor, leaving the size API.
     VirtualHeaderView header(Qt::Horizontal);
     header.resize(400, kHeaderHeight);
     HeaderGeometry geometry(Qt::Horizontal, this);
@@ -1790,7 +1792,8 @@ void TestVirtualHeaderView::sectionResizeIsOnByDefaultAndCanBeTurnedOff()
     header.show();
     QApplication::processEvents();
 
-    QVERIFY(header.isSectionResizeEnabled());
+    QVERIFY(!header.isSectionResizeEnabled());
+    header.setSectionResizeEnabled(true);
     // The trailing edge of section 1 (the boundary is the *previous* section's edge, so the
     // handle is named by the section whose size it changes). Recomputed every time: the
     // boundary moves with each resize.

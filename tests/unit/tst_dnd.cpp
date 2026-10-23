@@ -329,10 +329,10 @@ private:
     }
 };
 
-/// The kernel paints the drop indicator with a child widget of the viewport.
+/// The kernel stacks the drop indicator above the view's separator overlays.
 QWidget *dropIndicatorOf(VirtualItemView *view)
 {
-    return view->viewport()->findChild<QWidget *>(QStringLiteral("vivDropIndicator"));
+    return view->findChild<QWidget *>(QStringLiteral("vivDropIndicator"));
 }
 
 /// Selection unit of a table. Called through the kernel reference and named
@@ -513,7 +513,7 @@ void TestDnd::dropAsksTheModelAndInserts()
     QWidget *indicator = dropIndicatorOf(&view);
     QVERIFY(indicator);
     QVERIFY(indicator->isVisible());
-    QCOMPARE(indicator->geometry().y(), kRowHeight - 1);
+    QCOMPARE(indicator->geometry().y() - view.viewport()->y(), kRowHeight - 1);
     QCOMPARE(indicator->geometry().height(), 2);
 
     sendDrop(&view, QPoint(20, kRowHeight - 2), data.data());
@@ -597,7 +597,7 @@ void TestDnd::dropIndicatorFollowsTheScrollAndModelChange()
     QWidget *indicator = dropIndicatorOf(&view);
     QVERIFY(indicator);
     QVERIFY(indicator->isVisible());
-    QCOMPARE(indicator->geometry().y(), 3 * kRowHeight - 1);
+    QCOMPARE(indicator->geometry().y() - view.viewport()->y(), 3 * kRowHeight - 1);
 
     // Scrolling moves the rows under the cursor; the next hover re-resolves the
     // target instead of reporting a stale boundary.

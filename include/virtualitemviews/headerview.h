@@ -8,11 +8,14 @@
 
 #include <QAbstractItemModel>
 #include <QColor>
+#include <QFont>
+#include <QMargins>
 #include <functional>
 
 namespace viv {
 
 class HeaderGeometry;
+class HeaderWidgetAdapter;
 
 /// Colour the current style paints a header section separator with (probed by rendering a
 /// small section and reading its edge pixel). The pane boundary lines and the built-in
@@ -24,9 +27,9 @@ VIRTUALITEMVIEWS_EXPORT QColor headerSectionSeparatorColor(const QWidget *contex
 
 /// Renderer abstraction of a table header (architecture document §15/§16/§17).
 ///
-/// The implementation is `LabelHeaderView` (the default: a `VirtualHeaderView` plus the
-/// built-in label adapter) or any renderer the application installs - `VirtualHeaderView`
-/// with its own section widgets, or a custom implementation of this interface.
+/// The default implementation is VirtualHeaderView with its built-in LabelHeaderAdapter.
+/// Applications can replace its adapter or install a custom renderer implementing this
+/// interface.
 ///
 /// Every renderer consumes the same HeaderGeometry, so the table body never depends on how
 /// the header is rendered. The interface is intentionally not a QWidget: an implementation
@@ -41,7 +44,41 @@ public:
 
     /// Widget to place in the table's header area.
     virtual QWidget *headerWidget() = 0;
+    /// Const access without requiring existing custom renderers to add an overload.
+    virtual const QWidget *headerWidget() const
+    {
+        return const_cast<HeaderViewInterface *>(this)->headerWidget();
+    }
     virtual Qt::Orientation orientation() const = 0;
+    /// Replaces the section adapter; nullptr disables section widgets.
+    /// With takeOwnership, the header deletes the adapter after releasing its sections.
+    virtual void setAdapter(HeaderWidgetAdapter *adapter, bool takeOwnership = false) = 0;
+    /// Current section adapter, owned by the header only when explicitly requested.
+    virtual HeaderWidgetAdapter *adapter() const = 0;
+    /// Base panel visibility. Built-in headers retain text, separators and state layers.
+    /// Custom renderers may ignore the optional appearance settings below.
+    virtual void setBackgroundVisible(bool visible) { Q_UNUSED(visible); }
+    virtual bool backgroundVisible() const { return true; }
+    /// Flat base color; invalid restores the native panel in built-in headers.
+    virtual void setBackgroundColor(const QColor &color) { Q_UNUSED(color); }
+    virtual QColor backgroundColor() const { return QColor(); }
+    /// Gap color; invalid follows this header's base background.
+    virtual void setSpacingBackgroundColor(const QColor &color) { Q_UNUSED(color); }
+    virtual QColor spacingBackgroundColor() const { return QColor(); }
+    /// Default text color; invalid inherits the widget palette's ButtonText brush.
+    /// A section's model ForegroundRole takes precedence.
+    virtual void setForegroundColor(const QColor &color) { Q_UNUSED(color); }
+    virtual QColor foregroundColor() const { return QColor(); }
+    /// Default label alignment, centered by default. Model TextAlignmentRole takes precedence.
+    virtual void setTextAlignment(Qt::Alignment alignment) { Q_UNUSED(alignment); }
+    virtual Qt::Alignment textAlignment() const { return Qt::AlignCenter; }
+    /// Additional content insets, excluding backgrounds and separators. Zero by default.
+    virtual void setContentPadding(const QMargins &padding) { Q_UNUSED(padding); }
+    virtual QMargins contentPadding() const { return QMargins(); }
+    /// Default widget font, inherited by sections unless their model supplies FontRole.
+    /// An unresolved QFont restores inheritance from the header's parent widget.
+    virtual void setFont(const QFont &font) { headerWidget()->setFont(font); }
+    virtual const QFont &font() const { return headerWidget()->font(); }
     /// Model that provides the section labels (headerData()).
     virtual void setLabelModel(QAbstractItemModel *model) = 0;
     /// Enables sort interaction; the header reports clicks by writing the sort

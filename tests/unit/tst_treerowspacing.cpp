@@ -600,7 +600,6 @@ private slots:
                 view.setCellAdapter(new CellAdapter, true);
                 if (cells) {
                     view.setMaterializationMode(viv::VirtualTableView::MaterializationMode::CellWidgets);
-                    view.setVisualStateScope(viv::VirtualTableView::VisualStateScope::Cell);
                     view.setSelectionBehavior(viv::VirtualTableView::SelectionBehavior::SelectItems);
                 }
                 view.setColumnSpacing(14);
@@ -719,7 +718,6 @@ private slots:
                 if (mode == 2 || mode == 5)
                     view.setMaterializationMode(viv::VirtualTableView::MaterializationMode::CellWidgets);
                 if (cellScope) {
-                    view.setVisualStateScope(viv::VirtualTableView::VisualStateScope::Cell);
                     view.setSelectionBehavior(viv::VirtualItemView::SelectionBehavior::SelectItems);
                 }
                 view.setHorizontalGridLinesVisible(false);
@@ -856,6 +854,7 @@ private slots:
     {
         QStandardItemModel model(8, 3);
         RoundedBackgroundTable view;
+        view.setVisualStateCornerRadiusIncludesHeaders(false);
         view.setAdapter(new RowAdapter, true);
         view.setUniformItemHeight(26);
         view.setRowSpacing(12);
@@ -873,9 +872,8 @@ private slots:
             view.setColumnWidth(column, 100);
         const QModelIndex index = model.index(3, 1);
         for (bool cells : {false, true}) {
-            view.setVisualStateScope(cells ? viv::VirtualTableView::VisualStateScope::Cell
-                                          : viv::VirtualTableView::VisualStateScope::Row);
-            view.setSelectionBehavior(viv::VirtualItemView::SelectionBehavior::SelectItems);
+            view.setSelectionBehavior(cells ? viv::VirtualItemView::SelectionBehavior::SelectItems
+                                            : viv::VirtualItemView::SelectionBehavior::SelectRows);
             for (bool select : {false, true}) {
                 view.flushPendingRelayout();
                 const QRect cell = view.spanRect(index);

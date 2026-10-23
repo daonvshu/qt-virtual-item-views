@@ -1855,8 +1855,8 @@ void TestTreeTableViewInteraction::rowStripPreviewFollowsBothTreeWidgetModes()
     view.setBranchIndicatorRenderer(new SolidBranchRenderer, true);
     view.setVisualStateBackgroundVisible(true);
     view.setVisualStateAnimationDuration(0);
-    view.setVisualStateScope(cellScope ? VirtualTableView::VisualStateScope::Cell
-                                       : VirtualTableView::VisualStateScope::Row);
+    view.setSelectionBehavior(cellScope ? VirtualItemView::SelectionBehavior::SelectItems
+                                        : VirtualItemView::SelectionBehavior::SelectRows);
     view.setVisualStateBackgroundExtent(
         static_cast<VirtualTreeTableView::VisualStateBackgroundExtent>(extent));
     const QColor selected(230, 30, 70);
@@ -2050,7 +2050,6 @@ void TestTreeTableViewInteraction::rowStripPreviewKeepsMergedCellMasks()
     view.setVerticalHeaderDragEnabled(true);
     view.setHeaderAnimationEnabled(true);
     view.setHeaderAnimationDuration(100);
-    view.setVisualStateScope(VirtualTableView::VisualStateScope::Cell);
     view.setSelectionBehavior(VirtualTableView::SelectionBehavior::SelectItems);
     view.setVisualStateBackgroundVisible(true);
     view.setVisualStateAnimationDuration(0);
@@ -3646,10 +3645,10 @@ void TestTreeTableViewInteraction::dragAutoscrollTracksTreeTargetsAndStops()
     QVERIFY(scrolled.row >= 0);
     QVERIFY(scrolled.row <= model.rowCount(scrolled.parent));
     QVERIFY(scrolled.parent != initial.parent || scrolled.row > initial.row);
-    QWidget *indicator = view.viewport()->findChild<QWidget *>(QStringLiteral("vivDropIndicator"));
+    QWidget *indicator = view.findChild<QWidget *>(QStringLiteral("vivDropIndicator"));
     QVERIFY(indicator);
     QVERIFY(indicator->isVisible());
-    QCOMPARE(indicator->geometry(), view.dropIndicatorRect(scrolled));
+    QCOMPARE(indicator->geometry().translated(-view.viewport()->pos()), view.dropIndicatorRect(scrolled));
 
     QDragLeaveEvent leave;
     QApplication::sendEvent(view.viewport(), &leave);
@@ -4801,6 +4800,9 @@ void TestTreeTableViewInteraction::headerResizeSwitchesFollowTreePanes()
         for (VirtualHeaderView *header : view.findChildren<VirtualHeaderView *>())
             QCOMPARE(header->isSectionResizeEnabled(), enabled);
     };
+    verifySwitches(false);
+    view.setColumnResizeEnabled(true);
+    view.setVerticalHeaderResizeEnabled(true);
     verifySwitches(true);
     for (int column = 0; column < 3; ++column) {
         const int width = view.columnWidth(column);
@@ -4948,7 +4950,7 @@ void TestTreeTableViewInteraction::dragSourcePinsSurviveIgnoredReturn()
     QPointer<QWidget> widget(cells ? view.cellWidget(source)
         : view.widgetForIndex(QModelIndex(source).siblingAtColumn(0)));
     QVERIFY(widget);
-    QCOMPARE(view.dragSourceWidget(source), widget.data());
+    QCOMPARE(view.dragSourceWidget(source), cells ? view.viewport() : widget.data());
     if (cells) {
         QVERIFY(view.cellWidget(model.index(0, 0, parent)) != widget.data());
         QVERIFY(!view.isItemPinned(model.index(0, 0, parent)));
@@ -4972,7 +4974,9 @@ void TestTreeTableViewInteraction::dragSourcePinsSurviveIgnoredReturn()
             view.setItemPinned(source, !alreadyPinned);
         view.scrollTo(model.index(80, 0, parent), VirtualItemView::PositionAtTop);
         view.flushPendingRelayout();
-        keptWhileScrolled = widget && view.dragSourceWidget(source) == widget.data();
+        // Row previews use the viewport; the pin still retains the source cell itself.
+        keptWhileScrolled = widget && (cells ? view.cellWidget(source)
+            : view.widgetForIndex(QModelIndex(source).siblingAtColumn(0))) == widget.data();
         view.collapse(parent);
         view.flushPendingRelayout();
         // Collapsed nodes have no visible-row mapping, but their pinned widget must remain.
@@ -6767,7 +6771,6 @@ void TestTreeTableViewInteraction::mergedCellsMaskInternalGridPixels()
     view.setRowSpacing(spacing);
     view.setColumnSpacing(spacing);
     view.setSelectionBehavior(VirtualItemView::SelectionBehavior::SelectItems);
-    view.setVisualStateScope(VirtualTableView::VisualStateScope::Cell);
     view.setVisualStateAnimationDuration(0);
     view.setVisualStateBackgroundVisible(true);
     view.setVisualStateBackgroundExtent(
@@ -10244,8 +10247,8 @@ void TestTreeTableViewInteraction::realtimeAnimationCostsStayWindowBound()
         for (VirtualTableView *view : {static_cast<VirtualTableView *>(&treeTable), &table}) {
             view->setDefaultColumnWidth(100);
             view->setColumnOverscan(1);
-            view->setVisualStateScope(cells ? VirtualTableView::VisualStateScope::Cell
-                                           : VirtualTableView::VisualStateScope::Row);
+            view->setSelectionBehavior(cells ? VirtualItemView::SelectionBehavior::SelectItems
+                                            : VirtualItemView::SelectionBehavior::SelectRows);
             if (cells) {
                 view->setCellAdapter(new CellAdapter, true);
                 view->setMaterializationMode(VirtualTableView::MaterializationMode::CellWidgets);
@@ -10456,7 +10459,6 @@ void TestTreeTableViewInteraction::realtimeHeaderPreviewCostsStayWindowBound()
         if (treeView)
             treeView->setVisualStateBackgroundVisible(true);
         view.setVisualStateAnimationDuration(0);
-        view.setVisualStateScope(VirtualTableView::VisualStateScope::Cell);
         view.setSelectionBehavior(VirtualItemView::SelectionBehavior::SelectItems);
         if (cells) {
             view.setCellAdapter(new CellAdapter, true);
@@ -10694,8 +10696,6 @@ void TestTreeTableViewInteraction::animatedBackgroundsPreserveGridPixels()
     view.setDefaultColumnWidth(100);
     view.setRowSpacing(spacing);
     view.setColumnSpacing(spacing);
-    view.setVisualStateScope(cellScope ? VirtualTableView::VisualStateScope::Cell
-                                     : VirtualTableView::VisualStateScope::Row);
     view.setSelectionBehavior(cellScope ? VirtualItemView::SelectionBehavior::SelectItems
                                        : VirtualItemView::SelectionBehavior::SelectRows);
     view.setVisualStateBackgroundVisible(true);

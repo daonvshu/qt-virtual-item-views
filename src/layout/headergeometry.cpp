@@ -5,6 +5,7 @@
 #include <QIODevice>
 
 #include <algorithm>
+#include <cmath>
 #include <limits>
 
 namespace viv {
@@ -25,6 +26,55 @@ namespace {
 /// further away is off screen anyway, and keeping the value bounded keeps the
 /// 32-bit QRect/QWidget arithmetic from overflowing on very wide tables.
 constexpr qint64 kMaxOffscreenX = qint64(1) << 20;
+
+/// Divides an integer budget proportionally with bounds and deterministic pixel rounding.
+QVector<int> fitSizes(const QVector<qreal> &weights, qint64 budget, int minimum, int maximum)
+{
+    if (weights.isEmpty())
+        return {};
+    const int count = int(weights.size());
+    budget = qBound(qint64(minimum) * count, budget, qint64(maximum) * count);
+    qreal smallest = std::numeric_limits<qreal>::max();
+    for (qreal weight : weights)
+        smallest = qMin(smallest, qMax(qreal(1), weight));
+    long double low = 0;
+    long double high = static_cast<long double>(maximum) / smallest;
+    for (int pass = 0; pass < 64; ++pass) {
+        const long double scale = (low + high) / 2;
+        long double sum = 0;
+        for (qreal weight : weights)
+            sum += qBound(static_cast<long double>(minimum),
+                          scale * qMax(qreal(1), weight), static_cast<long double>(maximum));
+        if (sum <= budget)
+            low = scale;
+        else
+            high = scale;
+    }
+    QVector<int> sizes(count);
+    QVector<long double> fractions(count);
+    QVector<int> order;
+    qint64 assigned = 0;
+    for (int i = 0; i < count; ++i) {
+        const long double share = qBound(static_cast<long double>(minimum),
+            low * qMax(qreal(1), weights.at(i)), static_cast<long double>(maximum));
+        sizes[i] = int(std::floor(share));
+        fractions[i] = share - sizes.at(i);
+        assigned += sizes.at(i);
+        order.append(i);
+    }
+    std::stable_sort(order.begin(), order.end(), [&](int a, int b) {
+        return fractions.at(a) > fractions.at(b);
+    });
+    while (assigned < budget) {
+        for (int i : order) {
+            if (sizes.at(i) < maximum && assigned < budget) {
+                ++sizes[i];
+                ++assigned;
+            }
+        }
+    }
+    return sizes;
+}
 } // namespace
 
 HeaderGeometry::HeaderGeometry(Qt::Orientation orientation, QObject *parent)
@@ -77,6 +127,7 @@ void HeaderGeometry::setSectionCount(int count)
         ++m_orderRevision;
         invalidateCaches();
         emit sectionCountChanged(clamped);
+        applyStretch();
         emitGeometryChanged();
         return;
     }
@@ -519,51 +570,137 @@ void HeaderGeometry::resizeSection(int logicalIndex, int size)
 {
     if (!isValidLogical(logicalIndex))
         return;
+    if (m_resizeMode == ResizeMode::FitExtent && !isSectionHidden(logicalIndex)) {
+        const QVector<int> order = visibleSectionsInVisualOrder();
+        const Qt::Edge edge = order.last() == logicalIndex ? Qt::LeftEdge : Qt::RightEdge;
+        resizeSectionFromEdge(logicalIndex, size, edge, resizeSnapshot());
+        return;
+    }
     const int clamped = clampedSize(size);
+    const int previous = storedSectionSize(logicalIndex);
+    const bool wasStretchLast = m_stretchLastSection;
+    const bool stoppedStretch = stopStretchForResize();
     if (m_uniformCount > 0) {
         // Uniform: a size override is k entries in the sparse list, not the whole section
         // set - this is the row-boundary drag at ten million rows (§5/§12).
-        const int index = sparseIndexOf(logicalIndex);
-        const int previous = index >= 0 ? m_sparseSizes.at(index) : m_defaultSectionSize;
-        // Dragging a section's edge takes it out of the stretch pass: from now on its
-        // width is the one the user dragged (QHeaderView's Stretch -> Interactive).
-        const bool wasStretching = index >= 0 && m_sparseFactors.at(index) > 0.0;
-        if (wasStretching)
-            setSparseFactor(logicalIndex, 0.0);
-        if (previous == clamped) {
-            if (wasStretching) {
-                invalidateCaches();
-                applyStretch();      // the remaining participants share what it gave up
-                emitGeometryChanged();
-            }
-            return;
-        }
-        setSparseSize(logicalIndex, clamped);
-        invalidateCaches();
-        emit sectionResized(logicalIndex, previous, clamped);
-        applyStretch();
-        emitGeometryChanged();
-        return;
+        if (previous != clamped)
+            setSparseSize(logicalIndex, clamped);
+    } else {
+        Section &section = m_sections[logicalIndex];
+        section.size = clamped;
+        section.explicitSize = true;
+        if (m_resizeMode == ResizeMode::FitExtent)
+            section.fitWeight = qMax(1, clamped);
     }
-    densify();
-    Section &section = m_sections[logicalIndex];
-    const int previous = section.size;
-    const bool wasStretching = section.stretchFactor > 0.0;
-    section.stretchFactor = 0.0;
-    section.explicitSize = true;
-    if (previous == clamped) {
-        if (wasStretching) {
-            invalidateCaches();
-            applyStretch();
-            emitGeometryChanged();
-        }
+    if (previous == clamped && !stoppedStretch)
         return;
-    }
-    section.size = clamped;
     invalidateCaches();
-    emit sectionResized(logicalIndex, previous, clamped);
+    if (previous != clamped)
+        emit sectionResized(logicalIndex, previous, clamped);
     applyStretch();
+    if (stoppedStretch && wasStretchLast)
+        emit stretchLastSectionChanged(false);
     emitGeometryChanged();
+}
+
+void HeaderGeometry::setResizeMode(ResizeMode mode)
+{
+    if (m_resizeMode == mode)
+        return;
+    const bool wasStretchLast = m_stretchLastSection;
+    m_resizeMode = mode;
+    ++m_fitRevision;
+    m_fitSectionSpacings.clear();
+    if (mode == ResizeMode::FitExtent) {
+        densify();
+        for (Section &section : m_sections) {
+            section.fitWeight = qMax(1, section.size);
+            section.stretchFactor = 0;
+            section.explicitSize = true;
+        }
+        m_stretchLastSection = false;
+    }
+    invalidateCaches();
+    applyStretch();
+    if (mode == ResizeMode::FitExtent)
+        setViewportOffset(0);
+    if (wasStretchLast && !m_stretchLastSection)
+        emit stretchLastSectionChanged(false);
+    emit resizeModeChanged(mode);
+    emit bulkGeometryChanged();
+    emitGeometryChanged();
+}
+
+HeaderGeometry::ResizeSnapshot HeaderGeometry::resizeSnapshot() const
+{
+    ResizeSnapshot snapshot;
+    if (m_resizeMode != ResizeMode::FitExtent)
+        return snapshot;
+    snapshot.orderRevision = orderRevision();
+    snapshot.fitRevision = m_fitRevision;
+    snapshot.extent = stretchExtent();
+    snapshot.minimum = minimumSectionSize();
+    snapshot.maximum = maximumSectionSize();
+    snapshot.spacings = m_fitSectionSpacings;
+    snapshot.sizes.reserve(sectionCount());
+    for (int logical = 0; logical < sectionCount(); ++logical)
+        snapshot.sizes.append(storedSectionSize(logical));
+    return snapshot;
+}
+
+void HeaderGeometry::resizeSectionFromEdge(int logicalIndex, int size, Qt::Edge edge,
+                                          const ResizeSnapshot &snapshot)
+{
+    if (m_resizeMode != ResizeMode::FitExtent || !isValidLogical(logicalIndex)
+        || isSectionHidden(logicalIndex) || snapshot.sizes.size() != sectionCount()
+        || snapshot.orderRevision != orderRevision() || snapshot.extent != stretchExtent()
+        || snapshot.fitRevision != m_fitRevision
+        || snapshot.minimum != minimumSectionSize() || snapshot.maximum != maximumSectionSize()
+        || snapshot.spacings != m_fitSectionSpacings
+        || (edge != Qt::LeftEdge && edge != Qt::TopEdge
+            && edge != Qt::RightEdge && edge != Qt::BottomEdge))
+        return;
+    const QVector<int> order = visibleSectionsInVisualOrder();
+    const int slot = int(order.indexOf(logicalIndex));
+    const bool leading = edge == Qt::LeftEdge || edge == Qt::TopEdge;
+    QVector<int> peers;
+    QVector<qreal> weights;
+    qint64 peerTotal = 0;
+    qint64 available = 0;
+    for (int i = 0; i < order.size(); ++i) {
+        const int logical = order.at(i);
+        if (snapshot.sizes.at(logical) < 0)
+            return;
+        available += snapshot.sizes.at(logical);
+        if ((leading && i < slot) || (!leading && i > slot)) {
+            peers.append(logical);
+            weights.append(qMax(1, snapshot.sizes.at(logical)));
+            peerTotal += snapshot.sizes.at(logical);
+        }
+    }
+    if (peers.isEmpty())
+        return;
+    qint64 gapTotal = 0;
+    for (int i = 0; i + 1 < order.size(); ++i)
+        gapTotal += sectionSpacingAfter(order.at(i));
+    if (available != stretchExtent() - gapTotal)
+        return;
+    const int minimum = int(qMin<qint64>(m_minimumSectionSize, available / order.size()));
+    const int maximum = int(qMin<qint64>(std::numeric_limits<int>::max(),
+        qMax<qint64>(m_maximumSectionSize, (available + order.size() - 1) / order.size())));
+    const qint64 budget = peerTotal + snapshot.sizes.at(logicalIndex);
+    const qint64 lower = qMax<qint64>(minimum, budget - qint64(maximum) * peers.size());
+    const qint64 upper = qMin<qint64>(maximum, budget - qint64(minimum) * peers.size());
+    const int wanted = int(qBound(lower, qint64(size), upper));
+    QVector<int> sizes = snapshot.sizes;
+    sizes[logicalIndex] = wanted;
+    if (wanted != snapshot.sizes.at(logicalIndex)) {
+        const QVector<int> adjusted = fitSizes(weights, budget - wanted, minimum, maximum);
+        for (int i = 0; i < peers.size(); ++i)
+            sizes[peers.at(i)] = adjusted.at(i);
+    }
+    if (commitFitSizes(sizes, true))
+        emitGeometryChanged();
 }
 
 bool HeaderGeometry::isSectionSizeExplicit(int logicalIndex) const
@@ -708,6 +845,14 @@ void HeaderGeometry::setSparseSectionSpacingOverrides(const QVector<QPair<int, i
 
 int HeaderGeometry::sectionSpacingAfter(int logicalIndex) const
 {
+    if (m_resizeMode == ResizeMode::FitExtent && m_fitSectionSpacings.size() == sectionCount()
+        && isValidLogical(logicalIndex))
+        return m_fitSectionSpacings.at(logicalIndex);
+    return configuredSectionSpacingAfter(logicalIndex);
+}
+
+int HeaderGeometry::configuredSectionSpacingAfter(int logicalIndex) const
+{
     if (!isValidLogical(logicalIndex))
         return m_sectionSpacing;
     if (!m_sectionSpacingOverrides.isEmpty())
@@ -777,8 +922,10 @@ void HeaderGeometry::setDefaultSectionSize(int size)
         return;
     }
     for (Section &section : m_sections) {
-        if (!section.explicitSize)
+        if (!section.explicitSize) {
             section.size = clamped;
+            section.fitWeight = clamped;
+        }
     }
     invalidateCaches();
     emit bulkGeometryChanged();
@@ -1314,6 +1461,8 @@ void HeaderGeometry::setSortIndicator(int logicalIndex, Qt::SortOrder order)
 
 void HeaderGeometry::setStretchLastSection(bool stretch)
 {
+    if (stretch && m_resizeMode == ResizeMode::FitExtent)
+        setResizeMode(ResizeMode::Independent);
     if (m_stretchLastSection == stretch)
         return;
     m_stretchLastSection = stretch;
@@ -1350,6 +1499,8 @@ void HeaderGeometry::setSectionStretchFactor(int logicalIndex, qreal factor)
     if (!isValidLogical(logicalIndex))
         return;
     const qreal wanted = factor > 0.0 ? factor : 0.0;
+    if (wanted > 0 && m_resizeMode == ResizeMode::FitExtent)
+        setResizeMode(ResizeMode::Independent);
     if (qFuzzyCompare(sectionStretchFactor(logicalIndex) + 1.0, wanted + 1.0))
         return;
 
@@ -1375,6 +1526,8 @@ bool HeaderGeometry::hasStretchSections() const
     // read this as "the stretch state can change a size right now".
     if (m_stretchExtent <= 0)
         return false;
+    if (m_resizeMode == ResizeMode::FitExtent)
+        return visibleSectionCount() > 0;
     if (m_stretchLastSection)
         return visibleSectionCount() > 0;
     if (m_uniformCount > 0) {
@@ -1391,8 +1544,126 @@ bool HeaderGeometry::hasStretchSections() const
     return false;
 }
 
+bool HeaderGeometry::stopStretchForResize()
+{
+    bool hasStretch = m_stretchLastSection;
+    if (m_uniformCount > 0) {
+        for (qreal factor : m_sparseFactors)
+            hasStretch = hasStretch || factor > 0.0;
+    } else {
+        for (const Section &section : m_sections)
+            hasStretch = hasStretch || section.stretchFactor > 0.0;
+    }
+    if (!hasStretch)
+        return false;
+    int last = -1;
+    if (m_stretchLastSection) {
+        if (m_uniformCount > 0) {
+            last = m_uniformCount - 1;
+        } else {
+            if (m_cacheDirty)
+                rebuildCaches();
+            if (!m_visibleLogicalOrder.isEmpty())
+                last = m_visibleLogicalOrder.last();
+        }
+    }
+    // Clear every factor together: clearing them one at a time would redistribute
+    // the remaining space and move the edge currently held by the pointer.
+    if (m_uniformCount > 0) {
+        for (qreal &factor : m_sparseFactors)
+            factor = 0.0;
+        pruneSparseList();
+        rebuildSparsePrefix();
+    } else {
+        for (int logical = 0; logical < m_sections.size(); ++logical) {
+            Section &section = m_sections[logical];
+            if (section.stretchFactor > 0.0 || logical == last)
+                section.explicitSize = true;
+            section.stretchFactor = 0.0;
+        }
+    }
+    m_stretchLastSection = false;
+    return true;
+}
+
+bool HeaderGeometry::commitFitSizes(const QVector<int> &sizes, bool updateWeights)
+{
+    QVector<QPair<int, int>> changes;
+    for (int logical = 0; logical < m_sections.size(); ++logical) {
+        Section &section = m_sections[logical];
+        if (section.size != sizes.at(logical))
+            changes.append(qMakePair(logical, section.size));
+        section.size = sizes.at(logical);
+    }
+    if (changes.isEmpty())
+        return false;
+    if (updateWeights) {
+        for (Section &section : m_sections)
+            section.fitWeight = qMax(1, section.size);
+    }
+    invalidateCaches();
+    for (const auto &change : changes)
+        emit sectionResized(change.first, change.second, sizes.at(change.first));
+    return true;
+}
+
+bool HeaderGeometry::applyFitExtent()
+{
+    ++m_fitRevision;
+    if (sectionCount() <= 0)
+        return false;
+    densify();
+    const QVector<int> order = visibleSectionsInVisualOrder();
+    if (order.isEmpty())
+        return false;
+    QVector<int> gaps(sectionCount(), 0);
+    QVector<int> gapKeys;
+    QVector<qreal> gapWeights;
+    qint64 gapTotal = 0;
+    for (int i = 0; i + 1 < order.size(); ++i) {
+        const int logical = order.at(i);
+        const int gap = configuredSectionSpacingAfter(logical);
+        gaps[logical] = gap;
+        gapTotal += gap;
+        if (gap > 0) {
+            gapKeys.append(logical);
+            gapWeights.append(gap);
+        }
+    }
+    if (gapTotal > m_stretchExtent) {
+        const QVector<int> compressed = fitSizes(gapWeights, m_stretchExtent, 0,
+                                                 std::numeric_limits<int>::max());
+        for (int i = 0; i < gapKeys.size(); ++i)
+            gaps[gapKeys.at(i)] = compressed.at(i);
+        gapTotal = m_stretchExtent;
+    }
+    const bool gapsChanged = gaps != m_fitSectionSpacings;
+    m_fitSectionSpacings = gaps;
+    if (gapsChanged)
+        invalidateCaches();
+    const qint64 available = m_stretchExtent - gapTotal;
+    const int minimum = int(qMin<qint64>(m_minimumSectionSize, available / order.size()));
+    const int maximum = int(qMin<qint64>(std::numeric_limits<int>::max(),
+        qMax<qint64>(m_maximumSectionSize, (available + order.size() - 1) / order.size())));
+    QVector<qreal> weights;
+    QVector<int> sizes;
+    for (Section &section : m_sections) {
+        if (section.fitWeight <= 0)
+            section.fitWeight = qMax(1, section.size);
+        sizes.append(section.size);
+    }
+    for (int logical : order)
+        weights.append(m_sections.at(logical).fitWeight);
+    const QVector<int> fitted = fitSizes(weights, available, minimum, maximum);
+    for (int i = 0; i < order.size(); ++i)
+        sizes[order.at(i)] = fitted.at(i);
+    return commitFitSizes(sizes, false) || gapsChanged;
+}
+
 bool HeaderGeometry::applyStretch()
 {
+    if (m_resizeMode == ResizeMode::FitExtent)
+        return applyFitExtent();
     if (m_stretchExtent <= 0 || sectionCount() <= 0)
         return false;
 
@@ -1668,6 +1939,7 @@ bool HeaderGeometry::restoreState(const QByteArray &state)
             section.hidden = hidden.at(logical) != 0;
             section.explicitSize = true;
             section.stretchFactor = 0.0;
+            section.fitWeight = 0.0;
         }
         for (int index = 0; index < stretchKeys.size(); ++index) {
             Section &section = m_sections[int(stretchKeys.at(index))];
@@ -1685,6 +1957,13 @@ bool HeaderGeometry::restoreState(const QByteArray &state)
     m_sortIndicatorOrder = (sortOrder == int(Qt::AscendingOrder)) ? Qt::AscendingOrder
                                                                   : Qt::DescendingOrder;
     m_stretchLastSection = stretch != 0;
+    m_fitSectionSpacings.clear();
+    if (m_resizeMode == ResizeMode::FitExtent) {
+        m_stretchLastSection = false;
+        for (Section &section : m_sections)
+            section.stretchFactor = 0.0;
+        m_sparseFactors.fill(0.0);
+    }
 
     // The restored order / hidden set are a structural change, so the revision has to move
     // (a renderer caches the visual order by revision, and the order may just have been

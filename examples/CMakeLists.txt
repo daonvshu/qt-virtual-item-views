@@ -102,29 +102,18 @@ if(VIRTUALITEMVIEWS_BUILD_TESTS)
         add_dependencies(viv_demo_scroll_tests tst_smoothscrollbar)
     endif()
 endif()
-viv_add_example(table_row_widgets table_row_widgets/main.cpp)
-viv_add_example(table_many_columns table_many_columns/main.cpp)
 viv_add_example(tree_view tree_view/main.cpp)
 viv_add_example(tree_table_view tree_table_view/main.cpp)
-viv_add_example(table_custom_header table_custom_header/main.cpp)
 viv_add_example(drag_drop
     drag_drop/main.cpp
     drag_drop/dragmodels.h
     drag_drop/dragwidgets.h
     drag_drop/sampledata.cpp)
-viv_add_example(table_spans table_spans/main.cpp)
-viv_add_example(table_panes table_panes/main.cpp)
-viv_add_example(table_frozen_rows table_frozen_rows/main.cpp)
-viv_add_example(table_stretch_columns table_stretch_columns/main.cpp)
-viv_add_example(table_header_persistence table_header_persistence/main.cpp)
-
-if(_viv_demo_smooth_enabled)
-    viv_add_example(smooth_scroll_table smooth_scroll_table/main.cpp)
-endif()
 
 add_subdirectory(list_capabilities)
+add_subdirectory(table_capabilities)
 add_subdirectory(reference)
 
 get_property(_viv_example_targets DIRECTORY PROPERTY VIV_EXAMPLE_TARGETS)
 add_custom_target(viv_examples DEPENDS ${_viv_example_targets})
-add_dependencies(viv_examples viv_reference_examples list_capabilities)
+add_dependencies(viv_examples viv_reference_examples list_capabilities table_capabilities)

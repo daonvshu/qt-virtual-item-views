@@ -85,7 +85,35 @@ public:
     int sectionSize(int logicalIndex) const;
     /// Size of a section even when it is hidden.
     int storedSectionSize(int logicalIndex) const;
+    /// In Independent mode, resizing any section freezes all stretching section widths
+    /// and clears every stretch setting, even when the size is unchanged. FitExtent
+    /// compensates on the right, or on the left for the last visible section.
     void resizeSection(int logicalIndex, int size);
+    /// Independent preserves ordinary fixed/stretch sizing. FitExtent keeps all visible
+    /// sections and their gaps within stretchExtent(), including after edge resizing.
+    enum class ResizeMode { Independent, FitExtent };
+    Q_ENUM(ResizeMode)
+    ResizeMode resizeMode() const { return m_resizeMode; }
+    /// FitExtent captures current proportions and clears ordinary stretch settings.
+    /// The mode is view configuration, independent of saveState()/restoreState().
+    void setResizeMode(ResizeMode mode);
+    /// Immutable press-time widths for renderers implementing proportional edge resizing.
+    /// Structural or extent changes invalidate the snapshot. It is not persisted.
+    struct ResizeSnapshot {
+        QVector<int> sizes;
+        quint32 orderRevision = 0;
+        quint32 fitRevision = 0;
+        qint64 extent = 0;
+        int minimum = 0;
+        int maximum = 0;
+        QVector<int> spacings;
+    };
+    ResizeSnapshot resizeSnapshot() const;
+    /// In FitExtent, LeftEdge/TopEdge distribute the opposite width change before the
+    /// target; RightEdge/BottomEdge distribute it after the target, in visual order.
+    /// Uses the snapshot ratios so reversing a drag cannot accumulate rounding errors.
+    void resizeSectionFromEdge(int logicalIndex, int size, Qt::Edge edge,
+                               const ResizeSnapshot &snapshot);
     /// True when the size was set explicitly (user resize or restoreState).
     bool isSectionSizeExplicit(int logicalIndex) const;
     void clearExplicitSectionSize(int logicalIndex);
@@ -175,9 +203,9 @@ public:
 
     /// Extent the visible sections should fill, in content coordinates: a table hands in
     /// the width its columns have to cover (the viewport, frozen columns included), a
-    /// standalone renderer its own axis extent. 0 - the default - means "no target", and
-    /// the whole stretch state below stays inert: every section keeps its own size, which
-    /// is what a geometry nobody configures for stretching does.
+    /// standalone renderer its own axis extent. In Independent mode, 0 (the default)
+    /// means "no target": every section keeps its own size. FitExtent treats 0 as an
+    /// empty viewport and temporarily collapses visible sections and their gaps.
     ///
     /// Deliberately *not* part of saveState(): the extent belongs to the view showing the
     /// sections, not to the column state an application saved, so a restored state is
@@ -191,10 +219,10 @@ public:
     /// 0 (the default) is a section that keeps its own size.
     ///
     /// The size of a stretching section is *derived*: isSectionSizeExplicit() stays false
-    /// for it and a user resize - the header's drag on a section edge, i.e.
-    /// resizeSection() - clears the factor, so the section becomes fixed at the dragged
-    /// width. That is QHeaderView's "Stretch becomes Interactive" rule, except that the
-    /// body follows the geometry here, so both stay the same width.
+    /// for it. Calling resizeSection(), including a header edge drag, on any section
+    /// clears all factors and disables stretchLastSection(). Other sections keep their
+    /// current sizes; the resized section takes the requested width. Setting a positive
+    /// factor explicitly enables proportional sizing again.
     qreal sectionStretchFactor(int logicalIndex) const;
     void setSectionStretchFactor(int logicalIndex, qreal factor);
     /// True while at least one section stretches, i.e. while a stretch pass can change
@@ -218,7 +246,8 @@ signals:
     void sectionCountChanged(int count);
     void sortIndicatorChanged(int logicalIndex, Qt::SortOrder order);
     void stretchLastSectionChanged(bool stretch);
-    /// The stretch factor of \a logicalIndex changed (a resize that clears one is
+    void resizeModeChanged(viv::HeaderGeometry::ResizeMode mode);
+    /// The stretch factor of \a logicalIndex changed (a resize that clears factors is
     /// reported through the size signals instead, not as a factor change).
     void sectionStretchFactorChanged(int logicalIndex, qreal factor);
     /// The viewport offset changed; headers only have to shift, no per-section
@@ -242,6 +271,8 @@ private:
         bool explicitSize = false;
         /// Share of the leftover extent; 0 = the section keeps its own size.
         qreal stretchFactor = 0.0;
+        /// Stable proportions while fitting the viewport, including at very narrow widths.
+        qreal fitWeight = 0.0;
     };
 
     /// Recomputes the sizes of the stretching sections from m_stretchExtent and returns
@@ -249,6 +280,15 @@ private:
     /// signals emitted here; the caller still reports its own geometry change). A no-op
     /// while no extent is set or no section is a participant.
     bool applyStretch();
+    /// Fits visible sections and gaps atomically, retaining proportions across resizes.
+    bool applyFitExtent();
+    /// Stores all sizes before emitting signals; manual changes also refresh fit weights.
+    bool commitFitSizes(const QVector<int> &sizes, bool updateWeights);
+    /// Configured gap before the fit mode optionally compresses oversized spacing.
+    int configuredSectionSpacingAfter(int logicalIndex) const;
+    /// Freezes every stretch participant without emitting signals for any explicit
+    /// section resize. Returns true when stretch settings were cleared.
+    bool stopStretchForResize();
     void rebuildCaches() const;
     /// Rebuilds logicalIndex -> visualIndex from the visual order.
     void rebuildIndexMaps();
@@ -320,6 +360,9 @@ private:
     int m_sortIndicatorSection = -1;
     Qt::SortOrder m_sortIndicatorOrder = Qt::AscendingOrder;
     bool m_stretchLastSection = false;
+    ResizeMode m_resizeMode = ResizeMode::Independent;
+    quint32 m_fitRevision = 0;
+    QVector<int> m_fitSectionSpacings;
     /// Extent the visible sections should fill; 0 = no stretch target (see setStretchExtent()).
     qint64 m_stretchExtent = 0;
     /// See orderRevision().

@@ -2,6 +2,7 @@
 #include "../core/pixelalignedlines_p.h"
 
 #include <virtualitemviews/headergeometry.h>
+#include <virtualitemviews/labelheaderview.h>
 #include <virtualitemviews/widgetrecycler.h>
 
 #include <QAbstractItemModel>
@@ -14,6 +15,7 @@
 #include <QPainter>
 #include <QResizeEvent>
 #include <QSet>
+#include <QSignalBlocker>
 #include <QVariantAnimation>
 
 #include <algorithm>
@@ -37,6 +39,15 @@ inline QPoint eventPosition(const QMouseEvent *event)
     return event->position().toPoint();
 #else
     return event->pos();
+#endif
+}
+
+inline QPoint eventGlobalPosition(const QMouseEvent *event)
+{
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    return event->globalPosition().toPoint();
+#else
+    return event->globalPos();
 #endif
 }
 } // namespace
@@ -84,6 +95,7 @@ VirtualHeaderView::VirtualHeaderView(Qt::Orientation orientation, QWidget *paren
         if (m_dragging)
             positionSections();
     });
+    setAdapter(new LabelHeaderAdapter, true);
 }
 
 VirtualHeaderView::~VirtualHeaderView()
@@ -102,8 +114,11 @@ void VirtualHeaderView::paintEvent(QPaintEvent *event)
 {
     Q_UNUSED(event);
     QPainter painter(this);
-    painter.fillRect(rect(), palette().brush(QPalette::Button));
-    if ((!m_sectionSeparatorsVisible && !m_crossAxisSeparatorVisible) || !m_geometry)
+    if (m_backgroundVisible)
+        painter.fillRect(rect(), m_backgroundColor.isValid()
+            ? QBrush(m_backgroundColor) : palette().brush(QPalette::Button));
+    if (!m_geometry || (!m_sectionSeparatorsVisible && !m_crossAxisSeparatorVisible
+                        && !m_spacingBackgroundColor.isValid()))
         return;
     const QColor sectionColor = m_sectionSeparatorColor.isValid()
         ? m_sectionSeparatorColor : headerSectionSeparatorColor(this);
@@ -111,42 +126,65 @@ void VirtualHeaderView::paintEvent(QPaintEvent *event)
         ? m_crossAxisSeparatorColor : headerSectionSeparatorColor(this);
     for (auto it = m_sectionWidgets.cbegin(); it != m_sectionWidgets.cend(); ++it) {
         const QWidget *section = it.value();
-        if (!section->isVisible())
-            continue;
+        // The section itself can be clipped out while its trailing gap remains visible.
+        // Hidden widgets retain their old rect, so derive their position from geometry.
+        int sectionEnd = axisPosOf(section) + axisSizeOf(section);
+        if (!section->isVisible()) {
+            int position = sectionPos(it.key());
+            if (position == kSectionNotShown)
+                continue;
+            if (m_slideProgress < 1.0) {
+                const auto from = m_slideFrom.constFind(it.key());
+                if (from != m_slideFrom.constEnd())
+                    position = from.value()
+                        + qRound(qreal(position - from.value()) * m_slideProgress);
+            }
+            sectionEnd = position + m_geometry->sectionSize(it.key());
+        }
+        const int spacing = isHorizontal() && m_paneSpacingProvider
+            ? m_paneSpacingProvider(it.key()) : m_geometry->sectionSpacingAfter(it.key());
+        if (spacing > 0 && m_spacingBackgroundColor.isValid()) {
+            const QRect gap = isHorizontal() ? QRect(sectionEnd, 0, spacing, height())
+                                             : QRect(0, sectionEnd, width(), spacing);
+            painter.fillRect(gap.intersected(rect()), m_spacingBackgroundColor);
+        }
         if (isHorizontal()) {
+            if (!section->isVisible())
+                continue;
             if (m_sectionSeparatorsVisible) {
                 const int x = section->geometry().right();
                 if (x >= 0 && x < width())
                     fillVerticalPixelLines(&painter,
                         {QRect(x - m_sectionSeparatorWidth + 1, 0, m_sectionSeparatorWidth, height())},
-                        m_sectionSeparatorWidth, sectionColor);
+                        m_sectionSeparatorWidth, sectionColor, true);
             }
             continue;
         }
-        const int spacing = m_geometry->sectionSpacingAfter(it.key());
         if (spacing == 0) {
             if (m_sectionSeparatorsVisible) {
-                const int y = section->geometry().bottom();
-                if (y >= 0 && y < height())
+                const QRect line(0, sectionEnd - m_sectionSeparatorWidth,
+                                 width(), m_sectionSeparatorWidth);
+                if (line.intersects(rect()))
                     fillHorizontalPixelLines(&painter,
-                        {QRect(0, y - m_sectionSeparatorWidth + 1, width(), m_sectionSeparatorWidth)},
-                        m_sectionSeparatorWidth, sectionColor);
+                        {line},
+                        m_sectionSeparatorWidth, sectionColor, true);
             }
             continue;
         }
         if (m_geometry->sectionPosition(it.key()) + m_geometry->sectionSize(it.key())
             >= m_geometry->totalExtent())
             continue;
-        const int top = section->geometry().bottom() + 1;
+        const int top = sectionEnd;
         if (m_crossAxisSeparatorVisible && width() > 0)
             fillVerticalPixelLines(&painter,
                 {QRect(width() - m_crossAxisSeparatorWidth, top, m_crossAxisSeparatorWidth, spacing)},
-                m_crossAxisSeparatorWidth, crossColor);
+                m_crossAxisSeparatorWidth, crossColor, true);
         if (m_sectionSeparatorsVisible) {
             QVector<QRect> lines;
             for (int y : {top, top + qMax(0, spacing - m_sectionSeparatorWidth)}) {
-                if (y >= 0 && y < height())
-                    lines.append(QRect(0, y, width(), m_sectionSeparatorWidth));
+                const QRect line(0, y, width(), m_sectionSeparatorWidth);
+                if (line.intersects(rect()))
+                    lines.append(line);
             }
             fillHorizontalPixelLines(&painter, lines, m_sectionSeparatorWidth, sectionColor);
         }
@@ -162,8 +200,14 @@ void VirtualHeaderView::setGeometryModel(HeaderGeometry *geometry)
                  "orientation; ignored");
         return;
     }
+    const QPointer<VirtualHeaderView> self(this);
+    finishPointerInteraction(false);
+    if (!self)
+        return;
     connectGeometry(m_geometry, false);
     m_geometry = geometry;
+    m_resizeSection = -1;
+    m_resizeSnapshot = HeaderGeometry::ResizeSnapshot();
     // The pane cache, the remembered visual order and its revision all describe the geometry
     // that was just replaced (P1 of the third review - a standalone header may switch
     // geometries through the public API).
@@ -191,6 +235,10 @@ void VirtualHeaderView::connectGeometry(HeaderGeometry *geometry, bool connectSi
         // QPointer goes null at the same moment, so both sides agree without guessing
         // (P1.3 of the fourth review).
         connect(geometry, &QObject::destroyed, this, [this]() {
+            const QPointer<VirtualHeaderView> self(this);
+            finishPointerInteraction(false);
+            if (!self)
+                return;
             if (m_adapter)
                 m_adapter->setGeometryModel(nullptr);
         });
@@ -429,6 +477,13 @@ void VirtualHeaderView::setPaneTerminalColumn(int logicalIndex)
     relayout();
 }
 
+void VirtualHeaderView::setPaneSpacingProvider(std::function<int(int)> provider)
+{
+    m_paneSpacingProvider = std::move(provider);
+    m_paneCacheDirty = true;
+    relayout();
+}
+
 void VirtualHeaderView::setSectionSeparatorsVisible(bool visible)
 {
     if (m_sectionSeparatorsVisible == visible)
@@ -447,6 +502,116 @@ void VirtualHeaderView::setCrossAxisSeparatorVisible(bool visible)
     for (QWidget *section : m_sectionWidgets)
         section->update();
     update();
+}
+
+void VirtualHeaderView::setBackgroundVisible(bool visible)
+{
+    if (m_backgroundVisible == visible)
+        return;
+    m_backgroundVisible = visible;
+    notifyAppearanceChanged();
+}
+
+void VirtualHeaderView::setBackgroundColor(const QColor &color)
+{
+    if (m_backgroundColor == color)
+        return;
+    m_backgroundColor = color;
+    notifyAppearanceChanged();
+}
+
+void VirtualHeaderView::setForegroundColor(const QColor &color)
+{
+    if (m_foregroundColor == color)
+        return;
+    m_foregroundColor = color;
+    notifyAppearanceChanged();
+}
+
+void VirtualHeaderView::setTextAlignment(Qt::Alignment alignment)
+{
+    if (!alignment)
+        alignment = Qt::AlignCenter;
+    if (m_textAlignment == alignment)
+        return;
+    m_textAlignment = alignment;
+    notifyAppearanceChanged();
+}
+
+void VirtualHeaderView::setContentPadding(const QMargins &padding)
+{
+    const QMargins clamped(qMax(0, padding.left()), qMax(0, padding.top()),
+                           qMax(0, padding.right()), qMax(0, padding.bottom()));
+    if (m_contentPadding == clamped)
+        return;
+    m_contentPadding = clamped;
+    notifyAppearanceChanged();
+}
+
+void VirtualHeaderView::setFont(const QFont &font)
+{
+    // FontChange also covers inherited changes and calls made through a QWidget pointer.
+    const QPointer<VirtualHeaderView> self(this);
+    const QFont previous = QWidget::font();
+    QWidget::setFont(font);
+    // Explicitly resolving an unchanged font can still change its inheritance mask.
+    if (self && previous == QWidget::font())
+        notifyAppearanceChanged();
+}
+
+void VirtualHeaderView::setSpacingBackgroundColor(const QColor &color)
+{
+    if (m_spacingBackgroundColor == color)
+        return;
+    m_spacingBackgroundColor = color;
+    notifyAppearanceChanged();
+}
+
+void VirtualHeaderView::notifyAppearanceChanged()
+{
+    for (QWidget *section : m_sectionWidgets)
+        section->update();
+    update();
+    emit appearanceChanged();
+}
+
+void VirtualHeaderView::copyAppearanceFrom(const VirtualHeaderView *source)
+{
+    // A clone follows its source; copying must not publish intermediate appearance states.
+    const QSignalBlocker blocker(this);
+    setFont(source->font());
+    setPalette(source->palette());
+    setBackgroundVisible(source->backgroundVisible());
+    setBackgroundColor(source->backgroundColor());
+    setSpacingBackgroundColor(source->spacingBackgroundColor());
+    setForegroundColor(source->foregroundColor());
+    setTextAlignment(source->textAlignment());
+    setContentPadding(source->contentPadding());
+}
+
+void VirtualHeaderView::setAppearanceSource(VirtualHeaderView *source)
+{
+    copyAppearanceFrom(source);
+    connect(source, &VirtualHeaderView::appearanceChanged, this, [this, source] {
+        copyAppearanceFrom(source);
+    });
+}
+
+void VirtualHeaderView::changeEvent(QEvent *event)
+{
+    const QPointer<VirtualHeaderView> self(this);
+    QWidget::changeEvent(event);
+    if (!self)
+        return;
+    switch (event->type()) {
+    case QEvent::FontChange:
+    case QEvent::PaletteChange:
+    case QEvent::StyleChange:
+        notifyAppearanceChanged();
+        break;
+    default:
+        break;
+    }
 }
 
 void VirtualHeaderView::setSectionSeparatorColor(const QColor &color)
@@ -596,7 +761,8 @@ void VirtualHeaderView::rebuildPaneCacheIfNeeded() const
         m_paneSlotByLogical[logical] = slot;
         x += m_geometry->sectionSize(logical)
             + (logical == m_paneTerminalColumn ? 0
-                                              : m_geometry->sectionSpacingAfter(logical));
+                : (m_paneSpacingProvider ? m_paneSpacingProvider(logical)
+                                         : m_geometry->sectionSpacingAfter(logical)));
         m_panePrefix.append(x);
     }
 }
@@ -1294,6 +1460,28 @@ void VirtualHeaderView::finishSectionDrag(bool commit)
     update();
 }
 
+void VirtualHeaderView::finishPointerInteraction(bool commit)
+{
+    const bool wasResize = m_resizeSection >= 0;
+    m_resizeSection = -1;
+    m_resizeSnapshot = HeaderGeometry::ResizeSnapshot();
+    m_pressedSection = -1;
+    m_moved = false;
+    const QPointer<VirtualHeaderView> self(this);
+    if (m_dragging)
+        finishSectionDrag(commit);
+    if (!self)
+        return;
+    // Clear gesture state first: releaseMouse() can synchronously send UngrabMouse.
+    if (QWidget::mouseGrabber() == this)
+        releaseMouse();
+    if (self)
+        updateCursor(mapFromGlobal(QCursor::pos()));
+    // Restore hover even without a subsequent move, including cancellation or lost capture.
+    if (self && wasResize)
+        emit sectionHoverChanged();
+}
+
 void VirtualHeaderView::animateSectionMove()
 {
     // Where the materialized sections are right now: an interrupted transition
@@ -1339,7 +1527,7 @@ bool VirtualHeaderView::isSectionPinned(int logicalIndex) const
     const QWidget *widget = m_sectionWidgets.value(logicalIndex, nullptr);
     if (!widget)
         return false;
-    // Hiding the dragged child drops Qt's implicit mouse grab before the release.
+    // Keep the dragged section materialized for its preview outside the header.
     if (m_dragging && logicalIndex == m_dragSection)
         return true;
     if (const QWidget *focus = QApplication::focusWidget()) {
@@ -1403,6 +1591,17 @@ qsizetype VirtualHeaderView::pooledSectionCount() const
 // Interaction (§21/§22/§25)
 // ---------------------------------------------------------------------------
 
+bool VirtualHeaderView::event(QEvent *event)
+{
+    const QPointer<VirtualHeaderView> self(this);
+    const bool interrupted = event->type() == QEvent::UngrabMouse
+        || event->type() == QEvent::WindowDeactivate || event->type() == QEvent::Hide
+        || (event->type() == QEvent::EnabledChange && !isEnabled());
+    if (interrupted && (m_resizeSection >= 0 || m_dragging || m_pressedSection >= 0))
+        finishPointerInteraction(false);
+    return self ? QWidget::event(event) : true;
+}
+
 int VirtualHeaderView::sectionAt(const QPoint &pos) const
 {
     if (!m_geometry)
@@ -1417,12 +1616,69 @@ int VirtualHeaderView::sectionAt(const QPoint &pos) const
     return -1;
 }
 
-int VirtualHeaderView::resizeEdgeAt(const QPoint &pos) const
+int VirtualHeaderView::resizeEdgeAt(const QPoint &pos, bool *leading) const
 {
     // Switched off means the edge is not a handle at all: no resize gesture and no resize
     // cursor (the press then behaves like one anywhere else in the section).
     if (!m_geometry || !m_sectionResizeEnabled)
         return -1;
+    if (leading)
+        *leading = false;
+    if (m_resizeFromLeadingEdge) {
+        // The trailing edge stays fixed; resize the section after the shared boundary.
+        int target = -1;
+        int distance = kResizeMargin + 1;
+        for (int logical : materializedSections()) {
+            const int position = sectionPos(logical);
+            if (position == kSectionNotShown)
+                continue;
+            const int edgeDistance = qAbs(axisOf(pos) - position);
+            if (edgeDistance < distance) {
+                target = logical;
+                distance = edgeDistance;
+            }
+        }
+        if (target >= 0 && leading)
+            *leading = true;
+        return target;
+    }
+    if (m_geometry->resizeMode() == HeaderGeometry::ResizeMode::FitExtent) {
+        // The half of a shared boundary inside a section belongs to that section.
+        // This distinguishes its leading edge from its neighbour's trailing edge.
+        const QVector<int> order = m_geometry->visibleSectionsInVisualOrder();
+        int target = sectionAt(pos);
+        int distance = kResizeMargin + 1;
+        bool before = false;
+        const auto consider = [&](int logical) {
+            const int left = sectionPos(logical);
+            if (left == kSectionNotShown)
+                return;
+            const int right = left + m_geometry->sectionSize(logical);
+            const int slot = int(order.indexOf(logical));
+            const int leftDistance = qAbs(axisOf(pos) - left);
+            const int rightDistance = qAbs(axisOf(pos) - right);
+            if (slot > 0 && leftDistance < distance) {
+                target = logical;
+                distance = leftDistance;
+                before = true;
+            }
+            if (slot >= 0 && slot + 1 < order.size() && rightDistance < distance) {
+                target = logical;
+                distance = rightDistance;
+                before = false;
+            }
+        };
+        if (target >= 0)
+            consider(target);
+        else
+            for (int logical : materializedSections())
+                consider(logical);
+        if (distance > kResizeMargin)
+            return -1;
+        if (leading)
+            *leading = before;
+        return target;
+    }
     for (int logical : materializedSections()) {
         const int left = sectionPos(logical);
         if (left == kSectionNotShown)
@@ -1463,36 +1719,79 @@ void VirtualHeaderView::mousePressEvent(QMouseEvent *event)
         QWidget::mousePressEvent(event);
         return;
     }
+    const QPointer<VirtualHeaderView> self(this);
+    finishPointerInteraction(false);
+    if (!self || !m_geometry)
+        return;
     const QPoint pos = eventPosition(event);
     m_moved = false;
     m_dragSection = -1;
     m_dragging = false;
-    m_resizeSection = resizeEdgeAt(pos);
+    m_resizeSection = resizeEdgeAt(pos, &m_resizeLeading);
     if (m_resizeSection >= 0) {
         m_resizeStartSize = m_geometry->storedSectionSize(m_resizeSection);
-        m_resizeStartPos = axisOf(pos);
+        // A bottom-frozen strip moves as its rows grow; local coordinates would feed that
+        // movement back into the next resize and amplify the requested size.
+        m_resizeStartGlobalPos = axisOf(eventGlobalPosition(event));
+        m_resizeSnapshot = m_geometry->resizeSnapshot();
         m_pressedSection = -1;
         setCursor(resizeCursor()); // the gesture owns the cursor until the release
         event->accept();
+        // Section widgets may be hidden or recycled as their widths change. The header
+        // owns the gesture so release still arrives outside the window or those widgets.
+        grabMouse();
         return;
     }
     m_pressedSection = sectionAt(pos);
     m_pressedPos = axisOf(pos);
     event->accept();
+    if (m_pressedSection >= 0)
+        grabMouse();
 }
 
 void VirtualHeaderView::mouseMoveEvent(QMouseEvent *event)
 {
+    if ((m_resizeSection >= 0 || m_dragging || m_pressedSection >= 0)
+        && !(event->buttons() & Qt::LeftButton)) {
+        const QPointer<VirtualHeaderView> self(this);
+        finishPointerInteraction(false);
+        event->accept();
+        if (self)
+            emit sectionHoverChanged();
+        return;
+    }
     if (!m_geometry) {
         QWidget::mouseMoveEvent(event);
         return;
     }
     const QPoint pos = eventPosition(event);
     if (m_resizeSection >= 0) {
-        const int width = qMax(m_geometry->minimumSectionSize(),
-                               m_resizeStartSize + axisOf(pos) - m_resizeStartPos);
-        m_geometry->resizeSection(m_resizeSection, width);
+        const QPointer<VirtualHeaderView> self(this);
+        const qint64 delta = qint64(axisOf(eventGlobalPosition(event))) - m_resizeStartGlobalPos;
+        if (m_geometry->resizeMode() == HeaderGeometry::ResizeMode::FitExtent) {
+            if (m_resizeSnapshot.orderRevision != m_geometry->orderRevision()
+                || m_resizeSnapshot.extent != m_geometry->stretchExtent()
+                || m_resizeSnapshot.sizes.size() != m_geometry->sectionCount()) {
+                finishPointerInteraction(false);
+                event->accept();
+                return;
+            }
+            const int width = int(qBound<qint64>(qint64(0),
+                m_resizeStartSize + (m_resizeLeading ? -delta : delta),
+                qint64(std::numeric_limits<int>::max())));
+            m_geometry->resizeSectionFromEdge(m_resizeSection, width,
+                m_resizeLeading ? Qt::LeftEdge : Qt::RightEdge, m_resizeSnapshot);
+        } else if (m_resizeSnapshot.sizes.isEmpty()) {
+            const int width = int(qBound<qint64>(qint64(m_geometry->minimumSectionSize()),
+                m_resizeStartSize + (m_resizeLeading ? -delta : delta),
+                qint64(std::numeric_limits<int>::max())));
+            m_geometry->resizeSection(m_resizeSection, width);
+        } else {
+            finishPointerInteraction(false);
+        }
         event->accept();
+        if (self)
+            emit sectionHoverChanged();
         return;
     }
     if (m_sectionDragEnabled && m_pressedSection >= 0
@@ -1509,15 +1808,17 @@ void VirtualHeaderView::mouseMoveEvent(QMouseEvent *event)
         }
         updateSectionDrag(axisOf(pos));
         event->accept();
+        emit sectionHoverChanged();
         return;
     }
     updateCursor(pos);
     QWidget::mouseMoveEvent(event);
+    emit sectionHoverChanged();
 }
 
 void VirtualHeaderView::mouseReleaseEvent(QMouseEvent *event)
 {
-    if (!m_geometry) {
+    if (event->button() != Qt::LeftButton) {
         QWidget::mouseReleaseEvent(event);
         return;
     }
@@ -1525,29 +1826,28 @@ void VirtualHeaderView::mouseReleaseEvent(QMouseEvent *event)
     const bool wasResize = m_resizeSection >= 0;
     const bool wasDragging = m_dragging;
     const int pressed = m_pressedSection;
-    if (wasDragging) {
-        finishSectionDrag(true);
-        m_resizeSection = -1;
-        m_pressedSection = -1;
-        m_moved = false;
-        event->accept();
+    const bool clicked = !wasResize && !wasDragging && !m_moved && pressed >= 0
+        && m_geometry && sectionAt(pos) == pressed
+        && qAbs(axisOf(pos) - m_pressedPos) < QApplication::startDragDistance();
+    event->accept();
+    const QPointer<VirtualHeaderView> self(this);
+    finishPointerInteraction(true);
+    if (!self || !clicked || !m_geometry)
+        return;
+    // Selection and sorting are mutually exclusive click actions.
+    if (m_sectionSelectionEnabled) {
+        emit sectionClicked(pressed, event->modifiers());
         return;
     }
-    m_resizeSection = -1;
-    m_pressedSection = -1;
-    updateCursor(pos);
-
-    // A plain click on a section sets the sort indicator (§33).
-    if (!wasResize && !m_moved && pressed >= 0 && sectionAt(pos) == pressed
-        && m_sortInteractionEnabled) {
+    if (m_sortInteractionEnabled) {
         const bool same = m_geometry->sortIndicatorSection() == pressed;
         const Qt::SortOrder order = same && m_geometry->sortIndicatorOrder() == Qt::AscendingOrder
             ? Qt::DescendingOrder
             : Qt::AscendingOrder;
         m_geometry->setSortIndicator(pressed, order);
     }
-    m_moved = false;
-    event->accept();
+    if (self)
+        emit sectionClicked(pressed, event->modifiers());
 }
 
 void VirtualHeaderView::updateCursor(const QPoint &pos)
@@ -1595,10 +1895,15 @@ bool VirtualHeaderView::eventFilter(QObject *watched, QEvent *event)
     if (!widget || !m_geometry)
         return QWidget::eventFilter(watched, event);
 
+    const QPointer<QWidget> guardedWidget(widget);
+    const QPointer<VirtualHeaderView> self(this);
+
     switch (event->type()) {
     case QEvent::MouseMove: {
         const auto *mouse = static_cast<QMouseEvent *>(event);
-        updateCursor(widget->mapTo(this, eventPosition(mouse)));
+        if (isAncestorOf(widget))
+            updateCursor(widget->mapTo(this, eventPosition(mouse)));
+        emit sectionHoverChanged();
         break;
     }
     case QEvent::Enter:
@@ -1606,25 +1911,30 @@ bool VirtualHeaderView::eventFilter(QObject *watched, QEvent *event)
         // Enter/Leave carry no usable position, and the pointer may move from one child
         // to another without the header seeing a move: ask the pointer itself.
         updateCursor(mapFromGlobal(QCursor::pos()));
+        emit sectionHoverChanged();
         break;
     default:
         break;
     }
-    return false; // never consume: the business widget keeps its own events
+    // A hover callback can recycle the receiving section or destroy the view.
+    return !self || !guardedWidget;
 }
 
 void VirtualHeaderView::leaveEvent(QEvent *event)
 {
-    unsetCursor();
+    if (m_resizeSection < 0 && !m_dragging)
+        unsetCursor();
     QWidget::leaveEvent(event);
+    emit sectionHoverChanged();
 }
 
 void VirtualHeaderView::keyPressEvent(QKeyEvent *event)
 {
-    if (event->key() == Qt::Key_Escape && m_dragging) {
+    if (event->key() == Qt::Key_Escape
+        && (m_dragging || m_resizeSection >= 0 || m_pressedSection >= 0)) {
         // Escape drops the preview: no commit, the sections go back to where the
         // committed geometry says they are.
-        finishSectionDrag(false);
+        finishPointerInteraction(false);
         event->accept();
         return;
     }

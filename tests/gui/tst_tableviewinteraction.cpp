@@ -246,6 +246,7 @@ void TestTableViewInteraction::horizontalWheelScrollsBodyAndHeader()
 
 void TestTableViewInteraction::headerDragResizesColumn()
 {
+    m_view->setColumnResizeEnabled(true);
     auto *header = dynamic_cast<VirtualHeaderView *>(m_view->horizontalHeader());
     QVERIFY(header != nullptr);
 
@@ -270,6 +271,7 @@ void TestTableViewInteraction::headerDragResizesColumn()
 
 void TestTableViewInteraction::verticalHeaderDragResizesRow()
 {
+    m_view->setVerticalHeaderResizeEnabled(true);
     // The row-number strip is the same widget renderer as the column header, other axis:
     // the drag goes to the strip and writes the new row height into the row geometry.
     auto *rowStrip = dynamic_cast<VirtualHeaderView *>(m_view->verticalHeader());

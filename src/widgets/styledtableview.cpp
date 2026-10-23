@@ -29,7 +29,7 @@ void StyledTableCellHost::clearIndex()
 
 void StyledTableCellHost::paintEvent(QPaintEvent *)
 {
-    if (!m_view || m_view->visualStateScope() == VirtualTableView::VisualStateScope::Row)
+    if (!m_view || m_view->selectionBehavior() == VirtualItemView::SelectionBehavior::SelectRows)
         return;
     QPainter painter(this);
     painter.fillRect(rect(), palette().color(QPalette::Base));
@@ -67,7 +67,7 @@ void StyledTableRowWidget::refreshVisualState(const QModelIndex &index)
 {
     if (!m_view)
         return;
-    if (m_view->visualStateScope() == VirtualTableView::VisualStateScope::Row) {
+    if (m_view->selectionBehavior() == VirtualItemView::SelectionBehavior::SelectRows) {
         update();
     } else {
         for (QWidget *child : findChildren<QWidget *>()) {
@@ -96,7 +96,7 @@ void StyledTableRowWidget::paintEvent(QPaintEvent *)
     QPainter painter(this);
     painter.fillRect(rect(), palette().color(QPalette::Base));
     if (!m_view || !m_index.isValid()
-        || m_view->visualStateScope() != VirtualTableView::VisualStateScope::Row)
+        || m_view->selectionBehavior() != VirtualItemView::SelectionBehavior::SelectRows)
         return;
 
     QRectF background(rect());
@@ -190,8 +190,8 @@ protected:
             painter.restore();
         };
 
-        const bool rowScope = m_view->visualStateScope()
-            == VirtualTableView::VisualStateScope::Row;
+        const bool rowScope = m_view->selectionBehavior()
+            == VirtualItemView::SelectionBehavior::SelectRows;
         const QVector<TablePane> panes = rowScope ? QVector<TablePane>() : m_view->panes();
         const QVector<int> columns = rowScope ? QVector<int>()
                                                : m_view->visibleColumnLogicalIndexes();
@@ -249,13 +249,15 @@ StyledTableView::StyledTableView(QWidget *parent)
     });
     connect(this, &VirtualItemView::virtualizationUpdated, this,
             [this]() { refreshGridCover(); });
+    VirtualTableView::setVisualStateCornerRadius(6);
 }
 
 QPainterPath StyledTableView::visualStateBackgroundPath(const QRectF &rect) const
 {
     QPainterPath path;
-    if (m_cornerRadius > 0)
-        path.addRoundedRect(rect, m_cornerRadius, m_cornerRadius);
+    const int radius = visualStateCornerRadius();
+    if (radius > 0)
+        path.addRoundedRect(rect, radius, radius);
     else
         path.addRect(rect);
     return path;
@@ -270,7 +272,7 @@ void StyledTableView::paintVisualStateBackground(QPainter *painter, const QRectF
     if (state.hoverProgress <= 0.0 && state.selectedProgress <= 0.0)
         return;
     painter->save();
-    painter->setRenderHint(QPainter::Antialiasing, m_cornerRadius > 0);
+    painter->setRenderHint(QPainter::Antialiasing, visualStateCornerRadius() > 0);
     const QPainterPath path = visualStateBackgroundPath(rect);
     painter->setOpacity(state.hoverProgress);
     painter->fillPath(path, hoverBackgroundColor());
@@ -281,11 +283,7 @@ void StyledTableView::paintVisualStateBackground(QPainter *painter, const QRectF
 
 void StyledTableView::setVisualStateCornerRadius(int radius)
 {
-    radius = qMax(0, radius);
-    if (m_cornerRadius == radius)
-        return;
-    m_cornerRadius = radius;
-    refreshVisualStates();
+    VirtualTableView::setVisualStateCornerRadius(radius);
 }
 
 void StyledTableView::setBackgroundCoversGridLines(bool enabled)
@@ -299,6 +297,8 @@ void StyledTableView::setBackgroundCoversGridLines(bool enabled)
 
 bool StyledTableView::hasLeftRowEdge() const
 {
+    if (rowVisualStateIncludesHeader())
+        return false;
     return !frozenColumns().isEmpty() || horizontalOffset() == 0;
 }
 
@@ -316,7 +316,7 @@ void StyledTableView::refreshRoundedEdges()
         return;
     m_leftRounded = left;
     m_rightRounded = right;
-    if (visualStateScope() == VisualStateScope::Row) {
+    if (selectionBehavior() == SelectionBehavior::SelectRows) {
         for (const MaterializedItem &item : materializedItems()) {
             if (item.widget)
                 item.widget->update();

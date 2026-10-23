@@ -425,7 +425,7 @@ void TestAdapterReplacement::replacingAWidgetHeaderDestroysItsPaneRenderers()
     table.setHorizontalHeader(nullptr);
     settle();
     QVERIFY(installed.isNull());
-    // `nullptr` installs the view's own default header - a LabelHeaderView, which is a
+    // `nullptr` installs the view's own default header - a VirtualHeaderView, which is a
     // widget header too - so what is left is exactly that one plus its pane clone.
     QCOMPARE(virtualHeaderCount(&table), 2);
 }

@@ -9,7 +9,7 @@
 namespace viv {
 
 // Snap both exclusive edges together; logical region clips otherwise round differently.
-inline void fillPixelAlignedRegion(QPainter *painter, const QRegion &region, const QColor &color)
+inline void fillPixelAlignedRegion(QPainter *painter, const QRegion &region, const QBrush &brush)
 {
     const QTransform transform = painter->deviceTransform();
     bool invertible = false;
@@ -29,17 +29,18 @@ inline void fillPixelAlignedRegion(QPainter *painter, const QRegion &region, con
     for (const QRect &rect : pixels) {
         QRectF device(rect);
         device.adjust(0.001, 0.001, -0.001, -0.001);
-        painter->fillRect(inverse.mapRect(device), color);
+        painter->fillRect(inverse.mapRect(device), brush);
     }
     painter->restore();
 }
 
 // Keep antialiased corners inside the same exclusive device edges as flat backgrounds.
 inline void fillPixelAlignedRoundedRegion(QPainter *painter, const QRect &rect,
-                                         const QRegion &clip, int radius, const QColor &color)
+                                         const QRegion &clip, int radius, const QBrush &brush,
+                                         bool roundLeft = true, bool roundRight = true)
 {
-    if (radius <= 0) {
-        fillPixelAlignedRegion(painter, clip.intersected(QRegion(rect)), color);
+    if (radius <= 0 || (!roundLeft && !roundRight)) {
+        fillPixelAlignedRegion(painter, clip.intersected(QRegion(rect)), brush);
         return;
     }
     const QTransform transform = painter->deviceTransform();
@@ -59,12 +60,19 @@ inline void fillPixelAlignedRoundedRegion(QPainter *painter, const QRect &rect,
         deviceClip.addRect(aligned(part));
     deviceClip.setFillRule(Qt::WindingFill);
     const QRectF scaledRadius = transform.mapRect(QRectF(0, 0, radius, radius));
+    const QRectF bounds = aligned(rect);
     QPainterPath shape;
-    shape.addRoundedRect(aligned(rect), scaledRadius.width(), scaledRadius.height());
+    shape.addRoundedRect(bounds, scaledRadius.width(), scaledRadius.height());
+    // Fill a joined side within the same path so translucent layers are painted only once.
+    shape.setFillRule(Qt::WindingFill);
+    if (!roundLeft)
+        shape.addRect(QRectF(bounds.left(), bounds.top(), bounds.width() / 2.0, bounds.height()));
+    if (!roundRight)
+        shape.addRect(QRectF(bounds.center().x(), bounds.top(), bounds.width() / 2.0, bounds.height()));
     painter->save();
     painter->setClipPath(inverse.map(deviceClip), Qt::IntersectClip);
     painter->setRenderHint(QPainter::Antialiasing, true);
-    painter->fillPath(inverse.map(shape), color);
+    painter->fillPath(inverse.map(shape), brush);
     painter->restore();
 }
 
@@ -101,15 +109,17 @@ inline void fillPixelLines(QPainter *painter, const QVector<QRect> &lines,
 }
 
 inline void fillHorizontalPixelLines(QPainter *painter, const QVector<QRect> &lines,
-                                     int pixelWidth, const QColor &color)
+                                     int pixelWidth, const QColor &color,
+                                     bool trailingEdge = false)
 {
-    fillPixelLines(painter, lines, pixelWidth, color, Qt::Horizontal);
+    fillPixelLines(painter, lines, pixelWidth, color, Qt::Horizontal, trailingEdge);
 }
 
 inline void fillVerticalPixelLines(QPainter *painter, const QVector<QRect> &lines,
-                                   int pixelWidth, const QColor &color)
+                                   int pixelWidth, const QColor &color,
+                                   bool trailingEdge = false)
 {
-    fillPixelLines(painter, lines, pixelWidth, color, Qt::Vertical);
+    fillPixelLines(painter, lines, pixelWidth, color, Qt::Vertical, trailingEdge);
 }
 
 // Use the same physical-pixel thickness and leading edge for every separator style.

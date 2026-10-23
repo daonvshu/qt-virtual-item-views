@@ -744,7 +744,7 @@ private slots:
     void aBrokenStateLeavesTheViewUntouched();
     void columnsShareTheLeftoverWidthByStretchFactor();
     void headerDragsAreOffByDefault();
-    void headerResizeIsOnByDefaultAndCanBeTurnedOff();
+    void headerResizeIsOffByDefaultAndCanBeEnabled();
     void theRowDragInstantiatesAModelOnlyWithoutOne();
 
 private:
@@ -838,7 +838,7 @@ void TestVirtualTableView::rowWidgetModeCreatesNoCellWidgets()
 
 void TestVirtualTableView::headerAndRowsAgreeOnColumnBoundaries()
 {
-    // The default horizontal header is a widget header (LabelHeaderView), so the
+    // The default horizontal header is a widget header (VirtualHeaderView), so the
     // agreement is read from the section widgets - the same x the body's ColumnHosts
     // use (§45.1).
     auto *header = dynamic_cast<VirtualHeaderView *>(m_view->horizontalHeader());
@@ -873,7 +873,7 @@ void TestVirtualTableView::defaultHeaderStaysOnTheCommittedColumns()
     // The header the view installs itself: a label-only widget header. It has to sit
     // exactly on the committed column geometry for the header *and* for the pane
     // clones, after a resize, a scroll, a reorder and a freeze.
-    QVERIFY(dynamic_cast<LabelHeaderView *>(m_view->horizontalHeader()) != nullptr);
+    QVERIFY(dynamic_cast<VirtualHeaderView *>(m_view->horizontalHeader()) != nullptr);
     // A hidden header still works - the sections just have no visible geometry.
     QVERIFY(m_view->isHorizontalHeaderVisible());
 
@@ -1471,7 +1471,7 @@ void TestVirtualTableView::tenMillionUniformRowsResizeOneStaysCompact()
     QCOMPARE(view.verticalHeaderGeometry()->sectionCount(), kRows);
     QCOMPARE(view.verticalHeaderGeometry()->storedSectionStateCount(), 0);
     QVERIFY(view.verticalHeaderGeometry()->isUniform());
-    // The strip is a widget one (LabelHeaderView(Qt::Vertical)): only the rows its window
+    // The strip is a widget one (VirtualHeaderView(Qt::Vertical)): only the rows its window
     // shows own a widget.
     auto *strip = dynamic_cast<VirtualHeaderView *>(view.verticalHeader());
     QVERIFY(strip != nullptr);
@@ -1788,7 +1788,7 @@ void TestVirtualTableView::verticalHeaderMirrorsRowHeights()
 
 void TestVirtualTableView::verticalHeaderFollowsVerticalScroll()
 {
-    // The row-number strip is a widget strip (LabelHeaderView(Qt::Vertical)): the same
+    // The row-number strip is a widget strip (VirtualHeaderView(Qt::Vertical)): the same
     // renderer as the column header, other axis.
     auto *header = dynamic_cast<VirtualHeaderView *>(m_view->verticalHeader());
     QVERIFY(header != nullptr);
@@ -2589,17 +2589,19 @@ void TestVirtualTableView::theRowDragInstantiatesAModelOnlyWithoutOne()
     }
 }
 
-void TestVirtualTableView::headerResizeIsOnByDefaultAndCanBeTurnedOff()
+void TestVirtualTableView::headerResizeIsOffByDefaultAndCanBeEnabled()
 {
-    // 列宽 / 行高调整默认开着（表头本来就该能调尺寸），两个开关只关掉手势。
-    QVERIFY(m_view->isColumnResizeEnabled());
-    QVERIFY(m_view->isVerticalHeaderResizeEnabled());
+    // Column and row resizing are opt-in; programmatic size APIs stay available.
+    QVERIFY(!m_view->isColumnResizeEnabled());
+    QVERIFY(!m_view->isVerticalHeaderResizeEnabled());
     auto *header = dynamic_cast<VirtualHeaderView *>(m_view->horizontalHeader());
     auto *strip = dynamic_cast<VirtualHeaderView *>(m_view->verticalHeader());
     QVERIFY(header != nullptr);
     QVERIFY(strip != nullptr);
-    QVERIFY(header->isSectionResizeEnabled());
-    QVERIFY(strip->isSectionResizeEnabled());
+    QVERIFY(!header->isSectionResizeEnabled());
+    QVERIFY(!strip->isSectionResizeEnabled());
+    m_view->setColumnResizeEnabled(true);
+    m_view->setVerticalHeaderResizeEnabled(true);
 
     // 列：拖列 1 的**后边界**（-1 px 落在 ±3 px 判定里）→ 改列 1 的宽度。
     const int column = 1;

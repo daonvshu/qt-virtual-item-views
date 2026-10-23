@@ -158,6 +158,8 @@ public:
     /// Viewport x of a column. Negative x is valid for a partially clipped column;
     /// use paneIndexOfColumn() to distinguish it from an unknown column.
     int columnViewportX(int logicalIndex) const;
+    /// Actual gap after a column, including pane order and the terminal boundary.
+    int columnSpacingAfter(int logicalIndex) const { return m_columnSpacings.value(logicalIndex, 0); }
     /// Pane a column is painted in (scrollable when it is not frozen).
     TablePane::Type paneOfColumn(int logicalIndex) const;
     /// Index of the pane that shows \a logicalIndex (-1 when hidden/unknown).
@@ -240,6 +242,8 @@ private:
     QVector<QVector<qint64>> m_panePrefixX;
     /// Slot of a logical column inside its pane's column list (-1 = no pane).
     QVector<int> m_paneSlotByLogical;
+    /// Fitted gaps follow displayed slots when frozen panes change the column order.
+    QVector<int> m_columnSpacings;
     /// Visible window of a pane as slots into its column list (-1 = nothing
     /// visible); the visual-index range is derived from it for the public API.
     QVector<QPair<int, int>> m_paneSlotWindows;

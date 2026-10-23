@@ -215,7 +215,6 @@ int main(int argc, char **argv)
     table->setUniformItemHeight(kTableRowHeight);
     table->setDefaultColumnWidth(kTableColumnWidth);
     table->setModel(tableModel);
-    table->setVisualStateScope(viv::VirtualTableView::VisualStateScope::Row);
     // 默认状态背景覆盖冻结列和滚动列，无需重写绘制函数。
     table->setVisualStateBackgroundVisible(true);
     table->setVisualStateCornerRadius(0);

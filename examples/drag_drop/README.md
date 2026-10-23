@@ -1,6 +1,6 @@
 # 多视图拖放综合演示
 
-只想接入一个功能时，先读 [表格整行拖放](../reference/drag_drop/rows.cpp)、[单元格投放](../reference/drag_drop/cells.cpp) 或 [列表手柄起拖](../list_capabilities/15_drag_drop/example.cpp)。本目录保留多视图组合、多个 cell、行高保留、工具栏和诊断参数，目标仍为 `drag_drop`。
+只想接入一个功能时，先读 [表格整行拖放](../table_capabilities/24_drag_indicator/example.cpp)、[单元格投放](../table_capabilities/26_cell_drop/example.cpp) 或 [列表手柄起拖](../list_capabilities/15_drag_drop/example.cpp)。本目录保留多视图组合、多个 cell、行高保留、工具栏和诊断参数，目标仍为 `drag_drop`。
 
 ## 文件职责
 

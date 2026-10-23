@@ -57,7 +57,7 @@ public:
     explicit StyledTableView(QWidget *parent = nullptr);
 
     void setVisualStateCornerRadius(int radius);
-    int visualStateCornerRadius() const { return m_cornerRadius; }
+    int visualStateCornerRadius() const { return VirtualTableView::visualStateCornerRadius(); }
     void setBackgroundCoversGridLines(bool enabled);
     bool backgroundCoversGridLines() const { return m_backgroundCoversGridLines; }
     void refreshRoundedEdges();
@@ -79,7 +79,6 @@ private:
     void refreshGridCover(const QRect &dirty = QRect());
 
     GridCoverOverlay *m_gridCover = nullptr;
-    int m_cornerRadius = 6;
     bool m_backgroundCoversGridLines = false;
     bool m_leftRounded = true;
     bool m_rightRounded = true;

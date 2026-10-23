@@ -183,7 +183,10 @@ protected:
     {
         QPainter painter(this);
         const int lineWidth = qMax(1, property("vivSpacingLineWidth").toInt());
-        if (property("vivFillSpacingBackground").toBool())
+        const QColor background = property("vivSpacingBackgroundColor").value<QColor>();
+        if (background.isValid())
+            painter.fillRect(rect(), background);
+        else if (property("vivFillSpacingBackground").toBool())
             painter.fillRect(rect(), palette().brush(QPalette::Base));
         if (property("vivShowSpacingLines").toBool()) {
             const int left = qBound(0, property("vivSpacingLineLeftInset").toInt(), width());
@@ -558,6 +561,29 @@ void VirtualItemView::setRowSpacing(int pixels)
     relayout();
 }
 
+void VirtualItemView::setSpacingBackgroundColor(const QColor &color)
+{
+    if (m_spacingBackgroundColor == color)
+        return;
+    m_spacingBackgroundColor = color;
+    const quint64 serial = ++m_rowSpacingStateSerial;
+    const QPointer<VirtualItemView> self(this);
+    QVector<QPointer<QWidget>> widgets;
+    for (QWidget *widget : m_rowSpacingWidgets)
+        widgets.append(widget);
+    for (const QPointer<QWidget> &widget : widgets) {
+        if (!self || m_rowSpacingStateSerial != serial)
+            return;
+        if (!widget)
+            continue;
+        widget->setProperty("vivSpacingBackgroundColor", color);
+        if (!self || m_rowSpacingStateSerial != serial)
+            return;
+        if (widget)
+            widget->update();
+    }
+}
+
 void VirtualItemView::setRowSpacingFactory(RowSpacingFactory factory, RowSpacingBinder binder)
 {
     if (factory && !supportsRowSpacingWidgets()) {
@@ -639,7 +665,7 @@ VirtualItemView::VisualState VirtualItemView::visualState(const QModelIndex &ind
 }
 
 VirtualItemView::VisualState VirtualItemView::animatedVisualState(
-    const QModelIndex &index, bool hovered, bool selected) const
+    const QModelIndex &index, bool hovered, bool selected, VisualStateChannel channel) const
 {
     const qreal hoverTarget = hovered ? 1.0 : 0.0;
     const qreal selectedTarget = selected ? 1.0 : 0.0;
@@ -647,7 +673,7 @@ VirtualItemView::VisualState VirtualItemView::animatedVisualState(
     if (m_visualStateAnimationDuration <= 0)
         return state;
 
-    const QPersistentModelIndex key(index);
+    const VisualTransitionKey key{QPersistentModelIndex(index), int(channel)};
     auto it = m_visualTransitions.find(key);
     if (it == m_visualTransitions.end()) {
         // Public queries may name offscreen indexes; cap retained snapshots.
@@ -680,7 +706,7 @@ VirtualItemView::VisualState VirtualItemView::animatedVisualState(
                 const QPointF progress = value.toPointF();
                 current.value().hoverProgress = qBound<qreal>(0.0, progress.x(), 1.0);
                 current.value().selectedProgress = qBound<qreal>(0.0, progress.y(), 1.0);
-                view->scheduleVisualStateRefresh(key);
+                view->scheduleVisualStateRefresh(key.first);
             });
             connect(animation, &QVariantAnimation::finished, view,
                     [view, key, animation]() {
@@ -693,7 +719,7 @@ VirtualItemView::VisualState VirtualItemView::animatedVisualState(
                 current.value().animation = nullptr;
                 current.value().clock.invalidate();
                 animation->deleteLater();
-                view->scheduleVisualStateRefresh(key);
+                view->scheduleVisualStateRefresh(key.first);
             });
         }
         QVariantAnimation *animation = transition.animation;
@@ -776,7 +802,8 @@ void VirtualItemView::setVisualStateAnimationEasingCurve(const QEasingCurve &cur
 
 void VirtualItemView::clearVisualTransition(const QModelIndex &index)
 {
-    auto it = m_visualTransitions.find(QPersistentModelIndex(index));
+    const VisualTransitionKey key{QPersistentModelIndex(index), int(VisualStateChannel::Item)};
+    auto it = m_visualTransitions.find(key);
     if (it == m_visualTransitions.end())
         return;
     stopVisualTransition(it.value());
@@ -787,10 +814,12 @@ void VirtualItemView::clearVisualTransition(const QModelIndex &index)
 void VirtualItemView::clearVisualTransitionsForRow(const QModelIndex &index)
 {
     for (auto it = m_visualTransitions.begin(); it != m_visualTransitions.end();) {
-        const QModelIndex key = it.key();
-        if (key.isValid() && key.parent() == index.parent() && key.row() == index.row()) {
+        const QModelIndex key = it.key().first;
+        // Column headers remain visible when their representative row is recycled.
+        if (it.key().second != int(VisualStateChannel::ColumnHeader)
+            && key.isValid() && key.parent() == index.parent() && key.row() == index.row()) {
             stopVisualTransition(it.value());
-            m_pendingVisualRefreshes.remove(it.key());
+            m_pendingVisualRefreshes.remove(it.key().first);
             it = m_visualTransitions.erase(it);
         } else {
             ++it;
@@ -818,9 +847,9 @@ void VirtualItemView::rekeyPersistentState()
     }
     m_explicitPinned.swap(pinned);
 
-    QHash<QPersistentModelIndex, VisualTransition> transitions;
+    QHash<VisualTransitionKey, VisualTransition> transitions;
     for (auto it = m_visualTransitions.begin(); it != m_visualTransitions.end(); ++it) {
-        if (it.key().isValid())
+        if (it.key().first.isValid())
             transitions.insert(it.key(), it.value());
         else
             stopVisualTransition(it.value());
@@ -859,7 +888,7 @@ void VirtualItemView::setSelectedBackgroundColor(const QColor &color)
 
 void VirtualItemView::updateHoveredIndex(const QModelIndex &index)
 {
-    if (m_destroying || m_dragInProgress || m_hoveredIndex == index)
+    if (m_destroying || m_dragInProgress || isHoverTrackingLocked() || m_hoveredIndex == index)
         return;
     const QPersistentModelIndex previous = m_hoveredIndex;
     const QPersistentModelIndex next(index);
@@ -867,6 +896,7 @@ void VirtualItemView::updateHoveredIndex(const QModelIndex &index)
     const quint64 modelSerial = m_modelChangeSerial;
     const auto isCurrent = [&self, modelSerial](const QPersistentModelIndex &hovered) {
         return self && !self->m_destroying && !self->m_dragInProgress
+            && !self->isHoverTrackingLocked()
             && self->m_modelChangeSerial == modelSerial && self->m_hoveredIndex == hovered;
     };
     // Seed both identities before changing the target. The virtual query preserves
@@ -901,15 +931,19 @@ void VirtualItemView::updateHoveredIndex(const QModelIndex &index)
 
 void VirtualItemView::refreshHoveredIndex()
 {
-    if (m_dragInProgress || m_destroying)
+    if (m_dragInProgress || m_destroying || isHoverTrackingLocked())
         return;
-    QWidget *target = QApplication::widgetAt(QCursor::pos());
+    updateHoveredIndex(hoverIndexAtGlobalPosition(QCursor::pos()));
+}
+
+QModelIndex VirtualItemView::hoverIndexAtGlobalPosition(const QPoint &position) const
+{
+    QWidget *target = QApplication::widgetAt(position);
     if (target != viewport() && !viewport()->isAncestorOf(target)) {
-        updateHoveredIndex(QModelIndex());
-        return;
+        return {};
     }
-    const QPoint pos = viewport()->mapFromGlobal(QCursor::pos());
-    updateHoveredIndex(viewport()->rect().contains(pos) ? indexAt(pos) : QModelIndex());
+    const QPoint pos = viewport()->mapFromGlobal(position);
+    return viewport()->rect().contains(pos) ? indexAt(pos) : QModelIndex();
 }
 
 void VirtualItemView::clearDragHover()
@@ -1043,7 +1077,8 @@ bool VirtualItemView::eventFilter(QObject *watched, QEvent *event)
             const QPoint pos = event->type() == QEvent::MouseMove
                 ? widget->mapTo(viewPort, mousePosition(static_cast<QMouseEvent *>(event)))
                 : viewPort->mapFromGlobal(QCursor::pos());
-            updateHoveredIndex(viewPort->rect().contains(pos) ? indexAt(pos) : QModelIndex());
+            updateHoveredIndex(viewPort->rect().contains(pos) ? indexAt(pos)
+                : hoverIndexAtGlobalPosition(viewPort->mapToGlobal(pos)));
         }
     }
     return QAbstractScrollArea::eventFilter(watched, event);
@@ -1086,7 +1121,14 @@ void VirtualItemView::setSelectionBehavior(SelectionBehavior behavior)
     if (m_selectionBehavior == behavior)
         return;
     m_selectionBehavior = behavior;
+    // Row and cell transitions have different identities; discard the previous scope.
+    clearVisualTransitions();
+    const QPointer<VirtualItemView> self(this);
     clearDragFeedback();
+    if (self)
+        refreshHoveredIndex();
+    if (self)
+        refreshVisualStates();
 }
 
 void VirtualItemView::setCurrentIndex(const QModelIndex &index)
@@ -1976,10 +2018,11 @@ void VirtualItemView::syncItemPanes()
 void VirtualItemView::raiseItemPaneSeparatorLines() const
 {
     // The items are (re)created by every materialization pass, so the boundary lines
-    // have to be lifted above them again. These overlays let input
-    // through, so they can sit on top of everything.
+    // have to be lifted above them again. The drag indicator remains above these
+    // input-transparent overlays.
     for (QWidget *line : m_itemPaneSeparatorLines)
         line->raise();
+    raiseDropIndicator();
 }
 
 bool VirtualItemView::isRowGridLineCoveredByPaneSeparator(const QRect &rect) const
@@ -2131,6 +2174,9 @@ void VirtualItemView::syncRowSpacingWidgets(const QVector<VisibleRange> &ranges)
         };
         auto *host = static_cast<RowSpacingHost *>(widget);
         host->setProperty("vivSpacingIndex", QVariant::fromValue(index));
+        if (!hostIsCurrent())
+            return;
+        host->setProperty("vivSpacingBackgroundColor", m_spacingBackgroundColor);
         if (!hostIsCurrent())
             return;
         configureRowSpacingWidget(host);
@@ -3609,11 +3655,8 @@ Qt::DropAction VirtualItemView::startDragImpl(const QModelIndex &index, const Dr
     if (!canStartDrag(sourceIndex) || !requestIsCurrent())
         return Qt::IgnoreAction;
 
-    // The selection is the payload when the dragged item is part of it - and it is handed over
-    // column for column, like Qt does: a *row* selection (SelectionBehavior::SelectRows) carries
-    // every column of those rows, so a drop can fill the new row 1:1, while a cell selection
-    // carries just the dragged cell. Filtering the payload down to column 0 (the materialized row
-    // identity) used to lose every other column of a row drag.
+    // Carry the selected drag-enabled indexes, or resolve the unselected source according
+    // to the selection behavior. Manual handles need not select their row before starting.
     QModelIndexList indexes = dragSourceIndexes(dragIndex);
     if (!requestIsCurrent() || indexes.isEmpty())
         return Qt::IgnoreAction;
@@ -3652,8 +3695,10 @@ Qt::DropAction VirtualItemView::startDragImpl(const QModelIndex &index, const Dr
     QPixmap pixmap;
     QPoint hotSpot;
     if (previewWidget) {
-        const QRect requestedRect = useDefaultPreview ? dragPixmapRect(dragIndex)
-                                                      : previewOptions.previewRect;
+        const bool defaultCapture = useDefaultPreview
+            || (!customPreview && previewOptions.previewRect.isEmpty());
+        const QRect requestedRect = defaultCapture ? dragPixmapRect(dragIndex)
+                                                   : previewOptions.previewRect;
         if (!requestIsCurrent()) {
             delete mime;
             return Qt::IgnoreAction;
@@ -3665,7 +3710,8 @@ Qt::DropAction VirtualItemView::startDragImpl(const QModelIndex &index, const Dr
                     hotSpot = dragPreviewHotSpot(capture,
                         previewWidget->mapFromGlobal(globalPressPosition));
                 }
-                pixmap = previewWidget->grab(capture);
+                pixmap = customPreview ? previewWidget->grab(capture)
+                                       : grabDragPreview(previewWidget.data(), capture);
                 if (!previewOptions.usePressPosition && !pixmap.isNull())
                     hotSpot = dragPreviewCenter(pixmap.size(), pixmap.devicePixelRatio());
             }
@@ -3730,7 +3776,7 @@ Qt::DropAction VirtualItemView::startDragImpl(const QModelIndex &index, const Dr
 QModelIndexList VirtualItemView::dragSourceIndexes(const QModelIndex &dragIndex) const
 {
     QModelIndexList indexes;
-    if (!m_model || !dragIndex.isValid())
+    if (!m_model || !dragIndex.isValid() || dragIndex.model() != m_model)
         return indexes;
     const QPointer<const VirtualItemView> self(this);
     const QPointer<QAbstractItemModel> sourceModel(m_model);
@@ -3738,10 +3784,12 @@ QModelIndexList VirtualItemView::dragSourceIndexes(const QModelIndex &dragIndex)
     const QPointer<QItemSelectionModel> selection(m_selectionModel);
     const quint64 modelSerial = modelChangeSerial();
     const quint64 mappingSerial = viewMappingSerial();
+    const SelectionBehavior behavior = m_selectionBehavior;
     const auto requestIsCurrent = [&]() {
         return self && sourceModel && self->modelChangeSerial() == modelSerial
             && self->viewMappingSerial() == mappingSerial && source.isValid()
-            && source == dragIndex && self->m_selectionModel == selection;
+            && source == dragIndex && self->m_selectionModel == selection
+            && self->m_selectionBehavior == behavior;
     };
     const bool sourceSelected = selection && selection->isSelected(source);
     if (!requestIsCurrent())
@@ -3758,8 +3806,32 @@ QModelIndexList VirtualItemView::dragSourceIndexes(const QModelIndex &dragIndex)
                 indexes.append(candidate);
         }
     }
-    if (indexes.isEmpty())
+    if (!indexes.isEmpty())
+        return indexes;
+    if (behavior == SelectionBehavior::SelectRows) {
+        // A handle can start on an unselected cell. Serialize its sibling columns before
+        // Move removes the source row, including columns that are hidden or offscreen.
+        const QModelIndex parent = source.parent();
+        if (!requestIsCurrent())
+            return {};
+        const int columns = sourceModel->columnCount(parent);
+        if (!requestIsCurrent())
+            return {};
+        for (int column = 0; column < columns; ++column) {
+            const QModelIndex candidate = sourceModel->index(source.row(), column, parent);
+            if (!requestIsCurrent())
+                return {};
+            if (!candidate.isValid())
+                continue;
+            const Qt::ItemFlags flags = sourceModel->flags(candidate);
+            if (!requestIsCurrent())
+                return {};
+            if (flags & Qt::ItemIsDragEnabled)
+                indexes.append(candidate);
+        }
+    } else {
         indexes.append(dragIndex);
+    }
     return indexes;
 }
 
@@ -3779,6 +3851,11 @@ QRect VirtualItemView::dragPixmapRect(const QModelIndex &index) const
 {
     Q_UNUSED(index);
     return QRect();   // the whole item widget is the preview
+}
+
+QPixmap VirtualItemView::grabDragPreview(QWidget *sourceWidget, const QRect &capture)
+{
+    return sourceWidget ? sourceWidget->grab(capture) : QPixmap();
 }
 
 QModelIndex VirtualItemView::dragNodeIndex(const QModelIndex &index) const
@@ -4137,11 +4214,13 @@ void VirtualItemView::showDropIndicator(const DropTarget &target)
     if (!self || m_modelChangeSerial != modelSerial || !m_dropIndicatorTargetValid)
         return;
     if (custom) {
+        m_dropIndicatorViewportRect = {};
         if (m_dropIndicator)
             m_dropIndicator->hide();
         return;
     }
     if (!m_dropIndicatorShown || m_dropIndicatorWidth <= 0 || m_dropIndicatorPenStyle == Qt::NoPen) {
+        m_dropIndicatorViewportRect = {};
         if (m_dropIndicator)
             m_dropIndicator->hide();
         return;
@@ -4153,12 +4232,32 @@ void VirtualItemView::showDropIndicator(const DropTarget &target)
     }
     const bool frame = dropIndicatorStyle(target) == DropIndicatorStyle::Frame;
     if (!m_dropIndicator) {
-        m_dropIndicator = new DropIndicatorWidget(viewport());
+        // Grid and pane separators are children of the view so they can cross headers.
+        // Share that stacking level; a viewport child cannot rise above those siblings.
+        m_dropIndicator = new DropIndicatorWidget(this);
         viewport()->update();
     }
     static_cast<DropIndicatorWidget *>(m_dropIndicator)->setAppearance(frame, m_dropIndicatorColor,
         m_dropIndicatorWidth, m_dropIndicatorPenStyle, dropIndicatorOrientation());
-    m_dropIndicator->setGeometry(rect);
+    m_dropIndicatorViewportRect = rect;
+    raiseDropIndicator();
+}
+
+void VirtualItemView::raiseDropIndicator() const
+{
+    if (!m_dropIndicator || m_dropIndicatorViewportRect.isEmpty())
+        return;
+    const QRect visible = m_dropIndicatorViewportRect.intersected(viewport()->rect());
+    if (visible.isEmpty()) {
+        m_dropIndicator->hide();
+        return;
+    }
+    m_dropIndicator->setGeometry(m_dropIndicatorViewportRect.translated(viewport()->pos()));
+    // Keep the original shape and dash origin when clipping at the viewport edges.
+    if (visible == m_dropIndicatorViewportRect)
+        m_dropIndicator->clearMask();
+    else
+        m_dropIndicator->setMask(QRegion(visible.translated(-m_dropIndicatorViewportRect.topLeft())));
     m_dropIndicator->show();
     m_dropIndicator->raise();
 }
@@ -4166,6 +4265,7 @@ void VirtualItemView::showDropIndicator(const DropTarget &target)
 void VirtualItemView::hideDropIndicator()
 {
     m_dropIndicatorTargetValid = false;
+    m_dropIndicatorViewportRect = {};
     if (m_dropIndicator)
         m_dropIndicator->hide();
     clearDragFeedback();
