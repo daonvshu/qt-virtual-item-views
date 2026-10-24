@@ -942,18 +942,18 @@ void VirtualTableView::onHeaderSectionClicked(int logicalIndex, Qt::KeyboardModi
 
 bool VirtualTableView::isHoverTrackingLocked() const
 {
-    // Row and column boundaries move under the pointer while resizing in any pane.
-    const auto isResizing = [](const HeaderViewInterface *header) {
+    // Resizing and reorder previews move row/column boundaries under the pointer.
+    const auto locksHover = [](const HeaderViewInterface *header) {
         const auto *strip = dynamic_cast<const VirtualHeaderView *>(header);
-        return strip && strip->m_resizeSection >= 0;
+        return strip && (strip->m_resizeSection >= 0 || strip->m_dragging);
     };
     for (HeaderViewInterface *header : {m_horizontalHeader, m_verticalHeader,
                                       m_frozenTopRowsHeader, m_frozenBottomRowsHeader}) {
-        if (isResizing(header))
+        if (locksHover(header))
             return true;
     }
     for (HeaderViewInterface *header : m_paneHeaders) {
-        if (isResizing(header))
+        if (locksHover(header))
             return true;
     }
     return VirtualItemView::isHoverTrackingLocked();
@@ -2204,6 +2204,19 @@ VirtualHeaderView *VirtualTableView::visualRowStrip(qsizetype row) const
             return strip;
     }
     return nullptr;
+}
+
+qsizetype VirtualTableView::headerDragRow() const
+{
+    if (!m_rowFollowsHeaderVisual)
+        return -1;
+    for (HeaderViewInterface *header : {m_verticalHeader, m_frozenTopRowsHeader,
+                                       m_frozenBottomRowsHeader}) {
+        const auto *strip = dynamic_cast<const VirtualHeaderView *>(header);
+        if (strip && !strip->isHidden() && strip->m_dragging)
+            return strip->m_dragSection;
+    }
+    return -1;
 }
 
 bool VirtualTableView::rowVisualY(qsizetype row, int *viewportY) const
@@ -5170,12 +5183,16 @@ void VirtualTableView::syncRowGridLines()
     const QRect viewportRect = viewport()->geometry();
     const QRegion content = columnContentRegion();
     const QRect contentBounds = content.boundingRect().translated(viewportRect.topLeft());
+    const qsizetype draggedRow = headerDragRow();
+    const QRect draggedRect = draggedRow >= 0 ? rowGridGeometry(draggedRow) : QRect();
+    const QRect draggedPane = draggedRow >= 0
+        ? itemPaneRect(itemPaneForRow(draggedRow)).intersected(viewport()->rect()) : QRect();
     if (m_horizontalGridLinesVisible && viewportRect.width() > 0) {
         for (const VisibleRange &range : visibleItemRanges()) {
             for (qsizetype row = range.first; row >= 0 && row <= range.last; ++row) {
                 const bool placeholder = m_dragRowPreview->isActive()
                     && row == m_dragRowPreview->source();
-                if ((row + 1 >= viewItemCount() && !m_dragRowPreview->isActive())
+                if ((row + 1 >= viewItemCount() && !m_dragRowPreview->isActive() && row != draggedRow)
                     || (!placeholder && m_rowLayout && m_rowLayout->spacingAfter(row) > 0))
                     continue;
                 const QRect rowRect = rowGridGeometry(row);
@@ -5239,6 +5256,11 @@ void VirtualTableView::syncRowGridLines()
         line->setGeometry(it.value());
         QRegion mask(line->rect());
         mask &= content.translated(viewportRect.topLeft() - line->pos());
+        // The lifted row is above its neighbours. Their trailing edges must not
+        // cut through its background or text; its own trailing edge stays visible.
+        if (draggedRow >= 0 && it.key() != draggedRow)
+            mask -= draggedRect.intersected(draggedPane)
+                .translated(viewportRect.topLeft() - line->pos());
         const QRect excluded = rowGridLineExclusion(itemDepth(viewIndex(it.key())));
         if (!excluded.isEmpty())
             mask -= excluded.translated(viewportRect.x() - line->x(), 0);
@@ -5262,8 +5284,36 @@ void VirtualTableView::syncRowGridLines()
             line->clearMask();
         else
             line->setMask(mask);
-        line->show();
+        line->setVisible(!mask.isEmpty());
         line->raise();
+    }
+    // The header adds a leading border when lifting a section. Use the same
+    // logical band here so its physical edge matches at fractional scale factors.
+    const QRect leading = QRect(0, draggedRect.top(), viewportRect.width(), m_horizontalGridLineWidth)
+        .intersected(draggedPane).translated(viewportRect.topLeft()).intersected(contentBounds);
+    if (m_horizontalGridLinesVisible && draggedRow >= 0 && !leading.isEmpty()) {
+        if (!m_headerDragLeadingSeparator) {
+            m_headerDragLeadingSeparator = new QWidget(this);
+            m_headerDragLeadingSeparator->setAttribute(Qt::WA_TransparentForMouseEvents);
+            m_headerDragLeadingSeparator->setAutoFillBackground(true);
+        }
+        QPalette colors = m_headerDragLeadingSeparator->palette();
+        colors.setColor(QPalette::Window, color);
+        m_headerDragLeadingSeparator->setPalette(colors);
+        m_headerDragLeadingSeparator->setGeometry(leading);
+        QRegion mask = content.translated(viewportRect.topLeft() - leading.topLeft());
+        if (!m_horizontalSpacingLineThroughColumnSpacing) {
+            for (QWidget *gap : m_columnSpacingWidgets) {
+                const int band = m_verticalGridLinesVisible ? m_verticalGridLineWidth : 1;
+                mask -= gap->geometry().adjusted(band, 0, 0, 0).translated(-leading.topLeft());
+            }
+        }
+        mask &= m_headerDragLeadingSeparator->rect();
+        m_headerDragLeadingSeparator->setMask(mask);
+        m_headerDragLeadingSeparator->setVisible(!mask.isEmpty());
+        m_headerDragLeadingSeparator->raise();
+    } else if (m_headerDragLeadingSeparator) {
+        m_headerDragLeadingSeparator->hide();
     }
     raiseDropIndicator();
 }
@@ -5407,6 +5457,10 @@ void VirtualTableView::updateColumnSpacingVisualRows()
     const quint64 modelSerial = modelChangeSerial();
     const int spacing = columnSpacing();
     const QRect viewportRect = viewport()->geometry();
+    const qsizetype draggedRow = headerDragRow();
+    const QRect draggedRect = draggedRow >= 0
+        ? rowGridGeometry(draggedRow).intersected(itemPaneRect(itemPaneForRow(draggedRow)))
+            .intersected(viewport()->rect()).translated(viewportRect.topLeft()) : QRect();
     QVector<QPointer<QWidget>> widgets;
     for (QWidget *widget : m_columnSpacingWidgets)
         widgets.append(widget);
@@ -5443,16 +5497,19 @@ void VirtualTableView::updateColumnSpacingVisualRows()
                         .intersected(widget->rect());
                     const auto appendLine = [&](int y) {
                         const QRect band(0, y, host->width(), m_horizontalGridLineWidth);
-                        const QRect visible = band.intersected(clip);
+                        QRegion visible(band.intersected(clip));
+                        if (draggedRow >= 0 && row != draggedRow)
+                            visible -= draggedRect.translated(-widget->pos());
                         if (visible.isEmpty())
                             return;
                         if (m_dragRowPreview->isActive()
                             && std::any_of(horizontalLines.cbegin(), horizontalLines.cend(),
                                 [&](const ColumnSpacingHost::HorizontalLine &line) {
-                                    return line.y == y && line.clip == visible;
+                                    return line.y == y && QRegion(line.clip) == visible;
                                 }))
                             return;
-                        horizontalLines.append(ColumnSpacingHost::HorizontalLine{y, visible});
+                        for (const QRect &part : visible)
+                            horizontalLines.append(ColumnSpacingHost::HorizontalLine{y, part});
                     };
                     appendLine(first);
                     if (rowSpacing > 0) {

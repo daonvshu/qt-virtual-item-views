@@ -769,6 +769,8 @@ private:
     /// Active preview strip for the pane containing \a row, or null.
     /// A negative row queries any active row strip, including frozen bands.
     VirtualHeaderView *visualRowStrip(qsizetype row = -1) const;
+    /// Row lifted by a header reorder preview, or -1 when the body is not following one.
+    qsizetype headerDragRow() const;
     /// Puts every materialized row widget on its visual y - the committed one while no
     /// strip is dragging, which is also how the rows come back after a commit/cancel.
     void updateVisualRowGeometry();
@@ -875,6 +877,8 @@ private:
     QVector<QWidget *> m_columnSpacingPool;
     QHash<qsizetype, QWidget *> m_rowGridLines;
     QVector<QWidget *> m_rowGridLinePool;
+    /// Leading edge of a lifted row, matching the row-number strip's drag border.
+    QWidget *m_headerDragLeadingSeparator = nullptr;
     ColumnSpacingFactory m_columnSpacingFactory;
     ColumnSpacingBinder m_columnSpacingBinder;
     ColumnSpacingFactory m_headerColumnSpacingFactory;

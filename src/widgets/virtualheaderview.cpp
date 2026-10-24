@@ -1463,6 +1463,7 @@ void VirtualHeaderView::finishSectionDrag(bool commit)
 void VirtualHeaderView::finishPointerInteraction(bool commit)
 {
     const bool wasResize = m_resizeSection >= 0;
+    const bool wasDragging = m_dragging;
     m_resizeSection = -1;
     m_resizeSnapshot = HeaderGeometry::ResizeSnapshot();
     m_pressedSection = -1;
@@ -1478,7 +1479,7 @@ void VirtualHeaderView::finishPointerInteraction(bool commit)
     if (self)
         updateCursor(mapFromGlobal(QCursor::pos()));
     // Restore hover even without a subsequent move, including cancellation or lost capture.
-    if (self && wasResize)
+    if (self && (wasResize || wasDragging))
         emit sectionHoverChanged();
 }
 

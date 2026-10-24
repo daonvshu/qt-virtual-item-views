@@ -687,10 +687,16 @@ VirtualItemView::VisualState VirtualItemView::animatedVisualState(
     }
 
     VisualTransition &transition = it.value();
-    sampleVisualTransition(transition);
+    const bool targetChanged = transition.hoverTarget != hovered
+        || transition.selectedTarget != selected;
+    // Paint queries must share the last published tick, including partial repaints
+    // beneath transparent children. Only sample wall time when retargeting, so a
+    // quick reversal stays smooth without advancing individual painted regions.
+    if (targetChanged)
+        sampleVisualTransition(transition);
     state.hoverProgress = transition.hoverProgress;
     state.selectedProgress = transition.selectedProgress;
-    if (transition.hoverTarget != hovered || transition.selectedTarget != selected) {
+    if (targetChanged) {
         transition.hoverTarget = hovered;
         transition.selectedTarget = selected;
         auto *view = const_cast<VirtualItemView *>(this);
@@ -704,8 +710,9 @@ VirtualItemView::VisualState VirtualItemView::animatedVisualState(
                     || current.value().animation != animation)
                     return;
                 const QPointF progress = value.toPointF();
-                current.value().hoverProgress = qBound<qreal>(0.0, progress.x(), 1.0);
-                current.value().selectedProgress = qBound<qreal>(0.0, progress.y(), 1.0);
+                current.value().pendingHoverProgress = qBound<qreal>(0.0, progress.x(), 1.0);
+                current.value().pendingSelectedProgress = qBound<qreal>(0.0, progress.y(), 1.0);
+                current.value().hasPendingProgress = true;
                 view->scheduleVisualStateRefresh(key.first);
             });
             connect(animation, &QVariantAnimation::finished, view,
@@ -714,8 +721,9 @@ VirtualItemView::VisualState VirtualItemView::animatedVisualState(
                 if (current == view->m_visualTransitions.end()
                     || current.value().animation != animation)
                     return;
-                current.value().hoverProgress = qreal(current.value().hoverTarget);
-                current.value().selectedProgress = qreal(current.value().selectedTarget);
+                current.value().pendingHoverProgress = qreal(current.value().hoverTarget);
+                current.value().pendingSelectedProgress = qreal(current.value().selectedTarget);
+                current.value().hasPendingProgress = true;
                 current.value().animation = nullptr;
                 current.value().clock.invalidate();
                 animation->deleteLater();
@@ -744,6 +752,17 @@ void VirtualItemView::scheduleVisualStateRefresh(const QPersistentModelIndex &in
         m_visualRefreshScheduled = false;
         QSet<QPersistentModelIndex> pending;
         pending.swap(m_pendingVisualRefreshes);
+        // A hover repaint can arrive before this queued notification. Keep the
+        // old published progress until all affected regions can be invalidated,
+        // and commit every channel before adapters or headers query the batch.
+        for (auto it = m_visualTransitions.begin(); it != m_visualTransitions.end(); ++it) {
+            VisualTransition &transition = it.value();
+            if (!transition.hasPendingProgress || !pending.contains(it.key().first))
+                continue;
+            transition.hoverProgress = transition.pendingHoverProgress;
+            transition.selectedProgress = transition.pendingSelectedProgress;
+            transition.hasPendingProgress = false;
+        }
         for (const QPersistentModelIndex &index : pending) {
             if (index.isValid() && index.model() == m_model)
                 refreshVisualState(QModelIndex(index));
@@ -753,6 +772,12 @@ void VirtualItemView::scheduleVisualStateRefresh(const QPersistentModelIndex &in
 
 void VirtualItemView::sampleVisualTransition(VisualTransition &transition) const
 {
+    // A finished animation may still have its final sample queued when reversed.
+    if (transition.hasPendingProgress) {
+        transition.hoverProgress = transition.pendingHoverProgress;
+        transition.selectedProgress = transition.pendingSelectedProgress;
+        transition.hasPendingProgress = false;
+    }
     if (!transition.animation || !transition.clock.isValid()
         || transition.animation->state() != QAbstractAnimation::Running)
         return;
@@ -953,6 +978,7 @@ void VirtualItemView::clearDragHover()
     for (auto it = m_visualTransitions.begin(); it != m_visualTransitions.end(); ++it) {
         VisualTransition &transition = it.value();
         transition.hoverProgress = 0.0;
+        transition.pendingHoverProgress = 0.0;
         transition.hoverTarget = false;
         if (QVariantAnimation *animation = transition.animation) {
             // Flatten only the hover component. Selection keeps its curve and clock,

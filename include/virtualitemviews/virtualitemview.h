@@ -848,6 +848,10 @@ private:
         bool selectedTarget = false;
         QVariantAnimation *animation = nullptr;
         QElapsedTimer clock;
+        // Publish animation samples together with the queued visual refresh.
+        qreal pendingHoverProgress = 0.0;
+        qreal pendingSelectedProgress = 0.0;
+        bool hasPendingProgress = false;
     };
     void sampleVisualTransition(VisualTransition &transition) const;
     void stopVisualTransition(VisualTransition &transition);
