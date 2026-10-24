@@ -1,23 +1,27 @@
 # 30 外边框与圆角
 
-在同一张表上切换方案 2（四角覆盖层）与方案 3（整体 Alpha 合成），观察圆角边缘、内容贴边、透明度和滚动表现。保留原方案编号，默认显示方案 2。使用 `table_capabilities --example 30` 打开；没有 SmoothScrollbar 时，第 30 节仍编译显示，章节编号不前移。
+使用框架内置的整体 Alpha 合成，让表头、单元格和滚动条统一遵循圆角外框，透明角透出外部背景。运行 `table_capabilities --example 30`；本页不依赖 SmoothScrollbar。
 
-本目录包含完整的 model、adapter、页面和两种方案，不引用其他章节代码。外框圆角与 hover／selected 圆角独立。最终采用哪种方案及框架接口形式仍待确认，见 [圆角外边框方案（待确认）](../../../docs/rounded-border-proposal.md)。
+`example.cpp` 中的 `Example::setupView()` 创建普通 `VirtualTableView`，`applyOptions()` 直接调用公共接口，不再需要额外的外框容器或示例专属 effect。
 
-| 方案 | 源码相对路径 | 特点 |
-| --- | --- | --- |
-| 2 四角覆盖层 | `examples/table_capabilities/30_borders/cornercover.cpp` | 上层用纯色遮住四角，支持内容贴边；渐变和棋盘格背景会显示接缝 |
-| 3 整体 Alpha 合成 | `examples/table_capabilities/30_borders/alphaframe.cpp` | `QGraphicsEffect` 获取完整子控件画面，用抗锯齿 Alpha 遮罩合成，支持真实透明；半径为零直接绘制源画面 |
+```cpp
+view->setFrameCornerRadius(20);
+view->setFrameBorderWidth(2);
+view->setFrameBorderColor(QColor("#4079ad"));
+view->setVisualStateCornerRadius(6);
+```
 
-先看 `example.cpp` 中 `Example::setupExample()`、`rebuildDemo()` 的公共表格配置，再看目标方案。公共容器、边框与绘制辅助函数在 `borderdemo.h/.cpp`，页面布局在 `example.ui`。两种方案共用本章的模型与配置，切换方案重新创建视图并选择首行。
+外框半径和边框宽度默认均为零；同时归零可关闭合成。行状态圆角独立配置。此能力继承自 `VirtualItemView`，也适用于列表和树视图。接口约束与实现说明见 [圆角外边框](../../../docs/rounded-border-proposal.md)。
 
-可调外框半径、边框宽度和颜色、行状态圆角；外部背景可选纯色、渐变或棋盘格。还可显示隐藏表头、开启行列间距与四边冻结、切换大／小数据量及滚动条策略，点击按钮定位并选中首行或末行。
+页面可调外框半径、宽度、颜色及行状态圆角；背景可选纯色、渐变、棋盘格。数据可选 200 行 × 12 列、3 行 × 3 列、1 行 × 1 列及 0 行 × 3 列。还可组合显示隐藏表头、行列间距、四边冻结和滚动条策略，选择首行或末行。
 
-方案 2 的纯色接缝是该方案的边界，保留它用于对比。方案 3 缓存与设备像素比对应的 Alpha 遮罩，源画面每次仍需要合成，适合对比滚动和状态动画时的开销。两种方案均使用默认表头和 QLabel 单元格，不使用外轮廓的 `QWidget::setMask()`；视觉圆角不修改底层矩形控件的命中区域。
+少量数据时，空白视口保持统一底色，行号背景及列间距竖线不再向末行之外延伸；冻结列之间的整行状态背景连续。冻结末行和末列仍固定在视口底部与右侧。空模型不执行行选择。
+
+末行仍绘制底边；普通行分隔线和冻结行分隔线只覆盖实际列与行号，冻结列之间的空白处不绘制横线。冻结边线连通真实列间距，底部冻结行的上边线位于行顶边外侧，使行号、单元格及空白区的状态背景顶边一致。中间空白不会命中冻结行，也不会作为该行的拖放落点。
 
 ## 独立运行
 
-复制本目录，增加以下入口，将本目录全部 `.cpp` 和 `example.ui` 编入目标，链接 VirtualItemViews 与 Qt Widgets，并启用目标的 `AUTOUIC`。MSVC 使用 `/utf-8` 编译选项。
+复制本目录，将 `example.cpp` 和 `example.ui` 编入目标，链接 VirtualItemViews 与 Qt Widgets，并启用 `AUTOUIC`。MSVC 使用 `/utf-8` 编译选项。
 
 ```cpp
 #include "example.h"

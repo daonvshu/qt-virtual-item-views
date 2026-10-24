@@ -10,6 +10,19 @@
 
 namespace viv {
 
+namespace {
+// The last row has no trailing gap, even when the geometry stores configured spacing.
+bool hasTrailingSectionGap(const VirtualHeaderView *header, int logicalIndex)
+{
+    const HeaderGeometry *geometry = header ? header->geometryModel() : nullptr;
+    if (!geometry || geometry->sectionSpacingAfter(logicalIndex) <= 0)
+        return false;
+    return header->orientation() != Qt::Vertical
+        || geometry->sectionPosition(logicalIndex) + geometry->sectionSize(logicalIndex)
+            < geometry->totalExtent();
+}
+} // namespace
+
 StyledHeaderSection::StyledHeaderSection(QWidget *parent)
     : HeaderSection(parent)
 {
@@ -81,6 +94,9 @@ void StyledHeaderSection::paintBackground(QPainter *painter)
     const bool roundRight = orientation() != Qt::Vertical
         || table->selectionBehavior() == VirtualItemView::SelectionBehavior::SelectItems;
     painter->save();
+    if (orientation() == Qt::Vertical && header->sectionSeparatorsVisible()
+        && !hasTrailingSectionGap(header, logicalIndex()))
+        clipPixelAlignedBottomInset(painter, rect(), header->sectionSeparatorWidth());
     painter->setOpacity(state.hoverProgress);
     fillPixelAlignedRoundedRegion(painter, rect(), QRegion(rect()), radius,
                                   visualStateBackgroundBrush(false, table->hoverBackgroundColor()),
@@ -96,8 +112,7 @@ void StyledHeaderSection::paintForeground(QPainter *painter)
 {
     const auto *header = headerView();
     const bool vertical = orientation() == Qt::Vertical;
-    const bool hasGap = header && header->geometryModel()
-        && header->geometryModel()->sectionSpacingAfter(logicalIndex()) > 0;
+    const bool hasGap = hasTrailingSectionGap(header, logicalIndex());
     const QColor sectionColor = header && header->sectionSeparatorColor().isValid()
         ? header->sectionSeparatorColor() : headerSectionSeparatorColor(this);
     const QColor crossColor = header && header->crossAxisSeparatorColor().isValid()

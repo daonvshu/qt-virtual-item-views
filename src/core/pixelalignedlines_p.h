@@ -8,6 +8,22 @@
 
 namespace viv {
 
+// Reserve a trailing border in physical pixels; the caller owns painter save/restore.
+inline void clipPixelAlignedBottomInset(QPainter *painter, const QRect &rect, int pixelInset)
+{
+    const QTransform transform = painter->deviceTransform();
+    bool invertible = false;
+    const QTransform inverse = transform.inverted(&invertible);
+    if (!invertible)
+        return;
+    const QRectF device = transform.mapRect(QRectF(rect));
+    const int left = qRound(device.left());
+    const int top = qRound(device.top());
+    const QRectF body(left, top, qMax(0, qRound(device.right()) - left),
+                      qMax(0, qRound(device.bottom()) - top - qMax(0, pixelInset)));
+    painter->setClipRect(inverse.mapRect(body), Qt::IntersectClip);
+}
+
 // Snap both exclusive edges together; logical region clips otherwise round differently.
 inline void fillPixelAlignedRegion(QPainter *painter, const QRegion &region, const QBrush &brush)
 {
@@ -79,7 +95,7 @@ inline void fillPixelAlignedRoundedRegion(QPainter *painter, const QRect &rect,
 // Union device-pixel bands before painting so thin/overlapping gaps stay uniform.
 inline void fillPixelLines(QPainter *painter, const QVector<QRect> &lines,
                            int pixelWidth, const QColor &color, Qt::Orientation orientation,
-                           bool trailingEdge = false)
+                           bool trailingEdge = false, bool bothEdges = false)
 {
     const QTransform transform = painter->deviceTransform();
     bool invertible = false;
@@ -92,7 +108,7 @@ inline void fillPixelLines(QPainter *painter, const QVector<QRect> &lines,
             continue;
         const QRectF device = transform.mapRect(QRectF(line));
         const int thickness = qMax(1, pixelWidth);
-        bands += QRect(orientation == Qt::Vertical && trailingEdge
+        QRect band(orientation == Qt::Vertical && trailingEdge
                            ? qRound(device.right()) - thickness : qRound(device.left()),
                        orientation == Qt::Horizontal && trailingEdge
                            ? qRound(device.bottom()) - thickness : qRound(device.top()),
@@ -100,6 +116,14 @@ inline void fillPixelLines(QPainter *painter, const QVector<QRect> &lines,
                            : qMax(0, qRound(device.right()) - qRound(device.left())),
                        orientation == Qt::Horizontal ? qMax(1, pixelWidth)
                            : qMax(0, qRound(device.bottom()) - qRound(device.top())));
+        bands += band;
+        if (bothEdges) {
+            if (orientation == Qt::Horizontal)
+                band.moveTop(qMax(qRound(device.top()), qRound(device.bottom()) - thickness));
+            else
+                band.moveLeft(qMax(qRound(device.left()), qRound(device.right()) - thickness));
+            bands += band;
+        }
     }
     painter->save();
     painter->setRenderHint(QPainter::Antialiasing, false);
@@ -115,6 +139,13 @@ inline void fillHorizontalPixelLines(QPainter *painter, const QVector<QRect> &li
     fillPixelLines(painter, lines, pixelWidth, color, Qt::Horizontal, trailingEdge);
 }
 
+// Full gap rectangles share leading/trailing anchors and merge overlapping physical bands.
+inline void fillHorizontalPixelGapEdges(QPainter *painter, const QVector<QRect> &gaps,
+                                        int pixelWidth, const QColor &color)
+{
+    fillPixelLines(painter, gaps, pixelWidth, color, Qt::Horizontal, false, true);
+}
+
 inline void fillVerticalPixelLines(QPainter *painter, const QVector<QRect> &lines,
                                    int pixelWidth, const QColor &color,
                                    bool trailingEdge = false)
@@ -122,15 +153,16 @@ inline void fillVerticalPixelLines(QPainter *painter, const QVector<QRect> &line
     fillPixelLines(painter, lines, pixelWidth, color, Qt::Vertical, trailingEdge);
 }
 
-// Use the same physical-pixel thickness and leading edge for every separator style.
+// Use the same physical-pixel thickness and chosen edge for every separator style.
 inline void drawPixelAlignedSeparator(QPainter *painter, const QRect &rect,
                                       int pixelWidth, const QColor &color,
-                                      Qt::PenStyle style, Qt::Orientation orientation)
+                                      Qt::PenStyle style, Qt::Orientation orientation,
+                                      bool trailingEdge = false)
 {
     if (rect.isEmpty() || pixelWidth <= 0 || style == Qt::NoPen || color.alpha() == 0)
         return;
     if (style == Qt::SolidLine) {
-        fillPixelLines(painter, {rect}, pixelWidth, color, orientation);
+        fillPixelLines(painter, {rect}, pixelWidth, color, orientation, trailingEdge);
         return;
     }
     const QTransform transform = painter->deviceTransform();
@@ -142,11 +174,13 @@ inline void drawPixelAlignedSeparator(QPainter *painter, const QRect &rect,
     QPointF start;
     QPointF end;
     if (orientation == Qt::Horizontal) {
-        const int y = qRound(device.top()) + pixelWidth / 2;
+        const int y = (trailingEdge ? qRound(device.bottom()) - pixelWidth
+                                    : qRound(device.top())) + pixelWidth / 2;
         start = QPointF(qRound(device.left()), y);
         end = QPointF(qRound(device.right()), y);
     } else {
-        const int x = qRound(device.left()) + pixelWidth / 2;
+        const int x = (trailingEdge ? qRound(device.right()) - pixelWidth
+                                    : qRound(device.left())) + pixelWidth / 2;
         start = QPointF(x, qRound(device.top()));
         end = QPointF(x, qRound(device.bottom()));
     }
@@ -164,14 +198,25 @@ class PixelAlignedHorizontalLine : public QWidget
 public:
     explicit PixelAlignedHorizontalLine(QWidget *parent) : QWidget(parent) {}
 
+    void setTrailingEdge(bool trailingEdge)
+    {
+        if (m_trailingEdge == trailingEdge)
+            return;
+        m_trailingEdge = trailingEdge;
+        update();
+    }
+
 protected:
     void paintEvent(QPaintEvent *) override
     {
         QPainter painter(this);
-        // The line ends at the row edge, even when its logical band spans two pixels.
+        // Use the same edge as the adjoining row or spacing host at fractional DPI.
         fillPixelLines(&painter, {rect()}, height(), palette().color(QPalette::Window),
-                       Qt::Horizontal, true);
+                       Qt::Horizontal, m_trailingEdge);
     }
+
+private:
+    bool m_trailingEdge = true;
 };
 
 } // namespace viv

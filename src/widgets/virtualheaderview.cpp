@@ -114,11 +114,13 @@ void VirtualHeaderView::paintEvent(QPaintEvent *event)
 {
     Q_UNUSED(event);
     QPainter painter(this);
+    const bool rowSectionsOnly = !isHorizontal() && m_viewportOriginSet
+        && !m_backgroundColor.isValid();
     if (m_backgroundVisible)
         painter.fillRect(rect(), m_backgroundColor.isValid()
-            ? QBrush(m_backgroundColor) : palette().brush(QPalette::Button));
-    if (!m_geometry || (!m_sectionSeparatorsVisible && !m_crossAxisSeparatorVisible
-                        && !m_spacingBackgroundColor.isValid()))
+            ? QBrush(m_backgroundColor)
+            : palette().brush(rowSectionsOnly ? QPalette::Base : QPalette::Button));
+    if (!m_geometry)
         return;
     const QColor sectionColor = m_sectionSeparatorColor.isValid()
         ? m_sectionSeparatorColor : headerSectionSeparatorColor(this);
@@ -141,8 +143,19 @@ void VirtualHeaderView::paintEvent(QPaintEvent *event)
             }
             sectionEnd = position + m_geometry->sectionSize(it.key());
         }
-        const int spacing = isHorizontal() && m_paneSpacingProvider
+        int spacing = isHorizontal() && m_paneSpacingProvider
             ? m_paneSpacingProvider(it.key()) : m_geometry->sectionSpacingAfter(it.key());
+        // Geometry stores configured spacing even after the final section; the
+        // content extent excludes it, just like the table's row layout does.
+        const bool terminalRow = !isHorizontal() && m_geometry->sectionPosition(it.key())
+            + m_geometry->sectionSize(it.key()) >= m_geometry->totalExtent();
+        if (terminalRow)
+            spacing = 0;
+        if (m_backgroundVisible && rowSectionsOnly) {
+            const int size = section->isVisible() ? axisSizeOf(section) : m_geometry->sectionSize(it.key());
+            painter.fillRect(QRect(0, sectionEnd - size, width(), size + spacing)
+                                 .intersected(rect()), palette().brush(QPalette::Button));
+        }
         if (spacing > 0 && m_spacingBackgroundColor.isValid()) {
             const QRect gap = isHorizontal() ? QRect(sectionEnd, 0, spacing, height())
                                              : QRect(0, sectionEnd, width(), spacing);
@@ -171,22 +184,14 @@ void VirtualHeaderView::paintEvent(QPaintEvent *event)
             }
             continue;
         }
-        if (m_geometry->sectionPosition(it.key()) + m_geometry->sectionSize(it.key())
-            >= m_geometry->totalExtent())
-            continue;
         const int top = sectionEnd;
         if (m_crossAxisSeparatorVisible && width() > 0)
             fillVerticalPixelLines(&painter,
                 {QRect(width() - m_crossAxisSeparatorWidth, top, m_crossAxisSeparatorWidth, spacing)},
                 m_crossAxisSeparatorWidth, crossColor, true);
         if (m_sectionSeparatorsVisible) {
-            QVector<QRect> lines;
-            for (int y : {top, top + qMax(0, spacing - m_sectionSeparatorWidth)}) {
-                const QRect line(0, y, width(), m_sectionSeparatorWidth);
-                if (line.intersects(rect()))
-                    lines.append(line);
-            }
-            fillHorizontalPixelLines(&painter, lines, m_sectionSeparatorWidth, sectionColor);
+            fillHorizontalPixelGapEdges(&painter,
+                {QRect(0, top, width(), spacing)}, m_sectionSeparatorWidth, sectionColor);
         }
     }
 }

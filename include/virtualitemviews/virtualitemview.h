@@ -27,6 +27,7 @@ class QDragEnterEvent;
 class QDragLeaveEvent;
 class QDragMoveEvent;
 class QDropEvent;
+class QGraphicsEffect;
 class QKeyEvent;
 class QMouseEvent;
 class QPaintEvent;
@@ -105,6 +106,18 @@ public:
 
     explicit VirtualItemView(QWidget *parent = nullptr);
     ~VirtualItemView() override;
+
+    /// Rounded outer frame shared by all views (logical pixels; defaults to zero).
+    /// Enabling radius or width installs an Alpha compositing graphics effect,
+    /// replacing any existing effect. Headers, child widgets and scrollbars are included.
+    void setFrameCornerRadius(int radius);
+    int frameCornerRadius() const { return m_frameCornerRadius; }
+    /// Border space is reserved inside the view; clamped to [0, 32767].
+    void setFrameBorderWidth(int width);
+    int frameBorderWidth() const { return m_frameBorderWidth; }
+    /// An invalid color uses the palette's Mid color.
+    void setFrameBorderColor(const QColor &color);
+    QColor frameBorderColor() const { return m_frameBorderColor; }
 
     // -- model ---------------------------------------------------------------
     virtual void setModel(QAbstractItemModel *model);
@@ -740,6 +753,9 @@ protected:
     void applyItemPaneGeometry(MaterializedItem &item, qsizetype row);
     /// Raises the boundary lines above the (re)materialized items.
     void raiseItemPaneSeparatorLines() const;
+    /// Visible part of a row pane separator, in separator-local coordinates.
+    /// The default covers its complete view-coordinate geometry.
+    virtual QRegion itemPaneSeparatorMask(const QRect &geometry) const;
     /// Whether a view-coordinate row grid line overlaps a visible pane divider.
     bool isRowGridLineCoveredByPaneSeparator(const QRect &rect) const;
     void syncRowSpacingWidgets(const QVector<VisibleRange> &ranges);
@@ -749,6 +765,7 @@ protected:
     void appendLifecycleLog(const QString &entry);
 
     // -- events --------------------------------------------------------------
+    bool event(QEvent *event) override;
     void paintEvent(QPaintEvent *event) override;
     void resizeEvent(QResizeEvent *event) override;
     void showEvent(QShowEvent *event) override;
@@ -766,6 +783,18 @@ protected:
     bool eventFilter(QObject *watched, QEvent *event) override;
 
 private:
+    /// Updates the owned Alpha effect and the frame's content inset.
+    void updateFrameAppearance();
+    /// Clips scroll-area child controls to the rounded outer frame.
+    void updateFrameChildMasks();
+    int m_frameCornerRadius = 0;
+    int m_frameBorderWidth = 0;
+    QColor m_frameBorderColor;
+    QPointer<QGraphicsEffect> m_frameEffect;
+    int m_savedFrameStyle = QFrame::NoFrame;
+    int m_savedLineWidth = 1;
+    int m_savedMidLineWidth = 0;
+
     void connectModel(QAbstractItemModel *model);
     void connectSelectionModel();
     void retireOwnedSelectionModel();

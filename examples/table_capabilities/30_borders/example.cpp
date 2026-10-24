@@ -1,5 +1,4 @@
 #include "example.h"
-#include "borderdemo.h"
 #include "ui_example.h"
 
 #include <virtualitemviews/tablewidgetadapter.h>
@@ -23,7 +22,7 @@ public:
         m_layout->setContentsMargins(24, 24, 24, 24);
     }
     void setBackground(int mode) { m_background = mode; update(); }
-    void addDemo(BorderDemo *demo) { m_layout->addWidget(demo, 1); }
+    void addDemo(QWidget *demo) { m_layout->addWidget(demo, 1); }
 
 protected:
     void paintEvent(QPaintEvent *) override
@@ -45,7 +44,7 @@ protected:
                 }
             }
         } else {
-            painter.fillRect(rect(), stageColor());
+            painter.fillRect(rect(), QColor(QStringLiteral("#e8edf4")));
         }
     }
 
@@ -97,9 +96,7 @@ private:
     {
         m_model = new QStandardItemModel(this);
         populateModel(0);
-        rebuildDemo();
-        connect(m_ui.schemeCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
-                this, [this](int) { rebuildDemo(); });
+        setupView();
         connect(m_ui.backgroundCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
                 this, [this](int mode) { m_stage->setBackground(mode); });
         for (QSpinBox *spin : {m_ui.radiusSpin, m_ui.widthSpin, m_ui.stateRadiusSpin})
@@ -120,8 +117,10 @@ private:
     void populateModel(int mode)
     {
         m_model->clear();
-        m_model->setRowCount(mode == 0 ? 200 : 3);
-        m_model->setColumnCount(mode == 0 ? 12 : 3);
+        const int rows[] = {200, 3, 1, 0};
+        const int columns[] = {12, 3, 1, 3};
+        m_model->setRowCount(rows[mode]);
+        m_model->setColumnCount(columns[mode]);
         for (int column = 0; column < m_model->columnCount(); ++column)
             m_model->setHeaderData(column, Qt::Horizontal, QStringLiteral("列 %1").arg(column + 1));
         for (int row = 0; row < m_model->rowCount(); ++row) {
@@ -132,52 +131,68 @@ private:
         }
     }
 
-    void rebuildDemo()
+    void setupView()
     {
-        delete m_demo;
-        const int mode = m_ui.schemeCombo->currentIndex();
-        m_demo = mode == 0 ? createCornerCover(m_stage) : createAlphaFrame(m_stage);
-        auto *view = m_demo->view();
-        // Both techniques use the same model and table configuration for comparison.
+        m_view = new viv::VirtualTableView(m_stage);
+        auto *view = m_view;
+        view->setMinimumSize(260, 220);
+        // Materialize cells independently so the frame composes headers, cells and scrollbars together.
         view->setMaterializationMode(viv::VirtualTableView::MaterializationMode::CellWidgets);
         view->setCellAdapter(new CellAdapter, true);
+        // Keep row geometry stable while the example focuses on the outer frame and its clipping.
         view->setUniformItemHeight(44);
         view->setDefaultColumnWidth(150);
         view->setHeaderHeight(38);
+        // Enable header selection so the rounded frame also covers header state painting.
         view->setHorizontalHeaderSelectionEnabled(true);
         view->setHoverBackgroundColor(QColor(QStringLiteral("#e4effb")));
         view->setSelectedBackgroundColor(QColor(QStringLiteral("#b8d5f3")));
+        // The view listens to model signals and rebuilds its virtualized contents automatically.
         view->setModel(m_model);
-        m_stage->addDemo(m_demo);
+        m_stage->addDemo(view);
         applyOptions();
         selectRow(0);
-        const QString hints[] = {
-            QStringLiteral("方案 2：上层以纯色遮盖四角；切换渐变或棋盘格背景，可看到色块接缝。覆盖层不拦截鼠标。"),
-            QStringLiteral("方案 3：整张表及子控件通过抗锯齿 Alpha 遮罩合成；支持真实透明，滚动与动画时需承担离屏合成开销。")
-        };
-        m_ui.hintLabel->setText(hints[mode]);
+        m_ui.hintLabel->setText(QStringLiteral(
+            "框架内置 Alpha 合成：表头、单元格和滚动条统一裁成圆角，支持真实透明。"
+            "可切换少量或空数据，观察空白区、行状态与冻结区域。"));
     }
 
     void applyOptions()
     {
-        BorderOptions options;
-        options.radius = m_ui.radiusSpin->value();
-        options.width = m_ui.widthSpin->value();
-        options.stateRadius = m_ui.stateRadiusSpin->value();
+        // Frame and visual-state settings are shared VirtualItemView features inherited by the table.
+        m_view->setFrameCornerRadius(m_ui.radiusSpin->value());
+        m_view->setFrameBorderWidth(m_ui.widthSpin->value());
+        m_view->setVisualStateCornerRadius(m_ui.stateRadiusSpin->value());
         const QColor colors[] = {QColor(QStringLiteral("#4079ad")), QColor(QStringLiteral("#485260")),
                                  QColor(QStringLiteral("#cf668f"))};
-        options.color = colors[m_ui.colorCombo->currentIndex()];
-        options.headers = m_ui.headersCheck->isChecked();
-        options.gaps = m_ui.gapsCheck->isChecked();
-        options.frozen = m_ui.frozenCheck->isChecked();
-        options.scrollBars = m_ui.scrollBarsCheck->isChecked();
-        m_demo->setOptions(options);
+        m_view->setFrameBorderColor(colors[m_ui.colorCombo->currentIndex()]);
+        const bool headers = m_ui.headersCheck->isChecked();
+        // Header visibility changes the content geometry used by the rounded frame.
+        m_view->setHorizontalHeaderVisible(headers);
+        m_view->setVerticalHeaderVisible(headers);
+        const int spacing = m_ui.gapsCheck->isChecked() ? 10 : 0;
+        // Row and column gaps are part of the view layout, so state backgrounds cross them consistently.
+        m_view->setRowSpacing(spacing);
+        m_view->setColumnSpacing(spacing);
+        const bool frozen = m_ui.frozenCheck->isChecked();
+        // Freeze the first/last columns and rows to exercise all pane edges under the same frame.
+        m_view->setFrozenColumns(frozen && m_view->columnCount() > 0 ? QVector<int>{0} : QVector<int>{});
+        const int last = m_view->columnCount() - 1;
+        m_view->setFrozenRightColumns(frozen && last > 0 ? QVector<int>{last} : QVector<int>{});
+        m_view->setFrozenRows(frozen ? 1 : 0);
+        m_view->setFrozenBottomRows(frozen ? 1 : 0);
+        const auto policy = m_ui.scrollBarsCheck->isChecked() ? Qt::ScrollBarAlwaysOn : Qt::ScrollBarAsNeeded;
+        // AlwaysOn makes the scrollbar corners easy to inspect; AsNeeded covers the compact datasets too.
+        m_view->setHorizontalScrollBarPolicy(policy);
+        m_view->setVerticalScrollBarPolicy(policy);
     }
 
     void selectRow(int row)
     {
-        auto *view = m_demo->view();
+        auto *view = m_view;
         const QModelIndex index = m_model->index(row, 0);
+        if (!index.isValid())
+            return;
         // Write the selection model explicitly so the complete row is selected in every mode.
         view->selectionModel()->select(index, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
         view->setCurrentIndex(index);
@@ -187,7 +202,7 @@ private:
 
     Ui::BorderExample m_ui;
     BackgroundStage *m_stage = nullptr;
-    BorderDemo *m_demo = nullptr;
+    viv::VirtualTableView *m_view = nullptr;
     QStandardItemModel *m_model = nullptr;
 };
 

@@ -32,9 +32,6 @@ add_executable(table_capabilities
     28_diagnostics/example.cpp
     30_borders/example.cpp
     30_borders/example.ui
-    30_borders/borderdemo.cpp
-    30_borders/cornercover.cpp
-    30_borders/alphaframe.cpp
 )
 
 set_target_properties(table_capabilities PROPERTIES AUTOUIC ON)

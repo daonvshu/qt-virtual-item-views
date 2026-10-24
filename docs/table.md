@@ -33,7 +33,7 @@
 | 27 | 屏外保留：编辑或异步活动需要控件时显式保留，用完释放，索引不随屏外回收失去身份 | [examples/table_capabilities/27_pinning/example.cpp](../examples/table_capabilities/27_pinning/example.cpp) |
 | 28 | 运行统计与生命周期：读取统计快照和有界日志，区分累计创建次数与当前物化数量 | [examples/table_capabilities/28_diagnostics/example.cpp](../examples/table_capabilities/28_diagnostics/example.cpp) |
 | 29 | 平滑滚动（可选）：检测到匹配的 SmoothScrollbar 后才编译和显示，开关对比原生双向滚动 | [examples/table_capabilities/29_smooth_scrolling/example.cpp](../examples/table_capabilities/29_smooth_scrolling/example.cpp) |
-| 30 | 外边框与圆角：方案 2 四角覆盖与方案 3 整体 Alpha 合成对比，最终方案待确认 | [examples/table_capabilities/30_borders/README.md](../examples/table_capabilities/30_borders/README.md) |
+| 30 | 外边框与圆角：框架内置 Alpha 合成，支持透明圆角、边框与少量数据 | [examples/table_capabilities/30_borders/README.md](../examples/table_capabilities/30_borders/README.md) |
 
 先看 `Example::setupExample()` 中的视图配置与信号连接，再看本文件的 model、adapter 和控件。`setupUi()` 只处理页面布局。Hover 与 selected 背景由框架绘制，圆角、颜色、时长和曲线直接调用接口配置。
 

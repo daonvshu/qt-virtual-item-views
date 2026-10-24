@@ -106,6 +106,7 @@ set(VIRTUALITEMVIEWS_SOURCES
     src/core/scrollmapper.cpp
     src/core/reorderabletablemodel.cpp
     src/core/virtualitemview.cpp
+    src/core/virtualitemviewframe.cpp
     src/layout/headergeometry.cpp
     src/index/sizeindex.cpp
     src/index/treevisibilityindex.cpp

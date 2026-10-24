@@ -620,6 +620,8 @@ protected:
     void applyRowSpacingOverrides() override;
     void configureRowSpacingWidget(QWidget *widget) const override;
     QRegion rowSpacingWidgetMask(qsizetype row, const QRect &geometry) const override;
+    /// Keeps frozen-row separators inside actual column bands and the row header.
+    QRegion itemPaneSeparatorMask(const QRect &geometry) const override;
     bool handleItemKeyPress(QKeyEvent *event) override;
     /// §38: a table drops between rows (row semantics) or into a cell. The
     /// column of the target is -1 when the whole row is the drop unit.
@@ -650,7 +652,8 @@ private:
     /// Visible viewport band of a row preview, clipped to its frozen or scrolling pane.
     QRect rowDragPreviewRect(const QModelIndex &index) const;
     /// Viewport bands occupied by actual columns, clipped to their owning panes.
-    QRegion columnContentRegion() const;
+    /// Optionally includes the real trailing spacing at each pane's last column.
+    QRegion columnContentRegion(bool includeTrailingSpacing = false) const;
     /// Current elapsed-time sample, so a fast retarget does not start from a stale tick.
     qreal dragReorderProgress() const;
     /// Repositions widgets, row gaps, state backgrounds and grid lines in one frame.
@@ -782,6 +785,8 @@ private:
     /// Visual row bounds for grid lines; the hidden drag source supplies the
     /// insertion placeholder's trailing boundary instead of leaving it open.
     QRect rowGridGeometry(qsizetype row) const;
+    /// Viewport bands occupied by visible row bodies and their trailing spacing.
+    QRegion rowContentRegion() const;
     void applyGridLineVisibilityToHeaders();
     QColor resolvedVerticalGridLineColor() const;
     QColor resolvedHorizontalGridLineColor() const;

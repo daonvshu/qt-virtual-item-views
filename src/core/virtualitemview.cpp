@@ -193,12 +193,10 @@ protected:
             const int skipLeft = qBound(left, property("vivSpacingLineSkipX").toInt(), width());
             const int skipRight = qBound(skipLeft,
                 skipLeft + qMax(0, property("vivSpacingLineSkipWidth").toInt()), width());
-            QVector<QRect> lines;
-            for (int y : {0, qMax(0, height() - lineWidth)}) {
-                lines.append(QRect(left, y, skipLeft - left, lineWidth));
-                lines.append(QRect(skipRight, y, width() - skipRight, lineWidth));
-            }
-            fillHorizontalPixelLines(&painter, lines, lineWidth, m_lineColor);
+            fillHorizontalPixelGapEdges(&painter,
+                {QRect(left, 0, skipLeft - left, height()),
+                 QRect(skipRight, 0, width() - skipRight, height())},
+                lineWidth, m_lineColor);
         }
     }
 
@@ -237,10 +235,12 @@ public:
         setFocusPolicy(Qt::NoFocus);
     }
 
-    void setSeparator(const PaneSeparatorStyle &style, const QColor &styleSeparatorColor)
+    void setSeparator(const PaneSeparatorStyle &style, const QColor &styleSeparatorColor,
+                      bool trailingEdge)
     {
         m_style = style;
         m_resolvedColor = style.effectiveColor(styleSeparatorColor);
+        m_trailingEdge = trailingEdge;
         update();
     }
 
@@ -251,12 +251,13 @@ protected:
             return;
         QPainter painter(this);
         drawPixelAlignedSeparator(&painter, rect(), m_style.width, m_resolvedColor,
-                                  m_style.lineStyle, Qt::Horizontal);
+                                  m_style.lineStyle, Qt::Horizontal, m_trailingEdge);
     }
 
 private:
     PaneSeparatorStyle m_style;
     QColor m_resolvedColor;
+    bool m_trailingEdge = false;
 };
 } // namespace
 
@@ -2003,8 +2004,9 @@ void VirtualItemView::syncItemPanes()
     }
 
     // One line per pane boundary (top|scrolling and scrolling|bottom). The band
-    // lies inside the pane above the boundary, so the lines of neighbouring panes
-    // stay continuous.
+    // ends at the boundary, leaving the following row's state background intact.
+    // In particular, the bottom frozen row must share its top edge with the
+    // state background painted across empty column space.
     QVector<int> boundaries;
     for (int index = 0; index + 1 < panes.size(); ++index) {
         const ItemPane &before = panes.at(index);
@@ -2033,8 +2035,9 @@ void VirtualItemView::syncItemPanes()
                                                                              : qMax(1, band);
     for (int i = 0; i < boundaries.size(); ++i) {
         auto *line = static_cast<ItemPaneSeparatorLine *>(m_itemPaneSeparatorLines.at(i));
-        line->setSeparator(m_itemPaneSeparatorStyle, styleColor);
-        line->setGeometry(viewportRect.x() - leftExtension, viewportRect.y() + boundaries.at(i) - lineWidth,
+        line->setSeparator(m_itemPaneSeparatorStyle, styleColor, true);
+        const int y = viewportRect.y() + boundaries.at(i) - lineWidth;
+        line->setGeometry(viewportRect.x() - leftExtension, y,
                           viewportRect.width() + leftExtension, lineWidth);
         line->setVisible(m_itemPaneSeparatorStyle.isVisible() && lineWidth > 0);
     }
@@ -2046,9 +2049,21 @@ void VirtualItemView::raiseItemPaneSeparatorLines() const
     // The items are (re)created by every materialization pass, so the boundary lines
     // have to be lifted above them again. The drag indicator remains above these
     // input-transparent overlays.
-    for (QWidget *line : m_itemPaneSeparatorLines)
+    for (QWidget *line : m_itemPaneSeparatorLines) {
+        const QRegion mask = itemPaneSeparatorMask(line->geometry()).intersected(line->rect());
+        if (mask == QRegion(line->rect()))
+            line->clearMask();
+        else
+            line->setMask(mask);
+        line->setVisible(m_itemPaneSeparatorStyle.isVisible() && !mask.isEmpty());
         line->raise();
+    }
     raiseDropIndicator();
+}
+
+QRegion VirtualItemView::itemPaneSeparatorMask(const QRect &geometry) const
+{
+    return QRegion(QRect(QPoint(), geometry.size()));
 }
 
 bool VirtualItemView::isRowGridLineCoveredByPaneSeparator(const QRect &rect) const
@@ -2527,6 +2542,9 @@ QModelIndex VirtualItemView::indexAt(const QPoint &viewportPos) const
     const ItemPane::Type pane = itemPaneAtY(viewportPos.y());
     const qsizetype row = m_layout->itemAtPoint(viewportPos, itemPaneScrollOffset(pane));
     if (row < 0 || row >= viewItemCount())
+        return QModelIndex();
+    // A frozen row's former content position may fall in empty scrolling space.
+    if (itemPaneForRow(row) != pane)
         return QModelIndex();
     return viewIndex(row);
 }
@@ -3427,6 +3445,7 @@ void VirtualItemView::paintEvent(QPaintEvent *event)
 void VirtualItemView::resizeEvent(QResizeEvent *event)
 {
     QAbstractScrollArea::resizeEvent(event);
+    updateFrameChildMasks();
     if (m_layout)
         m_layout->setCrossExtent(viewport()->width());
     if (m_recycler)
@@ -4155,6 +4174,8 @@ VirtualItemView::DropTarget VirtualItemView::resolveDropTarget(const QPoint &vie
         return target;
     const qsizetype row = m_layout->indexAtOffset(offset);
     if (row < 0 || row >= m_layout->itemCount())
+        return target;
+    if (itemPaneForRow(row) != pane)
         return target;
     const qint64 rowOffset = m_layout->offsetOf(row);
     const bool after = offset - rowOffset > m_layout->itemSize(row) / 2;

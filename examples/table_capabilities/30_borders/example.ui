@@ -4,17 +4,12 @@
  <widget class="QWidget" name="BorderExample">
   <layout class="QVBoxLayout" name="pageLayout">
    <item><widget class="QLabel" name="titleLabel">
-    <property name="text"><string>30 外边框与圆角：对比方案 2 与方案 3，最终方案待确认</string></property>
+    <property name="text"><string>30 外边框与圆角：框架内置 Alpha 合成</string></property>
     <property name="wordWrap"><bool>true</bool></property>
    </widget></item>
    <item><layout class="QGridLayout" name="controlsLayout">
-    <item row="0" column="0"><widget class="QLabel" name="schemeLabel"><property name="text"><string>实现方案</string></property><property name="buddy"><cstring>schemeCombo</cstring></property></widget></item>
-    <item row="0" column="1" colspan="3"><widget class="QComboBox" name="schemeCombo">
-     <item><property name="text"><string>2 四角覆盖层</string></property></item>
-     <item><property name="text"><string>3 整体 Alpha 合成</string></property></item>
-    </widget></item>
-    <item row="0" column="4"><widget class="QLabel" name="backgroundLabel"><property name="text"><string>外部背景</string></property><property name="buddy"><cstring>backgroundCombo</cstring></property></widget></item>
-    <item row="0" column="5"><widget class="QComboBox" name="backgroundCombo">
+    <item row="0" column="0"><widget class="QLabel" name="backgroundLabel"><property name="text"><string>外部背景</string></property><property name="buddy"><cstring>backgroundCombo</cstring></property></widget></item>
+    <item row="0" column="1" colspan="5"><widget class="QComboBox" name="backgroundCombo">
      <item><property name="text"><string>纯色</string></property></item>
      <item><property name="text"><string>渐变</string></property></item>
      <item><property name="text"><string>棋盘格</string></property></item>
@@ -35,6 +30,8 @@
     <item row="2" column="3" colspan="3"><widget class="QComboBox" name="dataCombo">
      <item><property name="text"><string>200 行 × 12 列</string></property></item>
      <item><property name="text"><string>3 行 × 3 列</string></property></item>
+     <item><property name="text"><string>1 行 × 1 列</string></property></item>
+     <item><property name="text"><string>0 行 × 3 列</string></property></item>
     </widget></item>
    </layout></item>
    <item><layout class="QHBoxLayout" name="togglesLayout">
