@@ -171,6 +171,8 @@ public:
 
     QWidget *content() const { return m_content; }
     void setLineColor(const QColor &color) { m_lineColor = color; update(); }
+    void setStatePainter(std::function<void(QPainter *, const QRect &)> paint)
+    { m_statePainter = std::move(paint); }
 
 protected:
     void resizeEvent(QResizeEvent *event) override
@@ -188,24 +190,30 @@ protected:
             painter.fillRect(rect(), background);
         else if (property("vivFillSpacingBackground").toBool())
             painter.fillRect(rect(), palette().brush(QPalette::Base));
+        if (m_statePainter)
+            m_statePainter(&painter, rect());
         if (property("vivShowSpacingLines").toBool()) {
             const int left = qBound(0, property("vivSpacingLineLeftInset").toInt(), width());
             const int skipLeft = qBound(left, property("vivSpacingLineSkipX").toInt(), width());
             const int skipRight = qBound(skipLeft,
                 skipLeft + qMax(0, property("vivSpacingLineSkipWidth").toInt()), width());
-            fillHorizontalPixelGapEdges(&painter,
+            fillPixelLines(&painter,
                 {QRect(left, 0, skipLeft - left, height()),
                  QRect(skipRight, 0, width() - skipRight, height())},
-                lineWidth, m_lineColor);
+                lineWidth, m_lineColor, Qt::Horizontal, false,
+                !property("vivSpacingLineCentered").toBool(),
+                property("vivSpacingLineCentered").toBool());
         }
     }
 
 private:
     void layoutContent()
     {
-        if (m_content)
-            m_content->setGeometry(0, qMax(1, property("vivSpacingLineWidth").toInt()), width(),
-                                   qMax(0, height() - 2 * qMax(1, property("vivSpacingLineWidth").toInt())));
+        if (m_content) {
+            const int inset = property("vivSpacingLineCentered").toBool()
+                ? 0 : qMax(1, property("vivSpacingLineWidth").toInt());
+            m_content->setGeometry(0, inset, width(), qMax(0, height() - 2 * inset));
+        }
     }
 
     bool event(QEvent *event) override
@@ -219,6 +227,7 @@ private:
 
     QPointer<QWidget> m_content;
     QColor m_lineColor;
+    std::function<void(QPainter *, const QRect &)> m_statePainter;
 };
 
 /// The line between two row panes (§31). The item widgets cover the viewport, so a
@@ -484,6 +493,28 @@ void VirtualItemView::applyRowSpacingOverrides()
 void VirtualItemView::configureRowSpacingWidget(QWidget *widget) const
 {
     Q_UNUSED(widget);
+}
+
+void VirtualItemView::setGridLinePlacement(GridLinePlacement placement)
+{
+    if (m_gridLinePlacement == placement)
+        return;
+    ++m_rowSpacingStateSerial;
+    m_gridLinePlacement = placement;
+    applyRowSpacingOverrides();
+    relayout();
+}
+
+void VirtualItemView::paintRowSpacingBackground(QPainter *painter, const QRect &dirtyRect) const
+{
+    Q_UNUSED(painter);
+    Q_UNUSED(dirtyRect);
+}
+
+void VirtualItemView::refreshRowSpacingBackgrounds()
+{
+    for (QWidget *widget : m_rowSpacingWidgets)
+        widget->update();
 }
 
 QRegion VirtualItemView::rowSpacingWidgetMask(qsizetype row, const QRect &geometry) const
@@ -1792,6 +1823,8 @@ qint64 VirtualItemView::frozenTopExtent() const
     const qsizetype rows = frozenRows();
     if (rows <= 0 || !m_layout)
         return 0;
+    if (rows == m_layout->itemCount())
+        return m_layout->contentExtent();
     return qMin<qint64>(m_layout->offsetOf(rows), m_layout->contentExtent());
 }
 
@@ -1800,6 +1833,8 @@ qint64 VirtualItemView::frozenBottomExtent() const
     const qsizetype rows = frozenBottomRows();
     if (rows <= 0 || !m_layout)
         return 0;
+    if (rows == m_layout->itemCount())
+        return m_layout->contentExtent();
     return qMax<qint64>(0, m_layout->contentExtent() - m_layout->offsetOf(m_layout->itemCount() - rows));
 }
 
@@ -2171,6 +2206,14 @@ void VirtualItemView::syncRowSpacingWidgets(const QVector<VisibleRange> &ranges)
             if (abortStalePass())
                 return;
             auto *host = static_cast<RowSpacingHost *>(widget);
+            host->setStatePainter([this, host](QPainter *painter, const QRect &dirty) {
+                // Gap hosts can live under a scroll clip; global mapping avoids sibling mapTo().
+                const QPoint origin = viewport()->mapToGlobal(QPoint()) - host->mapToGlobal(QPoint());
+                painter->save();
+                painter->translate(origin);
+                paintRowSpacingBackground(painter, dirty.translated(-origin));
+                painter->restore();
+            });
             if (factory && !host->content()) {
                 QPointer<QWidget> content(factory(index, host));
                 if (!guardedWidget) {
@@ -2212,6 +2255,9 @@ void VirtualItemView::syncRowSpacingWidgets(const QVector<VisibleRange> &ranges)
         if (!hostIsCurrent())
             return;
         host->setProperty("vivSpacingBackgroundColor", m_spacingBackgroundColor);
+        if (!hostIsCurrent())
+            return;
+        host->setProperty("vivSpacingLineCentered", m_gridLinePlacement == GridLinePlacement::SpacingCenter);
         if (!hostIsCurrent())
             return;
         configureRowSpacingWidget(host);

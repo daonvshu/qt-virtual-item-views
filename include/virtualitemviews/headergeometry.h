@@ -135,6 +135,11 @@ public:
     /// default spacing are omitted; structure changes clear this projection too.
     void setSparseSectionSpacingOverrides(const QVector<QPair<int, int>> &spacings);
     int sectionSpacingAfter(int logicalIndex) const;
+    /// Transient outer spacing, excluded from saveState(). Empty geometry has no outer spacing.
+    /// FitExtent includes these bands in its width budget and compresses them if necessary.
+    void setEdgeSpacing(int leading, int trailing);
+    int leadingSpacing() const;
+    int trailingSpacing() const;
     int minimumSectionSize() const { return m_minimumSectionSize; }
     void setMinimumSectionSize(int size);
     int maximumSectionSize() const { return m_maximumSectionSize; }
@@ -149,7 +154,7 @@ public:
     int sectionAtOffset(qint64 contentOffset) const;
     /// Visual index of the section containing \a contentOffset, or -1.
     int visualSectionAtOffset(qint64 contentOffset) const;
-    /// Sum of the visible section sizes.
+    /// Visible section extent, including inter-section gaps and outer edge spacing.
     qint64 totalExtent() const;
 
     // -- order / visibility --------------------------------------------------
@@ -351,6 +356,8 @@ private:
 
     int m_defaultSectionSize = 100;
     int m_sectionSpacing = 0;
+    int m_leadingSpacing = 0;
+    int m_trailingSpacing = 0;
     QVector<int> m_sectionSpacingOverrides;
     QVector<QPair<int, int>> m_sparseSpacingOverrides;
     QVector<qint64> m_spacingDeltaPrefix;

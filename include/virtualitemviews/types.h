@@ -11,6 +11,10 @@ class QWidget;
 
 namespace viv {
 
+/// Position of item grid lines when a nonzero gap separates adjacent items.
+/// Zero spacing always uses one shared trailing boundary.
+enum class GridLinePlacement { SpacingCenter, SpacingEdges };
+
 /// A point that can be omitted, including on C++14 toolchains.
 class OptionalPoint
 {

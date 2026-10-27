@@ -242,6 +242,7 @@ private slots:
         QStandardItemModel model(10, 1);
         vivtest::TestAdapter adapter;
         ExposedFlowView view;
+        view.setGridLinePlacement(viv::GridLinePlacement::SpacingEdges);
         view.setFrameShape(QFrame::NoFrame);
         view.setAdapter(&adapter);
         view.setFixedCellHeight(31);
@@ -398,6 +399,7 @@ private slots:
         QStandardItemModel model(50, 1);
         vivtest::TestAdapter adapter;
         ExposedFlowView view;
+        view.setGridLinePlacement(viv::GridLinePlacement::SpacingEdges);
         view.setFrameShape(QFrame::NoFrame);
         view.setAdapter(&adapter);
         view.setCellHeightMode(viv::VirtualFlowTableView::CellHeightMode::AspectRatio);
@@ -887,6 +889,7 @@ private slots:
         QStandardItemModel model(10, 1);
         vivtest::TestAdapter adapter;
         ExposedFlowView view;
+        view.setGridLinePlacement(viv::GridLinePlacement::SpacingEdges);
         view.setFrameShape(QFrame::NoFrame);
         view.setAdapter(&adapter);
         view.setFixedCellHeight(31);

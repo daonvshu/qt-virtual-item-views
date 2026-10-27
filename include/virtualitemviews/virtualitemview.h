@@ -31,6 +31,7 @@ class QGraphicsEffect;
 class QKeyEvent;
 class QMouseEvent;
 class QPaintEvent;
+class QPainter;
 class QResizeEvent;
 class QShowEvent;
 class QTimer;
@@ -327,6 +328,10 @@ public:
     /// Gap below a row; the last row has no trailing gap. Zero disables it.
     virtual void setRowSpacing(int pixels);
     int rowSpacing() const { return m_rowSpacing; }
+    /// Grid lines use the gap center by default, or both gap edges when requested.
+    /// With zero spacing both modes use a single shared item boundary.
+    virtual void setGridLinePlacement(GridLinePlacement placement);
+    GridLinePlacement gridLinePlacement() const { return m_gridLinePlacement; }
     /// Background of row gaps. An invalid color preserves the default palette behavior.
     /// The getter returns the configured color, including an invalid default.
     virtual void setSpacingBackgroundColor(const QColor &color);
@@ -555,6 +560,10 @@ protected:
     /// Applies view-specific spacing (tree depth) after a row layout reset.
     virtual void applyRowSpacingOverrides();
     virtual void configureRowSpacingWidget(QWidget *widget) const;
+    /// Paints optional state layers in row gaps, using viewport coordinates.
+    virtual void paintRowSpacingBackground(QPainter *painter, const QRect &dirtyRect) const;
+    /// Repaints materialized row gaps after a state transition.
+    void refreshRowSpacingBackgrounds();
     /// Visible part of a row gap, in coordinates local to its viewport geometry.
     virtual QRegion rowSpacingWidgetMask(qsizetype row, const QRect &geometry) const;
     /// Recompute gap clipping after horizontal geometry changes.
@@ -927,6 +936,7 @@ private:
     RowSpacingBinder m_rowSpacingBinder;
     quint64 m_rowSpacingStateSerial = 0;
     int m_rowSpacing = 0;
+    GridLinePlacement m_gridLinePlacement = GridLinePlacement::SpacingCenter;
     QColor m_spacingBackgroundColor;
     PaneSeparatorStyle m_itemPaneSeparatorStyle;
     ScrollAnchor m_pendingAnchor;

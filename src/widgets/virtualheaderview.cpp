@@ -3,6 +3,8 @@
 
 #include <virtualitemviews/headergeometry.h>
 #include <virtualitemviews/labelheaderview.h>
+#include <virtualitemviews/styledheadersection.h>
+#include <virtualitemviews/virtualtableview.h>
 #include <virtualitemviews/widgetrecycler.h>
 
 #include <QAbstractItemModel>
@@ -126,45 +128,117 @@ void VirtualHeaderView::paintEvent(QPaintEvent *event)
         ? m_sectionSeparatorColor : headerSectionSeparatorColor(this);
     const QColor crossColor = m_crossAxisSeparatorColor.isValid()
         ? m_crossAxisSeparatorColor : headerSectionSeparatorColor(this);
+    const bool fillSpacing = m_spacingBackgroundColor.isValid()
+        || (m_backgroundVisible && !m_backgroundColor.isValid());
+    const QBrush spacingBrush = m_spacingBackgroundColor.isValid()
+        ? QBrush(m_spacingBackgroundColor) : palette().brush(QPalette::Base);
+    // Fill every gap before state layers so iteration order cannot erase a neighbour's half.
     for (auto it = m_sectionWidgets.cbegin(); it != m_sectionWidgets.cend(); ++it) {
-        const QWidget *section = it.value();
-        // The section itself can be clipped out while its trailing gap remains visible.
-        // Hidden widgets retain their old rect, so derive their position from geometry.
-        int sectionEnd = axisPosOf(section) + axisSizeOf(section);
-        if (!section->isVisible()) {
-            int position = sectionPos(it.key());
-            if (position == kSectionNotShown)
-                continue;
-            if (m_slideProgress < 1.0) {
-                const auto from = m_slideFrom.constFind(it.key());
-                if (from != m_slideFrom.constEnd())
-                    position = from.value()
-                        + qRound(qreal(position - from.value()) * m_slideProgress);
-            }
-            sectionEnd = position + m_geometry->sectionSize(it.key());
-        }
-        int spacing = isHorizontal() && m_paneSpacingProvider
-            ? m_paneSpacingProvider(it.key()) : m_geometry->sectionSpacingAfter(it.key());
-        // Geometry stores configured spacing even after the final section; the
-        // content extent excludes it, just like the table's row layout does.
-        const bool terminalRow = !isHorizontal() && m_geometry->sectionPosition(it.key())
-            + m_geometry->sectionSize(it.key()) >= m_geometry->totalExtent();
-        if (terminalRow)
-            spacing = 0;
+        const QRect section = sectionPaintRect(it.key());
+        if (section.isEmpty())
+            continue;
+        const int sectionEnd = isHorizontal() ? section.right() + 1 : section.bottom() + 1;
+        const int spacing = sectionSpacingAfter(it.key());
         if (m_backgroundVisible && rowSectionsOnly) {
-            const int size = section->isVisible() ? axisSizeOf(section) : m_geometry->sectionSize(it.key());
-            painter.fillRect(QRect(0, sectionEnd - size, width(), size + spacing)
+            // Native section panels retain their base; gap bands are filled separately.
+            painter.fillRect(QRect(0, section.y(), width(), section.height())
                                  .intersected(rect()), palette().brush(QPalette::Button));
         }
-        if (spacing > 0 && m_spacingBackgroundColor.isValid()) {
+        if (spacing > 0 && fillSpacing) {
             const QRect gap = isHorizontal() ? QRect(sectionEnd, 0, spacing, height())
                                              : QRect(0, sectionEnd, width(), spacing);
-            painter.fillRect(gap.intersected(rect()), m_spacingBackgroundColor);
+            painter.fillRect(gap.intersected(rect()), spacingBrush);
         }
+        if (fillSpacing) {
+            const int before = sectionLeadingEdgeSpacing(it.key());
+            const int after = sectionTrailingEdgeSpacing(it.key());
+            const QRect leading = isHorizontal()
+                ? QRect(section.left() - before, 0, before, height())
+                : QRect(0, section.top() - before, width(), before);
+            const QRect trailing = isHorizontal() ? QRect(sectionEnd, 0, after, height())
+                                                  : QRect(0, sectionEnd, width(), after);
+            painter.fillRect(leading.intersected(rect()), spacingBrush);
+            painter.fillRect(trailing.intersected(rect()), spacingBrush);
+        }
+    }
+    if (!isHorizontal()) {
+        for (auto it = m_sectionWidgets.cbegin(); it != m_sectionWidgets.cend(); ++it) {
+            const auto *section = qobject_cast<const StyledHeaderSection *>(it.value());
+            const QRect body = sectionPaintRect(it.key());
+            if (!section || body.isEmpty())
+                continue;
+            const QRect shape = sectionStateRect(it.key(), body);
+            const QRegion clip = (QRegion(shape) - QRegion(body)).intersected(rect());
+            if (clip.isEmpty())
+                continue;
+            painter.save();
+            painter.translate(body.topLeft());
+            section->paintVisualStateBackground(&painter, shape.translated(-body.topLeft()),
+                                                clip.translated(-body.topLeft()));
+            painter.restore();
+        }
+    }
+    for (auto it = m_sectionWidgets.cbegin(); it != m_sectionWidgets.cend(); ++it) {
+        const QWidget *section = it.value();
+        const QRect sectionRect = sectionPaintRect(it.key());
+        if (sectionRect.isEmpty())
+            continue;
+        const int sectionEnd = isHorizontal() ? sectionRect.right() + 1 : sectionRect.bottom() + 1;
+        const int spacing = sectionSpacingAfter(it.key());
+        const int leading = sectionLeadingEdgeSpacing(it.key());
+        const int trailing = sectionTrailingEdgeSpacing(it.key());
+        if (m_crossAxisSeparatorVisible && m_crossAxisSeparatorThroughSpacing) {
+            if (isHorizontal())
+                fillHorizontalPixelLines(&painter,
+                    {QRect(sectionRect.left() - leading, height() - m_crossAxisSeparatorWidth,
+                           leading, m_crossAxisSeparatorWidth),
+                     QRect(sectionEnd, height() - m_crossAxisSeparatorWidth,
+                           trailing, m_crossAxisSeparatorWidth)},
+                    m_crossAxisSeparatorWidth, crossColor, true);
+            else
+                fillVerticalPixelLines(&painter,
+                    {QRect(width() - m_crossAxisSeparatorWidth, sectionRect.top() - leading,
+                           m_crossAxisSeparatorWidth, leading),
+                     QRect(width() - m_crossAxisSeparatorWidth, sectionEnd,
+                           m_crossAxisSeparatorWidth, trailing)},
+                    m_crossAxisSeparatorWidth, crossColor, true);
+        }
+        if (trailing > 0) {
+            // The terminal border is at the outer edge, keeping a full half-gap after the widget.
+            if (m_sectionSeparatorsVisible) {
+                if (isHorizontal())
+                    fillVerticalPixelLines(&painter,
+                        {QRect(sectionEnd + trailing - m_sectionSeparatorWidth, 0,
+                               m_sectionSeparatorWidth, height())},
+                        m_sectionSeparatorWidth, sectionColor, true);
+                else
+                    fillHorizontalPixelLines(&painter,
+                        {QRect(0, sectionEnd + trailing - m_sectionSeparatorWidth,
+                               width(), m_sectionSeparatorWidth)},
+                        m_sectionSeparatorWidth, sectionColor, true);
+            }
+            continue;
+        }
+        // Visible styled sections paint their body border after their own background.
+        const bool sectionOwnsBorder = section->isVisible()
+            && qobject_cast<const StyledHeaderSection *>(section);
         if (isHorizontal()) {
+            if (spacing > 0 && m_gridLinePlacement == GridLinePlacement::SpacingCenter) {
+                // Center gap hosts leave header input and its body boundary to this widget.
+                if (m_crossAxisSeparatorVisible && m_crossAxisSeparatorThroughSpacing)
+                    fillHorizontalPixelLines(&painter,
+                        {QRect(sectionEnd, height() - m_crossAxisSeparatorWidth,
+                               spacing, m_crossAxisSeparatorWidth)},
+                        m_crossAxisSeparatorWidth, crossColor, true);
+                if (m_sectionSeparatorsVisible)
+                    fillPixelLines(&painter, {QRect(sectionEnd, 0, spacing, height())},
+                                   m_sectionSeparatorWidth, sectionColor, Qt::Vertical,
+                                   false, false, true);
+                continue;
+            }
             if (!section->isVisible())
                 continue;
-            if (m_sectionSeparatorsVisible) {
+            if (m_sectionSeparatorsVisible && !sectionOwnsBorder) {
                 const int x = section->geometry().right();
                 if (x >= 0 && x < width())
                     fillVerticalPixelLines(&painter,
@@ -174,7 +248,7 @@ void VirtualHeaderView::paintEvent(QPaintEvent *event)
             continue;
         }
         if (spacing == 0) {
-            if (m_sectionSeparatorsVisible) {
+            if (m_sectionSeparatorsVisible && !sectionOwnsBorder) {
                 const QRect line(0, sectionEnd - m_sectionSeparatorWidth,
                                  width(), m_sectionSeparatorWidth);
                 if (line.intersects(rect()))
@@ -185,15 +259,93 @@ void VirtualHeaderView::paintEvent(QPaintEvent *event)
             continue;
         }
         const int top = sectionEnd;
-        if (m_crossAxisSeparatorVisible && width() > 0)
+        if (m_crossAxisSeparatorVisible && m_crossAxisSeparatorThroughSpacing && width() > 0)
             fillVerticalPixelLines(&painter,
                 {QRect(width() - m_crossAxisSeparatorWidth, top, m_crossAxisSeparatorWidth, spacing)},
                 m_crossAxisSeparatorWidth, crossColor, true);
         if (m_sectionSeparatorsVisible) {
-            fillHorizontalPixelGapEdges(&painter,
-                {QRect(0, top, width(), spacing)}, m_sectionSeparatorWidth, sectionColor);
+            fillPixelLines(&painter, {QRect(0, top, width(), spacing)},
+                           m_sectionSeparatorWidth, sectionColor, Qt::Horizontal,
+                           false, m_gridLinePlacement == GridLinePlacement::SpacingEdges,
+                           m_gridLinePlacement == GridLinePlacement::SpacingCenter);
         }
     }
+}
+
+QRect VirtualHeaderView::sectionPaintRect(int logicalIndex) const
+{
+    const QWidget *widget = m_sectionWidgets.value(logicalIndex);
+    if (!widget || !m_geometry)
+        return {};
+    if (widget->isVisible())
+        return widget->geometry();
+    // Clipped widgets retain stale geometry; reconstruct their current animated position.
+    int position = sectionPos(logicalIndex);
+    if (position == kSectionNotShown)
+        return {};
+    if (m_slideProgress < 1.0) {
+        const auto from = m_slideFrom.constFind(logicalIndex);
+        if (from != m_slideFrom.constEnd())
+            position = from.value() + qRound(qreal(position - from.value()) * m_slideProgress);
+    }
+    return isHorizontal() ? QRect(position, 0, m_geometry->sectionSize(logicalIndex), height())
+                          : QRect(0, position, width(), m_geometry->sectionSize(logicalIndex));
+}
+
+int VirtualHeaderView::previousSection(int logicalIndex) const
+{
+    if (!m_geometry)
+        return -1;
+    if (m_paneFilterActive) {
+        rebuildPaneCacheIfNeeded();
+        const int slot = logicalIndex >= 0 && logicalIndex < m_paneSlotByLogical.size()
+            ? m_paneSlotByLogical.at(logicalIndex) : -1;
+        return slot > 0 ? m_paneOrder.at(slot - 1) : -1;
+    }
+    for (int visual = m_geometry->visualIndex(logicalIndex) - 1; visual >= 0; --visual) {
+        const int previous = m_geometry->logicalIndex(visual);
+        if (!isHorizontal() && previous < m_firstPaneRow)
+            break;
+        if (!m_geometry->isSectionHidden(previous))
+            return previous;
+    }
+    return -1;
+}
+
+int VirtualHeaderView::sectionLeadingEdgeSpacing(int logicalIndex) const
+{
+    if (!m_geometry)
+        return 0;
+    if (m_paneFilterActive)
+        return previousSection(logicalIndex) < 0 ? m_paneLeadingSpacing : 0;
+    return m_geometry->sectionPosition(logicalIndex) == m_geometry->leadingSpacing()
+        ? m_geometry->leadingSpacing() : 0;
+}
+
+int VirtualHeaderView::sectionTrailingEdgeSpacing(int logicalIndex) const
+{
+    if (!m_geometry)
+        return 0;
+    if (m_paneFilterActive)
+        return logicalIndex == m_paneTerminalColumn ? m_paneTrailingSpacing : 0;
+    return m_geometry->sectionPosition(logicalIndex) + m_geometry->sectionSize(logicalIndex)
+        == m_geometry->totalExtent() - m_geometry->trailingSpacing()
+        ? m_geometry->trailingSpacing() : 0;
+}
+
+QRect VirtualHeaderView::sectionStateRect(int logicalIndex, const QRect &body) const
+{
+    const auto *table = qobject_cast<const VirtualTableView *>(parentWidget());
+    if (isHorizontal() || m_gridLinePlacement != GridLinePlacement::SpacingCenter
+        || !table || !table->visualStateThroughRowSpacing())
+        return body;
+    const int previous = previousSection(logicalIndex);
+    const int before = previous >= 0 ? (sectionSpacingAfter(previous) + 1) / 2
+                                    : sectionLeadingEdgeSpacing(logicalIndex);
+    const int after = sectionTrailingEdgeSpacing(logicalIndex) > 0
+        ? sectionTrailingEdgeSpacing(logicalIndex)
+        : (logicalIndex < m_lastPaneRow ? sectionSpacingAfter(logicalIndex) / 2 : 0);
+    return body.adjusted(0, -before, 0, after);
 }
 
 void VirtualHeaderView::setGeometryModel(HeaderGeometry *geometry)
@@ -489,6 +641,16 @@ void VirtualHeaderView::setPaneSpacingProvider(std::function<int(int)> provider)
     relayout();
 }
 
+void VirtualHeaderView::setPaneEdgeSpacing(int leading, int trailing)
+{
+    if (m_paneLeadingSpacing == leading && m_paneTrailingSpacing == trailing)
+        return;
+    m_paneLeadingSpacing = leading;
+    m_paneTrailingSpacing = trailing;
+    m_paneCacheDirty = true;
+    relayout();
+}
+
 void VirtualHeaderView::setSectionSeparatorsVisible(bool visible)
 {
     if (m_sectionSeparatorsVisible == visible)
@@ -497,6 +659,30 @@ void VirtualHeaderView::setSectionSeparatorsVisible(bool visible)
     for (QWidget *section : m_sectionWidgets)
         section->update();
     update();
+}
+
+void VirtualHeaderView::setGridLinePlacement(GridLinePlacement placement)
+{
+    if (m_gridLinePlacement == placement)
+        return;
+    m_gridLinePlacement = placement;
+    for (QWidget *section : m_sectionWidgets)
+        section->update();
+    if (m_resizeSection < 0 && !m_dragging)
+        updateCursor(mapFromGlobal(QCursor::pos()));
+    update();
+}
+
+int VirtualHeaderView::sectionSpacingAfter(int logicalIndex) const
+{
+    if (!m_geometry)
+        return 0;
+    if (isHorizontal() && m_paneSpacingProvider)
+        return qMax(0, m_paneSpacingProvider(logicalIndex));
+    if (m_geometry->sectionPosition(logicalIndex) + m_geometry->sectionSize(logicalIndex)
+        >= m_geometry->totalExtent() - m_geometry->trailingSpacing())
+        return 0;
+    return m_geometry->sectionSpacingAfter(logicalIndex);
 }
 
 void VirtualHeaderView::setCrossAxisSeparatorVisible(bool visible)
@@ -759,8 +945,8 @@ void VirtualHeaderView::rebuildPaneCacheIfNeeded() const
 
     m_paneSlotByLogical.fill(-1, count);
     m_panePrefix.reserve(m_paneOrder.size() + 1);
-    m_panePrefix.append(0);
-    qint64 x = 0;
+    qint64 x = m_paneLeadingSpacing;
+    m_panePrefix.append(x);
     for (int slot = 0; slot < m_paneOrder.size(); ++slot) {
         const int logical = m_paneOrder.at(slot);
         m_paneSlotByLogical[logical] = slot;
@@ -1328,9 +1514,10 @@ void VirtualHeaderView::positionDraggedSections()
     QWidget *dragged = m_sectionWidgets.value(m_dragSection, nullptr);
     if (m_sectionSeparatorsVisible && dragged && dragged->isVisible()) {
         if (!m_dragLeadingSeparator) {
-            m_dragLeadingSeparator = new QWidget(this);
+            auto *line = new PixelAlignedLine(this, isHorizontal() ? Qt::Vertical : Qt::Horizontal);
+            line->setTrailingEdge(false);
+            m_dragLeadingSeparator = line;
             m_dragLeadingSeparator->setAttribute(Qt::WA_TransparentForMouseEvents);
-            m_dragLeadingSeparator->setAutoFillBackground(true);
         }
         QPalette colors = m_dragLeadingSeparator->palette();
         colors.setColor(QPalette::Window, m_sectionSeparatorColor.isValid()
@@ -1630,6 +1817,17 @@ int VirtualHeaderView::resizeEdgeAt(const QPoint &pos, bool *leading) const
         return -1;
     if (leading)
         *leading = false;
+    const bool centered = m_gridLinePlacement == GridLinePlacement::SpacingCenter;
+    const auto trailingEdge = [this, centered](int logical, int position) {
+        return position + m_geometry->sectionSize(logical)
+            + (centered ? (sectionSpacingAfter(logical) > 0 ? sectionSpacingAfter(logical) / 2
+                                                          : sectionTrailingEdgeSpacing(logical)) : 0);
+    };
+    const auto leadingEdge = [this, centered](int logical, int position) {
+        const int previous = centered ? previousSection(logical) : -1;
+        return position - (previous >= 0 ? (sectionSpacingAfter(previous) + 1) / 2
+                                        : (centered ? sectionLeadingEdgeSpacing(logical) : 0));
+    };
     if (m_resizeFromLeadingEdge) {
         // The trailing edge stays fixed; resize the section after the shared boundary.
         int target = -1;
@@ -1638,7 +1836,7 @@ int VirtualHeaderView::resizeEdgeAt(const QPoint &pos, bool *leading) const
             const int position = sectionPos(logical);
             if (position == kSectionNotShown)
                 continue;
-            const int edgeDistance = qAbs(axisOf(pos) - position);
+            const int edgeDistance = qAbs(axisOf(pos) - leadingEdge(logical, position));
             if (edgeDistance < distance) {
                 target = logical;
                 distance = edgeDistance;
@@ -1659,16 +1857,19 @@ int VirtualHeaderView::resizeEdgeAt(const QPoint &pos, bool *leading) const
             const int left = sectionPos(logical);
             if (left == kSectionNotShown)
                 return;
-            const int right = left + m_geometry->sectionSize(logical);
+            const int right = trailingEdge(logical, left);
+            const int beforeEdge = leadingEdge(logical, left);
             const int slot = int(order.indexOf(logical));
-            const int leftDistance = qAbs(axisOf(pos) - left);
+            const int leftDistance = qAbs(axisOf(pos) - beforeEdge);
             const int rightDistance = qAbs(axisOf(pos) - right);
-            if (slot > 0 && leftDistance < distance) {
+            if (slot > 0 && leftDistance < distance
+                && (!centered || sectionAt(pos) >= 0 || axisOf(pos) >= beforeEdge)) {
                 target = logical;
                 distance = leftDistance;
                 before = true;
             }
-            if (slot >= 0 && slot + 1 < order.size() && rightDistance < distance) {
+            if (slot >= 0 && slot + 1 < order.size() && rightDistance < distance
+                && (!centered || sectionAt(pos) >= 0 || axisOf(pos) < right)) {
                 target = logical;
                 distance = rightDistance;
                 before = false;
@@ -1689,21 +1890,11 @@ int VirtualHeaderView::resizeEdgeAt(const QPoint &pos, bool *leading) const
         const int left = sectionPos(logical);
         if (left == kSectionNotShown)
             continue;
-        const int right = left + m_geometry->sectionSize(logical);
+        const int right = trailingEdge(logical, left);
         if (qAbs(axisOf(pos) - right) <= kResizeMargin)
             return logical;
-        if (qAbs(axisOf(pos) - left) <= kResizeMargin) {
-            if (m_paneFilterActive) {
-                rebuildPaneCacheIfNeeded();
-                const int slot = logical < m_paneSlotByLogical.size()
-                    ? m_paneSlotByLogical.at(logical) : -1;
-                return slot > 0 ? m_paneOrder.at(slot - 1) : -1;
-            }
-            // The leading edge belongs to the previous shown section.
-            const int visual = m_geometry->visualIndex(logical);
-            if (visual > 0)
-                return m_geometry->logicalIndex(visual - 1);
-        }
+        if (qAbs(axisOf(pos) - leadingEdge(logical, left)) <= kResizeMargin)
+            return previousSection(logical);
     }
     return -1;
 }

@@ -48,7 +48,7 @@ table.verticalHeader()->setSpacingBackgroundColor(QColor("#e3edf7"));
 
 按行选择时，hover 和 selected 背景默认贯通内容区的列间距，覆盖在间距底色之上，动画与整行保持一致。调用 `setVisualStateThroughColumnSpacing(false)` 可让列间距保持自身背景，通过 `visualStateThroughColumnSpacing()` 查询。按单元格选择时只高亮单元格；纵向行间距和表头间距始终保留自身外观。自定义间距控件需要保持背景透明，才能显示框架绘制的状态背景。
 
-传入 `QColor()` 恢复默认行为：内容间距沿用原有调色板绘制，表头间距跟随本轴基础背景，默认使用 `QPalette::Button`，调用 header 的 `setBackgroundColor()` 后跟随指定底色；调用 `setBackgroundVisible(false)` 后，未指定颜色的表头间距也保持透明。显式间距颜色与基础背景开关独立。对应 getter 返回配置值，未设置时为无效颜色。`VirtualListView` 和 `VirtualTreeView` 也可以使用继承的 `setSpacingBackgroundColor()` 配置行间距背景。可运行示例和动态恢复写法见 [第 09 节源码](../examples/table_capabilities/09_spacing/example.cpp)。
+传入 `QColor()` 恢复默认行为：内容间距和表头间距统一使用 `QPalette::Base`，包括内容区四周和表头首尾的半间距。调用 header 的 `setBackgroundColor()` 后，未指定颜色的表头间距跟随该底色；调用 `setBackgroundVisible(false)` 后，未指定颜色的表头间距也保持透明。显式间距颜色与基础背景开关独立。对应 getter 返回配置值，未设置时为无效颜色。`VirtualListView` 和 `VirtualTreeView` 也可以使用继承的 `setSpacingBackgroundColor()` 配置行间距背景。可运行示例和动态恢复写法见 [第 09 节源码](../examples/table_capabilities/09_spacing/example.cpp)。
 
 ## 冻结列和冻结行
 

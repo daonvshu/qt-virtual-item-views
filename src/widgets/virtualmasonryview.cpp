@@ -733,6 +733,8 @@ void VirtualMasonryView::setHorizontalGridLineColor(const QColor &color)
 
 void VirtualMasonryView::setVerticalSpacingLineThroughRowSpacing(bool enabled)
 {
+    if (gridLinePlacement() == GridLinePlacement::SpacingCenter)
+        return;
     if (m_verticalThroughRows == enabled)
         return;
     m_verticalThroughRows = enabled;
@@ -741,6 +743,8 @@ void VirtualMasonryView::setVerticalSpacingLineThroughRowSpacing(bool enabled)
 
 void VirtualMasonryView::setHorizontalSpacingLineThroughColumnSpacing(bool enabled)
 {
+    if (gridLinePlacement() == GridLinePlacement::SpacingCenter)
+        return;
     if (m_horizontalThroughColumns == enabled)
         return;
     m_horizontalThroughColumns = enabled;
@@ -802,6 +806,9 @@ void VirtualMasonryView::paintGridLines(QPainter *painter) const
     QVector<QRect> horizontalLeading;
     QVector<QRect> verticalTrailing;
     QVector<QRect> verticalLeading;
+    QVector<QRect> horizontalCenters;
+    QVector<QRect> verticalCenters;
+    const bool centered = gridLinePlacement() == GridLinePlacement::SpacingCenter;
     const auto colorFor = [this](const QColor &color) {
         return color.isValid() ? color : palette().color(QPalette::Mid);
     };
@@ -822,29 +829,38 @@ void VirtualMasonryView::paintGridLines(QPainter *painter) const
         const bool hasRightColumn = column + 1 < m_masonry->columnCount();
 
         QRect verticalSegment = rect;
-        if (m_verticalThroughRows && !nextRect.isEmpty() && nextRect.top() > rect.bottom())
+        if (verticalSpacingLineThroughRowSpacing() && !nextRect.isEmpty() && nextRect.top() > rect.bottom())
             verticalSegment.setBottom(nextRect.top() - 1);
         if (m_verticalLines) {
-            if (hasRightColumn)
-                verticalTrailing.append(verticalSegment);
-            if (hasLeftColumn && m_masonry->columnSpacing() > 0)
+            if (hasRightColumn) {
+                const int gap = m_masonry->columnX(column + 1) - rect.right() - 1;
+                if (centered && gap > 0)
+                    verticalCenters.append(QRect(rect.right() + 1, rect.y(), gap, verticalSegment.height()));
+                else
+                    verticalTrailing.append(verticalSegment);
+            }
+            if (!centered && hasLeftColumn && m_masonry->columnSpacing() > 0)
                 verticalLeading.append(verticalSegment);
         }
 
         if (next < 0 || !m_horizontalLines)
             continue;
-        const bool throughColumns = m_horizontalThroughColumns && hasRightColumn;
+        const bool throughColumns = horizontalSpacingLineThroughColumnSpacing() && hasRightColumn;
         const int segmentRight = throughColumns
             ? m_masonry->columnX(column + 1) - 1 : rect.right();
         QRect horizontalSegment(rect.x(), rect.y(),
                                 qMax(0, segmentRight - rect.x() + 1), rect.height());
         if (horizontalSegment.width() <= 0)
             continue;
-        horizontalTrailing.append(horizontalSegment);
-        if (m_masonry->rowSpacing() > 0) {
+        const int gap = nextRect.top() - rect.bottom() - 1;
+        if (centered && gap > 0)
+            horizontalCenters.append(QRect(rect.x(), rect.bottom() + 1, horizontalSegment.width(), gap));
+        else
+            horizontalTrailing.append(horizontalSegment);
+        if (!centered && m_masonry->rowSpacing() > 0) {
             const int nextColumn = m_masonry->itemColumn(next);
             const bool nextHasRightColumn = nextColumn + 1 < m_masonry->columnCount();
-            const int nextRight = m_horizontalThroughColumns && nextHasRightColumn
+            const int nextRight = horizontalSpacingLineThroughColumnSpacing() && nextHasRightColumn
                 ? m_masonry->columnX(nextColumn + 1) - 1 : nextRect.right();
             horizontalLeading.append(QRect(nextRect.x(), nextRect.y(),
                                            qMax(0, nextRight - nextRect.x() + 1),
@@ -853,12 +869,16 @@ void VirtualMasonryView::paintGridLines(QPainter *painter) const
     }
 
     if (m_horizontalLines) {
+        fillPixelLines(painter, horizontalCenters, m_horizontalLineWidth,
+                       colorFor(m_horizontalLineColor), Qt::Horizontal, false, false, true);
         fillPixelLines(painter, horizontalTrailing, m_horizontalLineWidth,
                        colorFor(m_horizontalLineColor), Qt::Horizontal, true);
         fillPixelLines(painter, horizontalLeading, m_horizontalLineWidth,
                        colorFor(m_horizontalLineColor), Qt::Horizontal);
     }
     if (m_verticalLines) {
+        fillPixelLines(painter, verticalCenters, m_verticalLineWidth,
+                       colorFor(m_verticalLineColor), Qt::Vertical, false, false, true);
         fillPixelLines(painter, verticalTrailing, m_verticalLineWidth,
                        colorFor(m_verticalLineColor), Qt::Vertical, true);
         fillPixelLines(painter, verticalLeading, m_verticalLineWidth,

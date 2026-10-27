@@ -2017,6 +2017,7 @@ void TestTreeTableViewInteraction::rowStripPreviewKeepsMergedCellMasks()
     QFETCH(int, customGapFlags);
     SiblingMoveModel model;
     VirtualTreeTableView view;
+    view.setGridLinePlacement(viv::GridLinePlacement::SpacingEdges);
     view.setUniformItemHeight(28);
     view.setDefaultColumnWidth(100);
     if (cells) {
@@ -2698,6 +2699,7 @@ void TestTreeTableViewInteraction::customSpacingWidgetsFollowVisibleNodesAndHead
     model.appendRow(row(QStringLiteral("sibling")));
 
     VirtualTreeTableView view;
+    view.setGridLinePlacement(viv::GridLinePlacement::SpacingEdges);
     configure(&view, &model, false);
     view.setRowSpacing(8);
     setNodeSpacingAtDepth(model, view.rootIndex(), 1, 12);
@@ -2807,6 +2809,7 @@ void TestTreeTableViewInteraction::customSpacingWidgetsFollowAdvancedPanes()
     model.appendRow(row(QStringLiteral("sibling")));
 
     VirtualTreeTableView view;
+    view.setGridLinePlacement(viv::GridLinePlacement::SpacingEdges);
     if (customHeaders) {
         auto *horizontal = new VirtualHeaderView(Qt::Horizontal);
         horizontal->setAdapter(new TreeHeaderAdapter(&view, Qt::Horizontal, 1), true);
@@ -10692,6 +10695,7 @@ void TestTreeTableViewInteraction::animatedBackgroundsPreserveGridPixels()
     RowAdapter rowAdapter;
     CellAdapter cellAdapter;
     VirtualTreeTableView view;
+    view.setGridLinePlacement(viv::GridLinePlacement::SpacingEdges);
     view.setUniformItemHeight(28);
     view.setDefaultColumnWidth(100);
     view.setRowSpacing(spacing);

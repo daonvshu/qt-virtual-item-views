@@ -1065,11 +1065,7 @@ void VirtualTreeTableView::refreshVisualState(const QModelIndex &index)
 
 void VirtualTreeTableView::paintEvent(QPaintEvent *event)
 {
-    VirtualItemView::paintEvent(event);
-    if (!m_visualStateBackgroundVisible)
-        return;
-    QPainter painter(viewport());
-    paintVisualStateBackgrounds(&painter, event->rect());
+    VirtualTableView::paintEvent(event);
 }
 
 void VirtualTreeTableView::paintVisualStateBackgrounds(QPainter *painter,
@@ -1122,13 +1118,14 @@ void VirtualTreeTableView::paintVisualStateBackgrounds(QPainter *painter,
         paintRoundedStateBackgroundLayer(painter, rect, clip, selectedBackgroundColor(), visualStateCornerRadius());
         painter->restore();
     };
-    for (const VisibleRange &range : visibleItemRanges()) {
+    for (const VisibleRange &range : visualStatePaintRanges()) {
         for (qsizetype row = range.first; row >= 0 && row <= range.last; ++row) {
             const QModelIndex node = viewIndex(row);
             QRect rowRect = geometryForViewRow(row);
             int visualY = rowRect.y();
             if (rowVisualY(row, &visualY))
                 rowRect.moveTop(visualY);
+            rowRect = stateBackgroundRectWithRowSpacing(rowRect, row, row);
             if (!node.isValid() || !rowRect.intersects(dirty))
                 continue;
             const QRect fullRow(0, rowRect.y(), viewportWidth, rowRect.height());
@@ -1158,6 +1155,8 @@ void VirtualTreeTableView::paintVisualStateBackgrounds(QPainter *painter,
                 const int committedY = anchorY;
                 if (rowVisualY(anchorRow, &anchorY))
                     rect.translate(0, anchorY - committedY);
+                rect = stateBackgroundRectWithRowSpacing(rect, anchorRow,
+                    anchorRow + spanAt(anchor).rowSpan - 1);
                 if (rect.isEmpty() || anchorRow < 0
                     || columnPane < 0 || columnPane >= currentPanes.size())
                     continue;

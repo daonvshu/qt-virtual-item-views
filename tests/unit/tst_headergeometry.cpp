@@ -66,6 +66,8 @@ private slots:
     void fitExtentSupportsProgrammaticWidthsAndEmptyModels();
     void fitExtentRestoresWidthsAndExitsForOrdinaryStretch();
     void fitExtentCommitsSizesBeforeNotifying();
+    void edgeSpacingGeometry();
+    void edgeSpacingFitExtentAndPanes();
 };
 
 void TestHeaderGeometry::defaultSectionGeometry()
@@ -1732,6 +1734,80 @@ void TestHeaderGeometry::fitExtentCommitsSizesBeforeNotifying()
     geometry.resizeSectionFromEdge(1, 400, Qt::RightEdge, geometry.resizeSnapshot());
     geometry.setStretchExtent(1200);
     QVERIFY(notifications > 0);
+}
+
+void TestHeaderGeometry::edgeSpacingGeometry()
+{
+    HeaderGeometry geometry;
+    geometry.setSectionCount(3);
+    geometry.setSectionSpacing(12);
+    geometry.setEdgeSpacing(6, 6);
+    QCOMPARE(geometry.sectionPosition(0), qint64(6));
+    QCOMPARE(geometry.sectionPosition(1), qint64(118));
+    QCOMPARE(geometry.sectionPosition(2), qint64(230));
+    QCOMPARE(geometry.totalExtent(), qint64(336));
+    QCOMPARE(geometry.sectionAtOffset(5), -1);
+    QCOMPARE(geometry.sectionAtOffset(6), 0);
+    QCOMPARE(geometry.sectionAtOffset(105), 0);
+    QCOMPARE(geometry.sectionAtOffset(106), -1);
+    QCOMPARE(geometry.sectionAtOffset(118), 1);
+    QCOMPARE(geometry.sectionAtOffset(329), 2);
+    QCOMPARE(geometry.sectionAtOffset(330), -1);
+    geometry.resizeSection(1, 140);
+    QCOMPARE(geometry.sectionPosition(2), qint64(270));
+    geometry.setSparseSectionSpacingOverrides({qMakePair(0, 20)});
+    QCOMPARE(geometry.sectionPosition(1), qint64(126));
+    QCOMPARE(geometry.sectionPosition(2), qint64(278));
+    QCOMPARE(geometry.sectionAtOffset(277), -1);
+    QCOMPARE(geometry.sectionAtOffset(278), 2);
+    geometry.setSectionHidden(0, true);
+    QCOMPARE(geometry.sectionPosition(1), qint64(6));
+    QCOMPARE(geometry.totalExtent(), qint64(264));
+    geometry.setSectionHidden(2, true);
+    QCOMPARE(geometry.totalExtent(), qint64(152));
+    geometry.setEdgeSpacing(5, 6);
+    QCOMPARE(geometry.sectionPosition(1), qint64(5));
+    QCOMPARE(geometry.totalExtent(), qint64(151));
+    geometry.setEdgeSpacing(0, 0);
+    QCOMPARE(geometry.sectionPosition(1), qint64(0));
+    QCOMPARE(geometry.totalExtent(), qint64(140));
+    QCOMPARE(geometry.sectionAtOffset(0), 1);
+    geometry.setEdgeSpacing(6, 6);
+    geometry.setSectionCount(0);
+    QCOMPARE(geometry.totalExtent(), qint64(0));
+}
+
+void TestHeaderGeometry::edgeSpacingFitExtentAndPanes()
+{
+    HeaderGeometry geometry;
+    geometry.setSectionCount(4);
+    geometry.setSectionSpacing(12);
+    geometry.setEdgeSpacing(6, 6);
+    geometry.setStretchExtent(480);
+    geometry.setResizeMode(HeaderGeometry::ResizeMode::FitExtent);
+    QCOMPARE(geometry.totalExtent(), qint64(480));
+    QCOMPARE(geometry.sectionSize(0), 108);
+    geometry.resizeSectionFromEdge(1, 130, Qt::RightEdge, geometry.resizeSnapshot());
+    QCOMPARE(geometry.sectionSize(1), 130);
+    QCOMPARE(geometry.totalExtent(), qint64(480));
+    TablePaneLayout panes;
+    panes.setGeometry(&geometry);
+    panes.setFrozenColumns({2});
+    panes.setFrozenRightColumns({0});
+    panes.update(480, 200);
+    QCOMPARE(panes.columnViewportX(2), 6);
+    QCOMPARE(panes.columnViewportX(0) + geometry.sectionSize(0) + 6, 480);
+    QCOMPARE(panes.maximumOffset(), qint64(0));
+    QCOMPARE(panes.leadingSpacingForPane(panes.paneIndexOfColumn(1)), 0);
+    QCOMPARE(panes.trailingSpacingForPane(panes.paneIndexOfColumn(1)), 0);
+    geometry.setResizeMode(HeaderGeometry::ResizeMode::Independent);
+    geometry.setSectionStretchFactor(3, 1.0);
+    QCOMPARE(geometry.totalExtent(), qint64(480));
+    geometry.setResizeMode(HeaderGeometry::ResizeMode::FitExtent);
+    geometry.setStretchExtent(5);
+    QCOMPARE(geometry.totalExtent(), qint64(5));
+    geometry.setSectionCount(0);
+    QCOMPARE(geometry.totalExtent(), qint64(0));
 }
 
 QTEST_APPLESS_MAIN(TestHeaderGeometry)

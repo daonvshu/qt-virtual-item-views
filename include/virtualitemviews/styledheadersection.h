@@ -31,6 +31,11 @@ protected:
     void paintBackground(QPainter *painter) override;
     /// Draws section and cross-axis separators after content, excluding section gaps.
     void paintForeground(QPainter *painter) override;
+
+private:
+    friend class VirtualHeaderView;
+    /// Shares animated brushes with the owning header when the shape extends into a gap.
+    void paintVisualStateBackground(QPainter *painter, const QRect &shape, const QRegion &clip) const;
 };
 
 } // namespace viv

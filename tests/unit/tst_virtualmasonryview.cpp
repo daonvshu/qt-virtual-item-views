@@ -2248,6 +2248,7 @@ void VirtualMasonryViewTest::gridLinesUseSinglePhysicalPixelBands()
         model.appendRow(new QStandardItem(QStringLiteral("item-%1").arg(row)));
     MasonryAdapter adapter;
     PaintableMasonryView view;
+    view.setGridLinePlacement(viv::GridLinePlacement::SpacingEdges);
     view.setAdapter(&adapter);
     view.setCellWidthRange(100, 200);
     view.setColumnSpacing(12);

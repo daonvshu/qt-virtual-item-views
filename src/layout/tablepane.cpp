@@ -280,6 +280,8 @@ bool TablePaneLayout::update(int viewportWidth, int viewportHeight)
     m_visibleScrollable = VisibleRange();
     m_columnVisits = 0;
     m_primaryScrollGroup = -1;
+    m_firstContentPane = -1;
+    m_lastContentPane = -1;
     m_paneWindows.clear();
 
     if (!m_geometry || count <= 0) {
@@ -358,9 +360,16 @@ bool TablePaneLayout::update(int viewportWidth, int viewportHeight)
         }
     }
     int terminalColumn = -1;
+    for (int index = 0; index < resolved.size(); ++index) {
+        if (!resolved.at(index).pane.logicalColumns.isEmpty()) {
+            m_firstContentPane = index;
+            break;
+        }
+    }
     for (int index = resolved.size() - 1; index >= 0; --index) {
         if (!resolved.at(index).pane.logicalColumns.isEmpty()) {
             terminalColumn = resolved.at(index).pane.logicalColumns.last();
+            m_lastContentPane = index;
             break;
         }
     }
@@ -382,6 +391,7 @@ bool TablePaneLayout::update(int viewportWidth, int viewportHeight)
     for (int index = 0; index < resolved.size(); ++index) {
         ResolvedPane &pane = resolved[index];
         pane.extent = extentOf(pane.pane.logicalColumns);
+        pane.extent += qint64(leadingSpacingForPane(index)) + trailingSpacingForPane(index);
         if (pane.pane.type == TablePane::Type::Scrollable)
             continue;
         pane.pane.type = primaryIndex < 0 || index < primaryIndex ? TablePane::Type::FrozenLeft
@@ -475,8 +485,8 @@ bool TablePaneLayout::update(int viewportWidth, int viewportHeight)
         QVector<qint64> &prefix = m_panePrefixX[paneIndex];
         prefix.clear();
         prefix.reserve(pane.pane.logicalColumns.size() + 1);
-        qint64 contentX = 0;
-        prefix.append(0);
+        qint64 contentX = leadingSpacingForPane(paneIndex);
+        prefix.append(contentX);
         for (int slot = 0; slot < pane.pane.logicalColumns.size(); ++slot) {
             const int logical = pane.pane.logicalColumns.at(slot);
             m_paneByLogical[logical] = int(pane.pane.type);
@@ -489,6 +499,8 @@ bool TablePaneLayout::update(int viewportWidth, int viewportHeight)
             ++m_columnVisits;
         }
         pane.contentX = contentX;
+        if (!pane.pane.logicalColumns.isEmpty())
+            prefix.last() += trailingSpacingForPane(paneIndex);
     }
 
     for (const ResolvedPane &pane : resolved)
@@ -500,6 +512,18 @@ bool TablePaneLayout::update(int viewportWidth, int viewportHeight)
         || previousHeight != m_viewportHeight
         || previousVisibleScrollable.first != m_visibleScrollable.first
         || previousVisibleScrollable.last != m_visibleScrollable.last;
+}
+
+int TablePaneLayout::leadingSpacingForPane(int paneIndex) const
+{
+    return m_geometry && paneIndex >= 0 && paneIndex == m_firstContentPane
+        ? m_geometry->leadingSpacing() : 0;
+}
+
+int TablePaneLayout::trailingSpacingForPane(int paneIndex) const
+{
+    return m_geometry && paneIndex >= 0 && paneIndex == m_lastContentPane
+        ? m_geometry->trailingSpacing() : 0;
 }
 
 TablePane TablePaneLayout::pane(TablePane::Type type) const

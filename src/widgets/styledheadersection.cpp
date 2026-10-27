@@ -14,12 +14,7 @@ namespace {
 // The last row has no trailing gap, even when the geometry stores configured spacing.
 bool hasTrailingSectionGap(const VirtualHeaderView *header, int logicalIndex)
 {
-    const HeaderGeometry *geometry = header ? header->geometryModel() : nullptr;
-    if (!geometry || geometry->sectionSpacingAfter(logicalIndex) <= 0)
-        return false;
-    return header->orientation() != Qt::Vertical
-        || geometry->sectionPosition(logicalIndex) + geometry->sectionSize(logicalIndex)
-            < geometry->totalExtent();
+    return header && header->sectionSpacingAfter(logicalIndex) > 0;
 }
 } // namespace
 
@@ -87,6 +82,16 @@ void StyledHeaderSection::paintBackground(QPainter *painter)
 
     if (!header || !table || !table->headerVisualStateBackgroundVisible(orientation()))
         return;
+    paintVisualStateBackground(painter, header->sectionStateRect(logicalIndex(), rect()), QRegion(rect()));
+}
+
+void StyledHeaderSection::paintVisualStateBackground(QPainter *painter, const QRect &shape,
+                                                     const QRegion &clip) const
+{
+    const auto *header = headerView();
+    const auto *table = tableView();
+    if (!header || !table || !table->headerVisualStateBackgroundVisible(orientation()))
+        return;
     const auto state = visualState();
     const int radius = table->visualStateCornerRadiusIncludesHeaders()
         ? table->visualStateCornerRadius() : 0;
@@ -95,14 +100,15 @@ void StyledHeaderSection::paintBackground(QPainter *painter)
         || table->selectionBehavior() == VirtualItemView::SelectionBehavior::SelectItems;
     painter->save();
     if (orientation() == Qt::Vertical && header->sectionSeparatorsVisible()
-        && !hasTrailingSectionGap(header, logicalIndex()))
-        clipPixelAlignedBottomInset(painter, rect(), header->sectionSeparatorWidth());
+        && !hasTrailingSectionGap(header, logicalIndex())
+        && header->sectionTrailingEdgeSpacing(logicalIndex()) == 0)
+        clipPixelAlignedBottomInset(painter, shape, header->sectionSeparatorWidth());
     painter->setOpacity(state.hoverProgress);
-    fillPixelAlignedRoundedRegion(painter, rect(), QRegion(rect()), radius,
+    fillPixelAlignedRoundedRegion(painter, shape, clip, radius,
                                   visualStateBackgroundBrush(false, table->hoverBackgroundColor()),
                                   true, roundRight);
     painter->setOpacity(state.selectedProgress);
-    fillPixelAlignedRoundedRegion(painter, rect(), QRegion(rect()), radius,
+    fillPixelAlignedRoundedRegion(painter, shape, clip, radius,
                                   visualStateBackgroundBrush(true, table->selectedBackgroundColor()),
                                   true, roundRight);
     painter->restore();
@@ -112,7 +118,8 @@ void StyledHeaderSection::paintForeground(QPainter *painter)
 {
     const auto *header = headerView();
     const bool vertical = orientation() == Qt::Vertical;
-    const bool hasGap = hasTrailingSectionGap(header, logicalIndex());
+    const bool hasGap = hasTrailingSectionGap(header, logicalIndex())
+        || (header && header->sectionTrailingEdgeSpacing(logicalIndex()) > 0);
     const QColor sectionColor = header && header->sectionSeparatorColor().isValid()
         ? header->sectionSeparatorColor() : headerSectionSeparatorColor(this);
     const QColor crossColor = header && header->crossAxisSeparatorColor().isValid()
@@ -127,7 +134,9 @@ void StyledHeaderSection::paintForeground(QPainter *painter)
             fillHorizontalPixelLines(painter, {QRect(0, height() - crossWidth, width(), crossWidth)},
                                      crossWidth, crossColor, true);
     }
-    if ((!header || header->sectionSeparatorsVisible()) && (!vertical || !hasGap)) {
+    const bool centeredGap = header && hasGap
+        && header->gridLinePlacement() == GridLinePlacement::SpacingCenter;
+    if ((!header || header->sectionSeparatorsVisible()) && (!vertical || !hasGap) && !centeredGap) {
         if (vertical)
             fillHorizontalPixelLines(painter, {QRect(0, height() - sectionWidth, width(), sectionWidth)},
                                      sectionWidth, sectionColor, true);

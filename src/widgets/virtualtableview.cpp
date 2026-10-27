@@ -15,6 +15,7 @@
 #include <QApplication>
 #include <QStyleOptionHeader>
 #include <QKeyEvent>
+#include <QMouseEvent>
 #include <QResizeEvent>
 #include <QPainter>
 #include <QPaintEvent>
@@ -162,12 +163,15 @@ public:
         int y;
         QRect clip;
         bool trailingEdge;
+        int height;
+        bool centered;
     };
 
     explicit ColumnSpacingHost(QWidget *parent = nullptr) : QWidget(parent)
     {
         setObjectName(QStringLiteral("vivColumnSpacingHost"));
         setFocusPolicy(Qt::NoFocus);
+        setMouseTracking(true);
     }
 
     void setContent(QWidget *content)
@@ -186,19 +190,28 @@ public:
         m_headerContent = content;
         if (content) {
             content->setParent(this);
+            content->setMouseTracking(true);
             content->show();
         }
         layoutContent();
     }
     QWidget *headerContent() const { return m_headerContent; }
     int bodyTop() const { return m_bodyTop; }
+    void setHeaderInputTarget(QWidget *target, bool centered)
+    {
+        m_headerInputTarget = target;
+        m_centeredHeaderInput = centered;
+    }
     void setSpanMask(const QRegion &mask)
     {
         m_spanMask = mask;
     }
     void setBodyRegion(const QRegion &region)
     {
-        const QRegion visible = (QRegion(QRect(0, 0, width(), m_bodyTop)) | region)
+        // Default center gaps let the header below receive resize input at the grid line.
+        const QRegion header = m_centeredHeaderInput && !m_headerContent ? QRegion()
+            : QRegion(QRect(0, 0, width(), m_bodyTop));
+        const QRegion visible = (header | region)
             .intersected(m_spanMask).intersected(rect());
         setMask(visible);
         setVisible(!visible.isEmpty());
@@ -243,6 +256,16 @@ public:
         layoutContent();
         update();
     }
+    void setGridPlacement(bool centered, const QRect &gap,
+                          bool verticalHeader, bool horizontalThrough)
+    {
+        m_centered = centered;
+        m_gap = gap;
+        m_verticalHeader = verticalHeader;
+        m_horizontalThrough = horizontalThrough;
+        layoutContent();
+        update();
+    }
     void setRowGaps(const QVector<QRect> &gaps, const QVector<HorizontalLine> &horizontalLines,
                     bool verticalThrough)
     {
@@ -254,6 +277,39 @@ public:
     }
 
 protected:
+    bool event(QEvent *event) override
+    {
+        if (event->type() == QEvent::Leave)
+            unsetCursor();
+        // Interactive custom gap children keep their events. Unhandled header input
+        // follows the same resize path as the default, input-transparent header gap.
+        if (m_centeredHeaderInput && m_headerInputTarget
+            && (event->type() == QEvent::MouseMove || event->type() == QEvent::MouseButtonPress
+                || event->type() == QEvent::MouseButtonRelease
+                || event->type() == QEvent::MouseButtonDblClick)) {
+            const auto *mouse = static_cast<QMouseEvent *>(event);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+            const QPointF global = mouse->globalPosition();
+            const QPointF local = mouse->position();
+#else
+            const QPointF global = mouse->screenPos();
+            const QPointF local = mouse->localPos();
+#endif
+            if (local.y() < m_bodyTop) {
+                const QPointer<ColumnSpacingHost> self(this);
+                const QPointer<QWidget> header(m_headerInputTarget);
+                const QPointF headerLocal = header->mapFromGlobal(global.toPoint());
+                QMouseEvent forwarded(event->type(), headerLocal, global, mouse->button(),
+                                      mouse->buttons(), mouse->modifiers());
+                QApplication::sendEvent(header, &forwarded);
+                if (self && header)
+                    setCursor(header->cursor());
+                return true;
+            }
+        }
+        return QWidget::event(event);
+    }
+
     void resizeEvent(QResizeEvent *event) override
     {
         QWidget::resizeEvent(event);
@@ -263,8 +319,10 @@ protected:
     void paintEvent(QPaintEvent *event) override
     {
         QPainter painter(this);
-        painter.fillRect(QRect(0, 0, width(), m_bodyTop), m_headerBackground.isValid()
-            ? QBrush(m_headerBackground) : palette().brush(QPalette::Button));
+        // Centered header gaps are painted by the header itself, including its line.
+        if (!m_centered)
+            painter.fillRect(QRect(0, 0, width(), m_bodyTop), m_headerBackground.isValid()
+                ? QBrush(m_headerBackground) : palette().brush(QPalette::Base));
         const QRect body(0, m_bodyTop, width(), height() - m_bodyTop);
         // Reset underlying item layers before compositing translucent gap colors and states.
         if (m_bodyBackground.isValid() || property("vivFillSpacingBackground").toBool())
@@ -278,8 +336,9 @@ protected:
             painter.restore();
         }
         QVector<QRect> verticalLines;
-        appendBodyEdges(verticalLines, 0, m_bodyTop);
-        if (m_horizontalGridLinesVisible && m_bodyTop > 0)
+        if (m_verticalHeader && !m_centered)
+            appendBodyEdges(verticalLines, 0, m_bodyTop);
+        if (m_horizontalGridLinesVisible && m_horizontalThrough && m_bodyTop > 0)
             fillHorizontalPixelLines(&painter,
                 {QRect(0, m_bodyTop - m_horizontalWidth, width(), m_horizontalWidth)},
                 m_horizontalWidth, m_horizontalColor, true);
@@ -306,21 +365,22 @@ protected:
                 }
             }
         }
-        fillVerticalPixelLines(&painter, verticalLines, m_verticalWidth, m_verticalColor, true);
+        fillPixelLines(&painter, verticalLines, m_verticalWidth, m_verticalColor,
+                       Qt::Vertical, !m_centered, false, m_centered);
     }
 
 private:
     void layoutContent()
     {
         if (m_content)
-            m_content->setGeometry(m_left ? m_verticalWidth : 0, m_bodyTop,
-                                   qMax(0, width() - (m_left ? m_verticalWidth : 0)
-                                        - (m_right ? m_verticalWidth : 0)),
+            m_content->setGeometry(!m_centered && m_left ? m_verticalWidth : 0, m_bodyTop,
+                                   qMax(0, width() - (!m_centered && m_left ? m_verticalWidth : 0)
+                                        - (!m_centered && m_right ? m_verticalWidth : 0)),
                                    qMax(0, height() - m_bodyTop));
         if (m_headerContent)
-            m_headerContent->setGeometry(m_left ? m_verticalWidth : 0, 0,
-                                         qMax(0, width() - (m_left ? m_verticalWidth : 0)
-                                              - (m_right ? m_verticalWidth : 0)),
+            m_headerContent->setGeometry(!m_centered && m_left ? m_verticalWidth : 0, 0,
+                                         qMax(0, width() - (!m_centered && m_left ? m_verticalWidth : 0)
+                                              - (!m_centered && m_right ? m_verticalWidth : 0)),
                                          qMax(0, m_bodyTop - (m_horizontalGridLinesVisible
                                              ? m_horizontalWidth : 0)));
         syncHorizontalLines();
@@ -328,6 +388,10 @@ private:
 
     void appendBodyEdges(QVector<QRect> &lines, int y, int h) const
     {
+        if (m_centered) {
+            lines.append(QRect(m_gap.x(), y, m_gap.width(), h));
+            return;
+        }
         if (m_left)
             lines.append(QRect(0, y, m_verticalWidth, h));
         if (m_right)
@@ -348,7 +412,8 @@ private:
             auto *line = static_cast<PixelAlignedHorizontalLine *>(m_horizontalLines.at(i));
             const HorizontalLine &band = m_horizontalLineBands.at(i);
             line->setTrailingEdge(band.trailingEdge);
-            line->setGeometry(0, band.y, width(), m_horizontalWidth);
+            line->setCentered(band.centered, m_horizontalWidth);
+            line->setGeometry(0, band.y, width(), band.height);
             const QRect clip = band.clip.intersected(rect()).translated(-line->pos())
                 .intersected(line->rect());
             if (clip == line->rect())
@@ -366,6 +431,8 @@ private:
 
     QWidget *m_content = nullptr;
     QWidget *m_headerContent = nullptr;
+    QPointer<QWidget> m_headerInputTarget;
+    bool m_centeredHeaderInput = false;
     QColor m_verticalColor;
     QColor m_horizontalColor;
     QColor m_bodyBackground;
@@ -382,6 +449,10 @@ private:
     QVector<QWidget *> m_horizontalLines;
     bool m_verticalThrough = true;
     bool m_horizontalGridLinesVisible = true;
+    bool m_centered = false;
+    QRect m_gap;
+    bool m_verticalHeader = true;
+    bool m_horizontalThrough = true;
 };
 
 } // namespace
@@ -1007,6 +1078,7 @@ void VirtualTableView::refreshHeaderVisualStates()
             if (QWidget *section = widgetHeader->sectionWidget(logical))
                 section->update();
         }
+        widgetHeader->update();
     };
     refresh(m_horizontalHeader);
     for (HeaderViewInterface *pane : m_paneHeaders)
@@ -1606,6 +1678,8 @@ void VirtualTableView::setSpacingBackgroundColor(const QColor &color)
     VirtualItemView::setSpacingBackgroundColor(color);
     if (!self)
         return;
+    // Outer half-gaps are painted by the viewport, independently of gap host widgets.
+    viewport()->update();
     for (QWidget *widget : m_columnSpacingWidgets)
         static_cast<ColumnSpacingHost *>(widget)->setBackgroundColors(
             spacingBackgroundColor(), resolvedHeaderSpacingBackgroundColor());
@@ -1616,6 +1690,14 @@ void VirtualTableView::setVisualStateThroughColumnSpacing(bool enabled)
     if (m_visualStateThroughColumnSpacing == enabled)
         return;
     m_visualStateThroughColumnSpacing = enabled;
+    refreshVisualStates();
+}
+
+void VirtualTableView::setVisualStateThroughRowSpacing(bool enabled)
+{
+    if (m_visualStateThroughRowSpacing == enabled)
+        return;
+    m_visualStateThroughRowSpacing = enabled;
     refreshVisualStates();
 }
 
@@ -1659,19 +1741,58 @@ void VirtualTableView::setHeaderColumnSpacingFactory(ColumnSpacingFactory factor
     syncColumnSpacingWidgets();
 }
 
+void VirtualTableView::setGridLinePlacement(GridLinePlacement placement)
+{
+    if (gridLinePlacement() == placement)
+        return;
+    const QPointer<VirtualTableView> self(this);
+    VirtualItemView::setGridLinePlacement(placement);
+    if (!self)
+        return;
+    applyGridLineVisibilityToHeaders();
+    updatePaneLayout();
+    relayout();
+}
+
+void VirtualTableView::setVerticalGridLinesThroughHeader(bool enabled)
+{
+    if (m_verticalGridLinesThroughHeader == enabled)
+        return;
+    m_verticalGridLinesThroughHeader = enabled;
+    applyGridLineVisibilityToHeaders();
+    syncColumnSpacingWidgets();
+    syncPaneSeparatorLines();
+}
+
+void VirtualTableView::setHorizontalGridLinesThroughHeader(bool enabled)
+{
+    if (m_horizontalGridLinesThroughHeader == enabled)
+        return;
+    m_horizontalGridLinesThroughHeader = enabled;
+    applyGridLineVisibilityToHeaders();
+    syncColumnSpacingWidgets();
+    raiseItemPaneSeparatorLines();
+}
+
 void VirtualTableView::setVerticalSpacingLineThroughRowSpacing(bool enabled)
 {
+    if (gridLinePlacement() == GridLinePlacement::SpacingCenter)
+        return;
     if (m_verticalSpacingLineThroughRowSpacing == enabled)
         return;
     m_verticalSpacingLineThroughRowSpacing = enabled;
+    applyGridLineVisibilityToHeaders();
     syncColumnSpacingWidgets();
 }
 
 void VirtualTableView::setHorizontalSpacingLineThroughColumnSpacing(bool enabled)
 {
+    if (gridLinePlacement() == GridLinePlacement::SpacingCenter)
+        return;
     if (m_horizontalSpacingLineThroughColumnSpacing == enabled)
         return;
     m_horizontalSpacingLineThroughColumnSpacing = enabled;
+    applyGridLineVisibilityToHeaders();
     syncColumnSpacingWidgets();
 }
 
@@ -1762,12 +1883,18 @@ void VirtualTableView::applyGridLineVisibilityToHeaders()
     const auto configure = [this, &verticalColor, &horizontalColor](HeaderViewInterface *header,
                                 bool horizontal, bool sectionVisible, bool crossVisible) {
         if (auto *widget = dynamic_cast<VirtualHeaderView *>(header)) {
-            widget->setSectionSeparatorsVisible(sectionVisible);
+            widget->m_crossAxisSeparatorThroughSpacing = horizontal
+                ? horizontalSpacingLineThroughColumnSpacing() : verticalSpacingLineThroughRowSpacing();
+            widget->setGridLinePlacement(gridLinePlacement());
+            widget->setSectionSeparatorsVisible(sectionVisible && (horizontal
+                ? m_verticalGridLinesThroughHeader : m_horizontalGridLinesThroughHeader));
+            // Header/body boundaries remain visible independently of header-internal grids.
             widget->setCrossAxisSeparatorVisible(crossVisible);
             widget->setSectionSeparatorColor(horizontal ? verticalColor : horizontalColor);
             widget->setCrossAxisSeparatorColor(horizontal ? horizontalColor : verticalColor);
             widget->setSectionSeparatorWidth(horizontal ? m_verticalGridLineWidth : m_horizontalGridLineWidth);
             widget->setCrossAxisSeparatorWidth(horizontal ? m_horizontalGridLineWidth : m_verticalGridLineWidth);
+            widget->update();
         }
     };
     configure(m_horizontalHeader, true, m_verticalGridLinesVisible, m_horizontalGridLinesVisible);
@@ -2363,6 +2490,8 @@ void VirtualTableView::updatePaneLayout()
     if (m_paneLayoutActive)
         return;
     m_paneLayoutActive = true;
+    const int spacing = gridLinePlacement() == GridLinePlacement::SpacingCenter ? columnSpacing() : 0;
+    m_columns->setEdgeSpacing(spacing / 2, spacing - spacing / 2);
     m_columns->setStretchExtent(viewport()->width());
     const bool changed = m_panes.update(viewport()->width(), viewport()->height());
     syncHeaderPanes();
@@ -2471,6 +2600,8 @@ void VirtualTableView::syncHeaderPanes()
         if (auto *widgetHeader = dynamic_cast<VirtualHeaderView *>(header)) {
             widgetHeader->m_resizeFromLeadingEdge = pane.type == TablePane::Type::FrozenRight;
             widgetHeader->setPaneTerminalColumn(terminalColumn);
+            widgetHeader->setPaneEdgeSpacing(m_panes.leadingSpacingForPane(paneIndex),
+                                             m_panes.trailingSpacingForPane(paneIndex));
             widgetHeader->setPaneSpacingProvider([this](int logical) {
                 return m_panes.columnSpacingAfter(logical);
             });
@@ -2483,6 +2614,8 @@ void VirtualTableView::syncHeaderPanes()
     if (primaryIndex >= 0 && anyOtherPane) {
         if (auto *widgetHeader = dynamic_cast<VirtualHeaderView *>(m_horizontalHeader)) {
             widgetHeader->setPaneTerminalColumn(terminalColumn);
+            widgetHeader->setPaneEdgeSpacing(m_panes.leadingSpacingForPane(primaryIndex),
+                                             m_panes.trailingSpacingForPane(primaryIndex));
             widgetHeader->setPaneSpacingProvider([this](int logical) {
                 return m_panes.columnSpacingAfter(logical);
             });
@@ -2767,7 +2900,8 @@ void VirtualTableView::raisePaneSeparatorLines()
     }
     const QPoint origin = viewport()->pos();
     QRegion content = rowContentRegion().translated(origin);
-    const int headerHeight = m_horizontalHeaderVisible && m_horizontalHeader ? m_headerHeight : 0;
+    const int headerHeight = m_verticalGridLinesThroughHeader && m_horizontalHeaderVisible
+        && m_horizontalHeader ? m_headerHeight : 0;
     content += QRect(origin.x(), origin.y() - headerHeight, viewport()->width(), headerHeight);
     for (QWidget *line : m_paneSeparatorLines) {
         const QRegion visible = content.translated(-line->pos()).intersected(line->rect());
@@ -3513,7 +3647,7 @@ QRegion VirtualTableView::itemPaneSeparatorMask(const QRect &geometry) const
 {
     QRegion mask = columnContentRegion(true).translated(viewport()->pos() - geometry.topLeft());
     const int rowHeaderWidth = itemPaneSeparatorLeftExtension();
-    if (rowHeaderWidth > 0)
+    if (m_horizontalGridLinesThroughHeader && rowHeaderWidth > 0)
         mask += QRect(viewport()->x() - rowHeaderWidth - geometry.x(), 0,
                       rowHeaderWidth, geometry.height());
     return mask.intersected(QRect(QPoint(), geometry.size()));
@@ -4553,6 +4687,38 @@ void VirtualTableView::paintEvent(QPaintEvent *event)
 {
     QPainter painter(viewport());
     painter.fillRect(event->rect(), palette().brush(QPalette::Base));
+    if (spacingBackgroundColor().isValid() && gridLinePlacement() == GridLinePlacement::SpacingCenter) {
+        QRegion outer;
+        for (int i = 0; i < m_panes.panes().size(); ++i) {
+            const TablePane &pane = m_panes.panes().at(i);
+            if (pane.logicalColumns.isEmpty())
+                continue;
+            const int first = pane.logicalColumns.first();
+            const int last = pane.logicalColumns.last();
+            const int leading = m_panes.leadingSpacingForPane(i);
+            const int trailing = m_panes.trailingSpacingForPane(i);
+            outer += QRect(m_panes.columnViewportX(first) - leading, 0, leading, viewport()->height())
+                .intersected(pane.viewportRect);
+            outer += QRect(m_panes.columnViewportX(last) + m_columns->sectionSize(last), 0,
+                           trailing, viewport()->height()).intersected(pane.viewportRect);
+        }
+        outer &= rowContentRegion();
+        if (m_rowLayout && viewItemCount() > 0) {
+            const QRect first = geometryForViewRow(0);
+            const QRect last = geometryForViewRow(viewItemCount() - 1);
+            outer += QRegion(QRect(0, first.top() - m_rowLayout->leadingSpacing(),
+                                   viewport()->width(), m_rowLayout->leadingSpacing()))
+                .intersected(itemPaneRect(itemPaneForRow(0))).intersected(columnContentRegion());
+            outer += QRegion(QRect(0, last.bottom() + 1, viewport()->width(),
+                                   m_rowLayout->trailingSpacing()))
+                .intersected(itemPaneRect(itemPaneForRow(viewItemCount() - 1)))
+                .intersected(columnContentRegion());
+        }
+        painter.save();
+        painter.setClipRegion(outer, Qt::IntersectClip);
+        painter.fillRect(event->rect(), spacingBackgroundColor());
+        painter.restore();
+    }
     if (m_visualStateBackgroundVisible)
         paintVisualStateBackgrounds(&painter, event->rect());
 }
@@ -4565,14 +4731,61 @@ QRegion VirtualTableView::columnContentRegion(bool includeTrailingSpacing) const
             continue;
         const int first = pane.logicalColumns.first();
         const int last = pane.logicalColumns.last();
+        const int paneIndex = m_panes.paneIndexOfColumn(first);
         const int trailingSpacing = includeTrailingSpacing ? m_panes.columnSpacingAfter(last) : 0;
-        const qint64 left = qMax<qint64>(pane.viewportRect.left(), m_panes.columnViewportX(first));
+        const qint64 left = qMax<qint64>(pane.viewportRect.left(),
+            m_panes.columnViewportX(first) - m_panes.leadingSpacingForPane(paneIndex));
         const qint64 right = qMin<qint64>(qint64(pane.viewportRect.right()) + 1,
-            qint64(m_panes.columnViewportX(last)) + m_columns->sectionSize(last) + trailingSpacing);
+            qint64(m_panes.columnViewportX(last)) + m_columns->sectionSize(last) + trailingSpacing
+                + m_panes.trailingSpacingForPane(paneIndex));
         if (right > left)
             content += QRect(int(left), 0, int(right - left), viewport()->height());
     }
     return content.intersected(viewport()->rect());
+}
+
+QRect VirtualTableView::stateBackgroundRectWithRowSpacing(const QRect &rect, qsizetype firstRow,
+                                                         qsizetype lastRow) const
+{
+    if (!m_visualStateThroughRowSpacing || gridLinePlacement() != GridLinePlacement::SpacingCenter
+        || !m_rowLayout || firstRow < 0 || lastRow < firstRow || lastRow >= viewItemCount())
+        return rect;
+    const auto pane = itemPaneForRow(firstRow);
+    const int before = firstRow == 0 ? m_rowLayout->leadingSpacing()
+        : (itemPaneForRow(firstRow - 1) == pane ? (m_rowLayout->spacingAfter(firstRow - 1) + 1) / 2 : 0);
+    const int after = lastRow + 1 == viewItemCount() ? m_rowLayout->trailingSpacing()
+        : (itemPaneForRow(lastRow + 1) == pane ? m_rowLayout->spacingAfter(lastRow) / 2 : 0);
+    return rect.adjusted(0, -before, 0, after);
+}
+
+QVector<VisibleRange> VirtualTableView::visualStatePaintRanges() const
+{
+    auto ranges = visibleItemRanges();
+    if (!m_visualStateThroughRowSpacing || gridLinePlacement() != GridLinePlacement::SpacingCenter)
+        return ranges;
+    for (auto &range : ranges) {
+        if (range.first < 0 || range.last < range.first)
+            continue;
+        if (range.first > 0 && itemPaneForRow(range.first - 1) == itemPaneForRow(range.first))
+            --range.first;
+        if (range.last + 1 < viewItemCount()
+            && itemPaneForRow(range.last + 1) == itemPaneForRow(range.last))
+            ++range.last;
+    }
+    return ranges;
+}
+
+void VirtualTableView::paintRowSpacingBackground(QPainter *painter, const QRect &dirtyRect) const
+{
+    if (m_visualStateBackgroundVisible && m_visualStateThroughRowSpacing
+        && gridLinePlacement() == GridLinePlacement::SpacingCenter) {
+        // The viewport can already contain the extended layer below this gap host.
+        // Reset it before compositing translucent spacing colors and state brushes.
+        painter->fillRect(dirtyRect, palette().brush(QPalette::Base));
+        if (spacingBackgroundColor().isValid())
+            painter->fillRect(dirtyRect, spacingBackgroundColor());
+        paintVisualStateBackgrounds(painter, dirtyRect);
+    }
 }
 
 void VirtualTableView::paintVisualStateBackgrounds(QPainter *target, const QRect &dirtyRect,
@@ -4601,9 +4814,11 @@ void VirtualTableView::paintVisualStateBackgrounds(QPainter *target, const QRect
     int rowLeft = 0;
     int rowWidth = 0;
     if (rowScope && first >= 0) {
-        rowLeft = m_panes.columnViewportX(first);
+        rowLeft = m_panes.columnViewportX(first)
+            - m_panes.leadingSpacingForPane(m_panes.paneIndexOfColumn(first));
         const qint64 right = qMin<qint64>(std::numeric_limits<int>::max(),
-            qint64(m_panes.columnViewportX(terminal)) + m_columns->sectionSize(terminal));
+            qint64(m_panes.columnViewportX(terminal)) + m_columns->sectionSize(terminal)
+                + m_panes.trailingSpacingForPane(m_panes.paneIndexOfColumn(terminal)));
         rowWidth = int(qBound<qint64>(qint64(0), right - rowLeft,
                                      qint64(std::numeric_limits<int>::max())));
     }
@@ -4644,7 +4859,7 @@ void VirtualTableView::paintVisualStateBackgrounds(QPainter *target, const QRect
         layer(state.selectedProgress, selectedBackgroundColor());
     };
     QSet<QModelIndex> painted;
-    for (const VisibleRange &range : visibleItemRanges()) {
+    for (const VisibleRange &range : visualStatePaintRanges()) {
         for (qsizetype row = range.first; row >= 0 && row <= range.last; ++row) {
             const QModelIndex node = viewIndex(row);
             if (rowScope) {
@@ -4652,10 +4867,13 @@ void VirtualTableView::paintVisualStateBackgrounds(QPainter *target, const QRect
                 int y = rect.y();
                 rowVisualY(row, &y);
                 rect = QRect(rowLeft, y, rowWidth, rect.height());
+                rect = stateBackgroundRectWithRowSpacing(rect, row, row);
                 // A bottom border occupies the row body only when no trailing gap exists.
                 // Reserve the same physical band across actual columns and empty space.
                 const int bottomInset = m_horizontalGridLinesVisible && m_rowLayout
-                    && m_rowLayout->spacingAfter(row) == 0 ? m_horizontalGridLineWidth : 0;
+                    && m_rowLayout->spacingAfter(row) == 0
+                    && (row + 1 != viewItemCount() || m_rowLayout->trailingSpacing() == 0)
+                    ? m_horizontalGridLineWidth : 0;
                 paint(node, rect, itemPaneRect(itemPaneForRow(row)), bottomInset);
                 continue;
             }
@@ -4673,6 +4891,8 @@ void VirtualTableView::paintVisualStateBackgrounds(QPainter *target, const QRect
                 int y = committedY;
                 rowVisualY(anchorRow, &y);
                 rect.translate(0, y - committedY);
+                rect = stateBackgroundRectWithRowSpacing(rect, anchorRow,
+                    anchorRow + spanAt(anchor).rowSpan - 1);
                 paint(anchor, rect, itemPaneRect(itemPaneForRow(anchorRow))
                     .intersected(currentPanes.at(pane).viewportRect), 0);
             }
@@ -4704,6 +4924,7 @@ bool VirtualTableView::rowVisualStateIncludesHeader() const
 
 void VirtualTableView::refreshVisualStates()
 {
+    refreshRowSpacingBackgrounds();
     refreshHeaderVisualStates();
     viewport()->update();
     for (QWidget *widget : m_columnSpacingWidgets)
@@ -4717,6 +4938,7 @@ void VirtualTableView::refreshVisualStates()
 
 void VirtualTableView::refreshVisualState(const QModelIndex &index)
 {
+    refreshRowSpacingBackgrounds();
     refreshHeaderVisualStates();
     viewport()->update();
     for (QWidget *widget : m_columnSpacingWidgets)
@@ -5236,6 +5458,10 @@ QRegion VirtualTableView::rowContentRegion() const
                 && row == m_dragRowPreview->source();
             if (!placeholder && m_rowLayout)
                 band.setHeight(band.height() + m_rowLayout->spacingAfter(row));
+            if (!placeholder && m_rowLayout && row == 0)
+                band.adjust(0, -m_rowLayout->leadingSpacing(), 0, 0);
+            if (!placeholder && m_rowLayout && row + 1 == viewItemCount())
+                band.adjust(0, 0, 0, m_rowLayout->trailingSpacing());
             band.setLeft(0);
             band.setWidth(viewport()->width());
             content += band.intersected(itemPaneRect(itemPaneForRow(row)))
@@ -5263,9 +5489,11 @@ void VirtualTableView::syncRowGridLines()
                 if (!placeholder && m_rowLayout && m_rowLayout->spacingAfter(row) > 0)
                     continue;
                 const QRect rowRect = rowGridGeometry(row);
-                if (!rowRect.intersects(viewport()->rect()))
+                const int trailing = !placeholder && m_rowLayout && row + 1 == viewItemCount()
+                    ? m_rowLayout->trailingSpacing() : 0;
+                if (!rowRect.adjusted(0, 0, 0, trailing).intersects(viewport()->rect()))
                     continue;
-                const int y = viewportRect.y() + rowRect.bottom() - m_horizontalGridLineWidth + 1;
+                const int y = viewportRect.y() + rowRect.bottom() + trailing - m_horizontalGridLineWidth + 1;
                 const QRect lineRect(viewportRect.x(), y, viewportRect.width(),
                                      m_horizontalGridLineWidth);
                 const QRect paneRect = itemPaneRect(itemPaneForRow(row))
@@ -5355,21 +5583,26 @@ void VirtualTableView::syncRowGridLines()
         line->raise();
     }
     // The header adds a leading border when lifting a section. Use the same
-    // logical band here so its physical edge matches at fractional scale factors.
+    // logical band and leading device-pixel edge here at fractional scale factors.
     const QRect leading = QRect(0, draggedRect.top(), viewportRect.width(), m_horizontalGridLineWidth)
-        .intersected(draggedPane).translated(viewportRect.topLeft()).intersected(contentBounds);
-    if (m_horizontalGridLinesVisible && draggedRow >= 0 && !leading.isEmpty()) {
+        .translated(viewportRect.topLeft());
+    const QRect leadingClip = leading.intersected(draggedPane.translated(viewportRect.topLeft()))
+        .intersected(contentBounds);
+    if (m_horizontalGridLinesVisible && draggedRow >= 0 && !leadingClip.isEmpty()) {
         if (!m_headerDragLeadingSeparator) {
-            m_headerDragLeadingSeparator = new QWidget(this);
+            auto *line = new PixelAlignedHorizontalLine(this);
+            line->setTrailingEdge(false);
+            m_headerDragLeadingSeparator = line;
             m_headerDragLeadingSeparator->setAttribute(Qt::WA_TransparentForMouseEvents);
-            m_headerDragLeadingSeparator->setAutoFillBackground(true);
         }
         QPalette colors = m_headerDragLeadingSeparator->palette();
         colors.setColor(QPalette::Window, color);
         m_headerDragLeadingSeparator->setPalette(colors);
         m_headerDragLeadingSeparator->setGeometry(leading);
         QRegion mask = content.translated(viewportRect.topLeft() - leading.topLeft());
-        if (!m_horizontalSpacingLineThroughColumnSpacing) {
+        // Clip without moving the original edge or changing its physical thickness.
+        mask &= QRegion(leadingClip.translated(-leading.topLeft()));
+        if (!horizontalSpacingLineThroughColumnSpacing()) {
             for (QWidget *gap : m_columnSpacingWidgets) {
                 const int band = m_verticalGridLinesVisible ? m_verticalGridLineWidth : 1;
                 mask -= gap->geometry().adjusted(band, 0, 0, 0).translated(-leading.topLeft());
@@ -5415,11 +5648,13 @@ void VirtualTableView::syncColumnSpacingWidgets()
                 continue;
             const QRect pane = m_panes.paneAt(paneIndex).viewportRect;
             const bool terminal = logical == last;
-            const int columnEnd = x + m_columns->sectionSize(logical);
+            const int columnEnd = x + m_columns->sectionSize(logical)
+                + (terminal ? m_panes.trailingSpacingForPane(paneIndex) : 0);
             if (terminal && (!m_verticalGridLinesVisible || columnEnd > pane.right() + 1))
                 continue;
             const int boundarySpacing = m_panes.columnSpacingAfter(logical);
-            const int verticalBand = m_verticalGridLinesVisible ? m_verticalGridLineWidth : 1;
+            const int verticalBand = gridLinePlacement() == GridLinePlacement::SpacingCenter
+                && boundarySpacing > 0 ? 0 : (m_verticalGridLinesVisible ? m_verticalGridLineWidth : 1);
             const QRect full(viewportRect.x() + columnEnd - verticalBand,
                              headerTop, boundarySpacing + verticalBand, bottom - headerTop);
             const QRect clipped = full.intersected(
@@ -5458,6 +5693,15 @@ void VirtualTableView::syncColumnSpacingWidgets()
         }
         auto *host = static_cast<ColumnSpacingHost *>(widget);
         const bool terminal = it.key() == last;
+        const int headerPane = m_panes.paneIndexOfColumn(it.key());
+        HeaderViewInterface *inputHeader = headerPane >= 0 && headerPane < m_paneHeaders.size()
+            ? m_paneHeaders.at(headerPane) : nullptr;
+        if (!inputHeader && headerPane >= 0)
+            inputHeader = m_horizontalHeader;
+        host->setHeaderInputTarget(inputHeader ? inputHeader->headerWidget() : nullptr,
+            gridLinePlacement() == GridLinePlacement::SpacingCenter
+                && (m_panes.columnSpacingAfter(it.key()) > 0
+                    || (terminal && m_panes.trailingSpacingForPane(headerPane) > 0)));
         host->setBackgroundColors(spacingBackgroundColor(), resolvedHeaderSpacingBackgroundColor());
         if (spacing > 0 && !terminal && m_columnSpacingFactory && !host->content())
             host->setContent(m_columnSpacingFactory(it.key(), host));
@@ -5474,6 +5718,14 @@ void VirtualTableView::syncColumnSpacingWidgets()
         host->setEdges(m_verticalGridLinesVisible && it.value().left() == full.left(),
                        m_verticalGridLinesVisible && it.value().right() == full.right(),
                        viewport()->geometry().y() - it.value().y());
+        const int gapWidth = m_panes.columnSpacingAfter(it.key());
+        const int verticalBand = gridLinePlacement() == GridLinePlacement::SpacingCenter
+            && gapWidth > 0 ? 0 : (m_verticalGridLinesVisible ? m_verticalGridLineWidth : 1);
+        host->setGridPlacement(m_verticalGridLinesVisible
+                && gridLinePlacement() == GridLinePlacement::SpacingCenter && gapWidth > 0,
+            QRect(full.x() + verticalBand - it.value().x(), 0, gapWidth, it.value().height()),
+            m_verticalGridLinesThroughHeader,
+            horizontalSpacingLineThroughColumnSpacing());
         widget->setGeometry(it.value());
         if (m_spanProvider && model()) {
             QRegion mask(widget->rect());
@@ -5549,7 +5801,7 @@ void VirtualTableView::updateColumnSpacingVisualRows()
         std::sort(localGaps.begin(), localGaps.end(),
                   [](const QRect &a, const QRect &b) { return a.top() < b.top(); });
         QVector<ColumnSpacingHost::HorizontalLine> horizontalLines;
-        if (m_horizontalGridLinesVisible && m_horizontalSpacingLineThroughColumnSpacing
+        if (m_horizontalGridLinesVisible && horizontalSpacingLineThroughColumnSpacing()
             && spacing > 0) {
             for (const VisibleRange &range : visibleItemRanges()) {
                 for (qsizetype row = range.first; row >= 0 && row <= range.last; ++row) {
@@ -5559,14 +5811,16 @@ void VirtualTableView::updateColumnSpacingVisualRows()
                     // A visible trailing gap still needs lines after its row body scrolls out.
                     const int rowSpacing = !placeholder && m_rowLayout
                         ? m_rowLayout->spacingAfter(row) : 0;
-                    const int first = viewportRect.y() + rowRect.bottom()
+                    const int trailing = !placeholder && m_rowLayout && row + 1 == viewItemCount()
+                        ? m_rowLayout->trailingSpacing() : 0;
+                    const int first = viewportRect.y() + rowRect.bottom() + trailing
                         + (rowSpacing > 0 ? 1 : 1 - m_horizontalGridLineWidth) - widget->y();
                     const QRect clip = itemPaneRect(itemPaneForRow(row))
                         .intersected(viewport()->rect())
                         .translated(viewportRect.topLeft() - widget->pos())
                         .intersected(widget->rect());
-                    const auto appendLine = [&](int y, bool trailingEdge) {
-                        const QRect band(0, y, host->width(), m_horizontalGridLineWidth);
+                    const auto appendLine = [&](int y, bool trailingEdge, int height, bool centered) {
+                        const QRect band(0, y, host->width(), height);
                         QRegion visible(band.intersected(clip));
                         if (draggedRow >= 0 && row != draggedRow)
                             visible -= draggedRect.translated(-widget->pos());
@@ -5580,17 +5834,21 @@ void VirtualTableView::updateColumnSpacingVisualRows()
                                 }))
                             return;
                         for (const QRect &part : visible)
-                            horizontalLines.append(ColumnSpacingHost::HorizontalLine{y, part, trailingEdge});
+                            horizontalLines.append(ColumnSpacingHost::HorizontalLine{y, part, trailingEdge,
+                                                                                     height, centered});
                     };
-                    appendLine(first, rowSpacing <= 0);
-                    if (rowSpacing > 0) {
+                    const bool centered = gridLinePlacement() == GridLinePlacement::SpacingCenter
+                        && rowSpacing > 0;
+                    appendLine(first, rowSpacing <= 0, centered ? rowSpacing : m_horizontalGridLineWidth,
+                               centered);
+                    if (rowSpacing > 0 && !centered) {
                         const int lastLine = first + qMax(0, rowSpacing - m_horizontalGridLineWidth);
-                        appendLine(lastLine, true);
+                        appendLine(lastLine, true, m_horizontalGridLineWidth, false);
                     }
                 }
             }
         }
-        host->setRowGaps(localGaps, horizontalLines, m_verticalSpacingLineThroughRowSpacing);
+        host->setRowGaps(localGaps, horizontalLines, verticalSpacingLineThroughRowSpacing());
         host->setBodyRegion(occupiedRows.translated(viewportRect.topLeft() - widget->pos()));
     }
 }
@@ -5631,14 +5889,19 @@ void VirtualTableView::afterMaterialize()
 
 void VirtualTableView::applyRowSpacingOverrides()
 {
-    if (m_rowHeaders)
+    const int spacing = gridLinePlacement() == GridLinePlacement::SpacingCenter ? rowSpacing() : 0;
+    if (m_rowLayout)
+        m_rowLayout->setEdgeSpacing(spacing / 2, spacing - spacing / 2);
+    if (m_rowHeaders) {
         m_rowHeaders->setSectionSpacing(rowSpacing());
+        m_rowHeaders->setEdgeSpacing(spacing / 2, spacing - spacing / 2);
+    }
 }
 
 void VirtualTableView::configureRowSpacingWidget(QWidget *widget) const
 {
     if (widget) {
-        widget->setProperty("vivFillSpacingBackground", !m_verticalSpacingLineThroughRowSpacing);
+        widget->setProperty("vivFillSpacingBackground", !verticalSpacingLineThroughRowSpacing());
         widget->setProperty("vivShowSpacingLines", m_horizontalGridLinesVisible);
         widget->setProperty("vivSpacingLineWidth", m_horizontalGridLineWidth);
     }

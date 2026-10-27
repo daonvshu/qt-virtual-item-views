@@ -288,12 +288,16 @@ void VirtualFlowTableView::setHorizontalGridLineColor(const QColor &color)
 
 void VirtualFlowTableView::setVerticalSpacingLineThroughRowSpacing(bool enabled)
 {
+    if (gridLinePlacement() == GridLinePlacement::SpacingCenter)
+        return;
     m_verticalThroughRows = enabled;
     m_gridOverlay->update();
 }
 
 void VirtualFlowTableView::setHorizontalSpacingLineThroughColumnSpacing(bool enabled)
 {
+    if (gridLinePlacement() == GridLinePlacement::SpacingCenter)
+        return;
     m_horizontalThroughColumns = enabled;
     m_gridOverlay->update();
 }
@@ -345,6 +349,9 @@ void VirtualFlowTableView::paintGridLines(QPainter *painter) const
     QVector<QRect> vertical;
     QVector<QRect> horizontalLeading;
     QVector<QRect> verticalLeading;
+    QVector<QRect> horizontalCenters;
+    QVector<QRect> verticalCenters;
+    const bool centered = gridLinePlacement() == GridLinePlacement::SpacingCenter;
     for (const MaterializedItem &item : materializedItems()) {
         const qsizetype ordinal = viewItemForIndex(item.index);
         if (ordinal < 0)
@@ -354,20 +361,30 @@ void VirtualFlowTableView::paintGridLines(QPainter *painter) const
             && ordinal + 1 < viewItemCount();
         const bool hasNextRow = ordinal / columnCount() + 1 < displayRowCount();
         const QRect verticalSegment(rect.x(), rect.y(), rect.width(),
-            m_flow->rowHeight() + (m_verticalThroughRows && hasNextRow ? rowSpacing() : 0));
+            m_flow->rowHeight() + (verticalSpacingLineThroughRowSpacing() && hasNextRow ? rowSpacing() : 0));
         const QRect horizontalSegment(rect.x(), rect.y(),
-            rect.width() + (m_horizontalThroughColumns && hasNextColumn ? columnSpacing() : 0),
+            rect.width() + (horizontalSpacingLineThroughColumnSpacing() && hasNextColumn ? columnSpacing() : 0),
             m_flow->rowHeight());
         if (m_verticalLines) {
-            if (hasNextColumn)
-                vertical.append(verticalSegment);
-            if (columnSpacing() > 0 && ordinal % columnCount() > 0)
+            if (hasNextColumn) {
+                if (centered && columnSpacing() > 0)
+                    verticalCenters.append(QRect(rect.right() + 1, rect.y(), columnSpacing(),
+                                                 verticalSegment.height()));
+                else
+                    vertical.append(verticalSegment);
+            }
+            if (!centered && columnSpacing() > 0 && ordinal % columnCount() > 0)
                 verticalLeading.append(verticalSegment);
         }
         if (m_horizontalLines) {
-            if (hasNextRow)
-                horizontal.append(horizontalSegment);
-            if (rowSpacing() > 0 && ordinal >= columnCount())
+            if (hasNextRow) {
+                if (centered && rowSpacing() > 0)
+                    horizontalCenters.append(QRect(rect.x(), rect.bottom() + 1,
+                                                   horizontalSegment.width(), rowSpacing()));
+                else
+                    horizontal.append(horizontalSegment);
+            }
+            if (!centered && rowSpacing() > 0 && ordinal >= columnCount())
                 horizontalLeading.append(horizontalSegment);
         }
     }
@@ -384,6 +401,12 @@ void VirtualFlowTableView::paintGridLines(QPainter *painter) const
     fillPixelLines(painter, verticalLeading, m_verticalLineWidth,
         m_verticalLineColor.isValid() ? m_verticalLineColor : palette().color(QPalette::Mid),
         Qt::Vertical);
+    fillPixelLines(painter, horizontalCenters, m_horizontalLineWidth,
+        m_horizontalLineColor.isValid() ? m_horizontalLineColor : palette().color(QPalette::Mid),
+        Qt::Horizontal, false, false, true);
+    fillPixelLines(painter, verticalCenters, m_verticalLineWidth,
+        m_verticalLineColor.isValid() ? m_verticalLineColor : palette().color(QPalette::Mid),
+        Qt::Vertical, false, false, true);
 }
 int VirtualFlowTableView::columnCount() const { return m_flow->columnCount(); }
 qsizetype VirtualFlowTableView::displayRowCount() const { return m_flow->rowCount(); }

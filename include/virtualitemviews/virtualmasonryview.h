@@ -93,12 +93,15 @@ public:
     QColor verticalGridLineColor() const { return m_verticalLineColor; }
     void setHorizontalGridLineColor(const QColor &color);
     QColor horizontalGridLineColor() const { return m_horizontalLineColor; }
-    /// Whether vertical separators bridge gaps between stacked items.
+    /// SpacingEdges only: whether vertical separators bridge stacked-item gaps.
+    /// SpacingCenter always bridges gaps and ignores these setters.
     void setVerticalSpacingLineThroughRowSpacing(bool enabled);
-    bool verticalSpacingLineThroughRowSpacing() const { return m_verticalThroughRows; }
-    /// Whether horizontal separators bridge the gap into the next column.
+    bool verticalSpacingLineThroughRowSpacing() const
+    { return gridLinePlacement() == GridLinePlacement::SpacingCenter || m_verticalThroughRows; }
+    /// SpacingEdges only: whether horizontal separators bridge column gaps.
     void setHorizontalSpacingLineThroughColumnSpacing(bool enabled);
-    bool horizontalSpacingLineThroughColumnSpacing() const { return m_horizontalThroughColumns; }
+    bool horizontalSpacingLineThroughColumnSpacing() const
+    { return gridLinePlacement() == GridLinePlacement::SpacingCenter || m_horizontalThroughColumns; }
 
 signals:
     void masonryLayoutChanged();

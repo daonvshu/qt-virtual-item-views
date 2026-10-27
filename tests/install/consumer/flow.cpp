@@ -95,6 +95,7 @@ int main(int argc, char **argv)
     view.setHorizontalGridLineWidth(3);
     view.setVerticalGridLineColor(Qt::red);
     view.setHorizontalGridLineColor(Qt::blue);
+    view.setGridLinePlacement(viv::GridLinePlacement::SpacingEdges);
     view.setVerticalSpacingLineThroughRowSpacing(false);
     view.setHorizontalSpacingLineThroughColumnSpacing(false);
     check(!view.verticalGridLinesVisible() && !view.horizontalGridLinesVisible()

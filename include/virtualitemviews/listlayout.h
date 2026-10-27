@@ -52,6 +52,11 @@ public:
     int itemSpacing() const { return m_defaultSpacing; }
     void setSpacingAfter(qsizetype item, int pixels);
     int spacingAfter(qsizetype item) const;
+    /// Space before the first and after the last item; empty layouts have no edge spacing.
+    /// Included in content offsets and hit testing, independently of viewport margins.
+    void setEdgeSpacing(int leading, int trailing);
+    int leadingSpacing() const { return m_leadingSpacing; }
+    int trailingSpacing() const { return m_trailingSpacing; }
 
     /// Estimated item size used when a caller passes estimate <= 0.
     int estimate() const { return m_estimate; }
@@ -68,6 +73,8 @@ private:
     BlockSizeIndex m_spacings;
     BlockSizeIndex m_extents;
     int m_defaultSpacing = 0;
+    int m_leadingSpacing = 0;
+    int m_trailingSpacing = 0;
     bool m_hasSpacingOverrides = false;
     bool m_ownsSizeIndex = true;
     Qt::Orientation m_orientation = Qt::Vertical;

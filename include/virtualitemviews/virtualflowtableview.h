@@ -60,11 +60,14 @@ public:
     QColor verticalGridLineColor() const { return m_verticalLineColor; }
     void setHorizontalGridLineColor(const QColor &color);
     QColor horizontalGridLineColor() const { return m_horizontalLineColor; }
-    /// Whether separator segments bridge gaps in the other direction (default true).
+    /// SpacingEdges only: whether segments bridge crossing gaps (default true).
+    /// SpacingCenter always bridges gaps and ignores these setters.
     void setVerticalSpacingLineThroughRowSpacing(bool enabled);
-    bool verticalSpacingLineThroughRowSpacing() const { return m_verticalThroughRows; }
+    bool verticalSpacingLineThroughRowSpacing() const
+    { return gridLinePlacement() == GridLinePlacement::SpacingCenter || m_verticalThroughRows; }
     void setHorizontalSpacingLineThroughColumnSpacing(bool enabled);
-    bool horizontalSpacingLineThroughColumnSpacing() const { return m_horizontalThroughColumns; }
+    bool horizontalSpacingLineThroughColumnSpacing() const
+    { return gridLinePlacement() == GridLinePlacement::SpacingCenter || m_horizontalThroughColumns; }
     /// Display columns are independent of the number of items in the model.
     int columnCount() const;
     qsizetype displayRowCount() const;

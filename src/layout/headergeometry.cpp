@@ -683,7 +683,7 @@ void HeaderGeometry::resizeSectionFromEdge(int logicalIndex, int size, Qt::Edge 
     qint64 gapTotal = 0;
     for (int i = 0; i + 1 < order.size(); ++i)
         gapTotal += sectionSpacingAfter(order.at(i));
-    if (available != stretchExtent() - gapTotal)
+    if (available != stretchExtent() - leadingSpacing() - trailingSpacing() - gapTotal)
         return;
     const int minimum = int(qMin<qint64>(m_minimumSectionSize, available / order.size()));
     const int maximum = int(qMin<qint64>(std::numeric_limits<int>::max(),
@@ -780,6 +780,30 @@ void HeaderGeometry::clearExplicitSectionSizes()
     applyStretch();
     if (changed)
         emitGeometryChanged();
+}
+
+void HeaderGeometry::setEdgeSpacing(int leading, int trailing)
+{
+    leading = qMax(0, leading);
+    trailing = qMax(0, trailing);
+    if (m_leadingSpacing == leading && m_trailingSpacing == trailing)
+        return;
+    m_leadingSpacing = leading;
+    m_trailingSpacing = trailing;
+    applyStretch();
+    emitGeometryChanged();
+}
+
+int HeaderGeometry::leadingSpacing() const
+{
+    return m_resizeMode == ResizeMode::FitExtent
+        ? int(qMin<qint64>(m_leadingSpacing, m_stretchExtent)) : m_leadingSpacing;
+}
+
+int HeaderGeometry::trailingSpacing() const
+{
+    return m_resizeMode == ResizeMode::FitExtent
+        ? int(qMin<qint64>(m_trailingSpacing, m_stretchExtent - leadingSpacing())) : m_trailingSpacing;
 }
 
 void HeaderGeometry::setSectionSpacing(int pixels)
@@ -1060,7 +1084,8 @@ qint64 HeaderGeometry::totalExtent() const
 {
     if (m_cacheDirty)
         rebuildCaches();
-    return m_totalExtent;
+    return m_totalExtent + (m_uniformCount > 0 || !m_visibleLogicalOrder.isEmpty()
+        ? qint64(leadingSpacing()) + trailingSpacing() : 0);
 }
 
 qint64 HeaderGeometry::sectionPosition(int logicalIndex) const
@@ -1068,13 +1093,13 @@ qint64 HeaderGeometry::sectionPosition(int logicalIndex) const
     if (!isValidLogical(logicalIndex))
         return 0;
     if (m_uniformCount > 0) {
-        return qint64(logicalIndex) * (qint64(m_defaultSectionSize) + m_sectionSpacing)
+        return leadingSpacing() + qint64(logicalIndex) * (qint64(m_defaultSectionSize) + m_sectionSpacing)
             + sparseDeltaBefore(logicalIndex)
             + spacingDeltaBefore(logicalIndex);
     }
     if (m_cacheDirty)
         rebuildCaches();
-    return m_contentXByLogical.at(logicalIndex);
+    return leadingSpacing() + m_contentXByLogical.at(logicalIndex);
 }
 
 int HeaderGeometry::sectionViewportPosition(int logicalIndex) const
@@ -1086,13 +1111,14 @@ int HeaderGeometry::sectionViewportPosition(int logicalIndex) const
 
 int HeaderGeometry::visualSectionAtOffset(qint64 contentOffset) const
 {
+    contentOffset -= leadingSpacing();
     if (m_uniformCount > 0) {
         if (!m_sectionSpacingOverrides.isEmpty() || !m_sparseSpacingOverrides.isEmpty()) {
             int low = 0;
             int high = m_uniformCount - 1;
             while (low < high) {
                 const int mid = low + (high - low + 1) / 2;
-                if (sectionPosition(mid) <= contentOffset)
+                if (sectionPosition(mid) - leadingSpacing() <= contentOffset)
                     low = mid;
                 else
                     high = mid - 1;
@@ -1148,6 +1174,11 @@ int HeaderGeometry::visualSectionAtOffset(qint64 contentOffset) const
 
 int HeaderGeometry::sectionAtOffset(qint64 contentOffset) const
 {
+    // Outer padding is not a section, while existing out-of-range clamping stays intact.
+    if ((contentOffset >= 0 && contentOffset < leadingSpacing())
+        || (trailingSpacing() > 0 && contentOffset >= totalExtent() - trailingSpacing()
+            && contentOffset < totalExtent()))
+        return -1;
     const int visual = visualSectionAtOffset(contentOffset);
     const int logical = visual < 0 ? -1 : logicalIndex(visual);
     if ((m_sectionSpacing == 0 && m_sectionSpacingOverrides.isEmpty()
@@ -1630,18 +1661,19 @@ bool HeaderGeometry::applyFitExtent()
             gapWeights.append(gap);
         }
     }
-    if (gapTotal > m_stretchExtent) {
-        const QVector<int> compressed = fitSizes(gapWeights, m_stretchExtent, 0,
+    const qint64 contentBudget = m_stretchExtent - leadingSpacing() - trailingSpacing();
+    if (gapTotal > contentBudget) {
+        const QVector<int> compressed = fitSizes(gapWeights, contentBudget, 0,
                                                  std::numeric_limits<int>::max());
         for (int i = 0; i < gapKeys.size(); ++i)
             gaps[gapKeys.at(i)] = compressed.at(i);
-        gapTotal = m_stretchExtent;
+        gapTotal = contentBudget;
     }
     const bool gapsChanged = gaps != m_fitSectionSpacings;
     m_fitSectionSpacings = gaps;
     if (gapsChanged)
         invalidateCaches();
-    const qint64 available = m_stretchExtent - gapTotal;
+    const qint64 available = contentBudget - gapTotal;
     const int minimum = int(qMin<qint64>(m_minimumSectionSize, available / order.size()));
     const int maximum = int(qMin<qint64>(std::numeric_limits<int>::max(),
         qMax<qint64>(m_maximumSectionSize, (available + order.size() - 1) / order.size())));

@@ -62,6 +62,8 @@ private slots:
     void insertKeepsDepthSpacingWithUniformSize();
     void insertWithNewUniformSizeRebuildsExtents();
     void insertKeepsVariableSizesAndSpacing();
+    void edgeSpacingGeometry_data();
+    void edgeSpacingGeometry();
 };
 
 void TestListLayout::uniformItemGeometry()
@@ -310,6 +312,60 @@ void TestListLayout::insertKeepsVariableSizesAndSpacing()
     QCOMPARE(layout.offsetOf(2), qint64(54));
     QCOMPARE(layout.offsetOf(3), qint64(76));
     QCOMPARE(layout.contentExtent(), qint64(111));
+}
+
+void TestListLayout::edgeSpacingGeometry_data()
+{
+    QTest::addColumn<int>("orientation");
+    QTest::addColumn<bool>("variable");
+    QTest::newRow("vertical-fixed") << int(Qt::Vertical) << false;
+    QTest::newRow("vertical-variable") << int(Qt::Vertical) << true;
+    QTest::newRow("horizontal-fixed") << int(Qt::Horizontal) << false;
+    QTest::newRow("horizontal-variable") << int(Qt::Horizontal) << true;
+}
+
+void TestListLayout::edgeSpacingGeometry()
+{
+    QFETCH(int, orientation);
+    QFETCH(bool, variable);
+    ListLayout layout(static_cast<Qt::Orientation>(orientation));
+    layout.setCrossExtent(200);
+    layout.setItemSpacing(12);
+    layout.setEdgeSpacing(6, 6);
+    layout.resetItems(3, 40);
+    if (variable) {
+        layout.setSizeIndex(new BlockSizeIndex(3, 40));
+        layout.setItemSize(1, 60);
+        layout.setSpacingAfter(0, 16);
+    }
+    const int extra = variable ? 24 : 0;
+    QCOMPARE(layout.offsetOf(0), qint64(6));
+    QCOMPARE(layout.offsetOf(2), qint64(110 + extra));
+    QCOMPARE(layout.contentExtent(), qint64(156 + extra));
+    const auto point = [orientation](int offset) {
+        return orientation == Qt::Vertical ? QPoint(10, offset) : QPoint(offset, 10);
+    };
+    QCOMPARE(layout.itemAtPoint(point(0), 0), qsizetype(-1));
+    QCOMPARE(layout.itemAtPoint(point(5), 0), qsizetype(-1));
+    QCOMPARE(layout.itemAtPoint(point(6), 0), qsizetype(0));
+    QCOMPARE(layout.itemAtPoint(point(46), 0), qsizetype(-1));
+    QCOMPARE(layout.itemAtPoint(point(149 + extra), 0), qsizetype(2));
+    QCOMPARE(layout.itemAtPoint(point(150 + extra), 0), qsizetype(-1));
+    QCOMPARE(layout.indexAtOffset(110 + extra), qsizetype(2));
+    QCOMPARE(layout.itemAtPoint(point(10), 110 + extra), qsizetype(2));
+    layout.resetItems(1, 40);
+    QCOMPARE(layout.contentExtent(), qint64(52));
+    layout.setEdgeSpacing(5, 6);
+    QCOMPARE(layout.offsetOf(0), qint64(5));
+    QCOMPARE(layout.contentExtent(), qint64(51));
+    layout.setEdgeSpacing(0, 0);
+    QCOMPARE(layout.offsetOf(0), qint64(0));
+    QCOMPARE(layout.contentExtent(), qint64(40));
+    QCOMPARE(layout.itemAtPoint(point(0), 0), qsizetype(0));
+    layout.setEdgeSpacing(6, 6);
+    layout.resetItems(0, 40);
+    QCOMPARE(layout.contentExtent(), qint64(0));
+    QCOMPARE(layout.offsetOf(0), qint64(0));
 }
 
 QTEST_APPLESS_MAIN(TestListLayout)

@@ -218,9 +218,13 @@ public:
     /// Background of body row and column gaps; invalid restores palette defaults.
     void setSpacingBackgroundColor(const QColor &color) override;
     /// Extends whole-row hover/selection backgrounds across column gaps. Default true.
-    /// SelectItems stays cell-local; row gaps and header gaps are never covered.
+    /// SelectItems stays cell-local; vertical extension follows visualStateThroughRowSpacing().
     void setVisualStateThroughColumnSpacing(bool enabled);
     bool visualStateThroughColumnSpacing() const { return m_visualStateThroughColumnSpacing; }
+    /// Extends hover/selection to the adjacent half of each row gap in SpacingCenter.
+    /// Default true; inactive in SpacingEdges. Built-in row headers use the same bounds.
+    void setVisualStateThroughRowSpacing(bool enabled);
+    bool visualStateThroughRowSpacing() const { return m_visualStateThroughRowSpacing; }
     /// Background of gaps in both widget headers, including frozen panes.
     /// Invalid follows the header base background setting; custom renderers own their painting.
     /// Convenience setter for both axes; the getter reports the horizontal header.
@@ -229,10 +233,24 @@ public:
     /// Optional content for visible column gaps; the binder refreshes reused widgets.
     void setColumnSpacingFactory(ColumnSpacingFactory factory, ColumnSpacingBinder binder = {});
     void setHeaderColumnSpacingFactory(ColumnSpacingFactory factory, ColumnSpacingBinder binder = {});
+    void setGridLinePlacement(GridLinePlacement placement) override;
+    /// Only SpacingEdges allows breaks at crossing gaps. SpacingCenter always
+    /// crosses gaps; requests made in that mode are ignored. Default true.
     void setVerticalSpacingLineThroughRowSpacing(bool enabled);
-    bool verticalSpacingLineThroughRowSpacing() const { return m_verticalSpacingLineThroughRowSpacing; }
+    bool verticalSpacingLineThroughRowSpacing() const
+    { return gridLinePlacement() == GridLinePlacement::SpacingCenter || m_verticalSpacingLineThroughRowSpacing; }
     void setHorizontalSpacingLineThroughColumnSpacing(bool enabled);
-    bool horizontalSpacingLineThroughColumnSpacing() const { return m_horizontalSpacingLineThroughColumnSpacing; }
+    bool horizontalSpacingLineThroughColumnSpacing() const
+    { return gridLinePlacement() == GridLinePlacement::SpacingCenter || m_horizontalSpacingLineThroughColumnSpacing; }
+    /// Extends vertical grid lines through the horizontal header. Default true.
+    /// Applies to both placements and all frozen header panes.
+    /// Disabling this keeps the header/body boundary visible.
+    void setVerticalGridLinesThroughHeader(bool enabled);
+    bool verticalGridLinesThroughHeader() const { return m_verticalGridLinesThroughHeader; }
+    /// Extends horizontal grid lines through the vertical header. Default true.
+    /// Disabling this keeps the header/body boundary visible.
+    void setHorizontalGridLinesThroughHeader(bool enabled);
+    bool horizontalGridLinesThroughHeader() const { return m_horizontalGridLinesThroughHeader; }
     /// Grid lines remain visible at zero spacing; each direction can be hidden independently.
     void setVerticalGridLinesVisible(bool visible);
     bool verticalGridLinesVisible() const { return m_verticalGridLinesVisible; }
@@ -519,7 +537,7 @@ public:
     qsizetype materializedCellCount() const { return m_cells.size(); }
     QWidget *cellWidget(const QModelIndex &index) const;
     /// Paints complete hover/selection backgrounds below transparent row/cell widgets.
-    /// Enabled by default; row gaps stay clear and column gaps follow visualStateThroughColumnSpacing().
+    /// Enabled by default; gap coverage follows the visualStateThrough*Spacing() settings.
     /// Hover and selection follow SelectionBehavior, independently of materialization.
     /// Colors and animation use VirtualItemView's visual-state settings.
     virtual void setVisualStateBackgroundVisible(bool visible);
@@ -554,10 +572,16 @@ signals:
 protected:
     bool m_visualStateBackgroundVisible = true;
     void paintEvent(QPaintEvent *event) override;
-    /// Paints visible item state layers, always excluding row gaps.
+    /// Paints visible item state layers, including configured half-row-gap extensions.
     /// Column gap hosts call with paintColumnSpacing=true; the viewport excludes their bands.
     virtual void paintVisualStateBackgrounds(QPainter *painter, const QRect &dirtyRect,
                                             bool paintColumnSpacing = false) const;
+    void paintRowSpacingBackground(QPainter *painter, const QRect &dirtyRect) const override;
+    /// Expands the shape around a row or merged cell without crossing frozen panes.
+    QRect stateBackgroundRectWithRowSpacing(const QRect &rect, qsizetype firstRow,
+                                            qsizetype lastRow) const;
+    /// Includes adjacent rows whose bodies may be clipped while their half-gap is visible.
+    QVector<VisibleRange> visualStatePaintRanges() const;
     /// Paints one state layer using the configured visibility and corner radius.
     /// Override for custom shapes; the clip includes column gaps only when configured.
     /// Adapter widgets must leave their background transparent.
@@ -892,8 +916,11 @@ private:
     bool m_verticalSpacingLineThroughRowSpacing = true;
     bool m_horizontalSpacingLineThroughColumnSpacing = true;
     bool m_visualStateThroughColumnSpacing = true;
+    bool m_visualStateThroughRowSpacing = true;
     bool m_verticalGridLinesVisible = true;
     bool m_horizontalGridLinesVisible = true;
+    bool m_verticalGridLinesThroughHeader = true;
+    bool m_horizontalGridLinesThroughHeader = true;
     QColor m_verticalGridLineColor;
     QColor m_horizontalGridLineColor;
     int m_verticalGridLineWidth = 1;

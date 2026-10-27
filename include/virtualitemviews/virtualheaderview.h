@@ -176,12 +176,18 @@ public:
     /// Uses QWidget font inheritance and notifies this header's pane clones on changes.
     void setFont(const QFont &font) override;
     const QFont &font() const override { return QWidget::font(); }
-    /// Background of section gaps only; invalid uses the container's background setting.
+    /// Background of section gaps only; invalid follows an explicit container base or QPalette::Base.
+    /// Hidden container backgrounds leave implicit gaps transparent.
     void setSpacingBackgroundColor(const QColor &color) override;
     QColor spacingBackgroundColor() const override { return m_spacingBackgroundColor; }
-    /// Controls the trailing edge of the built-in section widgets and spacing gaps.
+    /// Controls section grid lines, including those inside spacing gaps.
     void setSectionSeparatorsVisible(bool visible);
     bool sectionSeparatorsVisible() const { return m_sectionSeparatorsVisible; }
+    /// Matches the owning table's grid placement; zero spacing keeps one boundary.
+    void setGridLinePlacement(GridLinePlacement placement);
+    GridLinePlacement gridLinePlacement() const { return m_gridLinePlacement; }
+    /// Actual trailing gap, including pane boundaries and terminal-section handling.
+    int sectionSpacingAfter(int logicalIndex) const;
     /// Controls the edge perpendicular to the section sequence.
     void setCrossAxisSeparatorVisible(bool visible);
     bool crossAxisSeparatorVisible() const { return m_crossAxisSeparatorVisible; }
@@ -262,6 +268,16 @@ protected:
 
 private:
     friend class VirtualTableView;
+    friend class StyledHeaderSection;
+    /// Shape bounds shared by section and gap painting; row panes remain separate.
+    QRect sectionStateRect(int logicalIndex, const QRect &rect) const;
+    /// Current section geometry, including clipped sections and slide animation.
+    QRect sectionPaintRect(int logicalIndex) const;
+    /// Previous shown section in this pane, without materializing the full row order.
+    int previousSection(int logicalIndex) const;
+    /// Outer padding beside a section, separate from the inter-section gap.
+    int sectionLeadingEdgeSpacing(int logicalIndex) const;
+    int sectionTrailingEdgeSpacing(int logicalIndex) const;
     /// Connects a table-owned clone to the installed header's current and future styles.
     void setAppearanceSource(VirtualHeaderView *source);
     /// Copies resolved widget defaults and explicit content/base settings without rebinding.
@@ -270,7 +286,11 @@ private:
     void notifyAppearanceChanged();
     /// Table-owned pane gaps can differ from the flat geometry after freezing columns.
     void setPaneSpacingProvider(std::function<int(int)> provider);
+    /// Mirrors the outer bands owned by this pane, including frozen column reordering.
+    void setPaneEdgeSpacing(int leading, int trailing);
     std::function<int(int)> m_paneSpacingProvider;
+    int m_paneLeadingSpacing = 0;
+    int m_paneTrailingSpacing = 0;
     /// Restricts a row strip to its pane without allocating a per-row filter.
     void setRowPaneRange(int first, int last);
     // -- axis helpers (§45: one renderer, two axes) ---------------------------
@@ -421,7 +441,9 @@ private:
     qint64 m_paneOffset = kFollowGeometryOffset;
     int m_paneTerminalColumn = -1;
     bool m_sectionSeparatorsVisible = true;
+    GridLinePlacement m_gridLinePlacement = GridLinePlacement::SpacingCenter;
     bool m_crossAxisSeparatorVisible = true;
+    bool m_crossAxisSeparatorThroughSpacing = true;
     bool m_backgroundVisible = true;
     QColor m_backgroundColor;
     QColor m_foregroundColor;

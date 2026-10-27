@@ -91,6 +91,12 @@ int ListLayout::spacingAfter(qsizetype item) const
     return item >= 0 && item + 1 < itemCount() ? m_spacings.sizeOf(item) : 0;
 }
 
+void ListLayout::setEdgeSpacing(int leading, int trailing)
+{
+    m_leadingSpacing = qMax(0, leading);
+    m_trailingSpacing = qMax(0, trailing);
+}
+
 void ListLayout::setEstimate(int estimate)
 {
     m_estimate = qMax(0, estimate);
@@ -116,21 +122,23 @@ qint64 ListLayout::offsetOf(qsizetype item) const
     if (!m_sizeIndex)
         return 0;
     if (item >= itemCount())
-        return m_hasSpacingOverrides
+        return (itemCount() > 0 ? m_leadingSpacing : 0) + (m_hasSpacingOverrides
             ? m_extents.totalSize() - (itemCount() > 0 ? m_spacings.sizeOf(itemCount() - 1) : 0)
             : m_sizeIndex->totalSize()
-                + qint64(qMax<qsizetype>(0, itemCount() - 1)) * m_defaultSpacing;
+                + qint64(qMax<qsizetype>(0, itemCount() - 1)) * m_defaultSpacing);
     if (m_hasSpacingOverrides)
-        return m_extents.offsetOf(item);
-    return m_sizeIndex->offsetOf(item)
+        return m_leadingSpacing + m_extents.offsetOf(item);
+    return m_leadingSpacing + m_sizeIndex->offsetOf(item)
         + qint64(qMax<qsizetype>(0, item)) * m_defaultSpacing;
 }
 
 qsizetype ListLayout::indexAtOffset(qint64 offset) const
 {
+    if (itemCount() > 0)
+        offset -= m_leadingSpacing;
     if (!m_sizeIndex || (m_defaultSpacing == 0 && !m_hasSpacingOverrides))
         return m_sizeIndex ? m_sizeIndex->indexAt(offset) : 0;
-    if (offset >= offsetOf(itemCount()))
+    if (offset >= offsetOf(itemCount()) - (itemCount() > 0 ? m_leadingSpacing : 0))
         return itemCount();
     if (m_hasSpacingOverrides)
         return m_extents.indexAt(offset);
@@ -144,7 +152,7 @@ qsizetype ListLayout::indexAtOffset(qint64 offset) const
     qsizetype high = itemCount();
     while (low < high) {
         const qsizetype mid = low + (high - low + 1) / 2;
-        if (offsetOf(mid) <= offset)
+        if (offsetOf(mid) - m_leadingSpacing <= offset)
             low = mid;
         else
             high = mid - 1;
@@ -161,7 +169,7 @@ qint64 ListLayout::contentExtent() const
     const qint64 margins = m_orientation == Qt::Vertical
         ? m_viewportMargins.top() + m_viewportMargins.bottom()
         : m_viewportMargins.left() + m_viewportMargins.right();
-    return total + margins;
+    return total + margins + (itemCount() > 0 ? qint64(m_leadingSpacing) + m_trailingSpacing : 0);
 }
 
 void ListLayout::setCrossExtent(int extent)
@@ -207,7 +215,8 @@ qsizetype ListLayout::itemAtPoint(const QPoint &viewportPos, qint64 scrollOffset
         if (offset < 0 || offset >= contentExtent())
             return -1;
         const qsizetype row = indexAtOffset(offset);
-        return row < itemCount() && offset < offsetOf(row) + itemSize(row) ? row : -1;
+        return row < itemCount() && offset >= offsetOf(row)
+            && offset < offsetOf(row) + itemSize(row) ? row : -1;
     }
 
     if (viewportPos.x() < m_viewportMargins.left() || viewportPos.x() >= m_crossExtent - m_viewportMargins.right())
@@ -216,7 +225,8 @@ qsizetype ListLayout::itemAtPoint(const QPoint &viewportPos, qint64 scrollOffset
     if (offset < 0 || offset >= contentExtent())
         return -1;
     const qsizetype row = indexAtOffset(offset);
-    return row < itemCount() && offset < offsetOf(row) + itemSize(row) ? row : -1;
+    return row < itemCount() && offset >= offsetOf(row)
+        && offset < offsetOf(row) + itemSize(row) ? row : -1;
 }
 
 bool ListLayout::isVariableSized() const

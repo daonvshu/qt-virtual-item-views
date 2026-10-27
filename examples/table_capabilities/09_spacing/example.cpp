@@ -5,6 +5,7 @@
 #include <QLabel>
 #include <QSpinBox>
 #include <QCheckBox>
+#include <QComboBox>
 #include <QHBoxLayout>
 #include <QVBoxLayout>
 
@@ -43,7 +44,7 @@ private:
     void setupUi()
     {
         auto *layout = new QVBoxLayout(this);
-        auto *description = new QLabel(QStringLiteral("09 间距与分割线：行列间距、分割线颜色和粗细，以及留白里的自定义控件"), this);
+        auto *description = new QLabel(QStringLiteral("09 间距与分割线：中心模式自动补齐四周半间距，首尾行列与内部单元格保持对称留白"), this);
         description->setWordWrap(true);
         layout->addWidget(description);
         auto *controls = new QHBoxLayout;
@@ -70,9 +71,23 @@ private:
         controls->addWidget(m_custom);
         m_cross = new QCheckBox(QStringLiteral("网格穿过间距"), this);
         m_cross->setChecked(true);
+        m_cross->setEnabled(false);
         controls->addWidget(m_cross);
         controls->addStretch();
         layout->addLayout(controls);
+        auto *placement = new QHBoxLayout;
+        m_placement = new QComboBox(this);
+        m_placement->addItem(QStringLiteral("间距中心（默认；零间距回退单线）"));
+        m_placement->addItem(QStringLiteral("间距两侧"));
+        placement->addWidget(m_placement);
+        m_verticalHeaderLines = new QCheckBox(QStringLiteral("竖线穿过水平表头"), this);
+        m_verticalHeaderLines->setChecked(true);
+        placement->addWidget(m_verticalHeaderLines);
+        m_horizontalHeaderLines = new QCheckBox(QStringLiteral("横线穿过垂直表头"), this);
+        m_horizontalHeaderLines->setChecked(true);
+        placement->addWidget(m_horizontalHeaderLines);
+        placement->addStretch();
+        layout->addLayout(placement);
         auto *colors = new QHBoxLayout;
         m_bodyColor = new QCheckBox(QStringLiteral("内容间距背景色"), this);
         colors->addWidget(m_bodyColor);
@@ -81,6 +96,9 @@ private:
         m_stateCross = new QCheckBox(QStringLiteral("Hover / 选中背景穿过列间距"), this);
         m_stateCross->setChecked(true);
         colors->addWidget(m_stateCross);
+        m_rowStateCross = new QCheckBox(QStringLiteral("状态延伸到上下半行间距"), this);
+        m_rowStateCross->setChecked(true);
+        colors->addWidget(m_rowStateCross);
         colors->addStretch();
         layout->addLayout(colors);
         m_view = new viv::VirtualTableView(this);
@@ -109,12 +127,34 @@ private:
         }
         // The QObject parent owns the model; Qt model signals report data and structure changes.
         m_view->setModel(m_model);
-        // Whole-row state backgrounds cross column gaps by default; row gaps stay clear.
+        // Center placement extends each state to the adjacent half of each row gap.
         m_view->setRowSpacing(12);
         m_view->setColumnSpacing(12);
         m_view->setVisualStateThroughColumnSpacing(true);
+        m_view->setVisualStateThroughRowSpacing(true);
+        // Enable resizing here to demonstrate handles aligned with the spacing grid lines.
+        m_view->setColumnResizeEnabled(true);
+        m_view->setVerticalHeaderResizeEnabled(true);
         m_view->setHorizontalGridLineColor(QColor(QStringLiteral("#8aa2bb")));
         m_view->setVerticalGridLineColor(QColor(QStringLiteral("#8aa2bb")));
+        // Center placement always crosses gaps; zero spacing shares one item boundary.
+        m_view->setGridLinePlacement(viv::GridLinePlacement::SpacingCenter);
+        connect(m_placement, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int mode) {
+            m_view->setGridLinePlacement(mode == 0 ? viv::GridLinePlacement::SpacingCenter
+                                                  : viv::GridLinePlacement::SpacingEdges);
+            m_cross->setEnabled(mode != 0);
+            m_rowStateCross->setEnabled(mode == 0);
+            if (mode == 0) {
+                m_cross->setChecked(true);
+            } else {
+                m_view->setVerticalSpacingLineThroughRowSpacing(m_cross->isChecked());
+                m_view->setHorizontalSpacingLineThroughColumnSpacing(m_cross->isChecked());
+            }
+        });
+        connect(m_verticalHeaderLines, &QCheckBox::toggled, m_view,
+                &viv::VirtualTableView::setVerticalGridLinesThroughHeader);
+        connect(m_horizontalHeaderLines, &QCheckBox::toggled, m_view,
+                &viv::VirtualTableView::setHorizontalGridLinesThroughHeader);
 
         connect(m_bodyColor, &QCheckBox::toggled, this, [this](bool enabled) {
             // Color only body row/column gaps; invalid restores the palette defaults.
@@ -127,9 +167,11 @@ private:
             m_view->verticalHeader()->setSpacingBackgroundColor(color);
         });
         connect(m_stateCross, &QCheckBox::toggled, this, [this](bool enabled) {
-            // This affects whole-row hover and selection only, leaving row and header gaps intact.
+            // This controls horizontal gap coverage for whole-row hover and selection.
             m_view->setVisualStateThroughColumnSpacing(enabled);
         });
+        connect(m_rowStateCross, &QCheckBox::toggled, m_view,
+                &viv::VirtualTableView::setVisualStateThroughRowSpacing);
         connect(m_rows, QOverload<int>::of(&QSpinBox::valueChanged), this, [this](int value) {
             m_view->setRowSpacing(value);
         });
@@ -145,7 +187,7 @@ private:
             m_view->setVerticalGridLinesVisible(enabled);
         });
         connect(m_cross, &QCheckBox::toggled, this, [this](bool enabled) {
-            // Grid continuity across gaps is independent of hover and selection background scope.
+            // Only edge placement accepts this option; center placement always crosses gaps.
             m_view->setVerticalSpacingLineThroughRowSpacing(enabled);
             m_view->setHorizontalSpacingLineThroughColumnSpacing(enabled);
         });
@@ -186,9 +228,13 @@ private:
     QCheckBox *m_grid = nullptr;
     QCheckBox *m_custom = nullptr;
     QCheckBox *m_cross = nullptr;
+    QComboBox *m_placement = nullptr;
+    QCheckBox *m_verticalHeaderLines = nullptr;
+    QCheckBox *m_horizontalHeaderLines = nullptr;
     QCheckBox *m_bodyColor = nullptr;
     QCheckBox *m_headerColor = nullptr;
     QCheckBox *m_stateCross = nullptr;
+    QCheckBox *m_rowStateCross = nullptr;
 };
 
 QWidget *createExample(QWidget *parent)

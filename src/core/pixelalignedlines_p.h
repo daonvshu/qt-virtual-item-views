@@ -95,7 +95,8 @@ inline void fillPixelAlignedRoundedRegion(QPainter *painter, const QRect &rect,
 // Union device-pixel bands before painting so thin/overlapping gaps stay uniform.
 inline void fillPixelLines(QPainter *painter, const QVector<QRect> &lines,
                            int pixelWidth, const QColor &color, Qt::Orientation orientation,
-                           bool trailingEdge = false, bool bothEdges = false)
+                           bool trailingEdge = false, bool bothEdges = false,
+                           bool centered = false)
 {
     const QTransform transform = painter->deviceTransform();
     bool invertible = false;
@@ -116,6 +117,12 @@ inline void fillPixelLines(QPainter *painter, const QVector<QRect> &lines,
                            : qMax(0, qRound(device.right()) - qRound(device.left())),
                        orientation == Qt::Horizontal ? qMax(1, pixelWidth)
                            : qMax(0, qRound(device.bottom()) - qRound(device.top())));
+        if (centered) {
+            if (orientation == Qt::Horizontal)
+                band.moveTop(qRound((device.top() + device.bottom() - thickness) / 2.0));
+            else
+                band.moveLeft(qRound((device.left() + device.right() - thickness) / 2.0));
+        }
         bands += band;
         if (bothEdges) {
             if (orientation == Qt::Horizontal)
@@ -193,10 +200,18 @@ inline void drawPixelAlignedSeparator(QPainter *painter, const QRect &rect,
     painter->restore();
 }
 
-class PixelAlignedHorizontalLine : public QWidget
+class PixelAlignedLine : public QWidget
 {
 public:
-    explicit PixelAlignedHorizontalLine(QWidget *parent) : QWidget(parent) {}
+    explicit PixelAlignedLine(QWidget *parent, Qt::Orientation orientation)
+        : QWidget(parent), m_orientation(orientation) {}
+
+    void setCentered(bool centered, int pixelWidth)
+    {
+        m_centered = centered;
+        m_pixelWidth = pixelWidth;
+        update();
+    }
 
     void setTrailingEdge(bool trailingEdge)
     {
@@ -211,12 +226,24 @@ protected:
     {
         QPainter painter(this);
         // Use the same edge as the adjoining row or spacing host at fractional DPI.
-        fillPixelLines(&painter, {rect()}, height(), palette().color(QPalette::Window),
-                       Qt::Horizontal, m_trailingEdge);
+        const int extent = m_orientation == Qt::Horizontal ? height() : width();
+        fillPixelLines(&painter, {rect()}, m_pixelWidth > 0 ? m_pixelWidth : extent,
+                       palette().color(QPalette::Window), m_orientation, m_trailingEdge,
+                       false, m_centered);
     }
 
 private:
+    Qt::Orientation m_orientation;
     bool m_trailingEdge = true;
+    bool m_centered = false;
+    int m_pixelWidth = 0;
+};
+
+class PixelAlignedHorizontalLine : public PixelAlignedLine
+{
+public:
+    explicit PixelAlignedHorizontalLine(QWidget *parent)
+        : PixelAlignedLine(parent, Qt::Horizontal) {}
 };
 
 } // namespace viv

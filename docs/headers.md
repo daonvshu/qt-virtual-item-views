@@ -74,7 +74,7 @@ table.verticalHeader()->setTextAlignment(Qt::AlignCenter);
 | `setContentPadding()` / `contentPadding()` | 零附加内边距；负值归零，只调整文字与排序箭头 |
 | `setFont()` / `font()` | 遵循 QWidget 字体继承；通过 `QFont` 设置字号、加粗、斜体等 |
 | `setBackgroundVisible()` / `backgroundVisible()` | 默认开启，只控制基础背景 |
-| `setSpacingBackgroundColor()` / `spacingBackgroundColor()` | 无效颜色跟随本轴基础背景 |
+| `setSpacingBackgroundColor()` / `spacingBackgroundColor()` | 默认使用 `QPalette::Base`；无效颜色跟随显式配置的本轴基础背景 |
 
 padding 添加在原生样式的内容留白之外，不缩小背景或分割线。留白耗尽 section 空间时不绘制内容。字体大小不自动改变表头高度或行号宽度，使用 `setHeaderHeight()`、`setVerticalHeaderWidth()` 为文字提供空间。自定义文本内容可调用 `LabelHeaderSection::initContentStyleOption()` 复用文字样式与 padding。
 
@@ -84,7 +84,7 @@ padding 添加在原生样式的内容留白之外，不缩小背景或分割线
 
 ## 表头底色与透明背景
 
-横纵表头独立管理基础背景，默认 corner 跟随水平表头底色与显隐。未指定颜色的表头间距跟随本轴底色，显式间距颜色优先。传入 `QColor()` 恢复原生面板；`setBackgroundVisible(false)` 暂时隐藏已配置底色，重新显示后继续生效。
+横纵表头独立管理基础背景，默认 corner 跟随水平表头底色与显隐。表头间距默认使用 `QPalette::Base`，与内容区间距保持一致；显式配置本轴底色后，未指定颜色的间距跟随该底色，显式间距颜色优先。传入 `QColor()` 恢复原生面板；`setBackgroundVisible(false)` 暂时隐藏已配置底色，重新显示后继续生效。
 
 ```cpp
 for (auto *header : {table.horizontalHeader(), table.verticalHeader()}) {

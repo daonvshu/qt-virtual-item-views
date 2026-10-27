@@ -256,6 +256,7 @@ void TestTableSpan::rowSpacingLinesRespectMergedCells()
     SpanHostAdapter rowAdapter(4);
     SpanCellAdapter cellAdapter;
     VirtualTableView view;
+    view.setGridLinePlacement(viv::GridLinePlacement::SpacingEdges);
     if (cells) {
         view.setMaterializationMode(VirtualTableView::MaterializationMode::CellWidgets);
         view.setCellAdapter(&cellAdapter);

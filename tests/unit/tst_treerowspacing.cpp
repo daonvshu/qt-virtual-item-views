@@ -591,6 +591,7 @@ private slots:
         QFETCH(int, mode);
         QFETCH(bool, frozen);
         const auto verify = [frozen](auto &view, bool cells) {
+            view.setGridLinePlacement(viv::GridLinePlacement::SpacingEdges);
             using View = std::decay_t<decltype(view)>;
             constexpr bool tree = std::is_same_v<View, viv::VirtualTreeView>
                 || std::is_same_v<View, viv::VirtualTreeTableView>;
@@ -977,6 +978,7 @@ private slots:
         parent->appendRow(sibling);
         model.appendRow(parent);
         viv::VirtualTreeView view;
+        view.setGridLinePlacement(viv::GridLinePlacement::SpacingEdges);
         RowAdapter adapter;
         view.setAdapter(&adapter);
         view.setUniformItemHeight(24);
@@ -1025,6 +1027,7 @@ private slots:
     {
         QFETCH(int, mode);
         const auto verify = [](auto &view, bool cells) {
+            view.setGridLinePlacement(viv::GridLinePlacement::SpacingEdges);
             using View = std::decay_t<decltype(view)>;
             QStandardItemModel model;
             for (int i = 0; i < 40; ++i)

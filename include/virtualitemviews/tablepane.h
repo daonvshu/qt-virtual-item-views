@@ -160,6 +160,9 @@ public:
     int columnViewportX(int logicalIndex) const;
     /// Actual gap after a column, including pane order and the terminal boundary.
     int columnSpacingAfter(int logicalIndex) const { return m_columnSpacings.value(logicalIndex, 0); }
+    /// Outer half-gaps belong only to the first and last nonempty displayed panes.
+    int leadingSpacingForPane(int paneIndex) const;
+    int trailingSpacingForPane(int paneIndex) const;
     /// Pane a column is painted in (scrollable when it is not frozen).
     TablePane::Type paneOfColumn(int logicalIndex) const;
     /// Index of the pane that shows \a logicalIndex (-1 when hidden/unknown).
@@ -264,6 +267,8 @@ private:
     VisibleRange m_visibleScrollable;
     /// Scroll group of the primary pane (see primaryScrollGroup()).
     int m_primaryScrollGroup = -1;
+    int m_firstContentPane = -1;
+    int m_lastContentPane = -1;
     int m_viewportWidth = 0;
     int m_viewportHeight = 0;
 };
