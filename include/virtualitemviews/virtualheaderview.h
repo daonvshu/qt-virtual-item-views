@@ -90,14 +90,13 @@ public:
     ///
     /// A section move is the one interaction whose committed geometry is final
     /// before the user sees the result, so the renderer slides the section from its
-    /// old position to the committed one instead of teleporting. Only the header
-    /// moves: the body, the scroll bar and every geometry query read the committed
-    /// HeaderGeometry, so they jump once - at the commit - and never follow an
-    /// intermediate frame.
+    /// old position to the committed one instead of teleporting. In VirtualTableView,
+    /// body widgets follow these visual positions according to the table's column
+    /// and row following settings, both enabled by default. HeaderGeometry, scroll
+    /// bars and geometry queries continue to use the committed positions.
     ///
     /// Resizing a section, scrolling and pane changes stay immediate: those are the
-    /// cases where the body *does* follow every frame (§24), so animating the
-    /// header alone would tear header and body apart.
+    /// cases where the body follows every geometry change directly.
     void setSectionAnimationEnabled(bool enabled) override;
     bool sectionAnimationEnabled() const { return m_animationEnabled; }
     /// Duration of the visual transition in milliseconds; 0 disables it as well.

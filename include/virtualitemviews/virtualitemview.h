@@ -182,7 +182,8 @@ public:
 
     void setSelectionMode(SelectionMode mode);
     SelectionMode selectionMode() const { return m_selectionMode; }
-    /// Tables use the same row/cell choice for hover and selected visual states.
+    /// Whole rows are selected by default. Tables use the same row/cell choice
+    /// for hover and selected visual states.
     void setSelectionBehavior(SelectionBehavior behavior);
     SelectionBehavior selectionBehavior() const { return m_selectionBehavior; }
 
@@ -421,7 +422,9 @@ public:
     void setEstimatedItemHeight(int height);
     int estimatedItemHeight() const { return m_estimatedItemHeight; }
     /// Enables measuring the size hint of bound widgets (Variable mode) and the
-    /// first-item fitting of Uniform mode.
+    /// first-item fitting of Uniform mode. Enabled by default, except in
+    /// VirtualFlowTableView and VirtualMasonryView, which disable measurement and
+    /// reject attempts to enable it; use their dedicated height APIs instead.
     void setAutoMeasureItemHeight(bool enabled);
     bool autoMeasureItemHeight() const { return m_autoMeasure; }
 
@@ -938,7 +941,7 @@ private:
     bool m_pinLimitWarned = false;
 
     SelectionMode m_selectionMode = SelectionMode::ExtendedSelection;
-    SelectionBehavior m_selectionBehavior = SelectionBehavior::SelectItems;
+    SelectionBehavior m_selectionBehavior = SelectionBehavior::SelectRows;
     bool m_lifecycleLogEnabled = false;
     QStringList m_lifecycleLog;
 

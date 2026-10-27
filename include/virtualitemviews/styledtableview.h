@@ -51,6 +51,7 @@ private:
 };
 
 /// Optional styled table base. Adapters provide content; row/cell hosts paint state.
+/// Uses a default state-background corner radius of 6 logical pixels.
 class VIRTUALITEMVIEWS_EXPORT StyledTableView : public VirtualTableView
 {
 public:

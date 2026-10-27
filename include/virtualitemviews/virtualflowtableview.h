@@ -9,8 +9,9 @@ class FlowTableLayout;
 
 /// Responsive item grid. Display columns share the viewport width; model rows
 /// remain item identities when resizing moves items between display rows.
-/// Use the cell height API below. Inherited size-index height setters and
-/// automatic sizeHint measurement are unsupported and report a warning.
+/// Use the cell height API below. Inherited size-index height setters are
+/// unsupported. Automatic sizeHint measurement is disabled and cannot be enabled;
+/// attempts to use either unsupported configuration report a warning.
 class VIRTUALITEMVIEWS_EXPORT VirtualFlowTableView : public VirtualItemView
 {
     Q_OBJECT

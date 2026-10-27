@@ -389,8 +389,6 @@ private:
 VirtualTableView::VirtualTableView(QWidget *parent)
     : VirtualItemView(parent), m_dragRowPreview(new RowDragPreview)
 {
-    // Tables select whole rows by default (§45: row selection).
-    setSelectionBehavior(SelectionBehavior::SelectRows);
     setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
     setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
 

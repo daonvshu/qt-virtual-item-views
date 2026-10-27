@@ -19,6 +19,9 @@ namespace viv {
 class MasonryLayout;
 
 /// Virtualized shortest-column layout for items with independent heights.
+/// Use the height APIs below. Inherited size-index height setters are unsupported.
+/// Automatic sizeHint measurement is disabled and cannot be enabled; attempts to
+/// use either unsupported configuration report a warning.
 class VIRTUALITEMVIEWS_EXPORT VirtualMasonryView : public VirtualItemView
 {
     Q_OBJECT

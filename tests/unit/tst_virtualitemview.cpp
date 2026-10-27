@@ -668,7 +668,8 @@ void TestVirtualItemView::selectionBehaviorSelectsWholeRows()
     view.setModel(&model);
     showView(&view, QSize(kViewWidth, kViewHeight));
 
-    // SelectItems (default): only the current index is selected.
+    // SelectItems: only the current index is selected.
+    view.setSelectionBehavior(VirtualItemView::SelectionBehavior::SelectItems);
     view.setCurrentIndex(model.index(2, 1));
     QCOMPARE(view.selectionModel()->selectedIndexes().size(), 1);
 

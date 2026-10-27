@@ -262,8 +262,6 @@ private:
 } // namespace
 
 namespace {
-constexpr int kDefaultOverscan = 2;
-constexpr int kDefaultWheelScrollItems = 3;
 /// Automatic height measurement must converge: a widget whose size hint depends
 /// on its own geometry could otherwise trigger an endless relayout loop.
 constexpr int kMaxConsecutiveMeasurePasses = 8;
@@ -302,10 +300,6 @@ VirtualItemView::VirtualItemView(QWidget *parent)
     viewport()->setAttribute(Qt::WA_Hover);
     viewport()->setMouseTracking(true);
     viewport()->installEventFilter(this);
-
-    m_overscanBefore = kDefaultOverscan;
-    m_overscanAfter = kDefaultOverscan;
-    m_wheelScrollItems = kDefaultWheelScrollItems;
 
     m_recycler = new WidgetRecycler(viewport());
     m_recycler->setFactory([this](WidgetType type, QWidget *parentWidget) {

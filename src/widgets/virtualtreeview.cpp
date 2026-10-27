@@ -69,7 +69,6 @@ VirtualTreeView::VirtualTreeView(QWidget *parent)
     m_visibility = new TreeVisibilityIndex(nullptr);
     m_rowLayout = new ListLayout(Qt::Vertical);
     setLayoutPolicy(m_rowLayout, true);
-    setSelectionBehavior(SelectionBehavior::SelectRows);
 }
 
 VirtualTreeView::~VirtualTreeView()

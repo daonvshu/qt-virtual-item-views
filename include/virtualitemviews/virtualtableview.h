@@ -400,10 +400,11 @@ public:
 
     // -- header animation (§23/§24) ------------------------------------------
     /// Visual geometry animation of the installed header renderers: a section move
-    /// slides the section to its committed position instead of teleporting, while
-    /// the body keeps reading the committed HeaderGeometry (it jumps once, at the
-    /// commit). Resizing, scrolling and pane changes stay immediate, because there
-    /// the body follows every frame. Renderers without their own section placement
+    /// slides the section to its committed position instead of teleporting. Body
+    /// widgets follow visual positions according to columnFollowsHeaderVisual() and
+    /// rowFollowsHeaderVisual(), both enabled by default; geometry queries keep
+    /// reading the committed HeaderGeometry. Resizing, scrolling and pane changes
+    /// stay immediate. Renderers without their own section placement
     /// (a native QHeaderView) ignore the setting. Default: enabled, 300 ms, OutCubic.
     void setHeaderAnimationEnabled(bool enabled);
     bool headerAnimationEnabled() const { return m_headerAnimationEnabled; }
