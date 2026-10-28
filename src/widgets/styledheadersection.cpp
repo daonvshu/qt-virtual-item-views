@@ -100,6 +100,7 @@ void StyledHeaderSection::paintVisualStateBackground(QPainter *painter, const QR
         || table->selectionBehavior() == VirtualItemView::SelectionBehavior::SelectItems;
     painter->save();
     if (orientation() == Qt::Vertical && header->sectionSeparatorsVisible()
+        && (!header->isPaneBoundaryAfter(logicalIndex()) || header->isPaneTailExposed(logicalIndex()))
         && !hasTrailingSectionGap(header, logicalIndex())
         && header->sectionTrailingEdgeSpacing(logicalIndex()) == 0)
         clipPixelAlignedBottomInset(painter, shape, header->sectionSeparatorWidth());
@@ -136,7 +137,10 @@ void StyledHeaderSection::paintForeground(QPainter *painter)
     }
     const bool centeredGap = header && hasGap
         && header->gridLinePlacement() == GridLinePlacement::SpacingCenter;
-    if ((!header || header->sectionSeparatorsVisible()) && (!vertical || !hasGap) && !centeredGap) {
+    if ((!header || (header->sectionSeparatorsVisible()
+            && (!header->isPaneBoundaryAfter(logicalIndex())
+                || (!hasGap && header->isPaneTailExposed(logicalIndex())))))
+        && (!vertical || !hasGap) && !centeredGap) {
         if (vertical)
             fillHorizontalPixelLines(painter, {QRect(0, height() - sectionWidth, width(), sectionWidth)},
                                      sectionWidth, sectionColor, true);

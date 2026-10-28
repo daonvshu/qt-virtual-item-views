@@ -807,9 +807,15 @@ private:
     void syncColumnSpacingWidgets();
     /// Updates existing column-gap hosts for moving row gaps and horizontal lines.
     void updateColumnSpacingVisualRows();
+    /// Cell-side borders of split pane gaps in edge placement, above spacing widgets.
+    void syncPaneGapGridLines();
     /// Visual row bounds for grid lines; the hidden drag source supplies the
     /// insertion placeholder's trailing boundary instead of leaving it open.
     QRect rowGridGeometry(qsizetype row) const;
+    /// A row-pane tail before unused space needs its own border besides the frozen divider.
+    bool rowPaneTailIsExposed(qsizetype row) const;
+    /// Same content-tail distinction for split column-pane spacing.
+    bool columnPaneTailIsExposed(int logicalColumn) const;
     /// Viewport bands occupied by visible row bodies and their trailing spacing.
     QRegion rowContentRegion() const;
     void applyGridLineVisibilityToHeaders();
@@ -907,6 +913,8 @@ private:
     QVector<QWidget *> m_columnSpacingPool;
     QHash<qsizetype, QWidget *> m_rowGridLines;
     QVector<QWidget *> m_rowGridLinePool;
+    /// Extra cell-side borders around pane half-gaps in edge placement.
+    QWidget *m_paneGapGridLines = nullptr;
     /// Leading edge of a lifted row, matching the row-number strip's drag border.
     QWidget *m_headerDragLeadingSeparator = nullptr;
     ColumnSpacingFactory m_columnSpacingFactory;

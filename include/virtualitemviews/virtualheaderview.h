@@ -263,6 +263,7 @@ protected:
     void mouseMoveEvent(QMouseEvent *event) override;
     void mouseReleaseEvent(QMouseEvent *event) override;
     void keyPressEvent(QKeyEvent *event) override;
+    void wheelEvent(QWheelEvent *event) override;
     void leaveEvent(QEvent *event) override;
     bool eventFilter(QObject *watched, QEvent *event) override;
 
@@ -278,6 +279,10 @@ private:
     /// Outer padding beside a section, separate from the inter-section gap.
     int sectionLeadingEdgeSpacing(int logicalIndex) const;
     int sectionTrailingEdgeSpacing(int logicalIndex) const;
+    /// Identifies pane boundaries so their divider and cell-side borders stay separate.
+    bool isPaneBoundaryAfter(int logicalIndex) const;
+    /// A pane tail before unused space needs a border separate from the frozen divider.
+    bool isPaneTailExposed(int logicalIndex) const;
     /// Connects a table-owned clone to the installed header's current and future styles.
     void setAppearanceSource(VirtualHeaderView *source);
     /// Copies resolved widget defaults and explicit content/base settings without rebinding.
@@ -287,10 +292,11 @@ private:
     /// Table-owned pane gaps can differ from the flat geometry after freezing columns.
     void setPaneSpacingProvider(std::function<int(int)> provider);
     /// Mirrors the outer bands owned by this pane, including frozen column reordering.
-    void setPaneEdgeSpacing(int leading, int trailing);
+    void setPaneEdgeSpacing(int leading, int trailing, bool trailingOuterEdge);
     std::function<int(int)> m_paneSpacingProvider;
     int m_paneLeadingSpacing = 0;
     int m_paneTrailingSpacing = 0;
+    bool m_paneTrailingOuterEdge = true;
     /// Restricts a row strip to its pane without allocating a per-row filter.
     void setRowPaneRange(int first, int last);
     // -- axis helpers (§45: one renderer, two axes) ---------------------------

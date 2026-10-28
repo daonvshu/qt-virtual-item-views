@@ -97,6 +97,9 @@ public:
     void setGeometry(const HeaderGeometry *geometry) { m_geometry = geometry; }
     const HeaderGeometry *geometry() const { return m_geometry; }
 
+    /// Splits inter-pane gaps into trailing and leading halves, independent of grid placement.
+    void setSplitBoundarySpacing(bool split) { m_splitBoundarySpacing = split; }
+
     /// Logical columns frozen at the left/right edge (order is irrelevant, the
     /// pane lists them in visual order). A column in both sets stays on the left.
     void setFrozenColumns(const QVector<int> &logicalColumns);
@@ -160,7 +163,7 @@ public:
     int columnViewportX(int logicalIndex) const;
     /// Actual gap after a column, including pane order and the terminal boundary.
     int columnSpacingAfter(int logicalIndex) const { return m_columnSpacings.value(logicalIndex, 0); }
-    /// Outer half-gaps belong only to the first and last nonempty displayed panes.
+    /// Outer padding and the halves of centered inter-pane gaps owned by each pane.
     int leadingSpacingForPane(int paneIndex) const;
     int trailingSpacingForPane(int paneIndex) const;
     /// Pane a column is painted in (scrollable when it is not frozen).
@@ -247,6 +250,9 @@ private:
     QVector<int> m_paneSlotByLogical;
     /// Fitted gaps follow displayed slots when frozen panes change the column order.
     QVector<int> m_columnSpacings;
+    QVector<int> m_paneLeadingSpacings;
+    QVector<int> m_paneTrailingSpacings;
+    bool m_splitBoundarySpacing = false;
     /// Visible window of a pane as slots into its column list (-1 = nothing
     /// visible); the visual-index range is derived from it for the public API.
     QVector<QPair<int, int>> m_paneSlotWindows;

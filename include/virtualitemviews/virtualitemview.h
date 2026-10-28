@@ -770,6 +770,8 @@ protected:
     virtual QRegion itemPaneSeparatorMask(const QRect &geometry) const;
     /// Whether a view-coordinate row grid line overlaps a visible pane divider.
     bool isRowGridLineCoveredByPaneSeparator(const QRect &rect) const;
+    /// Row-pane boundaries split their spacing between adjacent panes.
+    bool isItemPaneBoundaryAfter(qsizetype row) const;
     void syncRowSpacingWidgets(const QVector<VisibleRange> &ranges);
     /// Moves existing gap hosts with visual rows, without invoking factories or binders.
     void updateRowSpacingVisualGeometry(const std::function<int(qsizetype)> &offset);

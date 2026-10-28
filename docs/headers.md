@@ -84,7 +84,7 @@ padding 添加在原生样式的内容留白之外，不缩小背景或分割线
 
 ## 表头底色与透明背景
 
-横纵表头独立管理基础背景，默认 corner 跟随水平表头底色与显隐。表头间距默认使用 `QPalette::Base`，与内容区间距保持一致；显式配置本轴底色后，未指定颜色的间距跟随该底色，显式间距颜色优先。传入 `QColor()` 恢复原生面板；`setBackgroundVisible(false)` 暂时隐藏已配置底色，重新显示后继续生效。
+横纵表头独立管理基础背景，默认 corner 跟随水平表头底色与显隐。表头容器的空白区域与间距默认统一使用 `QPalette::Base`，与内容区背景保持一致；实际 section 和 corner 保留原生面板样式。显式配置本轴底色后，未指定颜色的间距跟随该底色，显式间距颜色优先。传入 `QColor()` 恢复默认容器底色和原生面板；`setBackgroundVisible(false)` 暂时隐藏已配置底色，重新显示后继续生效。
 
 ```cpp
 for (auto *header : {table.horizontalHeader(), table.verticalHeader()}) {

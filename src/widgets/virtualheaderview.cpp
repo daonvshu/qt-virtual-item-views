@@ -1,5 +1,6 @@
 #include <virtualitemviews/virtualheaderview.h>
 #include "../core/pixelalignedlines_p.h"
+#include "../core/wheeleventforwarding_p.h"
 
 #include <virtualitemviews/headergeometry.h>
 #include <virtualitemviews/labelheaderview.h>
@@ -116,12 +117,10 @@ void VirtualHeaderView::paintEvent(QPaintEvent *event)
 {
     Q_UNUSED(event);
     QPainter painter(this);
-    const bool rowSectionsOnly = !isHorizontal() && m_viewportOriginSet
-        && !m_backgroundColor.isValid();
     if (m_backgroundVisible)
         painter.fillRect(rect(), m_backgroundColor.isValid()
             ? QBrush(m_backgroundColor)
-            : palette().brush(rowSectionsOnly ? QPalette::Base : QPalette::Button));
+            : palette().brush(QPalette::Base));
     if (!m_geometry)
         return;
     const QColor sectionColor = m_sectionSeparatorColor.isValid()
@@ -139,11 +138,6 @@ void VirtualHeaderView::paintEvent(QPaintEvent *event)
             continue;
         const int sectionEnd = isHorizontal() ? section.right() + 1 : section.bottom() + 1;
         const int spacing = sectionSpacingAfter(it.key());
-        if (m_backgroundVisible && rowSectionsOnly) {
-            // Native section panels retain their base; gap bands are filled separately.
-            painter.fillRect(QRect(0, section.y(), width(), section.height())
-                                 .intersected(rect()), palette().brush(QPalette::Button));
-        }
         if (spacing > 0 && fillSpacing) {
             const QRect gap = isHorizontal() ? QRect(sectionEnd, 0, spacing, height())
                                              : QRect(0, sectionEnd, width(), spacing);
@@ -203,9 +197,16 @@ void VirtualHeaderView::paintEvent(QPaintEvent *event)
                            m_crossAxisSeparatorWidth, trailing)},
                     m_crossAxisSeparatorWidth, crossColor, true);
         }
-        if (trailing > 0) {
+        const bool paneBoundary = isPaneBoundaryAfter(it.key());
+        // A short scrolling pane ends before its frozen divider. Close the actual
+        // content after its half-gap, while coincident pane edges keep only the divider.
+        if (paneBoundary && !isPaneTailExposed(it.key()))
+            continue;
+        const bool sectionOwnsBorder = section->isVisible()
+            && qobject_cast<const StyledHeaderSection *>(section);
+        if (trailing > 0 || paneBoundary) {
             // The terminal border is at the outer edge, keeping a full half-gap after the widget.
-            if (m_sectionSeparatorsVisible) {
+            if (m_sectionSeparatorsVisible && (trailing > 0 || !sectionOwnsBorder)) {
                 if (isHorizontal())
                     fillVerticalPixelLines(&painter,
                         {QRect(sectionEnd + trailing - m_sectionSeparatorWidth, 0,
@@ -220,8 +221,6 @@ void VirtualHeaderView::paintEvent(QPaintEvent *event)
             continue;
         }
         // Visible styled sections paint their body border after their own background.
-        const bool sectionOwnsBorder = section->isVisible()
-            && qobject_cast<const StyledHeaderSection *>(section);
         if (isHorizontal()) {
             if (spacing > 0 && m_gridLinePlacement == GridLinePlacement::SpacingCenter) {
                 // Center gap hosts leave header input and its body boundary to this widget.
@@ -318,6 +317,8 @@ int VirtualHeaderView::sectionLeadingEdgeSpacing(int logicalIndex) const
         return 0;
     if (m_paneFilterActive)
         return previousSection(logicalIndex) < 0 ? m_paneLeadingSpacing : 0;
+    if (!isHorizontal() && logicalIndex == m_firstPaneRow && logicalIndex > 0)
+        return (m_geometry->sectionSpacingAfter(logicalIndex - 1) + 1) / 2;
     return m_geometry->sectionPosition(logicalIndex) == m_geometry->leadingSpacing()
         ? m_geometry->leadingSpacing() : 0;
 }
@@ -328,9 +329,30 @@ int VirtualHeaderView::sectionTrailingEdgeSpacing(int logicalIndex) const
         return 0;
     if (m_paneFilterActive)
         return logicalIndex == m_paneTerminalColumn ? m_paneTrailingSpacing : 0;
+    if (isPaneBoundaryAfter(logicalIndex))
+        return m_geometry->sectionSpacingAfter(logicalIndex) / 2;
     return m_geometry->sectionPosition(logicalIndex) + m_geometry->sectionSize(logicalIndex)
         == m_geometry->totalExtent() - m_geometry->trailingSpacing()
         ? m_geometry->trailingSpacing() : 0;
+}
+
+bool VirtualHeaderView::isPaneBoundaryAfter(int logicalIndex) const
+{
+    if (!m_geometry)
+        return false;
+    return isHorizontal()
+        ? m_paneFilterActive && !m_paneTrailingOuterEdge && logicalIndex == m_paneTerminalColumn
+        : logicalIndex == m_lastPaneRow && logicalIndex + 1 < m_geometry->sectionCount();
+}
+
+bool VirtualHeaderView::isPaneTailExposed(int logicalIndex) const
+{
+    if (!isPaneBoundaryAfter(logicalIndex))
+        return false;
+    const QRect section = sectionPaintRect(logicalIndex);
+    const int end = (isHorizontal() ? section.right() + 1 : section.bottom() + 1)
+        + sectionTrailingEdgeSpacing(logicalIndex);
+    return !section.isEmpty() && end > 0 && end < axisExtent();
 }
 
 QRect VirtualHeaderView::sectionStateRect(int logicalIndex, const QRect &body) const
@@ -641,12 +663,14 @@ void VirtualHeaderView::setPaneSpacingProvider(std::function<int(int)> provider)
     relayout();
 }
 
-void VirtualHeaderView::setPaneEdgeSpacing(int leading, int trailing)
+void VirtualHeaderView::setPaneEdgeSpacing(int leading, int trailing, bool trailingOuterEdge)
 {
-    if (m_paneLeadingSpacing == leading && m_paneTrailingSpacing == trailing)
+    if (m_paneLeadingSpacing == leading && m_paneTrailingSpacing == trailing
+        && m_paneTrailingOuterEdge == trailingOuterEdge)
         return;
     m_paneLeadingSpacing = leading;
     m_paneTrailingSpacing = trailing;
+    m_paneTrailingOuterEdge = trailingOuterEdge;
     m_paneCacheDirty = true;
     relayout();
 }
@@ -676,6 +700,8 @@ void VirtualHeaderView::setGridLinePlacement(GridLinePlacement placement)
 int VirtualHeaderView::sectionSpacingAfter(int logicalIndex) const
 {
     if (!m_geometry)
+        return 0;
+    if (isPaneBoundaryAfter(logicalIndex))
         return 0;
     if (isHorizontal() && m_paneSpacingProvider)
         return qMax(0, m_paneSpacingProvider(logicalIndex));
@@ -2136,6 +2162,15 @@ void VirtualHeaderView::keyPressEvent(QKeyEvent *event)
         return;
     }
     QWidget::keyPressEvent(event);
+}
+
+void VirtualHeaderView::wheelEvent(QWheelEvent *event)
+{
+    auto *table = qobject_cast<VirtualTableView *>(parentWidget());
+    if (table)
+        forwardWheelToViewport(table->viewport(), event);
+    else
+        QWidget::wheelEvent(event);
 }
 
 void VirtualHeaderView::resizeEvent(QResizeEvent *event)

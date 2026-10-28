@@ -101,6 +101,15 @@ private:
         colors->addWidget(m_rowStateCross);
         colors->addStretch();
         layout->addLayout(colors);
+        auto *scenarios = new QHBoxLayout;
+        m_frozenColumns = new QCheckBox(QStringLiteral("冻结左右列（各一列）"), this);
+        scenarios->addWidget(m_frozenColumns);
+        m_frozenRows = new QCheckBox(QStringLiteral("冻结上下行（各一行）"), this);
+        scenarios->addWidget(m_frozenRows);
+        m_smallData = new QCheckBox(QStringLiteral("少量数据（4 行 × 3 列）"), this);
+        scenarios->addWidget(m_smallData);
+        scenarios->addStretch();
+        layout->addLayout(scenarios);
         m_view = new viv::VirtualTableView(this);
         m_view->setObjectName(QStringLiteral("spacingTable"));
         // Match the grid color; target only the table's outer frame.
@@ -117,14 +126,8 @@ private:
         m_view->setUniformItemHeight(40);
         // The header and body share the same column geometry.
         m_view->setDefaultColumnWidth(150);
-        m_model = new QStandardItemModel(120, 8, m_view);
-        for (int column = 0; column < m_model->columnCount(); ++column)
-            m_model->setHeaderData(column, Qt::Horizontal, QStringLiteral("列 %1").arg(column + 1));
-        for (int row = 0; row < m_model->rowCount(); ++row) {
-            for (int column = 0; column < m_model->columnCount(); ++column) {
-                m_model->setData(m_model->index(row, column), QStringLiteral("条目 %1 / 列 %2").arg(row + 1).arg(column + 1));
-            }
-        }
+        m_model = new QStandardItemModel(m_view);
+        populateModel(false);
         // The QObject parent owns the model; Qt model signals report data and structure changes.
         m_view->setModel(m_model);
         // Center placement extends each state to the adjacent half of each row gap.
@@ -137,6 +140,12 @@ private:
         m_view->setVerticalHeaderResizeEnabled(true);
         m_view->setHorizontalGridLineColor(QColor(QStringLiteral("#8aa2bb")));
         m_view->setVerticalGridLineColor(QColor(QStringLiteral("#8aa2bb")));
+        // One style configures both row and column pane dividers, independently of the grid.
+        viv::PaneSeparatorStyle frozenSeparator;
+        frozenSeparator.width = 2;
+        frozenSeparator.color = QColor(Qt::red);
+        frozenSeparator.lineStyle = Qt::DashLine;
+        m_view->setPaneSeparatorStyle(frozenSeparator);
         // Center placement always crosses gaps; zero spacing shares one item boundary.
         m_view->setGridLinePlacement(viv::GridLinePlacement::SpacingCenter);
         connect(m_placement, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int mode) {
@@ -155,6 +164,23 @@ private:
                 &viv::VirtualTableView::setVerticalGridLinesThroughHeader);
         connect(m_horizontalHeaderLines, &QCheckBox::toggled, m_view,
                 &viv::VirtualTableView::setHorizontalGridLinesThroughHeader);
+        connect(m_frozenColumns, &QCheckBox::toggled, this, [this](bool) {
+            applyFrozenColumns();
+        });
+        connect(m_frozenRows, &QCheckBox::toggled, this, [this](bool enabled) {
+            // Both placements split pane gaps; edge placement also outlines each cell side.
+            m_view->setFrozenRows(enabled ? 1 : 0);
+            m_view->setFrozenBottomRows(enabled ? 1 : 0);
+        });
+        connect(m_smallData, &QCheckBox::toggled, this, [this](bool small) {
+            // Release old logical column indexes before changing the model dimensions.
+            m_view->clearFrozenColumns();
+            populateModel(small);
+            applyFrozenColumns();
+            // Return to the content origin while keeping normal scrollbar visibility rules.
+            m_view->scrollByHorizontalPixels(-m_view->horizontalOffset());
+            m_view->scrollTo(m_model->index(0, 0), viv::VirtualItemView::PositionAtTop);
+        });
 
         connect(m_bodyColor, &QCheckBox::toggled, this, [this](bool enabled) {
             // Color only body row/column gaps; invalid restores the palette defaults.
@@ -220,6 +246,32 @@ private:
         });
     }
 
+    void populateModel(bool small)
+    {
+        // Regenerate removed cells as well when returning to the larger data set.
+        m_model->setRowCount(small ? 4 : 120);
+        m_model->setColumnCount(small ? 3 : 8);
+        for (int column = 0; column < m_model->columnCount(); ++column)
+            m_model->setHeaderData(column, Qt::Horizontal, QStringLiteral("列 %1").arg(column + 1));
+        for (int row = 0; row < m_model->rowCount(); ++row) {
+            for (int column = 0; column < m_model->columnCount(); ++column) {
+                m_model->setData(m_model->index(row, column),
+                    QStringLiteral("条目 %1 / 列 %2").arg(row + 1).arg(column + 1));
+            }
+        }
+    }
+
+    void applyFrozenColumns()
+    {
+        // Recompute the last logical index for both data sizes; the middle stays scrollable.
+        if (m_frozenColumns->isChecked()) {
+            m_view->setFrozenColumns({0});
+            m_view->setFrozenRightColumns({m_model->columnCount() - 1});
+        } else {
+            m_view->clearFrozenColumns();
+        }
+    }
+
     viv::VirtualTableView *m_view = nullptr;
     QStandardItemModel *m_model = nullptr;
     QSpinBox *m_rows = nullptr;
@@ -235,6 +287,9 @@ private:
     QCheckBox *m_headerColor = nullptr;
     QCheckBox *m_stateCross = nullptr;
     QCheckBox *m_rowStateCross = nullptr;
+    QCheckBox *m_frozenColumns = nullptr;
+    QCheckBox *m_frozenRows = nullptr;
+    QCheckBox *m_smallData = nullptr;
 };
 
 QWidget *createExample(QWidget *parent)

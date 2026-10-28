@@ -192,7 +192,8 @@ protected:
             painter.fillRect(rect(), palette().brush(QPalette::Base));
         if (m_statePainter)
             m_statePainter(&painter, rect());
-        if (property("vivShowSpacingLines").toBool()) {
+        if (property("vivShowSpacingLines").toBool()
+            && !property("vivSpacingPaneBoundary").toBool()) {
             const int left = qBound(0, property("vivSpacingLineLeftInset").toInt(), width());
             const int skipLeft = qBound(left, property("vivSpacingLineSkipX").toInt(), width());
             const int skipRight = qBound(skipLeft,
@@ -519,8 +520,13 @@ void VirtualItemView::refreshRowSpacingBackgrounds()
 
 QRegion VirtualItemView::rowSpacingWidgetMask(qsizetype row, const QRect &geometry) const
 {
-    Q_UNUSED(row);
-    return QRegion(QRect(QPoint(), geometry.size()));
+    QRect visible = geometry;
+    // At a pane tail only the preceding row's half belongs to this gap host,
+    // even when short content leaves unused space before the next frozen pane.
+    if (isItemPaneBoundaryAfter(row))
+        visible.setHeight(geometry.height() / 2);
+    return QRegion(itemPaneRect(itemPaneForRow(row)).intersected(visible)
+        .translated(-geometry.topLeft()));
 }
 
 void VirtualItemView::updateRowSpacingWidgetMasks()
@@ -1825,7 +1831,10 @@ qint64 VirtualItemView::frozenTopExtent() const
         return 0;
     if (rows == m_layout->itemCount())
         return m_layout->contentExtent();
-    return qMin<qint64>(m_layout->offsetOf(rows), m_layout->contentExtent());
+    const auto *layout = dynamic_cast<const ListLayout *>(m_layout);
+    const int followingHalf = layout
+        ? (layout->spacingAfter(rows - 1) + 1) / 2 : 0;
+    return qMin<qint64>(m_layout->offsetOf(rows) - followingHalf, m_layout->contentExtent());
 }
 
 qint64 VirtualItemView::frozenBottomExtent() const
@@ -1835,7 +1844,11 @@ qint64 VirtualItemView::frozenBottomExtent() const
         return 0;
     if (rows == m_layout->itemCount())
         return m_layout->contentExtent();
-    return qMax<qint64>(0, m_layout->contentExtent() - m_layout->offsetOf(m_layout->itemCount() - rows));
+    const qsizetype first = m_layout->itemCount() - rows;
+    const auto *layout = dynamic_cast<const ListLayout *>(m_layout);
+    const int leadingHalf = layout
+        ? (layout->spacingAfter(first - 1) + 1) / 2 : 0;
+    return qMax<qint64>(0, m_layout->contentExtent() - m_layout->offsetOf(first) + leadingHalf);
 }
 
 qsizetype VirtualItemView::rowsFittingFromTop(qint64 extent) const
@@ -1848,7 +1861,15 @@ qsizetype VirtualItemView::rowsFittingFromTop(qint64 extent) const
         return count;
     // The row containing the boundary may stick out of the pane, so only the rows
     // that end before it belong to the pane.
-    return qBound<qsizetype>(qsizetype(0), m_layout->indexAtOffset(extent), count);
+    qsizetype rows = qBound<qsizetype>(qsizetype(0), m_layout->indexAtOffset(extent), count);
+    const auto *layout = dynamic_cast<const ListLayout *>(m_layout);
+    if (layout && rows < count) {
+        const qint64 end = rows + 1 == count ? content
+            : layout->offsetOf(rows) + layout->itemSize(rows) + layout->spacingAfter(rows) / 2;
+        if (end <= extent)
+            ++rows;
+    }
+    return rows;
 }
 
 qsizetype VirtualItemView::rowsFittingFromBottom(qint64 extent) const
@@ -1864,6 +1885,21 @@ qsizetype VirtualItemView::rowsFittingFromBottom(qint64 extent) const
         return 0;
     // Same rule from the other edge: the row the boundary falls into is not part of
     // the pane.
+    const auto *layout = dynamic_cast<const ListLayout *>(m_layout);
+    if (layout) {
+        qsizetype first = row;
+        const auto start = [layout](qsizetype item) {
+            return item == 0 ? qint64(0)
+                : layout->offsetOf(item) - (layout->spacingAfter(item - 1) + 1) / 2;
+        };
+        // The offset can fall in a body or its gap; the following row's leading
+        // half-gap must also fit before that row can join the frozen pane.
+        if (first < count && start(first) < content - extent)
+            ++first;
+        if (first < count && start(first) < content - extent)
+            ++first;
+        return qBound<qsizetype>(qsizetype(0), count - first, count);
+    }
     return qBound<qsizetype>(qsizetype(0), count - row - 1, count);
 }
 
@@ -2032,17 +2068,17 @@ void VirtualItemView::syncItemPanes()
         m_scrollPaneHost->setVisible(!scrollRect.isEmpty());
     }
 
-    // One line per pane boundary (top|scrolling and scrolling|bottom). The band
-    // ends at the boundary, leaving the following row's state background intact.
-    // In particular, the bottom frozen row must share its top edge with the
-    // state background painted across empty column space.
+    // One line per pane boundary (top|scrolling and scrolling|bottom). The
+    // dividers stay inside the frozen pane, between the two owned half-gaps.
     QVector<int> boundaries;
+    QVector<bool> trailingEdges;
     for (int index = 0; index + 1 < panes.size(); ++index) {
         const ItemPane &before = panes.at(index);
         const ItemPane &after = panes.at(index + 1);
         if (before.viewportRect.height() <= 0 || after.viewportRect.height() <= 0)
             continue;
         boundaries.append(before.viewportRect.bottom() + 1);
+        trailingEdges.append(before.type != ItemPane::Type::Scrollable);
     }
     while (m_itemPaneSeparatorLines.size() > boundaries.size()) {
         QWidget *line = m_itemPaneSeparatorLines.takeLast();
@@ -2064,8 +2100,8 @@ void VirtualItemView::syncItemPanes()
                                                                              : qMax(1, band);
     for (int i = 0; i < boundaries.size(); ++i) {
         auto *line = static_cast<ItemPaneSeparatorLine *>(m_itemPaneSeparatorLines.at(i));
-        line->setSeparator(m_itemPaneSeparatorStyle, styleColor, true);
-        const int y = viewportRect.y() + boundaries.at(i) - lineWidth;
+        line->setSeparator(m_itemPaneSeparatorStyle, styleColor, trailingEdges.at(i));
+        const int y = viewportRect.y() + boundaries.at(i) - (trailingEdges.at(i) ? lineWidth : 0);
         line->setGeometry(viewportRect.x() - leftExtension, y,
                           viewportRect.width() + leftExtension, lineWidth);
         line->setVisible(m_itemPaneSeparatorStyle.isVisible() && lineWidth > 0);
@@ -2105,6 +2141,13 @@ bool VirtualItemView::isRowGridLineCoveredByPaneSeparator(const QRect &rect) con
             return m_itemPaneSeparatorStyle.effectiveColor(itemPaneSeparatorColor()).alpha() > 0;
     }
     return false;
+}
+
+bool VirtualItemView::isItemPaneBoundaryAfter(qsizetype row) const
+{
+    return m_layout
+        && row >= 0 && row + 1 < m_layout->itemCount()
+        && itemPaneForRow(row) != itemPaneForRow(row + 1);
 }
 
 void VirtualItemView::syncRowSpacingWidgets(const QVector<VisibleRange> &ranges)
@@ -2260,10 +2303,14 @@ void VirtualItemView::syncRowSpacingWidgets(const QVector<VisibleRange> &ranges)
         host->setProperty("vivSpacingLineCentered", m_gridLinePlacement == GridLinePlacement::SpacingCenter);
         if (!hostIsCurrent())
             return;
+        host->setProperty("vivSpacingPaneBoundary", isItemPaneBoundaryAfter(row));
+        if (!hostIsCurrent())
+            return;
         configureRowSpacingWidget(host);
         if (!hostIsCurrent())
             return;
-        host->setLineColor(itemPaneSeparatorColor());
+        const QColor lineColor = host->property("vivSpacingLineColor").value<QColor>();
+        host->setLineColor(lineColor.isValid() ? lineColor : itemPaneSeparatorColor());
         if (!hostIsCurrent())
             return;
         if (host->content() && binder)

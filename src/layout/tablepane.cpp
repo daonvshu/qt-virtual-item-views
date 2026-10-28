@@ -271,6 +271,8 @@ bool TablePaneLayout::update(int viewportWidth, int viewportHeight)
     m_panePrefixX.clear();
     m_paneSlotByLogical.fill(-1, count);
     m_columnSpacings.fill(0, count);
+    m_paneLeadingSpacings.clear();
+    m_paneTrailingSpacings.clear();
     m_paneSlotWindows.clear();
     m_paneByLogical.fill(int(TablePane::Type::Scrollable), count);
     m_paneIndexByLogical.fill(-1, count);
@@ -386,6 +388,28 @@ bool TablePaneLayout::update(int viewportWidth, int viewportHeight)
                 : (fittedGaps.isEmpty() ? m_geometry->sectionSpacingAfter(logical)
                                        : fittedGaps.value(gapSlot, 0));
             ++gapSlot;
+        }
+    }
+    m_paneLeadingSpacings.fill(0, resolved.size());
+    m_paneTrailingSpacings.fill(0, resolved.size());
+    if (m_firstContentPane >= 0)
+        m_paneLeadingSpacings[m_firstContentPane] = m_geometry->leadingSpacing();
+    if (m_lastContentPane >= 0)
+        m_paneTrailingSpacings[m_lastContentPane] = m_geometry->trailingSpacing();
+    if (m_splitBoundarySpacing) {
+        int previous = -1;
+        for (int index = 0; index < resolved.size(); ++index) {
+            if (resolved.at(index).pane.logicalColumns.isEmpty())
+                continue;
+            if (previous >= 0) {
+                const int last = resolved.at(previous).pane.logicalColumns.last();
+                const int gap = m_columnSpacings.at(last);
+                // Boundary padding replaces the ordinary inter-column gap.
+                m_paneTrailingSpacings[previous] = gap / 2;
+                m_paneLeadingSpacings[index] = gap - gap / 2;
+                m_columnSpacings[last] = 0;
+            }
+            previous = index;
         }
     }
     for (int index = 0; index < resolved.size(); ++index) {
@@ -516,14 +540,12 @@ bool TablePaneLayout::update(int viewportWidth, int viewportHeight)
 
 int TablePaneLayout::leadingSpacingForPane(int paneIndex) const
 {
-    return m_geometry && paneIndex >= 0 && paneIndex == m_firstContentPane
-        ? m_geometry->leadingSpacing() : 0;
+    return m_paneLeadingSpacings.value(paneIndex, 0);
 }
 
 int TablePaneLayout::trailingSpacingForPane(int paneIndex) const
 {
-    return m_geometry && paneIndex >= 0 && paneIndex == m_lastContentPane
-        ? m_geometry->trailingSpacing() : 0;
+    return m_paneTrailingSpacings.value(paneIndex, 0);
 }
 
 TablePane TablePaneLayout::pane(TablePane::Type type) const

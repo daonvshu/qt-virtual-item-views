@@ -56,6 +56,8 @@ private slots:
     void perSectionSpacingKeepsPositionsAndGapsAligned();
     void sparseSpacingKeepsLargeUniformGeometryCompact();
     void panePositionsIncludeColumnSpacing();
+    void paneBoundariesShareCenteredSpacing_data();
+    void paneBoundariesShareCenteredSpacing();
     void fitExtentRedistributesFromEitherEdge();
     void fitExtentDragUsesOriginalSnapshot();
     void fitExtentPreservesRatiosAcrossViewportLimits();
@@ -1471,6 +1473,70 @@ void TestHeaderGeometry::panePositionsIncludeColumnSpacing()
     QCOMPARE(panes.columnViewportX(1), 220);
     QCOMPARE(panes.groupExtent(0), qint64(210));
 }
+
+void TestHeaderGeometry::paneBoundariesShareCenteredSpacing_data()
+{
+    QTest::addColumn<int>("columns");
+    QTest::addColumn<int>("gap");
+    QTest::addColumn<bool>("fit");
+    QTest::addColumn<bool>("outerSpacing");
+    for (int columns : {3, 8}) {
+        for (int gap : {0, 1, 11, 12}) {
+            const QByteArray name = QByteArray::number(columns) + "-columns-" + QByteArray::number(gap);
+            QTest::newRow((name + "-center").constData()) << columns << gap << false << true;
+            QTest::newRow((name + "-edges").constData()) << columns << gap << false << false;
+        }
+    }
+    QTest::newRow("fit-extent-center") << 8 << 12 << true << true;
+    QTest::newRow("fit-extent-edges") << 8 << 12 << true << false;
+}
+
+void TestHeaderGeometry::paneBoundariesShareCenteredSpacing()
+{
+    QFETCH(int, columns);
+    QFETCH(int, gap);
+    QFETCH(bool, fit);
+    QFETCH(bool, outerSpacing);
+    HeaderGeometry geometry;
+    geometry.setDefaultSectionSize(100);
+    geometry.setSectionCount(columns);
+    geometry.setSectionSpacing(gap);
+    geometry.setEdgeSpacing(outerSpacing ? gap / 2 : 0, outerSpacing ? gap - gap / 2 : 0);
+    if (fit) {
+        geometry.setStretchExtent(1000);
+        geometry.setResizeMode(HeaderGeometry::ResizeMode::FitExtent);
+    }
+    TablePaneLayout panes;
+    panes.setGeometry(&geometry);
+    panes.setSplitBoundarySpacing(true);
+    panes.setFrozenColumns({0});
+    panes.setFrozenRightColumns({columns - 1});
+    panes.update(1000, 200);
+
+    const int left = panes.paneIndexOfColumn(0);
+    const int middle = panes.paneIndexOfColumn(1);
+    const int right = panes.paneIndexOfColumn(columns - 1);
+    QCOMPARE(panes.columnSpacingAfter(0), 0);
+    QCOMPARE(panes.columnSpacingAfter(columns - 2), 0);
+    QCOMPARE(panes.trailingSpacingForPane(left), gap / 2);
+    QCOMPARE(panes.leadingSpacingForPane(middle), gap - gap / 2);
+    QCOMPARE(panes.trailingSpacingForPane(middle), gap / 2);
+    QCOMPARE(panes.leadingSpacingForPane(right), gap - gap / 2);
+    QCOMPARE(panes.frozenLeftWidth(), geometry.leadingSpacing() + geometry.sectionSize(0) + gap / 2);
+    QCOMPARE(panes.columnViewportX(1), panes.frozenLeftWidth() + gap - gap / 2);
+    QCOMPARE(panes.columnViewportX(columns - 1), panes.paneAt(right).viewportRect.left() + gap - gap / 2);
+    QCOMPARE(qint64(panes.frozenLeftWidth()) + panes.groupExtent(0) + panes.frozenRightWidth(),
+             geometry.totalExtent());
+    QCOMPARE(panes.maximumOffset(), qint64(0));
+
+    // Switching back restores the full trailing gap instead of retaining pane padding.
+    panes.setSplitBoundarySpacing(false);
+    panes.update(1000, 200);
+    QCOMPARE(panes.columnSpacingAfter(0), gap);
+    QCOMPARE(panes.leadingSpacingForPane(middle), 0);
+    QCOMPARE(panes.trailingSpacingForPane(middle), 0);
+}
+
 void TestHeaderGeometry::fitExtentRedistributesFromEitherEdge()
 {
     HeaderGeometry geometry;
