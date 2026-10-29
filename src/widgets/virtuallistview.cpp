@@ -1,4 +1,5 @@
 #include <virtualitemviews/virtuallistview.h>
+#include "../core/performanceprobe_p.h"
 #include "../core/pixelalignedlines_p.h"
 #include "../core/rowdragpreview_p.h"
 
@@ -83,6 +84,7 @@ void VirtualListView::refreshVisualState(const QModelIndex &index)
 
 void VirtualListView::paintEvent(QPaintEvent *event)
 {
+    detail::PerformanceScope performance(this, "paint.list", detail::PerformanceDomain::Paint);
     VirtualItemView::paintEvent(event);
     if (!m_visualStateBackgroundVisible)
         return;
@@ -150,6 +152,7 @@ void VirtualListView::afterMaterialize()
 
 void VirtualListView::syncRowGridLines()
 {
+    detail::PerformanceScope performance(this, "grid.list-lines");
     QHash<qsizetype, QRect> desired;
     const QRect viewportRect = viewport()->geometry();
     if (m_rowGridLinesVisible && rowSpacing() == 0 && viewportRect.width() > 0) {

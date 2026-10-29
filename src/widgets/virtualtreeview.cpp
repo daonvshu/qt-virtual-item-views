@@ -1,4 +1,5 @@
 #include <virtualitemviews/virtualtreeview.h>
+#include "../core/performanceprobe_p.h"
 #include "treeexpansiontransition_p.h"
 #include "../core/pixelalignedlines_p.h"
 
@@ -196,6 +197,7 @@ void VirtualTreeView::onColumnStructureChanged()
 
 void VirtualTreeView::refreshVisibility(bool keepAnchor)
 {
+    detail::PerformanceScope performance(this, "tree.visibility");
     if (m_updatingVisibility)
         return;
     m_updatingVisibility = true;
@@ -434,6 +436,7 @@ int VirtualTreeView::expansionAnimationDuration() const
 
 void VirtualTreeView::expand(const QModelIndex &index)
 {
+    detail::PerformanceScope performance(this, "tree.expand");
     if (!index.isValid() || m_visibility->isExpanded(index))
         return;
     const QPersistentModelIndex node(index);
@@ -462,6 +465,7 @@ void VirtualTreeView::expand(const QModelIndex &index)
 
 void VirtualTreeView::collapse(const QModelIndex &index)
 {
+    detail::PerformanceScope performance(this, "tree.collapse");
     if (!index.isValid() || !m_visibility->isExpanded(index))
         return;
     const QPersistentModelIndex node(index);
@@ -487,6 +491,7 @@ void VirtualTreeView::collapse(const QModelIndex &index)
 
 void VirtualTreeView::expandRecursively(const QModelIndex &index)
 {
+    detail::PerformanceScope performance(this, "tree.expand-recursively");
     if (!index.isValid())
         return;
     const QPersistentModelIndex node(index);
@@ -528,6 +533,7 @@ bool VirtualTreeView::isExpanded(const QModelIndex &index) const
 
 void VirtualTreeView::collapseAll()
 {
+    detail::PerformanceScope performance(this, "tree.collapse-all");
     const QPointer<VirtualTreeView> animationGuard(this);
     const quint64 animationSerial = modelChangeSerial();
     const QPersistentModelIndex animationRoot(m_rootIndex);
@@ -719,6 +725,7 @@ void VirtualTreeView::refreshVisualState(const QModelIndex &index)
 
 void VirtualTreeView::syncRowGridLines()
 {
+    detail::PerformanceScope performance(this, "grid.tree-lines");
     QHash<qsizetype, QRect> desired;
     const QRect viewportRect = viewport()->geometry();
     if (m_rowGridLinesVisible && m_rowLayout && viewportRect.width() > 0) {
@@ -804,6 +811,7 @@ void VirtualTreeView::invalidateBranchIndicators()
 
 void VirtualTreeView::paintEvent(QPaintEvent *event)
 {
+    detail::PerformanceScope performance(this, "paint.tree", detail::PerformanceDomain::Paint);
     VirtualItemView::paintEvent(event);
     QPainter painter(viewport());
     if (m_visualStateBackgroundVisible)
@@ -814,6 +822,7 @@ void VirtualTreeView::paintEvent(QPaintEvent *event)
 
 void VirtualTreeView::paintVisualStateBackgrounds(QPainter *painter, const QRect &dirty)
 {
+    detail::PerformanceScope performance(this, "paint.tree-state", detail::PerformanceDomain::Paint);
     const QRect viewportRect = viewport()->rect();
     for (const MaterializedItem &item : materializedItems()) {
         const qsizetype row = viewItemForIndex(item.index);
@@ -851,6 +860,7 @@ void VirtualTreeView::paintVisualStateBackgrounds(QPainter *painter, const QRect
 
 void VirtualTreeView::paintBranchIndicators(QPainter *painter)
 {
+    detail::PerformanceScope performance(this, "paint.tree-branches", detail::PerformanceDomain::Paint);
     const QRect viewportRect = viewport()->rect();
     for (const MaterializedItem &item : materializedItems()) {
         const qsizetype row = viewItemForIndex(item.index);
@@ -877,7 +887,9 @@ void VirtualTreeView::paintBranchIndicators(QPainter *painter)
             if (cellRect.isEmpty() || !cellRect.intersects(viewportRect))
                 continue;
             painter->save();
-            m_branchRenderer->paintBranch(painter, branchState(index, cellDepth), index, cellRect);
+            detail::performanceCall(this, "callback.branch.paint", [&] {
+                return m_branchRenderer->paintBranch(painter, branchState(index, cellDepth), index, cellRect);
+            });
             painter->restore();
         }
     }

@@ -613,6 +613,7 @@ bool TablePaneLayout::refreshScrollWindows()
 bool TablePaneLayout::refreshScrollWindowsImpl()
 {
     const VisibleRange previousScrollable = m_visibleScrollable;
+    const auto previousSlots = m_paneSlotWindows;
     m_paneWindows.clear();
     m_visibleScrollable = VisibleRange();
     m_paneSlotWindows.resize(m_panes.size());
@@ -677,7 +678,10 @@ bool TablePaneLayout::refreshScrollWindowsImpl()
             : window;
     }
 
-    return previousScrollable.first != m_visibleScrollable.first
+    // A middle pane can change while the outer limits of the union stay put.
+    // Cell materialization must also observe that pane's entering columns.
+    return previousSlots != m_paneSlotWindows
+        || previousScrollable.first != m_visibleScrollable.first
         || previousScrollable.last != m_visibleScrollable.last;
 }
 

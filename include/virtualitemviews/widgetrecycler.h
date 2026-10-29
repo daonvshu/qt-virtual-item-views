@@ -84,6 +84,13 @@ public:
     void clear();
 
 private:
+    friend class VirtualTableView;
+
+    /// Cell layouts choose the final parent after row panes have been reconciled.
+    /// Prefer a matching pooled parent and retain it until that layout runs.
+    QWidget *acquireImpl(WidgetType type, QWidget *preferredParent, bool retainParent);
+    /// Retaining a cell's clip host avoids two parent changes on every reuse.
+    void recycleImpl(WidgetType type, QWidget *widget, bool retainParent);
     bool canReuse(WidgetType type, const QWidget *widget) const;
 
     QPointer<QWidget> m_parent;

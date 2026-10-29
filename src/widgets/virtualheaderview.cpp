@@ -1,4 +1,5 @@
 #include <virtualitemviews/virtualheaderview.h>
+#include "../core/performanceprobe_p.h"
 #include "../core/pixelalignedlines_p.h"
 #include "../core/wheeleventforwarding_p.h"
 
@@ -67,7 +68,9 @@ VirtualHeaderView::VirtualHeaderView(Qt::Orientation orientation, QWidget *paren
     m_recycler = new WidgetRecycler(this);
     m_recycler->setParentWidget(this);
     m_recycler->setFactory([this](WidgetType type, QWidget *parent) -> QWidget * {
-        return m_adapter ? m_adapter->createSection(type, parent) : nullptr;
+        return m_adapter ? detail::performanceCall(this, "callback.header.create", [&] {
+            return m_adapter->createSection(type, parent);
+        }) : nullptr;
     });
     setMouseTracking(true);
     setAttribute(Qt::WA_OpaquePaintEvent, false);
@@ -115,6 +118,7 @@ VirtualHeaderView::~VirtualHeaderView()
 
 void VirtualHeaderView::paintEvent(QPaintEvent *event)
 {
+    detail::PerformanceScope performance(this, "paint.header", detail::PerformanceDomain::Paint);
     Q_UNUSED(event);
     QPainter painter(this);
     if (m_backgroundVisible)
@@ -532,7 +536,9 @@ void VirtualHeaderView::rebindMaterializedSections(int first, int last)
         // Re-binding is also how the business learns about the change, so this is the
         // contract for "the state of this section changed" (sort indicator included).
         QPointer<QWidget> guardedWidget(it.value());
-        adapter->bindSection(guardedWidget.data(), it.key());
+        detail::performanceCall(this, "callback.header.bind", [&] {
+            return adapter->bindSection(guardedWidget.data(), it.key());
+        });
         if (!self)
             return;
         if (m_adapter != adapter || m_adapterSerial != adapterSerial)
@@ -1038,6 +1044,7 @@ int VirtualHeaderView::sectionPos(int logicalIndex) const
 
 void VirtualHeaderView::relayout()
 {
+    detail::PerformanceScope performance(this, "header.materialize");
     QPointer<VirtualHeaderView> self(this);
     HeaderWidgetAdapter *const adapter = m_adapter;
     const quint64 adapterSerial = m_adapterSerial;
@@ -1228,7 +1235,9 @@ void VirtualHeaderView::relayout()
             continue;
         }
         QPointer<QWidget> guardedWidget(it.value());
-        adapter->unbindSection(guardedWidget.data(), it.key());
+        detail::performanceCall(this, "callback.header.unbind", [&] {
+            return adapter->unbindSection(guardedWidget.data(), it.key());
+        });
         if (!self)
             return;
         if (m_adapter != adapter || m_adapterSerial != adapterSerial)
@@ -1238,7 +1247,9 @@ void VirtualHeaderView::relayout()
             continue;
         }
         guardedWidget->hide();
-        const WidgetType type = adapter->sectionType(it.key());
+        const WidgetType type = detail::performanceCall(this, "callback.header.type", [&] {
+            return adapter->sectionType(it.key());
+        });
         if (!self || m_adapter != adapter || m_adapterSerial != adapterSerial)
             return;
         m_recycler->recycle(type, guardedWidget.data());
@@ -1249,7 +1260,9 @@ void VirtualHeaderView::relayout()
     for (int logical : wanted) {
         QWidget *widget = m_sectionWidgets.value(logical, nullptr);
         if (!widget) {
-            const WidgetType type = adapter->sectionType(logical);
+            const WidgetType type = detail::performanceCall(this, "callback.header.type", [&] {
+                return adapter->sectionType(logical);
+            });
             if (!self || m_adapter != adapter || m_adapterSerial != adapterSerial)
                 return;
             widget = m_recycler->acquire(type);
@@ -1265,7 +1278,9 @@ void VirtualHeaderView::relayout()
             widget->hide();
             m_sectionWidgets.insert(logical, widget);
             QPointer<QWidget> guardedWidget(widget);
-            adapter->bindSection(widget, logical);
+            detail::performanceCall(this, "callback.header.bind", [&] {
+                return adapter->bindSection(widget, logical);
+            });
             if (!self)
                 return;
             if (m_adapter != adapter || m_adapterSerial != adapterSerial
@@ -1350,6 +1365,7 @@ QVector<int> VirtualHeaderView::visualOrder() const
 
 void VirtualHeaderView::positionSections()
 {
+    detail::PerformanceScope performance(this, "header.position");
     if (!m_geometry)
         return;
     if (m_dragging) {
@@ -1427,6 +1443,7 @@ bool VirtualHeaderView::sectionVisualX(int logicalIndex, int *viewportX) const
 
 void VirtualHeaderView::refreshSectionLabels()
 {
+    detail::PerformanceScope performance(this, "header.refresh-labels");
     // Every materialized section, wherever its item sits: the label model answered for the
     // *item* before the model moved it, and the section set did not change.
     rebindMaterializedSections(std::numeric_limits<int>::min(),
@@ -1442,6 +1459,7 @@ void VirtualHeaderView::setVisualGeometryCallback(std::function<void()> callback
 
 void VirtualHeaderView::notifyVisualGeometry()
 {
+    detail::PerformanceScope performance(this, "callback.header.visual-geometry");
     if (!m_visualGeometryCallback)
         return;
     const bool active = hasVisualSectionGeometry();
@@ -1770,7 +1788,9 @@ void VirtualHeaderView::recycleAllSections()
     const quint64 adapterSerial = m_adapterSerial;
     for (auto it = m_sectionWidgets.begin(); it != m_sectionWidgets.end();) {
         QPointer<QWidget> guardedWidget(it.value());
-        adapter->unbindSection(guardedWidget.data(), it.key());
+        detail::performanceCall(this, "callback.header.unbind", [&] {
+            return adapter->unbindSection(guardedWidget.data(), it.key());
+        });
         if (!self)
             return;
         if (m_adapter != adapter || m_adapterSerial != adapterSerial)
@@ -1780,7 +1800,9 @@ void VirtualHeaderView::recycleAllSections()
             continue;
         }
         guardedWidget->hide();
-        const WidgetType type = adapter->sectionType(it.key());
+        const WidgetType type = detail::performanceCall(this, "callback.header.type", [&] {
+            return adapter->sectionType(it.key());
+        });
         if (!self || m_adapter != adapter || m_adapterSerial != adapterSerial)
             return;
         m_recycler->recycle(type, guardedWidget.data());

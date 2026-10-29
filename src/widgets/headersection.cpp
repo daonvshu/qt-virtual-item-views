@@ -1,4 +1,5 @@
 #include <virtualitemviews/headersection.h>
+#include "../core/performanceprobe_p.h"
 
 #include <virtualitemviews/virtualheaderview.h>
 #include <virtualitemviews/virtualtableview.h>
@@ -52,16 +53,17 @@ VirtualItemView::VisualState HeaderSection::visualState() const
 
 void HeaderSection::paintEvent(QPaintEvent *)
 {
+    detail::PerformanceScope performance(this, "paint.header-section", detail::PerformanceDomain::Paint);
     QPainter painter(this);
     painter.setClipRect(rect());
     painter.save();
-    paintBackground(&painter);
+    detail::performanceCall(this, "paint.header-background", [&] { return paintBackground(&painter); });
     painter.restore();
     painter.save();
-    paintContent(&painter);
+    detail::performanceCall(this, "paint.header-content", [&] { return paintContent(&painter); });
     painter.restore();
     painter.save();
-    paintForeground(&painter);
+    detail::performanceCall(this, "paint.header-foreground", [&] { return paintForeground(&painter); });
     painter.restore();
 }
 

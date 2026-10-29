@@ -1,4 +1,5 @@
 #include <virtualitemviews/widgetrecycler.h>
+#include "../core/performanceprobe_p.h"
 
 #include <QWidget>
 
@@ -99,14 +100,29 @@ bool WidgetRecycler::canReuse(WidgetType type, const QWidget *widget) const
 
 QWidget *WidgetRecycler::acquire(WidgetType type)
 {
+    return acquireImpl(type, m_parent.data(), false);
+}
+
+QWidget *WidgetRecycler::acquireImpl(WidgetType type, QWidget *preferredParent, bool retainParent)
+{
     ++m_acquireCount;
 
     QList<QPointer<QWidget>> &pool = m_pools[type];
+    if (retainParent) {
+        // Keep LIFO reuse within each pane, falling back to any pooled widget
+        // when a newly visible pane has no matching entry yet.
+        for (int i = int(pool.size()) - 1; i >= 0; --i) {
+            if (pool.at(i) && pool.at(i)->parentWidget() == preferredParent) {
+                pool.move(i, int(pool.size()) - 1);
+                break;
+            }
+        }
+    }
     while (!pool.isEmpty()) {
         QWidget *candidate = pool.takeLast().data();
         if (!candidate)
             continue;
-        if (candidate->parentWidget() != m_parent.data())
+        if (!retainParent && candidate->parentWidget() != m_parent.data())
             candidate->setParent(m_parent.data());
         if (!canReuse(type, candidate)) {
             // Keep it out of the pool until the kernel recycles it properly.
@@ -144,17 +160,36 @@ QWidget *WidgetRecycler::acquire(WidgetType type)
 
 void WidgetRecycler::recycle(WidgetType type, QWidget *widget)
 {
+    recycleImpl(type, widget, false);
+}
+
+void WidgetRecycler::recycleImpl(WidgetType type, QWidget *widget, bool retainParent)
+{
+    detail::PerformanceScope performance(m_parent.data(), "recycler.recycle");
     if (!widget)
         return;
 
+    const QPointer<WidgetRecycler> self(this);
+    const QPointer<QWidget> guardedWidget(widget);
     if (m_activeWidgets.remove(widget) && m_activeCount > 0)
         --m_activeCount;
 
-    widget->hide();
-    widget->clearFocus();
-    if (widget->parentWidget() != m_parent.data())
-        widget->setParent(m_parent.data());
+    if (!widget->isHidden())
+        detail::performanceCall(m_parent.data(), "recycler.hide", [&] { widget->hide(); });
+    if (!self || !guardedWidget)
+        return;
+    detail::performanceCall(m_parent.data(), "recycler.clear-focus", [&] { widget->clearFocus(); });
+    if (!self || !guardedWidget)
+        return;
+    if (!retainParent && widget->parentWidget() != m_parent.data()) {
+        detail::performanceCall(m_parent.data(), "recycler.reparent", [&] {
+            widget->setParent(m_parent.data());
+        });
+        if (!self || !guardedWidget)
+            return;
+    }
 
+    detail::PerformanceScope poolPerformance(m_parent.data(), "recycler.pool-return");
     QList<QPointer<QWidget>> &pool = m_pools[type];
     pool.erase(std::remove_if(pool.begin(), pool.end(),
                               [](const QPointer<QWidget> &candidate) { return !candidate; }),

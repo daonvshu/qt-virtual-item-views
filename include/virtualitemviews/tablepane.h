@@ -144,7 +144,7 @@ public:
     /// Scroll fast path: recomputes each pane's visible window (and the union of
     /// the scrolling panes) from the cached pane-local prefix sums. Cost is
     /// O(panes x log(columns in pane)), independent of the total column count.
-    /// Returns true when the window moved.
+    /// Returns true when any pane's window moved.
     bool refreshScrollWindows();
     /// Columns the last update()/refreshScrollWindows() looked at (diagnostics:
     /// proves the scroll path is window-bounded and the structure path is O(N)).

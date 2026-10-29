@@ -360,6 +360,14 @@ public:
     /// Snapshot of the virtualization state (diagnostics / debug overlay).
     virtual VirtualViewStats stats() const;
 
+    /// Opt-in timing of synchronous refresh work, callbacks and framework painting.
+    /// Filter qCDebug output with viv.performance.refresh and viv.performance.paint.
+    /// Active work is aggregated per view/category and logged once per second.
+    /// Summaries show hot stages; viv.performance.details enables the full timing table.
+    /// Disabled by default; filtering out a category also skips its timing work.
+    void setPerformanceLoggingEnabled(bool enabled);
+    bool isPerformanceLoggingEnabled() const { return m_performanceLoggingEnabled; }
+
     /// Opt-in bounded event log (create/bind/unbind/recycle/pin) used to debug
     /// "why does the widget count keep growing". Disabled by default.
     static constexpr qsizetype kLifecycleLogCapacity = 400;
@@ -949,6 +957,8 @@ private:
 
     quint64 m_bindCount = 0;
     quint64 m_recycleCount = 0;
+    bool m_performanceLoggingEnabled = false;
+    quint64 m_performanceRefreshRequests = 0;
     int m_maxPinnedItems = 0;
     bool m_pinLimitWarned = false;
 

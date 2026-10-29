@@ -1,4 +1,5 @@
 #include <virtualitemviews/virtualmasonryview.h>
+#include "../core/performanceprobe_p.h"
 #include <virtualitemviews/widgetadapter.h>
 
 #include "../layout/masonrylayout_p.h"
@@ -377,6 +378,7 @@ qsizetype VirtualMasonryView::anchorItemAtOffset(qint64 offset) const
 
 void VirtualMasonryView::reflow(const ScrollAnchor &anchor)
 {
+    detail::PerformanceScope performance(this, "masonry.reflow");
     ++m_revision;
     setPendingAnchor(anchor);
     if (relayoutActive())
@@ -526,6 +528,7 @@ void VirtualMasonryView::invalidateItemSize(const QModelIndex &index)
 
 void VirtualMasonryView::applyPendingItemSizes()
 {
+    detail::PerformanceScope performance(this, "masonry.pending-sizes");
     m_itemSizesScheduled = false;
     auto pending = std::exchange(m_pendingItemSizes, {});
     if (pending.isEmpty() || !adapter() || !model())
@@ -551,7 +554,9 @@ void VirtualMasonryView::applyPendingItemSizes()
         const qsizetype item = viewItemForIndex(index);
         if (item < 0)
             continue;
-        const WidgetType type = activeAdapter->widgetType(index);
+        const WidgetType type = detail::performanceCall(this, "callback.row.type", [&] {
+            return activeAdapter->widgetType(index);
+        });
         if (!self || !activeModel || model() != activeModel.data()
             || adapter() != activeAdapter || revision != m_revision) {
             if (self && activeModel && model() == activeModel.data()
@@ -561,7 +566,9 @@ void VirtualMasonryView::applyPendingItemSizes()
             }
             return;
         }
-        const QSize size = activeAdapter->estimatedSize(type, index);
+        const QSize size = detail::performanceCall(this, "callback.row.estimate", [&] {
+            return activeAdapter->estimatedSize(type, index);
+        });
         if (!self || !activeModel || model() != activeModel.data()
             || adapter() != activeAdapter || revision != m_revision) {
             if (self && activeModel && model() == activeModel.data()
@@ -775,6 +782,7 @@ QVector<qsizetype> VirtualMasonryView::materializationItems(const QVector<Visibl
 
 void VirtualMasonryView::resizeEvent(QResizeEvent *event)
 {
+    detail::PerformanceScope performance(this, "masonry.resize");
     const ScrollAnchor anchor = captureAnchor();
     VirtualItemView::resizeEvent(event);
     if (m_masonry->crossExtent() != viewport()->width()) {
@@ -785,6 +793,7 @@ void VirtualMasonryView::resizeEvent(QResizeEvent *event)
 
 void VirtualMasonryView::paintEvent(QPaintEvent *event)
 {
+    detail::PerformanceScope performance(this, "paint.masonry", detail::PerformanceDomain::Paint);
     VirtualItemView::paintEvent(event);
     if (m_backgroundVisible) {
         QPainter painter(viewport());
@@ -802,6 +811,7 @@ void VirtualMasonryView::afterMaterialize()
 
 void VirtualMasonryView::paintGridLines(QPainter *painter) const
 {
+    detail::PerformanceScope performance(this, "paint.masonry-grid", detail::PerformanceDomain::Paint);
     QVector<QRect> horizontalTrailing;
     QVector<QRect> horizontalLeading;
     QVector<QRect> verticalTrailing;
@@ -902,6 +912,7 @@ void VirtualMasonryView::refreshVisualState(const QModelIndex &index)
 
 void VirtualMasonryView::paintVisualStateBackgrounds(QPainter *painter, const QRect &dirty) const
 {
+    detail::PerformanceScope performance(this, "paint.masonry-state", detail::PerformanceDomain::Paint);
     for (const MaterializedItem &item : materializedItems()) {
         const qsizetype ordinal = viewItemForIndex(item.index);
         if (ordinal < 0)
@@ -1067,6 +1078,7 @@ void VirtualMasonryView::restoreItemSizes()
 
 void VirtualMasonryView::refreshAdapterEstimates(const ScrollAnchor &preservedAnchor)
 {
+    detail::PerformanceScope performance(this, "callback.masonry-estimates");
     if (itemHeightMode() != ItemHeightMode::AdapterEstimate || !adapter() || !model())
         return;
     const QPointer<VirtualMasonryView> self(this);
@@ -1083,11 +1095,15 @@ void VirtualMasonryView::refreshAdapterEstimates(const ScrollAnchor &preservedAn
     estimates.reserve(int(count));
     for (qsizetype row = 0; row < count; ++row) {
         const QModelIndex index = viewIndex(row);
-        const WidgetType type = activeAdapter->widgetType(index);
+        const WidgetType type = detail::performanceCall(this, "callback.row.type", [&] {
+            return activeAdapter->widgetType(index);
+        });
         if (!self || !activeModel || model() != activeModel.data()
             || adapter() != activeAdapter || revision != m_revision)
             return;
-        const QSize size = activeAdapter->estimatedSize(type, index);
+        const QSize size = detail::performanceCall(this, "callback.row.estimate", [&] {
+            return activeAdapter->estimatedSize(type, index);
+        });
         if (!self || !activeModel || model() != activeModel.data()
             || adapter() != activeAdapter || revision != m_revision)
             return;

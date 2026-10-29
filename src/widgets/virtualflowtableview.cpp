@@ -1,4 +1,5 @@
 #include <virtualitemviews/virtualflowtableview.h>
+#include "../core/performanceprobe_p.h"
 #include "../layout/flowtablelayout_p.h"
 #include "../core/pixelalignedlines_p.h"
 
@@ -168,6 +169,7 @@ void VirtualFlowTableView::setRootIndex(const QModelIndex &index)
 
 void VirtualFlowTableView::reflow(const ScrollAnchor &anchor)
 {
+    detail::PerformanceScope performance(this, "flow.reflow");
     ++m_revision;
     setPendingAnchor(anchor);
     if (relayoutActive())
@@ -316,6 +318,7 @@ void VirtualFlowTableView::refreshVisualState(const QModelIndex &index)
 
 void VirtualFlowTableView::paintEvent(QPaintEvent *event)
 {
+    detail::PerformanceScope performance(this, "paint.flow", detail::PerformanceDomain::Paint);
     VirtualItemView::paintEvent(event);
     if (m_backgroundVisible) {
         QPainter painter(viewport());
@@ -325,6 +328,7 @@ void VirtualFlowTableView::paintEvent(QPaintEvent *event)
 
 void VirtualFlowTableView::paintVisualStateBackgrounds(QPainter *painter, const QRect &dirty) const
 {
+    detail::PerformanceScope performance(this, "paint.flow-state", detail::PerformanceDomain::Paint);
     for (const MaterializedItem &item : materializedItems()) {
         const qsizetype ordinal = viewItemForIndex(item.index);
         if (ordinal < 0)
@@ -345,6 +349,7 @@ void VirtualFlowTableView::paintVisualStateBackgrounds(QPainter *painter, const 
 
 void VirtualFlowTableView::paintGridLines(QPainter *painter) const
 {
+    detail::PerformanceScope performance(this, "paint.flow-grid", detail::PerformanceDomain::Paint);
     QVector<QRect> horizontal;
     QVector<QRect> vertical;
     QVector<QRect> horizontalLeading;
@@ -428,6 +433,7 @@ int VirtualFlowTableView::displayColumnForIndex(const QModelIndex &index) const
 
 void VirtualFlowTableView::resizeEvent(QResizeEvent *event)
 {
+    detail::PerformanceScope performance(this, "flow.resize");
     const ScrollAnchor anchor = captureAnchor();
     ++m_revision;
     setPendingAnchor(anchor);

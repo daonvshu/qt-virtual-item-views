@@ -1,4 +1,5 @@
 #include <virtualitemviews/virtualitemview.h>
+#include "performanceprobe_p.h"
 
 #include <QEvent>
 #include <QGraphicsEffect>
@@ -49,6 +50,7 @@ public:
 protected:
     void draw(QPainter *painter) override
     {
+        detail::PerformanceScope performance(m_view, "paint.frame-composite", detail::PerformanceDomain::Paint);
         QPoint offset;
         const QPixmap source = sourcePixmap(Qt::LogicalCoordinates, &offset, NoPad);
         if (source.isNull())

@@ -905,8 +905,11 @@ private:
     /// Framework containers that clip the cell widgets, keyed by
     /// cellClipKey(row pane, column pane) (§43 "advanced panes" + §31 row
     /// direction: several groups scroll independently, so each pane intersection
-    /// has its own).
+    /// has its own). Each clip contains a bounded content layer that translates
+    /// with scrolling, keeping retained cell coordinates stable between rebases.
     QHash<quint64, QWidget *> m_cellClipHosts;
+    /// Stable clip hosts keep frozen cells stacked across scrolling frames.
+    bool m_cellStackingDirty = true;
     /// 1 px body lines at the pane boundaries (left | scrollable | right).
     QVector<QWidget *> m_paneSeparatorLines;
     QHash<int, QWidget *> m_columnSpacingWidgets;

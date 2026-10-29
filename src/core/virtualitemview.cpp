@@ -1,4 +1,5 @@
 #include <virtualitemviews/virtualitemview.h>
+#include "performanceprobe_p.h"
 #include "pixelalignedlines_p.h"
 #include "dragpreview_p.h"
 #include "dragmoveselection_p.h"
@@ -97,6 +98,7 @@ public:
 protected:
     void paintEvent(QPaintEvent *) override
     {
+        detail::PerformanceScope performance(this, "paint.drop-indicator", detail::PerformanceDomain::Paint);
         QPainter painter(this);
         if (m_width <= 0 || m_penStyle == Qt::NoPen)
             return;
@@ -183,6 +185,7 @@ protected:
 
     void paintEvent(QPaintEvent *) override
     {
+        detail::PerformanceScope performance(this, "paint.row-spacing", detail::PerformanceDomain::Paint);
         QPainter painter(this);
         const int lineWidth = qMax(1, property("vivSpacingLineWidth").toInt());
         const QColor background = property("vivSpacingBackgroundColor").value<QColor>();
@@ -257,6 +260,7 @@ public:
 protected:
     void paintEvent(QPaintEvent *) override
     {
+        detail::PerformanceScope performance(this, "paint.row-pane-divider", detail::PerformanceDomain::Paint);
         if (!m_style.isVisible() || m_resolvedColor.alpha() == 0)
             return;
         QPainter painter(this);
@@ -313,13 +317,16 @@ VirtualItemView::VirtualItemView(QWidget *parent)
 
     m_recycler = new WidgetRecycler(viewport());
     m_recycler->setFactory([this](WidgetType type, QWidget *parentWidget) {
-        return m_adapter ? m_adapter->createWidget(type, parentWidget) : nullptr;
+        return m_adapter ? detail::performanceCall(this, "callback.row.create", [&] {
+            return m_adapter->createWidget(type, parentWidget);
+        }) : nullptr;
     });
 }
 
 VirtualItemView::~VirtualItemView()
 {
     m_destroying = true;
+    setPerformanceLoggingEnabled(false);
     viewport()->removeEventFilter(this);
     for (QWidget *widget : m_rowSpacingWidgets)
         delete widget;
@@ -352,6 +359,7 @@ VirtualItemView::~VirtualItemView()
 
 void VirtualItemView::setModel(QAbstractItemModel *model)
 {
+    detail::PerformanceScope performance(this, "refresh.set-model");
     if (m_model.data() == model)
         return;
     const QPointer<VirtualItemView> self(this);
@@ -480,6 +488,7 @@ void VirtualItemView::disconnectModel(QAbstractItemModel *model)
 
 void VirtualItemView::resetLayoutForNewModel()
 {
+    detail::PerformanceScope performance(this, "layout.reset");
     if (!m_layout)
         return;
     const qsizetype count = viewItemCount();
@@ -988,6 +997,7 @@ void VirtualItemView::updateHoveredIndex(const QModelIndex &index)
 
 void VirtualItemView::refreshHoveredIndex()
 {
+    detail::PerformanceScope performance(this, "state.refresh-hover");
     if (m_dragInProgress || m_destroying || isHoverTrackingLocked())
         return;
     updateHoveredIndex(hoverIndexAtGlobalPosition(QCursor::pos()));
@@ -1029,6 +1039,7 @@ void VirtualItemView::clearDragHover()
 
 void VirtualItemView::refreshVisualStates()
 {
+    detail::PerformanceScope performance(this, "state.refresh-all");
     if (!m_adapter)
         return;
     const quint64 modelSerial = m_modelChangeSerial;
@@ -1055,13 +1066,16 @@ void VirtualItemView::refreshVisualStates()
                 || m_itemLifecycleSerial != lifecycleSerial || m_adapter != activeAdapter)
                 return;
             if (widget && widgetForIndex(persistent) == widget.data())
-                activeAdapter->visualStateChanged(type, widget.data(), context);
+                detail::performanceCall(this, "callback.row.state", [&] {
+                    return activeAdapter->visualStateChanged(type, widget.data(), context);
+                });
         }
     }
 }
 
 void VirtualItemView::refreshVisualState(const QModelIndex &index)
 {
+    detail::PerformanceScope performance(this, "state.refresh-item");
     if (!m_adapter || !index.isValid() || index.model() != m_model)
         return;
     const QPersistentModelIndex target(index);
@@ -1093,7 +1107,9 @@ void VirtualItemView::refreshVisualState(const QModelIndex &index)
                 || m_itemLifecycleSerial != lifecycleSerial || m_adapter != activeAdapter)
                 return;
             if (widget && widgetForIndex(persistent) == widget.data())
-                activeAdapter->visualStateChanged(type, widget.data(), context);
+                detail::performanceCall(this, "callback.row.state", [&] {
+                    return activeAdapter->visualStateChanged(type, widget.data(), context);
+                });
         }
     }
 }
@@ -1309,6 +1325,7 @@ void VirtualItemView::clearLifecycleLog()
 
 void VirtualItemView::setAdapter(WidgetAdapter *adapter, bool takeOwnership)
 {
+    detail::PerformanceScope performance(this, "refresh.set-adapter");
     installAdapter(adapter, takeOwnership, true);
 }
 
@@ -1433,6 +1450,7 @@ void VirtualItemView::setAutoMeasureItemHeight(bool enabled)
 
 void VirtualItemView::rebuildSizeIndex()
 {
+    detail::PerformanceScope performance(this, "layout.size-index");
     if (!m_layout)
         return;
 
@@ -1446,6 +1464,7 @@ void VirtualItemView::rebuildSizeIndex()
 
 int VirtualItemView::estimateItemSize(qsizetype item) const
 {
+    detail::PerformanceScope performance(this, "callback.adapter.estimate");
     if (m_heightMode == ItemHeightMode::Uniform)
         return m_uniformItemHeight;
 
@@ -1457,11 +1476,15 @@ int VirtualItemView::estimateItemSize(qsizetype item) const
         const quint64 modelSerial = m_modelChangeSerial;
         const quint64 mappingSerial = viewMappingSerial();
         const QPersistentModelIndex persistent(index);
-        const WidgetType type = activeAdapter->widgetType(index);
+        const WidgetType type = detail::performanceCall(this, "callback.row.type", [&] {
+            return activeAdapter->widgetType(index);
+        });
         if (!self || !persistent.isValid() || m_adapter != activeAdapter || persistent != index
             || m_modelChangeSerial != modelSerial || viewMappingSerial() != mappingSerial)
             return fallback;
-        const QSize hint = activeAdapter->estimatedSize(type, index);
+        const QSize hint = detail::performanceCall(this, "callback.row.estimate", [&] {
+            return activeAdapter->estimatedSize(type, index);
+        });
         if (!self || !persistent.isValid() || m_adapter != activeAdapter
             || m_modelChangeSerial != modelSerial || viewMappingSerial() != mappingSerial)
             return fallback;
@@ -1473,6 +1496,7 @@ int VirtualItemView::estimateItemSize(qsizetype item) const
 
 int VirtualItemView::measuredHeightOf(const MaterializedItem &item) const
 {
+    detail::PerformanceScope performance(this, "callback.widget.measure");
     if (!item.widget)
         return 0;
     const int width = item.geometry.width() > 0 ? item.geometry.width() : viewport()->width();
@@ -1483,6 +1507,7 @@ int VirtualItemView::measuredHeightOf(const MaterializedItem &item) const
 
 void VirtualItemView::afterMaterialize()
 {
+    detail::PerformanceScope performance(this, "layout.measure-heights");
     if (!m_autoMeasure || !m_layout || materializedItems().isEmpty())
         return;
 
@@ -1525,12 +1550,14 @@ void VirtualItemView::afterMaterialize()
         return;
     }
     if (++m_measurePasses > kMaxConsecutiveMeasurePasses) {
+        performance.count("measure.convergence-limit");
         // Give up on this oscillation and keep the last measured heights.
         m_measurePasses = 0;
         return;
     }
     // Heights above the viewport changed: keep the top item in place.
     setPendingAnchor(anchor);
+    performance.count("measure.height-changed");
     markDirty();
 }
 
@@ -1555,6 +1582,7 @@ int VirtualItemView::bindingColumn(const QModelIndex &index) const
 
 ItemBindingContext VirtualItemView::bindingContext(const QModelIndex &index) const
 {
+    detail::PerformanceScope performance(this, "model.binding-context");
     ItemBindingContext context;
     context.index = index;
     if (!m_model || !index.isValid() || index.model() != m_model)
@@ -1569,6 +1597,7 @@ ItemBindingContext VirtualItemView::bindingContext(const QModelIndex &index) con
 
 void VirtualItemView::refreshItemData()
 {
+    detail::PerformanceScope performance(this, "refresh.data");
     const QPointer<QAbstractItemModel> activeModel(m_model);
     const quint64 modelSerial = m_modelChangeSerial;
     const quint64 mappingSerial = viewMappingSerial();
@@ -1632,6 +1661,7 @@ QVector<qsizetype> VirtualItemView::materializationItems(const QVector<VisibleRa
 
 void VirtualItemView::rebindItemsInRange(const QModelIndex &topLeft, const QModelIndex &bottomRight)
 {
+    detail::PerformanceScope performance(this, "refresh.model-change");
     rebindItemsInModelRange(topLeft.parent(), topLeft.row(), bottomRight.row());
 }
 
@@ -2045,6 +2075,7 @@ QVector<QRect> VirtualItemView::itemPaneSeparatorRects() const
 
 void VirtualItemView::syncItemPanes()
 {
+    detail::PerformanceScope performance(this, "layout.row-panes");
     // The clip container only exists while something is frozen: an unused feature
     // changes nothing at all (the item widgets keep the viewport as parent).
     const QVector<ItemPane> panes = itemPanes();
@@ -2152,6 +2183,7 @@ bool VirtualItemView::isItemPaneBoundaryAfter(qsizetype row) const
 
 void VirtualItemView::syncRowSpacingWidgets(const QVector<VisibleRange> &ranges)
 {
+    detail::PerformanceScope performance(this, "layout.row-spacing");
     auto *layout = dynamic_cast<ListLayout *>(m_layout);
     const quint64 modelSerial = m_modelChangeSerial;
     const quint64 mappingSerial = viewMappingSerial();
@@ -2258,7 +2290,9 @@ void VirtualItemView::syncRowSpacingWidgets(const QVector<VisibleRange> &ranges)
                 painter->restore();
             });
             if (factory && !host->content()) {
-                QPointer<QWidget> content(factory(index, host));
+                QPointer<QWidget> content(detail::performanceCall(this, "callback.row-gap.create", [&] {
+                    return factory(index, host);
+                }));
                 if (!guardedWidget) {
                     if (m_rowSpacingWidgets.value(row) == widget)
                         m_rowSpacingWidgets.remove(row);
@@ -2314,7 +2348,7 @@ void VirtualItemView::syncRowSpacingWidgets(const QVector<VisibleRange> &ranges)
         if (!hostIsCurrent())
             return;
         if (host->content() && binder)
-            binder(host->content(), index);
+            detail::performanceCall(this, "callback.row-gap.bind", [&] { return binder(host->content(), index); });
         if (!hostIsCurrent())
             return;
         const bool scrolling = m_scrollPaneHost && !isRowFrozen(row);
@@ -2386,6 +2420,7 @@ void VirtualItemView::updateRowSpacingVisualGeometry(const std::function<int(qsi
 
 void VirtualItemView::applyItemPaneGeometry(MaterializedItem &item, qsizetype row)
 {
+    detail::PerformanceScope performance(this, "layout.row-widget");
     QPointer<QWidget> widget(item.widget);
     if (!widget)
         return;
@@ -2616,6 +2651,17 @@ VirtualViewStats VirtualItemView::stats() const
     return result;
 }
 
+void VirtualItemView::setPerformanceLoggingEnabled(bool enabled)
+{
+    if (m_performanceLoggingEnabled == enabled)
+        return;
+    m_performanceLoggingEnabled = enabled;
+    detail::PerformanceScope::viewLoggingChanged(enabled);
+    m_performanceRefreshRequests = 0;
+    if (!enabled)
+        detail::PerformanceScope::discard(this);
+}
+
 // ---------------------------------------------------------------------------
 // Lookup
 // ---------------------------------------------------------------------------
@@ -2709,6 +2755,8 @@ void VirtualItemView::markDirty()
 
 void VirtualItemView::scheduleRelayout()
 {
+    if (m_performanceLoggingEnabled)
+        ++m_performanceRefreshRequests;
     // One queued pass is enough for any number of invalidations: without this
     // guard 100 markDirty() calls post 100 queued events (all but the first are
     // no-ops, but they are 100 event-loop round trips).
@@ -2739,8 +2787,15 @@ void VirtualItemView::abortMaterializationPass()
 
 void VirtualItemView::relayout()
 {
-    if (m_inRelayout)
+    detail::PerformanceScope performance(this, "refresh.relayout", detail::PerformanceDomain::Refresh);
+    if (m_performanceLoggingEnabled) {
+        performance.count("refresh.requests", qint64(m_performanceRefreshRequests));
+        m_performanceRefreshRequests = 0;
+    }
+    if (m_inRelayout) {
+        performance.count("refresh.reentrant-skipped");
         return;
+    }
 
     // A view that materializes its own widgets (table cell mode) does not need
     // a WidgetAdapter: the kernel only computes ranges for it.
@@ -2785,9 +2840,10 @@ void VirtualItemView::relayout()
             && self->m_adapter == activeAdapter && self->m_layout == activeLayout
             && self->usesItemWidgets() == rowWidgets;
     };
-    const auto abortStalePass = [self, &requestIsCurrent]() {
+    const auto abortStalePass = [self, &requestIsCurrent, &performance]() {
         if (requestIsCurrent())
             return false;
+        performance.count("refresh.stale-pass");
         if (self) {
             self->m_inRelayout = false;
             self->abortMaterializationPass();
@@ -2876,6 +2932,7 @@ void VirtualItemView::relayout()
     }
 
     augmentMaterializationRanges(ranges);
+    performance.checkpoint("refresh.range-and-model");
 
     // ---- decide what to reuse, then recycle what is obsolete --------------
     if (!usesItemWidgets()) {
@@ -2896,7 +2953,9 @@ void VirtualItemView::relayout()
         syncScrollBars();
         afterMaterialize();
         refreshHoveredIndex();
-        emit virtualizationUpdated();
+        detail::performanceCall(this, "callback.signal.virtualization-updated", [&] {
+            emit virtualizationUpdated();
+        });
         return;
     }
 
@@ -2933,6 +2992,7 @@ void VirtualItemView::relayout()
     }
 
     // ---- materialize ------------------------------------------------------
+    performance.checkpoint("refresh.match-and-recycle");
     QList<MaterializedItem> next;
     QList<qsizetype> nextRows;
     QSet<QPersistentModelIndex> nextIndexes;
@@ -3003,6 +3063,7 @@ void VirtualItemView::relayout()
     rebuildLookup();
 
     // ---- apply geometry ---------------------------------------------------
+    performance.checkpoint("refresh.acquire-and-order");
     // The row panes decide the parent (the scrolling rows are clipped into their
     // pane) and, for the frozen rows, lift them above the scrolling pane.
     syncItemPanes();
@@ -3019,6 +3080,7 @@ void VirtualItemView::relayout()
     raiseItemPaneSeparatorLines();
 
     m_inRelayout = false;
+    performance.checkpoint("refresh.apply-geometry");
 
     syncScrollBars();
     if (abortStalePass())
@@ -3029,11 +3091,14 @@ void VirtualItemView::relayout()
     refreshHoveredIndex();
     if (abortStalePass())
         return;
-    emit virtualizationUpdated();
+    detail::performanceCall(this, "callback.signal.virtualization-updated", [&] {
+        emit virtualizationUpdated();
+    });
 }
 
 MaterializedItem VirtualItemView::createItem(const QPersistentModelIndex &index)
 {
+    detail::PerformanceScope performance(this, "items.acquire-and-bind");
     MaterializedItem item;
     item.index = index;
     if (!m_adapter || !index.isValid())
@@ -3054,7 +3119,9 @@ MaterializedItem VirtualItemView::createItem(const QPersistentModelIndex &index)
             && self->m_layout == activeLayout && self->usesItemWidgets() && index.isValid();
     };
     const QModelIndex modelIndex(index);
-    item.type = activeAdapter->widgetType(modelIndex);
+    item.type = detail::performanceCall(this, "callback.row.type", [&] {
+        return activeAdapter->widgetType(modelIndex);
+    });
     if (!requestIsCurrent() || QModelIndex(index) != modelIndex)
         return item;
 
@@ -3118,7 +3185,9 @@ MaterializedItem VirtualItemView::createItem(const QPersistentModelIndex &index)
         item.widget = nullptr;
         return item;
     }
-    activeAdapter->bindWidget(item.type, widget, context);
+    detail::performanceCall(this, "callback.row.bind", [&] {
+        return activeAdapter->bindWidget(item.type, widget, context);
+    });
     if (!bindingIsCurrent()) {
         item.widget = nullptr;
         return item;
@@ -3128,7 +3197,9 @@ MaterializedItem VirtualItemView::createItem(const QPersistentModelIndex &index)
         item.widget = nullptr;
         return item;
     }
-    activeAdapter->visualStateChanged(item.type, widget, context);
+    detail::performanceCall(this, "callback.row.state", [&] {
+        return activeAdapter->visualStateChanged(item.type, widget, context);
+    });
     if (!bindingIsCurrent()) {
         item.widget = nullptr;
         return item;
@@ -3142,6 +3213,7 @@ MaterializedItem VirtualItemView::createItem(const QPersistentModelIndex &index)
 
 void VirtualItemView::recycleItem(MaterializedItem &item)
 {
+    detail::PerformanceScope performance(this, "items.unbind-and-recycle");
     if (!item.widget)
         return;
     WidgetAdapter *const activeAdapter = m_adapter;
@@ -3154,7 +3226,9 @@ void VirtualItemView::recycleItem(MaterializedItem &item)
             item.widget = nullptr;
             return;
         }
-        activeAdapter->unbindWidget(item.type, widget.data(), context);
+        detail::performanceCall(this, "callback.row.unbind", [&] {
+            return activeAdapter->unbindWidget(item.type, widget.data(), context);
+        });
     }
     clearVisualTransitionsForRow(QModelIndex(item.index));
     if (m_lifecycleLogEnabled)
@@ -3282,6 +3356,7 @@ bool VirtualItemView::isPinnedItem(const MaterializedItem &item) const
 
 void VirtualItemView::rebindItemsInModelRange(const QModelIndex &parent, int first, int last)
 {
+    detail::PerformanceScope performance(this, "refresh.rebind-rows");
     if (!m_adapter)
         return;
     const quint64 modelSerial = m_modelChangeSerial;
@@ -3315,14 +3390,18 @@ void VirtualItemView::rebindItemsInModelRange(const QModelIndex &parent, int fir
             return;
         if (!widget || widgetForIndex(persistent) != widget.data())
             continue;
-        activeAdapter->bindWidget(type, widget.data(), context);
+        detail::performanceCall(this, "callback.row.bind", [&] {
+            return activeAdapter->bindWidget(type, widget.data(), context);
+        });
         if (!activeModel || m_modelChangeSerial != modelSerial
             || viewMappingSerial() != mappingSerial || m_itemLifecycleSerial != lifecycleSerial
             || m_adapter != activeAdapter)
             return;
         if (!widget || widgetForIndex(index) != widget.data())
             continue;
-        activeAdapter->visualStateChanged(type, widget.data(), context);
+        detail::performanceCall(this, "callback.row.state", [&] {
+            return activeAdapter->visualStateChanged(type, widget.data(), context);
+        });
         if (!activeModel || m_modelChangeSerial != modelSerial
             || viewMappingSerial() != mappingSerial || m_itemLifecycleSerial != lifecycleSerial
             || m_adapter != activeAdapter)
@@ -3487,6 +3566,7 @@ void VirtualItemView::applyPendingAnchor()
 
 void VirtualItemView::syncScrollBars()
 {
+    detail::PerformanceScope performance(this, "layout.scrollbars");
     QScrollBar *bar = verticalScrollBar();
     const int viewExtent = viewportMainExtent();
     const qint64 extent = m_layout ? m_layout->contentExtent() : 0;
@@ -3524,6 +3604,7 @@ void VirtualItemView::scrollContentsBy(int dx, int dy)
 
 void VirtualItemView::paintEvent(QPaintEvent *event)
 {
+    detail::PerformanceScope performance(this, "paint.base", detail::PerformanceDomain::Paint);
     Q_UNUSED(event);
     QPainter painter(viewport());
     painter.fillRect(viewport()->rect(), palette().brush(QPalette::Base));
@@ -3531,6 +3612,7 @@ void VirtualItemView::paintEvent(QPaintEvent *event)
 
 void VirtualItemView::resizeEvent(QResizeEvent *event)
 {
+    detail::PerformanceScope performance(this, "layout.resize");
     QAbstractScrollArea::resizeEvent(event);
     updateFrameChildMasks();
     if (m_layout)
@@ -3542,6 +3624,7 @@ void VirtualItemView::resizeEvent(QResizeEvent *event)
 
 void VirtualItemView::showEvent(QShowEvent *event)
 {
+    detail::PerformanceScope performance(this, "layout.show");
     QAbstractScrollArea::showEvent(event);
     if (m_layout)
         m_layout->setCrossExtent(viewport()->width());
@@ -4685,6 +4768,7 @@ void VirtualItemView::extendSelectionTo(const QModelIndex &index)
 void VirtualItemView::onDataChanged(const QModelIndex &topLeft, const QModelIndex &bottomRight,
                                     const QVector<int> &roles)
 {
+    detail::PerformanceScope performance(this, "model.data-changed");
     if (!topLeft.isValid() || !bottomRight.isValid())
         return;
     if (topLeft.parent() != bottomRight.parent())
@@ -4724,6 +4808,7 @@ void VirtualItemView::onRowsAboutToBeInserted(const QModelIndex &parent, int fir
 
 void VirtualItemView::onRowsInserted(const QModelIndex &parent, int first, int last)
 {
+    detail::PerformanceScope performance(this, "model.rows-inserted");
     if (!isLayoutParent(parent) || !m_layout)
         return;
     const qsizetype count = qsizetype(last) - qsizetype(first) + 1;
@@ -4745,6 +4830,7 @@ void VirtualItemView::onRowsAboutToBeRemoved(const QModelIndex &parent, int firs
 
 void VirtualItemView::onRowsRemoved(const QModelIndex &parent, int first, int last)
 {
+    detail::PerformanceScope performance(this, "model.rows-removed");
     if (!isLayoutParent(parent) || !m_layout)
         return;
     const qsizetype count = qsizetype(last) - qsizetype(first) + 1;
@@ -4768,6 +4854,7 @@ void VirtualItemView::onRowsAboutToBeMoved(const QModelIndex &sourceParent, int 
 void VirtualItemView::onRowsMoved(const QModelIndex &sourceParent, int start, int end,
                                      const QModelIndex &destParent, int row)
 {
+    detail::PerformanceScope performance(this, "model.rows-moved");
     if (!isLayoutParent(sourceParent) || !isLayoutParent(destParent)) {
         // Cross-parent moves change the visible mapping entirely.
         if (managesVisibleRows()) {
@@ -4803,6 +4890,7 @@ void VirtualItemView::onLayoutAboutToBeChanged(const QList<QPersistentModelIndex
 void VirtualItemView::onLayoutChanged(const QList<QPersistentModelIndex> &parents,
                                          QAbstractItemModel::LayoutChangeHint hint)
 {
+    detail::PerformanceScope performance(this, "model.layout-changed");
     Q_UNUSED(parents);
     Q_UNUSED(hint);
     // Sizes are keyed by row, so they cannot be trusted after a reorder.
@@ -4822,6 +4910,7 @@ void VirtualItemView::onModelAboutToBeReset()
 
 void VirtualItemView::onModelReset()
 {
+    detail::PerformanceScope performance(this, "model.reset");
     m_scrollOffset = 0;
     m_scrollMapper.resetAnchor();
     if (!managesVisibleRows())

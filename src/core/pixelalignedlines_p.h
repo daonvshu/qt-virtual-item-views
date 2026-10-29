@@ -1,5 +1,7 @@
 #pragma once
 
+#include "performanceprobe_p.h"
+
 #include <QPainter>
 #include <QPainterPath>
 #include <QRegion>
@@ -224,6 +226,7 @@ public:
 protected:
     void paintEvent(QPaintEvent *) override
     {
+        detail::PerformanceScope performance(this, "paint.grid-lines", detail::PerformanceDomain::Paint);
         QPainter painter(this);
         // Use the same edge as the adjoining row or spacing host at fractional DPI.
         const int extent = m_orientation == Qt::Horizontal ? height() : width();

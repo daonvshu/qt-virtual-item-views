@@ -10,7 +10,7 @@ namespace viv {
 // Forward only unhandled input, keeping viewport filters and scroll-group routing active.
 inline void forwardWheelToViewport(QWidget *viewport, QWheelEvent *event)
 {
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
     const QPointF global = event->globalPosition();
 #else
     const QPointF global = event->globalPosF();

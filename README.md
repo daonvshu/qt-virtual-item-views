@@ -17,7 +17,7 @@
 | 树 | 展开/折叠、节点上下间距、键盘导航、缩进和分支图标 | [VirtualTreeView 功能示例源码](docs/tree.md) |
 | 多列表格树 | 树节点展开、表格列布局、表头、冻结 pane 与单元格控件 | [多列表格树](docs/tree-table.md) |
 | 通用交互 | 选择、拖放、编辑器焦点与弹窗 | [选择与拖放](docs/interaction.md) |
-| 可访问性与诊断 | 可见项接口、物化统计和生命周期日志 | [可访问性与诊断](docs/accessibility-guide.md) |
+| 可访问性与诊断 | 可见项接口、物化统计、生命周期日志与分模块性能探测 | [可访问性与诊断](docs/accessibility-guide.md) |
 
 从[快速开始](docs/getting-started.md)完成构建与接入。列表、表格与树的用法按功能列在 [VirtualListView](docs/list.md)、[VirtualTableView](docs/table.md) 和 [VirtualTreeView](docs/tree.md) 源码路径索引中，所有路径均相对于仓库根目录。
 

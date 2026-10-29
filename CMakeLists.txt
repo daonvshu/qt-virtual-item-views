@@ -105,6 +105,7 @@ set(VIRTUALITEMVIEWS_SOURCES
     ${VIRTUALITEMVIEWS_PUBLIC_HEADERS}
     src/core/scrollmapper.cpp
     src/core/reorderabletablemodel.cpp
+    src/core/performanceprobe.cpp
     src/core/virtualitemview.cpp
     src/core/virtualitemviewframe.cpp
     src/layout/headergeometry.cpp
@@ -163,7 +164,21 @@ else()
 endif()
 
 if(MSVC)
-    target_compile_options(VirtualItemViews PRIVATE /W4 /permissive- /utf-8)
+    # Respect warning levels inherited from a host project or toolchain, avoiding D9025.
+    get_directory_property(_viv_msvc_directory_options COMPILE_OPTIONS)
+    set(_viv_msvc_warning_flags "${CMAKE_CXX_FLAGS};${_viv_msvc_directory_options}")
+    set(_viv_msvc_configurations Debug Release RelWithDebInfo MinSizeRel
+        ${CMAKE_CONFIGURATION_TYPES} ${CMAKE_BUILD_TYPE})
+    list(REMOVE_DUPLICATES _viv_msvc_configurations)
+    foreach(_viv_msvc_configuration IN LISTS _viv_msvc_configurations)
+        string(TOUPPER "${_viv_msvc_configuration}" _viv_msvc_configuration_upper)
+        string(APPEND _viv_msvc_warning_flags
+            ";${CMAKE_CXX_FLAGS_${_viv_msvc_configuration_upper}}")
+    endforeach()
+    if(NOT _viv_msvc_warning_flags MATCHES "(^|[ ;:>])[-/](W[0-4]|Wall|w)([ ;>]|$)")
+        target_compile_options(VirtualItemViews PRIVATE /W4)
+    endif()
+    target_compile_options(VirtualItemViews PRIVATE /permissive- /utf-8)
 else()
     target_compile_options(VirtualItemViews PRIVATE -Wall -Wextra -Wpedantic)
 endif()

@@ -1,4 +1,5 @@
 #include <virtualitemviews/virtualtreetableview.h>
+#include "../core/performanceprobe_p.h"
 #include "treeexpansiontransition_p.h"
 #include "../core/pixelalignedlines_p.h"
 
@@ -475,6 +476,7 @@ bool VirtualTreeTableView::isPersistentRowStateValid(const QModelIndex &index) c
 
 void VirtualTreeTableView::refreshVisibility(bool resetSizes)
 {
+    detail::PerformanceScope performance(this, "tree-table.visibility");
     if (m_updatingVisibility) {
         m_visibilityRefreshPending = true;
         return;
@@ -547,6 +549,7 @@ void VirtualTreeTableView::refreshVisibility(bool resetSizes)
 void VirtualTreeTableView::refreshVisibilitySplice(qsizetype first, qsizetype removed,
                                                    qsizetype inserted, qsizetype previousCount)
 {
+    detail::PerformanceScope performance(this, "tree-table.visibility-splice");
     auto *layout = dynamic_cast<ListLayout *>(layoutPolicy());
     if (!layout || layout->itemCount() != previousCount || first < 0
         || first > previousCount || removed < 0 || inserted < 0
@@ -802,6 +805,7 @@ int VirtualTreeTableView::expansionAnimationDuration() const
 
 void VirtualTreeTableView::expand(const QModelIndex &index)
 {
+    detail::PerformanceScope performance(this, "tree-table.expand");
     const QPersistentModelIndex node(nodeIndex(index));
     if (!node.isValid() || viewItemForIndex(node) < 0
         || !hasChildren(node) || isExpanded(node))
@@ -838,6 +842,7 @@ void VirtualTreeTableView::expand(const QModelIndex &index)
 
 void VirtualTreeTableView::collapse(const QModelIndex &index)
 {
+    detail::PerformanceScope performance(this, "tree-table.collapse");
     const QPersistentModelIndex node(nodeIndex(index));
     if (!node.isValid() || !isExpanded(node))
         return;
@@ -875,6 +880,7 @@ void VirtualTreeTableView::collapse(const QModelIndex &index)
 
 void VirtualTreeTableView::expandRecursively(const QModelIndex &index)
 {
+    detail::PerformanceScope performance(this, "tree-table.expand-recursively");
     const QPersistentModelIndex node(nodeIndex(index));
     if (!node.isValid() || !hasChildren(node))
         return;
@@ -909,6 +915,7 @@ void VirtualTreeTableView::expandRecursively(const QModelIndex &index)
 
 void VirtualTreeTableView::collapseAll()
 {
+    detail::PerformanceScope performance(this, "tree-table.collapse-all");
     const QPointer<VirtualTreeTableView> animationGuard(this);
     const quint64 animationSerial = modelChangeSerial();
     const QPersistentModelIndex animationRoot(m_rootIndex);
@@ -1255,6 +1262,7 @@ bool VirtualTreeTableView::isIndicatorPosition(const QModelIndex &index,
 
 void VirtualTreeTableView::paintBranches(QPainter *painter) const
 {
+    detail::PerformanceScope performance(this, "paint.tree-table-branches", detail::PerformanceDomain::Paint);
     if (!m_branchIndicatorsVisible || isColumnHidden(0))
         return;
     const int paneIndex = paneIndexOfColumn(0);
@@ -1297,7 +1305,9 @@ void VirtualTreeTableView::paintBranches(QPainter *painter) const
                 state.isExpanded = isExpanded(cell);
                 state.hasSiblings = cell.row() + 1 < model()->rowCount(cell.parent());
                 painter->save();
-                m_branchRenderer->paintBranch(painter, state, node, rect);
+                detail::performanceCall(this, "callback.branch.paint", [&] {
+                    return m_branchRenderer->paintBranch(painter, state, node, rect);
+                });
                 painter->restore();
             }
         }
