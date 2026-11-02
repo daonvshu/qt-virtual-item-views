@@ -1,4 +1,5 @@
 #include <virtualitemviews/headergeometry.h>
+#include <virtualitemviews/listlayout.h>
 #include "../core/datastreamversion_p.h"
 
 #include <QDataStream>
@@ -546,6 +547,8 @@ int HeaderGeometry::clampedSize(int size) const
 
 int HeaderGeometry::sectionSize(int logicalIndex) const
 {
+    if (m_transientRows)
+        return m_transientRows->itemSize(logicalIndex);
     if (m_uniformCount > 0) {
         if (!isValidLogical(logicalIndex))
             return 0;
@@ -560,8 +563,12 @@ int HeaderGeometry::sectionSize(int logicalIndex) const
 
 int HeaderGeometry::storedSectionSize(int logicalIndex) const
 {
-    if (m_uniformCount > 0)
-        return sectionSize(logicalIndex);
+    if (m_uniformCount > 0) {
+        if (!isValidLogical(logicalIndex))
+            return 0;
+        const int index = sparseIndexOf(logicalIndex);
+        return index >= 0 ? m_sparseSizes.at(index) : m_defaultSectionSize;
+    }
     const Section *section = sectionAt(logicalIndex);
     return section ? section->size : 0;
 }
@@ -869,6 +876,8 @@ void HeaderGeometry::setSparseSectionSpacingOverrides(const QVector<QPair<int, i
 
 int HeaderGeometry::sectionSpacingAfter(int logicalIndex) const
 {
+    if (m_transientRows)
+        return m_transientRows->spacingAfter(logicalIndex);
     if (m_resizeMode == ResizeMode::FitExtent && m_fitSectionSpacings.size() == sectionCount()
         && isValidLogical(logicalIndex))
         return m_fitSectionSpacings.at(logicalIndex);
@@ -1082,6 +1091,8 @@ void HeaderGeometry::rebuildCaches() const
 
 qint64 HeaderGeometry::totalExtent() const
 {
+    if (m_transientRows)
+        return m_transientRows->contentExtent();
     if (m_cacheDirty)
         rebuildCaches();
     return m_totalExtent + (m_uniformCount > 0 || !m_visibleLogicalOrder.isEmpty()
@@ -1090,6 +1101,8 @@ qint64 HeaderGeometry::totalExtent() const
 
 qint64 HeaderGeometry::sectionPosition(int logicalIndex) const
 {
+    if (m_transientRows)
+        return m_transientRows->offsetOf(logicalIndex);
     if (!isValidLogical(logicalIndex))
         return 0;
     if (m_uniformCount > 0) {
@@ -1111,6 +1124,8 @@ int HeaderGeometry::sectionViewportPosition(int logicalIndex) const
 
 int HeaderGeometry::visualSectionAtOffset(qint64 contentOffset) const
 {
+    if (m_transientRows)
+        return int(qMin<qsizetype>(sectionCount() - 1, m_transientRows->indexAtOffset(contentOffset)));
     contentOffset -= leadingSpacing();
     if (m_uniformCount > 0) {
         if (!m_sectionSpacingOverrides.isEmpty() || !m_sparseSpacingOverrides.isEmpty()) {
@@ -1337,6 +1352,8 @@ void HeaderGeometry::moveLogicalSectionSizes(int start, int count, int destinati
 
 bool HeaderGeometry::isSectionHidden(int logicalIndex) const
 {
+    if (m_transientRows)
+        return m_transientRows->itemSize(logicalIndex) <= 0;
     if (m_uniformCount > 0)
         return false;   // a uniform geometry stores no hidden section
     const Section *section = sectionAt(logicalIndex);
@@ -1410,6 +1427,18 @@ qint64 HeaderGeometry::maximumViewportOffset(int viewportExtent) const
 ColumnGeometry HeaderGeometry::columnGeometry(int logicalIndex) const
 {
     ColumnGeometry geometry;
+    if (m_transientRows) {
+        if (!isValidLogical(logicalIndex))
+            return geometry;
+        geometry.logicalIndex = logicalIndex;
+        geometry.visualIndex = logicalIndex;
+        geometry.width = sectionSize(logicalIndex);
+        geometry.hidden = geometry.width <= 0;
+        geometry.contentX = sectionPosition(logicalIndex);
+        geometry.viewportX = int(qBound<qint64>(-kMaxOffscreenX,
+                                    geometry.contentX - m_viewportOffset, kMaxOffscreenX));
+        return geometry;
+    }
     if (m_uniformCount > 0) {
         if (!isValidLogical(logicalIndex))
             return geometry;

@@ -32,6 +32,13 @@ public:
     qint64 offsetOf(qsizetype item) const override;
     qsizetype indexAtOffset(qint64 offset) const override;
     qint64 contentExtent() const override;
+    void filterVisibleRanges(QVector<VisibleRange> &ranges) const override;
+    bool hasTransientGeometry() const override { return m_transitionFirst >= 0; }
+    qreal itemOpacity(qsizetype item) const override
+    {
+        return m_transitionFadeEnabled && hasTransientGeometry()
+            && item >= m_transitionFirst && item < m_transitionEnd ? m_transitionOpacity : 1.0;
+    }
 
     int crossExtent() const override { return m_crossExtent; }
     void setCrossExtent(int extent) override;
@@ -67,6 +74,14 @@ public:
     void setViewportMargins(const QMargins &margins);
 
 private:
+    friend class TreeExpansionTransition;
+    qint64 naturalOffsetOf(qsizetype item) const;
+    qint64 transitionEnd() const;
+    qsizetype m_transitionFirst = -1;
+    qsizetype m_transitionEnd = -1;
+    qint64 m_transitionExtent = 0;
+    qreal m_transitionOpacity = 1.0;
+    bool m_transitionFadeEnabled = true;
     qint64 clampToIntRange(qint64 value) const;
 
     SizeIndex *m_sizeIndex = nullptr;

@@ -11,6 +11,7 @@
 #include <virtualitemviews/types.h>
 
 namespace viv {
+class ListLayout;
 
 /// Committed geometry of one column (architecture document §20).
 ///
@@ -269,6 +270,9 @@ signals:
     void bulkGeometryChanged();
 
 private:
+    friend class TreeExpansionTransition;
+    friend class VirtualHeaderView;
+    const ListLayout *m_transientRows = nullptr;
     struct Section
     {
         int size = 0;

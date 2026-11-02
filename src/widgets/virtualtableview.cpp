@@ -1,4 +1,5 @@
 #include <virtualitemviews/virtualtableview.h>
+#include "../core/transientitemgeometry_p.h"
 #include "../core/performanceprobe_p.h"
 #include "../core/pixelalignedlines_p.h"
 #include "../core/datastreamversion_p.h"
@@ -223,7 +224,7 @@ public:
         bool trailingEdge;
     };
 
-    explicit PaneGapGridLines(QWidget *parent) : QWidget(parent)
+    PaneGapGridLines(QWidget *parent, const LayoutPolicy *layout) : QWidget(parent), m_layout(layout)
     {
         setObjectName(QStringLiteral("vivPaneGapGridLines"));
         setAttribute(Qt::WA_TransparentForMouseEvents);
@@ -252,18 +253,23 @@ protected:
     {
         detail::PerformanceScope performance(this, "paint.pane-grid", detail::PerformanceDomain::Paint);
         QPainter painter(this);
-        for (const Line &line : m_lines) {
-            painter.save();
-            painter.setClipRegion(line.clip, Qt::IntersectClip);
-            const bool horizontal = line.orientation == Qt::Horizontal;
-            fillPixelLines(&painter, {line.rect}, horizontal ? m_horizontalWidth : m_verticalWidth,
-                           horizontal ? m_horizontalColor : m_verticalColor,
-                           line.orientation, line.trailingEdge);
-            painter.restore();
-        }
+        const auto *view = static_cast<const VirtualTableView *>(parentWidget());
+        detail::paintWithTransientItemOpacity(&painter, m_layout, view->verticalOffset(),
+            view->viewport()->geometry().translated(-pos()), [&] {
+                for (const Line &line : m_lines) {
+                    painter.save();
+                    painter.setClipRegion(line.clip, Qt::IntersectClip);
+                    const bool horizontal = line.orientation == Qt::Horizontal;
+                    fillPixelLines(&painter, {line.rect}, horizontal ? m_horizontalWidth : m_verticalWidth,
+                                   horizontal ? m_horizontalColor : m_verticalColor,
+                                   line.orientation, line.trailingEdge);
+                    painter.restore();
+                }
+            });
     }
 
 private:
+    const LayoutPolicy *m_layout;
     QVector<Line> m_lines;
     QColor m_horizontalColor;
     QColor m_verticalColor;
@@ -280,15 +286,16 @@ public:
         bool trailingEdge;
         int height;
         bool centered;
+        qreal opacity = 1.0;
 
         bool operator==(const HorizontalLine &other) const
         {
             return y == other.y && clip == other.clip && trailingEdge == other.trailingEdge
-                && height == other.height && centered == other.centered;
+                && height == other.height && centered == other.centered && opacity == other.opacity;
         }
     };
 
-    explicit ColumnSpacingHost(QWidget *parent = nullptr) : QWidget(parent)
+    ColumnSpacingHost(QWidget *parent, const LayoutPolicy *layout) : QWidget(parent), m_layout(layout)
     {
         setObjectName(QStringLiteral("vivColumnSpacingHost"));
         setFocusPolicy(Qt::NoFocus);
@@ -518,8 +525,12 @@ protected:
                 }
             }
         }
-        fillPixelLines(&painter, verticalLines, m_verticalWidth, m_verticalColor,
-                       Qt::Vertical, !m_centered, false, m_centered);
+        const auto *view = static_cast<const VirtualTableView *>(parentWidget());
+        detail::paintWithTransientItemOpacity(&painter, m_layout, view->verticalOffset(),
+            view->viewport()->geometry().translated(-pos()), [&] {
+                fillPixelLines(&painter, verticalLines, m_verticalWidth, m_verticalColor,
+                               Qt::Vertical, !m_centered, false, m_centered);
+            });
         // Default gaps have no child content to cover these lines. Paint them here
         // instead of maintaining a separate QWidget at every row/column intersection.
         if (!m_content) {
@@ -529,6 +540,7 @@ protected:
                 if (!clip.intersects(event->rect()))
                     continue;
                 painter.save();
+                painter.setOpacity(line.opacity);
                 painter.setClipRect(clip, Qt::IntersectClip);
                 fillPixelLines(&painter, {band}, m_horizontalWidth, m_horizontalColor,
                                Qt::Horizontal, line.trailingEdge, false, line.centered);
@@ -596,7 +608,9 @@ private:
             else
                 line->setMask(QRegion(clip));
             QPalette colors = line->palette();
-            colors.setColor(QPalette::Window, m_horizontalColor);
+            QColor color = m_horizontalColor;
+            color.setAlphaF(color.alphaF() * band.opacity);
+            colors.setColor(QPalette::Window, color);
             line->setPalette(colors);
             line->setAutoFillBackground(false);
             line->setVisible(!clip.isEmpty());
@@ -604,6 +618,7 @@ private:
         }
     }
 
+    const LayoutPolicy *m_layout;
     QWidget *m_content = nullptr;
     QWidget *m_headerContent = nullptr;
     QPointer<QWidget> m_headerInputTarget;
@@ -3296,6 +3311,8 @@ void VirtualTableView::updateRowHeaderOffset()
 void VirtualTableView::updateRowHeaderGeometry()
 {
     detail::PerformanceScope performance(this, "header.row-geometry");
+    if (m_rowLayout && m_rowLayout->hasTransientGeometry())
+        return;
     if (!m_rowHeaders)
         return;
     ensureHeaders();
@@ -4846,6 +4863,12 @@ void VirtualTableView::updateCellGeometry()
         auto *clipHost = static_cast<CellPaneClipHost *>(
             m_cellClipHosts.value(cellClipKey(row.pane, column.pane), nullptr));
         QWidget *parent = clipHost ? clipHost->contentWidget() : viewport();
+        const QPoint origin = clipHost
+            ? clipHost->geometry().topLeft() + parent->pos() : QPoint(0, 0);
+        QRect geometry = rect.translated(-origin);
+        detail::prepareTransientItemGeometry(widget, parent, geometry,
+            m_rowLayout->sizeIndex()->sizeOf(viewRow), m_rowLayout->hasTransientGeometry(),
+            m_rowLayout->itemOpacity(viewRow));
         const bool parentChanged = widget->parentWidget() != parent;
         if (parentChanged)
             detail::performanceCall(this, "cells.widget.reparent", [&] {
@@ -4859,9 +4882,6 @@ void VirtualTableView::updateCellGeometry()
         const QRect hostRect = clipHost ? clipHost->geometry() : QRect();
         const QRect visible = hostRect.isNull() ? rect : rect.intersected(hostRect);
         if (rect.isValid() && !visible.isEmpty()) {
-            const QPoint origin = clipHost
-                ? hostRect.topLeft() + parent->pos() : QPoint(0, 0);
-            const QRect geometry = rect.translated(-origin);
             if (widget->geometry() != geometry) {
                 detail::performanceCall(this, "cells.widget.set-geometry", [&] {
                     widget->setGeometry(geometry);
@@ -5244,7 +5264,7 @@ void VirtualTableView::paintVisualStateBackgrounds(QPainter *target, const QRect
             painter.save();
             if (bottomInsetPixels > 0)
                 clipPixelAlignedBottomInset(&painter, rect, bottomInsetPixels);
-            painter.setOpacity(opacity);
+            painter.setOpacity(opacity * m_rowLayout->itemOpacity(viewItemForIndex(index)));
             paintStateBackgroundLayer(&painter, rect, clip, color);
             painter.restore();
         };
@@ -6006,7 +6026,7 @@ void VirtualTableView::syncPaneGapGridLines()
         }
     }
     if (!m_paneGapGridLines && !lines.isEmpty())
-        m_paneGapGridLines = new PaneGapGridLines(this);
+        m_paneGapGridLines = new PaneGapGridLines(this, m_rowLayout);
     if (m_paneGapGridLines) {
         m_paneGapGridLines->setGeometry(rect());
         static_cast<PaneGapGridLines *>(m_paneGapGridLines)->setLines(std::move(lines),
@@ -6096,7 +6116,9 @@ void VirtualTableView::syncRowGridLines()
             m_rowGridLines.insert(it.key(), line);
         }
         QPalette colors = line->palette();
-        colors.setColor(QPalette::Window, color);
+        QColor fadedColor = color;
+        fadedColor.setAlphaF(color.alphaF() * m_rowLayout->itemOpacity(it.key()));
+        colors.setColor(QPalette::Window, fadedColor);
         line->setPalette(colors);
         line->setGeometry(it.value());
         QRegion mask(line->rect());
@@ -6238,7 +6260,7 @@ void VirtualTableView::syncColumnSpacingWidgets()
         QWidget *widget = m_columnSpacingWidgets.value(it.key(), nullptr);
         if (!widget) {
             if (m_columnSpacingPool.isEmpty()) {
-                auto *host = new ColumnSpacingHost(this);
+                auto *host = new ColumnSpacingHost(this, m_rowLayout);
                 host->setBodyStatePainter([this, host](QPainter *painter, const QRect &dirty) {
                     // Both widgets are children of the view; map sibling coordinates without mapTo().
                     const QPoint origin = viewport()->pos() - host->pos();
@@ -6395,10 +6417,12 @@ void VirtualTableView::updateColumnSpacingVisualRows()
                 const bool centered = gridLinePlacement() == GridLinePlacement::SpacingCenter
                     && rowSpacing > 0;
                 rowLines.append(RowLine{row, {first, clip, rowSpacing <= 0,
-                    centered ? rowSpacing : m_horizontalGridLineWidth, centered}});
+                    centered ? rowSpacing : m_horizontalGridLineWidth, centered,
+                    m_rowLayout->itemOpacity(row)}});
                 if (rowSpacing > 0 && !centered) {
                     const int last = first + qMax(0, rowSpacing - m_horizontalGridLineWidth);
-                    rowLines.append(RowLine{row, {last, clip, true, m_horizontalGridLineWidth, false}});
+                    rowLines.append(RowLine{row, {last, clip, true, m_horizontalGridLineWidth, false,
+                        m_rowLayout->itemOpacity(row)}});
                 }
             }
         }
@@ -6442,7 +6466,7 @@ void VirtualTableView::updateColumnSpacingVisualRows()
                 continue;
             for (const QRect &part : visible)
                 horizontalLines.append(ColumnSpacingHost::HorizontalLine{y, part, line.trailingEdge,
-                                                                         line.height, line.centered});
+                                                                         line.height, line.centered, line.opacity});
         }
         host->setRowGaps(localGaps, horizontalLines, verticalSpacingLineThroughRowSpacing());
         host->setBodyRegion(occupiedRows.translated(viewportRect.topLeft() - origin));

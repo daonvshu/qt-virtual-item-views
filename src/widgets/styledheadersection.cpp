@@ -38,8 +38,9 @@ void StyledHeaderSection::initStyleOption(QStyleOptionHeader *option) const
     option->orientation = Qt::Horizontal;
     option->state |= QStyle::State_Horizontal | QStyle::State_Raised;
     const bool vertical = orientation() == Qt::Vertical;
-    const QWidget *container = parentWidget();
-    const int pos = vertical ? y() : x();
+    const QWidget *container = headerView() ? headerView() : parentWidget();
+    const QPoint position = container ? mapTo(container, QPoint()) : pos();
+    const int pos = vertical ? position.y() : position.x();
     const int size = vertical ? height() : width();
     const int extent = vertical ? (container ? container->height() : height())
                                 : (container ? container->width() : width());
@@ -104,11 +105,12 @@ void StyledHeaderSection::paintVisualStateBackground(QPainter *painter, const QR
         && !hasTrailingSectionGap(header, logicalIndex())
         && header->sectionTrailingEdgeSpacing(logicalIndex()) == 0)
         clipPixelAlignedBottomInset(painter, shape, header->sectionSeparatorWidth());
-    painter->setOpacity(state.hoverProgress);
+    const qreal opacity = painter->opacity();
+    painter->setOpacity(opacity * state.hoverProgress);
     fillPixelAlignedRoundedRegion(painter, shape, clip, radius,
                                   visualStateBackgroundBrush(false, table->hoverBackgroundColor()),
                                   true, roundRight);
-    painter->setOpacity(state.selectedProgress);
+    painter->setOpacity(opacity * state.selectedProgress);
     fillPixelAlignedRoundedRegion(painter, shape, clip, radius,
                                   visualStateBackgroundBrush(true, table->selectedBackgroundColor()),
                                   true, roundRight);

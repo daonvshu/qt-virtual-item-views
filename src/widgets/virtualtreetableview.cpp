@@ -84,47 +84,45 @@ protected:
 VirtualTreeTableView::VirtualTreeTableView(QWidget *parent)
     : VirtualTableView(parent), m_visibility(new TreeVisibilityIndex)
 {
-    const auto animationGeometry = [this](const QModelIndex &index) {
-        const qsizetype row = viewItemForIndex(index);
-        if (row < 0)
-            return QRect();
-        const QRect geometry = geometryForViewRow(row);
-        const auto *layout = dynamic_cast<ListLayout *>(layoutPolicy());
-        return QRect(0, viewport()->geometry().top() + geometry.top(), width(),
-                     geometry.height() + (layout ? layout->spacingAfter(row) : 0));
-    };
-    m_expansionTransition = new TreeExpansionTransition(this, [this, animationGeometry]() {
-        QVector<TreeExpansionTransition::Row> rows;
-        // Frozen row boundaries use the fade fallback instead of crossing pane clips.
-        if (frozenRows() || frozenBottomRows())
-            return rows;
-        const VisibleRange range = visibleItemRange();
-        if (range.isValid()) {
-            for (qsizetype row = range.first; row <= range.last; ++row) {
-                const QModelIndex index = viewIndex(row);
-                rows.append({QPersistentModelIndex(index), animationGeometry(index),
-                             geometryForViewRow(row).height()});
-            }
-        }
-        return rows;
-    }, animationGeometry);
     verticalHeader()->setAdapter(new VisibleRowHeaderAdapter, true);
+    m_expansionTransition = new TreeExpansionTransition(this,
+        static_cast<ListLayout *>(layoutPolicy()),
+        [this]() {
+            const QPointer<VirtualTreeTableView> guard(this);
+            relayout();
+            if (guard) {
+                invalidateBranches();
+                viewport()->update();
+            }
+        },
+        verticalHeaderGeometry());
     m_branchOverlay = new BranchOverlay([this](QPainter *painter) { paintBranches(painter); }, viewport());
     m_branchOverlay->setGeometry(viewport()->rect());
     m_branchOverlay->show();
     connect(this, &VirtualTableView::horizontalOffsetChanged, this,
-            [this](qint64) { m_expansionTransition->stop(); invalidateBranches(); });
+            [this](qint64) {
+                if (!m_expansionTransition->isUpdatingGeometry())
+                    m_expansionTransition->stop();
+                invalidateBranches();
+            });
     connect(this, &VirtualTableView::columnGeometryChanged, this,
-            [this]() { m_expansionTransition->stop(); invalidateBranches(); });
+            [this]() {
+                if (!m_expansionTransition->isUpdatingGeometry())
+                    m_expansionTransition->stop();
+                invalidateBranches();
+            });
 }
 
 VirtualTreeTableView::~VirtualTreeTableView()
 {
+    m_expansionTransition->cancel();
+    m_expansionTransition->setEnabled(false);
     recycleAllCells();
     recycleAllItems();
     delete m_branchOverlay;
     if (m_ownBranchRenderer)
         delete m_branchRenderer;
+    delete m_expansionTransition;
     delete m_visibility;
 }
 
@@ -132,7 +130,7 @@ void VirtualTreeTableView::setModel(QAbstractItemModel *treeModel)
 {
     if (model() == treeModel)
         return;
-    m_expansionTransition->stop();
+    m_expansionTransition->cancel();
     const QPointer<QAbstractItemModel> requestedModel(treeModel);
     const quint64 rootSerial = ++m_rootChangeSerial;
     ++m_mappingSerial;
@@ -612,7 +610,7 @@ QModelIndex VirtualTreeTableView::nodeIndex(const QModelIndex &index) const
 
 void VirtualTreeTableView::setRootIndex(const QModelIndex &index)
 {
-    m_expansionTransition->stop();
+    m_expansionTransition->cancel();
     if (index.isValid() && index.model() != model()) {
         qWarning("VirtualTreeTableView::setRootIndex(): index belongs to another model");
         return;
@@ -803,10 +801,31 @@ int VirtualTreeTableView::expansionAnimationDuration() const
     return m_expansionTransition->duration();
 }
 
+void VirtualTreeTableView::setExpansionFadeEnabled(bool enabled)
+{
+    m_expansionTransition->setFadeEnabled(enabled);
+}
+
+bool VirtualTreeTableView::expansionFadeEnabled() const
+{
+    return m_expansionTransition->isFadeEnabled();
+}
+
 void VirtualTreeTableView::expand(const QModelIndex &index)
 {
+    const QPointer<VirtualTreeTableView> operationGuard(this);
+    const QPersistentModelIndex requested(nodeIndex(index));
+    if (!m_expansionTransition->affects(requested))
+        m_expansionTransition->stop();
+    if (!operationGuard)
+        return;
+    if (m_expansionTransition->resumeExpansion(requested)) {
+        if (operationGuard && requested.isValid())
+            emit expanded(requested);
+        return;
+    }
     detail::PerformanceScope performance(this, "tree-table.expand");
-    const QPersistentModelIndex node(nodeIndex(index));
+    const QPersistentModelIndex node(nodeIndex(requested));
     if (!node.isValid() || viewItemForIndex(node) < 0
         || !hasChildren(node) || isExpanded(node))
         return;
@@ -816,9 +835,10 @@ void VirtualTreeTableView::expand(const QModelIndex &index)
     const QPointer<VirtualTreeTableView> animationGuard(this);
     const quint64 animationSerial = modelChangeSerial();
     const QPersistentModelIndex animationRoot(m_rootIndex);
-    const auto before = m_expansionTransition->capture();
     if (!animationGuard || !node.isValid() || modelChangeSerial() != animationSerial || m_rootIndex != animationRoot)
         return;
+    const qsizetype animationFirst = viewItemForIndex(node) + 1;
+    const qsizetype animationCountBefore = viewItemCount();
     setPendingAnchor(captureAnchor());
     const qsizetype first = viewItemForIndex(node) + 1;
     const qsizetype previousCount = viewItemCount();
@@ -831,7 +851,7 @@ void VirtualTreeTableView::expand(const QModelIndex &index)
     if (!animationGuard)
         return;
     if (modelChangeSerial() == animationSerial && m_rootIndex == animationRoot) {
-        m_expansionTransition->start(before);
+        m_expansionTransition->expand(node, animationFirst, viewItemCount() - animationCountBefore);
         if (!animationGuard)
             return;
     }
@@ -842,8 +862,16 @@ void VirtualTreeTableView::expand(const QModelIndex &index)
 
 void VirtualTreeTableView::collapse(const QModelIndex &index)
 {
+    const QPointer<VirtualTreeTableView> operationGuard(this);
+    const QPersistentModelIndex requested(nodeIndex(index));
+    if (!m_expansionTransition->affects(requested))
+        m_expansionTransition->stop();
+    if (!operationGuard)
+        return;
+    if (m_expansionTransition->isCollapsing(requested))
+        return;
     detail::PerformanceScope performance(this, "tree-table.collapse");
-    const QPersistentModelIndex node(nodeIndex(index));
+    const QPersistentModelIndex node(nodeIndex(requested));
     if (!node.isValid() || !isExpanded(node))
         return;
     const QPersistentModelIndex collapsedNode(node);
@@ -852,8 +880,15 @@ void VirtualTreeTableView::collapse(const QModelIndex &index)
     const QPointer<VirtualTreeTableView> animationGuard(this);
     const quint64 animationSerial = modelChangeSerial();
     const QPersistentModelIndex animationRoot(m_rootIndex);
-    const auto before = m_expansionTransition->capture(m_visibility, node);
     if (!animationGuard || !node.isValid() || modelChangeSerial() != animationSerial || m_rootIndex != animationRoot)
+        return;
+    if (m_expansionTransition->collapse(m_visibility, node,
+            [animationGuard, node, animationSerial, animationRoot]() {
+                if (animationGuard && node.isValid()
+                    && animationGuard->modelChangeSerial() == animationSerial
+                    && animationGuard->rootIndex() == animationRoot)
+                    animationGuard->collapse(node);
+            }))
         return;
     setPendingAnchor(captureAnchor());
     const qsizetype row = viewItemForIndex(node);
@@ -869,10 +904,6 @@ void VirtualTreeTableView::collapse(const QModelIndex &index)
         refreshVisibility(false);
     if (!animationGuard)
         return;
-    if (modelChangeSerial() == animationSerial && m_rootIndex == animationRoot)
-        m_expansionTransition->start(before);
-    if (!animationGuard)
-        return;
     if (modelChangeSerial() == modelSerial && m_rootChangeSerial == rootSerial
         && collapsedNode.isValid() && !isExpanded(collapsedNode))
         emit collapsed(collapsedNode);
@@ -880,8 +911,13 @@ void VirtualTreeTableView::collapse(const QModelIndex &index)
 
 void VirtualTreeTableView::expandRecursively(const QModelIndex &index)
 {
+    const QPointer<VirtualTreeTableView> operationGuard(this);
+    const QPersistentModelIndex requested(index);
+    m_expansionTransition->stop();
+    if (!operationGuard)
+        return;
     detail::PerformanceScope performance(this, "tree-table.expand-recursively");
-    const QPersistentModelIndex node(nodeIndex(index));
+    const QPersistentModelIndex node(nodeIndex(requested));
     if (!node.isValid() || !hasChildren(node))
         return;
     const QPersistentModelIndex expandedNode(node);
@@ -891,9 +927,10 @@ void VirtualTreeTableView::expandRecursively(const QModelIndex &index)
     const QPointer<VirtualTreeTableView> animationGuard(this);
     const quint64 animationSerial = modelChangeSerial();
     const QPersistentModelIndex animationRoot(m_rootIndex);
-    const auto before = m_expansionTransition->capture();
     if (!animationGuard || !node.isValid() || modelChangeSerial() != animationSerial || m_rootIndex != animationRoot)
         return;
+    const qsizetype animationFirst = viewItemForIndex(node) + 1;
+    const qsizetype animationCountBefore = viewItemCount();
     setPendingAnchor(captureAnchor());
     const quint64 mappingSerial = ++m_mappingSerial;
     m_visibility->expandRecursively(node);
@@ -903,8 +940,8 @@ void VirtualTreeTableView::expandRecursively(const QModelIndex &index)
     refreshVisibility(true);
     if (!animationGuard)
         return;
-    if (modelChangeSerial() == animationSerial && m_rootIndex == animationRoot)
-        m_expansionTransition->start(before);
+    if (!wasExpanded && modelChangeSerial() == animationSerial && m_rootIndex == animationRoot)
+        m_expansionTransition->expand(node, animationFirst, viewItemCount() - animationCountBefore);
     if (!animationGuard)
         return;
     if (!wasExpanded && modelChangeSerial() == modelSerial
@@ -915,11 +952,14 @@ void VirtualTreeTableView::expandRecursively(const QModelIndex &index)
 
 void VirtualTreeTableView::collapseAll()
 {
+    const QPointer<VirtualTreeTableView> operationGuard(this);
+    m_expansionTransition->stop();
+    if (!operationGuard)
+        return;
     detail::PerformanceScope performance(this, "tree-table.collapse-all");
     const QPointer<VirtualTreeTableView> animationGuard(this);
     const quint64 animationSerial = modelChangeSerial();
     const QPersistentModelIndex animationRoot(m_rootIndex);
-    const auto before = m_expansionTransition->capture(m_visibility);
     if (!animationGuard || modelChangeSerial() != animationSerial || m_rootIndex != animationRoot)
         return;
     setPendingAnchor(captureAnchor());
@@ -928,8 +968,6 @@ void VirtualTreeTableView::collapseAll()
     refreshVisibility(true);
     if (!animationGuard)
         return;
-    if (modelChangeSerial() == animationSerial && m_rootIndex == animationRoot)
-        m_expansionTransition->start(before);
 }
 
 void VirtualTreeTableView::setExpanded(const QModelIndex &index, bool expanded)
@@ -944,7 +982,8 @@ void VirtualTreeTableView::toggleExpanded(const QModelIndex &index)
 
 bool VirtualTreeTableView::isExpanded(const QModelIndex &index) const
 {
-    return m_visibility->isExpanded(nodeIndex(index));
+    return !m_expansionTransition->isCollapsing(nodeIndex(index))
+        && m_visibility->isExpanded(nodeIndex(index));
 }
 
 void VirtualTreeTableView::setIndentation(int pixels)
@@ -955,6 +994,22 @@ void VirtualTreeTableView::setIndentation(int pixels)
     m_indentation = width;
     relayout();
     invalidateBranches();
+}
+
+void VirtualTreeTableView::setBranchAreaVisible(bool visible)
+{
+    if (m_branchAreaVisible == visible)
+        return;
+    const QPointer<VirtualTreeTableView> guard(this);
+    m_expansionTransition->stop();
+    if (!guard)
+        return;
+    m_branchAreaVisible = visible;
+    relayout();
+    if (guard) {
+        invalidateBranches();
+        viewport()->update();
+    }
 }
 
 int VirtualTreeTableView::effectiveRowSpacing(qsizetype row) const
@@ -1027,7 +1082,7 @@ QRect VirtualTreeTableView::decorationExclusion(int cells) const
 QRect VirtualTreeTableView::rowGridLineExclusion(int depth) const
 {
     const int cells = m_rowGridLineExtent == RowGridLineExtent::NodeOnly
-        ? int(qMin<qint64>(qint64(depth) + 1, INT_MAX))
+        ? int(qMin<qint64>(qint64(depth) + int(m_branchAreaVisible), INT_MAX))
         : m_rowGridLineExtent == RowGridLineExtent::NodeAndIcon ? depth : 0;
     return decorationExclusion(cells);
 }
@@ -1085,7 +1140,7 @@ void VirtualTreeTableView::paintVisualStateBackgrounds(QPainter *painter,
     const int viewportWidth = viewport()->width();
     const auto cells = [this](int depth) {
         return m_visualStateBackgroundExtent == VisualStateBackgroundExtent::NodeOnly
-            ? int(qMin<qint64>(qint64(depth) + 1, INT_MAX))
+            ? int(qMin<qint64>(qint64(depth) + int(m_branchAreaVisible), INT_MAX))
             : m_visualStateBackgroundExtent == VisualStateBackgroundExtent::NodeAndIcon ? depth : 0;
     };
     const QVector<int> columns = rowScope ? QVector<int>() : visibleColumnLogicalIndexes();
@@ -1119,9 +1174,10 @@ void VirtualTreeTableView::paintVisualStateBackgrounds(QPainter *painter,
         if (clip.isEmpty() || (state.hoverProgress <= 0.0 && state.selectedProgress <= 0.0))
             return;
         painter->save();
-        painter->setOpacity(state.hoverProgress);
+        const qreal opacity = layoutPolicy()->itemOpacity(viewItemForIndex(index));
+        painter->setOpacity(state.hoverProgress * opacity);
         paintRoundedStateBackgroundLayer(painter, rect, clip, hoverBackgroundColor(), visualStateCornerRadius());
-        painter->setOpacity(state.selectedProgress);
+        painter->setOpacity(state.selectedProgress * opacity);
         paintRoundedStateBackgroundLayer(painter, rect, clip, selectedBackgroundColor(), visualStateCornerRadius());
         painter->restore();
     };
@@ -1232,7 +1288,7 @@ QRect VirtualTreeTableView::branchCellRect(qsizetype row, int cellDepth, bool vi
         item.moveTop(visualY);
     const int paneIndex = paneIndexOfColumn(0);
     const QVector<TablePane> currentPanes = panes();
-    if (!node.isValid() || !column.isValid() || column.hidden || m_indentation <= 0
+    if (!m_branchAreaVisible || !node.isValid() || !column.isValid() || column.hidden || m_indentation <= 0
         || item.height() <= 0 || paneIndex < 0 || paneIndex >= currentPanes.size())
         return QRect();
     int columnX = column.viewportX;
@@ -1246,6 +1302,8 @@ QRect VirtualTreeTableView::branchCellRect(qsizetype row, int cellDepth, bool vi
     if (clippedRight <= clippedLeft)
         return QRect();
     // Keep the full row height for icon centering, even at a viewport/pane edge.
+    if (layoutPolicy()->hasTransientGeometry())
+        item.setHeight(layoutPolicy()->sizeIndex()->sizeOf(row));
     return QRect(int(clippedLeft), item.y(), int(clippedRight - clippedLeft), item.height());
 }
 
@@ -1254,7 +1312,7 @@ bool VirtualTreeTableView::isIndicatorPosition(const QModelIndex &index,
 {
     const QModelIndex node = nodeIndex(index);
     const qsizetype row = viewItemForIndex(node);
-    return m_branchIndicatorsVisible && hasChildren(node) && row >= 0
+    return m_branchAreaVisible && m_branchIndicatorsVisible && hasChildren(node) && row >= 0
         && branchCellRect(row, itemDepth(node))
             .intersected(itemPaneRect(itemPaneForRow(row)))
             .intersected(viewport()->rect()).contains(position);
@@ -1263,7 +1321,7 @@ bool VirtualTreeTableView::isIndicatorPosition(const QModelIndex &index,
 void VirtualTreeTableView::paintBranches(QPainter *painter) const
 {
     detail::PerformanceScope performance(this, "paint.tree-table-branches", detail::PerformanceDomain::Paint);
-    if (!m_branchIndicatorsVisible || isColumnHidden(0))
+    if (!m_branchAreaVisible || !m_branchIndicatorsVisible || isColumnHidden(0))
         return;
     const int paneIndex = paneIndexOfColumn(0);
     const QVector<TablePane> currentPanes = panes();
@@ -1276,14 +1334,23 @@ void VirtualTreeTableView::paintBranches(QPainter *painter) const
             const QModelIndex node = viewIndex(row);
             if (!node.isValid())
                 continue;
+            painter->setOpacity(layoutPolicy()->itemOpacity(row));
             painter->setClipRegion(QRegion(currentPanes.at(paneIndex).viewportRect)
                 .intersected(QRegion(itemPaneRect(itemPaneForRow(row))))
                 .intersected(QRegion(viewport()->rect())));
+            if (layoutPolicy()->hasTransientGeometry())
+                painter->setClipRect(geometryForViewRow(row), Qt::IntersectClip);
             const int depth = itemDepth(node);
             if (!m_branchRenderer) {
-                if (hasChildren(node))
+                if (hasChildren(node)) {
+                    BranchIndicatorState state = branchState(node);
+                    const qreal progress = m_expansionTransition->expansionProgress(node, state.isExpanded);
+                    state.isExpanded = true;
                     BranchIndicatorRenderer::paintBuiltinBranch(
-                        painter, branchState(node), branchCellRect(row, depth, true), palette());
+                        painter, state, branchCellRect(row, depth, true), palette(),
+                        kBranchIndicatorSize, QColor(), Qt::AlignCenter, QMargins(),
+                        (progress - 1.0) * 90.0);
+                }
                 continue;
             }
             QVector<QModelIndex> ancestors(depth + 1);
@@ -1411,7 +1478,7 @@ int VirtualTreeTableView::leadingCellInset(const QModelIndex &index) const
 {
     if (index.column() != 0)
         return 0;
-    const qint64 inset = (qint64(itemDepth(index)) + 1) * m_indentation;
+    const qint64 inset = (qint64(itemDepth(index)) + int(m_branchAreaVisible)) * m_indentation;
     return int(qBound<qint64>(qint64(0), inset,
                               qint64(qMax(0, columnGeometry(0).width))));
 }

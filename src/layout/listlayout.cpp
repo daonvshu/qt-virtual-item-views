@@ -1,4 +1,5 @@
 #include <virtualitemviews/listlayout.h>
+#include <virtualitemviews/types.h>
 
 #include <algorithm>
 
@@ -78,17 +79,21 @@ void ListLayout::setSpacingAfter(qsizetype item, int pixels)
                             + m_defaultSpacing);
         if (!m_sizeIndex->isUniform())
             for (qsizetype row = 0; row < itemCount(); ++row)
-                m_extents.setSize(row, itemSize(row) + m_defaultSpacing);
+                m_extents.setSize(row, m_sizeIndex->sizeOf(row) + m_defaultSpacing);
         m_hasSpacingOverrides = true;
     }
     m_spacings.setSize(item, spacing);
     if (m_hasSpacingOverrides)
-        m_extents.setSize(item, itemSize(item) + spacing);
+        m_extents.setSize(item, m_sizeIndex->sizeOf(item) + spacing);
 }
 
 int ListLayout::spacingAfter(qsizetype item) const
 {
-    return item >= 0 && item + 1 < itemCount() ? m_spacings.sizeOf(item) : 0;
+    const int spacing = item >= 0 && item + 1 < itemCount() ? m_spacings.sizeOf(item) : 0;
+    if (item >= m_transitionFirst && item < m_transitionEnd && hasTransientGeometry())
+        return int(qBound(qint64(0), transitionEnd() - naturalOffsetOf(item)
+                                     - m_sizeIndex->sizeOf(item), qint64(spacing)));
+    return spacing;
 }
 
 void ListLayout::setEdgeSpacing(int leading, int trailing)
@@ -114,10 +119,53 @@ qsizetype ListLayout::itemCount() const
 
 int ListLayout::itemSize(qsizetype item) const
 {
-    return m_sizeIndex ? m_sizeIndex->sizeOf(item) : 0;
+    const int size = m_sizeIndex ? m_sizeIndex->sizeOf(item) : 0;
+    if (item >= m_transitionFirst && item < m_transitionEnd && hasTransientGeometry())
+        return int(qBound(qint64(0), transitionEnd() - naturalOffsetOf(item), qint64(size)));
+    return size;
 }
 
 qint64 ListLayout::offsetOf(qsizetype item) const
+{
+    const qint64 natural = naturalOffsetOf(item);
+    if (!hasTransientGeometry() || item <= m_transitionFirst)
+        return natural;
+    if (item < m_transitionEnd)
+        return qMin(natural, transitionEnd());
+    return natural - (naturalOffsetOf(m_transitionEnd) - transitionEnd());
+}
+
+qint64 ListLayout::transitionEnd() const
+{
+    return qMin(naturalOffsetOf(m_transitionEnd),
+                naturalOffsetOf(m_transitionFirst) + m_transitionExtent);
+}
+
+void ListLayout::filterVisibleRanges(QVector<VisibleRange> &ranges) const
+{
+    if (!hasTransientGeometry())
+        return;
+    qsizetype low = m_transitionFirst;
+    qsizetype high = m_transitionEnd;
+    const qint64 end = transitionEnd();
+    while (low < high) {
+        const qsizetype mid = low + (high - low) / 2;
+        if (naturalOffsetOf(mid) < end)
+            low = mid + 1;
+        else
+            high = mid;
+    }
+    QVector<VisibleRange> visible;
+    for (const VisibleRange &range : ranges) {
+        if (range.first < low)
+            visible.append({range.first, qMin(range.last, low - 1)});
+        if (range.last >= m_transitionEnd)
+            visible.append({qMax(range.first, m_transitionEnd), range.last});
+    }
+    ranges = std::move(visible);
+}
+
+qint64 ListLayout::naturalOffsetOf(qsizetype item) const
 {
     if (!m_sizeIndex)
         return 0;
@@ -134,6 +182,18 @@ qint64 ListLayout::offsetOf(qsizetype item) const
 
 qsizetype ListLayout::indexAtOffset(qint64 offset) const
 {
+    if (hasTransientGeometry()) {
+        qsizetype low = 0;
+        qsizetype high = itemCount();
+        while (low < high) {
+            const qsizetype mid = low + (high - low + 1) / 2;
+            if (offsetOf(mid) <= offset)
+                low = mid;
+            else
+                high = mid - 1;
+        }
+        return low;
+    }
     if (itemCount() > 0)
         offset -= m_leadingSpacing;
     if (!m_sizeIndex || (m_defaultSpacing == 0 && !m_hasSpacingOverrides))
@@ -169,7 +229,9 @@ qint64 ListLayout::contentExtent() const
     const qint64 margins = m_orientation == Qt::Vertical
         ? m_viewportMargins.top() + m_viewportMargins.bottom()
         : m_viewportMargins.left() + m_viewportMargins.right();
-    return total + margins + (itemCount() > 0 ? qint64(m_leadingSpacing) + m_trailingSpacing : 0);
+    const qint64 hidden = hasTransientGeometry()
+        ? naturalOffsetOf(m_transitionEnd) - transitionEnd() : 0;
+    return total - hidden + margins + (itemCount() > 0 ? qint64(m_leadingSpacing) + m_trailingSpacing : 0);
 }
 
 void ListLayout::setCrossExtent(int extent)
@@ -258,7 +320,7 @@ void ListLayout::insertItems(qsizetype index, qsizetype count, int estimate)
         if (m_sizeIndex->isUniform() && m_sizeIndex->uniformSize() != previousUniformSize) {
             m_extents.reset(itemCount(), m_sizeIndex->uniformSize() + m_defaultSpacing);
             for (qsizetype row = 0; row < itemCount(); ++row)
-                m_extents.setSize(row, itemSize(row) + m_spacings.sizeOf(row));
+                m_extents.setSize(row, m_sizeIndex->sizeOf(row) + m_spacings.sizeOf(row));
         }
     }
 }
@@ -287,7 +349,7 @@ void ListLayout::moveItems(qsizetype from, qsizetype count, qsizetype to)
     QList<int> spacings;
     sizes.reserve(moved);
     for (qsizetype i = 0; i < moved; ++i)
-        sizes.append(itemSize(start + i));
+        sizes.append(m_sizeIndex->sizeOf(start + i));
     for (qsizetype i = 0; i < moved; ++i)
         spacings.append(m_spacings.sizeOf(start + i));
 
@@ -315,9 +377,9 @@ void ListLayout::setItemSize(qsizetype item, int size)
     if (m_hasSpacingOverrides && m_sizeIndex->isUniform()) {
         m_extents.reset(itemCount(), m_sizeIndex->uniformSize() + m_defaultSpacing);
         for (qsizetype row = 0; row < itemCount(); ++row)
-            m_extents.setSize(row, itemSize(row) + m_spacings.sizeOf(row));
+            m_extents.setSize(row, m_sizeIndex->sizeOf(row) + m_spacings.sizeOf(row));
     } else if (m_hasSpacingOverrides && item >= 0 && item < itemCount()) {
-        m_extents.setSize(item, itemSize(item) + m_spacings.sizeOf(item));
+        m_extents.setSize(item, m_sizeIndex->sizeOf(item) + m_spacings.sizeOf(item));
     }
 }
 

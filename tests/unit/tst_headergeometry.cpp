@@ -1327,8 +1327,8 @@ void TestHeaderGeometry::clearExplicitSizesPreservesStretchFactors()
         geometry.setSectionCount(5);
         if (indexed)
             geometry.setSectionHidden(4, true);
-        geometry.setSectionStretchFactor(1, 2.0);
         geometry.resizeSection(2, 150);
+        geometry.setSectionStretchFactor(1, 2.0);
         geometry.clearExplicitSectionSizes();
         QCOMPARE(geometry.sectionStretchFactor(1), 2.0);
         QCOMPARE(geometry.sectionSize(2), geometry.defaultSectionSize());

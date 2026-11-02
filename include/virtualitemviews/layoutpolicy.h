@@ -6,10 +6,12 @@
 #include <QRect>
 #include <Qt>
 #include <QtGlobal>
+#include <QVector>
 
 namespace viv {
 
 class SizeIndex;
+struct VisibleRange;
 
 /// Geometry strategy of a virtual view.
 ///
@@ -53,6 +55,12 @@ public:
     virtual bool isVariableSized() const = 0;
     /// Only layouts awaiting a size estimate need a provisional materialization pass.
     virtual bool needsInitialMeasurement() const { return true; }
+    /// Removes temporarily hidden items from materialization and painting ranges.
+    virtual void filterVisibleRanges(QVector<VisibleRange> &) const {}
+    /// Suppresses measurement while transient geometry differs from stored sizes.
+    virtual bool hasTransientGeometry() const { return false; }
+    /// Opacity of live item content during a layout transition; normally opaque.
+    virtual qreal itemOpacity(qsizetype) const { return 1.0; }
 
     /// Size model of the layout, when the layout is index based (rows/columns).
     virtual SizeIndex *sizeIndex() const { return nullptr; }

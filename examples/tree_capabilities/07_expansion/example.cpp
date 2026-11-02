@@ -68,6 +68,9 @@ private:
         animated = new QCheckBox(QStringLiteral("动画"), this);
         animated->setChecked(true);
         options->addWidget(animated);
+        fade = new QCheckBox(QStringLiteral("子节点淡入淡出"), this);
+        fade->setChecked(true);
+        options->addWidget(fade);
         duration = new QSpinBox(this);
         duration->setRange(0, 1000);
         duration->setValue(300);
@@ -107,16 +110,19 @@ private:
         // Qt model signals update the visible mapping and reused widgets automatically.
         m_view->setModel(m_model);
 
-        // Expansion animation is opt-in. It changes visuals, not model identities.
-        m_view->setExpansionAnimationEnabled(true);
+        // Expansion animation is enabled by default; it changes visuals, not model identities.
         m_view->setExpansionAnimationDuration(300);
+        // Fading is enabled by default. The checkbox calls setExpansionFadeEnabled(false)
+        // to disable it without disabling the live height transition.
+        fade->setChecked(m_view->expansionFadeEnabled());
         m_view->setCurrentIndex(m_model->index(0, 0));
         connect(open, &QPushButton::clicked, this, [this] { m_view->expand(m_view->currentIndex()); });
         connect(close, &QPushButton::clicked, this, [this] { m_view->collapse(m_view->currentIndex()); });
         connect(toggle, &QPushButton::clicked, this, [this] { m_view->toggleExpanded(m_view->currentIndex()); });
         connect(recursive, &QPushButton::clicked, this, [this] { m_view->expandRecursively(m_view->currentIndex()); });
-        connect(all, &QPushButton::clicked, m_view, &viv::VirtualTreeView::collapseAll);
         connect(animated, &QCheckBox::toggled, m_view, &viv::VirtualTreeView::setExpansionAnimationEnabled);
+        connect(fade, &QCheckBox::toggled, m_view, &viv::VirtualTreeView::setExpansionFadeEnabled);
+        connect(animated, &QCheckBox::toggled, fade, &QWidget::setEnabled);
         connect(duration, QOverload<int>::of(&QSpinBox::valueChanged), m_view,
                 &viv::VirtualTreeView::setExpansionAnimationDuration);
         const auto report = [this](const QModelIndex &index) {
@@ -126,6 +132,13 @@ private:
         };
         connect(m_view, &viv::VirtualTreeView::expanded, this, report);
         connect(m_view, &viv::VirtualTreeView::collapsed, this, report);
+        connect(all, &QPushButton::clicked, this, [this, report] {
+            m_view->collapseAll();
+            report(m_view->currentIndex());
+        });
+        // Populate the status before showing the page. An initially empty label
+        // grows on the first expanded signal, resizing the tree and ending its animation.
+        report(m_view->currentIndex());
     }
 
     viv::VirtualTreeView *m_view = nullptr;
@@ -137,6 +150,7 @@ private:
     QPushButton *recursive = nullptr;
     QPushButton *all = nullptr;
     QCheckBox *animated = nullptr;
+    QCheckBox *fade = nullptr;
     QSpinBox *duration = nullptr;
 };
 

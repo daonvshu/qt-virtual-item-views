@@ -94,6 +94,7 @@ public:
     void resetModelQueryCount() { m_modelQueryCount = 0; }
 
 private:
+    friend class TreeExpansionTransition;
     /// One parent's children: a Fenwick tree over the visible sub-tree size of each child.
     ///
     /// The visible row of a child is the prefix sum of the children before it, so a

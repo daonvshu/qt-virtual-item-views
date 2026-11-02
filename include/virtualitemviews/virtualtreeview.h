@@ -59,16 +59,26 @@ public:
     bool isExpanded(const QModelIndex &index) const;
     bool hasChildren(const QModelIndex &index) const;
     void collapseAll();
-    /// Height/position and opacity transition; disabled by default. Frozen rows use a fade.
+    /// Live layout transition; enabled by default. Collapse retains outgoing
+    /// rows until completion, then emits collapsed(). Frozen rows and bulk
+    /// collapseAll() updates are immediate, without a screenshot fallback.
     void setExpansionAnimationEnabled(bool enabled);
     bool expansionAnimationEnabled() const;
     /// Duration in milliseconds; zero disables the visual transition.
     void setExpansionAnimationDuration(int milliseconds);
     int expansionAnimationDuration() const;
+    /// Fade transitioning descendants with the live layout animation; default true.
+    /// Uses temporary framework containers, preserving item graphics effects.
+    void setExpansionFadeEnabled(bool enabled);
+    bool expansionFadeEnabled() const;
 
     // -- branch UI -----------------------------------------------------------
     void setIndentation(int pixels);
     int indentation() const { return m_indentation; }
+    /// Default true. Hiding removes branch decoration and the node's own icon
+    /// cell, while preserving depth * indentation() and the icon configuration.
+    void setBranchAreaVisible(bool visible);
+    bool branchAreaVisible() const { return m_branchAreaVisible; }
     /// Default true. When false, all-leaf sibling groups omit their own branch cell.
     void setIndentLeafItems(bool enabled);
     bool indentLeafItems() const { return m_indentLeafItems; }
@@ -110,17 +120,33 @@ public:
     /// Draws and handles the expand/collapse indicator of branch items.
     void setBranchIndicatorsVisible(bool visible);
     bool branchIndicatorsVisible() const { return m_branchIndicatorsVisible; }
-    /// Default renderer only: null icons restore the corresponding built-in triangle.
+    /// Default renderer only: one non-null icon rotates 90 degrees with expansion.
+    /// Two non-null icons switch immediately; two null icons restore the rotating
+    /// built-in expanded triangle. Custom renderers keep their own state handling.
     void setExpandedBranchIcon(const QIcon &icon);
     QIcon expandedBranchIcon() const { return m_expandedBranchIcon; }
     void setCollapsedBranchIcon(const QIcon &icon);
     QIcon collapsedBranchIcon() const { return m_collapsedBranchIcon; }
-    /// Square logical-pixel size (default 8), clamped to at least one and to the cell when painted.
+    /// Square logical-pixel size (default 10), clamped to at least one and to the cell when painted.
     void setBranchIconSize(int pixels);
     int branchIconSize() const { return m_branchIconSize; }
     /// Tints icons and triangles; invalid color restores icon colors / palette WindowText.
     void setBranchIconColor(const QColor &color);
     QColor branchIconColor() const { return m_branchIconColor; }
+    /// Alignment of the default icon or built-in triangle inside its branch cell.
+    /// Missing horizontal/vertical flags fall back to AlignLeft/AlignVCenter.
+    /// Defaults to Qt::AlignCenter; custom renderers control their own layout.
+    void setBranchIndicatorAlignment(Qt::Alignment alignment);
+    Qt::Alignment branchIndicatorAlignment() const { return m_branchIndicatorAlignment; }
+    /// Padding around the default icon or built-in triangle, in logical pixels.
+    /// Negative values are clamped to zero; the icon is clamped to the padded area.
+    /// The default is centered with zero padding.
+    void setBranchIndicatorPadding(const QMargins &padding);
+    void setBranchIndicatorPadding(int left, int top, int right, int bottom)
+    {
+        setBranchIndicatorPadding(QMargins(left, top, right, bottom));
+    }
+    QMargins branchIndicatorPadding() const { return m_branchIndicatorPadding; }
 
     // -- branch decoration ---------------------------------------------------
     /// Custom indicator renderer; null (the default) uses the configured icons
@@ -200,7 +226,7 @@ private:
     void paintBranchIndicators(QPainter *painter);
     /// Paints the configured expand/collapse icon or its built-in fallback.
     void paintDefaultBranchIndicator(QPainter *painter, const BranchIndicatorState &state,
-                                     const QRect &cellRect);
+                                     const QModelIndex &index, const QRect &cellRect);
     void paintVisualStateBackgrounds(QPainter *painter, const QRect &dirty);
     /// Cell rect (viewport coordinates) of \a cellDepth of a view row.
     QRect branchCellRect(qsizetype row, int cellDepth) const;
@@ -221,6 +247,7 @@ private:
     QPersistentModelIndex m_rootIndex;
     int m_indentation = 20;
     bool m_indentLeafItems = true;
+    bool m_branchAreaVisible = true;
     mutable QHash<QPersistentModelIndex, bool> m_siblingBranchCells;
     QHash<qsizetype, QWidget *> m_rowGridLines;
     QVector<QWidget *> m_rowGridLinePool;
@@ -236,6 +263,8 @@ private:
     QIcon m_collapsedBranchIcon;
     int m_branchIconSize = kBranchIndicatorSize;
     QColor m_branchIconColor;
+    Qt::Alignment m_branchIndicatorAlignment = Qt::AlignCenter;
+    QMargins m_branchIndicatorPadding;
     BranchIndicatorRenderer *m_branchRenderer = nullptr;
     bool m_ownBranchRenderer = false;
     /// Width of the strip invalidated for the branch indicators.

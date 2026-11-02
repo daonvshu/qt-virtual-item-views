@@ -62,6 +62,9 @@ private:
         icons = new QCheckBox(QStringLiteral("显示分支图标"), this);
         icons->setChecked(true);
         controls->addWidget(icons);
+        hideBranch = new QCheckBox(QStringLiteral("隐藏 branch 区域"), this);
+        hideBranch->setToolTip(QStringLiteral("隐藏分支图标及其占位，保留父子层级缩进。双击或方向键仍可展开节点。"));
+        controls->addWidget(hideBranch);
         controls->addStretch();
         layout->addLayout(controls);
         m_view = new viv::VirtualTreeView(this);
@@ -99,7 +102,13 @@ private:
         m_view->setIndentLeafItems(true);
         m_view->expandRecursively(m_model->index(0, 0));
         connect(width, QOverload<int>::of(&QSpinBox::valueChanged), m_view, &viv::VirtualTreeView::setIndentation);
+        // Remove each node's icon cell while retaining depth * indentation().
+        // The width control still changes the distance between hierarchy levels.
+        connect(hideBranch, &QCheckBox::toggled, this, [this](bool hidden) {
+            m_view->setBranchAreaVisible(!hidden);
+        });
         connect(leaves, &QCheckBox::toggled, m_view, &viv::VirtualTreeView::setIndentLeafItems);
+        // This only hides the icon; it preserves the current indentation width.
         connect(icons, &QCheckBox::toggled, m_view, &viv::VirtualTreeView::setBranchIndicatorsVisible);
     }
 
@@ -108,6 +117,7 @@ private:
     QSpinBox *width = nullptr;
     QCheckBox *leaves = nullptr;
     QCheckBox *icons = nullptr;
+    QCheckBox *hideBranch = nullptr;
 };
 
 QWidget *createExample(QWidget *parent)

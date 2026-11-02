@@ -16,7 +16,6 @@ int main(int argc, char **argv)
     view.setUniformItemHeight(36);
     view.setDefaultColumnWidth(180);
     view.setModel(&model);
-    view.setExpansionAnimationEnabled(true);
     view.setVisualStateBackgroundVisible(true);
     view.expand(model.index(0, 0));
     view.setWindowTitle(QStringLiteral("Tree table: row widgets"));

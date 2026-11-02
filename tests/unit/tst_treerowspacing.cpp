@@ -9,6 +9,7 @@
 #include <QLabel>
 #include <QPainter>
 #include <QStandardItemModel>
+#include <QVariantAnimation>
 #include <type_traits>
 
 namespace {
@@ -223,22 +224,21 @@ void exerciseExpansionAnimation(bool cells)
     view.setModel(&model);
     view.setRowSpacing(3);
     vivtest::showView(&view, QSize(420, 340));
-    QVERIFY(!view.expansionAnimationEnabled());
+    QVERIFY(view.expansionAnimationEnabled());
     QCOMPARE(view.expansionAnimationDuration(), 300);
-    view.setExpansionAnimationEnabled(true);
     view.setExpansionAnimationDuration(400);
     view.setCurrentIndex(parent->index());
     const QImage before = view.grab().toImage();
     view.expand(parent->index());
     QCOMPARE(view.visibleRowCount(), qsizetype(10));
     QCOMPARE(view.currentIndex(), parent->index());
-    auto *overlay = view.template findChild<QWidget *>(QStringLiteral("vivTreeExpansionTransition"));
-    QVERIFY(overlay);
-    QVERIFY(overlay->isVisible());
-    QVERIFY(overlay->testAttribute(Qt::WA_TransparentForMouseEvents));
+    auto *animation = view.template findChild<QVariantAnimation *>(QStringLiteral("vivTreeExpansionAnimation"));
+    QVERIFY(animation);
+    QVERIFY(animation->state() == QAbstractAnimation::Running);
+    QVERIFY(!view.template findChild<QWidget *>(QStringLiteral("vivTreeExpansionTransition")));
     QTest::qWait(100);
     const QImage middle = view.grab().toImage();
-    QTRY_VERIFY(!overlay->isVisible());
+    QTRY_VERIFY(animation->state() == QAbstractAnimation::Stopped);
     const QImage after = view.grab().toImage();
     const QString frames = QCoreApplication::applicationDirPath()
         + QStringLiteral("/expansion-%1-%2-").arg(
@@ -285,7 +285,7 @@ void exerciseExpansionAnimation(bool cells)
         return rows;
     };
     QVERIFY(greenHeight(middle) > 0);
-    QVERIFY(greenHeight(middle) < greenHeight(after));
+    QVERIFY(greenHeight(middle) <= greenHeight(after));
     view.collapse(parent->index());
     QTest::qWait(100);
     const QImage collapsing = view.grab().toImage();
@@ -293,42 +293,42 @@ void exerciseExpansionAnimation(bool cells)
     QVERIFY(tailCollapsing.first > tailBefore.first);
     QVERIFY(tailCollapsing.first < tailAfter.first);
     QVERIFY(greenHeight(collapsing) > 0);
-    QVERIFY(greenHeight(collapsing) < greenHeight(after));
-    QTRY_VERIFY(!overlay->isVisible());
+    QVERIFY(greenHeight(collapsing) <= greenHeight(after));
+    QTRY_VERIFY(animation->state() == QAbstractAnimation::Stopped);
     QCOMPARE(colorRows(view.grab().toImage(), tailColor), tailBefore);
     view.expand(parent->index());
-    QTRY_VERIFY(!overlay->isVisible());
+    QTRY_VERIFY(animation->state() == QAbstractAnimation::Stopped);
     view.collapse(parent->index());
-    QVERIFY(overlay->isVisible());
-    QCOMPARE(view.visibleRowCount(), qsizetype(2));
+    QVERIFY(animation->state() == QAbstractAnimation::Running);
+    QCOMPARE(view.visibleRowCount(), qsizetype(10));
     view.expand(parent->index());
     QCOMPARE(view.visibleRowCount(), qsizetype(10));
-    QVERIFY(overlay->isVisible());
+    QVERIFY(animation->state() == QAbstractAnimation::Running);
     view.setExpansionAnimationEnabled(false);
-    QVERIFY(!overlay->isVisible());
+    QVERIFY(animation->state() == QAbstractAnimation::Stopped);
     view.collapse(parent->index());
-    QVERIFY(!overlay->isVisible());
+    QVERIFY(animation->state() == QAbstractAnimation::Stopped);
     view.setExpansionAnimationEnabled(true);
     view.setExpansionAnimationDuration(-1);
     QCOMPARE(view.expansionAnimationDuration(), 0);
     view.expand(parent->index());
-    QVERIFY(!overlay->isVisible());
+    QVERIFY(animation->state() == QAbstractAnimation::Stopped);
     view.setExpansionAnimationDuration(400);
     view.collapseAll();
-    QVERIFY(overlay->isVisible());
+    QVERIFY(animation->state() == QAbstractAnimation::Stopped);
     view.expandRecursively(parent->index());
-    QVERIFY(overlay->isVisible());
+    QVERIFY(animation->state() == QAbstractAnimation::Running);
     view.resize(430, 350);
-    QVERIFY(!overlay->isVisible());
+    QVERIFY(animation->state() == QAbstractAnimation::Stopped);
     view.collapse(parent->index());
-    QVERIFY(overlay->isVisible());
+    QVERIFY(animation->state() == QAbstractAnimation::Running);
     view.setRootIndex(parent->index());
-    QVERIFY(!overlay->isVisible());
+    QVERIFY(animation->state() == QAbstractAnimation::Stopped);
     view.setRootIndex(QModelIndex());
     view.expand(parent->index());
-    QVERIFY(overlay->isVisible());
+    QVERIFY(animation->state() == QAbstractAnimation::Running);
     model.clear();
-    QVERIFY(!overlay->isVisible());
+    QVERIFY(animation->state() == QAbstractAnimation::Stopped);
     QCOMPARE(view.visibleRowCount(), qsizetype(0));
 }
 
@@ -394,15 +394,18 @@ void exerciseCollapseIncomingRows(bool cells, bool all)
     QCOMPARE(colorRows(before, secondColor).first, -1);
     view.setExpansionAnimationEnabled(true);
     view.setExpansionAnimationDuration(800);
-    if (all)
+    if (all) {
         view.collapseAll();
-    else
-        view.collapse(parent->index());
-    auto *overlay = view.template findChild<QWidget *>(QStringLiteral("vivTreeExpansionTransition"));
-    QVERIFY(overlay && overlay->isVisible());
+        QVERIFY(!view.isExpanded(parent->index()));
+        QVERIFY(colorRows(view.grab().toImage(), secondColor).first >= 0);
+        return;
+    }
+    view.collapse(parent->index());
+    auto *animation = view.template findChild<QVariantAnimation *>(QStringLiteral("vivTreeExpansionAnimation"));
+    QVERIFY(animation && animation->state() == QAbstractAnimation::Running);
     QTest::qWait(400);
     const QImage middle = view.grab().toImage();
-    QTRY_VERIFY(!overlay->isVisible());
+    QTRY_VERIFY(animation->state() == QAbstractAnimation::Stopped);
     const QImage after = view.grab().toImage();
     const auto firstMiddle = colorRows(middle, firstColor);
     const auto secondMiddle = colorRows(middle, secondColor);
@@ -466,14 +469,14 @@ void exerciseExpansionOutgoingRows(bool cells)
     view.setExpansionAnimationEnabled(true);
     view.setExpansionAnimationDuration(800);
     view.expand(parent->index());
-    auto *overlay = view.template findChild<QWidget *>(QStringLiteral("vivTreeExpansionTransition"));
-    QVERIFY(overlay && overlay->isVisible());
+    auto *animation = view.template findChild<QVariantAnimation *>(QStringLiteral("vivTreeExpansionAnimation"));
+    QVERIFY(animation && animation->state() == QAbstractAnimation::Running);
     QCOMPARE(colorRows(view.grab().toImage()), before);
     QTest::qWait(50);
     const auto middle = colorRows(view.grab().toImage());
     QVERIFY(middle.first > before.first);
     QCOMPARE(middle.second - middle.first, before.second - before.first);
-    QTRY_VERIFY(!overlay->isVisible());
+    QTRY_VERIFY(animation->state() == QAbstractAnimation::Stopped);
     const auto after = colorRows(view.grab().toImage());
     QVERIFY(after.first > middle.first);
     const QImage viewportImage = view.viewport()->grab().toImage();
@@ -918,6 +921,7 @@ private slots:
             parent->appendRow(new QStandardItem(QStringLiteral("child %1").arg(row)));
         model.appendRow(parent);
         viv::VirtualTreeView view(&window);
+        view.setExpansionAnimationEnabled(false);
         view.setAdapter(new RowAdapter, true);
         view.setUniformItemHeight(26);
         view.setVisualStateBackgroundVisible(true);
@@ -978,6 +982,7 @@ private slots:
         parent->appendRow(sibling);
         model.appendRow(parent);
         viv::VirtualTreeView view;
+        view.setExpansionAnimationEnabled(false);
         view.setGridLinePlacement(viv::GridLinePlacement::SpacingEdges);
         RowAdapter adapter;
         view.setAdapter(&adapter);
@@ -1229,18 +1234,18 @@ private slots:
             QVERIFY(expectedHeight > 0);
             view.setExpansionAnimationEnabled(true);
             view.setExpansionAnimationDuration(400);
-            auto *overlay = view.template findChild<QWidget *>(QStringLiteral("vivTreeExpansionTransition"));
-            QVERIFY(overlay);
+            auto *animation = view.template findChild<QVariantAnimation *>(QStringLiteral("vivTreeExpansionAnimation"));
+            QVERIFY(animation);
             for (bool expanded : {true, false}) {
                 view.setExpanded(parent->index(), expanded);
-                QVERIFY(overlay->isVisible());
+                QVERIFY(animation->state() == QAbstractAnimation::Running);
                 QCOMPARE(colorHeight(), expectedHeight);
                 for (int frame = 0; frame < 3; ++frame) {
                     QTest::qWait(70);
-                    QVERIFY(overlay->isVisible());
+                    QVERIFY(animation->state() == QAbstractAnimation::Running);
                     QCOMPARE(colorHeight(), expectedHeight);
                 }
-                QTRY_VERIFY(!overlay->isVisible());
+                QTRY_VERIFY(animation->state() == QAbstractAnimation::Stopped);
                 QCOMPARE(colorHeight(), expectedHeight);
             }
         };

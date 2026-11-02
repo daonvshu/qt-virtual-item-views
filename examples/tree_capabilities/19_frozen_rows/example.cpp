@@ -105,7 +105,6 @@ private:
         // Counts refer to flattened visible rows; expand/collapse may change the frozen identities.
         m_view->setFrozenRows(2);
         m_view->setFrozenBottomRows(1);
-        m_view->setExpansionAnimationEnabled(true);
         applySeparator();
         connect(top, QOverload<int>::of(&QSpinBox::valueChanged), m_view, &viv::VirtualItemView::setFrozenRows);
         connect(bottom, QOverload<int>::of(&QSpinBox::valueChanged), m_view, &viv::VirtualItemView::setFrozenBottomRows);

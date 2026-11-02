@@ -3,6 +3,7 @@
 #include <virtualitemviews/global.h>
 
 #include <QIcon>
+#include <QMargins>
 #include <QModelIndex>
 #include <QRect>
 #include <QtGlobal>
@@ -14,7 +15,9 @@ class QColor;
 namespace viv {
 
 /// Geometry of the built-in branch indicator inside its cell.
-constexpr int kBranchIndicatorSize = 8;
+constexpr int kBranchIndicatorSize = 10;
+/// Legacy leading margin for callers that opt into left-aligned geometry; the
+/// view's default indicator layout is centered with zero padding.
 constexpr int kBranchIndicatorMargin = 4;
 
 /// One indicator cell of a tree row.
@@ -70,19 +73,49 @@ public:
     /// Icon of \a state; the default returns a null icon (paint nothing).
     virtual QIcon branchIcon(const BranchIndicatorState &state, const QModelIndex &index) const;
 
+    /// Square target rect of a branch indicator inside \a cellRect.
+    ///
+    /// \a padding is removed from the cell in logical pixels before alignment;
+    /// negative values are clamped to zero. Missing horizontal or vertical
+    /// alignment flags fall back to AlignLeft or AlignVCenter. The size is
+    /// clamped to the padded area and an empty rect is returned when no room
+    /// remains. Custom renderers can use this to match the built-in geometry.
+    static QRect branchIndicatorTargetRect(const QRect &cellRect, int size,
+                                           Qt::Alignment alignment,
+                                           const QMargins &padding);
+
+    /// Floating-point target in logical pixels, preserving fractional centers.
+    /// Use this for painting; the painter applies the device pixel ratio.
+    static QRectF branchIndicatorTargetRectF(const QRectF &cellRect, qreal size,
+                                             Qt::Alignment alignment,
+                                             const QMarginsF &padding);
+
     /// Paints the cell of \a state into \a cellRect (viewport coordinates).
     virtual void paintBranch(QPainter *painter, const BranchIndicatorState &state,
                              const QModelIndex &index, const QRect &cellRect) const;
 
-    /// The indicator the view draws without a renderer: a triangle in the cell
+    /// The indicator the view draws without a renderer: a rounded equilateral triangle in the cell
     /// that adjoins a row with children, nothing for the other cells. Renderers
     /// can call this for the states they do not customize.
     static void paintBuiltinBranch(QPainter *painter, const BranchIndicatorState &state,
                                    const QRect &cellRect, const QPalette &palette);
-    /// Configurable triangle; size is clamped to the cell, invalid color uses the palette.
+    /// Configurable rounded triangle; size is clamped to the cell, invalid color uses the palette.
+    /// The default alignment is centered with zero padding.
     static void paintBuiltinBranch(QPainter *painter, const BranchIndicatorState &state,
                                    const QRect &cellRect, const QPalette &palette,
                                    int size, const QColor &color);
+    /// Same, with explicit alignment and padding inside the cell.
+    static void paintBuiltinBranch(QPainter *painter, const BranchIndicatorState &state,
+                                   const QRect &cellRect, const QPalette &palette,
+                                   int size, const QColor &color,
+                                   Qt::Alignment alignment, const QMargins &padding);
+    /// Same, rotating in degrees around the triangle's centroid, which stays at
+    /// the aligned icon-frame center throughout the rotation.
+    static void paintBuiltinBranch(QPainter *painter, const BranchIndicatorState &state,
+                                   const QRect &cellRect, const QPalette &palette,
+                                   int size, const QColor &color,
+                                   Qt::Alignment alignment, const QMargins &padding,
+                                   qreal rotationDegrees);
     /// Same, using the application palette.
     static void paintBuiltinBranch(QPainter *painter, const BranchIndicatorState &state,
                                    const QRect &cellRect);

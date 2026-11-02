@@ -155,7 +155,6 @@ int main(int argc, char **argv)
     }
 
     viv::VirtualTreeTableView view;
-    view.setExpansionAnimationEnabled(true);
     view.setModel(&model);
     view.setTableAdapter(new TreeTableAdapter, true);
     view.setCellAdapter(new TreeTableCellAdapter, true);

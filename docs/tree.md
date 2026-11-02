@@ -13,7 +13,7 @@
 | 07 | 展开收起与过渡动画 | [examples/tree_capabilities/07_expansion/example.cpp](../examples/tree_capabilities/07_expansion/example.cpp) |
 | 08 | 切换显示根与相对深度 | [examples/tree_capabilities/08_root_index/example.cpp](../examples/tree_capabilities/08_root_index/example.cpp) |
 | 09 | 分支格宽与叶子对齐 | [examples/tree_capabilities/09_indentation/example.cpp](../examples/tree_capabilities/09_indentation/example.cpp) |
-| 10 | 内置分支图标配置 | [examples/tree_capabilities/10_branch_icons/example.cpp](../examples/tree_capabilities/10_branch_icons/example.cpp) |
+| 10 | 内置分支图标配置：大小、颜色、分支格宽、对齐、四向留白与显隐 | [examples/tree_capabilities/10_branch_icons/example.cpp](../examples/tree_capabilities/10_branch_icons/example.cpp) |
 | 11 | 自定义分支渲染器 | [examples/tree_capabilities/11_branch_renderer/example.cpp](../examples/tree_capabilities/11_branch_renderer/example.cpp) |
 | 12 | 节点间距与分割线 | [examples/tree_capabilities/12_row_spacing/example.cpp](../examples/tree_capabilities/12_row_spacing/example.cpp) |
 | 13 | 状态背景、范围与圆角 | [examples/tree_capabilities/13_visual_states/example.cpp](../examples/tree_capabilities/13_visual_states/example.cpp) |
@@ -42,4 +42,16 @@
 
 默认 hover／selected 背景在透明行控件和 branch 图标下方绘制。圆角、颜色、范围和动画直接配置函数，见第 13 章；状态不覆盖行间距。分支格宽由 `setIndentation()` 控制，默认图标大小、颜色、替换和隐藏见第 10 章；只有连接线等完全自定义装饰才需要第 11 章的 renderer。
 
-展开动画默认关闭，第 07 章显式启用；冻结行情况下使用淡入淡出。树只提供插入线／目标框拖放，手动起拖和模型移动责任见第 20 章。业务异步加载、节点保留和诊断分别见第 22–24 章。
+内置图标和三角默认 `Qt::AlignCenter`，padding 全为 0。`setBranchIndicatorAlignment(Qt::Alignment)` 与 `setBranchIndicatorPadding(QMargins)`（或四参数重载）可以调整图标位置和四向留白；图标大小会限制在扣除 padding 后的区域内。点击区域仍是整个分支格，自定义 renderer 不受这些设置影响，可用 `BranchIndicatorRenderer::branchIndicatorTargetRect()` 复用同一套几何计算。
+
+默认 10px 圆角等边三角形以展开朝下为基准，收起时逆时针旋转 90°；旋转和真实行展开使用同一条动画，反向操作保留当前角度。只设置 `setExpandedBranchIcon(icon)` 时同样复用该图标；只设置 `setCollapsedBranchIcon(icon)` 时，展开方向为该图标顺时针旋转 90°。设置两个非空图标时立即切换，清空两个图标恢复内置旋转。自定义 renderer 不自动旋转。关闭展开动画或无过渡的操作会立即应用最终方向；单独关闭淡入淡出不影响旋转。第 10 章提供四种图标模式的对比。
+
+展开动画默认开启，可用 `setExpansionAnimationEnabled(false)` 关闭，`setExpansionAnimationDuration(ms)` 设置时长（默认 300 ms）。动画直接更新真实行布局，行控件、分支、分割线和命中区域随布局变化，不截取画面或使用截图覆盖层。部分露出的行由原生父控件进行矩形裁剪，业务控件保持正常高度。大子树只物化当前露出的范围，屏外尾部不逐行参与动画。
+
+收起开始后 `isExpanded()` 返回 `false`；为保留正在退出的真实控件，子节点映射和 `visibleRowCount()` 到动画结束才移除，随后发送 `collapsed`。展开映射和 `expanded` 在展开开始时更新。连续反向展开收起从当前进度继续；模型结构变化会取消过渡并重建布局。冻结行、`collapseAll()` 和已展开节点的递归展开直接更新，不使用截图回退。
+
+子节点淡入淡出默认启用，`setExpansionFadeEnabled(false)` 可单独关闭渐变，配置查询为 `expansionFadeEnabled()`。透明度和高度共享动画进度；父节点和后续分组不渐变。第 07 章提供勾选演示。框架通过临时容器保留业务控件已有的图形效果；Qt 的实时透明度合成可能使用离屏缓冲，开启后有额外绘制成本。
+
+树只提供插入线／目标框拖放，手动起拖和模型移动责任见第 20 章。业务异步加载、节点保留和诊断分别见第 22–24 章。
+
+第 09、10 章演示 `setBranchAreaVisible(false)`：隐藏所有分支装饰并移除节点自身的图标占位，保留 `depth × indentation()` 的层级缩进。`branchAreaVisible()` 查询配置，默认 `true`。`setBranchIndicatorsVisible(false)` 只隐藏装饰、仍保留图标占位；`setIndentation(0)` 则将全部缩进归零。隐藏分支区域不会修改图标配置或展开状态，仍可通过双击、键盘和展开接口操作。

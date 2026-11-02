@@ -12,6 +12,7 @@
 #include <QPainter>
 #include <QPalette>
 #include <QPixmap>
+#include <QtMath>
 #include <limits>
 
 namespace viv {
@@ -43,41 +44,27 @@ QModelIndex ancestorAt(const QModelIndex &index, int levels)
 VirtualTreeView::VirtualTreeView(QWidget *parent)
     : VirtualItemView(parent)
 {
-    const auto animationGeometry = [this](const QModelIndex &index) {
-        const qsizetype row = viewItemForIndex(index);
-        if (row < 0)
-            return QRect();
-        const QRect geometry = geometryForViewRow(row);
-        const auto *layout = dynamic_cast<ListLayout *>(layoutPolicy());
-        return QRect(0, viewport()->geometry().top() + geometry.top(), width(),
-                     geometry.height() + (layout ? layout->spacingAfter(row) : 0));
-    };
-    m_expansionTransition = new TreeExpansionTransition(this, [this, animationGeometry]() {
-        QVector<TreeExpansionTransition::Row> rows;
-        // Frozen row boundaries use the fade fallback instead of crossing pane clips.
-        if (frozenRows() || frozenBottomRows())
-            return rows;
-        const VisibleRange range = visibleItemRange();
-        if (range.isValid()) {
-            for (qsizetype row = range.first; row <= range.last; ++row) {
-                const QModelIndex index = viewIndex(row);
-                rows.append({QPersistentModelIndex(index), animationGeometry(index),
-                             geometryForViewRow(row).height()});
-            }
-        }
-        return rows;
-    }, animationGeometry);
     m_visibility = new TreeVisibilityIndex(nullptr);
     m_rowLayout = new ListLayout(Qt::Vertical);
     setLayoutPolicy(m_rowLayout, true);
+    m_expansionTransition = new TreeExpansionTransition(this, m_rowLayout,
+        [this]() {
+            const QPointer<VirtualTreeView> guard(this);
+            relayout();
+            if (guard)
+                viewport()->update();
+        });
 }
 
 VirtualTreeView::~VirtualTreeView()
 {
+    m_expansionTransition->cancel();
+    m_expansionTransition->setEnabled(false);
     qDeleteAll(m_rowGridLines);
     qDeleteAll(m_rowGridLinePool);
     if (m_ownBranchRenderer)
         delete m_branchRenderer;
+    delete m_expansionTransition;
     delete m_visibility;
 }
 
@@ -86,7 +73,7 @@ void VirtualTreeView::setModel(QAbstractItemModel *model)
     QAbstractItemModel *previous = VirtualItemView::model();
     if (previous == model)
         return;
-    m_expansionTransition->stop();
+    m_expansionTransition->cancel();
     if (previous)
         disconnect(previous, nullptr, this, nullptr);
 
@@ -331,6 +318,8 @@ void VirtualTreeView::setVisualStateBackgroundExtent(VisualStateBackgroundExtent
 
 bool VirtualTreeView::hasOwnBranchCell(const QModelIndex &index) const
 {
+    if (!m_branchAreaVisible)
+        return false;
     if (m_indentLeafItems || !index.isValid() || !model())
         return true;
     const QPersistentModelIndex parent(index.parent());
@@ -395,7 +384,7 @@ qsizetype VirtualTreeView::visibleRowCount() const
 
 void VirtualTreeView::setRootIndex(const QModelIndex &index)
 {
-    m_expansionTransition->stop();
+    m_expansionTransition->cancel();
     if (index == m_rootIndex)
         return;
     if (index.isValid() && index.model() != model()) {
@@ -434,27 +423,49 @@ int VirtualTreeView::expansionAnimationDuration() const
     return m_expansionTransition->duration();
 }
 
+void VirtualTreeView::setExpansionFadeEnabled(bool enabled)
+{
+    m_expansionTransition->setFadeEnabled(enabled);
+}
+
+bool VirtualTreeView::expansionFadeEnabled() const
+{
+    return m_expansionTransition->isFadeEnabled();
+}
+
 void VirtualTreeView::expand(const QModelIndex &index)
 {
-    detail::PerformanceScope performance(this, "tree.expand");
-    if (!index.isValid() || m_visibility->isExpanded(index))
+    const QPointer<VirtualTreeView> operationGuard(this);
+    const QPersistentModelIndex requested(index);
+    if (!m_expansionTransition->affects(requested))
+        m_expansionTransition->stop();
+    if (!operationGuard)
         return;
-    const QPersistentModelIndex node(index);
+    if (m_expansionTransition->resumeExpansion(requested)) {
+        if (operationGuard && requested.isValid())
+            emit expanded(requested);
+        return;
+    }
+    detail::PerformanceScope performance(this, "tree.expand");
+    if (!requested.isValid() || m_visibility->isExpanded(requested))
+        return;
+    const QPersistentModelIndex node(requested);
     // The anchor must be captured *before* the visible row mapping changes,
     // otherwise the view can jump by the number of inserted rows.
     const QPointer<VirtualTreeView> animationGuard(this);
     const quint64 animationSerial = modelChangeSerial();
     const QPersistentModelIndex animationRoot(m_rootIndex);
-    const auto before = m_expansionTransition->capture();
     if (!animationGuard || !node.isValid() || modelChangeSerial() != animationSerial || m_rootIndex != animationRoot)
         return;
+    const qsizetype animationFirst = viewItemForIndex(node) + 1;
+    const qsizetype animationCountBefore = viewItemCount();
     setPendingAnchor(captureAnchor());
     m_visibility->expand(node);
     refreshVisibility(false);
     if (!animationGuard)
         return;
     if (modelChangeSerial() == animationSerial && m_rootIndex == animationRoot) {
-        m_expansionTransition->start(before);
+        m_expansionTransition->expand(node, animationFirst, viewItemCount() - animationCountBefore);
         if (!animationGuard)
             return;
     }
@@ -465,23 +476,34 @@ void VirtualTreeView::expand(const QModelIndex &index)
 
 void VirtualTreeView::collapse(const QModelIndex &index)
 {
-    detail::PerformanceScope performance(this, "tree.collapse");
-    if (!index.isValid() || !m_visibility->isExpanded(index))
+    const QPointer<VirtualTreeView> operationGuard(this);
+    const QPersistentModelIndex requested(index);
+    if (!m_expansionTransition->affects(requested))
+        m_expansionTransition->stop();
+    if (!operationGuard)
         return;
-    const QPersistentModelIndex node(index);
+    if (m_expansionTransition->isCollapsing(requested))
+        return;
+    detail::PerformanceScope performance(this, "tree.collapse");
+    if (!requested.isValid() || !m_visibility->isExpanded(requested))
+        return;
+    const QPersistentModelIndex node(requested);
     const QPointer<VirtualTreeView> animationGuard(this);
     const quint64 animationSerial = modelChangeSerial();
     const QPersistentModelIndex animationRoot(m_rootIndex);
-    const auto before = m_expansionTransition->capture(m_visibility, node);
     if (!animationGuard || !node.isValid() || modelChangeSerial() != animationSerial || m_rootIndex != animationRoot)
+        return;
+    if (m_expansionTransition->collapse(m_visibility, node,
+            [animationGuard, node, animationSerial, animationRoot]() {
+                if (animationGuard && node.isValid()
+                    && animationGuard->modelChangeSerial() == animationSerial
+                    && animationGuard->rootIndex() == animationRoot)
+                    animationGuard->collapse(node);
+            }))
         return;
     setPendingAnchor(captureAnchor());
     m_visibility->collapse(node);
     refreshVisibility(false);
-    if (!animationGuard)
-        return;
-    if (modelChangeSerial() == animationSerial && m_rootIndex == animationRoot)
-        m_expansionTransition->start(before);
     if (!animationGuard)
         return;
     if (modelChangeSerial() == animationSerial && m_rootIndex == animationRoot
@@ -491,24 +513,30 @@ void VirtualTreeView::collapse(const QModelIndex &index)
 
 void VirtualTreeView::expandRecursively(const QModelIndex &index)
 {
-    detail::PerformanceScope performance(this, "tree.expand-recursively");
-    if (!index.isValid())
+    const QPointer<VirtualTreeView> operationGuard(this);
+    const QPersistentModelIndex requested(index);
+    m_expansionTransition->stop();
+    if (!operationGuard)
         return;
-    const QPersistentModelIndex node(index);
-    const bool wasExpanded = m_visibility->isExpanded(index);
+    detail::PerformanceScope performance(this, "tree.expand-recursively");
+    if (!requested.isValid())
+        return;
+    const QPersistentModelIndex node(requested);
+    const bool wasExpanded = m_visibility->isExpanded(requested);
     const QPointer<VirtualTreeView> animationGuard(this);
     const quint64 animationSerial = modelChangeSerial();
     const QPersistentModelIndex animationRoot(m_rootIndex);
-    const auto before = m_expansionTransition->capture();
     if (!animationGuard || !node.isValid() || modelChangeSerial() != animationSerial || m_rootIndex != animationRoot)
         return;
+    const qsizetype animationFirst = viewItemForIndex(node) + 1;
+    const qsizetype animationCountBefore = viewItemCount();
     setPendingAnchor(captureAnchor());
     m_visibility->expandRecursively(node);
     refreshVisibility(false);
     if (!animationGuard)
         return;
-    if (modelChangeSerial() == animationSerial && m_rootIndex == animationRoot)
-        m_expansionTransition->start(before);
+    if (!wasExpanded && modelChangeSerial() == animationSerial && m_rootIndex == animationRoot)
+        m_expansionTransition->expand(node, animationFirst, viewItemCount() - animationCountBefore);
     if (!animationGuard)
         return;
     if (!wasExpanded && modelChangeSerial() == animationSerial && m_rootIndex == animationRoot
@@ -528,16 +556,20 @@ void VirtualTreeView::toggleExpanded(const QModelIndex &index)
 
 bool VirtualTreeView::isExpanded(const QModelIndex &index) const
 {
-    return m_visibility->isExpanded(index);
+    return !m_expansionTransition->isCollapsing(index)
+        && m_visibility->isExpanded(index);
 }
 
 void VirtualTreeView::collapseAll()
 {
+    const QPointer<VirtualTreeView> operationGuard(this);
+    m_expansionTransition->stop();
+    if (!operationGuard)
+        return;
     detail::PerformanceScope performance(this, "tree.collapse-all");
     const QPointer<VirtualTreeView> animationGuard(this);
     const quint64 animationSerial = modelChangeSerial();
     const QPersistentModelIndex animationRoot(m_rootIndex);
-    const auto before = m_expansionTransition->capture(m_visibility);
     if (!animationGuard || modelChangeSerial() != animationSerial || m_rootIndex != animationRoot)
         return;
     setPendingAnchor(captureAnchor());
@@ -545,8 +577,6 @@ void VirtualTreeView::collapseAll()
     refreshVisibility(false);
     if (!animationGuard)
         return;
-    if (modelChangeSerial() == animationSerial && m_rootIndex == animationRoot)
-        m_expansionTransition->start(before);
 }
 
 // ---------------------------------------------------------------------------
@@ -571,6 +601,20 @@ void VirtualTreeView::setIndentLeafItems(bool enabled)
     m_siblingBranchCells.clear();
     relayout();
     viewport()->update();
+}
+
+void VirtualTreeView::setBranchAreaVisible(bool visible)
+{
+    if (m_branchAreaVisible == visible)
+        return;
+    const QPointer<VirtualTreeView> guard(this);
+    m_expansionTransition->stop();
+    if (!guard)
+        return;
+    m_branchAreaVisible = visible;
+    relayout();
+    if (guard)
+        viewport()->update();
 }
 
 void VirtualTreeView::setBranchIndicatorsVisible(bool visible)
@@ -617,7 +661,7 @@ BranchIndicatorState VirtualTreeView::branchState(const QModelIndex &index, int 
 
     state.adjoinsItem = state.cellDepth == itemDepth;
     state.hasChildren = model()->rowCount(cell) > 0;
-    state.isExpanded = m_visibility->isExpanded(cell);
+    state.isExpanded = isExpanded(cell);
     state.hasSiblings = cell.row() + 1 < model()->rowCount(cell.parent());
     return state;
 }
@@ -662,6 +706,28 @@ void VirtualTreeView::setBranchIconColor(const QColor &color)
     invalidateBranchIndicators();
 }
 
+void VirtualTreeView::setBranchIndicatorAlignment(Qt::Alignment alignment)
+{
+    if (!(alignment & (Qt::AlignLeft | Qt::AlignRight | Qt::AlignHCenter)))
+        alignment |= Qt::AlignLeft;
+    if (!(alignment & (Qt::AlignTop | Qt::AlignBottom | Qt::AlignVCenter)))
+        alignment |= Qt::AlignVCenter;
+    if (m_branchIndicatorAlignment == alignment)
+        return;
+    m_branchIndicatorAlignment = alignment;
+    invalidateBranchIndicators();
+}
+
+void VirtualTreeView::setBranchIndicatorPadding(const QMargins &padding)
+{
+    const QMargins clamped(qMax(0, padding.left()), qMax(0, padding.top()),
+                           qMax(0, padding.right()), qMax(0, padding.bottom()));
+    if (m_branchIndicatorPadding == clamped)
+        return;
+    m_branchIndicatorPadding = clamped;
+    invalidateBranchIndicators();
+}
+
 int VirtualTreeView::branchIndicatorX(qsizetype row) const
 {
     const int depth = itemDepth(viewIndex(row));
@@ -671,7 +737,7 @@ int VirtualTreeView::branchIndicatorX(qsizetype row) const
 QRect VirtualTreeView::branchCellRect(qsizetype row, int cellDepth) const
 {
     const QRect rowRect = VirtualItemView::geometryForViewRow(row);
-    if (!rowRect.isValid() || m_indentation <= 0 || cellDepth < 0)
+    if (!m_branchAreaVisible || !rowRect.isValid() || m_indentation <= 0 || cellDepth < 0)
         return QRect();
     const QModelIndex index = viewIndex(row);
     if (cellDepth == itemDepth(index) && !hasOwnBranchCell(index))
@@ -693,7 +759,7 @@ bool VirtualTreeView::isIndicatorPosition(const QModelIndex &index, const QPoint
 
 bool VirtualTreeView::hasBranchIndicator(qsizetype row) const
 {
-    if (!m_branchIndicatorsVisible)
+    if (!m_branchAreaVisible || !m_branchIndicatorsVisible)
         return false;
     const QModelIndex index = viewIndex(row);
     return index.isValid() && hasChildren(index);
@@ -731,7 +797,9 @@ void VirtualTreeView::syncRowGridLines()
     if (m_rowGridLinesVisible && m_rowLayout && viewportRect.width() > 0) {
         for (const VisibleRange &range : visibleItemRanges()) {
             for (qsizetype row = range.first; row >= 0 && row <= range.last; ++row) {
-                if (row + 1 >= viewItemCount() || m_rowLayout->spacingAfter(row) > 0)
+                // Keep the trailing edge too: a tree without a bottom line looks
+                // cut off when the last row is a branch or a leaf.
+                if (m_rowLayout->spacingAfter(row) > 0)
                     continue;
                 const QRect rowRect = VirtualItemView::geometryForViewRow(row);
                 if (!rowRect.intersects(viewport()->rect()))
@@ -767,7 +835,9 @@ void VirtualTreeView::syncRowGridLines()
             m_rowGridLines.insert(it.key(), line);
         }
         QPalette colors = line->palette();
-        colors.setColor(QPalette::Window, itemPaneSeparatorColor());
+        QColor color = itemPaneSeparatorColor();
+        color.setAlphaF(color.alphaF() * m_rowLayout->itemOpacity(it.key()));
+        colors.setColor(QPalette::Window, color);
         line->setPalette(colors);
         line->setGeometry(it.value());
         line->clearMask();
@@ -778,7 +848,7 @@ void VirtualTreeView::syncRowGridLines()
 
 void VirtualTreeView::invalidateBranchIndicators()
 {
-    if (!m_branchIndicatorsVisible) {
+    if (!m_branchAreaVisible || !m_branchIndicatorsVisible) {
         // Erase the indicators that are already painted before giving up the
         // strip.
         if (m_indicatorStripWidth > 0) {
@@ -816,7 +886,7 @@ void VirtualTreeView::paintEvent(QPaintEvent *event)
     QPainter painter(viewport());
     if (m_visualStateBackgroundVisible)
         paintVisualStateBackgrounds(&painter, event->rect());
-    if (m_branchIndicatorsVisible)
+    if (m_branchAreaVisible && m_branchIndicatorsVisible)
         paintBranchIndicators(&painter);
 }
 
@@ -848,10 +918,10 @@ void VirtualTreeView::paintVisualStateBackgrounds(QPainter *painter, const QRect
         if (background.isEmpty() || clip.isEmpty())
             continue;
         painter->save();
-        painter->setOpacity(state.hoverProgress);
+        painter->setOpacity(state.hoverProgress * m_rowLayout->itemOpacity(row));
         fillPixelAlignedRoundedRegion(painter, background, QRegion(clip),
             m_visualStateCornerRadius, hoverBackgroundColor());
-        painter->setOpacity(state.selectedProgress);
+        painter->setOpacity(state.selectedProgress * m_rowLayout->itemOpacity(row));
         fillPixelAlignedRoundedRegion(painter, background, QRegion(clip),
             m_visualStateCornerRadius, selectedBackgroundColor());
         painter->restore();
@@ -868,25 +938,40 @@ void VirtualTreeView::paintBranchIndicators(QPainter *painter)
             continue;
 
         const QRect rowRect = VirtualItemView::geometryForViewRow(row);
-        if (rowRect.height() <= 0 || !rowRect.intersects(viewportRect))
+        const QRect clip = rowRect.intersected(itemPaneRect(itemPaneForRow(row)))
+            .intersected(viewportRect);
+        if (clip.isEmpty())
             continue;
 
         const QModelIndex index = item.index;
         const int depth = itemDepth(index);
+        const auto animatedCell = [this, row](int cellDepth) {
+            QRect cell = branchCellRect(row, cellDepth);
+            if (m_rowLayout->hasTransientGeometry())
+                cell.setHeight(m_rowLayout->sizeIndex()->sizeOf(row));
+            return cell;
+        };
         if (!m_branchRenderer) {
-            if (hasBranchIndicator(row))
+            if (hasBranchIndicator(row)) {
+                painter->save();
+                painter->setOpacity(painter->opacity() * m_rowLayout->itemOpacity(row));
+                painter->setClipRect(clip, Qt::IntersectClip);
                 paintDefaultBranchIndicator(
-                    painter, branchState(index, depth), branchCellRect(row, depth));
+                    painter, branchState(index, depth), index, animatedCell(depth));
+                painter->restore();
+            }
             continue;
         }
 
         // A custom renderer owns the whole decoration, so it also receives the
         // cells of the ancestors of this row (the connector lines).
         for (int cellDepth = 0; cellDepth <= depth; ++cellDepth) {
-            const QRect cellRect = branchCellRect(row, cellDepth);
-            if (cellRect.isEmpty() || !cellRect.intersects(viewportRect))
+            const QRect cellRect = animatedCell(cellDepth);
+            if (cellRect.isEmpty() || !cellRect.intersects(clip))
                 continue;
             painter->save();
+            painter->setOpacity(painter->opacity() * m_rowLayout->itemOpacity(row));
+            painter->setClipRect(clip, Qt::IntersectClip);
             detail::performanceCall(this, "callback.branch.paint", [&] {
                 return m_branchRenderer->paintBranch(painter, branchState(index, cellDepth), index, cellRect);
             });
@@ -897,38 +982,67 @@ void VirtualTreeView::paintBranchIndicators(QPainter *painter)
 
 void VirtualTreeView::paintDefaultBranchIndicator(QPainter *painter,
                                                  const BranchIndicatorState &state,
-                                                 const QRect &cellRect)
+                                                 const QModelIndex &index, const QRect &cellRect)
 {
-    const QIcon &icon = state.isExpanded ? m_expandedBranchIcon : m_collapsedBranchIcon;
-    if (icon.isNull()) {
-        BranchIndicatorRenderer::paintBuiltinBranch(painter, state, cellRect, palette(),
-                                                    m_branchIconSize, m_branchIconColor);
+    if (!state.adjoinsItem || !state.hasChildren)
+        return;
+    const qreal progress = m_expansionTransition->expansionProgress(index, state.isExpanded);
+    const bool hasExpandedIcon = !m_expandedBranchIcon.isNull();
+    const bool hasCollapsedIcon = !m_collapsedBranchIcon.isNull();
+    if (!hasExpandedIcon && !hasCollapsedIcon) {
+        // The built-in decoration is one expanded triangle reused for both states.
+        BranchIndicatorState expandedState = state;
+        expandedState.isExpanded = true;
+        BranchIndicatorRenderer::paintBuiltinBranch(painter, expandedState, cellRect, palette(),
+                                                    m_branchIconSize, m_branchIconColor,
+                                                    m_branchIndicatorAlignment,
+                                                    m_branchIndicatorPadding,
+                                                    (progress - 1.0) * 90.0);
         return;
     }
-    const int size = qMin(m_branchIconSize,
-                         qMin(cellRect.width() - kBranchIndicatorMargin, cellRect.height()));
-    if (!state.adjoinsItem || !state.hasChildren || size <= 0)
+    const bool separateIcons = hasExpandedIcon && hasCollapsedIcon;
+    const QIcon &icon = (separateIcons ? state.isExpanded : hasExpandedIcon)
+        ? m_expandedBranchIcon : m_collapsedBranchIcon;
+    const qreal rotation = separateIcons ? 0.0
+        : (hasExpandedIcon ? progress - 1.0 : progress) * 90.0;
+    const QRectF target = BranchIndicatorRenderer::branchIndicatorTargetRectF(
+        QRectF(cellRect), qreal(m_branchIconSize), m_branchIndicatorAlignment,
+        QMarginsF(m_branchIndicatorPadding));
+    if (target.isEmpty())
         return;
-    const QRect target(cellRect.x() + kBranchIndicatorMargin,
-                       cellRect.y() + (cellRect.height() - size) / 2, size, size);
+    painter->save();
+    painter->setClipRect(QRectF(cellRect), Qt::IntersectClip);
+    painter->setRenderHint(QPainter::Antialiasing, true);
+    painter->setRenderHint(QPainter::SmoothPixmapTransform, true);
+    painter->translate(target.center());
+    painter->rotate(rotation);
+    painter->translate(-target.center());
     if (!m_branchIconColor.isValid()) {
-        icon.paint(painter, target);
+        painter->translate(target.topLeft());
+        icon.paint(painter, QRect(QPoint(), target.size().toSize()));
+        painter->restore();
         return;
     }
     const qreal dpr = painter->device()->devicePixelRatioF();
-    QPixmap pixmap = icon.pixmap(QSize(qMax(1, qRound(size * dpr)),
-                                     qMax(1, qRound(size * dpr))));
-    if (pixmap.isNull())
+    const qreal size = target.width();
+    QPixmap pixmap = icon.pixmap(QSize(qMax(1, qCeil(size * dpr)),
+                                     qMax(1, qCeil(size * dpr))));
+    if (pixmap.isNull()) {
+        painter->restore();
         return;
+    }
     pixmap.setDevicePixelRatio(dpr);
     {
         QPainter tint(&pixmap);
         tint.setCompositionMode(QPainter::CompositionMode_SourceIn);
         tint.fillRect(pixmap.rect(), m_branchIconColor);
     }
-    const QSizeF logicalSize(pixmap.width() / dpr, pixmap.height() / dpr);
-    painter->drawPixmap(QPointF(target.x() + (target.width() - logicalSize.width()) / 2,
-                               target.y() + (target.height() - logicalSize.height()) / 2), pixmap);
+    QSizeF logicalSize = pixmap.size();
+    logicalSize.scale(target.size(), Qt::KeepAspectRatio);
+    const QRectF imageRect(target.center()
+        - QPointF(logicalSize.width() / 2.0, logicalSize.height() / 2.0), logicalSize);
+    painter->drawPixmap(imageRect, pixmap, QRectF(pixmap.rect()));
+    painter->restore();
 }
 
 void VirtualTreeView::toggleIfBranchClicked(const QPoint &viewportPos, bool *handled)

@@ -36,12 +36,18 @@ public:
     void collapse(const QModelIndex &index);
     void expandRecursively(const QModelIndex &index);
     void collapseAll();
-    /// Height/position and opacity transition; disabled by default. Frozen rows use a fade.
+    /// Live layout transition; enabled by default. Collapse retains outgoing
+    /// rows until completion, then emits collapsed(). Frozen rows and bulk
+    /// collapseAll() updates are immediate, without a screenshot fallback.
     void setExpansionAnimationEnabled(bool enabled);
     bool expansionAnimationEnabled() const;
     /// Duration in milliseconds; zero disables the visual transition.
     void setExpansionAnimationDuration(int milliseconds);
     int expansionAnimationDuration() const;
+    /// Fade transitioning descendants with the live layout animation; default true.
+    /// Applies to row/cell widgets and vertical headers, preserving item graphics effects.
+    void setExpansionFadeEnabled(bool enabled);
+    bool expansionFadeEnabled() const;
     void setExpanded(const QModelIndex &index, bool expanded);
     void toggleExpanded(const QModelIndex &index);
     bool isExpanded(const QModelIndex &index) const;
@@ -53,6 +59,10 @@ public:
     /// The branch decoration occupies one indentation cell per ancestor and node.
     void setIndentation(int pixels);
     int indentation() const { return m_indentation; }
+    /// Default true. Hiding removes branch decoration and the node's own icon
+    /// cell, while preserving depth * indentation() inside column zero.
+    void setBranchAreaVisible(bool visible);
+    bool branchAreaVisible() const { return m_branchAreaVisible; }
     /// Model data on column zero: pixels below this node; missing/negative values
     /// use rowSpacing(). The last visible node has no trailing gap.
     static constexpr int NodeRowSpacingRole = Qt::UserRole + 0x100;
@@ -169,6 +179,7 @@ private:
     VisualStateBackgroundExtent m_visualStateBackgroundExtent = VisualStateBackgroundExtent::FullWidth;
     bool m_ownBranchRenderer = false;
     bool m_branchIndicatorsVisible = true;
+    bool m_branchAreaVisible = true;
     bool m_indicatorPressToggled = false;
     bool m_updatingVisibility = false;
     bool m_visibilityRefreshPending = false;

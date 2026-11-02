@@ -1,367 +1,263 @@
 #pragma once
 
+#include <virtualitemviews/headergeometry.h>
+#include <virtualitemviews/listlayout.h>
 #include <virtualitemviews/treevisibilityindex.h>
-
-#include <QAbstractItemModel>
-#include <QAbstractScrollArea>
-#include <QCoreApplication>
+#include <virtualitemviews/virtualitemview.h>
 #include <QEvent>
-#include <QHash>
-#include <QPainter>
 #include <QPointer>
-#include <QRegion>
 #include <QScrollBar>
+#include <QSignalBlocker>
 #include <QTimer>
 #include <QVariantAnimation>
-#include <QVector>
-#include <QWidget>
 #include <functional>
 #include <utility>
 
 namespace viv {
 
-// Keeps animation pixels separate from the committed tree geometry and widgets.
-class TreeExpansionTransition : public QWidget
+// Drives live layout geometry; never captures pixels or covers the viewport.
+class TreeExpansionTransition : public QObject
 {
 public:
-    struct Row {
-        QPersistentModelIndex index;
-        QRect rect;
-        int bodyHeight = 0;
-    };
-    struct Snapshot {
-        QPixmap pixels;
-        QVector<Row> rows;
-        QHash<QPersistentModelIndex, QRect> existingRects;
-    };
-
-    explicit TreeExpansionTransition(QAbstractScrollArea *view,
-                                     std::function<QVector<Row>()> rows,
-                                     std::function<QRect(const QModelIndex &)> geometry)
-        : QWidget(view), m_view(view), m_rows(std::move(rows)), m_geometry(std::move(geometry))
+    TreeExpansionTransition(VirtualItemView *view, ListLayout *layout,
+                            std::function<void()> refreshLayout, HeaderGeometry *header = nullptr)
+        : QObject(view), m_view(view), m_layout(layout), m_refresh(std::move(refreshLayout)),
+          m_header(header)
     {
         setObjectName(QStringLiteral("vivTreeExpansionTransition"));
-        setAttribute(Qt::WA_TransparentForMouseEvents);
-        setAttribute(Qt::WA_NoSystemBackground);
-        setAttribute(Qt::WA_TranslucentBackground);
-        setFocusPolicy(Qt::NoFocus);
-        hide();
+        m_animation.setObjectName(QStringLiteral("vivTreeExpansionAnimation"));
+        m_animation.setParent(this);
+        m_animation.setEasingCurve(QEasingCurve::OutCubic);
         view->installEventFilter(this);
         view->viewport()->installEventFilter(this);
-        connect(view->verticalScrollBar(), &QScrollBar::valueChanged, this,
-                [this]() { stop(); });
-        connect(view->horizontalScrollBar(), &QScrollBar::valueChanged, this,
-                [this]() { stop(); });
-        m_animation.setStartValue(1.0);
-        m_animation.setEndValue(0.0);
-        m_animation.setEasingCurve(QEasingCurve::OutCubic);
-        connect(&m_animation, &QVariantAnimation::valueChanged, this,
-                [this](const QVariant &value) {
-                    m_opacity = value.toReal();
-                    update();
-                });
-        connect(&m_animation, &QVariantAnimation::finished, this,
-                [this]() { stop(); });
+        view->verticalScrollBar()->installEventFilter(this);
+        connect(&m_animation, &QVariantAnimation::valueChanged, this, [this](const QVariant &value) {
+            if (m_layout->hasTransientGeometry()) {
+                const qreal progress = value.toReal();
+                m_layout->m_transitionExtent = qRound64(m_startExtent + (m_endExtent - m_startExtent) * progress);
+                m_layout->m_transitionOpacity = m_startOpacity + (m_endOpacity - m_startOpacity) * progress;
+                refresh();
+            }
+        });
+        connect(&m_animation, &QVariantAnimation::finished, this, [this]() { stop(); });
     }
+
+    ~TreeExpansionTransition() override { cancel(); }
 
     void watchModel(QAbstractItemModel *model)
     {
         if (m_model)
             disconnect(m_model, nullptr, this, nullptr);
+        cancel();
         m_model = model;
-        stop();
         if (!model)
             return;
-        const auto cancel = [this]() { stop(); };
-        connect(model, &QAbstractItemModel::modelAboutToBeReset, this, cancel);
-        connect(model, &QAbstractItemModel::rowsAboutToBeInserted, this, cancel);
-        connect(model, &QAbstractItemModel::rowsAboutToBeRemoved, this, cancel);
-        connect(model, &QAbstractItemModel::rowsAboutToBeMoved, this, cancel);
-        connect(model, &QAbstractItemModel::columnsAboutToBeInserted, this, cancel);
-        connect(model, &QAbstractItemModel::columnsAboutToBeRemoved, this, cancel);
-        connect(model, &QAbstractItemModel::columnsAboutToBeMoved, this, cancel);
-        connect(model, &QAbstractItemModel::layoutAboutToBeChanged, this, cancel);
-        connect(model, &QAbstractItemModel::dataChanged, this, cancel);
+        // Never run expansion callbacks inside a structural model mutation.
+        const auto abort = [this]() { cancel(); };
+        connect(model, &QAbstractItemModel::modelAboutToBeReset, this, abort);
+        connect(model, &QAbstractItemModel::rowsAboutToBeInserted, this, abort);
+        connect(model, &QAbstractItemModel::rowsAboutToBeRemoved, this, abort);
+        connect(model, &QAbstractItemModel::rowsAboutToBeMoved, this, abort);
+        connect(model, &QAbstractItemModel::columnsAboutToBeInserted, this, abort);
+        connect(model, &QAbstractItemModel::columnsAboutToBeRemoved, this, abort);
+        connect(model, &QAbstractItemModel::columnsAboutToBeMoved, this, abort);
+        connect(model, &QAbstractItemModel::layoutAboutToBeChanged, this, abort);
+        connect(model, &QObject::destroyed, this, abort);
+        connect(model, &QAbstractItemModel::dataChanged, this, [this]() { stop(); });
     }
 
-    Snapshot capture(const TreeVisibilityIndex *visibility = nullptr,
-                     const QModelIndex &collapsingNode = QModelIndex())
+    bool isEnabled() const { return m_enabled; }
+    bool isFadeEnabled() const { return m_layout->m_transitionFadeEnabled; }
+    void setFadeEnabled(bool enabled)
     {
-        stop();
-        if (!m_enabled || m_duration <= 0 || !m_view->isVisible())
-            return {};
-        const auto rows = m_rows();
-        Snapshot snapshot;
-        snapshot.rows = rows;
-        for (const auto &row : rows)
-            snapshot.existingRects.insert(row.index, row.rect);
-        if (visibility) {
-            // Retain coordinates, not pixels/widgets, for rows a collapse can reveal.
-            // At most one viewport of one-pixel rows can enter the final frame.
-            qsizetype first = 0;
-            if (collapsingNode.isValid()) {
-                first = visibility->visibleRowForIndex(collapsingNode);
-                if (first >= 0) {
-                    const int depth = visibility->depth(collapsingNode);
-                    ++first;
-                    while (first < visibility->visibleRowCount()
-                           && visibility->depth(visibility->indexAtVisibleRow(first)) > depth)
-                        ++first;
-                }
-            }
-            const int limit = m_view->viewport()->height() + 1;
-            for (int count = 0; first >= 0 && first < visibility->visibleRowCount()
-                                && count < limit; ++count) {
-                const QModelIndex index = visibility->indexAtVisibleRow(first);
-                snapshot.existingRects.insert(QPersistentModelIndex(index), m_geometry(index));
-                if (collapsingNode.isValid()) {
-                    ++first;
-                } else {
-                    // collapseAll retains only the children of the display root.
-                    const QModelIndex next = index.model()->index(index.row() + 1, 0, index.parent());
-                    first = visibility->visibleRowForIndex(next);
-                }
-            }
-        }
-        snapshot.pixels = m_view->grab();
-        return snapshot;
+        if (isFadeEnabled() == enabled)
+            return;
+        m_layout->m_transitionFadeEnabled = enabled;
+        if (m_layout->hasTransientGeometry())
+            refresh();
     }
-
-    void start(const Snapshot &before)
+    bool isUpdatingGeometry() const { return m_refreshDepth > 0; }
+    void setEnabled(bool enabled)
     {
-        if (before.pixels.isNull() || !m_enabled || m_duration <= 0 || !m_view->isVisible())
-            return;
-        const QPointer<TreeExpansionTransition> self(this);
-        const quint64 revision = m_revision;
-        m_pendingBefore = before;
-        m_startPending = true;
-        m_before = before.pixels;
-        m_strips.clear();
-        m_opacity = 1;
-        setGeometry(m_view->rect());
-        QCoreApplication::instance()->installEventFilter(this);
-        show();
-        if (!self || m_revision != revision)
-            return;
-        raise();
-        // Keep the old frame visible until queued scrollbar/viewport layout settles.
-        scheduleStart(revision);
+        m_enabled = enabled;
+        if (!enabled)
+            stop();
     }
-
-private:
-    void scheduleStart(quint64 revision)
+    int duration() const { return m_duration; }
+    void setDuration(int milliseconds)
     {
-        const quint64 layoutRevision = m_layoutRevision;
-        QTimer::singleShot(0, this, [this, revision, layoutRevision]() {
-            if (m_revision != revision || !m_startPending)
-                return;
-            if (m_layoutRevision != layoutRevision) {
-                scheduleStart(revision);
-                return;
-            }
-            finishStart(revision);
-        });
+        m_duration = qMax(0, milliseconds);
+        if (!m_duration)
+            stop();
     }
-
-    void finishStart(quint64 revision)
+    bool isCollapsing(const QModelIndex &node) const { return m_complete && m_node == node; }
+    bool affects(const QModelIndex &node) const
     {
-        const QPointer<TreeExpansionTransition> self(this);
-        const Snapshot before = m_pendingBefore;
-        const quint64 layoutRevision = m_layoutRevision;
-        // Exclude the temporary old-frame overlay from the final snapshot.
-        hide();
-        if (!self || m_revision != revision)
-            return;
-        const QPixmap after = m_view->grab();
-        if (!self || m_revision != revision)
-            return;
-        if (m_layoutRevision != layoutRevision) {
-            show();
-            if (!self || m_revision != revision)
-                return;
-            raise();
-            scheduleStart(revision);
-            return;
-        }
-        const auto afterRows = m_rows();
-        if (!self || m_revision != revision)
-            return;
-        m_before = before.pixels;
-        m_after = after;
-        const QRect viewport = m_view->viewport()->geometry();
-        m_body = QRect(m_view->frameWidth(), viewport.top(),
-                       viewport.right() - m_view->frameWidth() + 1, viewport.height());
-        m_strips.clear();
-        const auto &oldRects = before.existingRects;
-        QHash<QPersistentModelIndex, QRect> newRects;
-        QHash<QPersistentModelIndex, int> oldBodyHeights;
-        for (const auto &row : before.rows)
-            oldBodyHeights.insert(row.index, row.bodyHeight);
-        for (const auto &row : afterRows)
-            newRects.insert(row.index, row.rect);
-        // Missing descendants grow from their nearest previously visible ancestor.
-        // Rows leaving the viewport keep their final off-screen destination.
-        const auto collapsedRect = [this](const Row &row,
-                                         const QHash<QPersistentModelIndex, QRect> &rects) {
-            for (QModelIndex parent = row.index.parent(); parent.isValid(); parent = parent.parent()) {
-                const auto it = rects.constFind(QPersistentModelIndex(parent));
-                if (it != rects.cend())
-                    return QRect(0, it->bottom() + 1, width(), 0);
-            }
-            return QRect(0, m_body.bottom() + 1, width(), 0);
-        };
-        for (const auto &row : afterRows) {
-            const auto it = oldRects.constFind(row.index);
-            // A final-frame row may already be clipped at the bottom. Keep the
-            // more complete source so its pixels leave with the animated row.
-            const bool useOld = it != oldRects.cend()
-                && it->intersected(m_body).height() > row.rect.intersected(m_body).height();
-            m_strips.append({it == oldRects.cend() ? collapsedRect(row, oldRects) : *it,
-                             row.rect, useOld ? *it : row.rect, useOld, it == oldRects.cend(),
-                             useOld ? oldBodyHeights.value(row.index, row.bodyHeight) : row.bodyHeight});
-        }
-        for (const auto &row : before.rows) {
-            if (newRects.contains(row.index))
-                continue;
-            QRect destination = m_geometry(row.index);
-            const bool removed = destination.isEmpty();
-            if (removed)
-                destination = collapsedRect(row, newRects);
-            m_strips.append({row.rect, destination, row.rect, true, removed, row.bodyHeight});
-        }
-        m_opacity = 1;
-        setGeometry(m_view->rect());
-        show();
-        if (!self || m_revision != revision)
-            return;
-        raise();
-        m_startPending = false;
-        m_pendingBefore = Snapshot();
-        m_animation.setDuration(m_duration);
-        m_animation.start();
+        return m_layout->hasTransientGeometry() && m_node == node;
     }
 
-public:
+    // The eased open fraction also drives branch rotation when fading is disabled.
+    qreal expansionProgress(const QModelIndex &node, bool expanded) const
+    {
+        return affects(node) ? m_layout->m_transitionOpacity : (expanded ? 1.0 : 0.0);
+    }
+
+    bool resumeExpansion(const QModelIndex &node)
+    {
+        if (!isCollapsing(node))
+            return false;
+        m_complete = {};
+        start(m_layout->m_transitionFirst, m_layout->m_transitionEnd, true);
+        return true;
+    }
+
+    // Keep the expanded mapping until the outgoing live widgets finish moving.
+    bool collapse(TreeVisibilityIndex *visibility, const QModelIndex &node,
+                  std::function<void()> complete)
+    {
+        if (!canAnimate())
+            return false;
+        const qsizetype first = visibility->visibleRowForIndex(node) + 1;
+        const auto branch = visibility->m_branches.constFind(node);
+        if (first <= 0 || branch == visibility->m_branches.constEnd() || branch->total() <= 0)
+            return false;
+        m_node = node;
+        m_complete = std::move(complete);
+        start(first, first + branch->total(), false);
+        return true;
+    }
+
+    void expand(const QModelIndex &node, qsizetype first, qsizetype count)
+    {
+        if (canAnimate() && first >= 0 && count > 0) {
+            m_node = node;
+            start(first, first + count, true);
+        }
+    }
+
     void stop()
     {
-        ++m_revision;
-        m_startPending = false;
-        m_pendingBefore = Snapshot();
-        if (auto *app = QCoreApplication::instance())
-            app->removeEventFilter(this);
+        if (m_finishing || !m_layout->hasTransientGeometry())
+            return;
         m_animation.stop();
-        hide();
-        m_before = QPixmap();
-        m_after = QPixmap();
-        m_strips.clear();
+        clearGeometry();
+        auto complete = std::move(m_complete);
+        m_complete = {};
+        m_node = QModelIndex();
+        m_finishing = true;
+        const QPointer<TreeExpansionTransition> guard(this);
+        if (complete)
+            complete();
+        if (!guard)
+            return;
+        m_finishing = false;
+        refresh();
     }
 
-    void setEnabled(bool enabled) { m_enabled = enabled; if (!enabled) stop(); }
-    bool isEnabled() const { return m_enabled; }
-    void setDuration(int ms) { m_duration = qMax(0, ms); stop(); }
-    int duration() const { return m_duration; }
+    // Call before destroying the view's layout or invalidating model mappings.
+    void cancel()
+    {
+        const bool active = m_layout->hasTransientGeometry();
+        m_animation.stop();
+        clearGeometry();
+        m_complete = {};
+        m_node = QModelIndex();
+        if (active)
+            QTimer::singleShot(0, this, [this]() { refresh(); });
+    }
 
 protected:
     bool eventFilter(QObject *watched, QEvent *event) override
     {
-        const auto *widget = qobject_cast<QWidget *>(watched);
-        if (!widget || widget == this
-            || (widget != m_view && !m_view->isAncestorOf(widget)))
-            return false;
-        switch (event->type()) {
-        case QEvent::Resize:
-            if (widget == m_view)
-                stop();
-            else if (widget == m_view->viewport()) {
-                if (m_startPending)
-                    ++m_layoutRevision;
-                else
-                    stop();
-            }
-            break;
-        case QEvent::Hide:
-            if (widget == m_view || widget == m_view->viewport())
-                stop();
-            break;
-        case QEvent::Wheel:
-        case QEvent::MouseButtonPress:
-        case QEvent::KeyPress:
+        const bool input = event->type() == QEvent::Wheel
+            || (watched == m_view->verticalScrollBar() && event->type() == QEvent::MouseButtonPress);
+        if (input || (watched == m_view && (event->type() == QEvent::Resize
+                                          || event->type() == QEvent::Hide)))
             stop();
-            break;
-        default:
-            break;
-        }
         return false;
     }
 
-    void paintEvent(QPaintEvent *) override
+private:
+    bool canAnimate() const
     {
-        QPainter painter(this);
-        if (m_strips.isEmpty()) {
-            painter.setOpacity(m_opacity);
-            painter.drawPixmap(0, 0, m_before);
-            return;
-        }
-        painter.drawPixmap(0, 0, m_after);
-        painter.save();
-        painter.setClipRect(m_body);
-        painter.fillRect(m_body, m_view->viewport()->palette().brush(QPalette::Base));
-        const qreal progress = 1 - m_opacity;
-        for (const auto &strip : m_strips) {
-            const qreal top = strip.from.top() + (strip.to.top() - strip.from.top()) * progress;
-            const qreal height = strip.from.height()
-                + (strip.to.height() - strip.from.height()) * progress;
-            if (height <= 0)
-                continue;
-            painter.setOpacity(strip.fade ? (strip.old ? m_opacity : progress) : 1);
-            const QPixmap &pixels = strip.old ? m_before : m_after;
-            const qreal dpr = pixels.devicePixelRatio();
-            // Reveal/clip row content at its own height; only the following gap stretches.
-            const qreal bodyHeight = qMin(height, qreal(strip.bodyHeight));
-            if (bodyHeight > 0) {
-                painter.drawPixmap(QRectF(0, top, width(), bodyHeight), pixels,
-                    QRectF(strip.source.x() * dpr, strip.source.y() * dpr,
-                           strip.source.width() * dpr, bodyHeight * dpr));
-            }
-            const qreal gapHeight = height - bodyHeight;
-            const int sourceGap = strip.source.height() - strip.bodyHeight;
-            if (gapHeight > 0 && sourceGap > 0) {
-                painter.drawPixmap(QRectF(0, top + bodyHeight, width(), gapHeight), pixels,
-                    QRectF(strip.source.x() * dpr, (strip.source.y() + strip.bodyHeight) * dpr,
-                           strip.source.width() * dpr, sourceGap * dpr));
-            }
-        }
-        painter.restore();
-        painter.setClipRegion(QRegion(rect()).subtracted(QRegion(m_body)));
-        painter.setOpacity(m_opacity);
-        painter.drawPixmap(0, 0, m_before);
+        return !m_finishing && m_enabled && m_duration > 0 && m_view->isVisible()
+            && !m_view->frozenRows() && !m_view->frozenBottomRows();
     }
 
-private:
-    struct Strip {
-        QRect from;
-        QRect to;
-        QRect source;
-        bool old;
-        bool fade;
-        int bodyHeight;
-    };
-    QAbstractScrollArea *m_view;
-    std::function<QVector<Row>()> m_rows;
-    std::function<QRect(const QModelIndex &)> m_geometry;
+    void start(qsizetype first, qsizetype end, bool expanding)
+    {
+        const bool reversing = m_layout->hasTransientGeometry();
+        const qint64 current = m_layout->m_transitionExtent;
+        const qreal currentOpacity = m_layout->m_transitionOpacity;
+        m_animation.stop();
+        const qint64 startOffset = m_layout->naturalOffsetOf(first);
+        const qint64 natural = m_layout->naturalOffsetOf(end) - startOffset;
+        // Once the subtree covers the viewport, its offscreen tail needs no
+        // interpolation. Work per frame stays bounded by visible rows.
+        const qint64 visible = qMax<qint64>(1, m_view->verticalOffset()
+                                            + m_view->viewport()->height() - startOffset);
+        const qint64 extent = qMin(natural, visible);
+        m_layout->m_transitionFirst = first;
+        m_layout->m_transitionEnd = end;
+        m_layout->m_transitionExtent = reversing ? current : (expanding ? 0 : extent);
+        m_startExtent = qreal(m_layout->m_transitionExtent);
+        m_endExtent = qreal(expanding ? extent : 0);
+        m_startOpacity = reversing ? currentOpacity : (expanding ? 0.0 : 1.0);
+        m_endOpacity = expanding ? 1.0 : 0.0;
+        m_layout->m_transitionOpacity = m_startOpacity;
+        if (m_header)
+            m_header->m_transientRows = m_layout;
+        {
+            const QSignalBlocker blocker(&m_animation);
+            m_animation.setDuration(m_duration);
+            m_animation.setStartValue(0.0);
+            m_animation.setEndValue(1.0);
+        }
+        const QPointer<TreeExpansionTransition> guard(this);
+        refresh();
+        if (guard && m_layout->hasTransientGeometry())
+            m_animation.start();
+    }
+
+    void clearGeometry()
+    {
+        m_layout->m_transitionFirst = -1;
+        m_layout->m_transitionEnd = -1;
+        m_layout->m_transitionOpacity = 1.0;
+        if (m_header)
+            m_header->m_transientRows = nullptr;
+    }
+
+    void refresh()
+    {
+        const QPointer<TreeExpansionTransition> guard(this);
+        ++m_refreshDepth;
+        if (m_header)
+            emit m_header->geometryChanged();
+        if (guard) {
+            const auto callback = m_refresh;
+            callback();
+        }
+        if (guard)
+            --m_refreshDepth;
+    }
+
+    QPointer<VirtualItemView> m_view;
+    ListLayout *m_layout;
+    std::function<void()> m_refresh;
+    QPointer<HeaderGeometry> m_header;
     QPointer<QAbstractItemModel> m_model;
+    QPersistentModelIndex m_node;
+    std::function<void()> m_complete;
     QVariantAnimation m_animation;
-    QPixmap m_before;
-    QPixmap m_after;
-    QRect m_body;
-    QVector<Strip> m_strips;
-    Snapshot m_pendingBefore;
-    qreal m_opacity = 0;
-    bool m_startPending = false;
-    bool m_enabled = false;
     int m_duration = 300;
-    quint64 m_revision = 0;
-    quint64 m_layoutRevision = 0;
+    qreal m_startExtent = 0.0;
+    qreal m_endExtent = 0.0;
+    qreal m_startOpacity = 1.0;
+    qreal m_endOpacity = 1.0;
+    bool m_enabled = true;
+    bool m_finishing = false;
+    int m_refreshDepth = 0;
 };
 
 } // namespace viv

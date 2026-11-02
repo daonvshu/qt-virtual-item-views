@@ -1,4 +1,6 @@
 #include <virtualitemviews/virtualheaderview.h>
+#include "../core/transientitemgeometry_p.h"
+#include <virtualitemviews/listlayout.h>
 #include "../core/performanceprobe_p.h"
 #include "../core/pixelalignedlines_p.h"
 #include "../core/wheeleventforwarding_p.h"
@@ -170,6 +172,8 @@ void VirtualHeaderView::paintEvent(QPaintEvent *event)
             if (clip.isEmpty())
                 continue;
             painter.save();
+            if (m_geometry->m_transientRows)
+                painter.setOpacity(m_geometry->m_transientRows->itemOpacity(it.key()));
             painter.translate(body.topLeft());
             section->paintVisualStateBackground(&painter, shape.translated(-body.topLeft()),
                                                 clip.translated(-body.topLeft()));
@@ -178,6 +182,8 @@ void VirtualHeaderView::paintEvent(QPaintEvent *event)
     }
     for (auto it = m_sectionWidgets.cbegin(); it != m_sectionWidgets.cend(); ++it) {
         const QWidget *section = it.value();
+        painter.setOpacity(!isHorizontal() && m_geometry->m_transientRows
+            ? m_geometry->m_transientRows->itemOpacity(it.key()) : 1.0);
         const QRect sectionRect = sectionPaintRect(it.key());
         if (sectionRect.isEmpty())
             continue;
@@ -280,7 +286,7 @@ QRect VirtualHeaderView::sectionPaintRect(int logicalIndex) const
     const QWidget *widget = m_sectionWidgets.value(logicalIndex);
     if (!widget || !m_geometry)
         return {};
-    if (widget->isVisible())
+    if (widget->isVisible() && widget->parentWidget() == this)
         return widget->geometry();
     // Clipped widgets retain stale geometry; reconstruct their current animated position.
     int position = sectionPos(logicalIndex);
@@ -299,6 +305,11 @@ int VirtualHeaderView::previousSection(int logicalIndex) const
 {
     if (!m_geometry)
         return -1;
+    if (m_geometry->m_transientRows) {
+        const qint64 position = m_geometry->sectionPosition(logicalIndex);
+        return position > m_geometry->leadingSpacing()
+            ? int(m_geometry->m_transientRows->indexAtOffset(position - 1)) : -1;
+    }
     if (m_paneFilterActive) {
         rebuildPaneCacheIfNeeded();
         const int slot = logicalIndex >= 0 && logicalIndex < m_paneSlotByLogical.size()
@@ -1216,11 +1227,16 @@ void VirtualHeaderView::relayout()
     } else if (firstVisual >= 0) {
         const int from = qMax(0, firstVisual - m_overscan);
         const int to = qMin(count - 1, lastVisual + m_overscan);
-        m_materializationVisits += to - from + 1;
-        for (int visual = from; visual <= to; ++visual) {
-            const int logical = m_geometry->logicalIndex(visual);
-            if (logical >= 0 && !m_geometry->isSectionHidden(logical) && !isFiltered(logical))
-                wanted.insert(logical);
+        QVector<VisibleRange> ranges{{from, to}};
+        if (m_geometry->m_transientRows)
+            m_geometry->m_transientRows->filterVisibleRanges(ranges);
+        for (const VisibleRange &range : ranges) {
+            m_materializationVisits += int(range.count());
+            for (int visual = int(range.first); visual <= range.last; ++visual) {
+                const int logical = m_geometry->logicalIndex(visual);
+                if (logical >= 0 && !m_geometry->isSectionHidden(logical) && !isFiltered(logical))
+                    wanted.insert(logical);
+            }
         }
     }
     for (auto it = m_sectionWidgets.constBegin(); it != m_sectionWidgets.constEnd(); ++it) {
@@ -1385,6 +1401,10 @@ void VirtualHeaderView::positionSections()
             continue;
         }
         const int size = m_geometry->sectionSize(logical);
+        if (size <= 0) {
+            widget->hide();
+            continue;
+        }
         int visual = committed;
         if (m_slideProgress < 1.0) {
             const auto from = m_slideFrom.constFind(logical);
@@ -1396,7 +1416,16 @@ void VirtualHeaderView::positionSections()
             widget->hide();
             continue;
         }
-        placeSection(widget, visual, size);
+        QWidget *parent = this;
+        QRect geometry = isHorizontal() ? QRect(visual, 0, size, height())
+                                        : QRect(0, visual, width(), size);
+        detail::prepareTransientItemGeometry(widget, parent, geometry,
+            m_geometry->storedSectionSize(logical), !isHorizontal() && m_geometry->m_transientRows,
+            !isHorizontal() && m_geometry->m_transientRows
+                ? m_geometry->m_transientRows->itemOpacity(logical) : 1.0);
+        if (widget->parentWidget() != parent)
+            widget->setParent(parent);
+        widget->setGeometry(geometry);
         widget->show();
     }
     notifyVisualGeometry();

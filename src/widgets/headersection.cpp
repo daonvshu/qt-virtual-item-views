@@ -27,7 +27,11 @@ void HeaderSection::setLogicalIndex(int logicalIndex)
 
 const VirtualHeaderView *HeaderSection::headerView() const
 {
-    return qobject_cast<const VirtualHeaderView *>(parentWidget());
+    for (const QWidget *parent = parentWidget(); parent; parent = parent->parentWidget()) {
+        if (const auto *header = qobject_cast<const VirtualHeaderView *>(parent))
+            return header;
+    }
+    return nullptr;
 }
 
 const VirtualTableView *HeaderSection::tableView() const

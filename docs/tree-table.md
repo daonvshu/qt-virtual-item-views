@@ -156,11 +156,19 @@ view.setSelectionBehavior(viv::VirtualTableView::SelectionBehavior::SelectItems)
 
 `visibilityIndex()` 用于查询 `visibleRowForIndex()` / `indexAtVisibleRow()` 等映射，行号会随展开、排序及结构变化改变。应用应通过视图的展开和根索引 API 修改状态，直接修改返回的映射对象不会自动同步视图布局。`itemDepth()` 的深度从当前显示根的子节点开始计为 0。`setIndentation()` 的负值归零。
 
-与普通树相同，`setExpansionAnimationEnabled(true)` 开启展开/收起的高度、位置和淡入淡出过渡，`setExpansionAnimationDuration(ms)` 设置时长，默认 300 ms，0 关闭过渡。组件默认关闭，示例默认开启。子节点画面及节点间距逐渐展开或收拢，后续行、垂直表头和分支同步上下移动，水平表头和滚动条保持固定。动画按节点身份插值视图大小的前后画面，逻辑映射、行高、信号、焦点及命中仍立即更新。滚动、缩放、列布局变化、模型变化、换根或鼠标/键盘操作取消旧画面，连续展开收起替换旧过渡。冻结行模式使用淡入淡出，避免跨越冻结边界。
+与普通树相同，展开/收起默认启用真实布局动画，支持 `RowWidgets` 和 `CellWidgets`。`setExpansionAnimationEnabled(false)` 可关闭，`setExpansionAnimationDuration(ms)` 设置时长，默认 300 ms，0 关闭过渡。真实控件、后续行、垂直表头、分支及分割线使用同一份动画几何，命中检测也随之更新；不截取画面、不使用截图覆盖层。部分露出的控件使用原生父控件矩形裁剪，保留业务控件正常高度。大子树仅物化当前露出的行，屏外尾部不逐行参与动画。
+
+收起开始时 `isExpanded()` 返回 `false`，子节点映射和 `visibleRowCount()` 在动画结束后才移除，随后发送 `collapsed`；展开映射和 `expanded` 在开始时更新。连续反向操作从当前进度继续。模型结构变化取消过渡并重建布局；滚轮操作、窗口尺寸变化、列布局变化和切换根节点会结束当前过渡。冻结行、`collapseAll()` 和已展开节点的递归展开即时完成，不使用截图回退。
+
+子节点淡入淡出默认启用，`setExpansionFadeEnabled(false)` 可单独关闭渐变，`expansionFadeEnabled()` 查询配置。行控件、单元格控件、行号、状态背景和分支装饰使用同一进度，父节点及后续分组不渐变。临时框架容器保留业务控件已有的图形效果；Qt 的实时透明度合成可能使用离屏缓冲，因此该选项会增加绘制成本。使用写法可参考树能力第 07 章。
 
 `visibleRowsChanged` 发出时可查询刷新后的可见行映射和垂直表头。`rowHeightChanged(row, height)` 的 row 是通知当时的可见行号，height 为应用后的高度；应用需长期保存目标时应立即取得模型节点索引。显式行高仍跟随节点，在折叠/展开及切换显示根后保留。`selectionModelChanged` 发布当前安装的选择模型指针。横向偏移信号只携带应用后的偏移值，不携带滚动组 ID；使用多个独立组时，应通过带组号的查询读取各组状态。
 
-`setBranchIndicatorsVisible(false)` 隐藏分支绘制，但保留节点缩进和键盘展开入口。`setBranchIndicatorRenderer(renderer, takeOwnership)` 可替换分支绘制，默认由应用持有 renderer；传入 `true` 后由视图持有，传入 `nullptr` 恢复内置分支。renderer 的 `paintBranch()` 收到视口坐标的缩进格，`branchState(index, cellDepth)` 可查询当前节点或祖先格的深度、子节点、兄弟和展开状态；省略 `cellDepth` 时查询节点自身的格。
+`setBranchIndicatorsVisible(false)` 隐藏分支绘制，但保留节点缩进和键盘展开入口。内置三角默认在分支格居中且无额外 padding；需要自定义位置时使用 `BranchIndicatorRenderer`。`setBranchIndicatorRenderer(renderer, takeOwnership)` 可替换分支绘制，默认由应用持有 renderer；传入 `true` 后由视图持有，传入 `nullptr` 恢复内置分支。renderer 的 `paintBranch()` 收到视口坐标的缩进格，`branchState(index, cellDepth)` 可查询当前节点或祖先格的深度、子节点、兄弟和展开状态；省略 `cellDepth` 时查询节点自身的格。
+
+默认 10px 圆角等边三角形复用同一个朝下的展开图形，随真实行展开进度旋转 90°，收起方向为朝右；旋转共享动画的时长、曲线和反向进度，单独关闭淡入淡出不影响旋转。未执行展开过渡时直接应用最终方向。自定义 renderer 仍按 `branchState()` 自行切换图标，框架不自动旋转它绘制的内容。
+
+`setBranchAreaVisible(false)` 隐藏全部分支装饰，并移除逻辑列 0 中节点自身的图标占位，保留 `depth × indentation()` 的层级缩进。`branchAreaVisible()` 默认返回 `true`；隐藏期间仍可双击或使用键盘展开，重新显示后恢复原有装饰配置。行控件和单元格控件使用相同的缩进规则，状态背景及行分割线的 `NodeOnly` 范围也随内容起点调整。
 
 `saveHeaderState()` 保存当前根的列宽、视觉顺序、隐藏列、比例设置和冻结行列。先设置模型及根索引，再调用 `restoreHeaderState()`；保存时与恢复时的根列数必须相同，否则返回 `false` 且不修改现有列状态。切换到列数更少的根会截去高位列的临时状态，切回后这些列恢复默认值。需要分别保留多个根的列布局时，应用应按稳定根 ID 分别保存状态，并在每次切换根后恢复对应状态。
 

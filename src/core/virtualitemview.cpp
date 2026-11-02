@@ -1,4 +1,5 @@
 #include <virtualitemviews/virtualitemview.h>
+#include "transientitemgeometry_p.h"
 #include "performanceprobe_p.h"
 #include "pixelalignedlines_p.h"
 #include "dragpreview_p.h"
@@ -173,6 +174,7 @@ public:
 
     QWidget *content() const { return m_content; }
     void setLineColor(const QColor &color) { m_lineColor = color; update(); }
+    void setItemOpacity(qreal opacity) { m_itemOpacity = opacity; update(); }
     void setStatePainter(std::function<void(QPainter *, const QRect &)> paint)
     { m_statePainter = std::move(paint); }
 
@@ -188,13 +190,16 @@ protected:
         detail::PerformanceScope performance(this, "paint.row-spacing", detail::PerformanceDomain::Paint);
         QPainter painter(this);
         const int lineWidth = qMax(1, property("vivSpacingLineWidth").toInt());
+        painter.setOpacity(m_itemOpacity);
         const QColor background = property("vivSpacingBackgroundColor").value<QColor>();
         if (background.isValid())
             painter.fillRect(rect(), background);
         else if (property("vivFillSpacingBackground").toBool())
             painter.fillRect(rect(), palette().brush(QPalette::Base));
+        painter.setOpacity(1.0);
         if (m_statePainter)
             m_statePainter(&painter, rect());
+        painter.setOpacity(m_itemOpacity);
         if (property("vivShowSpacingLines").toBool()
             && !property("vivSpacingPaneBoundary").toBool()) {
             const int left = qBound(0, property("vivSpacingLineLeftInset").toInt(), width());
@@ -231,6 +236,7 @@ private:
 
     QPointer<QWidget> m_content;
     QColor m_lineColor;
+    qreal m_itemOpacity = 1.0;
     std::function<void(QPainter *, const QRect &)> m_statePainter;
 };
 
@@ -1508,7 +1514,7 @@ int VirtualItemView::measuredHeightOf(const MaterializedItem &item) const
 void VirtualItemView::afterMaterialize()
 {
     detail::PerformanceScope performance(this, "layout.measure-heights");
-    if (!m_autoMeasure || !m_layout || materializedItems().isEmpty())
+    if (!m_autoMeasure || !m_layout || m_layout->hasTransientGeometry() || materializedItems().isEmpty())
         return;
 
     if (m_heightMode == ItemHeightMode::Uniform) {
@@ -2041,6 +2047,8 @@ QVector<VisibleRange> VirtualItemView::visibleItemRanges() const
         const qsizetype count = m_layout ? m_layout->itemCount() : 0;
         ranges.append(VisibleRange{count - qsizetype(frozenBottomRows()), count - 1});
     }
+    if (m_layout)
+        m_layout->filterVisibleRanges(ranges);
     return ranges;
 }
 
@@ -2328,6 +2336,7 @@ void VirtualItemView::syncRowSpacingWidgets(const QVector<VisibleRange> &ranges)
             return false;
         };
         auto *host = static_cast<RowSpacingHost *>(widget);
+        host->setItemOpacity(m_layout ? m_layout->itemOpacity(row) : 1.0);
         host->setProperty("vivSpacingIndex", QVariant::fromValue(index));
         if (!hostIsCurrent())
             return;
@@ -2427,10 +2436,12 @@ void VirtualItemView::applyItemPaneGeometry(MaterializedItem &item, qsizetype ro
     const QPersistentModelIndex index = item.index;
     const QRect geometry = item.geometry;
 
-    if (row < 0 || row >= viewItemCount()) {
+    if (row < 0 || row >= viewItemCount() || geometry.isEmpty()) {
         // A focused row may stay pinned after its tree branch collapses. Keep it
         // alive and focused without painting over the row now occupying its old slot.
         widget->move(-qMax(1, widget->width()), -qMax(1, widget->height()));
+        if (auto *host = dynamic_cast<detail::TransientItemClipHost *>(widget->parentWidget()))
+            host->hide();
         return;
     }
 
@@ -2447,11 +2458,15 @@ void VirtualItemView::applyItemPaneGeometry(MaterializedItem &item, qsizetype ro
             origin = itemPaneRect(ItemPane::Type::Scrollable).topLeft();
         }
     }
+    QRect localGeometry = geometry.translated(-origin);
+    detail::prepareTransientItemGeometry(widget, parent, localGeometry,
+        m_layout && m_layout->sizeIndex() ? m_layout->sizeIndex()->sizeOf(row) : geometry.height(),
+        m_layout && m_layout->hasTransientGeometry(), m_layout ? m_layout->itemOpacity(row) : 1.0);
     if (widget->parentWidget() != parent)
         reparentPreservingFocus(widget, parent);
     if (!widget || widgetForIndex(index) != widget.data())
         return;
-    widget->setGeometry(geometry.translated(-origin));
+    widget->setGeometry(localGeometry);
     if (!widget || widgetForIndex(index) != widget.data())
         return;
     if (!widget->isVisible())
@@ -2932,6 +2947,7 @@ void VirtualItemView::relayout()
     }
 
     augmentMaterializationRanges(ranges);
+    m_layout->filterVisibleRanges(ranges);
     performance.checkpoint("refresh.range-and-model");
 
     // ---- decide what to reuse, then recycle what is obsolete --------------
