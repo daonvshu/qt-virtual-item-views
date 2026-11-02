@@ -22,7 +22,11 @@ public:
 
     void bindWidget(viv::WidgetType, QWidget *widget, const QModelIndex &index) override
     {
-        static_cast<QLabel *>(widget)->setText(index.data().toString());
+        auto *label = static_cast<QLabel *>(widget);
+        label->setText(index.data().toString());
+        // Recompute for each binding so reused widgets follow the current text width.
+        // A narrow widget makes FullWidth and WidgetOnly easy to compare.
+        label->setMaximumWidth(qMax(1, label->sizeHint().width()));
     }
 
     void unbindWidget(viv::WidgetType, QWidget *widget, const QModelIndex &) override
@@ -74,6 +78,36 @@ private:
         controls->addWidget(m_easing);
         controls->addWidget(m_radius);
         layout->addLayout(controls);
+        auto *backgroundGeometry = new QHBoxLayout;
+        m_extent = new QComboBox(this);
+        m_extent->addItems({QStringLiteral("整行 (FullWidth)"), QStringLiteral("仅控件 (WidgetOnly)")});
+        backgroundGeometry->addWidget(m_extent);
+        m_backgroundHeight = new QSpinBox(this);
+        m_backgroundHeight->setRange(0, 120);
+        m_backgroundHeight->setSpecialValueText(QStringLiteral("自动高度"));
+        m_backgroundHeight->setPrefix(QStringLiteral("背景高度 "));
+        backgroundGeometry->addWidget(m_backgroundHeight);
+        backgroundGeometry->addStretch();
+        layout->addLayout(backgroundGeometry);
+        auto *margins = new QHBoxLayout;
+        m_marginLeft = new QSpinBox(this);
+        m_marginLeft->setRange(0, 80);
+        m_marginLeft->setPrefix(QStringLiteral("左边距 "));
+        margins->addWidget(m_marginLeft);
+        m_marginTop = new QSpinBox(this);
+        m_marginTop->setRange(0, 80);
+        m_marginTop->setPrefix(QStringLiteral("上边距 "));
+        margins->addWidget(m_marginTop);
+        m_marginRight = new QSpinBox(this);
+        m_marginRight->setRange(0, 80);
+        m_marginRight->setPrefix(QStringLiteral("右边距 "));
+        margins->addWidget(m_marginRight);
+        m_marginBottom = new QSpinBox(this);
+        m_marginBottom->setRange(0, 80);
+        m_marginBottom->setPrefix(QStringLiteral("下边距 "));
+        margins->addWidget(m_marginBottom);
+        margins->addStretch();
+        layout->addLayout(margins);
         m_view = new viv::VirtualListView(this);
         layout->addWidget(m_view, 1);
     }
@@ -89,8 +123,6 @@ private:
         m_view->setUniformItemHeight(36);
         // Radius only affects the item; row spacing always keeps its own background.
         m_view->setVisualStateCornerRadius(8);
-        // Spacing stays neutral while hover and selection animate inside each item.
-        m_view->setRowSpacing(8);
         m_view->setRowGridLinesVisible(false);
         m_view->setSelectionMode(viv::VirtualItemView::SelectionMode::ExtendedSelection);
         // The view paints these colors below the transparent row labels.
@@ -100,6 +132,21 @@ private:
         // OutCubic is also the framework default; the explicit call demonstrates the API.
         m_view->setVisualStateAnimationEasingCurve(QEasingCurve::OutCubic);
         m_view->setModel(model);
+        // Both painting and mouse hits follow the chosen rectangle; selection APIs stay unchanged.
+        connect(m_extent, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int value) {
+            m_view->setVisualStateBackgroundExtent(
+                static_cast<viv::VirtualListView::VisualStateBackgroundExtent>(value));
+        });
+        // Insets shrink the state area without changing widget geometry or row height.
+        const auto applyMargins = [this] {
+            m_view->setVisualStateBackgroundMargins(m_marginLeft->value(), m_marginTop->value(),
+                                                   m_marginRight->value(), m_marginBottom->value());
+        };
+        for (QSpinBox *spin : {m_marginLeft, m_marginTop, m_marginRight, m_marginBottom})
+            connect(spin, QOverload<int>::of(&QSpinBox::valueChanged), this, applyMargins);
+        // Zero restores automatic height; a positive height is centered after margins.
+        connect(m_backgroundHeight, QOverload<int>::of(&QSpinBox::valueChanged),
+                m_view, &viv::VirtualListView::setVisualStateBackgroundHeight);
         // Duration is shared by hover and selection transitions; 0 switches immediately.
         connect(m_duration, QOverload<int>::of(&QSpinBox::valueChanged),
                 m_view, &viv::VirtualItemView::setVisualStateAnimationDuration);
@@ -121,6 +168,12 @@ private:
     viv::VirtualListView *m_view = nullptr;
     QSpinBox *m_duration = nullptr;
     QSpinBox *m_radius = nullptr;
+    QSpinBox *m_backgroundHeight = nullptr;
+    QSpinBox *m_marginLeft = nullptr;
+    QSpinBox *m_marginTop = nullptr;
+    QSpinBox *m_marginRight = nullptr;
+    QSpinBox *m_marginBottom = nullptr;
+    QComboBox *m_extent = nullptr;
     QComboBox *m_colors = nullptr;
     QComboBox *m_easing = nullptr;
 };

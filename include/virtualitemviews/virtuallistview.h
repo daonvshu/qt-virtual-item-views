@@ -5,6 +5,7 @@
 
 #include <QColor>
 #include <QHash>
+#include <QMargins>
 #include <QPersistentModelIndex>
 #include <QVector>
 #include <memory>
@@ -76,6 +77,30 @@ public:
     /// Radius in logical pixels, clamped to zero; item spacing remains unpainted.
     void setVisualStateCornerRadius(int radius);
     int visualStateCornerRadius() const { return m_visualStateCornerRadius; }
+    /// FullWidth (the default) paints the row; WidgetOnly follows the actual
+    /// materialized widget rectangle. Mouse hits follow the same rectangle,
+    /// independently of background visibility, keyboard and programmatic selection.
+    enum class VisualStateBackgroundExtent { FullWidth, WidgetOnly };
+    Q_ENUM(VisualStateBackgroundExtent)
+    void setVisualStateBackgroundExtent(VisualStateBackgroundExtent extent);
+    VisualStateBackgroundExtent visualStateBackgroundExtent() const
+    {
+        return m_visualStateBackgroundExtent;
+    }
+    /// Insets in logical pixels (default zero); negatives become zero.
+    /// They affect hover/selection painting and mouse hits, not row/widget sizes.
+    void setVisualStateBackgroundMargins(const QMargins &margins);
+    void setVisualStateBackgroundMargins(int left, int top, int right, int bottom)
+    {
+        setVisualStateBackgroundMargins(QMargins(left, top, right, bottom));
+    }
+    QMargins visualStateBackgroundMargins() const { return m_visualStateBackgroundMargins; }
+    /// Height centered after margins, capped at the remaining height.
+    /// Zero (the default) is automatic; negatives become zero. Units are logical pixels.
+    void setVisualStateBackgroundHeight(int height);
+    int visualStateBackgroundHeight() const { return m_visualStateBackgroundHeight; }
+    /// Index within the background rectangle, clipped to the visible row pane.
+    QModelIndex indexAt(const QPoint &viewportPos) const override;
     QColor itemPaneSeparatorColor() const override;
 
 protected:
@@ -94,6 +119,10 @@ protected:
 
 private:
     void syncRowGridLines();
+    /// Shared uncut background and mouse-hit rectangle in viewport coordinates.
+    QRect visualStateBackgroundRect(const QModelIndex &index, const QRect &rowRect) const;
+    /// Recomputes hover and repaints after background geometry settings change.
+    void refreshVisualStateBackgroundGeometry();
     /// Display geometry used by row widgets, backgrounds and separators alike.
     QRect visualRowRect(qsizetype row) const;
     /// Samples elapsed time even between animation ticks during fast dragging.
@@ -110,6 +139,9 @@ private:
     bool m_rowGridLinesVisible = true;
     bool m_visualStateBackgroundVisible = true;
     int m_visualStateCornerRadius = 0;
+    VisualStateBackgroundExtent m_visualStateBackgroundExtent = VisualStateBackgroundExtent::FullWidth;
+    QMargins m_visualStateBackgroundMargins;
+    int m_visualStateBackgroundHeight = 0;
     DragFeedbackMode m_dragFeedbackMode = DragFeedbackMode::RowMoveAnimation;
     int m_dragReorderAnimationDuration = 180;
     QEasingCurve m_dragReorderEasingCurve = QEasingCurve::OutCubic;

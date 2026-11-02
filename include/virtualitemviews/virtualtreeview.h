@@ -109,8 +109,27 @@ public:
     /// Radius of hover/selection backgrounds; negative values become zero (default zero).
     void setVisualStateCornerRadius(int radius);
     int visualStateCornerRadius() const { return m_visualStateCornerRadius; }
-    /// Left edge of the background for each node depth, independent of grid lines.
-    enum class VisualStateBackgroundExtent { NodeOnly, NodeAndIcon, FullWidth };
+    /// Insets of the hover/selection rectangle in logical pixels (default zero).
+    /// Negative margins become zero. Mouse hits follow the inset rectangle;
+    /// row heights, item widgets and independent branch clicks are unchanged.
+    void setVisualStateBackgroundMargins(const QMargins &margins);
+    void setVisualStateBackgroundMargins(int left, int top, int right, int bottom)
+    {
+        setVisualStateBackgroundMargins(QMargins(left, top, right, bottom));
+    }
+    QMargins visualStateBackgroundMargins() const { return m_visualStateBackgroundMargins; }
+    /// Height in logical pixels, centered after applying margins and capped at
+    /// the remaining height. Zero (the default) is automatic; negatives become zero.
+    void setVisualStateBackgroundHeight(int height);
+    int visualStateBackgroundHeight() const { return m_visualStateBackgroundHeight; }
+    /// NodeOnly/NodeAndIcon/FullWidth choose the left edge and extend to the
+    /// viewport's right edge. NodeAndIcon falls back to NodeOnly for leaves or
+    /// hidden branch indicators. WidgetOnly uses the actual materialized widget
+    /// rectangle; WidgetAndIcon also includes the node's own branch cell when
+    /// its expand/collapse indicator is visible. Leaves use WidgetOnly geometry.
+    /// Mouse hit testing follows the same rectangle, independently
+    /// of grid lines and background visibility. Branch toggling remains separate.
+    enum class VisualStateBackgroundExtent { NodeOnly, NodeAndIcon, FullWidth, WidgetOnly, WidgetAndIcon };
     void setVisualStateBackgroundExtent(VisualStateBackgroundExtent extent);
     VisualStateBackgroundExtent visualStateBackgroundExtent() const
     {
@@ -166,6 +185,9 @@ public:
 
     TreeVisibilityIndex *visibilityIndex() const { return m_visibility; }
     qsizetype visibleRowCount() const;
+    /// Index inside the background rectangle, clipped to the row's visible pane.
+    /// Branch indicators remain clickable outside this item interaction region.
+    QModelIndex indexAt(const QPoint &viewportPos) const override;
     /// Depth of an index in the (possibly root-restricted) tree.
     int itemDepth(const QModelIndex &index) const override;
     void applyRowSpacingOverrides() override;
@@ -227,6 +249,10 @@ private:
     /// Paints the configured expand/collapse icon or its built-in fallback.
     void paintDefaultBranchIndicator(QPainter *painter, const BranchIndicatorState &state,
                                      const QModelIndex &index, const QRect &cellRect);
+    /// Shared uncut background and mouse-hit rectangle in viewport coordinates.
+    QRect visualStateBackgroundRect(const QModelIndex &index, const QRect &rowGeometry) const;
+    /// Recomputes hover and repaints after background geometry settings change.
+    void refreshVisualStateBackgroundGeometry();
     void paintVisualStateBackgrounds(QPainter *painter, const QRect &dirty);
     /// Cell rect (viewport coordinates) of \a cellDepth of a view row.
     QRect branchCellRect(qsizetype row, int cellDepth) const;
@@ -258,6 +284,8 @@ private:
     VisualStateBackgroundExtent m_visualStateBackgroundExtent = VisualStateBackgroundExtent::FullWidth;
     bool m_visualStateBackgroundVisible = true;
     int m_visualStateCornerRadius = 0;
+    QMargins m_visualStateBackgroundMargins;
+    int m_visualStateBackgroundHeight = 0;
     bool m_branchIndicatorsVisible = true;
     QIcon m_expandedBranchIcon;
     QIcon m_collapsedBranchIcon;

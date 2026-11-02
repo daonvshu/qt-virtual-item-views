@@ -23,7 +23,11 @@ public:
     void bindWidget(viv::WidgetType, QWidget *widget, const QModelIndex &index) override
     {
         // Every bind replaces the previous node's content, including after scrolling.
-        static_cast<QLabel *>(widget)->setText(index.data().toString());
+        auto *label = static_cast<QLabel *>(widget);
+        label->setText(index.data().toString());
+        // Keep the widget narrower than the row so the background modes differ.
+        // Recompute on every bind because recycled nodes can have different text.
+        label->setMaximumWidth(qMax(1, label->sizeHint().width()));
     }
     void unbindWidget(viv::WidgetType, QWidget *widget, const QModelIndex &) override
     {
@@ -56,7 +60,9 @@ private:
         enabled->setChecked(true);
         controls->addWidget(enabled);
         extent = new QComboBox(this);
-        extent->addItems({QStringLiteral("仅节点"), QStringLiteral("节点及图标"), QStringLiteral("整行")});
+        extent->addItems({QStringLiteral("仅节点 (NodeOnly)"), QStringLiteral("节点及图标 (NodeAndIcon)"),
+                          QStringLiteral("整行 (FullWidth)"),
+                          QStringLiteral("仅控件 (WidgetOnly)"), QStringLiteral("控件及图标 (WidgetAndIcon)")});
         controls->addWidget(extent);
         radius = new QSpinBox(this);
         radius->setRange(0, 24);
@@ -79,6 +85,31 @@ private:
         options->addWidget(colors);
         options->addStretch();
         layout->addLayout(options);
+        auto *backgroundGeometry = new QHBoxLayout;
+        backgroundHeight = new QSpinBox(this);
+        backgroundHeight->setRange(0, 120);
+        backgroundHeight->setSpecialValueText(QStringLiteral("自动高度"));
+        backgroundHeight->setPrefix(QStringLiteral("背景高度 "));
+        backgroundHeight->setToolTip(QStringLiteral("0 为自动；固定高度在扣除边距后的区域内垂直居中，不超过剩余高度。"));
+        backgroundGeometry->addWidget(backgroundHeight);
+        marginLeft = new QSpinBox(this);
+        marginLeft->setRange(0, 80);
+        marginLeft->setPrefix(QStringLiteral("左边距 "));
+        backgroundGeometry->addWidget(marginLeft);
+        marginTop = new QSpinBox(this);
+        marginTop->setRange(0, 80);
+        marginTop->setPrefix(QStringLiteral("上边距 "));
+        backgroundGeometry->addWidget(marginTop);
+        marginRight = new QSpinBox(this);
+        marginRight->setRange(0, 80);
+        marginRight->setPrefix(QStringLiteral("右边距 "));
+        backgroundGeometry->addWidget(marginRight);
+        marginBottom = new QSpinBox(this);
+        marginBottom->setRange(0, 80);
+        marginBottom->setPrefix(QStringLiteral("下边距 "));
+        backgroundGeometry->addWidget(marginBottom);
+        backgroundGeometry->addStretch();
+        layout->addLayout(backgroundGeometry);
         m_view = new viv::VirtualTreeView(this);
         layout->addWidget(m_view, 1);
     }
@@ -113,13 +144,26 @@ private:
         m_view->setVisualStateCornerRadius(6);
         m_view->setVisualStateAnimationDuration(180);
         m_view->setVisualStateAnimationEasingCurve(QEasingCurve::OutCubic);
-        m_view->setRowSpacing(6);
         m_view->expandRecursively(m_model->index(0, 0));
         connect(enabled, &QCheckBox::toggled, m_view, &viv::VirtualTreeView::setVisualStateBackgroundVisible);
+        // WidgetOnly follows the widget; WidgetAndIcon also covers a visible branch icon's cell.
+        // Leaves and hidden indicators use WidgetOnly geometry, including for mouse hits.
+        // NodeAndIcon similarly falls back to NodeOnly when no indicator is shown.
         connect(extent, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int value) {
             m_view->setVisualStateBackgroundExtent(static_cast<viv::VirtualTreeView::VisualStateBackgroundExtent>(value));
         });
         extent->setCurrentIndex(2);
+        // Insets affect state backgrounds and mouse hits, never the node widget or row height.
+        // With a 36px row, top/bottom margins of 4 leave a 28px state background.
+        const auto applyMargins = [this] {
+            m_view->setVisualStateBackgroundMargins(
+                marginLeft->value(), marginTop->value(), marginRight->value(), marginBottom->value());
+        };
+        for (QSpinBox *spin : {marginLeft, marginTop, marginRight, marginBottom})
+            connect(spin, QOverload<int>::of(&QSpinBox::valueChanged), this, applyMargins);
+        // Zero restores automatic height. A positive height is centered within the inset area.
+        connect(backgroundHeight, QOverload<int>::of(&QSpinBox::valueChanged), m_view,
+                &viv::VirtualTreeView::setVisualStateBackgroundHeight);
         connect(radius, QOverload<int>::of(&QSpinBox::valueChanged), m_view, &viv::VirtualTreeView::setVisualStateCornerRadius);
         connect(duration, QOverload<int>::of(&QSpinBox::valueChanged), m_view, &viv::VirtualItemView::setVisualStateAnimationDuration);
         connect(curve, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int value) {
@@ -137,6 +181,11 @@ private:
     QComboBox *extent = nullptr;
     QSpinBox *radius = nullptr;
     QSpinBox *duration = nullptr;
+    QSpinBox *backgroundHeight = nullptr;
+    QSpinBox *marginLeft = nullptr;
+    QSpinBox *marginTop = nullptr;
+    QSpinBox *marginRight = nullptr;
+    QSpinBox *marginBottom = nullptr;
     QComboBox *curve = nullptr;
     QCheckBox *colors = nullptr;
 };

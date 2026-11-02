@@ -69,6 +69,81 @@ void VirtualListView::setVisualStateCornerRadius(int radius)
         viewport()->update();
 }
 
+void VirtualListView::setVisualStateBackgroundExtent(VisualStateBackgroundExtent extent)
+{
+    if (extent != VisualStateBackgroundExtent::FullWidth && extent != VisualStateBackgroundExtent::WidgetOnly)
+        return;
+    if (m_visualStateBackgroundExtent == extent)
+        return;
+    m_visualStateBackgroundExtent = extent;
+    refreshVisualStateBackgroundGeometry();
+}
+
+void VirtualListView::setVisualStateBackgroundMargins(const QMargins &margins)
+{
+    const QMargins clamped(qMax(0, margins.left()), qMax(0, margins.top()),
+                           qMax(0, margins.right()), qMax(0, margins.bottom()));
+    if (m_visualStateBackgroundMargins == clamped)
+        return;
+    m_visualStateBackgroundMargins = clamped;
+    refreshVisualStateBackgroundGeometry();
+}
+
+void VirtualListView::setVisualStateBackgroundHeight(int height)
+{
+    height = qMax(0, height);
+    if (m_visualStateBackgroundHeight == height)
+        return;
+    m_visualStateBackgroundHeight = height;
+    refreshVisualStateBackgroundGeometry();
+}
+
+void VirtualListView::refreshVisualStateBackgroundGeometry()
+{
+    const QPointer<VirtualListView> guard(this);
+    refreshHoveredIndex();
+    if (guard && m_visualStateBackgroundVisible)
+        viewport()->update();
+}
+
+QRect VirtualListView::visualStateBackgroundRect(const QModelIndex &index, const QRect &rowRect) const
+{
+    QRect background = rowRect;
+    if (m_visualStateBackgroundExtent == VisualStateBackgroundExtent::WidgetOnly) {
+        QWidget *widget = widgetForIndex(index);
+        if (!widget || !widget->isVisible())
+            return {};
+        // Frozen panes may reparent the widget into a clipping container.
+        background = QRect(viewport()->mapFromGlobal(widget->mapToGlobal(QPoint())), widget->size());
+    }
+    const QMargins &margins = m_visualStateBackgroundMargins;
+    if (qint64(margins.left()) + margins.right() >= background.width()
+        || qint64(margins.top()) + margins.bottom() >= background.height())
+        return {};
+    background.adjust(margins.left(), margins.top(), -margins.right(), -margins.bottom());
+    if (m_visualStateBackgroundHeight > 0) {
+        const int height = qMin(m_visualStateBackgroundHeight, background.height());
+        background = QRect(background.x(), background.y() + (background.height() - height) / 2,
+                           background.width(), height);
+    }
+    return background;
+}
+
+QModelIndex VirtualListView::indexAt(const QPoint &viewportPos) const
+{
+    const QModelIndex index = VirtualItemView::indexAt(viewportPos);
+    if (!index.isValid()
+        || (m_visualStateBackgroundExtent == VisualStateBackgroundExtent::FullWidth
+            && m_visualStateBackgroundMargins.isNull() && m_visualStateBackgroundHeight == 0))
+        return index;
+    const qsizetype row = viewItemForIndex(index);
+    const QRect rowRect = visualRowRect(row);
+    const QRect hitRect = visualStateBackgroundRect(index, rowRect)
+        .intersected(rowRect).intersected(itemPaneRect(itemPaneForRow(row)))
+        .intersected(viewport()->rect());
+    return hitRect.contains(viewportPos) ? index : QModelIndex();
+}
+
 void VirtualListView::refreshVisualStates()
 {
     VirtualItemView::refreshVisualStates();
@@ -99,11 +174,16 @@ void VirtualListView::paintEvent(QPaintEvent *event)
         if (clip.isEmpty())
             continue;
         const VisualState state = visualState(item.index);
+        if (state.hoverProgress <= 0.0 && state.selectedProgress <= 0.0)
+            continue;
+        const QRect background = visualStateBackgroundRect(item.index, rect);
+        if (background.isEmpty())
+            continue;
         painter.setOpacity(state.hoverProgress);
-        fillPixelAlignedRoundedRegion(&painter, rect, clip, m_visualStateCornerRadius,
+        fillPixelAlignedRoundedRegion(&painter, background, clip, m_visualStateCornerRadius,
                                       hoverBackgroundColor());
         painter.setOpacity(state.selectedProgress);
-        fillPixelAlignedRoundedRegion(&painter, rect, clip, m_visualStateCornerRadius,
+        fillPixelAlignedRoundedRegion(&painter, background, clip, m_visualStateCornerRadius,
                                       selectedBackgroundColor());
     }
 }
@@ -155,11 +235,11 @@ void VirtualListView::syncRowGridLines()
     detail::PerformanceScope performance(this, "grid.list-lines");
     QHash<qsizetype, QRect> desired;
     const QRect viewportRect = viewport()->geometry();
-    if (m_rowGridLinesVisible && rowSpacing() == 0 && viewportRect.width() > 0) {
+    if (m_rowGridLinesVisible && m_listLayout && viewportRect.width() > 0) {
         for (const VisibleRange &range : visibleItemRanges()) {
             for (qsizetype row = range.first; row >= 0 && row <= range.last; ++row) {
-                if (row + 1 >= viewItemCount()
-                    && (!m_dragRowPreview->isActive() || qFuzzyIsNull(m_dragRowPreview->offset(row, 1))))
+                // Spacing hosts draw their own lines; keep the trailing edge too.
+                if (m_listLayout->spacingAfter(row) > 0)
                     continue;
                 const QRect rowRect = visualRowRect(row);
                 if (!rowRect.intersects(viewport()->rect()))

@@ -303,16 +303,44 @@ void VirtualTreeView::setVisualStateCornerRadius(int radius)
         viewport()->update();
 }
 
+void VirtualTreeView::setVisualStateBackgroundMargins(const QMargins &margins)
+{
+    const QMargins clamped(qMax(0, margins.left()), qMax(0, margins.top()),
+                           qMax(0, margins.right()), qMax(0, margins.bottom()));
+    if (m_visualStateBackgroundMargins == clamped)
+        return;
+    m_visualStateBackgroundMargins = clamped;
+    refreshVisualStateBackgroundGeometry();
+}
+
+void VirtualTreeView::setVisualStateBackgroundHeight(int height)
+{
+    height = qMax(0, height);
+    if (m_visualStateBackgroundHeight == height)
+        return;
+    m_visualStateBackgroundHeight = height;
+    refreshVisualStateBackgroundGeometry();
+}
+
 void VirtualTreeView::setVisualStateBackgroundExtent(VisualStateBackgroundExtent extent)
 {
     if (extent != VisualStateBackgroundExtent::NodeOnly
         && extent != VisualStateBackgroundExtent::NodeAndIcon
-        && extent != VisualStateBackgroundExtent::FullWidth)
+        && extent != VisualStateBackgroundExtent::FullWidth
+        && extent != VisualStateBackgroundExtent::WidgetOnly
+        && extent != VisualStateBackgroundExtent::WidgetAndIcon)
         return;
     if (m_visualStateBackgroundExtent == extent)
         return;
     m_visualStateBackgroundExtent = extent;
-    if (m_visualStateBackgroundVisible)
+    refreshVisualStateBackgroundGeometry();
+}
+
+void VirtualTreeView::refreshVisualStateBackgroundGeometry()
+{
+    const QPointer<VirtualTreeView> guard(this);
+    refreshHoveredIndex();
+    if (guard && m_visualStateBackgroundVisible)
         viewport()->update();
 }
 
@@ -625,6 +653,9 @@ void VirtualTreeView::setBranchIndicatorsVisible(bool visible)
     // Turning them off must erase what is painted; turning them on must repaint
     // the strip (the rows themselves never carry the indicators).
     invalidateBranchIndicators();
+    if (m_visualStateBackgroundExtent == VisualStateBackgroundExtent::NodeAndIcon
+        || m_visualStateBackgroundExtent == VisualStateBackgroundExtent::WidgetAndIcon)
+        refreshVisualStateBackgroundGeometry();
 }
 
 void VirtualTreeView::setBranchIndicatorRenderer(BranchIndicatorRenderer *renderer, bool takeOwnership)
@@ -664,6 +695,21 @@ BranchIndicatorState VirtualTreeView::branchState(const QModelIndex &index, int 
     state.isExpanded = isExpanded(cell);
     state.hasSiblings = cell.row() + 1 < model()->rowCount(cell.parent());
     return state;
+}
+
+QModelIndex VirtualTreeView::indexAt(const QPoint &viewportPos) const
+{
+    const QModelIndex index = VirtualItemView::indexAt(viewportPos);
+    if (!index.isValid()
+        || (m_visualStateBackgroundExtent == VisualStateBackgroundExtent::FullWidth
+            && m_visualStateBackgroundMargins.isNull() && m_visualStateBackgroundHeight == 0))
+        return index;
+    const qsizetype row = viewItemForIndex(index);
+    const QRect rowGeometry = VirtualItemView::geometryForViewRow(row);
+    const QRect hitRect = visualStateBackgroundRect(index, rowGeometry)
+        .intersected(rowGeometry).intersected(itemPaneRect(itemPaneForRow(row)))
+        .intersected(viewport()->rect());
+    return hitRect.contains(viewportPos) ? index : QModelIndex();
 }
 
 QRect VirtualTreeView::geometryForViewRow(qsizetype row) const
@@ -890,6 +936,54 @@ void VirtualTreeView::paintEvent(QPaintEvent *event)
         paintBranchIndicators(&painter);
 }
 
+QRect VirtualTreeView::visualStateBackgroundRect(const QModelIndex &index,
+                                               const QRect &rowGeometry) const
+{
+    QRect background;
+    if (m_visualStateBackgroundExtent == VisualStateBackgroundExtent::WidgetOnly
+        || m_visualStateBackgroundExtent == VisualStateBackgroundExtent::WidgetAndIcon) {
+        QWidget *widget = widgetForIndex(index);
+        if (!widget || !widget->isVisible())
+            return {};
+        // Pane and transition hosts can sit between the widget and viewport.
+        // Keep the full rectangle for corners; callers clip the revealed part.
+        background = QRect(viewport()->mapFromGlobal(widget->mapToGlobal(QPoint())), widget->size());
+        if (m_visualStateBackgroundExtent == VisualStateBackgroundExtent::WidgetAndIcon) {
+            // A reserved but empty cell must not extend a leaf's background.
+            const qsizetype row = viewItemForIndex(index);
+            if (hasBranchIndicator(row))
+                background = background.united(branchCellRect(row, itemDepth(index)));
+        }
+    } else {
+        const int depth = itemDepth(index);
+        const bool nodeOnly = m_visualStateBackgroundExtent == VisualStateBackgroundExtent::NodeOnly
+            || (m_visualStateBackgroundExtent == VisualStateBackgroundExtent::NodeAndIcon
+                && !hasBranchIndicator(viewItemForIndex(index)));
+        const qint64 cells = nodeOnly
+            ? qint64(depth) + int(hasOwnBranchCell(index))
+            : m_visualStateBackgroundExtent == VisualStateBackgroundExtent::NodeAndIcon
+                ? qint64(depth) : 0;
+        const int left = int(qMin<qint64>(viewport()->width(),
+                                         qMax<qint64>(0, cells) * m_indentation));
+        background = QRect(left, rowGeometry.y(), viewport()->width() - left, rowGeometry.height());
+        // Insets and centering follow the natural row, not its currently revealed slice.
+        if (m_rowLayout->hasTransientGeometry()
+            && (!m_visualStateBackgroundMargins.isNull() || m_visualStateBackgroundHeight > 0))
+            background.setHeight(m_rowLayout->sizeIndex()->sizeOf(viewItemForIndex(index)));
+    }
+    const QMargins &margins = m_visualStateBackgroundMargins;
+    if (qint64(margins.left()) + margins.right() >= background.width()
+        || qint64(margins.top()) + margins.bottom() >= background.height())
+        return {};
+    background.adjust(margins.left(), margins.top(), -margins.right(), -margins.bottom());
+    if (m_visualStateBackgroundHeight > 0) {
+        const int height = qMin(m_visualStateBackgroundHeight, background.height());
+        background = QRect(background.x(), background.y() + (background.height() - height) / 2,
+                           background.width(), height);
+    }
+    return background;
+}
+
 void VirtualTreeView::paintVisualStateBackgrounds(QPainter *painter, const QRect &dirty)
 {
     detail::PerformanceScope performance(this, "paint.tree-state", detail::PerformanceDomain::Paint);
@@ -904,15 +998,7 @@ void VirtualTreeView::paintVisualStateBackgrounds(QPainter *painter, const QRect
         const VisualState state = visualState(QModelIndex(item.index));
         if (state.hoverProgress <= 0.0 && state.selectedProgress <= 0.0)
             continue;
-        const int depth = itemDepth(item.index);
-        const qint64 cells = m_visualStateBackgroundExtent == VisualStateBackgroundExtent::NodeOnly
-            ? qint64(depth) + int(hasOwnBranchCell(item.index))
-            : m_visualStateBackgroundExtent == VisualStateBackgroundExtent::NodeAndIcon
-                ? qint64(depth) : 0;
-        const int left = int(qMin<qint64>(viewportRect.width(),
-                                         qMax<qint64>(0, cells) * m_indentation));
-        const QRect background(left, rowGeometry.y(), viewportRect.width() - left,
-                               rowGeometry.height());
+        const QRect background = visualStateBackgroundRect(item.index, rowGeometry);
         const QRect clip = rowGeometry.intersected(itemPaneRect(itemPaneForRow(row)))
             .intersected(viewportRect).intersected(dirty);
         if (background.isEmpty() || clip.isEmpty())
@@ -1050,7 +1136,7 @@ void VirtualTreeView::toggleIfBranchClicked(const QPoint &viewportPos, bool *han
     if (handled)
         *handled = false;
 
-    const QModelIndex index = indexAt(viewportPos);
+    const QModelIndex index = VirtualItemView::indexAt(viewportPos);
     if (!isIndicatorPosition(index, viewportPos))
         return;
 
@@ -1095,7 +1181,7 @@ void VirtualTreeView::mouseDoubleClickEvent(QMouseEvent *event)
         // A double click on the indicator toggles once: the press of this very
         // gesture already did it.
         const bool pressToggledThisBranch = m_indicatorPressToggled
-            && isIndicatorPosition(index, viewportPos);
+            && isIndicatorPosition(VirtualItemView::indexAt(viewportPos), viewportPos);
         m_indicatorPressToggled = false;
         if (!pressToggledThisBranch && index.isValid() && hasChildren(index))
             toggleExpanded(index);
