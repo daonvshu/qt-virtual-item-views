@@ -34,6 +34,8 @@ const QStringList events = view.lifecycleLog();
 
 所有视图继承 `VirtualItemView` 的性能开关，默认关闭：
 
+`VirtualListView`、`VirtualTreeView` 与 `VirtualTableView` 使用相同的开关和日志分类。下面的 `view` 可以是其中任意一种视图；多个视图可分别启用，并通过 `objectName` 区分日志。
+
 ```cpp
 #include <QLoggingCategory>
 
@@ -78,6 +80,7 @@ QLoggingCategory::setFilterRules(QStringLiteral(
 | --- | --- |
 | `refresh.*`、`model.*` | 刷新请求、可见范围、索引匹配、数据通知处理与行数据上下文 |
 | `items.*`、`cells.*` | 行或单元格物化、复用、绑定、解绑与回收 |
+| `items.widget.*`、`items.layout.clip-hosts` | 行控件几何、显隐、层级、屏外移动与展开动画裁剪容器同步 |
 | `cells.widget.*`、`cells.layout.clip-hosts` | 单元格控件几何、显隐、层级、屏外移动与冻结裁剪容器同步 |
 | `recycler.*` | 回收时的隐藏、焦点清理、换父控件与复用池处理 |
 | `layout.*`、`header.*` | 尺寸测量、行列几何、冻结区域、表头与动画布局 |
@@ -87,6 +90,24 @@ QLoggingCategory::setFilterRules(QStringLiteral(
 | `callback.*` | 外部 adapter、间距工厂与绑定器、合并提供器、分支绘制及刷新信号的同步响应 |
 
 业务 `create`、`widgetType`、`bind`、`unbind`、`visualStateChanged`、行布局与尺寸估算分别计时。控件的 `sizeHint()` / `heightForWidth()` 包含在 `callback.widget.measure` 中；业务在回调里查询模型、构建子控件、设置样式、触发布局或同步信号的时间全部计入回调。框架直接查询模型和计算索引的时间包含在相应刷新、上下文和可见性阶段中。
+
+列表和树可进一步按下面的阶段定位卡顿：
+
+| 日志阶段／计数 | 排查方向 |
+| --- | --- |
+| `items.acquire`、`state.prepare-hover-tracking` | 行控件获取、创建与子控件 hover 事件跟踪准备 |
+| `layout.row-widget`、`items.widget.set-geometry`、`items.geometry-changed` / `unchanged` | 行控件布局耗时，以及实际改变和重复应用几何的次数 |
+| `list.after-materialize`、`tree.after-materialize` | 物化后的布局收尾、分割线和树分支更新 |
+| `state.list-*`、`state.tree-*`、`paint.list-state`、`paint.tree-state` | 状态通知与框架 hover / selected 背景绘制 |
+| `model.tree-rebuild`、`model.tree-expand*`、`model.tree-collapse*`、`tree.visibility` | 树可见索引重建、展开收起时的模型访问与布局同步 |
+| `model.tree-spacing`、`tree.spacing-rows` | 行间距数据查询，以及扫描的可见树结构总行数，包含屏外节点 |
+| `model.tree-sibling-branches`、`tree.siblings-scanned` | 未命中缓存时，为叶节点缩进规则扫描同级节点的成本 |
+| `layout.tree-expansion`、`layout.drag-animation`、`layout.row-spacing-animation` | 展开收起或拖动动画每次实际布局更新，不包含帧之间的等待时间 |
+| `callback.signal.expanded`、`callback.signal.collapsed` | 业务同步处理树展开、收起信号的耗时 |
+| `grid.list-lines`、`grid.tree-lines`、`grid.line-hosts`、`grid.lines-recycled` | 分割线控件同步，以及统计窗口内每次同步的控件数量累加和回收数量 |
+| `paint.tree-branches`、`paint.tree-branch-icon`、`callback.branch.paint` | 树分支区域、默认图标和业务自定义分支绘制 |
+
+`items.widget.*` 与单元格对应的 `cells.widget.*` 一样，包含 Qt 操作同步触发的业务 `moveEvent()`、`resizeEvent()`、事件过滤器、样式和信号响应。普通行控件独立收到的异步 `paintEvent()` 不会归入这些阶段；框架背景绘制和业务 branch renderer 则由绘制分类统计。对比滚动性能时，应同时查看 `refresh.relayout`、行控件几何、绑定／回收和绘制耗时，避免把同步业务事件的成本误判为框架几何计算。
 
 `cells.widget.set-geometry`、`show`、`hide`、`raise`、`reparent` 和 `move-offscreen` 按实际控件操作分别统计；`recycler.hide`、`clear-focus`、`reparent` 和 `pool-return` 拆分回收步骤。这些阶段包含相应 Qt 调用同步触发的业务 `resizeEvent()`、事件过滤器、样式更新和信号响应；不应将它们误认为只有框架计算。`layout.horizontal-scroll` 汇总横向滚动处理，`scroll.cell-refresh`、`scroll.cell-refresh-deferred` 和 `scroll.geometry-only` 分别计数立即物化刷新、重入时排队刷新及窗口未变的位置更新，显示在 `Counters` 表中。全部仍在原有统计窗口汇总。
 

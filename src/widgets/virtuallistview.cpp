@@ -146,12 +146,14 @@ QModelIndex VirtualListView::indexAt(const QPoint &viewportPos) const
 
 void VirtualListView::refreshVisualStates()
 {
+    detail::PerformanceScope performance(this, "state.list-all");
     VirtualItemView::refreshVisualStates();
     viewport()->update();
 }
 
 void VirtualListView::refreshVisualState(const QModelIndex &index)
 {
+    detail::PerformanceScope performance(this, "state.list-item");
     VirtualItemView::refreshVisualState(index);
     if (m_visualStateBackgroundVisible)
         viewport()->update();
@@ -163,6 +165,7 @@ void VirtualListView::paintEvent(QPaintEvent *event)
     VirtualItemView::paintEvent(event);
     if (!m_visualStateBackgroundVisible)
         return;
+    detail::PerformanceScope statePerformance(this, "paint.list-state", detail::PerformanceDomain::Paint);
     QPainter painter(viewport());
     for (const MaterializedItem &item : materializedItems()) {
         const qsizetype row = viewItemForIndex(item.index);
@@ -179,6 +182,7 @@ void VirtualListView::paintEvent(QPaintEvent *event)
         const QRect background = visualStateBackgroundRect(item.index, rect);
         if (background.isEmpty())
             continue;
+        statePerformance.count("paint.state-rows");
         painter.setOpacity(state.hoverProgress);
         fillPixelAlignedRoundedRegion(&painter, background, clip, m_visualStateCornerRadius,
                                       hoverBackgroundColor());
@@ -219,6 +223,7 @@ void VirtualListView::configureRowSpacingWidget(QWidget *widget) const
 
 void VirtualListView::afterMaterialize()
 {
+    detail::PerformanceScope performance(this, "list.after-materialize");
     const QPointer<VirtualListView> self(this);
     VirtualItemView::afterMaterialize();
     if (!self)
@@ -261,6 +266,7 @@ void VirtualListView::syncRowGridLines()
             continue;
         }
         it.value()->hide();
+        performance.count("grid.lines-recycled");
         m_rowGridLinePool.append(it.value());
         it = m_rowGridLines.erase(it);
     }
@@ -280,6 +286,7 @@ void VirtualListView::syncRowGridLines()
         line->show();
         line->raise();
     }
+    performance.count("grid.line-hosts", m_rowGridLines.size());
 }
 
 // ---------------------------------------------------------------------------
@@ -344,6 +351,7 @@ QRect VirtualListView::visualRowRect(qsizetype row) const
 
 void VirtualListView::applyDragReorderFrame()
 {
+    detail::PerformanceScope performance(this, "layout.drag-animation");
     if (m_dragReorderFrameActive)
         return;
     const QPointer<VirtualListView> self(this);
@@ -380,7 +388,9 @@ void VirtualListView::applyDragReorderFrame()
             continue;
         QWidget *parent = widget->parentWidget();
         const int parentY = parent && parent != viewport() ? parent->y() : 0;
-        widget->move(widget->x(), visualRowRect(row).y() - parentY);
+        detail::performanceCall(this, "items.widget.move", [&] {
+            widget->move(widget->x(), visualRowRect(row).y() - parentY);
+        });
     }
     if (!isCurrent())
         return;
@@ -400,6 +410,7 @@ bool VirtualListView::updateDragFeedback(const DropTarget &target, const QPoint 
                                         Qt::DropAction action,
                                         const QList<QPersistentModelIndex> &sources)
 {
+    detail::PerformanceScope performance(this, "drag.list-target");
     const auto useIndicator = [this]() {
         clearDragFeedback();
         return false;
@@ -506,6 +517,7 @@ bool VirtualListView::isLayoutParent(const QModelIndex &parent) const
 
 void VirtualListView::setModel(QAbstractItemModel *model)
 {
+    detail::PerformanceScope performance(this, "refresh.list-model");
     const QPointer<VirtualListView> self(this);
     const QPointer<QAbstractItemModel> requestedModel(model);
     clearDragFeedback();
@@ -540,6 +552,7 @@ void VirtualListView::setModel(QAbstractItemModel *model)
 
 void VirtualListView::setRootIndex(const QModelIndex &index)
 {
+    detail::PerformanceScope performance(this, "refresh.list-root");
     if (index == m_rootIndex)
         return;
     if (index.isValid() && index.model() != model()) {

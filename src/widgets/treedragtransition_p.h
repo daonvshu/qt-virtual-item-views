@@ -3,6 +3,7 @@
 #include <virtualitemviews/virtualtreeview.h>
 #include <virtualitemviews/listlayout.h>
 #include "../core/rowdragpreview_p.h"
+#include "../core/performanceprobe_p.h"
 #include "treedragplaceholder_p.h"
 
 #include <QAbstractItemModel>
@@ -172,6 +173,7 @@ public:
     {
         if (!isActive())
             return;
+        detail::PerformanceScope performance(m_view, "layout.tree-drag-ranges");
         const int bottom = m_view->viewport()->height();
         const auto append = [&](qsizetype first, qsizetype end) {
             qsizetype low = first, high = end;
@@ -223,6 +225,7 @@ public:
 
     void applyFrame(bool refreshRanges = false)
     {
+        detail::PerformanceScope performance(m_view, "layout.drag-animation");
         if (m_applying)
             return;
         const QPointer<VirtualTreeView> self(m_view);
@@ -260,7 +263,9 @@ public:
             QWidget *parent = widget->parentWidget();
             const int parentY = parent
                 ? m_view->viewport()->mapFromGlobal(parent->mapToGlobal(QPoint())).y() : 0;
-            widget->move(widget->x(), rowRect(row).y() - parentY);
+            detail::performanceCall(m_view, "items.widget.move", [&] {
+                widget->move(widget->x(), rowRect(row).y() - parentY);
+            });
         }
         if (!current())
             return;
@@ -283,6 +288,7 @@ public:
     bool update(const VirtualItemView::DropTarget &target, const QPoint &position,
                 Qt::DropAction action, const QList<QPersistentModelIndex> &sources)
     {
+        detail::PerformanceScope performance(m_view, "drag.tree-target");
         const auto indicator = [this]() { clear(); return false; };
         if (mode != VirtualTreeView::DragFeedbackMode::RowMoveAnimation
             || action != Qt::MoveAction || sources.isEmpty() || !m_view->model()

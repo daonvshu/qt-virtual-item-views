@@ -4,6 +4,7 @@
 #include <virtualitemviews/listlayout.h>
 #include <virtualitemviews/treevisibilityindex.h>
 #include <virtualitemviews/virtualitemview.h>
+#include "../core/performanceprobe_p.h"
 #include <QEvent>
 #include <QPointer>
 #include <QScrollBar>
@@ -229,10 +230,14 @@ private:
 
     void refresh()
     {
+        detail::PerformanceScope performance(m_view.data(), "layout.tree-expansion");
         const QPointer<TreeExpansionTransition> guard(this);
         ++m_refreshDepth;
-        if (m_header)
-            emit m_header->geometryChanged();
+        if (m_header) {
+            detail::performanceCall(m_view.data(), "callback.signal.tree-header-geometry", [&] {
+                emit m_header->geometryChanged();
+            });
+        }
         if (guard) {
             const auto callback = m_refresh;
             callback();

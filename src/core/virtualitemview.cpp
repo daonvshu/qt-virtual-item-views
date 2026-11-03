@@ -2398,6 +2398,7 @@ void VirtualItemView::syncRowSpacingWidgets(const QVector<VisibleRange> &ranges)
 
 void VirtualItemView::updateRowSpacingVisualGeometry(const std::function<int(qsizetype)> &offset)
 {
+    detail::PerformanceScope performance(this, "layout.row-spacing-animation");
     const QPointer<VirtualItemView> self(this);
     const quint64 modelSerial = m_modelChangeSerial;
     const quint64 spacingSerial = m_rowSpacingStateSerial;
@@ -2446,7 +2447,9 @@ void VirtualItemView::applyItemPaneGeometry(MaterializedItem &item, qsizetype ro
     if (row < 0 || row >= viewItemCount() || geometry.isEmpty()) {
         // A focused row may stay pinned after its tree branch collapses. Keep it
         // alive and focused without painting over the row now occupying its old slot.
-        widget->move(-qMax(1, widget->width()), -qMax(1, widget->height()));
+        detail::performanceCall(this, "items.widget.move-offscreen", [&] {
+            widget->move(-qMax(1, widget->width()), -qMax(1, widget->height()));
+        });
         if (auto *host = dynamic_cast<detail::TransientItemClipHost *>(widget->parentWidget()))
             host->hide();
         return;
@@ -2466,20 +2469,33 @@ void VirtualItemView::applyItemPaneGeometry(MaterializedItem &item, qsizetype ro
         }
     }
     QRect localGeometry = geometry.translated(-origin);
-    detail::prepareTransientItemGeometry(widget, parent, localGeometry,
-        m_layout && m_layout->sizeIndex() ? m_layout->sizeIndex()->sizeOf(row) : geometry.height(),
-        m_layout && m_layout->hasTransientGeometry(), m_layout ? m_layout->itemOpacity(row) : 1.0);
-    if (widget->parentWidget() != parent)
-        reparentPreservingFocus(widget, parent);
+    detail::performanceCall(this, "items.layout.clip-hosts", [&] {
+        detail::prepareTransientItemGeometry(widget, parent, localGeometry,
+            m_layout && m_layout->sizeIndex() ? m_layout->sizeIndex()->sizeOf(row) : geometry.height(),
+            m_layout && m_layout->hasTransientGeometry(), m_layout ? m_layout->itemOpacity(row) : 1.0);
+    });
+    if (widget->parentWidget() != parent) {
+        detail::performanceCall(this, "items.widget.reparent", [&] {
+            reparentPreservingFocus(widget, parent);
+        });
+    }
     if (!widget || widgetForIndex(index) != widget.data())
         return;
-    widget->setGeometry(localGeometry);
+    if (performance.isActive()) {
+        performance.count(widget->geometry() == localGeometry
+            ? "items.geometry-unchanged" : "items.geometry-changed");
+    }
+    detail::performanceCall(this, "items.widget.set-geometry", [&] {
+        widget->setGeometry(localGeometry);
+    });
     if (!widget || widgetForIndex(index) != widget.data())
         return;
-    if (!widget->isVisible())
-        widget->show();
-    if (widget && widgetForIndex(index) == widget.data() && frozen)
-        widget->raise();
+    if (!widget->isVisible()) {
+        detail::performanceCall(this, "items.widget.show", [&] { widget->show(); });
+    }
+    if (widget && widgetForIndex(index) == widget.data() && frozen) {
+        detail::performanceCall(this, "items.widget.raise", [&] { widget->raise(); });
+    }
 }
 
 qsizetype VirtualItemView::visibleItemCount() const
@@ -3031,6 +3047,7 @@ void VirtualItemView::relayout()
         const auto existing = m_itemLookup.constFind(index);
         if (existing != m_itemLookup.constEnd()) {
             item = m_items.at(existing.value());
+            performance.count("items.retained");
         } else {
             item = createItem(index);
             if (abortStalePass())
@@ -3149,7 +3166,9 @@ MaterializedItem VirtualItemView::createItem(const QPersistentModelIndex &index)
         return item;
 
     const qsizetype reuseBefore = m_recycler->reuseCount();
-    QWidget *widget = m_recycler->acquire(item.type);
+    QWidget *widget = detail::performanceCall(this, "items.acquire", [&] {
+        return m_recycler->acquire(item.type);
+    });
     if (!widget)
         return item;
     QPointer<QWidget> guardedWidget(widget);
@@ -3215,7 +3234,9 @@ MaterializedItem VirtualItemView::createItem(const QPersistentModelIndex &index)
         item.widget = nullptr;
         return item;
     }
-    prepareHoverTracking(widget);
+    detail::performanceCall(this, "state.prepare-hover-tracking", [&] {
+        prepareHoverTracking(widget);
+    });
     if (!bindingIsCurrent()) {
         item.widget = nullptr;
         return item;
