@@ -1,6 +1,6 @@
 # VirtualListView 独立能力示例
 
-构建目标：`list_capabilities`。一个进程通过左侧导航切换 18 个基础示例，按需创建页面；检测到 SmoothScrollbar 时额外加入第 19 项平滑滚动示例。下表路径均相对于仓库根目录。
+构建目标：`list_capabilities`。一个进程通过左侧导航切换 19 个基础示例（01–18、20），按需创建页面；检测到 SmoothScrollbar 时额外加入第 19 项平滑滚动示例。下表路径均相对于仓库根目录。
 
 每个编号目录都有自己的 `example.h`、`example.cpp` 和说明。model、adapter、行控件、手柄等代码都在该目录内定义，不引用其他示例或 `examples/common`。重复的小类是有意保留的，便于复制整个目录。每个目录使用独立命名空间，统一编译时不会出现重名冲突。
 
@@ -27,6 +27,7 @@
 | 17 | 屏外保留：按 index / widget 保留和释放控件 | [examples/list_capabilities/17_pinning/example.cpp](17_pinning/example.cpp) / [说明](17_pinning/README.md) |
 | 18 | 运行诊断：统计快照和生命周期日志 | [examples/list_capabilities/18_diagnostics/example.cpp](18_diagnostics/example.cpp) / [说明](18_diagnostics/README.md) |
 | 19（可选） | 平滑滚动：SmoothScrollbar 接入、启停和滚轮步长 | [examples/list_capabilities/19_smooth_scrolling/example.cpp](19_smooth_scrolling/example.cpp) / [说明](19_smooth_scrolling/README.md) |
+| 20 | 外边框与圆角：框架接口、透明角、状态圆角、间距和冻结行 | [examples/list_capabilities/20_borders/example.cpp](20_borders/example.cpp) / [说明](20_borders/README.md) |
 
 ## 构建与启动
 
@@ -36,9 +37,9 @@
 cmake --build <BUILD_DIR> --target list_capabilities --config Debug
 ```
 
-运行构建输出中的 `list_capabilities`，也可通过 `--example 15` 进入指示器拖动页，或通过 `--example 16` 进入行移动动画拖动页。运行前按当前 Qt kit 配置运行库和平台插件。前 18 项只依赖 VirtualItemViews 和 Qt Widgets，不依赖可选图片或滚动组件。
+运行构建输出中的 `list_capabilities`，也可通过 `--example 15` 进入指示器拖动页，通过 `--example 16` 进入行移动动画拖动页，或通过 `--example 20` 进入圆角外框页。运行前按当前 Qt kit 配置运行库和平台插件。01–18、20 章只依赖 VirtualItemViews 和 Qt Widgets，不依赖可选图片或滚动组件。
 
-启用 `VIRTUALITEMVIEWS_EXAMPLES_USE_SMOOTH_SCROLLBAR`（默认开启），并通过 `SmoothScrollbar_DIR` 或 `CMAKE_PREFIX_PATH` 提供与当前 Qt 主版本匹配的 SmoothScrollbar 包后，才会编译并显示第 19 项，可用 `--example 19` 直接进入。未检测到匹配依赖时，不编译该页，导航及命令行范围自动保持为 18 项。
+启用 `VIRTUALITEMVIEWS_EXAMPLES_USE_SMOOTH_SCROLLBAR`（默认开启），并通过 `SmoothScrollbar_DIR` 或 `CMAKE_PREFIX_PATH` 提供与当前 Qt 主版本匹配的 SmoothScrollbar 包后，才会编译并显示第 19 项，可用 `--example 19` 直接进入。未检测到匹配依赖时，只跳过第 19 章，第 20 章编号和命令行入口保持不变。
 
 ## 阅读和复制
 

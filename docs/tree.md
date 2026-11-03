@@ -29,6 +29,7 @@
 | 23 | 屏外保留与编辑生命周期 | [examples/tree_capabilities/23_pinning/example.cpp](../examples/tree_capabilities/23_pinning/example.cpp) |
 | 24 | 统计与生命周期日志 | [examples/tree_capabilities/24_diagnostics/example.cpp](../examples/tree_capabilities/24_diagnostics/example.cpp) |
 | 25（可选） | 平滑滚动（可选） | [examples/tree_capabilities/25_smooth_scrolling/example.cpp](../examples/tree_capabilities/25_smooth_scrolling/example.cpp) |
+| 26 | 外边框与圆角：框架接口、透明角、状态圆角与展开收起 | [examples/tree_capabilities/26_borders/example.cpp](../examples/tree_capabilities/26_borders/example.cpp) |
 
 先看各章的 `Example::setupExample()`，再看本目录的 model、adapter 和节点控件；`setupUi()` 只创建页面布局。普通数据直接创建 `QStandardItemModel` 填充，不为简单数据额外派生模型类。每个目录都有英文代码注释和独立运行入口，构建与启动见 [examples/tree_capabilities/README.md](../examples/tree_capabilities/README.md)。
 
@@ -41,6 +42,8 @@
 ## 绘制与交互
 
 默认 hover／selected 背景在透明行控件和 branch 图标下方绘制。圆角、颜色、范围和动画直接配置函数，见第 13 章；状态不覆盖行间距。分支格宽由 `setIndentation()` 控制，默认图标大小、颜色、替换和隐藏见第 10 章；只有连接线等完全自定义装饰才需要第 11 章的 renderer。
+
+整体圆角和外边框见 [第 26 章](../examples/tree_capabilities/26_borders/README.md)。`setFrameCornerRadius()`、`setFrameBorderWidth()` 和 `setFrameBorderColor()` 统一处理节点、分支和滚动条的外框；`setVisualStateCornerRadius()` 独立控制行状态圆角。页面提供多层树、少量节点、空模型及展开收起操作。
 
 内置图标和三角默认 `Qt::AlignCenter`，padding 全为 0。`setBranchIndicatorAlignment(Qt::Alignment)` 与 `setBranchIndicatorPadding(QMargins)`（或四参数重载）可以调整图标位置和四向留白；图标大小会限制在扣除 padding 后的区域内。点击区域仍是整个分支格，自定义 renderer 不受这些设置影响，可用 `BranchIndicatorRenderer::branchIndicatorTargetRect()` 复用同一套几何计算。
 

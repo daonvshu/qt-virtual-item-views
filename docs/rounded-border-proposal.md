@@ -27,3 +27,10 @@ view->setFrameBorderColor(QColor("#4079ad"));
 运行 `table_capabilities --example 30`。页面直接调用框架接口，支持纯色、渐变和棋盘格背景，以及 200×12、3×3、1×1 和 0×3 数据。可组合表头、行列间距、四边冻结和滚动条策略，检查边缘、空白区及行状态。
 
 [第 30 节操作说明](../examples/table_capabilities/30_borders/README.md)
+
+列表与树也直接使用同一组公共接口，各章拥有独立的 model、adapter 和 `.ui` 页面：
+
+- 列表：`list_capabilities --example 20`，见 [第 20 章源码](../examples/list_capabilities/20_borders/example.cpp) 和 [操作说明](../examples/list_capabilities/20_borders/README.md)，可组合行间距、首末冻结行及少量数据。
+- 树：`tree_capabilities --example 26`，见 [第 26 章源码](../examples/tree_capabilities/26_borders/example.cpp) 和 [操作说明](../examples/tree_capabilities/26_borders/README.md)，可组合分支区域显隐、展开收起及空模型。
+
+两页均可调整外框半径、边框宽度和颜色，以及独立的行状态圆角；可切换纯色、渐变和棋盘格父背景查看透明角，不依赖 SmoothScrollbar。

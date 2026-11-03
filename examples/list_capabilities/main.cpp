@@ -28,37 +28,40 @@
 #ifdef VIV_LIST_HAS_SMOOTH_SCROLLBAR
 #include "19_smooth_scrolling/example.h"
 #endif
+#include "20_borders/example.h"
 
 namespace {
 
 struct ExampleEntry
 {
+    int number;
     const char *title;
     QWidget *(*create)(QWidget *);
 };
 
 const ExampleEntry entries[] = {
-    {u8"01 基础列表", list_basic::createExample},
-    {u8"02 自定义行控件", list_row_widgets::createExample},
-    {u8"03 多种行类型", list_widget_types::createExample},
-    {u8"04 整行数据绑定", list_binding_context::createExample},
-    {u8"05 数据更新", list_model_updates::createExample},
-    {u8"06 行高", list_item_heights::createExample},
-    {u8"07 行间距和分割线", list_row_spacing::createExample},
-    {u8"08 Hover 和选中状态", list_visual_states::createExample},
-    {u8"09 状态关联内容", list_state_content::createExample},
-    {u8"10 选择与当前项", list_selection::createExample},
-    {u8"11 行事件与控件事件", list_item_events::createExample},
-    {u8"12 滚动与定位", list_scrolling::createExample},
-    {u8"13 虚拟化与复用", list_virtualization::createExample},
-    {u8"14 冻结行", list_frozen_rows::createExample},
-    {u8"15 指示器拖动", list_drag_drop::createExample},
-    {u8"16 行移动动画拖动", list_drag_animation::createExample},
-    {u8"17 屏外保留", list_pinning::createExample},
-    {u8"18 运行诊断", list_diagnostics::createExample},
+    {1, u8"01 基础列表", list_basic::createExample},
+    {2, u8"02 自定义行控件", list_row_widgets::createExample},
+    {3, u8"03 多种行类型", list_widget_types::createExample},
+    {4, u8"04 整行数据绑定", list_binding_context::createExample},
+    {5, u8"05 数据更新", list_model_updates::createExample},
+    {6, u8"06 行高", list_item_heights::createExample},
+    {7, u8"07 行间距和分割线", list_row_spacing::createExample},
+    {8, u8"08 Hover 和选中状态", list_visual_states::createExample},
+    {9, u8"09 状态关联内容", list_state_content::createExample},
+    {10, u8"10 选择与当前项", list_selection::createExample},
+    {11, u8"11 行事件与控件事件", list_item_events::createExample},
+    {12, u8"12 滚动与定位", list_scrolling::createExample},
+    {13, u8"13 虚拟化与复用", list_virtualization::createExample},
+    {14, u8"14 冻结行", list_frozen_rows::createExample},
+    {15, u8"15 指示器拖动", list_drag_drop::createExample},
+    {16, u8"16 行移动动画拖动", list_drag_animation::createExample},
+    {17, u8"17 屏外保留", list_pinning::createExample},
+    {18, u8"18 运行诊断", list_diagnostics::createExample},
 #ifdef VIV_LIST_HAS_SMOOTH_SCROLLBAR
-    {u8"19 平滑滚动（SmoothScrollbar）", list_smooth_scrolling::createExample},
+    {19, u8"19 平滑滚动（SmoothScrollbar）", list_smooth_scrolling::createExample},
 #endif
+    {20, u8"20 外边框与圆角", list_borders::createExample},
 };
 
 constexpr int kExampleCount = int(sizeof(entries) / sizeof(entries[0]));
@@ -111,16 +114,23 @@ int main(int argc, char **argv)
     QCommandLineParser parser;
     parser.setApplicationDescription(QStringLiteral("一个进程演示 VirtualListView 的 %1 项能力").arg(kExampleCount));
     parser.addHelpOption();
-    parser.addOption({QStringLiteral("example"), QStringLiteral("启动时选择示例（1–%1）").arg(kExampleCount),
+    parser.addOption({QStringLiteral("example"), QStringLiteral("章节编号（1–18、20；19 需要 SmoothScrollbar）"),
                       QStringLiteral("number"), QStringLiteral("1")});
     parser.process(app);
-    bool ok = false;
-    const int initial = parser.value(QStringLiteral("example")).toInt(&ok);
-    if (!ok || initial < 1 || initial > kExampleCount) {
-        qCritical() << "--example must be between 1 and" << kExampleCount;
+    bool valid = false;
+    const int number = parser.value(QStringLiteral("example")).toInt(&valid);
+    int initial = -1;
+    for (int row = 0; valid && row < kExampleCount; ++row) {
+        if (entries[row].number == number) {
+            initial = row;
+            break;
+        }
+    }
+    if (initial < 0) {
+        qCritical() << "--example must name an available chapter (1-18, 20, optional 19)";
         return 1;
     }
-    Browser browser(initial - 1);
+    Browser browser(initial);
     browser.show();
     return app.exec();
 }

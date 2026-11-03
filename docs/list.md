@@ -23,9 +23,12 @@
 | 17 | 屏外保留：按 index / widget 保留和释放控件 | [examples/list_capabilities/17_pinning/example.cpp](../examples/list_capabilities/17_pinning/example.cpp) |
 | 18 | 运行诊断：统计快照和生命周期日志 | [examples/list_capabilities/18_diagnostics/example.cpp](../examples/list_capabilities/18_diagnostics/example.cpp) |
 | 19（可选） | 平滑滚动：SmoothScrollbar 接入、启停和滚轮步长 | [examples/list_capabilities/19_smooth_scrolling/example.cpp](../examples/list_capabilities/19_smooth_scrolling/example.cpp) |
+| 20 | 外边框与圆角：框架接口、透明角、状态圆角、间距和冻结行 | [examples/list_capabilities/20_borders/example.cpp](../examples/list_capabilities/20_borders/example.cpp) |
 
 阅读时先看 `Example::setupExample()` 中的 `VirtualListView` 配置和信号连接，再看本文件的 adapter 与行控件。`setupUi()` 负责演示页面布局，各目录的 `README.md` 提供该功能的说明和独立运行入口。
 
 Hover 和选中背景默认由框架绘制，普通圆角、颜色和动画直接配置视图接口，行控件保持透明。状态关联控件的显隐与行内事件处理分别参考第 09、11 项。
+
+整体圆角和外边框见 [第 20 章](../examples/list_capabilities/20_borders/README.md)，直接使用 `setFrameCornerRadius()`、`setFrameBorderWidth()` 和 `setFrameBorderColor()`；行状态圆角仍由 `setVisualStateCornerRadius()` 独立配置。
 
 所有示例由一个 `list_capabilities` 程序演示，启动器位于 [examples/list_capabilities/main.cpp](../examples/list_capabilities/main.cpp)。构建、启动和复制方式见 [examples/list_capabilities/README.md](../examples/list_capabilities/README.md)。第 19 项仅在检测到与当前 Qt 主版本匹配的 SmoothScrollbar 时编译和显示。

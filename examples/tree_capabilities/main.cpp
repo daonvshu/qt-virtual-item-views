@@ -35,6 +35,7 @@
 #ifdef VIV_TREE_HAS_SMOOTH_SCROLLBAR
 #include "25_smooth_scrolling/example.h"
 #endif
+#include "26_borders/example.h"
 
 namespace {
 struct Entry { int number; const char *title; QWidget *(*create)(QWidget *); };
@@ -66,6 +67,7 @@ const Entry entries[] = {
 #ifdef VIV_TREE_HAS_SMOOTH_SCROLLBAR
     {25, u8"25 平滑滚动（可选）", tree_smooth_scrolling::createExample},
 #endif
+    {26, u8"26 外边框与圆角", tree_borders::createExample},
 };
 constexpr int kCount = int(sizeof(entries) / sizeof(entries[0]));
 
@@ -115,7 +117,7 @@ int main(int argc, char **argv)
     QCommandLineParser parser;
     parser.setApplicationDescription(QStringLiteral("VirtualTreeView 功能示例"));
     parser.addHelpOption();
-    parser.addOption({QStringLiteral("example"), QStringLiteral("章节编号（1-24；25 需要 SmoothScrollbar）"),
+    parser.addOption({QStringLiteral("example"), QStringLiteral("章节编号（1–24、26；25 需要 SmoothScrollbar）"),
                       QStringLiteral("number"), QStringLiteral("1")});
     parser.addOption({QStringLiteral("exit-after"), QStringLiteral("指定毫秒后退出"), QStringLiteral("ms")});
     parser.process(app);
@@ -129,7 +131,7 @@ int main(int argc, char **argv)
         }
     }
     if (initial < 0) {
-        qCritical() << "--example must name an available chapter (1-24, optional 25)";
+        qCritical() << "--example must name an available chapter (1-24, 26, optional 25)";
         return 1;
     }
     Browser browser(initial);

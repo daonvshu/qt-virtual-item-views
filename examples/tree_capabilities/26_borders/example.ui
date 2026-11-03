@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>TreeBorderExample</class>
+ <widget class="QWidget" name="TreeBorderExample">
+  <layout class="QVBoxLayout" name="pageLayout">
+   <item><widget class="QLabel" name="titleLabel">
+    <property name="text"><string>26 外边框与圆角：直接配置 VirtualTreeView</string></property>
+    <property name="wordWrap"><bool>true</bool></property>
+   </widget></item>
+   <item><layout class="QGridLayout" name="controlsLayout">
+    <item row="0" column="0"><widget class="QLabel" name="backgroundLabel"><property name="text"><string>外部背景</string></property><property name="buddy"><cstring>backgroundCombo</cstring></property></widget></item>
+    <item row="0" column="1" colspan="5"><widget class="QComboBox" name="backgroundCombo">
+     <item><property name="text"><string>纯色</string></property></item>
+     <item><property name="text"><string>渐变</string></property></item>
+     <item><property name="text"><string>棋盘格</string></property></item>
+    </widget></item>
+    <item row="1" column="0"><widget class="QLabel" name="radiusLabel"><property name="text"><string>外框圆角</string></property><property name="buddy"><cstring>radiusSpin</cstring></property></widget></item>
+    <item row="1" column="1"><widget class="QSpinBox" name="radiusSpin"><property name="maximum"><number>40</number></property><property name="value"><number>20</number></property></widget></item>
+    <item row="1" column="2"><widget class="QLabel" name="widthLabel"><property name="text"><string>边框宽度</string></property><property name="buddy"><cstring>widthSpin</cstring></property></widget></item>
+    <item row="1" column="3"><widget class="QSpinBox" name="widthSpin"><property name="maximum"><number>8</number></property><property name="value"><number>2</number></property></widget></item>
+    <item row="1" column="4"><widget class="QLabel" name="colorLabel"><property name="text"><string>边框颜色</string></property><property name="buddy"><cstring>colorCombo</cstring></property></widget></item>
+    <item row="1" column="5"><widget class="QComboBox" name="colorCombo">
+     <item><property name="text"><string>蓝色</string></property></item>
+     <item><property name="text"><string>深灰</string></property></item>
+     <item><property name="text"><string>粉色</string></property></item>
+     <item><property name="text"><string>调色板默认</string></property></item>
+    </widget></item>
+    <item row="2" column="0"><widget class="QLabel" name="stateLabel"><property name="text"><string>状态圆角</string></property><property name="buddy"><cstring>stateRadiusSpin</cstring></property></widget></item>
+    <item row="2" column="1"><widget class="QSpinBox" name="stateRadiusSpin"><property name="maximum"><number>24</number></property><property name="value"><number>6</number></property></widget></item>
+    <item row="2" column="2"><widget class="QLabel" name="dataLabel"><property name="text"><string>数据量</string></property><property name="buddy"><cstring>dataCombo</cstring></property></widget></item>
+    <item row="2" column="3" colspan="3"><widget class="QComboBox" name="dataCombo">
+     <item><property name="text"><string>6 组 × 12 节点（含三级）</string></property></item>
+     <item><property name="text"><string>1 组 + 2 个子节点</string></property></item>
+     <item><property name="text"><string>1 个根节点</string></property></item>
+     <item><property name="text"><string>空模型</string></property></item>
+    </widget></item>
+   </layout></item>
+   <item><layout class="QHBoxLayout" name="togglesLayout">
+    <item><widget class="QCheckBox" name="gapsCheck"><property name="text"><string>行间距</string></property></widget></item>
+    <item><widget class="QCheckBox" name="linesCheck"><property name="text"><string>分割线</string></property><property name="checked"><bool>true</bool></property></widget></item>
+    <item><widget class="QCheckBox" name="branchCheck"><property name="text"><string>显示分支区域</string></property><property name="checked"><bool>true</bool></property></widget></item>
+    <item><widget class="QCheckBox" name="scrollBarsCheck"><property name="text"><string>强制显示竖向滚动条</string></property><property name="checked"><bool>true</bool></property></widget></item>
+   </layout></item>
+   <item><layout class="QHBoxLayout" name="actionsLayout">
+    <item><widget class="QPushButton" name="expandButton"><property name="text"><string>递归展开</string></property></widget></item>
+    <item><widget class="QPushButton" name="collapseButton"><property name="text"><string>全部收起</string></property></widget></item>
+    <item><widget class="QPushButton" name="firstButton"><property name="text"><string>选中首个可见节点</string></property></widget></item>
+    <item><widget class="QPushButton" name="lastButton"><property name="text"><string>选中末个可见节点</string></property></widget></item>
+    <item><spacer name="actionSpacer"><property name="orientation"><enum>Qt::Horizontal</enum></property><property name="sizeHint" stdset="0"><size><width>10</width><height>1</height></size></property></spacer></item>
+   </layout></item>
+   <item><widget class="QLabel" name="hintLabel">
+    <property name="wordWrap"><bool>true</bool></property>
+    <property name="text"><string>外框由框架统一合成，透明角透出外部背景；行状态圆角独立设置。将外框圆角和边框宽度同时设为 0 可关闭外框合成。</string></property>
+   </widget></item>
+   <item><widget class="QWidget" name="previewHost" native="true"><layout class="QVBoxLayout" name="previewLayout"><property name="leftMargin"><number>0</number></property><property name="topMargin"><number>0</number></property><property name="rightMargin"><number>0</number></property><property name="bottomMargin"><number>0</number></property></layout></widget></item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

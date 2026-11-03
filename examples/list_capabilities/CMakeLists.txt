@@ -19,7 +19,12 @@ add_executable(list_capabilities
     16_drag_animation/example.cpp
     17_pinning/example.cpp
     18_diagnostics/example.cpp
+    20_borders/example.cpp
+    20_borders/example.ui
 )
+
+set_target_properties(list_capabilities PROPERTIES AUTOUIC ON)
+
 target_link_libraries(list_capabilities PRIVATE VirtualItemViews Qt${QT_VERSION_MAJOR}::Widgets)
 if(_viv_demo_smooth_enabled AND TARGET SmoothScrollbar::SmoothScrollbar)
     target_sources(list_capabilities PRIVATE 19_smooth_scrolling/example.cpp)

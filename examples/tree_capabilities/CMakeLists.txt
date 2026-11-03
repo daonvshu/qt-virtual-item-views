@@ -25,7 +25,12 @@ add_executable(tree_capabilities
     22_lazy_loading/example.cpp
     23_pinning/example.cpp
     24_diagnostics/example.cpp
+    26_borders/example.cpp
+    26_borders/example.ui
 )
+
+set_target_properties(tree_capabilities PROPERTIES AUTOUIC ON)
+
 target_link_libraries(tree_capabilities PRIVATE VirtualItemViews Qt${QT_VERSION_MAJOR}::Widgets)
 if(_viv_demo_smooth_enabled AND TARGET SmoothScrollbar::SmoothScrollbar)
     target_sources(tree_capabilities PRIVATE 25_smooth_scrolling/example.cpp)
