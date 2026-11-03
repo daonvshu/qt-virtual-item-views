@@ -1,6 +1,6 @@
 # 最小参考程序
 
-`VirtualListView` 功能示例源码路径见 [docs/list.md](../../docs/list.md)，基础接入位于 [examples/list_capabilities/01_basic/example.cpp](../list_capabilities/01_basic/example.cpp)。表格按功能查找见 [docs/table.md](../../docs/table.md)，统一程序为 [table_capabilities](../table_capabilities/README.md)。树的功能示例见 [tree_capabilities](../tree_capabilities/README.md) 和 [源码索引](../../docs/tree.md)。本目录提供树表、流式表格和瀑布流的独立参考程序。
+`VirtualListView` 功能示例源码路径见 [docs/list.md](../../docs/list.md)，基础接入位于 [examples/list_capabilities/01_basic/example.cpp](../list_capabilities/01_basic/example.cpp)。表格按功能查找见 [docs/table.md](../../docs/table.md)，统一程序为 [table_capabilities](../table_capabilities/README.md)。树的功能示例见 [tree_capabilities](../tree_capabilities/README.md) 和 [源码索引](../../docs/tree.md)。树表完整能力导航见 [treetable_capabilities](../treetable_capabilities/README.md) 和 [源码索引](../../docs/tree-table.md)。本目录保留树表的最小参考程序，以及流式表格和瀑布流示例。
 
 每个 `.cpp` 都是一个独立程序入口，只展示一个使用主题。先读入口里的模型、adapter、视图装配顺序，再按 `#include` 阅读对应的控件或模型。没有示例注册器、隐藏初始化流程或可选图片 / 滚动组件。
 

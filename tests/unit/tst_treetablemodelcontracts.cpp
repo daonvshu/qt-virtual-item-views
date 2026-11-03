@@ -1,5 +1,7 @@
 #include <virtualitemviews/tablespan.h>
 #include <virtualitemviews/treevisibilityindex.h>
+#include "../../src/core/rowselection_p.h"
+#include "../../src/core/columnselectioncache_p.h"
 
 #include <QSortFilterProxyModel>
 #include <QStandardItemModel>
@@ -149,6 +151,15 @@ private slots:
     void sortingDoesNotLeaveOverlappingSpans();
     void largeSpanExtentDoesNotOverflowReverseLookup();
     void siblingSpanContinuityTracksExpandedDescendants();
+    void rowSelectionAcrossParents_data();
+    void rowSelectionAcrossParents();
+    void rowSelectionTracksCurrentRangesAndFlags();
+    void columnSelectionSkipsEmptyAndUnrelatedRanges();
+    void columnSelectionCacheTracksSelectionAndVisibleMapping();
+    void columnSelectionCacheKeepsReentrantResult();
+    void flatColumnSelectionCacheTracksFlagsAndStructure();
+    void columnIndexCacheTracksMissingColumnsAndMapping();
+    void columnIndexCacheDoesNotStoreMutatedQuery();
 };
 
 void TestTreeTableModelContracts::expansionFollowsNodeAfterSiblingInsertion()
@@ -504,6 +515,292 @@ void TestTreeTableModelContracts::siblingSpanContinuityTracksExpandedDescendants
     visibility.collapse(second);
     QCOMPARE(visibility.visibleRowForIndex(third) - visibility.visibleRowForIndex(first),
              qsizetype(2));
+}
+
+void TestTreeTableModelContracts::rowSelectionAcrossParents_data()
+{
+    QTest::addColumn<bool>("reverse");
+    QTest::newRow("forward") << false;
+    QTest::newRow("reverse") << true;
+}
+
+void TestTreeTableModelContracts::rowSelectionAcrossParents()
+{
+    QFETCH(bool, reverse);
+    QStandardItemModel model(3, 3);
+    model.setItem(0, 0, new QStandardItem);
+    QStandardItem *root = model.invisibleRootItem();
+    for (int depth = 0; depth < 2; ++depth) {
+        root = root->child(0, 0);
+        root->setColumnCount(3);
+        root->setRowCount(3);
+        root->setChild(0, 0, new QStandardItem);
+    }
+    const QModelIndex branch = model.index(0, 0);
+    const QModelIndex child = model.index(0, 0, branch);
+    const QList<QModelIndex> parents{QModelIndex(), branch, child};
+    QItemSelectionModel selection(&model);
+    QItemSelection ranges;
+    for (int i = 0; i < parents.size(); ++i) {
+        const QModelIndex parent = parents.at(reverse ? parents.size() - 1 - i : i);
+        ranges.select(model.index(0, 0, parent), model.index(1, 2, parent));
+    }
+    selection.select(ranges, QItemSelectionModel::ClearAndSelect);
+
+    for (const QModelIndex &parent : parents) {
+        for (int row = 0; row < 3; ++row) {
+            QCOMPARE(detail::rowIntersectsSelection(&selection, row, parent), row < 2);
+        }
+    }
+
+    selection.select(QItemSelection(model.index(0, 0, branch), model.index(1, 2, branch)),
+                     QItemSelectionModel::Deselect);
+    QVERIFY(!detail::rowIntersectsSelection(&selection, 0, branch));
+    QVERIFY(!detail::rowIntersectsSelection(&selection, 1, branch));
+    QVERIFY(detail::rowIntersectsSelection(&selection, 0, QModelIndex()));
+    QVERIFY(detail::rowIntersectsSelection(&selection, 0, child));
+}
+
+void TestTreeTableModelContracts::rowSelectionTracksCurrentRangesAndFlags()
+{
+    QStandardItemModel model(3, 3);
+    auto *branch = new QStandardItem;
+    branch->setColumnCount(3);
+    branch->setRowCount(2);
+    model.setItem(0, 0, branch);
+    const QModelIndex parent = model.index(0, 0);
+    const QModelIndex cell = model.index(0, 2, parent);
+    QItemSelectionModel selection(&model);
+    selection.select(model.index(1, 0), QItemSelectionModel::Select);
+    // Commit the base selection before replacing the interactive current range.
+    selection.select(QItemSelection(), QItemSelectionModel::Select);
+    selection.select(cell, QItemSelectionModel::Select | QItemSelectionModel::Current);
+    QVERIFY(detail::rowIntersectsSelection(&selection, 1, QModelIndex()));
+    QVERIFY(detail::rowIntersectsSelection(&selection, 0, parent));
+    QVERIFY(!detail::rowIntersectsSelection(&selection, 1, parent));
+
+    const QModelIndex nextCell = model.index(1, 2, parent);
+    selection.select(nextCell, QItemSelectionModel::Select | QItemSelectionModel::Current);
+    QVERIFY(!detail::rowIntersectsSelection(&selection, 0, parent));
+    QVERIFY(detail::rowIntersectsSelection(&selection, 1, parent));
+    selection.select(nextCell, QItemSelectionModel::Deselect);
+    QVERIFY(!detail::rowIntersectsSelection(&selection, 1, parent));
+    QVERIFY(detail::rowIntersectsSelection(&selection, 1, QModelIndex()));
+    selection.select(cell, QItemSelectionModel::Select);
+    QVERIFY(detail::rowIntersectsSelection(&selection, 0, parent));
+    model.itemFromIndex(cell)->setFlags(Qt::ItemIsEnabled);
+    QVERIFY(!detail::rowIntersectsSelection(&selection, 0, parent));
+    model.itemFromIndex(cell)->setFlags(Qt::ItemIsSelectable);
+    QVERIFY(!detail::rowIntersectsSelection(&selection, 0, parent));
+    model.itemFromIndex(cell)->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEnabled);
+    QVERIFY(detail::rowIntersectsSelection(&selection, 0, parent));
+
+    QStandardItemModel foreign(1, 1);
+    QItemSelectionModel noModel;
+    QVERIFY(!detail::rowIntersectsSelection(nullptr, 0, parent));
+    QVERIFY(!detail::rowIntersectsSelection(&noModel, 0, QModelIndex()));
+    QVERIFY(!detail::rowIntersectsSelection(&selection, 0, foreign.index(0, 0)));
+    QVERIFY(!detail::rowIntersectsSelection(&selection, -1, parent));
+    QVERIFY(!detail::rowIntersectsSelection(&selection, 2, parent));
+    selection.clearSelection();
+    QVERIFY(!detail::rowIntersectsSelection(&selection, 0, parent));
+}
+
+void TestTreeTableModelContracts::columnSelectionSkipsEmptyAndUnrelatedRanges()
+{
+    QStandardItemModel model(3, 3);
+    detail::ColumnSelectionCache cache;
+    int queries = 0;
+    const auto query = [&]() { ++queries; return true; };
+    QVERIFY(!cache.isSelected(0, QItemSelection(), 1000000, 1, 1, query));
+    QCOMPARE(queries, 0);
+
+    const QItemSelection selected(model.index(0, 1), model.index(2, 1));
+    QVERIFY(!cache.isSelected(0, selected, 1000000, 1, 1, query));
+    QVERIFY(!cache.isSelected(2, selected, 1000000, 1, 1, query));
+    QCOMPARE(queries, 0);
+    QVERIFY(cache.isSelected(1, selected, 3, 1, 1, query));
+    QCOMPARE(queries, 1);
+}
+
+void TestTreeTableModelContracts::columnSelectionCacheTracksSelectionAndVisibleMapping()
+{
+    QStandardItemModel model(3, 3);
+    QItemSelection selected(model.index(0, 0), model.index(2, 2));
+    detail::ColumnSelectionCache cache;
+    int queries = 0;
+    bool covered = true;
+    const auto query = [&]() { ++queries; return covered; };
+    QVERIFY(cache.isSelected(0, selected, 3, 1, 1, query));
+    QVERIFY(cache.isSelected(1, selected, 3, 1, 1, query));
+    QCOMPARE(queries, 2);
+    for (int scroll = 0; scroll < 100; ++scroll) {
+        QVERIFY(cache.isSelected(0, selected, 3, 1, 1, query));
+        QVERIFY(cache.isSelected(1, selected, 3, 1, 1, query));
+    }
+    QCOMPARE(queries, 2);
+
+    covered = false;
+    // A new visible node invalidates a previously selected column.
+    QVERIFY(!cache.isSelected(0, selected, 4, 1, 2, query));
+    QCOMPARE(queries, 3);
+    QVERIFY(!cache.isSelected(0, selected, 4, 1, 2, query));
+    QCOMPARE(queries, 3);
+    // A root, sort or identity change can preserve the visible row count.
+    QVERIFY(!cache.isSelected(0, selected, 4, 1, 3, query));
+    QCOMPARE(queries, 4);
+    QVERIFY(!cache.isSelected(0, selected, 3, 1, 3, query));
+    QCOMPARE(queries, 5);
+    QVERIFY(!cache.isSelected(0, selected, 3, 2, 3, query));
+    QCOMPARE(queries, 6);
+
+    selected = QItemSelection(model.index(0, 0), model.index(0, 2));
+    QVERIFY(!cache.isSelected(0, selected, 3, 2, 3, query));
+    QCOMPARE(queries, 7);
+    QVERIFY(!cache.isSelected(0, QItemSelection(), 3, 2, 3, query));
+    QCOMPARE(queries, 7);
+    covered = true;
+    QVERIFY(cache.isSelected(0, selected, 3, 2, 3, query));
+    QCOMPARE(queries, 8);
+}
+
+void TestTreeTableModelContracts::columnSelectionCacheKeepsReentrantResult()
+{
+    QStandardItemModel model(2, 1);
+    const QItemSelection selected(model.index(0, 0), model.index(1, 0));
+    detail::ColumnSelectionCache cache;
+    bool nestedResult = true;
+    QVERIFY(cache.isSelected(0, selected, 2, 1, 1, [&]() {
+        nestedResult = cache.isSelected(0, selected, 2, 1, 2, []() { return false; });
+        return true;
+    }));
+    QVERIFY(!nestedResult);
+    int queries = 0;
+    QVERIFY(!cache.isSelected(0, selected, 2, 1, 2, [&]() { ++queries; return true; }));
+    QCOMPARE(queries, 0);
+}
+
+void TestTreeTableModelContracts::flatColumnSelectionCacheTracksFlagsAndStructure()
+{
+    QStandardItemModel model(4, 2);
+    detail::ColumnSelectionCache cache(&model);
+    QItemSelectionModel selection(&model);
+    int queries = 0;
+    const auto selected = [&]() {
+        return cache.isSelected(0, selection.selection(), model.rowCount(), 1, 0, [&]() {
+            ++queries;
+            return selection.isColumnSelected(0);
+        });
+    };
+    selection.select(QItemSelection(model.index(0, 0), model.index(3, 0)),
+                     QItemSelectionModel::Select);
+    for (int refresh = 0; refresh < 100; ++refresh)
+        QVERIFY(selected());
+    QCOMPARE(queries, 1);
+
+    QItemSelection partial(model.index(0, 0), model.index(1, 0));
+    partial.select(model.index(3, 0), model.index(3, 0));
+    selection.select(partial, QItemSelectionModel::ClearAndSelect);
+    QVERIFY(!selected());
+    QCOMPARE(queries, 2);
+    // Flags can change the result without changing the selection or row count.
+    model.itemFromIndex(model.index(2, 0))->setSelectable(false);
+    QVERIFY(selected());
+    QCOMPARE(queries, 3);
+    model.itemFromIndex(model.index(2, 0))->setSelectable(true);
+    QVERIFY(!selected());
+    QCOMPARE(queries, 4);
+
+    selection.select(model.index(2, 0), QItemSelectionModel::Select);
+    QVERIFY(selected());
+    QCOMPARE(queries, 5);
+    model.insertRow(4);
+    QVERIFY(!selected());
+    QCOMPARE(queries, 6);
+    selection.select(model.index(4, 0), QItemSelectionModel::Select);
+    QVERIFY(selected());
+    QCOMPARE(queries, 7);
+    model.sort(0);
+    QVERIFY(selected());
+    QCOMPARE(queries, 8);
+    model.clear();
+    QVERIFY(!selected());
+    QCOMPARE(queries, 8);
+}
+
+void TestTreeTableModelContracts::columnIndexCacheTracksMissingColumnsAndMapping()
+{
+    QStandardItemModel model;
+    auto *parent = new QStandardItem(QStringLiteral("parent"));
+    parent->appendRow({new QStandardItem(QStringLiteral("child")),
+                       new QStandardItem(QStringLiteral("detail"))});
+    model.appendRow(parent);
+    detail::ColumnSelectionCache cache(&model);
+    int visits = 0;
+    quint64 mapping = 1;
+    QVector<QModelIndex> nodes{model.index(0, 0), parent->child(0)->index()};
+    const auto indexForColumn = [&](int column) {
+        return cache.indexForColumn(column, nodes.size(), 1, mapping, [&]() {
+            for (const QModelIndex &node : nodes) {
+                ++visits;
+                const QModelIndex cell = model.index(node.row(), column, node.parent());
+                if (cell.isValid())
+                    return cell;
+            }
+            return QModelIndex();
+        });
+    };
+    const QModelIndex childColumn = parent->child(0, 1)->index();
+    for (int refresh = 0; refresh < 100; ++refresh) {
+        QCOMPARE(indexForColumn(1), childColumn);
+        QVERIFY(!indexForColumn(2).isValid());
+    }
+    QCOMPARE(visits, 4);
+
+    // Selection changes must not invalidate representative column identities.
+    const QItemSelection selected(childColumn, childColumn);
+    QVERIFY(cache.isSelected(1, selected, nodes.size(), 1, mapping, []() { return true; }));
+    QCOMPARE(indexForColumn(1), childColumn);
+    QCOMPARE(visits, 4);
+
+    nodes = {model.index(0, 0)};
+    ++mapping;
+    QVERIFY(!indexForColumn(1).isValid());
+    QCOMPARE(visits, 5);
+    nodes.append(parent->child(0)->index());
+    ++mapping;
+    QCOMPARE(indexForColumn(1), childColumn);
+    QCOMPARE(visits, 7);
+    QVERIFY(!indexForColumn(2).isValid());
+    QCOMPARE(visits, 9);
+
+    // A new child column invalidates even a previously cached missing result.
+    parent->setChild(0, 2, new QStandardItem(QStringLiteral("extra")));
+    QCOMPARE(indexForColumn(2), parent->child(0, 2)->index());
+    QCOMPARE(visits, 11);
+    model.clear();
+    nodes.clear();
+    QVERIFY(!indexForColumn(1).isValid());
+}
+
+void TestTreeTableModelContracts::columnIndexCacheDoesNotStoreMutatedQuery()
+{
+    QStandardItemModel model(1, 1);
+    detail::ColumnSelectionCache cache(&model);
+    const quint64 revision = cache.modelRevision();
+    cache.indexForColumn(0, 1, 1, 0, [&]() {
+        const QModelIndex oldIndex = model.index(0, 0);
+        model.clear();
+        return oldIndex;
+    });
+    QVERIFY(cache.modelRevision() != revision);
+    int queries = 0;
+    // Use the old context deliberately to verify mutation invalidates the query.
+    QVERIFY(!cache.indexForColumn(0, 1, 1, 0, [&]() {
+        ++queries;
+        return QModelIndex();
+    }).isValid());
+    QCOMPARE(queries, 1);
 }
 
 QTEST_APPLESS_MAIN(TestTreeTableModelContracts)

@@ -282,6 +282,13 @@ void VirtualHeaderView::paintEvent(QPaintEvent *event)
                            m_gridLinePlacement == GridLinePlacement::SpacingCenter);
         }
     }
+    if (m_sectionSeparatorsVisible) {
+        painter.setOpacity(1.0);
+        for (int edge : rowDragPlaceholderTrailingEdges())
+            fillHorizontalPixelLines(&painter,
+                {QRect(0, edge - m_sectionSeparatorWidth, width(), m_sectionSeparatorWidth)},
+                m_sectionSeparatorWidth, sectionColor, true);
+    }
 }
 
 QRect VirtualHeaderView::sectionPaintRect(int logicalIndex) const
@@ -1407,6 +1414,10 @@ void VirtualHeaderView::positionSections()
         return;
     if (m_dragging) {
         positionDraggedSections();
+        // Gap borders belong to this parent, not the moving section widgets.
+        // Repaint the strip so each preview frame also clears their old positions.
+        if (!isHorizontal())
+            update();
         notifyVisualGeometry();
         return;
     }
@@ -1550,6 +1561,7 @@ int VirtualHeaderView::dragTargetIndex() const
 
 void VirtualHeaderView::positionDraggedSections()
 {
+    m_rowDragGapEdges.clear();
     if (!m_geometry || m_dragSection < 0)
         return;
     const PackedOrder shown = packedOrder();
@@ -1561,6 +1573,9 @@ void VirtualHeaderView::positionDraggedSections()
     if (to != m_previewSlot)
         restartDragPreviewTween(to);
 
+    QVector<int> rowSlots;
+    if (!isHorizontal())
+        rowSlots.reserve(m_sectionWidgets.size());
     for (auto it = m_sectionWidgets.constBegin(); it != m_sectionWidgets.constEnd(); ++it) {
         const int logical = it.key();
         QWidget *widget = it.value();
@@ -1570,12 +1585,14 @@ void VirtualHeaderView::positionDraggedSections()
             continue;
         }
         const int width = m_geometry->sectionSize(logical);
+        const int packed = logical == m_dragSection ? from : shown.indexOf(logical);
+        if (!isHorizontal())
+            rowSlots.append(packed);
         int target = committed;
         if (logical == m_dragSection) {
             // The picked up section follows the pointer, keeping the grab offset.
             target = committed + (m_dragCurrentPos - m_dragStartPos);
         } else {
-            const int packed = shown.indexOf(logical);
             if (packed >= 0 && to >= 0) {
                 if (from < to && packed > from && packed <= to)
                     target = committed - draggedSize; // the gap closes behind it
@@ -1626,6 +1643,63 @@ void VirtualHeaderView::positionDraggedSections()
     } else if (m_dragLeadingSeparator) {
         m_dragLeadingSeparator->hide();
     }
+    if (!isHorizontal())
+        updateRowDragPlaceholderTrailingEdges(shown, from, to, rowSlots);
+}
+
+QVector<int> VirtualHeaderView::rowDragPlaceholderTrailingEdges() const
+{
+    return m_dragging ? m_rowDragGapEdges : QVector<int>();
+}
+
+void VirtualHeaderView::updateRowDragPlaceholderTrailingEdges(const PackedOrder &shown,
+                                                             int from, int to,
+                                                             const QVector<int> &packedSlots)
+{
+    m_rowDragGapEdges.clear();
+    const int extent = m_geometry->sectionSize(m_dragSection);
+    const auto position = [&](int logical, int packed) {
+        if (const QWidget *widget = m_sectionWidgets.value(logical)) {
+            if (widget->isVisible() && widget->parentWidget() == this)
+                return axisPosOf(widget);
+        }
+        // A neighbour just outside the materialized range still bounds a visible gap.
+        int target = sectionPos(logical);
+        if (from < to && packed > from && packed <= to)
+            target -= extent;
+        else if (from > to && packed >= to && packed < from)
+            target += extent;
+        const auto start = m_previewFrom.constFind(logical);
+        return start != m_previewFrom.constEnd() && m_previewProgress < 1.0
+            ? start.value() + qRound(qreal(target - start.value()) * m_previewProgress) : target;
+    };
+    const auto appendBefore = [&](int packed) {
+        const int following = shown.at(packed);
+        if (following == m_dragSection)
+            return;
+        int previousSlot = packed - 1;
+        if (shown.at(previousSlot) == m_dragSection)
+            --previousSlot;
+        const int previous = shown.at(previousSlot);
+        const qint64 top = previous >= 0
+            ? qint64(position(previous, previousSlot)) + m_geometry->sectionSize(previous)
+                + sectionSpacingAfter(previous)
+            : sectionPos(shown.at(0));
+        const int last = shown.at(shown.size() - 1);
+        const qint64 bottom = following >= 0 ? position(following, packed)
+            : qint64(sectionPos(last)) + m_geometry->sectionSize(last) + sectionTrailingEdgeSpacing(last);
+        if (bottom > top && bottom > 0 && bottom <= height())
+            m_rowDragGapEdges.append(int(bottom));
+    };
+    for (int packed : packedSlots) {
+        if (packed >= 0)
+            appendBefore(packed);
+    }
+    if (m_trailingSectionSeparatorVisible)
+        appendBefore(shown.size());
+    std::sort(m_rowDragGapEdges.begin(), m_rowDragGapEdges.end());
+    m_rowDragGapEdges.erase(std::unique(m_rowDragGapEdges.begin(), m_rowDragGapEdges.end()),
+                           m_rowDragGapEdges.end());
 }
 
 void VirtualHeaderView::restartDragPreviewTween(int packedSlot)

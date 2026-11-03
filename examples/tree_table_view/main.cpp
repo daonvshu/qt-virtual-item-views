@@ -324,18 +324,6 @@ int main(int argc, char **argv)
                          }
                      });
 
-    gridToolbar->addWidget(new QLabel(QStringLiteral("横线范围: "), &window));
-    auto *lineExtent = new QComboBox(&window);
-    lineExtent->addItems({QStringLiteral("仅节点"), QStringLiteral("节点及图标"),
-                          QStringLiteral("整行")});
-    lineExtent->setCurrentIndex(int(view.rowGridLineExtent()));
-    gridToolbar->addWidget(lineExtent);
-    QObject::connect(lineExtent, QOverload<int>::of(&QComboBox::currentIndexChanged),
-                     &view, [&view](int choice) {
-                         view.setRowGridLineExtent(
-                             static_cast<viv::VirtualTreeTableView::RowGridLineExtent>(choice));
-                     });
-
     window.addToolBarBreak();
     auto *stateToolbar = window.addToolBar(QStringLiteral("状态背景"));
     window.resize(1100, 560);

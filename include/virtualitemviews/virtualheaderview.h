@@ -362,6 +362,9 @@ private:
     /// follows the pointer, the others open / close the gap - all of it visual
     /// geometry, the committed order is not touched before the release (§22/§23).
     void positionDraggedSections();
+    /// Row-header-local trailing edges of gaps opened by the current drag preview.
+    /// Uses animated neighbours and omits the lifted section itself.
+    QVector<int> rowDragPlaceholderTrailingEdges() const;
     /// (Re)starts the "make room" tween when the insertion slot changes: every section
     /// keeps the position it has right now as its start and eases to its new slot with
     /// the same curve and duration as every other header animation (§23).
@@ -421,6 +424,9 @@ private:
         }
     };
     PackedOrder packedOrder() const;
+    /// Records visible gap boundaries using the order and slots already visited this frame.
+    void updateRowDragPlaceholderTrailingEdges(const PackedOrder &shown, int from, int to,
+                                               const QVector<int> &packedSlots);
     /// True when this widget shows \a logicalIndex at all.
     bool showsSection(int logicalIndex) const;
     int sectionAt(const QPoint &pos) const;
@@ -512,6 +518,8 @@ private:
     int m_dragStartPos = 0;
     int m_dragCurrentPos = 0;
     bool m_dragging = false;
+    /// Gap boundaries shared by the row-number strip and the following table body.
+    QVector<int> m_rowDragGapEdges;
     /// Preview easing (§22/§23): the sections that make room tween to their slot instead
     /// of teleporting. Same curve (OutCubic) and duration as the other header
     /// animations; the animation also runs while the pointer stands still, so the

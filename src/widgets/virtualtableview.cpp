@@ -4,6 +4,8 @@
 #include "../core/pixelalignedlines_p.h"
 #include "../core/datastreamversion_p.h"
 #include "../core/rowdragpreview_p.h"
+#include "../core/rowselection_p.h"
+#include "../core/columnselectioncache_p.h"
 #include "../core/wheeleventforwarding_p.h"
 
 #include <virtualitemviews/virtualheaderview.h>
@@ -649,7 +651,9 @@ private:
 } // namespace
 
 VirtualTableView::VirtualTableView(QWidget *parent)
-    : VirtualItemView(parent), m_dragRowPreview(new RowDragPreview)
+    : VirtualItemView(parent),
+      m_columnSelectionCache(std::make_shared<detail::ColumnSelectionCache>()),
+      m_dragRowPreview(new RowDragPreview)
 {
     setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
     setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
@@ -1121,22 +1125,76 @@ VirtualItemView::VisualState VirtualTableView::headerVisualState(Qt::Orientation
             VisualStateChannel::RowHeader).selectedProgress;
         return state;
     } else if (logicalIndex < columnCount() && viewItemCount() > 0) {
-        QModelIndex index = viewIndex(0, logicalIndex);
-        // A tree column can exist only below nodes whose parents expose fewer columns.
-        if (!index.isValid() && managesVisibleRows()) {
-            for (qsizetype row = 1; row < viewItemCount() && !index.isValid(); ++row)
-                index = viewIndex(row, logicalIndex);
-        }
+        const qsizetype count = viewItemCount();
+        const quint64 modelSerial = modelChangeSerial();
+        const quint64 mappingSerial = viewMappingSerial();
+        const QPointer<const VirtualTableView> guard(this);
+        // Retain the cache across model callbacks that may destroy the view.
+        const auto cache = m_columnSelectionCache;
+        const quint64 revision = cache->modelRevision();
+        const auto current = [guard, cache, modelSerial, mappingSerial, revision]() {
+            return guard && guard->m_columnSelectionCache == cache
+                && guard->model() == cache->model()
+                && guard->modelChangeSerial() == modelSerial
+                && guard->viewMappingSerial() == mappingSerial
+                && cache->modelRevision() == revision;
+        };
+        if (!current())
+            return VisualState();
+        const QModelIndex index = cache->indexForColumn(logicalIndex, count, modelSerial,
+                                                        mappingSerial, [&]() {
+            detail::PerformanceScope performance(this, "state.column-index");
+            const qsizetype limit = managesVisibleRows() ? count : 1;
+            // A tree column can exist only below parents with fewer columns.
+            for (qsizetype row = 0; row < limit; ++row) {
+                if (!current())
+                    return QModelIndex();
+                const QModelIndex cell = viewIndex(row, logicalIndex);
+                if (!current())
+                    return QModelIndex();
+                if (cell.isValid())
+                    return cell;
+            }
+            return QModelIndex();
+        });
+        if (!current())
+            return VisualState();
         if (!index.isValid())
             return state;
-        if (!managesVisibleRows()) {
-            state.selected = selectionModel()
-                && selectionModel()->isColumnSelected(logicalIndex, QModelIndex());
-        } else if (selectionModel()) {
-            QItemSelection remaining = headerSelectionRange(orientation, logicalIndex, logicalIndex);
-            const bool hasCells = !remaining.isEmpty();
-            remaining.merge(selectionModel()->selection(), QItemSelectionModel::Deselect);
-            state.selected = hasCells && remaining.isEmpty();
+        if (selectionModel()) {
+            const QItemSelection selected = selectionModel()->selection();
+            const QPointer<QItemSelectionModel> activeSelection(selectionModel());
+            const auto selectionCurrent = [&]() {
+                return current() && activeSelection && guard->selectionModel() == activeSelection;
+            };
+            state.selected = cache->isSelected(logicalIndex, selected, count, modelSerial,
+                                               mappingSerial, [&]() {
+                detail::PerformanceScope performance(this, "state.column-selection");
+                // Preserve Qt's selectable/enabled semantics for flat tables.
+                if (!managesVisibleRows())
+                    return activeSelection->isColumnSelected(logicalIndex, QModelIndex());
+                bool hasCells = false;
+                for (qsizetype row = 0; row < count; ++row) {
+                    if (!selectionCurrent())
+                        return false;
+                    const QModelIndex cell = viewIndex(row, logicalIndex);
+                    if (!selectionCurrent())
+                        return false;
+                    if (!cell.isValid())
+                        continue;
+                    hasCells = true;
+                    // A partial selection ends at the first uncovered node.
+                    const bool covered = std::any_of(selected.cbegin(), selected.cend(),
+                        [&cell](const QItemSelectionRange &range) {
+                            return range.model() == cell.model() && range.contains(cell);
+                        });
+                    if (!covered)
+                        return false;
+                }
+                return hasCells;
+            });
+            if (!selectionCurrent() || activeSelection->selection() != selected)
+                return VisualState();
         }
         // All pane clones use the same identity, independent of the scrolled rows.
         state.selectedProgress = animatedVisualState(index, false, state.selected,
@@ -1408,6 +1466,8 @@ void VirtualTableView::setModel(QAbstractItemModel *model)
     if (previous)
         disconnect(previous, nullptr, this, nullptr);
 
+    // Invalidate before model signals can invoke the kernel's refresh callbacks.
+    m_columnSelectionCache = std::make_shared<detail::ColumnSelectionCache>(model);
     const quint64 previousChangeSerial = modelChangeSerial();
     VirtualItemView::setModel(model);
     if (!self || modelChangeSerial() != previousChangeSerial + 1)
@@ -5161,8 +5221,8 @@ VirtualItemView::VisualState VirtualTableView::visualState(const QModelIndex &in
     const QModelIndex hovered = hoveredIndex();
     const bool hoveredRow = hovered.isValid() && hovered.parent() == index.parent()
         && hovered.row() == index.row();
-    const bool selectedRow = selectionModel()
-        && selectionModel()->rowIntersectsSelection(index.row(), index.parent());
+    const bool selectedRow = detail::rowIntersectsSelection(selectionModel(), index.row(),
+                                                          index.parent());
     return animatedVisualState(index.siblingAtColumn(0), hoveredRow, selectedRow);
 }
 
@@ -5277,6 +5337,60 @@ void VirtualTableView::paintRowSpacingBackground(QPainter *painter, const QRect 
     }
 }
 
+QRect VirtualTableView::rowVisualStateColumnBounds(const QVector<TablePane> &panes) const
+{
+    int first = -1;
+    int terminal = -1;
+    for (const TablePane &pane : panes) {
+        if (!pane.logicalColumns.isEmpty()) {
+            if (first < 0)
+                first = pane.logicalColumns.first();
+            terminal = pane.logicalColumns.last();
+        }
+    }
+    if (first < 0)
+        return QRect();
+    // Shape bounds retain the real row ends; only the paint clip follows the viewport.
+    // Use the outer panes so scrolling columns cannot move a frozen row edge.
+    const int left = m_panes.columnViewportX(first)
+        - m_panes.leadingSpacingForPane(m_panes.paneIndexOfColumn(first));
+    const qint64 right = qMin<qint64>(std::numeric_limits<int>::max(),
+        qint64(m_panes.columnViewportX(terminal)) + m_columns->sectionSize(terminal)
+            + m_panes.trailingSpacingForPane(m_panes.paneIndexOfColumn(terminal)));
+    const int width = int(qBound<qint64>(qint64(0), right - left,
+                                       qint64(std::numeric_limits<int>::max())));
+    return QRect(left, 0, width, viewport()->height());
+}
+
+QRegion VirtualTableView::rowVisualStateColumnGaps(const QVector<TablePane> &panes) const
+{
+    int terminal = -1;
+    for (const TablePane &pane : panes) {
+        if (!pane.logicalColumns.isEmpty())
+            terminal = pane.logicalColumns.last();
+    }
+    QRegion gaps;
+    for (int paneIndex = 0; paneIndex < panes.size(); ++paneIndex) {
+        const TablePane &pane = panes.at(paneIndex);
+        for (int logical : pane.logicalColumns) {
+            if (logical == terminal)
+                continue;
+            const ColumnGeometry column = columnGeometry(logical);
+            int x = column.viewportX;
+            columnVisualX(logical, &x);
+            // Pane boundaries replace a full inter-column gap with two owned halves.
+            // The trailing half is painted by a host; the next pane's leading half
+            // stays in the viewport layer. Never exclude space without a matching host.
+            const int spacing = m_panes.columnSpacingAfter(logical)
+                + (logical == pane.logicalColumns.last()
+                    ? m_panes.trailingSpacingForPane(paneIndex) : 0);
+            gaps += QRect(x + column.width, 0, spacing, viewport()->height())
+                .intersected(pane.viewportRect);
+        }
+    }
+    return gaps;
+}
+
 void VirtualTableView::paintVisualStateBackgrounds(QPainter *target, const QRect &dirtyRect,
                                                  bool paintColumnSpacing) const
 {
@@ -5285,46 +5399,12 @@ void VirtualTableView::paintVisualStateBackgrounds(QPainter *target, const QRect
     if (paintColumnSpacing && (!m_visualStateBackgroundVisible
         || !m_visualStateThroughColumnSpacing || !rowScope || dirtyRect.isEmpty()))
         return;
-    // Gap hosts already clip to their panes, including the trailing gap at a pane boundary.
-    const QRegion content = paintColumnSpacing || rowScope
-        ? QRegion(viewport()->rect()) : columnContentRegion();
-    QRegion columnGaps;
+    // Retain real half gaps, but leave unoccupied space before a right-frozen pane clear.
+    const QRegion content = columnContentRegion(paintColumnSpacing || rowScope);
     const auto currentPanes = panes();
-    int first = -1;
-    int terminal = -1;
-    for (const TablePane &pane : currentPanes) {
-        if (!pane.logicalColumns.isEmpty()) {
-            if (first < 0)
-                first = pane.logicalColumns.first();
-            terminal = pane.logicalColumns.last();
-        }
-    }
-    // Shape bounds retain the real row ends; only the paint clip follows the viewport.
-    // Use the outer panes so scrolling columns cannot move a frozen row edge.
-    int rowLeft = 0;
-    int rowWidth = 0;
-    if (rowScope && first >= 0) {
-        rowLeft = m_panes.columnViewportX(first)
-            - m_panes.leadingSpacingForPane(m_panes.paneIndexOfColumn(first));
-        const qint64 right = qMin<qint64>(std::numeric_limits<int>::max(),
-            qint64(m_panes.columnViewportX(terminal)) + m_columns->sectionSize(terminal)
-                + m_panes.trailingSpacingForPane(m_panes.paneIndexOfColumn(terminal)));
-        rowWidth = int(qBound<qint64>(qint64(0), right - rowLeft,
-                                     qint64(std::numeric_limits<int>::max())));
-    }
-    if (rowScope && !paintColumnSpacing) {
-        for (const TablePane &pane : currentPanes) {
-            for (int logical : pane.logicalColumns) {
-                if (logical == terminal)
-                    continue;
-                const ColumnGeometry column = columnGeometry(logical);
-                int x = column.viewportX;
-                columnVisualX(logical, &x);
-                columnGaps += QRect(x + column.width, 0, m_panes.columnSpacingAfter(logical), viewport()->height())
-                    .intersected(pane.viewportRect);
-            }
-        }
-    }
+    const QRect rowBounds = rowScope ? rowVisualStateColumnBounds(currentPanes) : QRect();
+    const QRegion columnGaps = rowScope && !paintColumnSpacing
+        ? rowVisualStateColumnGaps(currentPanes) : QRegion();
     QPainter &painter = *target;
     const auto paint = [&](const QModelIndex &index, const QRect &rect, const QRect &pane,
                            int bottomInsetPixels) {
@@ -5356,7 +5436,7 @@ void VirtualTableView::paintVisualStateBackgrounds(QPainter *target, const QRect
                 QRect rect = geometryForViewRow(row);
                 int y = rect.y();
                 rowVisualY(row, &y);
-                rect = QRect(rowLeft, y, rowWidth, rect.height());
+                rect = QRect(rowBounds.x(), y, rowBounds.width(), rect.height());
                 rect = stateBackgroundRectWithRowSpacing(rect, row, row);
                 // A bottom border occupies the row body only when no trailing gap exists.
                 // Reserve the same physical band across actual columns and empty space.
@@ -6198,6 +6278,29 @@ void VirtualTableView::syncRowGridLines()
             }
         }
     }
+    if (m_horizontalGridLinesVisible && draggedRow >= 0) {
+        const auto *strip = visualRowStrip(draggedRow);
+        if (strip) {
+            QRegion covered;
+            for (const QRect &rect : desired)
+                covered += rect;
+            for (const QRect &rect : rowSpacingWidgetRectsInView())
+                covered += rect;
+            qsizetype key = -1;
+            const QRect pane = draggedPane.translated(viewportRect.topLeft());
+            for (int edge : strip->rowDragPlaceholderTrailingEdges()) {
+                const QRect line(viewportRect.x(), strip->y() + edge - m_horizontalGridLineWidth,
+                                 viewportRect.width(), m_horizontalGridLineWidth);
+                const QRect clipped = line.intersected(pane).intersected(contentBounds);
+                if (clipped.isEmpty() || isRowGridLineCoveredByPaneSeparator(clipped))
+                    continue;
+                const QRegion missing = QRegion(clipped).subtracted(covered);
+                for (const QRect &part : missing)
+                    desired.insert(key--, part);
+                covered += missing;
+            }
+        }
+    }
     if (m_dragRowPreview->isActive()) {
         if (managesVisibleRows() && m_horizontalGridLinesVisible) {
             QVector<qsizetype> rows = m_dragPreviewRows;
@@ -6279,7 +6382,8 @@ void VirtualTableView::syncRowGridLines()
         }
         QPalette colors = line->palette();
         QColor fadedColor = color;
-        const qsizetype styleRow = it.key() < 0 ? m_dragRowPreview->source() : it.key();
+        const qsizetype styleRow = it.key() < 0
+            ? (draggedRow >= 0 ? draggedRow : m_dragRowPreview->source()) : it.key();
         fadedColor.setAlphaF(color.alphaF() * m_rowLayout->itemOpacity(styleRow));
         colors.setColor(QPalette::Window, fadedColor);
         line->setPalette(colors);

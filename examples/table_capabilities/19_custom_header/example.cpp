@@ -9,18 +9,18 @@
 #include <QTabWidget>
 #include <QHBoxLayout>
 #include <QVBoxLayout>
-#include <virtualitemviews/headerwidgetadapter.h>
+#include <virtualitemviews/styledheadersection.h>
 #include <QPointer>
 
 namespace table_custom_header {
 
-class HeaderSection : public QWidget
+// Keep the framework's panel, state backgrounds and separators around child widgets.
+class HeaderSection : public viv::StyledHeaderSection
 {
 public:
-    explicit HeaderSection(QWidget *parent) : QWidget(parent) { setupUi(); }
+    explicit HeaderSection(QWidget *parent) : viv::StyledHeaderSection(parent) { setupUi(); }
     QLabel *title = nullptr;
     QPushButton *sort = nullptr;
-    int logicalColumn = -1;
 private:
     void setupUi()
     {
@@ -33,7 +33,7 @@ private:
         layout->addWidget(sort);
     }
 };
-class HeaderAdapter : public viv::HeaderWidgetAdapter
+class HeaderAdapter : public viv::HeaderSectionAdapter
 {
 public:
     explicit HeaderAdapter(viv::VirtualTableView &view) : m_view(view) {}
@@ -43,21 +43,23 @@ public:
         auto *section = new HeaderSection(parent);
         QObject::connect(section->sort, &QPushButton::clicked, section, [this, section] {
             // Header widgets are also reused; read the logical column saved by the latest bind.
-            if (section->logicalColumn >= 0)
-                m_view.sortByColumn(section->logicalColumn, Qt::AscendingOrder);
+            if (section->logicalIndex() >= 0)
+                m_view.sortByColumn(section->logicalIndex(), Qt::AscendingOrder);
         });
         return section;
     }
     void bindSection(QWidget *widget, int logicalIndex) override
     {
+        // Bind the identity used by built-in state painting and the button callback.
+        viv::HeaderSectionAdapter::bindSection(widget, logicalIndex);
         auto *section = static_cast<HeaderSection *>(widget);
-        section->logicalColumn = logicalIndex;
         section->title->setText(m_model ? m_model->headerData(logicalIndex, Qt::Horizontal).toString() : QString());
     }
-    void unbindSection(QWidget *widget, int) override
+    void unbindSection(QWidget *widget, int logicalIndex) override
     {
+        // Clear the framework identity before this section is reused.
+        viv::HeaderSectionAdapter::unbindSection(widget, logicalIndex);
         auto *section = static_cast<HeaderSection *>(widget);
-        section->logicalColumn = -1;
         section->title->clear();
     }
 private:

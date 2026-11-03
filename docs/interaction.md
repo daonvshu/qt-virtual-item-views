@@ -39,7 +39,7 @@ hover 身份变化会立即驱动动画，不依赖后续绘制或 adapter 主�
 
 所有视图默认启用框架 hover/selected 背景，普通视图的圆角默认为 0，`StyledTableView` 保留默认 6 像素圆角。表格按行选择时，状态背景默认贯通横向列间距，可通过 `setVisualStateThroughColumnSpacing(false)` 关闭，参考 [第 09 节源码](../examples/table_capabilities/09_spacing/example.cpp)。按单元格选择时只绘制单元格背景；纵向行间距和表头间距保持自身外观。其他视图仍只在 item 内绘制状态背景。颜色和动画继续使用基类现有接口。表格需要完全自定义形状或绘制方式时，可重写 `paintStateBackgroundLayer()`。
 
-`VirtualTreeTableView` 同样支持上述背景开关、圆角和颜色接口，树的背景范围继续由 `setVisualStateBackgroundExtent()` 控制。`VirtualTreeView` 已提供同名的背景开关、圆角和颜色接口。最小参考代码见 [表格状态示例](../examples/table_capabilities/10_visual_states/example.cpp)。
+`VirtualTreeTableView` 同样支持上述背景开关、圆角和颜色接口，状态背景沿用表格的行／单元格规则，包含分支与缩进区域。`VirtualTreeView` 提供背景开关、圆角和颜色接口，并可独立配置树的背景范围。最小参考代码见 [表格状态示例](../examples/table_capabilities/10_visual_states/example.cpp)。
 
 ## 拖放
 

@@ -14,9 +14,11 @@
 #include <QMouseEvent>
 #include <QPaintEvent>
 #include <QPainter>
+#include <QPixmap>
 #include <QResizeEvent>
 #include <QRegion>
 #include <QSet>
+#include <QtMath>
 
 #include <climits>
 #include <limits>
@@ -1054,51 +1056,6 @@ void VirtualTreeTableView::applyRowSpacingOverrides()
     VirtualTableView::applyRowSpacingOverrides();
 }
 
-void VirtualTreeTableView::configureRowSpacingWidget(QWidget *widget) const
-{
-    VirtualTableView::configureRowSpacingWidget(widget);
-    const int depth = widget->property("vivSpacingDepth").toInt();
-    const QRect excluded = rowGridLineExclusion(depth);
-    widget->setProperty("vivSpacingLineLeftInset", 0);
-    widget->setProperty("vivSpacingLineSkipX", excluded.x());
-    widget->setProperty("vivSpacingLineSkipWidth", excluded.width());
-    widget->setProperty("vivFillSpacingBackground", !verticalSpacingLineThroughRowSpacing());
-}
-
-void VirtualTreeTableView::setRowGridLineExtent(RowGridLineExtent extent)
-{
-    if (m_rowGridLineExtent == extent)
-        return;
-    m_rowGridLineExtent = extent;
-    relayout();
-}
-
-QRect VirtualTreeTableView::decorationExclusion(int cells) const
-{
-    if (cells <= 0 || m_indentation <= 0)
-        return QRect();
-    const ColumnGeometry column = columnGeometry(0);
-    const int paneIndex = paneIndexOfColumn(0);
-    const QVector<TablePane> currentPanes = panes();
-    if (!column.isValid() || column.hidden || paneIndex < 0
-        || paneIndex >= currentPanes.size())
-        return QRect();
-    const int width = int(qMin<qint64>(column.width, qint64(cells) * m_indentation));
-    int x = column.viewportX;
-    columnVisualX(0, &x);
-    return QRect(x, 0, width, qMax(1, horizontalGridLineWidth()))
-        .intersected(currentPanes.at(paneIndex).viewportRect)
-        .intersected(viewport()->rect());
-}
-
-QRect VirtualTreeTableView::rowGridLineExclusion(int depth) const
-{
-    const int cells = m_rowGridLineExtent == RowGridLineExtent::NodeOnly
-        ? int(qMin<qint64>(qint64(depth) + int(m_branchAreaVisible), INT_MAX))
-        : m_rowGridLineExtent == RowGridLineExtent::NodeAndIcon ? depth : 0;
-    return decorationExclusion(cells);
-}
-
 void VirtualTreeTableView::setVisualStateBackgroundVisible(bool visible)
 {
     if (m_visualStateBackgroundVisible == visible)
@@ -1106,15 +1063,6 @@ void VirtualTreeTableView::setVisualStateBackgroundVisible(bool visible)
     m_visualStateBackgroundVisible = visible;
     relayout();
     viewport()->update();
-}
-
-void VirtualTreeTableView::setVisualStateBackgroundExtent(VisualStateBackgroundExtent extent)
-{
-    if (m_visualStateBackgroundExtent == extent)
-        return;
-    m_visualStateBackgroundExtent = extent;
-    if (m_visualStateBackgroundVisible)
-        viewport()->update();
 }
 
 void VirtualTreeTableView::refreshVisualStates()
@@ -1142,117 +1090,62 @@ void VirtualTreeTableView::paintEvent(QPaintEvent *event)
     VirtualTableView::paintEvent(event);
 }
 
-void VirtualTreeTableView::paintVisualStateBackgrounds(QPainter *painter,
-                                                      const QRect &dirty, bool paintColumnSpacing) const
-{
-    const bool rowScope = selectionBehavior() == SelectionBehavior::SelectRows;
-    if (paintColumnSpacing && (!m_visualStateBackgroundVisible
-        || !visualStateThroughColumnSpacing() || !rowScope || dirty.isEmpty()))
-        return;
-    const int viewportWidth = viewport()->width();
-    const auto cells = [this](int depth) {
-        return m_visualStateBackgroundExtent == VisualStateBackgroundExtent::NodeOnly
-            ? int(qMin<qint64>(qint64(depth) + int(m_branchAreaVisible), INT_MAX))
-            : m_visualStateBackgroundExtent == VisualStateBackgroundExtent::NodeAndIcon ? depth : 0;
-    };
-    const QVector<int> columns = rowScope ? QVector<int>() : visibleColumnLogicalIndexes();
-    const QVector<TablePane> currentPanes = panes();
-    QRegion columnGaps;
-    int terminalColumn = -1;
-    for (const TablePane &pane : currentPanes) {
-        if (!pane.logicalColumns.isEmpty())
-            terminalColumn = pane.logicalColumns.last();
-    }
-    if (rowScope && !paintColumnSpacing) {
-        for (const TablePane &pane : currentPanes) {
-            for (int logical : pane.logicalColumns) {
-                if (logical == terminalColumn)
-                    continue;
-                const ColumnGeometry column = columnGeometry(logical);
-                int x = column.viewportX;
-                columnVisualX(logical, &x);
-                columnGaps += QRect(x + column.width, 0, columnSpacing(), viewport()->height())
-                    .intersected(pane.viewportRect);
-            }
-        }
-    }
-    QSet<QModelIndex> paintedCells;
-    const auto paintState = [this, painter, rowScope, paintColumnSpacing, &columnGaps](
-                               QRegion clip, const QRect &rect, const QModelIndex &index) {
-        const VisualState state = visualState(index);
-        if (rowScope && !paintColumnSpacing)
-            clip -= columnGaps;
-        clip &= QRegion(rect);
-        if (clip.isEmpty() || (state.hoverProgress <= 0.0 && state.selectedProgress <= 0.0))
-            return;
-        painter->save();
-        const qreal opacity = layoutPolicy()->itemOpacity(viewItemForIndex(index));
-        painter->setOpacity(state.hoverProgress * opacity);
-        paintRoundedStateBackgroundLayer(painter, rect, clip, hoverBackgroundColor(), visualStateCornerRadius());
-        painter->setOpacity(state.selectedProgress * opacity);
-        paintRoundedStateBackgroundLayer(painter, rect, clip, selectedBackgroundColor(), visualStateCornerRadius());
-        painter->restore();
-    };
-    for (const VisibleRange &range : visualStatePaintRanges()) {
-        for (qsizetype row = range.first; row >= 0 && row <= range.last; ++row) {
-            const QModelIndex node = viewIndex(row);
-            QRect rowRect = geometryForViewRow(row);
-            int visualY = rowRect.y();
-            if (rowVisualY(row, &visualY))
-                rowRect.moveTop(visualY);
-            rowRect = stateBackgroundRectWithRowSpacing(rowRect, row, row);
-            if (!node.isValid() || !rowRect.intersects(dirty))
-                continue;
-            const QRect fullRow(0, rowRect.y(), viewportWidth, rowRect.height());
-            const QRect pane = itemPaneRect(itemPaneForRow(row));
-            const QRect excluded = decorationExclusion(cells(itemDepth(node)));
-            if (rowScope) {
-                QRegion clip(fullRow.intersected(pane).intersected(viewport()->rect()).intersected(dirty));
-                if (!excluded.isEmpty())
-                    clip -= QRect(excluded.x(), fullRow.y(), excluded.width(), fullRow.height());
-                paintState(clip, fullRow, node);
-                continue;
-            }
-            for (int logical : columns) {
-                const QModelIndex cell = viewIndex(row, logical);
-                if (!cell.isValid())
-                    continue;
-                const QModelIndex anchor = anchorIndex(cell);
-                if (!anchor.isValid() || paintedCells.contains(anchor))
-                    continue;
-                paintedCells.insert(anchor);
-                QRect rect = spanRect(anchor);
-                const int columnPane = paneIndexOfColumn(anchor.column());
-                const qsizetype anchorRow = viewItemForIndex(anchor);
-                if (anchorRow < 0)
-                    continue;
-                int anchorY = geometryForViewRow(anchorRow).top();
-                const int committedY = anchorY;
-                if (rowVisualY(anchorRow, &anchorY))
-                    rect.translate(0, anchorY - committedY);
-                rect = stateBackgroundRectWithRowSpacing(rect, anchorRow,
-                    anchorRow + spanAt(anchor).rowSpan - 1);
-                if (rect.isEmpty() || anchorRow < 0
-                    || columnPane < 0 || columnPane >= currentPanes.size())
-                    continue;
-                if (!rect.intersects(dirty))
-                    continue;
-                QRegion clip(rect.intersected(itemPaneRect(itemPaneForRow(anchorRow)))
-                    .intersected(currentPanes.at(columnPane).viewportRect)
-                    .intersected(viewport()->rect()).intersected(dirty));
-                if (!excluded.isEmpty() && anchorIndex(viewIndex(row, 0)) == anchor)
-                    clip -= QRect(excluded.x(), rect.y(), excluded.width(), rect.height());
-                paintState(clip, rect, anchor);
-            }
-        }
-    }
-}
-
 void VirtualTreeTableView::setBranchIndicatorsVisible(bool visible)
 {
     if (m_branchIndicatorsVisible == visible)
         return;
     m_branchIndicatorsVisible = visible;
+    invalidateBranches();
+}
+
+void VirtualTreeTableView::setExpandedBranchIcon(const QIcon &icon)
+{
+    m_expandedBranchIcon = icon;
+    invalidateBranches();
+}
+
+void VirtualTreeTableView::setCollapsedBranchIcon(const QIcon &icon)
+{
+    m_collapsedBranchIcon = icon;
+    invalidateBranches();
+}
+
+void VirtualTreeTableView::setBranchIconSize(int pixels)
+{
+    pixels = qMax(1, pixels);
+    if (m_branchIconSize == pixels)
+        return;
+    m_branchIconSize = pixels;
+    invalidateBranches();
+}
+
+void VirtualTreeTableView::setBranchIconColor(const QColor &color)
+{
+    if (m_branchIconColor == color)
+        return;
+    m_branchIconColor = color;
+    invalidateBranches();
+}
+
+void VirtualTreeTableView::setBranchIndicatorAlignment(Qt::Alignment alignment)
+{
+    if (!(alignment & (Qt::AlignLeft | Qt::AlignRight | Qt::AlignHCenter)))
+        alignment |= Qt::AlignLeft;
+    if (!(alignment & (Qt::AlignTop | Qt::AlignBottom | Qt::AlignVCenter)))
+        alignment |= Qt::AlignVCenter;
+    if (m_branchIndicatorAlignment == alignment)
+        return;
+    m_branchIndicatorAlignment = alignment;
+    invalidateBranches();
+}
+
+void VirtualTreeTableView::setBranchIndicatorPadding(const QMargins &padding)
+{
+    const QMargins clamped(qMax(0, padding.left()), qMax(0, padding.top()),
+                           qMax(0, padding.right()), qMax(0, padding.bottom()));
+    if (m_branchIndicatorPadding == clamped)
+        return;
+    m_branchIndicatorPadding = clamped;
     invalidateBranches();
 }
 
@@ -1354,15 +1247,9 @@ void VirtualTreeTableView::paintBranches(QPainter *painter) const
                 painter->setClipRect(geometryForViewRow(row), Qt::IntersectClip);
             const int depth = itemDepth(node);
             if (!m_branchRenderer) {
-                if (hasChildren(node)) {
-                    BranchIndicatorState state = branchState(node);
-                    const qreal progress = m_expansionTransition->expansionProgress(node, state.isExpanded);
-                    state.isExpanded = true;
-                    BranchIndicatorRenderer::paintBuiltinBranch(
-                        painter, state, branchCellRect(row, depth, true), palette(),
-                        kBranchIndicatorSize, QColor(), Qt::AlignCenter, QMargins(),
-                        (progress - 1.0) * 90.0);
-                }
+                if (hasChildren(node))
+                    paintDefaultBranchIndicator(painter, branchState(node), node,
+                                                branchCellRect(row, depth, true));
                 continue;
             }
             QVector<QModelIndex> ancestors(depth + 1);
@@ -1391,6 +1278,72 @@ void VirtualTreeTableView::paintBranches(QPainter *painter) const
             }
         }
     }
+    painter->restore();
+}
+
+void VirtualTreeTableView::paintDefaultBranchIndicator(QPainter *painter,
+                                                      const BranchIndicatorState &state,
+                                                      const QModelIndex &index,
+                                                      const QRect &cellRect) const
+{
+    if (!state.adjoinsItem || !state.hasChildren)
+        return;
+    const qreal progress = m_expansionTransition->expansionProgress(index, state.isExpanded);
+    const bool hasExpandedIcon = !m_expandedBranchIcon.isNull();
+    const bool hasCollapsedIcon = !m_collapsedBranchIcon.isNull();
+    if (!hasExpandedIcon && !hasCollapsedIcon) {
+        // The built-in decoration is one expanded triangle reused for both states.
+        BranchIndicatorState expandedState = state;
+        expandedState.isExpanded = true;
+        BranchIndicatorRenderer::paintBuiltinBranch(painter, expandedState, cellRect, palette(),
+                                                    m_branchIconSize, m_branchIconColor,
+                                                    m_branchIndicatorAlignment,
+                                                    m_branchIndicatorPadding,
+                                                    (progress - 1.0) * 90.0);
+        return;
+    }
+    const bool separateIcons = hasExpandedIcon && hasCollapsedIcon;
+    const QIcon &icon = (separateIcons ? state.isExpanded : hasExpandedIcon)
+        ? m_expandedBranchIcon : m_collapsedBranchIcon;
+    const qreal rotation = separateIcons ? 0.0
+        : (hasExpandedIcon ? progress - 1.0 : progress) * 90.0;
+    const QRectF target = BranchIndicatorRenderer::branchIndicatorTargetRectF(
+        QRectF(cellRect), qreal(m_branchIconSize), m_branchIndicatorAlignment,
+        QMarginsF(m_branchIndicatorPadding));
+    if (target.isEmpty())
+        return;
+    painter->save();
+    painter->setClipRect(QRectF(cellRect), Qt::IntersectClip);
+    painter->setRenderHint(QPainter::Antialiasing, true);
+    painter->setRenderHint(QPainter::SmoothPixmapTransform, true);
+    painter->translate(target.center());
+    painter->rotate(rotation);
+    painter->translate(-target.center());
+    if (!m_branchIconColor.isValid()) {
+        painter->translate(target.topLeft());
+        icon.paint(painter, QRect(QPoint(), target.size().toSize()));
+        painter->restore();
+        return;
+    }
+    const qreal dpr = painter->device()->devicePixelRatioF();
+    const qreal size = target.width();
+    QPixmap pixmap = icon.pixmap(QSize(qMax(1, qCeil(size * dpr)),
+                                     qMax(1, qCeil(size * dpr))));
+    if (pixmap.isNull()) {
+        painter->restore();
+        return;
+    }
+    pixmap.setDevicePixelRatio(dpr);
+    {
+        QPainter tint(&pixmap);
+        tint.setCompositionMode(QPainter::CompositionMode_SourceIn);
+        tint.fillRect(pixmap.rect(), m_branchIconColor);
+    }
+    QSizeF logicalSize = pixmap.size();
+    logicalSize.scale(target.size(), Qt::KeepAspectRatio);
+    const QRectF imageRect(target.center()
+        - QPointF(logicalSize.width() / 2.0, logicalSize.height() / 2.0), logicalSize);
+    painter->drawPixmap(imageRect, pixmap, QRectF(pixmap.rect()));
     painter->restore();
 }
 

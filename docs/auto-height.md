@@ -29,5 +29,4 @@ verticalLayout->addStretch();
 - [列表第 21 章](../examples/list_capabilities/21_auto_height/README.md)
 - [树第 27 章](../examples/tree_capabilities/27_auto_height/README.md)
 - [表格第 31 章](../examples/table_capabilities/31_auto_height/README.md)
-
-树表使用相同接口，独立能力章节后续补充。
+- [树表第 36 章](../examples/treetable_capabilities/36_auto_height/README.md)

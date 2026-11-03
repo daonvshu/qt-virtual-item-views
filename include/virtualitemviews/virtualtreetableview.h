@@ -4,6 +4,7 @@
 #include <virtualitemviews/treevisibilityindex.h>
 #include <virtualitemviews/virtualtableview.h>
 
+#include <QColor>
 #include <QHash>
 #include <QPersistentModelIndex>
 #include <QPointer>
@@ -73,6 +74,7 @@ public:
     /// Pixels above this node, added to the preceding node's below gap.
     /// Missing/negative values mean zero; the first visible row has no leading gap.
     static constexpr int NodeRowSpacingAboveRole = Qt::UserRole + 0x101;
+    /// Row lines span the actual columns, including the branch and indentation areas.
     /// Row line style is the table's horizontal grid line style.
     void setRowGridLinesVisible(bool visible) { setHorizontalGridLinesVisible(visible); }
     bool rowGridLinesVisible() const { return horizontalGridLinesVisible(); }
@@ -80,25 +82,42 @@ public:
     int rowGridLineWidth() const { return horizontalGridLineWidth(); }
     void setRowGridLineColor(const QColor &color) { setHorizontalGridLineColor(color); }
     QColor rowGridLineColor() const { return horizontalGridLineColor(); }
-    enum class RowGridLineExtent { NodeOnly, NodeAndIcon, FullWidth };
-    Q_ENUM(RowGridLineExtent)
-    /// Excludes only the tree decoration inside logical column zero.
-    void setRowGridLineExtent(RowGridLineExtent extent);
-    RowGridLineExtent rowGridLineExtent() const { return m_rowGridLineExtent; }
-    /// Optional viewport-painted hover and selection backgrounds.
+    /// Optional viewport-painted hover and selection backgrounds, including tree decoration.
+    /// Uses the table's row/cell selection behavior without a separate tree extent mode.
     void setVisualStateBackgroundVisible(bool visible) override;
     bool visualStateBackgroundVisible() const { return m_visualStateBackgroundVisible; }
-    enum class VisualStateBackgroundExtent { NodeOnly, NodeAndIcon, FullWidth };
-    Q_ENUM(VisualStateBackgroundExtent)
-    /// Controls the painted background inside logical column zero.
-    void setVisualStateBackgroundExtent(VisualStateBackgroundExtent extent);
-    VisualStateBackgroundExtent visualStateBackgroundExtent() const
-    {
-        return m_visualStateBackgroundExtent;
-    }
     void setBranchIndicatorsVisible(bool visible);
     bool branchIndicatorsVisible() const { return m_branchIndicatorsVisible; }
-    /// The view owns the renderer only when takeOwnership is true.
+    /// Default renderer only: one non-null icon rotates 90 degrees with expansion.
+    /// Two non-null icons switch immediately; two null icons restore the rotating
+    /// built-in expanded triangle. Custom renderers keep their own state handling.
+    void setExpandedBranchIcon(const QIcon &icon);
+    QIcon expandedBranchIcon() const { return m_expandedBranchIcon; }
+    void setCollapsedBranchIcon(const QIcon &icon);
+    QIcon collapsedBranchIcon() const { return m_collapsedBranchIcon; }
+    /// Square logical-pixel size (default 10), clamped to at least one and to the cell when painted.
+    void setBranchIconSize(int pixels);
+    int branchIconSize() const { return m_branchIconSize; }
+    /// Tints icons and triangles; invalid color restores icon colors / palette WindowText.
+    void setBranchIconColor(const QColor &color);
+    QColor branchIconColor() const { return m_branchIconColor; }
+    /// Alignment of the default icon or built-in triangle inside its branch cell.
+    /// Missing horizontal/vertical flags fall back to AlignLeft/AlignVCenter.
+    /// Defaults to Qt::AlignCenter; custom renderers control their own layout.
+    void setBranchIndicatorAlignment(Qt::Alignment alignment);
+    Qt::Alignment branchIndicatorAlignment() const { return m_branchIndicatorAlignment; }
+    /// Padding around the default icon or built-in triangle, in logical pixels.
+    /// Negative values are clamped to zero; the icon is clamped to the padded area.
+    /// The default is centered with zero padding.
+    void setBranchIndicatorPadding(const QMargins &padding);
+    void setBranchIndicatorPadding(int left, int top, int right, int bottom)
+    {
+        setBranchIndicatorPadding(QMargins(left, top, right, bottom));
+    }
+    QMargins branchIndicatorPadding() const { return m_branchIndicatorPadding; }
+    /// Custom renderer; null uses the configured icons or built-in triangle.
+    /// Icon settings do not affect custom renderers. The view owns the renderer
+    /// only when takeOwnership is true.
     void setBranchIndicatorRenderer(BranchIndicatorRenderer *renderer, bool takeOwnership = false);
     BranchIndicatorRenderer *branchIndicatorRenderer() const { return m_branchRenderer; }
     BranchIndicatorState branchState(const QModelIndex &index, int cellDepth = -1) const;
@@ -126,7 +145,6 @@ protected:
     /// Tree rows scroll together; horizontal column panes remain supported.
     bool supportsRowPanes() const override { return false; }
     void applyRowSpacingOverrides() override;
-    void configureRowSpacingWidget(QWidget *widget) const override;
     void afterMaterialize() override;
     void visualColumnGeometryChanged() override;
     void moveRowsForStripDrag(int fromRow, int toRow) override;
@@ -134,7 +152,6 @@ protected:
     QRect spanRowRect(qsizetype row) const override;
     quint64 viewMappingSerial() const override { return m_mappingSerial; }
     int leadingCellInset(const QModelIndex &index) const override;
-    QRect rowGridLineExclusion(int depth) const override;
     bool handleItemKeyPress(QKeyEvent *event) override;
     QModelIndex dragNodeIndex(const QModelIndex &index) const override;
     /// Collapse a single source immediately before capture in row animation mode.
@@ -173,11 +190,10 @@ private:
                                  qsizetype previousCount);
     QModelIndex nodeIndex(const QModelIndex &index) const;
     QRect branchCellRect(qsizetype row, int cellDepth, bool visual = false) const;
-    QRect decorationExclusion(int cells) const;
     bool isIndicatorPosition(const QModelIndex &index, const QPoint &position) const;
     void paintBranches(QPainter *painter) const;
-    void paintVisualStateBackgrounds(QPainter *painter, const QRect &dirty,
-                                    bool paintColumnSpacing = false) const override;
+    void paintDefaultBranchIndicator(QPainter *painter, const BranchIndicatorState &state,
+                                     const QModelIndex &index, const QRect &cellRect) const;
     void invalidateBranches();
     QRect insertionLineRect(const DropTarget &target) const;
     /// First visible row after a node's complete expanded subtree.
@@ -196,11 +212,15 @@ private:
     quint64 m_rootChangeSerial = 0;
     quint64 m_mappingSerial = 0;
     QVector<QPair<int, int>> m_headerSpacingOverrides;
+    QIcon m_expandedBranchIcon;
+    QIcon m_collapsedBranchIcon;
+    int m_branchIconSize = kBranchIndicatorSize;
+    QColor m_branchIconColor;
+    Qt::Alignment m_branchIndicatorAlignment = Qt::AlignCenter;
+    QMargins m_branchIndicatorPadding;
     BranchIndicatorRenderer *m_branchRenderer = nullptr;
     QWidget *m_branchOverlay = nullptr;
     int m_indentation = 20;
-    RowGridLineExtent m_rowGridLineExtent = RowGridLineExtent::FullWidth;
-    VisualStateBackgroundExtent m_visualStateBackgroundExtent = VisualStateBackgroundExtent::FullWidth;
     bool m_ownBranchRenderer = false;
     bool m_branchIndicatorsVisible = true;
     bool m_branchAreaVisible = true;

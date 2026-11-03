@@ -1368,7 +1368,7 @@ private slots:
     void accessibilityExposesHierarchyAndCells();
     void accessibilityFocusAndHitsFollowIndependentPanes_data();
     void accessibilityFocusAndHitsFollowIndependentPanes();
-    void selectedBackgroundExtentKeepsGridLineVisible();
+    void selectedBackgroundIncludesTreeDecorationAndKeepsGridLineVisible();
     void rowGridLineAliasesMatchTableGridSettings_data();
     void rowGridLineAliasesMatchTableGridSettings();
     void rootSchemaAndCrossParentSelection();
@@ -1727,16 +1727,13 @@ void TestTreeTableViewInteraction::rowStripPreviewFollowsBothTreeWidgetModes_dat
     QTest::addColumn<bool>("cells");
     QTest::addColumn<bool>("frozen");
     QTest::addColumn<bool>("cellScope");
-    QTest::addColumn<int>("extent");
     for (bool cells : {false, true}) {
         for (bool frozen : {false, true}) {
             for (bool cellScope : {false, true}) {
-                for (int extent = 0; extent < 3; ++extent) {
-                    const QByteArray name = QByteArray(cells ? "cells" : "rows")
-                        + (frozen ? "-frozen" : "-plain")
-                        + (cellScope ? "-cell-scope-" : "-row-scope-") + QByteArray::number(extent);
-                    QTest::newRow(name.constData()) << cells << frozen << cellScope << extent;
-                }
+                const QByteArray name = QByteArray(cells ? "cells" : "rows")
+                    + (frozen ? "-frozen" : "-plain")
+                    + (cellScope ? "-cell-scope" : "-row-scope");
+                QTest::newRow(name.constData()) << cells << frozen << cellScope;
             }
         }
     }
@@ -1747,7 +1744,6 @@ void TestTreeTableViewInteraction::rowStripPreviewFollowsBothTreeWidgetModes()
     QFETCH(bool, cells);
     QFETCH(bool, frozen);
     QFETCH(bool, cellScope);
-    QFETCH(int, extent);
     SiblingMoveModel model;
     VirtualTreeTableView view;
     view.setUniformItemHeight(28);
@@ -1767,8 +1763,6 @@ void TestTreeTableViewInteraction::rowStripPreviewFollowsBothTreeWidgetModes()
     view.setVisualStateAnimationDuration(0);
     view.setSelectionBehavior(cellScope ? VirtualItemView::SelectionBehavior::SelectItems
                                         : VirtualItemView::SelectionBehavior::SelectRows);
-    view.setVisualStateBackgroundExtent(
-        static_cast<VirtualTreeTableView::VisualStateBackgroundExtent>(extent));
     const QColor selected(230, 30, 70);
     view.setSelectedBackgroundColor(selected);
     const QModelIndex parent = model.index(0, 0);
@@ -1824,13 +1818,8 @@ void TestTreeTableViewInteraction::rowStripPreviewFollowsBothTreeWidgetModes()
         const int x = view.columnGeometry(0).viewportX;
         const int sampleY = movingY + 3;
         QCOMPARE(image.pixelColor(origin + QPoint(x + 90, sampleY)), selected);
-        for (int sampleX : {5, 25}) {
-            const bool covered = sampleX == 5 ? extent == 2 : extent != 0;
-            if (covered)
-                QCOMPARE(image.pixelColor(origin + QPoint(x + sampleX, sampleY)), selected);
-            else
-                QVERIFY(image.pixelColor(origin + QPoint(x + sampleX, sampleY)) != selected);
-        }
+        for (int sampleX : {5, 25})
+            QCOMPARE(image.pixelColor(origin + QPoint(x + sampleX, sampleY)), selected);
         const QPoint marker(x + view.indentation() + 9,
                             movingY + view.visualRect(moving).height() / 2 - 1);
         QCOMPARE(image.pixelColor(origin + marker), QColor(230, 180, 10));
@@ -3214,7 +3203,7 @@ void TestTreeTableViewInteraction::accessibilityFocusAndHitsFollowIndependentPan
     QCOMPARE(nodeInterface->focusChild(), cellInterface);
 }
 
-void TestTreeTableViewInteraction::selectedBackgroundExtentKeepsGridLineVisible()
+void TestTreeTableViewInteraction::selectedBackgroundIncludesTreeDecorationAndKeepsGridLineVisible()
 {
     QStandardItemModel model;
     model.setHorizontalHeaderLabels({QStringLiteral("Name"), QStringLiteral("Type"),
@@ -3237,25 +3226,16 @@ void TestTreeTableViewInteraction::selectedBackgroundExtentKeepsGridLineVisible(
     const QRect rowRect = view.visualRect(child);
     QVERIFY(rowRect.height() > 2);
     const int y = rowRect.center().y();
-    const QImage baseline = view.viewport()->grab().toImage();
-
     view.setCurrentIndex(child);
     QVERIFY(view.visualState(child).selected);
     const QColor selected(230, 30, 70);
     const QColor line(15, 125, 40);
-    using Extent = VirtualTreeTableView::VisualStateBackgroundExtent;
-    for (const Extent extent : {Extent::NodeOnly, Extent::NodeAndIcon, Extent::FullWidth}) {
-        view.setVisualStateBackgroundExtent(extent);
-        const QImage image = view.viewport()->grab().toImage();
-        QCOMPARE(image.pixelColor(45, y), selected);
-        QCOMPARE(image.pixelColor(25, y), extent == Extent::NodeOnly
-                     ? baseline.pixelColor(25, y) : selected);
-        QCOMPARE(image.pixelColor(5, y), extent == Extent::FullWidth
-                     ? selected : baseline.pixelColor(5, y));
-        const QImage full = view.grab().toImage();
-        QCOMPARE(full.pixelColor(view.viewport()->geometry().topLeft()
-                                     + QPoint(70, rowRect.bottom())), line);
-    }
+    const QImage image = view.viewport()->grab().toImage();
+    for (int x : {5, 25, 45})
+        QCOMPARE(image.pixelColor(x, y), selected);
+    const QImage full = view.grab().toImage();
+    QCOMPARE(full.pixelColor(view.viewport()->geometry().topLeft()
+                                 + QPoint(70, rowRect.bottom())), line);
 }
 
 void TestTreeTableViewInteraction::rowGridLineAliasesMatchTableGridSettings_data()
@@ -3278,14 +3258,12 @@ void TestTreeTableViewInteraction::rowGridLineAliasesMatchTableGridSettings()
     view.setRowGridLinesVisible(false);
     view.setRowGridLineWidth(3);
     view.setRowGridLineColor(color);
-    view.setRowGridLineExtent(VirtualTreeTableView::RowGridLineExtent::NodeAndIcon);
     QCOMPARE(view.rowGridLinesVisible(), false);
     QCOMPARE(view.horizontalGridLinesVisible(), false);
     QCOMPARE(view.rowGridLineWidth(), 3);
     QCOMPARE(view.horizontalGridLineWidth(), 3);
     QCOMPARE(view.rowGridLineColor(), color);
     QCOMPARE(view.horizontalGridLineColor(), color);
-    QCOMPARE(view.rowGridLineExtent(), VirtualTreeTableView::RowGridLineExtent::NodeAndIcon);
     view.setHorizontalGridLinesVisible(true);
     view.setHorizontalGridLineWidth(1);
     const QColor replacement(205, 71, 33);
@@ -6510,21 +6488,17 @@ void TestTreeTableViewInteraction::mergedCellsMaskInternalGridPixels_data()
     QTest::addColumn<bool>("frozen");
     QTest::addColumn<bool>("animated");
     QTest::addColumn<int>("anchorColumn");
-    QTest::addColumn<int>("extent");
     for (bool cells : {false, true}) {
         for (int spacing : {0, 6}) {
             for (bool frozen : {false, true}) {
                 for (bool animated : {false, true}) {
                     for (int anchorColumn : {0, 1}) {
-                        for (int extent = anchorColumn == 0 ? 0 : 2; extent < 3; ++extent) {
-                            const QByteArray name = QByteArray(cells ? "cells-" : "rows-")
-                                + QByteArray::number(spacing) + (frozen ? "-frozen" : "-scrollable")
-                                + (animated ? "-animated" : "-static")
-                                + "-column-" + QByteArray::number(anchorColumn)
-                                + "-extent-" + QByteArray::number(extent);
-                            QTest::newRow(name.constData()) << cells << spacing << frozen << animated
-                                                           << anchorColumn << extent;
-                        }
+                        const QByteArray name = QByteArray(cells ? "cells-" : "rows-")
+                            + QByteArray::number(spacing) + (frozen ? "-frozen" : "-scrollable")
+                            + (animated ? "-animated" : "-static")
+                            + "-column-" + QByteArray::number(anchorColumn);
+                        QTest::newRow(name.constData()) << cells << spacing << frozen << animated
+                                                       << anchorColumn;
                     }
                 }
             }
@@ -6539,7 +6513,6 @@ void TestTreeTableViewInteraction::mergedCellsMaskInternalGridPixels()
     QFETCH(bool, frozen);
     QFETCH(bool, animated);
     QFETCH(int, anchorColumn);
-    QFETCH(int, extent);
     QStandardItemModel model;
     auto parentRow = row(QStringLiteral("parent"));
     auto firstRow = row(QStringLiteral("first"));
@@ -6555,8 +6528,6 @@ void TestTreeTableViewInteraction::mergedCellsMaskInternalGridPixels()
     view.setSelectionBehavior(VirtualItemView::SelectionBehavior::SelectItems);
     view.setVisualStateAnimationDuration(0);
     view.setVisualStateBackgroundVisible(true);
-    view.setVisualStateBackgroundExtent(
-        static_cast<VirtualTreeTableView::VisualStateBackgroundExtent>(extent));
     const QColor selected(211, 31, 77);
     const QColor hover(29, 191, 113);
     const QColor horizontal(17, 131, 229);
@@ -6594,14 +6565,11 @@ void TestTreeTableViewInteraction::mergedCellsMaskInternalGridPixels()
                    view.visualRect(covered.siblingAtColumn(0)).top() + 4),
             QPoint(insideX, boundaryY),
             QPoint(verticalX, firstRect.top() + 4)};
-        QVector<bool> excluded(points.size(), false);
         if (anchorColumn == 0) {
             for (const int y : {firstRect.top() + 2,
                                view.visualRect(covered.siblingAtColumn(0)).top() + 2}) {
                 points.append(QPoint(view.columnGeometry(0).viewportX + 5, y));
-                excluded.append(extent != 2);
                 points.append(QPoint(view.columnGeometry(0).viewportX + view.indentation() + 5, y));
-                excluded.append(extent == 0);
             }
         }
         const QPoint origin = view.viewport()->geometry().topLeft();
@@ -6630,9 +6598,9 @@ void TestTreeTableViewInteraction::mergedCellsMaskInternalGridPixels()
                 QImage reference(1, 1, QImage::Format_ARGB32_Premultiplied);
                 reference.fill(baseline.pixelColor(origin + point));
                 QPainter painter(&reference);
-                painter.setOpacity(excluded.at(i) ? 0.0 : hoverProgress);
+                painter.setOpacity(hoverProgress);
                 painter.fillRect(reference.rect(), hover);
-                painter.setOpacity(excluded.at(i) ? 0.0 : selectedProgress);
+                painter.setOpacity(selectedProgress);
                 painter.fillRect(reference.rect(), selected);
                 painter.end();
                 QCOMPARE(actual.pixelColor(origin + point), reference.pixelColor(0, 0));
@@ -10384,20 +10352,15 @@ void TestTreeTableViewInteraction::animatedBackgroundsPreserveGridPixels_data()
     QTest::addColumn<bool>("cells");
     QTest::addColumn<bool>("cellScope");
     QTest::addColumn<int>("spacing");
-    QTest::addColumn<int>("extent");
     QTest::addColumn<int>("columnLayout");
     for (bool cells : {false, true}) {
         for (bool cellScope : {false, true}) {
             for (int spacing : {0, 6}) {
-                for (int extent = 0; extent < 3; ++extent) {
-                    for (int columnLayout = 0; columnLayout < 3; ++columnLayout) {
-                        const QByteArray name = QByteArray(cells ? "cells" : "rows")
-                            + (cellScope ? "-cell-scope-" : "-row-scope-") + QByteArray::number(spacing)
-                            + "-extent-" + QByteArray::number(extent)
-                            + "-layout-" + QByteArray::number(columnLayout);
-                        QTest::newRow(name.constData()) << cells << cellScope << spacing
-                                                       << extent << columnLayout;
-                    }
+                for (int columnLayout = 0; columnLayout < 3; ++columnLayout) {
+                    const QByteArray name = QByteArray(cells ? "cells" : "rows")
+                        + (cellScope ? "-cell-scope-" : "-row-scope-") + QByteArray::number(spacing)
+                        + "-layout-" + QByteArray::number(columnLayout);
+                    QTest::newRow(name.constData()) << cells << cellScope << spacing << columnLayout;
                 }
             }
         }
@@ -10409,7 +10372,6 @@ void TestTreeTableViewInteraction::animatedBackgroundsPreserveGridPixels()
     QFETCH(bool, cells);
     QFETCH(bool, cellScope);
     QFETCH(int, spacing);
-    QFETCH(int, extent);
     QFETCH(int, columnLayout);
     QStandardItemModel model;
     auto parentRow = row(QStringLiteral("parent"));
@@ -10428,8 +10390,6 @@ void TestTreeTableViewInteraction::animatedBackgroundsPreserveGridPixels()
     view.setSelectionBehavior(cellScope ? VirtualItemView::SelectionBehavior::SelectItems
                                        : VirtualItemView::SelectionBehavior::SelectRows);
     view.setVisualStateBackgroundVisible(true);
-    view.setVisualStateBackgroundExtent(
-        static_cast<VirtualTreeTableView::VisualStateBackgroundExtent>(extent));
     view.setVisualStateAnimationDuration(0);
     const QColor hover(30, 190, 120);
     const QColor selected(230, 30, 70);
@@ -10488,18 +10448,16 @@ void TestTreeTableViewInteraction::animatedBackgroundsPreserveGridPixels()
             QCOMPARE(pixel(paneBoundary), paneBaseline);
         if (columnLayout == 2)
             return;
-        const auto verify = [&](const QPoint &point, const QColor &original, bool covered) {
-            if (!covered) {
-                QCOMPARE(pixel(point), original);
-            } else if (midpoint) {
+        const auto verify = [&](const QPoint &point, const QColor &original) {
+            if (midpoint) {
                 QVERIFY(pixel(point) != original);
                 QVERIFY(pixel(point) != color);
             } else {
                 QCOMPARE(pixel(point), color);
             }
         };
-        verify(ancestor, ancestorBaseline, extent == 2);
-        verify(icon, iconBaseline, extent != 0);
+        verify(ancestor, ancestorBaseline);
+        verify(icon, iconBaseline);
     };
     QVERIFY(!view.visualState(stateIndex).hovered);
     const auto advance = [&](int time) {

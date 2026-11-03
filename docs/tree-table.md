@@ -2,7 +2,50 @@
 
 `VirtualTreeTableView` 使用树形 `QAbstractItemModel`，纵向只物化展开后的可见节点，横向沿用 `VirtualTableView` 的列布局、表头、控件模式和 pane。单列且不需要表格布局时使用 `VirtualTreeView`；没有父子节点时使用 `VirtualTableView`。
 
-支持继承的 `setAutoHeightEnabled(true)`，按表头与当前展开内容计算建议高度；最大高度沿用 `setMaximumHeight()`，父布局可进一步缩小视口，超出时才滚动。具体约束见 [自适应高度](auto-height.md)，树表的独立能力章节后续补充。
+支持继承的 `setAutoHeightEnabled(true)`，按表头与当前展开内容计算建议高度；最大高度沿用 `setMaximumHeight()`，父布局可进一步缩小视口，超出时才滚动。具体约束见 [自适应高度](auto-height.md)，完整示例见 [第 36 章](../examples/treetable_capabilities/36_auto_height/example.cpp)。
+
+## 按功能查找独立示例
+
+运行与复制说明见 [treetable_capabilities/README.md](../examples/treetable_capabilities/README.md)。同一个进程切换章节，每章独立保存模型、adapter 与控件。下列路径相对于仓库根目录，关键接口调用旁有英文注释。
+
+| 编号 | 功能 | 源码 |
+| --- | --- | --- |
+| 01 | 基础多列树 | [examples/treetable_capabilities/01_basic/example.cpp](../examples/treetable_capabilities/01_basic/example.cpp) |
+| 02 | 整行物化与 ColumnHost | [examples/treetable_capabilities/02_row_widgets/example.cpp](../examples/treetable_capabilities/02_row_widgets/example.cpp) |
+| 03 | 单元格物化 | [examples/treetable_capabilities/03_cell_widgets/example.cpp](../examples/treetable_capabilities/03_cell_widgets/example.cpp) |
+| 04 | 层级与列控件类型 | [examples/treetable_capabilities/04_widget_types/example.cpp](../examples/treetable_capabilities/04_widget_types/example.cpp) |
+| 05 | 节点结构体与绑定上下文 | [examples/treetable_capabilities/05_binding_context/example.cpp](../examples/treetable_capabilities/05_binding_context/example.cpp) |
+| 06 | 层级模型更新 | [examples/treetable_capabilities/06_model_updates/example.cpp](../examples/treetable_capabilities/06_model_updates/example.cpp) |
+| 07 | 固定与动态行高 | [examples/treetable_capabilities/07_row_heights/example.cpp](../examples/treetable_capabilities/07_row_heights/example.cpp) |
+| 08 | 展开收起与淡入淡出 | [examples/treetable_capabilities/08_expansion/example.cpp](../examples/treetable_capabilities/08_expansion/example.cpp) |
+| 09 | 显示根与相对深度 | [examples/treetable_capabilities/09_root_index/example.cpp](../examples/treetable_capabilities/09_root_index/example.cpp) |
+| 10 | 缩进与分支配置 | [examples/treetable_capabilities/10_indentation/example.cpp](../examples/treetable_capabilities/10_indentation/example.cpp) |
+| 11 | 自定义分支绘制 | [examples/treetable_capabilities/11_branch_renderer/example.cpp](../examples/treetable_capabilities/11_branch_renderer/example.cpp) |
+| 12 | 列宽、隐藏与换序 | [examples/treetable_capabilities/12_columns/example.cpp](../examples/treetable_capabilities/12_columns/example.cpp) |
+| 13 | 比例列宽与适应视口 | [examples/treetable_capabilities/13_stretch_columns/example.cpp](../examples/treetable_capabilities/13_stretch_columns/example.cpp) |
+| 14 | 节点间距与分割线 | [examples/treetable_capabilities/14_spacing/example.cpp](../examples/treetable_capabilities/14_spacing/example.cpp) |
+| 15 | 状态背景与圆角 | [examples/treetable_capabilities/15_visual_states/example.cpp](../examples/treetable_capabilities/15_visual_states/example.cpp) |
+| 16 | 状态关联内容 | [examples/treetable_capabilities/16_state_content/example.cpp](../examples/treetable_capabilities/16_state_content/example.cpp) |
+| 17 | 共享选择与键盘导航 | [examples/treetable_capabilities/17_selection/example.cpp](../examples/treetable_capabilities/17_selection/example.cpp) |
+| 18 | 行内事件与几何查询 | [examples/treetable_capabilities/18_item_events/example.cpp](../examples/treetable_capabilities/18_item_events/example.cpp) |
+| 19 | 大树定位与滚动 | [examples/treetable_capabilities/19_scrolling/example.cpp](../examples/treetable_capabilities/19_scrolling/example.cpp) |
+| 20 | 二维虚拟化与复用 | [examples/treetable_capabilities/20_virtualization/example.cpp](../examples/treetable_capabilities/20_virtualization/example.cpp) |
+| 21 | 左右冻结列 | [examples/treetable_capabilities/21_frozen_columns/example.cpp](../examples/treetable_capabilities/21_frozen_columns/example.cpp) |
+| 22 | 独立横向滚动分组 | [examples/treetable_capabilities/22_panes/example.cpp](../examples/treetable_capabilities/22_panes/example.cpp) |
+| 23 | 表头交互与调整 | [examples/treetable_capabilities/23_headers/example.cpp](../examples/treetable_capabilities/23_headers/example.cpp) |
+| 24 | 表头样式、Adapter 与 Corner | [examples/treetable_capabilities/24_custom_header/example.cpp](../examples/treetable_capabilities/24_custom_header/example.cpp) |
+| 25 | 保存与恢复布局 | [examples/treetable_capabilities/25_header_persistence/example.cpp](../examples/treetable_capabilities/25_header_persistence/example.cpp) |
+| 26 | 同级排序与递归过滤 | [examples/treetable_capabilities/26_sorting_filtering/example.cpp](../examples/treetable_capabilities/26_sorting_filtering/example.cpp) |
+| 27 | 同级行号拖动排序 | [examples/treetable_capabilities/27_row_reordering/example.cpp](../examples/treetable_capabilities/27_row_reordering/example.cpp) |
+| 28 | 同级单元格合并 | [examples/treetable_capabilities/28_spans/example.cpp](../examples/treetable_capabilities/28_spans/example.cpp) |
+| 29 | 节点拖放与指示器 | [examples/treetable_capabilities/29_drag_indicator/example.cpp](../examples/treetable_capabilities/29_drag_indicator/example.cpp) |
+| 30 | 节点拖放与位移动画 | [examples/treetable_capabilities/30_drag_animation/example.cpp](../examples/treetable_capabilities/30_drag_animation/example.cpp) |
+| 31 | 异步加载子节点 | [examples/treetable_capabilities/31_lazy_loading/example.cpp](../examples/treetable_capabilities/31_lazy_loading/example.cpp) |
+| 32 | 屏外保留与释放 | [examples/treetable_capabilities/32_pinning/example.cpp](../examples/treetable_capabilities/32_pinning/example.cpp) |
+| 33 | 统计与性能诊断 | [examples/treetable_capabilities/33_diagnostics/example.cpp](../examples/treetable_capabilities/33_diagnostics/example.cpp) |
+| 34 | 可选平滑滚动（可选依赖） | [examples/treetable_capabilities/34_smooth_scrolling/example.cpp](../examples/treetable_capabilities/34_smooth_scrolling/example.cpp) |
+| 35 | 圆角边框与透明视图 | [examples/treetable_capabilities/35_borders/example.cpp](../examples/treetable_capabilities/35_borders/example.cpp) |
+| 36 | 自适应高度与滚动上限 | [examples/treetable_capabilities/36_auto_height/example.cpp](../examples/treetable_capabilities/36_auto_height/example.cpp) |
 
 ## 节点的整行数据
 
@@ -10,7 +53,7 @@
 
 `context.index` 保留当前节点或单元格的身份，`context.logicalColumn` 是当前逻辑列，`context.depth` 是相对当前显示根的节点深度。其他列读取同一行第 0 列的 payload，不会读到父节点或相同可见行号的其他节点；列隐藏、换序不会改变来源。第 0 列 payload 改变并发出该 role 的 `dataChanged` 后，该节点所有已物化单元格都会重新绑定。
 
-`tree_table_view` 示例在 `makeRow()` 中设置一份 `NodeData`，两种控件模式均使用上下文回调，并在提示中显示深度及单元格逻辑列。不同层级的 payload 类型可以不同，由 adapter 的控件类型及业务规则区分。完整 API 说明、旧回调兼容方式和大对象传递建议见[表格的整行数据上下文](table.md#一行传递一个结构体)。
+[第 05 章](../examples/treetable_capabilities/05_binding_context/example.cpp) 为每级节点设置一份结构体，两种控件模式均使用上下文回调，并在提示中显示深度及单元格逻辑列。不同层级的 payload 类型可以不同，由 adapter 的控件类型及业务规则区分。完整 API 说明、旧回调兼容方式和大对象传递建议见[表格的整行数据上下文](table.md#一行传递一个结构体)。
 
 ## 最小用法
 
@@ -162,15 +205,17 @@ view.setSelectionBehavior(viv::VirtualTableView::SelectionBehavior::SelectItems)
 
 收起开始时 `isExpanded()` 返回 `false`，子节点映射和 `visibleRowCount()` 在动画结束后才移除，随后发送 `collapsed`；展开映射和 `expanded` 在开始时更新。连续反向操作从当前进度继续。模型结构变化取消过渡并重建布局；滚轮操作、窗口尺寸变化、列布局变化和切换根节点会结束当前过渡。`collapseAll()` 和已展开节点的递归展开即时完成，不使用截图回退。
 
-子节点淡入淡出默认启用，`setExpansionFadeEnabled(false)` 可单独关闭渐变，`expansionFadeEnabled()` 查询配置。行控件、单元格控件、行号、状态背景和分支装饰使用同一进度，父节点及后续分组不渐变。临时框架容器保留业务控件已有的图形效果；Qt 的实时透明度合成可能使用离屏缓冲，因此该选项会增加绘制成本。使用写法可参考树能力第 07 章。
+子节点淡入淡出默认启用，`setExpansionFadeEnabled(false)` 可单独关闭渐变，`expansionFadeEnabled()` 查询配置。行控件、单元格控件、行号、状态背景和分支装饰使用同一进度，父节点及后续分组不渐变。临时框架容器保留业务控件已有的图形效果；Qt 的实时透明度合成可能使用离屏缓冲，因此该选项会增加绘制成本。使用写法见 [树表第 08 章](../examples/treetable_capabilities/08_expansion/example.cpp)。
 
 `visibleRowsChanged` 发出时可查询刷新后的可见行映射和垂直表头。`rowHeightChanged(row, height)` 的 row 是通知当时的可见行号，height 为应用后的高度；应用需长期保存目标时应立即取得模型节点索引。显式行高仍跟随节点，在折叠/展开及切换显示根后保留。`selectionModelChanged` 发布当前安装的选择模型指针。横向偏移信号只携带应用后的偏移值，不携带滚动组 ID；使用多个独立组时，应通过带组号的查询读取各组状态。
 
-`setBranchIndicatorsVisible(false)` 隐藏分支绘制，但保留节点缩进和键盘展开入口。内置三角默认在分支格居中且无额外 padding；需要自定义位置时使用 `BranchIndicatorRenderer`。`setBranchIndicatorRenderer(renderer, takeOwnership)` 可替换分支绘制，默认由应用持有 renderer；传入 `true` 后由视图持有，传入 `nullptr` 恢复内置分支。renderer 的 `paintBranch()` 收到视口坐标的缩进格，`branchState(index, cellDepth)` 可查询当前节点或祖先格的深度、子节点、兄弟和展开状态；省略 `cellDepth` 时查询节点自身的格。
+`setBranchIndicatorsVisible(false)` 隐藏分支绘制，但保留节点缩进和键盘展开入口。默认 branch 的便捷配置接口与 `VirtualTreeView` 一致：`setBranchIconSize()` 设置逻辑像素大小（默认 10，最小 1），`setBranchIconColor()` 设置颜色（无效颜色恢复图标原色或内置三角的 `QPalette::WindowText`），`setBranchIndicatorAlignment()` 设置对齐（默认居中），`setBranchIndicatorPadding()` 设置四边内边距（默认零，负值归零）。先扣除 padding 再对齐，图标会缩小到剩余空间；这些设置不改变层级缩进。交互示例见 [树表第 10 章](../examples/treetable_capabilities/10_indentation/example.cpp)。
 
-默认 10px 圆角等边三角形复用同一个朝下的展开图形，随真实行展开进度旋转 90°，收起方向为朝右；旋转共享动画的时长、曲线和反向进度，单独关闭淡入淡出不影响旋转。未执行展开过渡时直接应用最终方向。自定义 renderer 仍按 `branchState()` 自行切换图标，框架不自动旋转它绘制的内容。
+`setBranchIndicatorRenderer(renderer, takeOwnership)` 可替换分支绘制，默认由应用持有 renderer；传入 `true` 后由视图持有，传入 `nullptr` 恢复已配置图标或内置三角。便捷图标设置不影响自定义 renderer。renderer 的 `paintBranch()` 收到视口坐标的缩进格，`branchState(index, cellDepth)` 可查询当前节点或祖先格的深度、子节点、兄弟和展开状态；省略 `cellDepth` 时查询节点自身的格。
 
-`setBranchAreaVisible(false)` 隐藏全部分支装饰，并移除逻辑列 0 中节点自身的图标占位，保留 `depth × indentation()` 的层级缩进。`branchAreaVisible()` 默认返回 `true`；隐藏期间仍可双击或使用键盘展开，重新显示后恢复原有装饰配置。行控件和单元格控件使用相同的缩进规则，状态背景及行分割线的 `NodeOnly` 范围也随内容起点调整。
+默认 10px 圆角等边三角形复用同一个朝下的展开图形，随真实行展开进度旋转 90°，收起方向为朝右；旋转共享动画的时长、曲线和反向进度，单独关闭淡入淡出不影响旋转。`setExpandedBranchIcon()`、`setCollapsedBranchIcon()` 只设置其中一个非空图标时，也复用该图标随展开进度旋转；同时设置两个非空图标时立即切换，清空两个图标则恢复内置三角。未执行展开过渡时直接应用最终方向。自定义 renderer 仍按 `branchState()` 自行切换图标，框架不自动旋转它绘制的内容。
+
+`setBranchAreaVisible(false)` 隐藏全部分支装饰，并移除逻辑列 0 中节点自身的图标占位，保留 `depth × indentation()` 的层级缩进。`branchAreaVisible()` 默认返回 `true`；隐藏期间仍可双击或使用键盘展开，重新显示后恢复原有装饰配置。行控件和单元格控件使用相同的缩进规则；行分割线和状态背景始终包含逻辑列 0 的分支与缩进区域。
 
 `saveHeaderState()` 保存当前根的列宽、视觉顺序、隐藏列、比例设置和左右冻结列。旧布局中的冻结行计数会被忽略。先设置模型及根索引，再调用 `restoreHeaderState()`；保存时与恢复时的根列数必须相同，否则返回 `false` 且不修改现有列状态。切换到列数更少的根会截去高位列的临时状态，切回后这些列恢复默认值。需要分别保留多个根的列布局时，应用应按稳定根 ID 分别保存状态，并在每次切换根后恢复对应状态。
 
@@ -179,24 +224,21 @@ view.setSelectionBehavior(viv::VirtualTableView::SelectionBehavior::SelectItems)
 ## 间距与状态
 
 ```cpp
-view.setRowSpacing(4);               // 所有节点后的默认间距
-node->setData(10, viv::VirtualTreeTableView::NodeRowSpacingRole); // 创建节点时设置其下方间距
+view.setRowSpacing(4);               // Default gap below each node.
+node->setData(10, viv::VirtualTreeTableView::NodeRowSpacingRole); // Override this node's below gap.
 view.setColumnSpacing(6);
 view.setHorizontalGridLinesVisible(true);
 view.setVerticalGridLinesVisible(true);
-view.setRowGridLineExtent(viv::VirtualTreeTableView::RowGridLineExtent::NodeAndIcon);
 view.setHorizontalGridLineColor(QColor("#9aa8b2"));
 view.setHorizontalGridLineWidth(1);
 view.setVisualStateBackgroundVisible(true);
-view.setVisualStateBackgroundExtent(
-    viv::VirtualTreeTableView::VisualStateBackgroundExtent::NodeOnly);
 view.setHoverBackgroundColor(QColor("#e7f4ed"));
 view.setSelectedBackgroundColor(QColor("#b9d9f1"));
 ```
 
-`RowGridLineExtent` 和 `VisualStateBackgroundExtent` 分别选择只覆盖节点内容（`NodeOnly`）、图标加内容（`NodeAndIcon`）或整行（`FullWidth`）。范围只扣除第 0 逻辑列中的树装饰区域，其他列仍正常绘制。分割线的颜色、宽度、显隐、是否穿过行列间距，以及自定义间距控件均沿用[表格设置](table.md)。状态背景默认开启；行控件需要保持透明，才能看到视图在其下方绘制的背景。也可以使用 adapter 的状态回调自行绘制。
+树表行分割线固定覆盖实际列的整行范围，包含分支与缩进区域，不按节点层级裁剪。状态背景直接复用表格绘制：默认按整行高亮；切换为按单元格选择时高亮完整单元格，同样保留树装饰区域。没有实际列的空白区域不填充状态背景。分割线的颜色、宽度、显隐、间距中心或两侧绘制、是否穿过行列间距，以及自定义间距控件均沿用[表格设置](table.md)。状态背景默认开启；行控件需要保持透明，才能看到视图在其下方绘制的背景。也可以使用 adapter 的状态回调自行绘制。
 
-hover 和 selected 默认启用。按行选择时，内容区的状态背景默认贯通列间距，可通过继承的 `setVisualStateThroughColumnSpacing(false)` 关闭；按单元格选择时仅高亮单元格。纵向行间距和表头间距不参与状态着色，节点间距 role 只影响布局。自定义间距控件仍可绘制自己的内容，保持背景透明时可显示框架状态背景。
+hover 和 selected 默认启用。按行选择时，内容区的状态背景默认贯通列间距，可通过继承的 `setVisualStateThroughColumnSpacing(false)` 关闭；按单元格选择时仅高亮单元格。间距中心模式下，可通过 `setVisualStateThroughRowSpacing(true)` 延伸到相邻上下半行间距；表头间距保持自身外观。自定义间距控件仍可绘制自己的内容，保持背景透明时可显示框架状态背景。
 
 与 `VirtualTreeView` 相同，创建节点时将根据深度或业务属性计算的间距写入第 0 列的 `NodeRowSpacingRole`（`Qt::UserRole + 0x100`）。间距属于上方节点，0 表示没有间距，缺失/无效/负值回退到 `rowSpacing()`。该 role 的 dataChanged 会更新布局；表头、单元格和间距命中使用同一几何，末行后不额外留白。模型移动或切换显示根不会自动修改节点保存的间距；旧的按深度、同级和层级设置接口已移除。
 
@@ -222,7 +264,7 @@ provider 默认由应用管理生命周期。使用 `setSpanProvider(provider, t
 
 拖动反馈与 `VirtualTreeView` 一致，沿用表格的 `setDragFeedbackMode()`，默认 `DragFeedbackMode::RowMoveAnimation`，时长 180 ms、曲线 OutCubic。`SelectRows` 下两种物化模式及冻结列均支持本视图单节点 Move 的位移动画。Automatic 与 Manual 都在截图前立即收起源节点，不执行收起动画，取消或放下后保持收起；仅主节点的单行高度（含正常间距）占位，子树数据仍由模型一起移动。占位补齐上下分割线；同一可见末尾允许多个层级投放时，描边按目标层级缩进，仅在模型允许另一层级时显示。指示器的插入线同样按目标层级缩进，并定位在前一节点整棵子树的末尾。
 
-`Indicator` 模式、单元格选择、复制、多节点、跨视图、放入节点及安装 span provider 时使用指示器；拖动中重新展开源节点也回退到指示器。动画只调整显示位置，不提前修改模型。`tree_table_view` 示例可独立切换物化模式、整行选择和拖动反馈，并默认冻结第 0 列，方便比较。
+`Indicator` 模式、单元格选择、复制、多节点、跨视图、放入节点及安装 span provider 时使用指示器；拖动中重新展开源节点也回退到指示器。动画只调整显示位置，不提前修改模型。[第 29 章](../examples/treetable_capabilities/29_drag_indicator/example.cpp) 演示指示器与手动起拖，[第 30 章](../examples/treetable_capabilities/30_drag_animation/example.cpp) 演示位移动画与冻结列。
 
 ## 辅助技术
 

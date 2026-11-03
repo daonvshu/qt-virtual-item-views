@@ -23,6 +23,7 @@
 #include <QCursor>
 #include <QEasingCurve>
 #include <QKeyEvent>
+#include <QLayout>
 #include <QMimeData>
 #include <QMouseEvent>
 #include <QPainter>
@@ -3721,7 +3722,35 @@ void VirtualItemView::syncScrollBars()
             QMetaObject::invokeMethod(this, [this]() {
                 if (!m_autoHeightScrollBarSyncPending)
                     return;
+                // Header and horizontal scrollbar updates can invalidate an
+                // ancestor layout after this callback was queued. Apply its
+                // latest height budget before comparing content and viewport.
+                const QPointer<VirtualItemView> guard(this);
+                const QSize hints = m_autoHeightLastHints;
+                QVector<QPointer<QLayout>> layouts;
+                for (QWidget *ancestor = parentWidget(); ancestor;
+                     ancestor = ancestor->parentWidget()) {
+                    if (ancestor->layout())
+                        layouts.append(QPointer<QLayout>(ancestor->layout()));
+                    if (ancestor->isWindow())
+                        break;
+                }
+                // An already active outer layout does not activate dirty
+                // layouts inside child widgets. Settle the whole ancestor
+                // chain from the outside in, including the immediate parent.
+                for (auto it = layouts.crbegin(); it != layouts.crend(); ++it) {
+                    if (*it)
+                        (*it)->activate();
+                    if (!guard || !m_autoHeightScrollBarSyncPending)
+                        return;
+                }
                 m_autoHeightScrollBarSyncPending = false;
+                // A resize may change the horizontal scrollbar's height. Let
+                // that new hint settle too, without publishing a stale range.
+                if (hints != m_autoHeightLastHints) {
+                    syncScrollBars();
+                    return;
+                }
                 updateVerticalScrollBarRange();
             }, Qt::QueuedConnection);
         }
@@ -3735,7 +3764,12 @@ void VirtualItemView::updateVerticalScrollBarRange()
 {
     detail::PerformanceScope performance(this, "layout.scrollbars");
     QScrollBar *bar = verticalScrollBar();
-    const int viewExtent = viewportMainExtent();
+    // QAbstractScrollArea may resize its viewport after the parent has already
+    // allocated this widget's height. Use that allocation and the same chrome
+    // as sizeHint(), rather than the previous frame's viewport, for auto height.
+    const int viewExtent = m_autoHeightEnabled
+            && (!m_layout || m_layout->orientation() == Qt::Vertical)
+        ? qMax(0, height() - autoHeightDecorationExtent()) : viewportMainExtent();
     const qint64 extent = m_layout ? m_layout->contentExtent() : 0;
 
     m_scrollMapper.setExtents(extent, viewExtent);

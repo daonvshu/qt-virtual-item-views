@@ -29,6 +29,10 @@ class RowDragPreview;
 
 class ListLayout;
 
+namespace detail {
+class ColumnSelectionCache;
+}
+
 /// Table MVP (architecture document §43 v0.4) on top of the virtualization
 /// kernel.
 ///
@@ -576,6 +580,14 @@ protected:
     /// Column gap hosts call with paintColumnSpacing=true; the viewport excludes their bands.
     virtual void paintVisualStateBackgrounds(QPainter *painter, const QRect &dirtyRect,
                                             bool paintColumnSpacing = false) const;
+    /// Row-state bounds across the outer column panes, including their half gaps.
+    /// Horizontal bounds remain unclipped so scrolling preserves the real rounded ends.
+    QRect rowVisualStateColumnBounds(const QVector<TablePane> &panes) const;
+    /// Column gaps painted by gap hosts, including the trailing half at pane boundaries.
+    QRegion rowVisualStateColumnGaps(const QVector<TablePane> &panes) const;
+    /// Viewport bands occupied by actual columns, clipped to their owning panes.
+    /// Optionally includes the real trailing spacing at each pane's last column.
+    QRegion columnContentRegion(bool includeTrailingSpacing = false) const;
     void paintRowSpacingBackground(QPainter *painter, const QRect &dirtyRect) const override;
     /// Expands the shape around a row or merged cell without crossing frozen panes.
     QRect stateBackgroundRectWithRowSpacing(const QRect &rect, qsizetype firstRow,
@@ -687,9 +699,6 @@ protected:
 private:
     /// Visible viewport band of a row preview, clipped to its frozen or scrolling pane.
     QRect rowDragPreviewRect(const QModelIndex &index) const;
-    /// Viewport bands occupied by actual columns, clipped to their owning panes.
-    /// Optionally includes the real trailing spacing at each pane's last column.
-    QRegion columnContentRegion(bool includeTrailingSpacing = false) const;
     /// Current elapsed-time sample, so a fast retarget does not start from a stale tick.
     qreal dragReorderProgress() const;
     /// Repositions widgets, row gaps, state backgrounds and grid lines in one frame.
@@ -899,6 +908,7 @@ private:
     int m_visualStateCornerRadius = 0;
     bool m_visualStateCornerRadiusIncludesHeaders = true;
     HeaderGeometry *m_columns = nullptr;
+    std::shared_ptr<detail::ColumnSelectionCache> m_columnSelectionCache;
     /// Compresses the 64-bit horizontal offset into the int-only scroll bar (the
     /// vertical axis has the same mapper in the kernel).
     ScrollMapper m_horizontalMapper;

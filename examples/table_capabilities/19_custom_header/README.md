@@ -7,6 +7,8 @@
 
 默认表头已经是 `VirtualHeaderView`，通过 `horizontalHeader()->setAdapter(new HeaderAdapter(*view), true)` 更换 section 控件即可。表头接管 adapter，并自动提供模型和列几何；冻结区使用同一个 adapter，替换时自动回收旧控件并重建。
 
+组合控件继承 `StyledHeaderSection`，保留默认背景、状态动画和分割线，再通过布局添加标题与按钮。adapter 继承 `HeaderSectionAdapter`；重载绑定与解绑时先调用基类，维护框架绘制和按钮事件使用的 `logicalIndex()`。直接使用普通 `QWidget` 时，这些绘制职责需要自行实现。
+
 先看各页 `Example::setupExample()` 中带英文注释的配置，再看对应 adapter 和 section；`setupUi()` 只创建页面布局。基础文本对齐、padding、字体等配置另见 [第 18 节](../18_headers/README.md)。
 
 ## 表头样式与绘制

@@ -112,8 +112,9 @@ viv_add_example(drag_drop
 add_subdirectory(list_capabilities)
 add_subdirectory(table_capabilities)
 add_subdirectory(tree_capabilities)
+add_subdirectory(treetable_capabilities)
 add_subdirectory(reference)
 
 get_property(_viv_example_targets DIRECTORY PROPERTY VIV_EXAMPLE_TARGETS)
 add_custom_target(viv_examples DEPENDS ${_viv_example_targets})
-add_dependencies(viv_examples viv_reference_examples list_capabilities table_capabilities tree_capabilities)
+add_dependencies(viv_examples viv_reference_examples list_capabilities table_capabilities tree_capabilities treetable_capabilities)
