@@ -180,8 +180,7 @@ protected:
 private:
     bool canAnimate() const
     {
-        return !m_finishing && m_enabled && m_duration > 0 && m_view->isVisible()
-            && !m_view->frozenRows() && !m_view->frozenBottomRows();
+        return !m_finishing && m_enabled && m_duration > 0 && m_view->isVisible();
     }
 
     void start(qsizetype first, qsizetype end, bool expanding)

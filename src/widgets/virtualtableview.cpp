@@ -2652,9 +2652,11 @@ void VirtualTableView::applyDragReorderFrame()
     const QPointer<QAbstractItemModel> activeModel(model());
     const quint64 modelSerial = modelChangeSerial();
     const quint64 configurationSerial = m_cellConfigurationSerial;
+    const quint64 mappingSerial = viewMappingSerial();
     const auto isCurrent = [=]() {
         return self && activeModel && self->model() == activeModel.data()
             && self->modelChangeSerial() == modelSerial
+            && self->viewMappingSerial() == mappingSerial
             && self->m_cellConfigurationSerial == configurationSerial;
     };
     if (!isCurrent())
@@ -2683,7 +2685,11 @@ void VirtualTableView::applyDragReorderFrame()
         return;
     viewport()->update();
     raisePaneSeparatorLines();
+    if (!isCurrent())
+        return;
     raiseItemPaneSeparatorLines();
+    if (isCurrent())
+        dragReorderFrameChanged();
 }
 
 void VirtualTableView::updatePaneLayout()
@@ -3589,8 +3595,9 @@ bool VirtualTableView::restoreHeaderState(const QByteArray &state)
         return false;
     m_panes.setFrozenColumns(frozenLeft);
     m_panes.setFrozenRightColumns(frozenRight);
-    setFrozenRows(int(frozenTopRows));
-    setFrozenBottomRows(int(frozenBottomRows));
+    // Views without row panes still restore legacy column layouts.
+    setFrozenRows(supportsRowPanes() ? int(frozenTopRows) : 0);
+    setFrozenBottomRows(supportsRowPanes() ? int(frozenBottomRows) : 0);
     updatePaneLayout();
     flushPendingRelayout();
     emit columnGeometryChanged();
@@ -3822,6 +3829,63 @@ bool VirtualTableView::usesItemWidgets() const
 
 void VirtualTableView::augmentMaterializationRanges(QVector<VisibleRange> &ranges) const
 {
+    if (m_dragRowPreview->isActive()) {
+        // Final displaced positions are ordered within each block. Query them
+        // without scanning the model, then retain current interpolation samples.
+        const qsizetype count = viewItemCount();
+        const qint64 top = itemPaneRect(ItemPane::Type::Scrollable).top();
+        const qint64 bottom = itemPaneRect(ItemPane::Type::Scrollable).bottom();
+        const auto rectAt = [this](qsizetype row, qreal progress) {
+            QRect rect = geometryForViewRow(row);
+            rect.translate(0, qRound(m_dragRowPreview->offset(row, progress)));
+            return rect;
+        };
+        const auto append = [&](qsizetype first, qsizetype end) {
+            qsizetype low = first, high = end;
+            while (low < high) {
+                const qsizetype mid = low + (high - low) / 2;
+                if (rectAt(mid, 1.0).bottom() < top)
+                    low = mid + 1;
+                else
+                    high = mid;
+            }
+            const qsizetype begin = qMax(first, low - 1 - overscanBefore());
+            high = end;
+            while (low < high) {
+                const qsizetype mid = low + (high - low) / 2;
+                if (rectAt(mid, 1.0).top() <= bottom)
+                    low = mid + 1;
+                else
+                    high = mid;
+            }
+            const qsizetype last = qMin(end - 1, low + overscanAfter());
+            if (begin <= last)
+                ranges.append({begin, last});
+        };
+        append(frozenRows(), m_dragRowPreview->source());
+        append(m_dragRowPreview->sourceEnd(), count - frozenBottomRows());
+        const qreal progress = dragReorderProgress();
+        for (qsizetype row : m_dragPreviewRows) {
+            if (row < 0 || row >= count || m_dragRowPreview->containsSource(row))
+                continue;
+            const QRect rect = rectAt(row, progress);
+            if (rect.top() <= bottom && rect.bottom() + m_rowLayout->spacingAfter(row) >= top)
+                ranges.append({row, row});
+        }
+        std::sort(ranges.begin(), ranges.end(), [](const VisibleRange &a, const VisibleRange &b) {
+            return a.first < b.first;
+        });
+        QVector<VisibleRange> merged;
+        for (const VisibleRange &range : ranges) {
+            if (!range.isValid())
+                continue;
+            if (!merged.isEmpty() && range.first <= merged.last().last + 1)
+                merged.last().last = qMax(merged.last().last, range.last);
+            else
+                merged.append(range);
+        }
+        ranges.swap(merged);
+    }
     if (m_materializationMode != MaterializationMode::RowWidgets || !m_spanProvider || !model())
         return;
 
@@ -5172,7 +5236,7 @@ QRect VirtualTableView::stateBackgroundRectWithRowSpacing(const QRect &rect, qsi
 
 QVector<VisibleRange> VirtualTableView::visualStatePaintRanges() const
 {
-    auto ranges = visibleItemRanges();
+    auto ranges = dragVisualRowRanges();
     if (!m_visualStateThroughRowSpacing || gridLinePlacement() != GridLinePlacement::SpacingCenter)
         return ranges;
     for (auto &range : ranges) {
@@ -5848,6 +5912,45 @@ QVector<QRect> VirtualTableView::previewSpanRects() const
     return rectangles;
 }
 
+QVector<VisibleRange> VirtualTableView::dragVisualRowRanges() const
+{
+    auto ranges = visibleItemRanges();
+    if (m_dragRowPreview->isActive())
+        augmentMaterializationRanges(ranges);
+    return ranges;
+}
+
+QRect VirtualTableView::dragPlaceholderGapBefore(qsizetype row) const
+{
+    if (!m_dragRowPreview->isActive() || row < 0 || row > viewItemCount()
+        || m_dragRowPreview->containsSource(row))
+        return {};
+    const qsizetype previous = m_dragRowPreview->containsSource(row - 1)
+        ? m_dragRowPreview->source() - 1 : row - 1;
+    const auto visualRect = [this](qsizetype item) {
+        QRect rect = geometryForViewRow(item);
+        int y = rect.y();
+        if (rowVisualY(item, &y))
+            rect.moveTop(y);
+        return rect;
+    };
+    const int top = previous >= 0
+        ? visualRect(previous).bottom() + 1 + m_rowLayout->spacingAfter(previous)
+        : geometryForViewRow(0).top();
+    const int bottom = row < viewItemCount() ? visualRect(row).top()
+        : geometryForViewRow(viewItemCount() - 1).bottom() + 1;
+    return QRect(0, top, viewport()->width(), qMax(0, bottom - top));
+}
+
+QRect VirtualTableView::dragPlaceholderRect() const
+{
+    if (!m_dragRowPreview->isActive())
+        return {};
+    const qsizetype destination = m_dragRowPreview->destination();
+    return dragPlaceholderGapBefore(destination == m_dragRowPreview->source()
+        ? m_dragRowPreview->sourceEnd() : destination);
+}
+
 QRect VirtualTableView::rowGridGeometry(qsizetype row) const
 {
     QRect rect = geometryForViewRow(row);
@@ -5873,7 +5976,7 @@ QRect VirtualTableView::rowGridGeometry(qsizetype row) const
 QRegion VirtualTableView::rowContentRegion() const
 {
     QRegion content;
-    for (const VisibleRange &range : visibleItemRanges()) {
+    for (const VisibleRange &range : dragVisualRowRanges()) {
         for (qsizetype row = range.first; row >= 0 && row <= range.last; ++row) {
             QRect band = rowGridGeometry(row);
             const bool placeholder = m_dragRowPreview->isActive()
@@ -6048,13 +6151,15 @@ void VirtualTableView::syncRowGridLines()
     const QRect draggedPane = draggedRow >= 0
         ? itemPaneRect(itemPaneForRow(draggedRow)).intersected(viewport()->rect()) : QRect();
     if (m_horizontalGridLinesVisible && viewportRect.width() > 0) {
-        for (const VisibleRange &range : visibleItemRanges()) {
+        for (const VisibleRange &range : dragVisualRowRanges()) {
             for (qsizetype row = range.first; row >= 0 && row <= range.last; ++row) {
                 const bool exposedTail = rowPaneTailIsExposed(row);
                 if (isItemPaneBoundaryAfter(row) && !exposedTail)
                     continue;
                 const bool placeholder = m_dragRowPreview->isActive()
                     && row == m_dragRowPreview->source();
+                if (placeholder && managesVisibleRows())
+                    continue;
                 if (!placeholder && m_rowLayout && m_rowLayout->spacingAfter(row) > 0 && !exposedTail)
                     continue;
                 const QRect rowRect = rowGridGeometry(row);
@@ -6076,6 +6181,45 @@ void VirtualTableView::syncRowGridLines()
         }
     }
     if (m_dragRowPreview->isActive()) {
+        if (managesVisibleRows() && m_horizontalGridLinesVisible) {
+            QVector<qsizetype> rows = m_dragPreviewRows;
+            rows.append(m_dragRowPreview->sourceEnd());
+            rows.append(m_dragRowPreview->destination());
+            rows.append(viewItemCount());
+            for (const VisibleRange &range : visibleItemRanges()) {
+                for (qsizetype row = range.first; row >= 0 && row <= range.last; ++row)
+                    rows.append(row);
+            }
+            std::sort(rows.begin(), rows.end());
+            rows.erase(std::unique(rows.begin(), rows.end()), rows.end());
+            qsizetype key = -1;
+            const QRect pane = itemPaneRect(ItemPane::Type::Scrollable)
+                .translated(viewportRect.topLeft());
+            QRegion covered;
+            for (const QRect &rect : desired)
+                covered += rect;
+            for (const QRect &rect : rowSpacingWidgetRectsInView())
+                covered += rect;
+            for (qsizetype row : rows) {
+                const QRect gap = dragPlaceholderGapBefore(row);
+                if (gap.isEmpty())
+                    continue;
+                const qsizetype previous = m_dragRowPreview->containsSource(row - 1)
+                    ? m_dragRowPreview->source() - 1 : row - 1;
+                for (int y : {previous >= 0 ? gap.top() - m_horizontalGridLineWidth : gap.top(),
+                              gap.bottom() + 1 - m_horizontalGridLineWidth}) {
+                    const QRect line(viewportRect.x(), viewportRect.y() + y,
+                                     viewportRect.width(), m_horizontalGridLineWidth);
+                    const QRect clipped = line.intersected(pane).intersected(contentBounds);
+                    if (clipped.isEmpty())
+                        continue;
+                    const QRegion missing = QRegion(clipped).subtracted(covered);
+                    for (const QRect &part : missing)
+                        desired.insert(key--, part);
+                    covered += missing;
+                }
+            }
+        }
         const qsizetype source = m_dragRowPreview->source();
         const auto placeholder = desired.constFind(source);
         if (placeholder != desired.cend()) {
@@ -6117,7 +6261,8 @@ void VirtualTableView::syncRowGridLines()
         }
         QPalette colors = line->palette();
         QColor fadedColor = color;
-        fadedColor.setAlphaF(color.alphaF() * m_rowLayout->itemOpacity(it.key()));
+        const qsizetype styleRow = it.key() < 0 ? m_dragRowPreview->source() : it.key();
+        fadedColor.setAlphaF(color.alphaF() * m_rowLayout->itemOpacity(styleRow));
         colors.setColor(QPalette::Window, fadedColor);
         line->setPalette(colors);
         line->setGeometry(it.value());
@@ -6128,7 +6273,7 @@ void VirtualTableView::syncRowGridLines()
         if (draggedRow >= 0 && it.key() != draggedRow)
             mask -= draggedRect.intersected(draggedPane)
                 .translated(viewportRect.topLeft() - line->pos());
-        const QRect excluded = rowGridLineExclusion(itemDepth(viewIndex(it.key())));
+        const QRect excluded = rowGridLineExclusion(itemDepth(viewIndex(styleRow)));
         if (!excluded.isEmpty())
             mask -= excluded.translated(viewportRect.x() - line->x(), 0);
         if (preview) {
@@ -6779,6 +6924,23 @@ void VirtualTableView::setDragReorderAnimationEasingCurve(const QEasingCurve &cu
         applyDragReorderFrame();
 }
 
+bool VirtualTableView::resolveDragRowMove(const DropTarget &target,
+                                         const QList<QPersistentModelIndex> &sources,
+                                         qsizetype *sourceRow, qsizetype *destination)
+{
+    if (managesVisibleRows() || target.parent.isValid())
+        return false;
+    const QPersistentModelIndex source = sources.first();
+    for (const auto &index : sources) {
+        if (!index.isValid() || index.model() != model() || index.parent().isValid()
+            || index.row() != source.row())
+            return false;
+    }
+    *sourceRow = viewItemForIndex(source);
+    *destination = target.row;
+    return true;
+}
+
 bool VirtualTableView::updateDragFeedback(const DropTarget &target, const QPoint &position,
                                          Qt::DropAction action,
                                          const QList<QPersistentModelIndex> &sources)
@@ -6789,27 +6951,32 @@ bool VirtualTableView::updateDragFeedback(const DropTarget &target, const QPoint
     };
     if (m_dragFeedbackMode != DragFeedbackMode::RowMoveAnimation || action != Qt::MoveAction
         || selectionBehavior() != SelectionBehavior::SelectRows || sources.isEmpty() || !model()
-        || managesVisibleRows() || m_spanProvider || target.parent.isValid() || target.ontoItem
+        || m_spanProvider || target.ontoItem
         || target.cellDrop || target.column >= 0 || !target.isValid()
+        || m_rowLayout->hasTransientGeometry()
         || !viewport()->rect().contains(position)
         || itemPaneAtY(position.y()) != ItemPane::Type::Scrollable)
         return useIndicator();
-    const QPersistentModelIndex source = sources.first();
-    if (!source.isValid() || source.model() != model() || source.parent().isValid())
+    const QPersistentModelIndex source(QModelIndex(sources.first()).siblingAtColumn(0));
+    if (!source.isValid() || source.model() != model())
         return useIndicator();
-    for (const QPersistentModelIndex &index : sources) {
-        if (!index.isValid() || index.model() != model() || index.parent().isValid()
-            || index.row() != source.row())
-            return useIndicator();
-    }
-    const qsizetype sourceRow = viewItemForIndex(source);
+    const QPointer<VirtualTableView> guard(this);
+    const quint64 modelSerial = modelChangeSerial();
+    const quint64 mappingSerial = viewMappingSerial();
+    qsizetype sourceRow = -1, destination = -1;
+    const bool resolved = resolveDragRowMove(target, sources, &sourceRow, &destination);
+    if (!guard || modelChangeSerial() != modelSerial || viewMappingSerial() != mappingSerial)
+        return true;
+    if (!resolved || !source.isValid())
+        return useIndicator();
     const qsizetype lastScrollable = viewItemCount() - frozenBottomRows();
-    if (sourceRow < 0 || isRowFrozen(sourceRow) || target.row < frozenRows()
-        || target.row > lastScrollable)
+    if (sourceRow < 0 || isRowFrozen(sourceRow) || destination < frozenRows()
+        || destination > lastScrollable)
         return useIndicator();
-    const qreal extent = qreal(rowHeight(sourceRow)) + rowSpacing();
+    const qreal extent = qreal(m_rowLayout->offsetOf(sourceRow + 1)
+        - m_rowLayout->offsetOf(sourceRow));
     if (m_dragRowPreview->isActive() && m_dragPreviewSource == source
-        && m_dragRowPreview->destination() == target.row && m_dragRowPreview->extent() == extent) {
+        && m_dragRowPreview->destination() == destination && m_dragRowPreview->extent() == extent) {
         applyDragReorderFrame();
         return true;
     }
@@ -6821,7 +6988,8 @@ bool VirtualTableView::updateDragFeedback(const DropTarget &target, const QPoint
     }
     const qreal progress = dragReorderProgress();
     m_dragReorderAnimation->stop();
-    m_dragRowPreview->retarget(sourceRow, target.row, extent, rows, progress);
+    m_dragRowPreview->retarget(sourceRow, destination, extent, rows, progress);
+    m_dragPreviewRows = rows;
     m_dragPreviewSource = source;
     m_dragReorderClock.invalidate();
     if (m_dragReorderAnimationDuration > 0) {
@@ -6834,6 +7002,8 @@ bool VirtualTableView::updateDragFeedback(const DropTarget &target, const QPoint
             return true;
     }
     applyDragReorderFrame();
+    if (guard)
+        markDirty();
     return true;
 }
 
@@ -6844,6 +7014,7 @@ void VirtualTableView::clearDragFeedback()
     m_dragReorderAnimation->stop();
     m_dragReorderClock.invalidate();
     m_dragRowPreview->clear();
+    m_dragPreviewRows.clear();
     m_dragPreviewSource = QPersistentModelIndex();
     if (m_dragReorderFrameActive) {
         markDirty();

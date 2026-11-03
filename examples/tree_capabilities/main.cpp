@@ -26,8 +26,8 @@
 #include "16_item_events/example.h"
 #include "17_scrolling/example.h"
 #include "18_virtualization/example.h"
-#include "19_frozen_rows/example.h"
-#include "20_drag_drop/example.h"
+#include "19_drag_drop/example.h"
+#include "20_drag_animation/example.h"
 #include "21_sorting_filtering/example.h"
 #include "22_lazy_loading/example.h"
 #include "23_pinning/example.h"
@@ -37,34 +37,34 @@
 #endif
 
 namespace {
-struct Entry { const char *title; QWidget *(*create)(QWidget *); };
+struct Entry { int number; const char *title; QWidget *(*create)(QWidget *); };
 const Entry entries[] = {
-    {u8"01 基础接入", tree_basic::createExample},
-    {u8"02 组合行控件与数据回写", tree_row_widgets::createExample},
-    {u8"03 不同节点类型与复用池", tree_widget_types::createExample},
-    {u8"04 节点结构体与绑定上下文", tree_binding_context::createExample},
-    {u8"05 层级模型更新", tree_model_updates::createExample},
-    {u8"06 固定、首项测量与动态行高", tree_item_heights::createExample},
-    {u8"07 展开收起与过渡动画", tree_expansion::createExample},
-    {u8"08 切换显示根与相对深度", tree_root_index::createExample},
-    {u8"09 分支格宽与叶子对齐", tree_indentation::createExample},
-    {u8"10 内置分支图标配置", tree_branch_icons::createExample},
-    {u8"11 自定义分支渲染器", tree_branch_renderer::createExample},
-    {u8"12 节点间距与分割线", tree_row_spacing::createExample},
-    {u8"13 状态背景、范围与圆角", tree_visual_states::createExample},
-    {u8"14 状态关联内容", tree_state_content::createExample},
-    {u8"15 选择、当前项与键盘导航", tree_selection::createExample},
-    {u8"16 行事件、正确索引与几何查询", tree_item_events::createExample},
-    {u8"17 大树滚动、定位与可见映射", tree_scrolling::createExample},
-    {u8"18 可见行映射与控件复用", tree_virtualization::createExample},
-    {u8"19 顶部底部冻结与区域分隔线", tree_frozen_rows::createExample},
-    {u8"20 节点拖放与手动起拖", tree_drag_drop::createExample},
-    {u8"21 层级排序与递归过滤", tree_sorting_filtering::createExample},
-    {u8"22 业务驱动的延迟加载", tree_lazy_loading::createExample},
-    {u8"23 屏外保留与编辑生命周期", tree_pinning::createExample},
-    {u8"24 统计与生命周期日志", tree_diagnostics::createExample},
+    {1, u8"01 基础接入", tree_basic::createExample},
+    {2, u8"02 组合行控件与数据回写", tree_row_widgets::createExample},
+    {3, u8"03 不同节点类型与复用池", tree_widget_types::createExample},
+    {4, u8"04 节点结构体与绑定上下文", tree_binding_context::createExample},
+    {5, u8"05 层级模型更新", tree_model_updates::createExample},
+    {6, u8"06 固定、首项测量与动态行高", tree_item_heights::createExample},
+    {7, u8"07 展开收起与过渡动画", tree_expansion::createExample},
+    {8, u8"08 切换显示根与相对深度", tree_root_index::createExample},
+    {9, u8"09 分支格宽与叶子对齐", tree_indentation::createExample},
+    {10, u8"10 内置分支图标配置", tree_branch_icons::createExample},
+    {11, u8"11 自定义分支渲染器", tree_branch_renderer::createExample},
+    {12, u8"12 节点间距与分割线", tree_row_spacing::createExample},
+    {13, u8"13 状态背景、范围与圆角", tree_visual_states::createExample},
+    {14, u8"14 状态关联内容", tree_state_content::createExample},
+    {15, u8"15 选择、当前项与键盘导航", tree_selection::createExample},
+    {16, u8"16 行事件、正确索引与几何查询", tree_item_events::createExample},
+    {17, u8"17 大树滚动、定位与可见映射", tree_scrolling::createExample},
+    {18, u8"18 可见行映射与控件复用", tree_virtualization::createExample},
+    {19, u8"19 节点拖放与手动起拖", tree_drag_drop::createExample},
+    {20, u8"20 拖动位移动画", tree_drag_animation::createExample},
+    {21, u8"21 层级排序与递归过滤", tree_sorting_filtering::createExample},
+    {22, u8"22 业务驱动的延迟加载", tree_lazy_loading::createExample},
+    {23, u8"23 屏外保留与编辑生命周期", tree_pinning::createExample},
+    {24, u8"24 统计与生命周期日志", tree_diagnostics::createExample},
 #ifdef VIV_TREE_HAS_SMOOTH_SCROLLBAR
-    {u8"25 平滑滚动（可选）", tree_smooth_scrolling::createExample},
+    {25, u8"25 平滑滚动（可选）", tree_smooth_scrolling::createExample},
 #endif
 };
 constexpr int kCount = int(sizeof(entries) / sizeof(entries[0]));
@@ -121,11 +121,18 @@ int main(int argc, char **argv)
     parser.process(app);
     bool valid = false;
     const int number = parser.value(QStringLiteral("example")).toInt(&valid);
-    if (!valid || number < 1 || number > kCount) {
+    int initial = -1;
+    for (int row = 0; valid && row < kCount; ++row) {
+        if (entries[row].number == number) {
+            initial = row;
+            break;
+        }
+    }
+    if (initial < 0) {
         qCritical() << "--example must name an available chapter (1-24, optional 25)";
         return 1;
     }
-    Browser browser(number - 1);
+    Browser browser(initial);
     browser.show();
     if (parser.isSet(QStringLiteral("exit-after"))) {
         bool validDuration = false;

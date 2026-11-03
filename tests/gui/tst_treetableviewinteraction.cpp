@@ -1342,7 +1342,6 @@ private slots:
     void cleanupTestCase();
     void branchClickFollowsMovedColumn();
     void frozenColumnAndSiblingSpanStayAligned();
-    void expandedFrozenRowsKeepHeadersAndBranchAligned();
     void rowStripDragRejectsCrossParentAndRestoresPreview();
     void rowStripDragMovesSiblingIdentity();
     void rowStripPreviewFollowsBothTreeWidgetModes_data();
@@ -1374,7 +1373,6 @@ private slots:
     void rowGridLineAliasesMatchTableGridSettings();
     void rootSchemaAndCrossParentSelection();
     void dropTargetsFollowVisibleTreeAndSpacing();
-    void dropIndicatorsFollowFrozenPanesAndSpacing();
     void dropIndicatorFollowsMergedCellAnchor_data();
     void dropIndicatorFollowsMergedCellAnchor();
     void dragAutoscrollTracksTreeTargetsAndStops_data();
@@ -1593,7 +1591,6 @@ void TestTreeTableViewInteraction::frozenColumnAndSiblingSpanStayAligned()
     VirtualTreeTableView view;
     configure(&view, &model, true);
     view.setFrozenColumns({0});
-    view.setFrozenRows(1);
     view.expand(model.index(0, 0));
     view.setSpan(1, 1, 2, 2);
     view.flushPendingRelayout();
@@ -1608,93 +1605,6 @@ void TestTreeTableViewInteraction::frozenColumnAndSiblingSpanStayAligned()
     QVERIFY(!view.cellWidget(covered));
     QCOMPARE(static_cast<const VirtualItemView &>(view).indexAt(
                  view.cellRect(model.index(0, 0)).center()), model.index(0, 0));
-}
-
-void TestTreeTableViewInteraction::expandedFrozenRowsKeepHeadersAndBranchAligned()
-{
-    QStandardItemModel model;
-    model.setHorizontalHeaderLabels({QStringLiteral("Name"), QStringLiteral("Type"),
-                                     QStringLiteral("State")});
-    auto first = row(QStringLiteral("first"));
-    first.first()->appendRow(row(QStringLiteral("first child")));
-    model.appendRow(first);
-    model.appendRow(row(QStringLiteral("middle")));
-    auto last = row(QStringLiteral("last"));
-    last.first()->appendRow(row(QStringLiteral("last child")));
-    model.appendRow(last);
-
-    VirtualTreeTableView view;
-    configure(&view, &model, true);
-    view.setFrozenColumns({0});
-    view.setFrozenRightColumns({2});
-    view.setFrozenRows(1);
-    view.setFrozenBottomRows(1);
-    view.flushPendingRelayout();
-
-    const QModelIndex firstRoot = model.index(0, 0);
-    const QModelIndex lastRoot = model.index(2, 0);
-    const QModelIndex lastChild = model.index(0, 0, lastRoot);
-    const auto verifyFrozenRow = [&](const QModelIndex &node, qsizetype row,
-                                     ItemPane::Type type) {
-        QApplication::processEvents();
-        const QVector<ItemPane> rowPanes = view.itemPanes();
-        QCOMPARE(rowPanes.size(), 3);
-        QRect paneRect;
-        for (const ItemPane &pane : rowPanes) {
-            if (pane.type == type) {
-                paneRect = pane.viewportRect;
-                QCOMPARE(pane.firstRow <= row && row <= pane.lastRow, true);
-                break;
-            }
-        }
-        QVERIFY(!paneRect.isEmpty());
-        const QRect bodyRect = view.visualRect(node);
-        QVERIFY(paneRect.contains(bodyRect.center()));
-        QCOMPARE(static_cast<const VirtualItemView &>(view).indexAt(
-                     view.cellRect(node.siblingAtColumn(1)).center()),
-                 node.siblingAtColumn(1));
-        const QRect viewportRect = view.viewport()->geometry();
-        bool foundHeader = false;
-        for (VirtualHeaderView *header : view.findChildren<VirtualHeaderView *>(
-                 QString(), Qt::FindDirectChildrenOnly)) {
-            if (header->orientation() != Qt::Vertical || !header->isVisible()
-                || header->geometry().y() != viewportRect.y() + paneRect.y()
-                || header->height() != paneRect.height())
-                continue;
-            QWidget *section = header->sectionWidget(int(row));
-            QVERIFY(section);
-            QCOMPARE(header->geometry().y() + section->y(),
-                     viewportRect.y() + bodyRect.y());
-            auto *label = qobject_cast<LabelHeaderSection *>(section);
-            QVERIFY(label);
-            QCOMPARE(label->text(), QString::number(row + 1));
-            foundHeader = true;
-            break;
-        }
-        QVERIFY(foundHeader);
-    };
-
-    verifyFrozenRow(firstRoot, 0, ItemPane::Type::FrozenTop);
-    verifyFrozenRow(lastRoot, 2, ItemPane::Type::FrozenBottom);
-    const ColumnGeometry firstColumn = view.columnGeometry(0);
-    const QPoint firstBranch(firstColumn.viewportX + view.indentation() / 2,
-                             view.visualRect(firstRoot).center().y());
-    QTest::mouseClick(view.viewport(), Qt::LeftButton, Qt::NoModifier, firstBranch);
-    view.flushPendingRelayout();
-    QCOMPARE(view.visibleRowCount(), qsizetype(4));
-    verifyFrozenRow(lastRoot, 3, ItemPane::Type::FrozenBottom);
-
-    const QPoint lastBranch(firstColumn.viewportX + view.indentation() / 2,
-                            view.visualRect(lastRoot).center().y());
-    QTest::mouseClick(view.viewport(), Qt::LeftButton, Qt::NoModifier, lastBranch);
-    view.flushPendingRelayout();
-    QCOMPARE(view.visibleRowCount(), qsizetype(5));
-    verifyFrozenRow(lastChild, 4, ItemPane::Type::FrozenBottom);
-
-    view.collapse(lastRoot);
-    view.flushPendingRelayout();
-    QCOMPARE(view.visibleRowCount(), qsizetype(4));
-    verifyFrozenRow(lastRoot, 3, ItemPane::Type::FrozenBottom);
 }
 
 void TestTreeTableViewInteraction::rowStripDragRejectsCrossParentAndRestoresPreview()
@@ -1864,8 +1774,6 @@ void TestTreeTableViewInteraction::rowStripPreviewFollowsBothTreeWidgetModes()
     const QModelIndex parent = model.index(0, 0);
     view.expand(parent);
     if (frozen) {
-        view.setFrozenRows(1);
-        view.setFrozenBottomRows(1);
         view.setFrozenColumns({0});
         view.setFrozenRightColumns({2});
     }
@@ -2067,8 +1975,6 @@ void TestTreeTableViewInteraction::rowStripPreviewKeepsMergedCellMasks()
     const QModelIndex parent = model.index(0, 0);
     view.expand(parent);
     if (frozen) {
-        view.setFrozenRows(1);
-        view.setFrozenBottomRows(1);
         view.setFrozenColumns({0});
     }
     const QPersistentModelIndex anchor(model.index(0, 1, parent));
@@ -2221,8 +2127,6 @@ void TestTreeTableViewInteraction::proxySortKeepsNodeStateAndRestoresHeaderLayou
     view.horizontalHeaderGeometry()->moveSection(0, 2);
     view.setFrozenColumns({0});
     view.setFrozenRightColumns({2});
-    view.setFrozenRows(1);
-    view.setFrozenBottomRows(1);
     view.flushPendingRelayout();
     const QByteArray state = view.saveHeaderState();
     QVERIFY(!state.isEmpty());
@@ -2243,8 +2147,8 @@ void TestTreeTableViewInteraction::proxySortKeepsNodeStateAndRestoresHeaderLayou
     QCOMPARE(restored.horizontalHeaderGeometry()->sortIndicatorOrder(), Qt::AscendingOrder);
     QCOMPARE(restored.frozenColumns(), QVector<int>({0}));
     QCOMPARE(restored.frozenRightColumns(), QVector<int>({2}));
-    QCOMPARE(restored.frozenRows(), 1);
-    QCOMPARE(restored.frozenBottomRows(), 1);
+    QCOMPARE(restored.frozenRows(), 0);
+    QCOMPARE(restored.frozenBottomRows(), 0);
     QCOMPARE(proxy.index(0, 0).data().toString(), QStringLiteral("Alpha"));
 }
 
@@ -2825,8 +2729,6 @@ void TestTreeTableViewInteraction::customSpacingWidgetsFollowAdvancedPanes()
     setNodeSpacingAtDepth(model, view.rootIndex(), 1, 12);
     view.setColumnSpacing(9);
     view.setFrozenColumns({0});
-    view.setFrozenRows(1);
-    view.setFrozenBottomRows(1);
     view.setPanes({{{0}, PaneScroll::Frozen, 0},
                    {{1, 2}, PaneScroll::Scrollable, 0},
                    {{3, 4, 5}, PaneScroll::Scrollable, 1}});
@@ -2996,8 +2898,6 @@ void TestTreeTableViewInteraction::customBranchRendererFollowsAdvancedPanes()
     view.setDefaultColumnWidth(100);
     view.setColumnOverscan(0);
     view.setFrozenColumns({0});
-    view.setFrozenRows(1);
-    view.setFrozenBottomRows(1);
     view.setPanes({{{0}, PaneScroll::Frozen, 0},
                    {{1, 2}, PaneScroll::Scrollable, 0},
                    {{3, 4, 5}, PaneScroll::Scrollable, 1}});
@@ -3083,8 +2983,6 @@ void TestTreeTableViewInteraction::customBranchRendererFollowsAdvancedPanes()
                            {{3, 4}, PaneScroll::Scrollable, 1},
                            {{5}, PaneScroll::Frozen, 0}});
         }
-        view.setFrozenRows(layout == 0 ? 0 : layout == 1 ? 2 : 1);
-        view.setFrozenBottomRows(layout == 0 ? 0 : 1);
         view.setHorizontalOffset(0, 0);
         view.setHorizontalOffset(1, qMin<qint64>(20, view.maximumHorizontalOffset(1)));
         view.flushPendingRelayout();
@@ -3145,8 +3043,6 @@ void TestTreeTableViewInteraction::branchRendererCanRemoveItselfDuringPaint()
     view.setDefaultColumnWidth(90);
     view.setFrozenColumns({0});
     view.setFrozenRightColumns({3});
-    view.setFrozenRows(1);
-    view.setFrozenBottomRows(1);
     view.setPanes({{{0}, PaneScroll::Frozen, 0},
                    {{1, 2}, PaneScroll::Scrollable, 0},
                    {{3}, PaneScroll::Frozen, 0}});
@@ -3277,8 +3173,6 @@ void TestTreeTableViewInteraction::accessibilityFocusAndHitsFollowIndependentPan
                    {{1, 2}, PaneScroll::Scrollable, 0},
                    {{3, 4}, PaneScroll::Scrollable, 1},
                    {{5}, PaneScroll::Frozen, 0}});
-    view.setFrozenRows(1);
-    view.setFrozenBottomRows(1);
     showView(&view, QSize(620, 340));
     view.setCurrentIndex(target);
     view.setHorizontalOffset(0, 20);
@@ -3490,73 +3384,6 @@ void TestTreeTableViewInteraction::dropTargetsFollowVisibleTreeAndSpacing()
     QVERIFY(!trailing.parent.isValid());
     QCOMPARE(trailing.row, 2);
     QVERIFY(trailing.trailing);
-}
-
-void TestTreeTableViewInteraction::dropIndicatorsFollowFrozenPanesAndSpacing()
-{
-    RecordingDropModel model;
-    model.setHorizontalHeaderLabels({QStringLiteral("Name"), QStringLiteral("Type"),
-                                     QStringLiteral("State")});
-    for (int i = 0; i < 12; ++i)
-        model.appendRow(row(QStringLiteral("root %1").arg(i)));
-
-    VirtualTreeTableView view;
-    configure(&view, &model, false);
-    view.setRowSpacing(8);
-    view.setFrozenRows(1);
-    view.setFrozenBottomRows(1);
-    view.setVerticalOffset(56);
-    view.flushPendingRelayout();
-
-    const QRect topPane = view.itemPaneRect(ItemPane::Type::FrozenTop);
-    const QRect scrollPane = view.itemPaneRect(ItemPane::Type::Scrollable);
-    const QRect bottomPane = view.itemPaneRect(ItemPane::Type::FrozenBottom);
-    QVERIFY(!topPane.isEmpty());
-    QVERIFY(!scrollPane.isEmpty());
-    QVERIFY(!bottomPane.isEmpty());
-
-    const QPoint probe(40, topPane.top() + 1);
-    const auto topTarget = view.dropTargetAt(probe);
-    QVERIFY(topTarget.isValid());
-    QVERIFY(!topTarget.parent.isValid());
-    QCOMPARE(topTarget.row, 0);
-    const auto lineCenterY = [](const QRect &line) { return line.top() + line.height() / 2; };
-    QCOMPARE(lineCenterY(view.dropIndicatorRect(topTarget)), topPane.top());
-
-    int scrollRow = -1;
-    QRect scrollRowRect;
-    for (int rowIndex = 1; rowIndex < model.rowCount() - 1; ++rowIndex) {
-        const QRect candidate = view.visualRect(model.index(rowIndex, 0));
-        if (scrollPane.contains(candidate.center())) {
-            scrollRow = rowIndex;
-            scrollRowRect = candidate;
-            break;
-        }
-    }
-    QVERIFY(scrollRow >= 1);
-    const auto scrollTarget = view.dropTargetAt(
-        QPoint(40, scrollRowRect.top() + 1));
-    QVERIFY(scrollTarget.isValid());
-    QVERIFY(!scrollTarget.parent.isValid());
-    QCOMPARE(scrollTarget.row, scrollRow);
-    QCOMPARE(lineCenterY(view.dropIndicatorRect(scrollTarget)), scrollRowRect.top());
-
-    const int gapY = scrollRowRect.bottom() + 4;
-    const auto gapTarget = view.dropTargetAt(QPoint(40, gapY));
-    QVERIFY(gapTarget.isValid());
-    QVERIFY(!gapTarget.parent.isValid());
-    QCOMPARE(gapTarget.row, scrollRow + 1);
-    QVERIFY(view.dropIndicatorRect(gapTarget).top() >= scrollPane.top());
-    QVERIFY(view.dropIndicatorRect(gapTarget).bottom() <= scrollPane.bottom());
-
-    const QModelIndex last = model.index(model.rowCount() - 1, 0);
-    const QRect bottomRow = view.visualRect(last);
-    QVERIFY(bottomPane.contains(bottomRow.center()));
-    const auto bottomTarget = view.dropTargetAt(QPoint(40, bottomRow.top() + 1));
-    QVERIFY(bottomTarget.isValid());
-    QVERIFY(!bottomTarget.parent.isValid());
-    QCOMPARE(bottomTarget.row, model.rowCount() - 1);
-    QCOMPARE(lineCenterY(view.dropIndicatorRect(bottomTarget)), bottomPane.top());
 }
 
 void TestTreeTableViewInteraction::dropIndicatorFollowsMergedCellAnchor_data()
@@ -4594,8 +4421,6 @@ void TestTreeTableViewInteraction::headerLayoutSurvivesFileAndViewRecreation()
         view.setStretchLastColumn(true);
         view.setFrozenColumns({0});
         view.setFrozenRightColumns({5});
-        view.setFrozenRows(1);
-        view.setFrozenBottomRows(1);
         view.setSortIndicator(2, Qt::DescendingOrder);
         view.flushPendingRelayout();
         for (int column = 0; column < 6; ++column) {
@@ -4629,8 +4454,8 @@ void TestTreeTableViewInteraction::headerLayoutSurvivesFileAndViewRecreation()
     QVERIFY(restored.stretchLastColumn());
     QCOMPARE(restored.frozenColumns(), QVector<int>({0}));
     QCOMPARE(restored.frozenRightColumns(), QVector<int>({5}));
-    QCOMPARE(restored.frozenRows(), 1);
-    QCOMPARE(restored.frozenBottomRows(), 1);
+    QCOMPARE(restored.frozenRows(), 0);
+    QCOMPARE(restored.frozenBottomRows(), 0);
     QCOMPARE(restored.horizontalHeaderGeometry()->sortIndicatorSection(), 2);
     QCOMPARE(restored.horizontalHeaderGeometry()->sortIndicatorOrder(), Qt::DescendingOrder);
     QCOMPARE(restored.saveHeaderState(), loaded);
@@ -4760,8 +4585,6 @@ void TestTreeTableViewInteraction::headerResizeSwitchesFollowTreePanes()
     if (frozen) {
         view.setFrozenColumns({0});
         view.setFrozenRightColumns({2});
-        view.setFrozenRows(1);
-        view.setFrozenBottomRows(1);
     }
     view.setBranchIndicatorRenderer(new SolidBranchRenderer, true);
     const QModelIndex parent = model.index(0, 0);
@@ -5303,8 +5126,6 @@ void TestTreeTableViewInteraction::clearingFrozenColumnsRestoresTreePaneQueries(
     view.setDefaultColumnWidth(160);
     view.setFrozenColumns({0});
     view.setFrozenRightColumns({2});
-    view.setFrozenRows(1);
-    view.setFrozenBottomRows(1);
     view.setBranchIndicatorRenderer(new SolidBranchRenderer, true);
     const QModelIndex parent = model.index(0, 0);
     const QModelIndex child = model.index(0, 1, parent);
@@ -5334,8 +5155,8 @@ void TestTreeTableViewInteraction::clearingFrozenColumnsRestoresTreePaneQueries(
     QCOMPARE(view.columnGeometry(0).viewportX, -17);
     QCOMPARE(view.currentIndex(), child);
     QVERIFY(view.isExpanded(parent));
-    QCOMPARE(view.frozenRows(), 1);
-    QCOMPARE(view.frozenBottomRows(), 1);
+    QCOMPARE(view.frozenRows(), 0);
+    QCOMPARE(view.frozenBottomRows(), 0);
     QCOMPARE(static_cast<const VirtualItemView &>(view).indexAt(view.cellRect(child).center()), child);
     const QPoint marker(view.columnGeometry(0).viewportX + view.indentation() + 9,
                         view.visualRect(child).center().y());
@@ -5400,8 +5221,8 @@ void TestTreeTableViewInteraction::clearingFrozenColumnsRestoresTreePaneQueries(
     }
     QCOMPARE(view.currentIndex(), child);
     QVERIFY(view.isExpanded(parent));
-    QCOMPARE(view.frozenRows(), 1);
-    QCOMPARE(view.frozenBottomRows(), 1);
+    QCOMPARE(view.frozenRows(), 0);
+    QCOMPARE(view.frozenBottomRows(), 0);
     QCOMPARE(static_cast<const VirtualItemView &>(view).indexAt(view.cellRect(child).center()), child);
     const QPoint restoredMarker(view.columnGeometry(0).viewportX + view.indentation() + 9,
                                 view.visualRect(child).center().y());
@@ -5432,8 +5253,6 @@ void TestTreeTableViewInteraction::scrollHintsPositionExpandedNodes()
     configure(&view, &model, cells);
     if (frozen) {
         view.setFrozenColumns({0});
-        view.setFrozenRows(1);
-        view.setFrozenBottomRows(1);
     }
     const QModelIndex parent = model.index(0, 0);
     view.expand(parent);
@@ -5480,11 +5299,6 @@ void TestTreeTableViewInteraction::scrollHintsPositionExpandedNodes()
     view.scrollTo(QModelIndex(), VirtualItemView::PositionAtTop);
     view.scrollTo(foreign.index(0, 0), VirtualItemView::PositionAtTop);
     QCOMPARE(view.verticalOffset(), offset);
-    if (frozen) {
-        view.scrollTo(parent, VirtualItemView::PositionAtBottom);
-        view.scrollTo(model.index(239, 0, parent), VirtualItemView::PositionAtTop);
-        QCOMPARE(view.verticalOffset(), offset);
-    }
     view.collapse(parent);
     view.flushPendingRelayout();
     const qint64 foldedOffset = view.verticalOffset();
@@ -5518,8 +5332,7 @@ void TestTreeTableViewInteraction::itemWheelStepsAcrossVariableTreeRows()
     setNodeSpacingAtDepth(model, view.rootIndex(), 1, 5);
     setNodeSpacingAtDepth(model, view.rootIndex(), 2, 9);
     if (frozen) {
-        view.setFrozenRows(1);
-        view.setFrozenBottomRows(1);
+        view.setFrozenColumns({0});
     }
     const QModelIndex parent = model.index(0, 0);
     const QModelIndex branch = model.index(80, 0, parent);
@@ -5569,7 +5382,7 @@ void TestTreeTableViewInteraction::itemWheelStepsAcrossVariableTreeRows()
     QCOMPARE(view.currentIndex(), branch.siblingAtColumn(1));
     view.setVerticalOffset(start);
     view.flushPendingRelayout();
-    const int partialReference = frozen ? 28 : 44;
+    const int partialReference = 44;
     sendWheel(-60);
     QCOMPARE(view.verticalOffset(), start + partialReference);
     sendWheel(60);
@@ -5603,36 +5416,6 @@ void TestTreeTableViewInteraction::itemWheelStepsAcrossVariableTreeRows()
     QCOMPARE(view.verticalOffset(), view.maximumVerticalOffset());
     sendWheel(120);
     QCOMPARE(view.verticalOffset(), qint64(0));
-    QStandardItemModel fullyFrozen;
-    auto frozenParent = row(QStringLiteral("frozen parent"));
-    frozenParent.first()->appendRow(row(QStringLiteral("frozen child")));
-    fullyFrozen.appendRow(frozenParent);
-    fullyFrozen.appendRow(row(QStringLiteral("frozen tail")));
-    view.setFrozenRows(0);
-    view.setFrozenBottomRows(0);
-    view.setModel(&fullyFrozen);
-    view.expand(fullyFrozen.index(0, 0));
-    const QModelIndex frozenChild = fullyFrozen.index(0, 1, fullyFrozen.index(0, 0));
-    view.setCurrentIndex(frozenChild);
-    for (const QPair<int, int> counts : {qMakePair(3, 0), qMakePair(0, 3), qMakePair(1, 2)}) {
-        view.setFrozenRows(0);
-        view.setFrozenBottomRows(0);
-        view.setFrozenRows(counts.first);
-        view.setFrozenBottomRows(counts.second);
-        view.flushPendingRelayout();
-        QCOMPARE(view.frozenRows() + view.frozenBottomRows(), qsizetype(3));
-        QCOMPARE(view.maximumVerticalOffset(), qint64(0));
-        for (int angle : {-120, 120, -60, 60}) {
-            sendWheel(angle);
-            QCOMPARE(view.verticalOffset(), qint64(0));
-        }
-        sendWheel(-120, QPoint(0, -7));
-        sendWheel(120, QPoint(0, 7));
-        QCOMPARE(view.verticalOffset(), qint64(0));
-        QCOMPARE(view.currentIndex(), frozenChild);
-        QCOMPARE(static_cast<const VirtualItemView &>(view).indexAt(view.cellRect(frozenChild).center()),
-                 frozenChild);
-    }
     view.setModel(nullptr);
 }
 
@@ -5660,8 +5443,6 @@ void TestTreeTableViewInteraction::wheelParametersScrollExpandedNodes()
     configure(&view, &model, cells);
     if (frozen) {
         view.setFrozenColumns({0});
-        view.setFrozenRows(1);
-        view.setFrozenBottomRows(1);
     }
     const QModelIndex parent = model.index(0, 0);
     view.expand(parent);
@@ -5990,8 +5771,6 @@ void TestTreeTableViewInteraction::headerVisibilityAndDimensionsKeepTreeGeometry
     VirtualTreeTableView view;
     configure(&view, &model, cells);
     view.setFrozenColumns({0});
-    view.setFrozenRows(1);
-    view.setFrozenBottomRows(1);
     view.setBranchIndicatorRenderer(new SolidBranchRenderer, true);
     const QModelIndex parent = model.index(0, 0);
     const QModelIndex child = model.index(0, 0, parent);
@@ -6798,8 +6577,6 @@ void TestTreeTableViewInteraction::mergedCellsMaskInternalGridPixels()
     view.expand(parent);
     if (frozen) {
         view.setFrozenColumns(anchorColumn == 0 ? QVector<int>{0, 1} : QVector<int>{0});
-        view.setFrozenRows(1);
-        view.setFrozenBottomRows(1);
     }
     view.setSpan(1, anchorColumn, 2, 2);
     if (animated) {
@@ -6920,35 +6697,6 @@ void TestTreeTableViewInteraction::mergedCellsMaskInternalGridPixels()
     QCOMPARE(view.anchorIndex(covered), anchor);
     const QImage collapsed = view.grab().toImage();
     QCOMPARE(collapsed.pixelColor(origin + QPoint(insideX, boundaryY)), selected);
-    view.setFrozenRows(2);
-    view.flushPendingRelayout();
-    settle();
-    QCOMPARE(view.spanRect(anchor).size(), QSize(view.columnWidth(anchorColumn), firstRect.height()));
-    QCOMPARE(view.anchorIndex(covered), covered);
-    const QImage topBoundary = view.grab().toImage();
-    QCOMPARE(topBoundary.pixelColor(origin + QPoint(verticalX, view.visualRect(first).top() + 4)),
-             vertical);
-    view.setFrozenRows(0);
-    view.setFrozenBottomRows(2);
-    view.flushPendingRelayout();
-    settle();
-    QCOMPARE(view.anchorIndex(covered), covered);
-    QCOMPARE(view.spanRect(anchor).size(), QSize(view.columnWidth(anchorColumn), firstRect.height()));
-    const QImage bottomBoundary = view.grab().toImage();
-    const QRect scrollingFirst = view.visualRect(first);
-    QCOMPARE(bottomBoundary.pixelColor(origin + QPoint(verticalX, scrollingFirst.top() + 4)), vertical);
-    QCOMPARE(bottomBoundary.pixelColor(origin + QPoint(insideX,
-                 scrollingFirst.bottom() + (spacing > 0 ? 1 : 0))), horizontal);
-    const QPoint separateHit(view.columnGeometry(anchorColumn + 1).viewportX + 40,
-                             view.visualRect(covered.siblingAtColumn(0)).center().y());
-    QCOMPARE(static_cast<const VirtualItemView &>(view).indexAt(separateHit), covered);
-    if (cells)
-        QVERIFY(view.cellWidget(covered));
-    view.setFrozenRows(frozen ? 1 : 0);
-    view.setFrozenBottomRows(frozen ? 1 : 0);
-    view.flushPendingRelayout();
-    settle();
-    QCOMPARE(view.anchorIndex(covered), anchor);
     const QRect restoredFirst = view.visualRect(first);
     const QImage restored = view.grab().toImage();
     QCOMPARE(restored.pixelColor(origin + QPoint(insideX,
@@ -7019,8 +6767,6 @@ void TestTreeTableViewInteraction::editorsAndPinsSurviveScrollingAndFolding()
     if (frozen) {
         view.setFrozenColumns({0});
         view.setFrozenRightColumns({2});
-        view.setFrozenRows(1);
-        view.setFrozenBottomRows(1);
     }
     if (merged)
         view.setSpan(1, 1, 2, 2);
@@ -7268,8 +7014,6 @@ void TestTreeTableViewInteraction::editorsSurviveRuntimeFreezeChanges()
         for (int layout = 0; layout < 3; ++layout) {
             view.setFrozenColumns(layout == 1 ? QVector<int>{0, 1} : QVector<int>{});
             view.setFrozenRightColumns(layout == 2 ? QVector<int>{1, 2} : QVector<int>{});
-            view.setFrozenRows(layout == 1 ? 2 : 0);
-            view.setFrozenBottomRows(layout == 2 ? 2 : 0);
             view.flushPendingRelayout();
             settle();
             QVERIFY(widget);
@@ -7289,8 +7033,6 @@ void TestTreeTableViewInteraction::editorsSurviveRuntimeFreezeChanges()
     }
     view.setFrozenColumns({});
     view.setFrozenRightColumns({});
-    view.setFrozenRows(0);
-    view.setFrozenBottomRows(0);
     view.expand(parent);
     view.scrollTo(node, VirtualItemView::EnsureVisible);
     view.flushPendingRelayout();
@@ -7360,8 +7102,6 @@ void TestTreeTableViewInteraction::rowHeightsAndScrollAnchorsFollowNodes()
     const QModelIndex target = model.index(1, 0, parent);
     view.expand(parent);
     if (frozen) {
-        view.setFrozenRows(1);
-        view.setFrozenBottomRows(1);
         view.setFrozenColumns({0});
     }
     showView(&view, QSize(440, 350));
@@ -7551,8 +7291,6 @@ void TestTreeTableViewInteraction::horizontalGeometryAndOverscanStayConsistent()
     if (frozen) {
         view.setFrozenColumns({0});
         view.setFrozenRightColumns({7});
-        view.setFrozenRows(1);
-        view.setFrozenBottomRows(1);
     }
     showView(&view, QSize(600, 300));
     const auto verify = [&]() {
@@ -7738,8 +7476,6 @@ void TestTreeTableViewInteraction::accessibilityHandlesSchemaSpansAndVisibility(
     view.expand(wideNode);
     view.expand(narrowNode);
     if (frozen) {
-        view.setFrozenRows(1);
-        view.setFrozenBottomRows(1);
         view.setFrozenColumns({0});
         view.setFrozenRightColumns({2});
     }
@@ -8073,8 +7809,6 @@ void TestTreeTableViewInteraction::offscreenSpanAnchorsStayMaterialized()
     if (frozen) {
         view.setFrozenColumns({0});
         view.setFrozenRightColumns({2});
-        view.setFrozenRows(1);
-        view.setFrozenBottomRows(1);
     }
     view.setSpan(1, 1, 100, 2);
     showView(&view, QSize(440, 280));
@@ -8999,8 +8733,6 @@ void TestTreeTableViewInteraction::crossParentProxyChangesKeepRemoteScrollAnchor
     view.expand(proxy.mapFromSource(sourceParent));
     view.expand(proxy.mapFromSource(destination));
     if (frozen) {
-        view.setFrozenRows(1);
-        view.setFrozenBottomRows(1);
         view.setFrozenColumns({0});
     }
     showView(&view, QSize(440, 350));
@@ -9450,8 +9182,6 @@ void TestTreeTableViewInteraction::popupEditorsStayPinnedUntilClosed()
     if (frozen) {
         view.setFrozenColumns({0});
         view.setFrozenRightColumns({2});
-        view.setFrozenRows(1);
-        view.setFrozenBottomRows(1);
     }
     showView(&view, QSize(440, 280));
     const auto owningWidget = [&]() {
@@ -9507,8 +9237,6 @@ void TestTreeTableViewInteraction::popupEditorsStayPinnedUntilClosed()
             view.setPanes({});
             view.setFrozenColumns(layout == 0 ? QVector<int>{1} : QVector<int>{0});
             view.setFrozenRightColumns(layout == 1 ? QVector<int>{1} : QVector<int>{2});
-            view.setFrozenRows(layout == 0 ? 2 : 1);
-            view.setFrozenBottomRows(layout == 2 ? 2 : 1);
             if (layout == 3) {
                 const auto pane = [](QVector<int> columns, PaneScroll scroll, int group) {
                     TablePaneSpec result;
@@ -9644,8 +9372,6 @@ void TestTreeTableViewInteraction::popupMenusKeepActionsAcrossPaneMigration()
         view.setPanes({});
         view.setFrozenColumns(layout == 0 ? QVector<int>{1} : QVector<int>{0});
         view.setFrozenRightColumns(layout == 1 ? QVector<int>{1} : QVector<int>{2});
-        view.setFrozenRows(1);
-        view.setFrozenBottomRows(1);
         if (layout == 2)
             view.setPanes({pane({0}, PaneScroll::Frozen, 0),
                            pane({2}, PaneScroll::Scrollable, 0),
@@ -9774,8 +9500,6 @@ void TestTreeTableViewInteraction::completionPopupKeepsEditorIdentity()
     for (int layout = 0; layout < 2; ++layout) {
         view.setFrozenColumns(layout == 0 ? QVector<int>{1} : QVector<int>{0});
         view.setFrozenRightColumns(layout == 1 ? QVector<int>{1} : QVector<int>{2});
-        view.setFrozenRows(1);
-        view.setFrozenBottomRows(1);
         view.flushPendingRelayout();
         settle();
         verifyPinned();
@@ -9860,7 +9584,6 @@ void TestTreeTableViewInteraction::completionSubmissionRetiresView()
     QTRY_COMPARE(QApplication::activePopupWidget(), popup.data());
     popup->setCurrentIndex(popup->model()->index(1, 0));
     view->setFrozenColumns({1});
-    view->setFrozenRows(1);
     view->flushPendingRelayout();
     settle();
     QVERIFY(popup);
@@ -10277,7 +10000,7 @@ void TestTreeTableViewInteraction::realtimeAnimationCostsStayWindowBound()
             view->setSelectionBehavior(cells && kind != 2
                 ? VirtualItemView::SelectionBehavior::SelectItems
                 : VirtualItemView::SelectionBehavior::SelectRows);
-            if (advanced) {
+            if (advanced && kind == 1) {
                 view->setFrozenRows(1);
                 view->setFrozenBottomRows(1);
             }
@@ -10485,8 +10208,10 @@ void TestTreeTableViewInteraction::realtimeHeaderPreviewCostsStayWindowBound()
                            {{5}, PaneScroll::Frozen, 0},
                            {{6, 7, 8, 9, 10}, PaneScroll::Scrollable, 1},
                            {{11}, PaneScroll::Frozen, 0}});
-            view.setFrozenRows(1);
-            view.setFrozenBottomRows(1);
+            if (flat) {
+                view.setFrozenRows(1);
+                view.setFrozenBottomRows(1);
+            }
         }
         showView(&view, QSize(900, 420));
         if (QGuiApplication::platformName() == QStringLiteral("windows")) {
@@ -10733,8 +10458,6 @@ void TestTreeTableViewInteraction::animatedBackgroundsPreserveGridPixels()
         view.moveColumn(0, 2);
     else if (columnLayout == 2)
         view.setColumnHidden(0, true);
-    view.setFrozenRows(1);
-    view.setFrozenBottomRows(1);
     showView(&view, QSize(440, 300));
     QCursor::setPos(view.viewport()->mapToGlobal(QPoint(400, 220)));
     sendHeaderMouse(view.viewport(), QEvent::MouseMove, QPoint(400, 220), Qt::NoButton, Qt::NoButton);
@@ -11160,8 +10883,6 @@ void TestTreeTableViewInteraction::customHeadersFollowTreeGeometry()
         view.setTableAdapter(new ParentTypedRowAdapter(8), true);
     }
     view.setModel(&model);
-    view.setFrozenRows(1);
-    view.setFrozenBottomRows(1);
     if (advanced) {
         const auto pane = [](QVector<int> columns, PaneScroll scroll, int group) {
             TablePaneSpec result;
@@ -11690,8 +11411,6 @@ void TestTreeTableViewInteraction::animatedColumnMovesKeepBranchesAndWidgetsAlig
     if (frozen) {
         view.setFrozenColumns({3});
         view.setFrozenRightColumns({4});
-        view.setFrozenRows(1);
-        view.setFrozenBottomRows(1);
     }
     showView(&view, QSize(650, 300));
     const int originalX = view.columnGeometry(0).viewportX;
@@ -11854,8 +11573,6 @@ void TestTreeTableViewInteraction::animatedColumnMovesKeepAdvancedPanesAndSpansA
     separatorStyle.width = 3;
     separatorStyle.color = QColor(180, 35, 125);
     view.setPaneSeparatorStyle(separatorStyle);
-    view.setFrozenRows(1);
-    view.setFrozenBottomRows(1);
     if (cells) {
         view.setCellAdapter(new CellAdapter, true);
         view.setMaterializationMode(VirtualTableView::MaterializationMode::CellWidgets);

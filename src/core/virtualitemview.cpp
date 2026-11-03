@@ -1653,6 +1653,12 @@ void VirtualItemView::augmentMaterializationRanges(QVector<VisibleRange> &ranges
     Q_UNUSED(ranges);
 }
 
+int VirtualItemView::rowSpacingVisualOffset(qsizetype row) const
+{
+    Q_UNUSED(row);
+    return 0;
+}
+
 QVector<qsizetype> VirtualItemView::materializationItems(const QVector<VisibleRange> &ranges) const
 {
     QVector<qsizetype> items;
@@ -2223,7 +2229,8 @@ void VirtualItemView::syncRowSpacingWidgets(const QVector<VisibleRange> &ranges)
                 if (spacing <= 0)
                     continue;
                 const QRect itemRect = layout->itemRect(row, itemPaneScrollOffset(itemPaneForRow(row)));
-                const QRect gap(0, itemRect.bottom() + 1, viewport()->width(), spacing);
+                const QRect gap(0, itemRect.bottom() + 1 + rowSpacingVisualOffset(row),
+                                viewport()->width(), spacing);
                 if (gap.intersects(itemPaneRect(itemPaneForRow(row)).intersected(viewport()->rect())))
                     desired.insert(row, gap);
             }
@@ -3866,7 +3873,7 @@ Qt::DropAction VirtualItemView::startDragImpl(const QModelIndex &index, const Dr
     QPointer<QWidget> previewWidget(previewOptions.previewWidget);
     const QPointer<QAbstractItemModel> sourceModel = m_model;
     const quint64 modelSerial = m_modelChangeSerial;
-    const quint64 mappingSerial = viewMappingSerial();
+    quint64 mappingSerial = viewMappingSerial();
 
     QModelIndex dragIndex = index;
     if (!dragIndex.isValid()) {
@@ -3878,10 +3885,12 @@ Qt::DropAction VirtualItemView::startDragImpl(const QModelIndex &index, const Dr
     const QPoint globalPressPosition = previewOptions.globalPressPosition.value_or(
         m_pressedIndex.isValid() && m_pressedIndex == sourceIndex
             ? m_dragGlobalStartPos : cursorPosition);
-    const auto requestIsCurrent = [&]() {
+    const auto sourceIsCurrent = [&]() {
         return self && sourceModel && self->modelChangeSerial() == modelSerial
-            && self->viewMappingSerial() == mappingSerial && sourceIndex.isValid()
-            && sourceIndex == dragIndex && self->m_dragEnabled;
+            && sourceIndex.isValid() && sourceIndex == dragIndex && self->m_dragEnabled;
+    };
+    const auto requestIsCurrent = [&]() {
+        return sourceIsCurrent() && self->viewMappingSerial() == mappingSerial;
     };
     if (!canStartDrag(sourceIndex) || !requestIsCurrent())
         return Qt::IgnoreAction;
@@ -3909,12 +3918,6 @@ Qt::DropAction VirtualItemView::startDragImpl(const QModelIndex &index, const Dr
         delete mime;
         return Qt::IgnoreAction;
     }
-    if (!customPreview)
-        previewWidget = dragSourceWidget(dragIndex);
-    if (!requestIsCurrent()) {
-        delete mime;
-        return Qt::IgnoreAction;
-    }
     m_dragSourcePin = sourcePin;
     dragStateStarted = true;
     m_pressedIndex = QPersistentModelIndex();
@@ -3922,6 +3925,22 @@ Qt::DropAction VirtualItemView::startDragImpl(const QModelIndex &index, const Dr
     m_dragSourceIndexes.clear();
     for (const QModelIndex &source : indexes)
         m_dragSourceIndexes.append(QPersistentModelIndex(source));
+
+    // Let a tree compact an expanded source before the native loop or screenshot.
+    // Its intentional mapping change starts a new snapshot, while model/source
+    // changes and source cleanup still invalidate the request.
+    if (!prepareDrag(indexes) || !sourceIsCurrent()
+        || m_dragSourcePin != sourcePin || m_dragSourceIndexes.isEmpty()) {
+        delete mime;
+        return Qt::IgnoreAction;
+    }
+    mappingSerial = viewMappingSerial();
+    if (!customPreview)
+        previewWidget = dragSourceWidget(dragIndex);
+    if (!requestIsCurrent()) {
+        delete mime;
+        return Qt::IgnoreAction;
+    }
 
     QPixmap pixmap;
     QPoint hotSpot;
@@ -4066,6 +4085,12 @@ QModelIndexList VirtualItemView::dragSourceIndexes(const QModelIndex &dragIndex)
     return indexes;
 }
 
+bool VirtualItemView::prepareDrag(const QModelIndexList &indexes)
+{
+    Q_UNUSED(indexes);
+    return true;
+}
+
 QWidget *VirtualItemView::dragSourceWidget(const QModelIndex &index) const
 {
     const qsizetype item = viewItemForIndex(index);
@@ -4164,10 +4189,12 @@ void VirtualItemView::finishDrag()
     m_dragHoverValid = false;
     m_dragHoverInternal = false;
     m_dragHoverAction = Qt::IgnoreAction;
+    m_dragHoverMimeData.clear();
     hideDropIndicator();
 }
 
-bool VirtualItemView::isDropOnItself(const DropTarget &target, Qt::DropAction action) const
+bool VirtualItemView::isDropOnItself(const DropTarget &target, Qt::DropAction action,
+                                    bool allowUnchangedPosition) const
 {
     // QAbstractItemView only guards internal *moves*: copying an item next to
     // itself is a legitimate gesture.
@@ -4185,7 +4212,7 @@ bool VirtualItemView::isDropOnItself(const DropTarget &target, Qt::DropAction ac
                 return true;
         }
         // Between the dragged item and itself: the item would not move.
-        if (!target.cellDrop && target.parent == source.parent()
+        if (!allowUnchangedPosition && !target.cellDrop && target.parent == source.parent()
             && (target.row == source.row() || target.row == source.row() + 1))
             return true;
     }
@@ -4249,6 +4276,7 @@ void VirtualItemView::dragMoveEvent(QDragMoveEvent *event)
         : event->proposedAction();
     m_dragHoverInternal = event->source() == this;
     m_dragHoverAction = action;
+    m_dragHoverMimeData = event->mimeData();
     const bool canDrop = target.isValid() && !isDropOnItself(target, action)
         && dropModel->canDropMimeData(event->mimeData(), action, target.row, target.column,
                                       target.parent);
@@ -4281,6 +4309,7 @@ void VirtualItemView::dragLeaveEvent(QDragLeaveEvent *event)
     m_dragHoverValid = false;
     m_dragHoverInternal = false;
     m_dragHoverAction = Qt::IgnoreAction;
+    m_dragHoverMimeData.clear();
     event->accept();
     hideDropIndicator();
 }
@@ -4295,6 +4324,7 @@ void VirtualItemView::dropEvent(QDropEvent *event)
         return;
     }
     m_dragHoverValid = false;
+    m_dragHoverMimeData.clear();
     if (!m_model || !event->mimeData()) {
         event->ignore();
         return;
@@ -4502,6 +4532,30 @@ void VirtualItemView::hideDropIndicator()
     if (m_dropIndicator)
         m_dropIndicator->hide();
     clearDragFeedback();
+}
+
+bool VirtualItemView::canDropAtCurrentDragTarget(const DropTarget &target,
+                                               bool allowUnchangedPosition) const
+{
+    if (m_destroying || !m_dragEnabled || !m_dragHoverValid || !m_model
+        || !m_dragHoverMimeData || m_dragHoverAction == Qt::IgnoreAction
+        || !target.isValid())
+        return false;
+    const QPointer<const VirtualItemView> self(this);
+    const QPointer<QAbstractItemModel> model(m_model);
+    const QPointer<const QMimeData> mime(m_dragHoverMimeData);
+    const quint64 serial = m_modelChangeSerial;
+    const QPersistentModelIndex parent(target.parent);
+    const Qt::DropAction action = m_dragHoverAction;
+    if (isDropOnItself(target, action, allowUnchangedPosition) || !self || !model || !mime)
+        return false;
+    const bool accepted = model->canDropMimeData(mime.data(), action, target.row,
+                                                target.column, target.parent);
+    return self && model && mime && accepted && !self->m_destroying
+        && self->m_model == model && self->m_modelChangeSerial == serial
+        && self->m_dragEnabled && self->m_dragHoverValid
+        && self->m_dragHoverMimeData == mime && self->m_dragHoverAction == action
+        && (!target.parent.isValid() || parent.isValid());
 }
 
 void VirtualItemView::refreshDragFeedback()

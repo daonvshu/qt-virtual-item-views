@@ -586,7 +586,8 @@ private slots:
         QTest::addColumn<bool>("frozen");
         for (int mode = 0; mode < 6; ++mode) {
             QTest::newRow(qPrintable(QStringLiteral("mode-%1").arg(mode))) << mode << false;
-            QTest::newRow(qPrintable(QStringLiteral("mode-%1-frozen").arg(mode))) << mode << true;
+            if (mode != 0)
+                QTest::newRow(qPrintable(QStringLiteral("mode-%1-frozen").arg(mode))) << mode << true;
         }
     }
     void stateBackgroundSpacing()
@@ -618,8 +619,10 @@ private slots:
                 if (frozen)
                     view.setFrozenColumns({0});
             }
-            if (frozen)
-                view.setFrozenRows(1);
+            if constexpr (!tree) {
+                if (frozen)
+                    view.setFrozenRows(1);
+            }
             const QColor hover(25, 180, 70);
             const QColor selected(190, 40, 90);
             view.setHoverBackgroundColor(hover);
@@ -1061,8 +1064,12 @@ private slots:
             }
             view.setUniformItemHeight(25);
             view.setModel(&model);
-            view.setFrozenRows(1);
-            view.setFrozenBottomRows(1);
+            constexpr bool rowPanes = std::is_same_v<View, viv::VirtualListView>
+                || std::is_same_v<View, viv::VirtualTableView>;
+            if constexpr (rowPanes) {
+                view.setFrozenRows(1);
+                view.setFrozenBottomRows(1);
+            }
             if constexpr (std::is_base_of_v<viv::VirtualTableView, View>)
                 view.setFrozenColumns({0});
             vivtest::showView(&view, QSize(420, 260));
@@ -1102,19 +1109,21 @@ private slots:
                 const int x = qRound((body.right() - 10) * image.devicePixelRatio());
                 // A gap edge can adjoin a frozen boundary; check their colors independently.
                 for (const QColor &lineColor : {color, paneColor}) {
-                int run = 0;
-                int lines = 0;
-                for (int y = qRound(body.top() * image.devicePixelRatio());
-                     y < qRound((body.bottom() + 1) * image.devicePixelRatio()); ++y) {
-                    if (image.pixelColor(x, y) == lineColor) {
-                        ++run;
-                        QVERIFY2(run == 1, qPrintable(QStringLiteral("gap=%1, y=%2").arg(gap).arg(y)));
-                        ++lines;
-                    } else {
-                        run = 0;
+                    if (!rowPanes && lineColor == paneColor)
+                        continue;
+                    int run = 0;
+                    int lines = 0;
+                    for (int y = qRound(body.top() * image.devicePixelRatio());
+                         y < qRound((body.bottom() + 1) * image.devicePixelRatio()); ++y) {
+                        if (image.pixelColor(x, y) == lineColor) {
+                            ++run;
+                            QVERIFY2(run == 1, qPrintable(QStringLiteral("gap=%1, y=%2").arg(gap).arg(y)));
+                            ++lines;
+                        } else {
+                            run = 0;
+                        }
                     }
-                }
-                QVERIFY2(lines > 0, qPrintable(QStringLiteral("row gap=%1").arg(gap)));
+                    QVERIFY2(lines > 0, qPrintable(QStringLiteral("row gap=%1").arg(gap)));
                 }
             }
         };

@@ -664,6 +664,17 @@ protected:
     bool updateDragFeedback(const DropTarget &target, const QPoint &position, Qt::DropAction action,
                             const QList<QPersistentModelIndex> &sources) override;
     void clearDragFeedback() override;
+    /// Maps a permitted single-row move to source and insert-before layout rows.
+    /// Derived hierarchical views may resolve a different model parent.
+    virtual bool resolveDragRowMove(const DropTarget &target,
+                                   const QList<QPersistentModelIndex> &sources,
+                                   qsizetype *sourceRow, qsizetype *destination);
+    /// Updates derived decorations after all widgets and spacing have moved.
+    virtual void dragReorderFrameChanged() {}
+    /// Actual opening at the current insertion boundary, excluding normal spacing.
+    QRect dragPlaceholderRect() const;
+    /// Includes rows displaced into the viewport by a native drag preview.
+    QVector<VisibleRange> dragVisualRowRanges() const;
     void resizeEvent(QResizeEvent *event) override;
     void showEvent(QShowEvent *event) override;
     void changeEvent(QEvent *event) override;
@@ -683,6 +694,8 @@ private:
     qreal dragReorderProgress() const;
     /// Repositions widgets, row gaps, state backgrounds and grid lines in one frame.
     void applyDragReorderFrame();
+    /// Current opening before a layout row; the source is excluded from neighbours.
+    QRect dragPlaceholderGapBefore(qsizetype row) const;
     /// Deletes a header renderer through its interface (a renderer does not have
     /// to be a QWidget itself, so deleting `headerWidget()` would leak the
     /// wrapper) and clears the pointer.
@@ -950,6 +963,7 @@ private:
     QEasingCurve m_dragReorderEasingCurve = QEasingCurve::OutCubic;
     std::unique_ptr<RowDragPreview> m_dragRowPreview;
     QPersistentModelIndex m_dragPreviewSource;
+    QVector<qsizetype> m_dragPreviewRows;
     QVariantAnimation *m_dragReorderAnimation = nullptr;
     QElapsedTimer m_dragReorderClock;
     bool m_dragReorderFrameActive = false;

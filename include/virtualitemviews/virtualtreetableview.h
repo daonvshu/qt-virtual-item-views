@@ -15,9 +15,11 @@ class QResizeEvent;
 namespace viv {
 
 class TreeExpansionTransition;
+class TreeDragPlaceholderOutline;
 
 /// A multi-column table whose rows are the expanded, visible nodes of a model tree.
 /// Column zero owns the branch indicator even when columns are reordered.
+/// Column freezing is supported; row freezing is not.
 class VIRTUALITEMVIEWS_EXPORT VirtualTreeTableView : public VirtualTableView
 {
     Q_OBJECT
@@ -37,8 +39,8 @@ public:
     void expandRecursively(const QModelIndex &index);
     void collapseAll();
     /// Live layout transition; enabled by default. Collapse retains outgoing
-    /// rows until completion, then emits collapsed(). Frozen rows and bulk
-    /// collapseAll() updates are immediate, without a screenshot fallback.
+    /// rows until completion, then emits collapsed(). Bulk collapseAll()
+    /// updates are immediate, without a screenshot fallback.
     void setExpansionAnimationEnabled(bool enabled);
     bool expansionAnimationEnabled() const;
     /// Duration in milliseconds; zero disables the visual transition.
@@ -121,6 +123,8 @@ protected:
     QItemSelection selectionRange(const QModelIndex &anchor,
                                   const QModelIndex &target) const override;
     bool usesExplicitRowSelection() const override { return true; }
+    /// Tree rows scroll together; horizontal column panes remain supported.
+    bool supportsRowPanes() const override { return false; }
     void applyRowSpacingOverrides() override;
     void configureRowSpacingWidget(QWidget *widget) const override;
     void afterMaterialize() override;
@@ -133,6 +137,13 @@ protected:
     QRect rowGridLineExclusion(int depth) const override;
     bool handleItemKeyPress(QKeyEvent *event) override;
     QModelIndex dragNodeIndex(const QModelIndex &index) const override;
+    /// Collapse a single source immediately before capture in row animation mode.
+    bool prepareDrag(const QModelIndexList &indexes) override;
+    bool resolveDragRowMove(const DropTarget &target,
+                           const QList<QPersistentModelIndex> &sources,
+                           qsizetype *sourceRow, qsizetype *destination) override;
+    void clearDragFeedback() override;
+    void dragReorderFrameChanged() override;
     DropTarget resolveDropTarget(const QPoint &viewportPos) const override;
     QRect resolveDropIndicatorRect(const DropTarget &target) const override;
     void mousePressEvent(QMouseEvent *event) override;
@@ -144,6 +155,10 @@ protected:
     void paintEvent(QPaintEvent *event) override;
 
 private:
+    // Keep column freezing public, but exclude row freezing from the tree API.
+    using VirtualItemView::setFrozenRows;
+    using VirtualItemView::setFrozenBottomRows;
+
     /// Resolves the gap from node data, falling back to rowSpacing().
     int effectiveRowSpacing(qsizetype row) const;
     void connectTreeSignals(QAbstractItemModel *model);
@@ -165,9 +180,18 @@ private:
                                     bool paintColumnSpacing = false) const override;
     void invalidateBranches();
     QRect insertionLineRect(const DropTarget &target) const;
+    /// First visible row after a node's complete expanded subtree.
+    qsizetype visibleSubtreeEnd(QModelIndex node) const;
+    /// Viewport x for a destination depth inside logical column zero.
+    int dropTargetLeft(const DropTarget &target, bool includeBranchCell) const;
 
     TreeVisibilityIndex *m_visibility = nullptr;
     TreeExpansionTransition *m_expansionTransition = nullptr;
+    QPointer<TreeDragPlaceholderOutline> m_dragPlaceholderOutline;
+    QPersistentModelIndex m_dragTargetParent;
+    int m_dragTargetRow = -1;
+    bool m_dragTargetAmbiguous = false;
+    quint64 m_dragFeedbackRevision = 0;
     QPersistentModelIndex m_rootIndex;
     quint64 m_rootChangeSerial = 0;
     quint64 m_mappingSerial = 0;

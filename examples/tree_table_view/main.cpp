@@ -164,6 +164,13 @@ int main(int argc, char **argv)
     view.setColumnWidth(2, 160);
     view.setColumnDragEnabled(true);
     view.setFrozenColumns({0});
+    // Row semantics apply equally to row widgets and cell widgets. The model
+    // copies MIME rows on drop, so the view removes the original rows on Move.
+    view.setDragEnabled(true);
+    view.setMoveRemovesSourceRows(true);
+    view.setDragDropActions(Qt::CopyAction | Qt::MoveAction);
+    view.setDropIndicatorColor(QColor(QStringLiteral("#2676c8")));
+    view.setHorizontalGridLinesVisible(true);
     view.setVisualStateBackgroundVisible(true);
     view.setHoverBackgroundColor(QColor(231, 244, 237));
     view.setSelectedBackgroundColor(QColor(185, 217, 241));
@@ -173,6 +180,13 @@ int main(int argc, char **argv)
     auto *mode = new QComboBox(&window);
     mode->addItems({QStringLiteral("行控件"), QStringLiteral("单元格控件")});
     controls->addWidget(mode);
+    auto *rowSelection = new QCheckBox(QStringLiteral("整行选择/拖动"), &window);
+    rowSelection->setChecked(true);
+    controls->addWidget(rowSelection);
+    QObject::connect(rowSelection, &QCheckBox::toggled, &view, [&view](bool rows) {
+        view.setSelectionBehavior(rows ? viv::VirtualItemView::SelectionBehavior::SelectRows
+                                       : viv::VirtualItemView::SelectionBehavior::SelectItems);
+    });
     auto *expansionAnimation = new QCheckBox(QStringLiteral("展开动画"), &window);
     expansionAnimation->setChecked(view.expansionAnimationEnabled());
     controls->addWidget(expansionAnimation);
@@ -188,17 +202,33 @@ int main(int argc, char **argv)
     QObject::connect(mode, QOverload<int>::of(&QComboBox::currentIndexChanged),
                      &view, [&view](int choice) {
                          using Mode = viv::VirtualTableView::MaterializationMode;
-                         using Selection = viv::VirtualTableView::SelectionBehavior;
                          view.setMaterializationMode(choice == 0 ? Mode::RowWidgets
                                                                  : Mode::CellWidgets);
-                         view.setSelectionBehavior(choice == 0 ? Selection::SelectRows
-                                                               : Selection::SelectItems);
                          const QModelIndex current = view.currentIndex();
                          if (current.isValid())
                              view.setCurrentIndex(current);
                          else if (view.selectionModel())
                              view.selectionModel()->clearSelection();
                      });
+
+    window.addToolBarBreak();
+    auto *dragToolbar = window.addToolBar(QStringLiteral("拖动反馈"));
+    auto *dragFeedback = new QComboBox(&window);
+    dragFeedback->addItems({QStringLiteral("位移动画（默认）"), QStringLiteral("指示器")});
+    dragToolbar->addWidget(dragFeedback);
+    QObject::connect(dragFeedback, QOverload<int>::of(&QComboBox::currentIndexChanged),
+                     &view, [&view](int choice) {
+        using Feedback = viv::VirtualTableView::DragFeedbackMode;
+        view.setDragFeedbackMode(choice == 0 ? Feedback::RowMoveAnimation : Feedback::Indicator);
+    });
+    auto *dragDuration = new QSpinBox(&window);
+    dragDuration->setRange(0, 1000);
+    dragDuration->setSuffix(QStringLiteral(" ms"));
+    dragDuration->setValue(view.dragReorderAnimationDuration());
+    dragToolbar->addWidget(dragDuration);
+    QObject::connect(dragDuration, QOverload<int>::of(&QSpinBox::valueChanged),
+                     &view, &viv::VirtualTableView::setDragReorderAnimationDuration);
+    dragToolbar->addWidget(new QLabel(QStringLiteral("起拖立即收起源节点，单行占位；末尾描边区分落点层级。"), &window));
 
     window.addToolBarBreak();
     auto *spacingToolbar = window.addToolBar(QStringLiteral("间距"));

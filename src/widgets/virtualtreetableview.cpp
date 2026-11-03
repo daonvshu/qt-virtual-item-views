@@ -1,6 +1,7 @@
 #include <virtualitemviews/virtualtreetableview.h>
 #include "../core/performanceprobe_p.h"
 #include "treeexpansiontransition_p.h"
+#include "treedragplaceholder_p.h"
 #include "../core/pixelalignedlines_p.h"
 
 #include <virtualitemviews/listlayout.h>
@@ -115,6 +116,9 @@ VirtualTreeTableView::VirtualTreeTableView(QWidget *parent)
 
 VirtualTreeTableView::~VirtualTreeTableView()
 {
+    clearDragFeedback();
+    delete m_dragPlaceholderOutline;
+    m_dragPlaceholderOutline = nullptr;
     m_expansionTransition->cancel();
     m_expansionTransition->setEnabled(false);
     recycleAllCells();
@@ -475,6 +479,10 @@ bool VirtualTreeTableView::isPersistentRowStateValid(const QModelIndex &index) c
 void VirtualTreeTableView::refreshVisibility(bool resetSizes)
 {
     detail::PerformanceScope performance(this, "tree-table.visibility");
+    const QPointer<VirtualTreeTableView> feedbackGuard(this);
+    clearDragFeedback();
+    if (!feedbackGuard)
+        return;
     if (m_updatingVisibility) {
         m_visibilityRefreshPending = true;
         return;
@@ -548,6 +556,10 @@ void VirtualTreeTableView::refreshVisibilitySplice(qsizetype first, qsizetype re
                                                    qsizetype inserted, qsizetype previousCount)
 {
     detail::PerformanceScope performance(this, "tree-table.visibility-splice");
+    const QPointer<VirtualTreeTableView> feedbackGuard(this);
+    clearDragFeedback();
+    if (!feedbackGuard)
+        return;
     auto *layout = dynamic_cast<ListLayout *>(layoutPolicy());
     if (!layout || layout->itemCount() != previousCount || first < 0
         || first > previousCount || removed < 0 || inserted < 0
@@ -1329,7 +1341,7 @@ void VirtualTreeTableView::paintBranches(QPainter *painter) const
         return;
     painter->save();
     painter->setClipRect(currentPanes.at(paneIndex).viewportRect);
-    for (const VisibleRange &range : visibleItemRanges()) {
+    for (const VisibleRange &range : dragVisualRowRanges()) {
         for (qsizetype row = range.first; row >= 0 && row <= range.last; ++row) {
             const QModelIndex node = viewIndex(row);
             if (!node.isValid())
@@ -1571,6 +1583,196 @@ QModelIndex VirtualTreeTableView::dragNodeIndex(const QModelIndex &index) const
     return nodeIndex(index);
 }
 
+bool VirtualTreeTableView::prepareDrag(const QModelIndexList &indexes)
+{
+    if (dragFeedbackMode() != DragFeedbackMode::RowMoveAnimation
+        || selectionBehavior() != SelectionBehavior::SelectRows || indexes.isEmpty())
+        return true;
+    const QPersistentModelIndex node(nodeIndex(indexes.first()));
+    for (const QModelIndex &index : indexes) {
+        if (!index.isValid() || index.model() != model() || nodeIndex(index) != node)
+            return true;
+    }
+    const QPointer<VirtualTreeTableView> guard(this);
+    const QPointer<QAbstractItemModel> sourceModel(model());
+    const quint64 serial = modelChangeSerial();
+    const QPersistentModelIndex root(rootIndex());
+    const auto current = [=]() {
+        return guard && sourceModel && guard->model() == sourceModel.data()
+            && guard->modelChangeSerial() == serial && guard->rootIndex() == root
+            && guard->isDragEnabled() && node.isValid()
+            && guard->viewItemForIndex(node) >= 0;
+    };
+    if (!current())
+        return false;
+    clearDragFeedback();
+    if (!current())
+        return false;
+    m_expansionTransition->stop();
+    if (!current())
+        return false;
+    if (m_visibility->isExpanded(node)) {
+        setPendingAnchor(captureAnchor());
+        if (!current())
+            return false;
+        const qsizetype first = viewItemForIndex(node) + 1;
+        const qsizetype previousCount = viewItemCount();
+        const quint64 mappingSerial = ++m_mappingSerial;
+        // Collapse before preview capture, without starting an expansion tween.
+        m_visibility->collapse(node);
+        if (!current() || m_mappingSerial != mappingSerial)
+            return false;
+        refreshVisibilitySplice(first, previousCount - viewItemCount(), 0, previousCount);
+        if (!current())
+            return false;
+        if (!isExpanded(node))
+            emit collapsed(node);
+    }
+    // Cancellation keeps the node collapsed; callbacks may invalidate or reopen it.
+    return current() && !isExpanded(node);
+}
+
+qsizetype VirtualTreeTableView::visibleSubtreeEnd(QModelIndex node) const
+{
+    if (!model())
+        return 0;
+    while (node.isValid() && node != rootIndex()) {
+        const QModelIndex next = model()->index(node.row() + 1, 0, node.parent());
+        if (next.isValid()) {
+            const qsizetype row = viewItemForIndex(next);
+            if (row >= 0)
+                return row;
+        }
+        node = node.parent();
+    }
+    return viewItemCount();
+}
+
+bool VirtualTreeTableView::resolveDragRowMove(const DropTarget &target,
+                                             const QList<QPersistentModelIndex> &sources,
+                                             qsizetype *sourceRow, qsizetype *destination)
+{
+    const QPersistentModelIndex source(nodeIndex(sources.first()));
+    for (const auto &index : sources) {
+        if (!index.isValid() || index.model() != model() || nodeIndex(index) != source)
+            return false;
+    }
+    *sourceRow = viewItemForIndex(source);
+    const qsizetype end = *sourceRow + 1;
+    if (*sourceRow < 0 || visibleSubtreeEnd(source) != end
+        || target.row < 0 || target.row > model()->rowCount(target.parent))
+        return false;
+    *destination = -1;
+    if (target.row < model()->rowCount(target.parent))
+        *destination = viewItemForIndex(model()->index(target.row, 0, target.parent));
+    else if (target.parent == rootIndex())
+        *destination = viewItemCount();
+    else if (viewItemForIndex(target.parent) >= 0 && isExpanded(target.parent))
+        *destination = visibleSubtreeEnd(target.parent);
+    if (*destination < 0)
+        return false;
+
+    const QPointer<VirtualTreeTableView> guard(this);
+    const QPointer<QAbstractItemModel> activeModel(model());
+    const quint64 serial = modelChangeSerial();
+    const quint64 mappingSerial = viewMappingSerial();
+    const quint64 revision = m_dragFeedbackRevision;
+    const QPersistentModelIndex root(rootIndex());
+    const auto current = [=]() {
+        return guard && activeModel && guard->model() == activeModel.data()
+            && guard->modelChangeSerial() == serial && guard->viewMappingSerial() == mappingSerial
+            && guard->rootIndex() == root && guard->m_dragFeedbackRevision == revision
+            && source.isValid();
+    };
+    bool ambiguous = false;
+    QModelIndex node = *destination > 0 ? viewIndex(*destination - 1) : QModelIndex();
+    while (node.isValid() && node != root && visibleSubtreeEnd(node) == *destination) {
+        DropTarget alternative;
+        alternative.parent = node.parent();
+        alternative.row = node.row() + 1;
+        if (alternative.parent != target.parent || alternative.row != target.row) {
+            const bool originalSlot = alternative.parent == source.parent()
+                && ((*destination == *sourceRow && alternative.row == source.row())
+                    || (*destination == end && alternative.row == source.row() + 1));
+            const bool accepted = canDropAtCurrentDragTarget(alternative, originalSlot);
+            if (!current())
+                return false;
+            if (accepted) {
+                ambiguous = true;
+                break;
+            }
+        }
+        node = node.parent();
+    }
+    m_dragTargetParent = target.parent;
+    m_dragTargetRow = target.row;
+    m_dragTargetAmbiguous = ambiguous;
+    return true;
+}
+
+void VirtualTreeTableView::clearDragFeedback()
+{
+    ++m_dragFeedbackRevision;
+    m_dragTargetParent = QPersistentModelIndex();
+    m_dragTargetRow = -1;
+    m_dragTargetAmbiguous = false;
+    const QPointer<VirtualTreeTableView> guard(this);
+    if (m_dragPlaceholderOutline)
+        m_dragPlaceholderOutline->hide();
+    if (guard)
+        VirtualTableView::clearDragFeedback();
+}
+
+int VirtualTreeTableView::dropTargetLeft(const DropTarget &target, bool includeBranchCell) const
+{
+    const ColumnGeometry column = columnGeometry(0);
+    if (!column.isValid() || column.hidden)
+        return 0;
+    const int depth = target.parent == rootIndex() ? 0 : itemDepth(target.parent) + 1;
+    const qint64 cells = qint64(depth) + int(includeBranchCell && m_branchAreaVisible);
+    int columnX = column.viewportX;
+    columnVisualX(0, &columnX);
+    const qint64 left = qMin(qint64(columnX) + column.width, qint64(columnX) + cells * indentation());
+    // Frozen columns can clip column zero before its logical content origin.
+    const int paneIndex = paneIndexOfColumn(0);
+    const auto currentPanes = panes();
+    const int paneLeft = paneIndex >= 0 && paneIndex < currentPanes.size()
+        ? currentPanes.at(paneIndex).viewportRect.left() : 0;
+    return int(qBound(qint64(qBound(0, paneLeft, viewport()->width())), left,
+                      qint64(viewport()->width())));
+}
+
+void VirtualTreeTableView::dragReorderFrameChanged()
+{
+    const QPointer<VirtualTreeTableView> guard(this);
+    invalidateBranches();
+    if (!guard)
+        return;
+    QRect rect = m_dragTargetAmbiguous && m_dragTargetRow >= 0 ? dragPlaceholderRect() : QRect();
+    if (!rect.isEmpty()) {
+        DropTarget target;
+        target.parent = m_dragTargetParent;
+        target.row = m_dragTargetRow;
+        rect.setLeft(dropTargetLeft(target, false));
+    }
+    if (rect.isEmpty() || !rect.intersects(viewport()->rect()) || dropIndicatorWidth() <= 0) {
+        if (m_dragPlaceholderOutline)
+            m_dragPlaceholderOutline->hide();
+        return;
+    }
+    if (!m_dragPlaceholderOutline)
+        m_dragPlaceholderOutline = new TreeDragPlaceholderOutline(this);
+    const QColor color = dropIndicatorColor().isValid()
+        ? dropIndicatorColor() : palette().color(QPalette::Highlight);
+    m_dragPlaceholderOutline->setFrame(rect, color, dropIndicatorWidth());
+    m_dragPlaceholderOutline->setGeometry(viewport()->geometry());
+    if (!guard || !m_dragPlaceholderOutline)
+        return;
+    m_dragPlaceholderOutline->show();
+    if (guard && m_dragPlaceholderOutline)
+        m_dragPlaceholderOutline->raise();
+}
+
 VirtualItemView::DropTarget VirtualTreeTableView::resolveDropTarget(const QPoint &viewportPos) const
 {
     DropTarget target;
@@ -1643,37 +1845,30 @@ QRect VirtualTreeTableView::insertionLineRect(const DropTarget &target) const
 {
     if (!target.isValid() || !model())
         return QRect();
+    const int left = dropTargetLeft(target, true);
+    const auto lineAt = [this, left](int y) {
+        return QRect(left, y, viewport()->width() - left, 2);
+    };
     if (target.trailing) {
         const qsizetype count = viewItemCount();
-        return QRect(0, count > 0 ? geometryForViewRow(count - 1).bottom() : 0,
-                     viewport()->width(), 2);
+        return lineAt(count > 0 ? geometryForViewRow(count - 1).bottom() : 0);
     }
     const QModelIndex parent = target.parent;
-    if (target.row < model()->rowCount(parent)) {
-        const qsizetype after = viewItemForIndex(model()->index(target.row, 0, parent));
-        if (after >= 0)
-            return QRect(0, geometryForViewRow(after).top() - 1, viewport()->width(), 2);
-    }
     if (target.row > 0) {
-        QModelIndex precedingNode = model()->index(target.row - 1, 0, parent);
-        qsizetype before = viewItemForIndex(precedingNode);
+        const QModelIndex precedingNode = model()->index(target.row - 1, 0, parent);
+        const qsizetype before = viewItemForIndex(precedingNode);
         if (before >= 0) {
-            while (isExpanded(precedingNode)) {
-                const int children = model()->rowCount(precedingNode);
-                if (children == 0)
-                    break;
-                precedingNode = model()->index(children - 1, 0, precedingNode);
-            }
-            const qsizetype lastDescendant = viewItemForIndex(precedingNode);
-            if (lastDescendant >= 0)
-                before = lastDescendant;
-            return QRect(0, geometryForViewRow(before).bottom(), viewport()->width(), 2);
+            const qsizetype last = qMax(before, visibleSubtreeEnd(precedingNode) - 1);
+            return lineAt(geometryForViewRow(last).bottom());
         }
     }
+    const qsizetype after = viewItemForIndex(model()->index(target.row, 0, parent));
+    if (after >= 0)
+        return lineAt(geometryForViewRow(after).top() - 1);
     const qsizetype parentRow = viewItemForIndex(parent);
     if (parentRow >= 0)
-        return QRect(0, geometryForViewRow(parentRow).bottom(), viewport()->width(), 2);
-    return QRect(0, 0, viewport()->width(), 2);
+        return lineAt(geometryForViewRow(parentRow).bottom());
+    return lineAt(0);
 }
 
 QRect VirtualTreeTableView::resolveDropIndicatorRect(const DropTarget &target) const

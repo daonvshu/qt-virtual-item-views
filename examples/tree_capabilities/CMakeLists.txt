@@ -19,8 +19,8 @@ add_executable(tree_capabilities
     16_item_events/example.cpp
     17_scrolling/example.cpp
     18_virtualization/example.cpp
-    19_frozen_rows/example.cpp
-    20_drag_drop/example.cpp
+    19_drag_drop/example.cpp
+    20_drag_animation/example.cpp
     21_sorting_filtering/example.cpp
     22_lazy_loading/example.cpp
     23_pinning/example.cpp

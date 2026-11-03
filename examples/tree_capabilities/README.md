@@ -24,8 +24,8 @@
 | 16 | 行事件、正确索引与几何查询 | [examples/tree_capabilities/16_item_events/example.cpp](16_item_events/example.cpp) |
 | 17 | 大树滚动、定位与可见映射 | [examples/tree_capabilities/17_scrolling/example.cpp](17_scrolling/example.cpp) |
 | 18 | 可见行映射与控件复用 | [examples/tree_capabilities/18_virtualization/example.cpp](18_virtualization/example.cpp) |
-| 19 | 顶部底部冻结与区域分隔线 | [examples/tree_capabilities/19_frozen_rows/example.cpp](19_frozen_rows/example.cpp) |
-| 20 | 节点拖放与手动起拖 | [examples/tree_capabilities/20_drag_drop/example.cpp](20_drag_drop/example.cpp) |
+| 19 | 节点拖放与手动起拖 | [examples/tree_capabilities/19_drag_drop/example.cpp](19_drag_drop/example.cpp) |
+| 20 | 拖动位移动画 | [examples/tree_capabilities/20_drag_animation/example.cpp](20_drag_animation/example.cpp) |
 | 21 | 层级排序与递归过滤 | [examples/tree_capabilities/21_sorting_filtering/example.cpp](21_sorting_filtering/example.cpp) |
 | 22 | 业务驱动的延迟加载 | [examples/tree_capabilities/22_lazy_loading/example.cpp](22_lazy_loading/example.cpp) |
 | 23 | 屏外保留与编辑生命周期 | [examples/tree_capabilities/23_pinning/example.cpp](23_pinning/example.cpp) |
@@ -42,10 +42,10 @@ cmake --build <BUILD_DIR> --target tree_capabilities --config Debug
 
 运行 `tree_capabilities` 或 `tree_capabilities --example 7`。`main.cpp` 仅负责导航和延迟创建页面；各章 `setupExample()` 明确列出视图调用和业务接线，`setupUi()` 管理少量参数控件及布局。独立运行入口见各章 README。
 
-第 25 章要求 `VIRTUALITEMVIEWS_EXAMPLES_USE_SMOOTH_SCROLLBAR=ON`，并通过 `SmoothScrollbar_DIR` 或 `CMAKE_PREFIX_PATH` 提供匹配当前 Qt 主版本的包。依赖缺失时不编译该页，导航和命令行编号保持 1–24。
+第 25 章要求 `VIRTUALITEMVIEWS_EXAMPLES_USE_SMOOTH_SCROLLBAR=ON`，并通过 `SmoothScrollbar_DIR` 或 `CMAKE_PREFIX_PATH` 提供匹配当前 Qt 主版本的包。依赖缺失时不编译该页，可用章节编号为 1–24。
 
 ## 使用时关注的边界
 
 树的模型 `row()` 是兄弟位置，可见映射行由展开路径决定，`itemDepth()` 相对于显示根计算，三者不要混用。行控件复用时必须完整绑定和解绑；事件发生时查询当前绑定，不能捕获首次绑定的索引。每页 model 归视图的 QObject 父子关系管理，adapter 通过 `takeOwnership=true` 交给视图，确保销毁顺序。
 
-hover／selected 背景默认由框架绘制，节点控件保持透明。树拖放提供兄弟插入线与成为子项的目标框，业务模型管理权限、MIME 和数据移动。延迟加载页由业务监听展开信号后更新模型，不依赖自动 `fetchMore()`。
+hover／selected 背景默认由框架绘制，节点控件保持透明。树拖放默认使用位移动画，另可选择兄弟插入线；投放为子项使用目标框，业务模型管理权限、MIME 和数据移动。延迟加载页由业务监听展开信号后更新模型，不依赖自动 `fetchMore()`。

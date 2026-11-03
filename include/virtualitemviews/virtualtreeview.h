@@ -18,6 +18,7 @@ class QPaintEvent;
 namespace viv {
 
 class TreeExpansionTransition;
+class TreeDragTransition;
 
 class ListLayout;
 
@@ -33,7 +34,7 @@ class ListLayout;
 ///
 /// Model mutations (insert/remove/move/sort/filter/reset) rebuild the visible
 /// row mapping while keeping the expansion state; expand/collapse are
-/// incremental inside TreeVisibilityIndex.
+/// incremental inside TreeVisibilityIndex. Row freezing is not supported.
 class VIRTUALITEMVIEWS_EXPORT VirtualTreeView : public VirtualItemView
 {
     Q_OBJECT
@@ -60,8 +61,8 @@ public:
     bool hasChildren(const QModelIndex &index) const;
     void collapseAll();
     /// Live layout transition; enabled by default. Collapse retains outgoing
-    /// rows until completion, then emits collapsed(). Frozen rows and bulk
-    /// collapseAll() updates are immediate, without a screenshot fallback.
+    /// rows until completion, then emits collapsed(). Bulk collapseAll()
+    /// updates are immediate, without a screenshot fallback.
     void setExpansionAnimationEnabled(bool enabled);
     bool expansionAnimationEnabled() const;
     /// Duration in milliseconds; zero disables the visual transition.
@@ -71,6 +72,20 @@ public:
     /// Uses temporary framework containers, preserving item graphics effects.
     void setExpansionFadeEnabled(bool enabled);
     bool expansionFadeEnabled() const;
+
+    /// Native drag feedback; model order changes only after an accepted drop.
+    enum class DragFeedbackMode { Indicator, RowMoveAnimation };
+    Q_ENUM(DragFeedbackMode)
+    /// Default RowMoveAnimation. A single-node drag immediately collapses its
+    /// source; internal Move uses one-row space. Other drops use indicators.
+    void setDragFeedbackMode(DragFeedbackMode mode);
+    DragFeedbackMode dragFeedbackMode() const;
+    /// Duration in milliseconds (default 180); zero makes room immediately.
+    void setDragReorderAnimationDuration(int milliseconds);
+    int dragReorderAnimationDuration() const;
+    /// Curve for nodes making room (default OutCubic).
+    void setDragReorderAnimationEasingCurve(const QEasingCurve &curve);
+    QEasingCurve dragReorderAnimationEasingCurve() const;
 
     // -- branch UI -----------------------------------------------------------
     void setIndentation(int pixels);
@@ -205,6 +220,8 @@ protected:
     bool isLayoutParent(const QModelIndex &parent) const override;
     /// Rebuild the visible mapping before layout queries after model mutations.
     bool managesVisibleRows() const override { return true; }
+    /// Tree rows always scroll with the expanded node sequence.
+    bool supportsRowPanes() const override { return false; }
     QRect geometryForViewRow(qsizetype row) const override;
     void configureRowSpacingWidget(QWidget *widget) const override;
     bool handleItemKeyPress(QKeyEvent *event) override;
@@ -213,13 +230,20 @@ protected:
     /// invalidated after every materialization pass (scroll, expand/collapse,
     /// indentation, resize).
     void afterMaterialize() override;
+    void augmentMaterializationRanges(QVector<VisibleRange> &ranges) const override;
+    int rowSpacingVisualOffset(qsizetype row) const override;
     void refreshVisualStates() override;
     void refreshVisualState(const QModelIndex &index) override;
+    /// Collapses a single source without animation before native drag capture.
+    bool prepareDrag(const QModelIndexList &indexes) override;
     /// §38: a tree drops *between* siblings or *into* an item. The middle band
     /// of a drop-enabled item expresses "become a child of this item" as
     /// (item, item.rowCount()), the same convention QTreeView uses.
     VirtualItemView::DropTarget resolveDropTarget(const QPoint &viewportPos) const override;
     QRect resolveDropIndicatorRect(const DropTarget &target) const override;
+    bool updateDragFeedback(const DropTarget &target, const QPoint &position, Qt::DropAction action,
+                            const QList<QPersistentModelIndex> &sources) override;
+    void clearDragFeedback() override;
 
     void mousePressEvent(QMouseEvent *event) override;
     void mouseReleaseEvent(QMouseEvent *event) override;
@@ -227,6 +251,11 @@ protected:
     void paintEvent(QPaintEvent *event) override;
 
 private:
+    friend class TreeDragTransition;
+    // Row freezing is not part of the tree API; base-class calls are rejected too.
+    using VirtualItemView::setFrozenRows;
+    using VirtualItemView::setFrozenBottomRows;
+
     /// Resolves the gap from node data, falling back to rowSpacing().
     int effectiveRowSpacing(qsizetype row) const;
     void connectModelSignals(QAbstractItemModel *model);
@@ -240,6 +269,8 @@ private:
     /// invalidated strip too, so an indicator that scrolled away is erased).
     void invalidateBranchIndicators();
     void syncRowGridLines();
+    /// Full row geometry including the current drag displacement.
+    QRect visualRowRect(qsizetype row) const;
     /// Whether this sibling group reserves a cell for its own branch indicators.
     bool hasOwnBranchCell(const QModelIndex &index) const;
     /// Left edge of a row line for a node, respecting leaf indentation.
@@ -263,12 +294,15 @@ private:
     bool isIndicatorPosition(const QModelIndex &index, const QPoint &viewportPos) const;
     /// True when the model flags of \a index accept a drop *into* it.
     bool acceptsDropInto(const QModelIndex &index) const;
+    /// Exclusive visible-row boundary after a node and all its visible descendants.
+    qsizetype visibleSubtreeEnd(QModelIndex node) const;
     /// Anchors an insertion line at the boundary of the visible tree, so a target
     /// inside a collapsed branch (or below the last row) still has a place.
     QRect insertionLineRect(const DropTarget &target) const;
 
     TreeVisibilityIndex *m_visibility = nullptr;
     TreeExpansionTransition *m_expansionTransition = nullptr;
+    TreeDragTransition *m_dragTransition = nullptr;
     ListLayout *m_rowLayout = nullptr;
     QPersistentModelIndex m_rootIndex;
     int m_indentation = 20;

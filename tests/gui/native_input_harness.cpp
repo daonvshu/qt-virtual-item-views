@@ -154,7 +154,6 @@ int main(int argc, char **argv)
     view->setColumnWidth(1, 260);
     view->setColumnWidth(2, 160);
     view->setFrozenColumns({0});
-    view->setFrozenRows(1);
     view->setOverscan(0, 0);
     view->expand(model.index(0, 0));
     const QPersistentModelIndex source(model.index(1, 1, model.index(0, 0)));

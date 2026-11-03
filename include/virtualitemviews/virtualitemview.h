@@ -29,6 +29,7 @@ class QDragMoveEvent;
 class QDropEvent;
 class QGraphicsEffect;
 class QKeyEvent;
+class QMimeData;
 class QMouseEvent;
 class QPaintEvent;
 class QPainter;
@@ -448,6 +449,7 @@ public:
     /// Freezes the first \a count rows at the top edge: they stay visible while the
     /// rows below scroll, and they add no scroll space of their own (the frozen
     /// height is not part of the scroll range, exactly like frozen columns).
+    /// Supported by list/table views; tree, flow and masonry views reject freezing.
     ///
     /// The value is clamped to the row count, and a frozen row that cannot fit into
     /// the viewport is not frozen at all: a frozen pane never shows a row that
@@ -580,6 +582,8 @@ protected:
     QVector<QRect> rowSpacingWidgetRectsInView() const;
     /// Hook called after a materialization pass (measurement feedback).
     virtual void afterMaterialize();
+    /// View-specific displacement used when materializing row spacing hosts.
+    virtual int rowSpacingVisualOffset(qsizetype row) const;
     /// Adds rows that must stay materialized for view-specific cross-row content.
     virtual void augmentMaterializationRanges(QVector<VisibleRange> &ranges) const;
     /// Returns logical item numbers for the current pass. The default expands
@@ -650,6 +654,9 @@ protected:
     /// dragged row's drag-enabled columns; SelectItems carries just \a dragIndex. Kernel API:
     /// a real drag (QDrag::exec) cannot run offscreen, so subclasses and tests use this.
     QModelIndexList dragSourceIndexes(const QModelIndex &dragIndex) const;
+    /// Prepares view state after pinning the source, before capturing its preview.
+    /// May update the visible mapping; false aborts the native drag.
+    virtual bool prepareDrag(const QModelIndexList &indexes);
     /// Default screenshot widget for a drag of \a index.
     /// The default resolves the canonical row; cell views override this lookup.
     virtual QWidget *dragSourceWidget(const QModelIndex &index) const;
@@ -707,6 +714,11 @@ protected:
     virtual void clearDragFeedback() {}
     /// Refreshes the current accepted target after a presentation setting changes.
     void refreshDragFeedback();
+    /// Checks an alternative target against the current native drag payload,
+    /// action and self-drop rules without changing the accepted feedback.
+    /// Feedback may include the original slot, still subject to model permission.
+    bool canDropAtCurrentDragTarget(const DropTarget &target,
+                                   bool allowUnchangedPosition = false) const;
     /// Positions and clips the active indicator to the viewport, above view-owned overlays.
     void raiseDropIndicator() const;
 
@@ -861,7 +873,8 @@ private:
     /// Mirrors QAbstractItemView's "dropping on itself" guard: the view then
     /// shows no indicator and refuses the drop, so the model never sees a no-op
     /// move. Only Qt::MoveAction is guarded; a copy onto itself is legitimate.
-    bool isDropOnItself(const DropTarget &target, Qt::DropAction action) const;
+    bool isDropOnItself(const DropTarget &target, Qt::DropAction action,
+                        bool allowUnchangedPosition = false) const;
     /// Releases the state of a finished drag (source pin, autoscroll, indicator).
     void finishDrag();
     /// Shared drag lifecycle; the legacy entry uses dragPixmapRect().
@@ -990,6 +1003,7 @@ private:
     bool m_dragHoverValid = false;
     bool m_dragHoverInternal = false;
     Qt::DropAction m_dragHoverAction = Qt::IgnoreAction;
+    QPointer<const QMimeData> m_dragHoverMimeData;
     /// Retains an accepted target while appearance settings hide its indicator.
     bool m_dropIndicatorTargetValid = false;
     QWidget *m_dropIndicator = nullptr;

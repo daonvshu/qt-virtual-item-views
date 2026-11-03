@@ -4,7 +4,7 @@
 
 源码相对路径：`examples/tree_capabilities/07_expansion/example.cpp`。
 
-组件默认开启真实布局动画，此页可用复选框关闭。`expandRecursively()` 展开当前节点及其后代，`collapseAll()` 即时收起全部分支。`expanded` 在开始展开时发送；收起时 `isExpanded()` 立即返回 `false`，退出中的子节点及可见行映射保留到动画结束，随后发送 `collapsed`。时长为 0 或设置冻结行时即时完成；已展开节点的递归展开也即时完成。动画使用真实控件及原生矩形裁剪，不使用截图覆盖层。
+组件默认开启真实布局动画，此页可用复选框关闭。`expandRecursively()` 展开当前节点及其后代，`collapseAll()` 即时收起全部分支。`expanded` 在开始展开时发送；收起时 `isExpanded()` 立即返回 `false`，退出中的子节点及可见行映射保留到动画结束，随后发送 `collapsed`。时长为 0 时即时完成；已展开节点的递归展开也即时完成。动画使用真实控件及原生矩形裁剪，不使用截图覆盖层。
 
 先看 `Example::setupExample()` 中的视图配置和信号连接，再看本目录的 adapter、model 和节点控件。`setupUi()` 仅创建页面布局，hover／selected 背景由框架绘制。
 

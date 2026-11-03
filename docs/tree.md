@@ -1,6 +1,6 @@
 # VirtualTreeView 功能示例源码
 
-`VirtualTreeView` 使用标准层级模型与 `WidgetAdapter`，每个节点物化一个真实行控件。只把展开路径中的节点映射为布局行，折叠的子树不创建控件。以下路径均相对于仓库根目录，每个目录可独立复制，统一由 `tree_capabilities` 进程演示。
+`VirtualTreeView` 使用标准层级模型与 `WidgetAdapter`，每个节点物化一个真实行控件。只把展开路径中的节点映射为布局行，折叠的子树不创建控件。树节点不支持冻结行。以下路径均相对于仓库根目录，每个目录可独立复制，统一由 `tree_capabilities` 进程演示。
 
 | 编号 | 能力 | 源码相对路径 |
 | --- | --- | --- |
@@ -22,8 +22,8 @@
 | 16 | 行事件、正确索引与几何查询 | [examples/tree_capabilities/16_item_events/example.cpp](../examples/tree_capabilities/16_item_events/example.cpp) |
 | 17 | 大树滚动、定位与可见映射 | [examples/tree_capabilities/17_scrolling/example.cpp](../examples/tree_capabilities/17_scrolling/example.cpp) |
 | 18 | 可见行映射与控件复用 | [examples/tree_capabilities/18_virtualization/example.cpp](../examples/tree_capabilities/18_virtualization/example.cpp) |
-| 19 | 顶部底部冻结与区域分隔线 | [examples/tree_capabilities/19_frozen_rows/example.cpp](../examples/tree_capabilities/19_frozen_rows/example.cpp) |
-| 20 | 节点拖放与手动起拖 | [examples/tree_capabilities/20_drag_drop/example.cpp](../examples/tree_capabilities/20_drag_drop/example.cpp) |
+| 19 | 节点拖放与手动起拖 | [examples/tree_capabilities/19_drag_drop/example.cpp](../examples/tree_capabilities/19_drag_drop/example.cpp) |
+| 20 | 拖动位移动画 | [examples/tree_capabilities/20_drag_animation/example.cpp](../examples/tree_capabilities/20_drag_animation/example.cpp) |
 | 21 | 层级排序与递归过滤 | [examples/tree_capabilities/21_sorting_filtering/example.cpp](../examples/tree_capabilities/21_sorting_filtering/example.cpp) |
 | 22 | 业务驱动的延迟加载 | [examples/tree_capabilities/22_lazy_loading/example.cpp](../examples/tree_capabilities/22_lazy_loading/example.cpp) |
 | 23 | 屏外保留与编辑生命周期 | [examples/tree_capabilities/23_pinning/example.cpp](../examples/tree_capabilities/23_pinning/example.cpp) |
@@ -48,10 +48,10 @@
 
 展开动画默认开启，可用 `setExpansionAnimationEnabled(false)` 关闭，`setExpansionAnimationDuration(ms)` 设置时长（默认 300 ms）。动画直接更新真实行布局，行控件、分支、分割线和命中区域随布局变化，不截取画面或使用截图覆盖层。部分露出的行由原生父控件进行矩形裁剪，业务控件保持正常高度。大子树只物化当前露出的范围，屏外尾部不逐行参与动画。
 
-收起开始后 `isExpanded()` 返回 `false`；为保留正在退出的真实控件，子节点映射和 `visibleRowCount()` 到动画结束才移除，随后发送 `collapsed`。展开映射和 `expanded` 在展开开始时更新。连续反向展开收起从当前进度继续；模型结构变化会取消过渡并重建布局。冻结行、`collapseAll()` 和已展开节点的递归展开直接更新，不使用截图回退。
+收起开始后 `isExpanded()` 返回 `false`；为保留正在退出的真实控件，子节点映射和 `visibleRowCount()` 到动画结束才移除，随后发送 `collapsed`。展开映射和 `expanded` 在展开开始时更新。连续反向展开收起从当前进度继续；模型结构变化会取消过渡并重建布局。`collapseAll()` 和已展开节点的递归展开直接更新，不使用截图回退。
 
 子节点淡入淡出默认启用，`setExpansionFadeEnabled(false)` 可单独关闭渐变，配置查询为 `expansionFadeEnabled()`。透明度和高度共享动画进度；父节点和后续分组不渐变。第 07 章提供勾选演示。框架通过临时容器保留业务控件已有的图形效果；Qt 的实时透明度合成可能使用离屏缓冲，开启后有额外绘制成本。
 
-树只提供插入线／目标框拖放，手动起拖和模型移动责任见第 20 章。业务异步加载、节点保留和诊断分别见第 22–24 章。
+树默认使用 `DragFeedbackMode::RowMoveAnimation`，单节点起拖时在截图前立即收起源节点，不执行收起动画；内部 Move 只按主节点的一行高度（含正常间距）让位，整棵子树的数据仍一起移动。取消或放下后保持收起。`setDragReorderAnimationDuration(ms)` 与 `setDragReorderAnimationEasingCurve(curve)` 控制位移，默认 180 ms / OutCubic，0 表示立即让位。复制、跨视图、多节点和投放为子项使用指示器；拖动中业务重新展开源节点时也回退到指示器。位移动画不提前修改模型顺序；取消、离开、拒绝落点或结构变化会清理显示偏移。指示器、手动起拖和模型移动责任见第 19 章，动画参数见第 20 章。业务异步加载、节点保留和诊断分别见第 22–24 章。
 
 第 09、10 章演示 `setBranchAreaVisible(false)`：隐藏所有分支装饰并移除节点自身的图标占位，保留 `depth × indentation()` 的层级缩进。`branchAreaVisible()` 查询配置，默认 `true`。`setBranchIndicatorsVisible(false)` 只隐藏装饰、仍保留图标占位；`setIndentation(0)` 则将全部缩进归零。隐藏分支区域不会修改图标配置或展开状态，仍可通过双击、键盘和展开接口操作。

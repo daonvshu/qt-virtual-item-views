@@ -97,7 +97,7 @@ table.setMoveRemovesSourceRows(false);
 
 `drag_drop` 示例使用组合模式：中间区域仅接受空白格，目标有数据或越界时拒绝；边缘投放插入新行并放入单元格。两种方式移动后都只清空源格，Ctrl 复制保留源格，多格选择保持相对位置；插入后的源位置通过持续索引确定。此模式使用本表内部的专用 MIME，并关闭 `setMoveRemovesSourceRows()`。示例的表格子类只保留背景绘制；勾选“整行拖动”后仍使用框架的行插入和源行清理。
 
-### 列表与表格的行移动动画
+### 列表、表格与树的行移动动画
 
 `VirtualListView` 和 `VirtualTableView` 默认使用行移动动画，让经过的行滑动让位，留下源行大小的空位。表格需要使用整行选择；也可显式配置动画参数：
 
@@ -109,13 +109,15 @@ table.setDragReorderAnimationEasingCurve(QEasingCurve::OutCubic); // 默认曲�
 // 切回指示器：setDragFeedbackMode(DragFeedbackMode::Indicator)
 ```
 
-动画用于同一表格内的单行 Move，支持 `RowWidgets`、`CellWidgets` 及冻结列；源行和落点须位于滚动行区域。复制、多行、跨视图、单元格投放、跨冻结行区域、有 span provider 的表格及树表沿用指示器。模式独立于 `setDropIndicatorShown()` 和指示器颜色、线宽、线型设置；这些设置只作用于指示器。
+动画用于同一表格内的单行 Move，支持 `RowWidgets`、`CellWidgets` 及冻结列；源行和落点须位于滚动行区域。复制、多行、跨视图、单元格投放、跨冻结行区域及有 span provider 的表格沿用指示器。模式独立于 `setDropIndicatorShown()` 和指示器颜色、线宽、线型设置；这些设置只作用于指示器。
 
 拖动过程中只改变控件、状态背景和分隔线的显示位置，不提前修改 model 顺序。放下仍调用 model 的 `dropMimeData()`；取消、离开或拒绝落点后恢复原位置。`Automatic` 与 `Manual` 共用同一逻辑。动画配置不会改变 MIME、选择或源行删除规则。表格默认预览跟随选择行为：`SelectRows` 截取整行可见内容，`SelectItems` 截取起拖单元格，与物化方式无关；单元格物化的整行预览由框架截取 viewport 中该行所属区域，包含冻结列和当前可见的滚动列。
 
 `drag_drop` 工具栏可切换反馈模式、物化方式、时长与曲线；勾选“整行拖动”后拖动表格的一行即可对比。启动参数 `--row-animation` 会同时启用整行语义与行移动动画。
 
 `VirtualListView` 提供同名接口，默认模式同样为 `VirtualListView::DragFeedbackMode::RowMoveAnimation`，可用 `Indicator` 切回插入指示器。列表无需设置 `SelectRows`；动画适用于本视图当前 `rootIndex()` 下滚动区域内的单行 Move，复制、多行、跨视图及跨冻结行区域沿用指示器。根节点、模型或模型结构改变时清理当前动画。`list_capabilities --example 15` 单独演示指示器拖动与样式配置，`--example 16` 单独演示行移动动画及时长、曲线配置。
+
+`VirtualTreeView` 也提供这些接口，默认 `VirtualTreeView::DragFeedbackMode::RowMoveAnimation`，时长 180 ms、曲线 OutCubic。在此模式下，Automatic 与 Manual 的单节点拖动都会在截图前立即收起源节点，不执行收起动画，结束后保持收起。内部 Move 在可见父节点之间插入时只按主节点的单行高度（含正常间距）占位，整棵子树的数据仍随主节点移动，其他节点、分支及分割线同步让位。复制、多节点、跨视图和投放为子项使用指示器；业务在拖动中重新展开源节点时也使用指示器。位移动画只调整显示位置；模型、显示根、展开状态或结构变化会清理当前偏移。`tree_capabilities --example 19` 演示指示器，`--example 20` 演示位移动画与参数。`VirtualTreeTableView` 在 `SelectRows` 下采用相同的单节点拖动表现，支持两种物化模式和冻结列；`SelectItems` 及有 span provider 时使用指示器。`tree_table_view` 可切换反馈和物化方式。树和树表在末尾存在多层级有效落点时绘制占位描边，颜色和粗细跟随投放指示器设置。
 
 ### 手动触发与自定义预览
 
