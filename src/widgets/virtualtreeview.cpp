@@ -1018,13 +1018,14 @@ void VirtualTreeView::syncRowGridLines()
     QSet<qsizetype> leadingEdges;
     const QRect viewportRect = viewport()->geometry();
     if (m_rowGridLinesVisible && m_rowLayout && viewportRect.width() > 0) {
+        const qsizetype last = viewItemCount() - 1;
+        const bool showTrailingLine = trailingRowGridLineVisible();
         for (const MaterializedItem &item : materializedItems()) {
             const qsizetype row = viewItemForIndex(item.index);
             if (row < 0)
                 continue;
-            // Keep the trailing edge too: a tree without a bottom line looks
-            // cut off when the last row is a branch or a leaf.
-            if (m_rowLayout->spacingAfter(row) > 0)
+            // The terminal visible node shares the outer frame when fitted or scrolling.
+            if ((row == last && !showTrailingLine) || m_rowLayout->spacingAfter(row) > 0)
                 continue;
             const QRect rowRect = visualRowRect(row);
             if (!rowRect.intersects(viewport()->rect()))

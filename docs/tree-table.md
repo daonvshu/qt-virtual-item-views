@@ -2,6 +2,8 @@
 
 `VirtualTreeTableView` 使用树形 `QAbstractItemModel`，纵向只物化展开后的可见节点，横向沿用 `VirtualTableView` 的列布局、表头、控件模式和 pane。单列且不需要表格布局时使用 `VirtualTreeView`；没有父子节点时使用 `VirtualTableView`。
 
+支持继承的 `setAutoHeightEnabled(true)`，按表头与当前展开内容计算建议高度；最大高度沿用 `setMaximumHeight()`，父布局可进一步缩小视口，超出时才滚动。具体约束见 [自适应高度](auto-height.md)，树表的独立能力章节后续补充。
+
 ## 节点的整行数据
 
 每个深度的节点都可以只保存一份完整结构体，放在该节点第 0 逻辑列的 `viv::kDefaultItemDataRole` 中。行控件及单元格控件分别重写接收 `const viv::ItemBindingContext &` 的 `bindWidget()` / `bindCellWidget()`，直接用 `context.rowData.value<NodeData>()` 获取数据；该自定义类型需在命名空间外声明 `Q_DECLARE_METATYPE(NodeData)`。可通过 `setItemDataRole()` 对接已有 role。

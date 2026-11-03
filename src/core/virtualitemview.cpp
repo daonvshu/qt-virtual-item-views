@@ -14,6 +14,7 @@
 #include <QApplication>
 #include <QAbstractItemView>
 #include <QChildEvent>
+#include <QCoreApplication>
 #include <QDrag>
 #include <QDragEnterEvent>
 #include <QDragLeaveEvent>
@@ -33,6 +34,8 @@
 #include <QScopeGuard>
 #include <QShowEvent>
 #include <QSignalBlocker>
+#include <QStyle>
+#include <QStyleOption>
 #include <QTimer>
 #include <QVariantAnimation>
 #include <QVector>
@@ -359,6 +362,95 @@ VirtualItemView::~VirtualItemView()
     }
 }
 
+void VirtualItemView::setAutoHeightEnabled(bool enabled)
+{
+    if (m_autoHeightEnabled == enabled)
+        return;
+    m_autoHeightEnabled = enabled;
+    QSizePolicy policy = sizePolicy();
+    if (enabled) {
+        m_autoHeightPreviousVerticalPolicy = policy.verticalPolicy();
+        // Maximum prevents spare layout space from stretching a short view,
+        // while retaining the ability to shrink below its preferred height.
+        policy.setVerticalPolicy(QSizePolicy::Maximum);
+    } else if (policy.verticalPolicy() == QSizePolicy::Maximum) {
+        policy.setVerticalPolicy(m_autoHeightPreviousVerticalPolicy);
+    }
+    setSizePolicy(policy);
+    m_autoHeightLastHints = QSize();
+    updateGeometry();
+    if (enabled)
+        updateAutoHeightGeometry();
+    // Separator visibility can change even when the allocated height stays the same.
+    markDirty();
+}
+
+QSize VirtualItemView::sizeHint() const
+{
+    QSize hint = QAbstractScrollArea::sizeHint();
+    if (!m_autoHeightEnabled || (m_layout && m_layout->orientation() != Qt::Vertical))
+        return hint;
+    // Read layout extents, never materialize or measure every logical item here.
+    qint64 content = qBound<qint64>(qint64(0), contentExtent(), qint64(QWIDGETSIZE_MAX));
+    // A first-item measurement needs a nonempty viewport to bootstrap. Do not
+    // let an unmeasured zero-height layout collapse before it can measure a row.
+    if (content == 0 && m_autoMeasure && m_layout && m_layout->itemCount() > 0
+        && m_layout->needsInitialMeasurement())
+        content = qMax(1, m_estimatedItemHeight);
+    const qint64 height = content + autoHeightDecorationExtent();
+    hint.setHeight(int(qBound<qint64>(qint64(minimumHeight()), height, qint64(maximumHeight()))));
+    return hint;
+}
+
+QSize VirtualItemView::minimumSizeHint() const
+{
+    QSize hint = QAbstractScrollArea::minimumSizeHint();
+    if (m_autoHeightEnabled && (!m_layout || m_layout->orientation() == Qt::Vertical)) {
+        // Do not inherit the scroll area's minimum scrollbar length: even a
+        // single row (or an empty list) must be allowed to occupy less space.
+        hint.setHeight(qMin(maximumHeight(), autoHeightDecorationExtent()));
+    }
+    return hint;
+}
+
+int VirtualItemView::autoHeightDecorationExtent() const
+{
+    const QMargins margins = viewportMargins();
+    qint64 height = qint64(2) * frameWidth() + margins.top() + margins.bottom();
+    const QScrollBar *bar = horizontalScrollBar();
+    const bool scrollBarNeeded = horizontalScrollBarPolicy() == Qt::ScrollBarAlwaysOn
+        || (horizontalScrollBarPolicy() == Qt::ScrollBarAsNeeded && bar->maximum() > bar->minimum());
+    if (scrollBarNeeded) {
+        QStyleOption option;
+        option.initFrom(this);
+        // Transient overlay scrollbars do not consume viewport height.
+        if (!bar->style()->styleHint(QStyle::SH_ScrollBar_Transient, &option, bar)) {
+            height += bar->sizeHint().height();
+            if (style()->styleHint(QStyle::SH_ScrollView_FrameOnlyAroundContents, &option, this))
+                height += qMax(0, style()->pixelMetric(QStyle::PM_ScrollView_ScrollBarSpacing, &option, this));
+        }
+    }
+    return int(qBound<qint64>(qint64(0), height, qint64(QWIDGETSIZE_MAX)));
+}
+
+void VirtualItemView::updateAutoHeightGeometry()
+{
+    if (!m_autoHeightEnabled || m_destroying)
+        return;
+    const QSize hints(sizeHint().height(), minimumSizeHint().height());
+    if (hints == m_autoHeightLastHints)
+        return;
+    m_autoHeightLastHints = hints;
+    updateGeometry();
+}
+
+bool VirtualItemView::trailingRowGridLineVisible() const
+{
+    // A forced scrollbar with zero range does not place the content at the frame edge.
+    return !m_trailingRowGridLineAutoHideEnabled
+        || (!m_autoHeightEnabled && maximumVerticalOffset() == 0);
+}
+
 // ---------------------------------------------------------------------------
 // Model
 // ---------------------------------------------------------------------------
@@ -519,6 +611,15 @@ void VirtualItemView::setGridLinePlacement(GridLinePlacement placement)
     m_gridLinePlacement = placement;
     applyRowSpacingOverrides();
     relayout();
+}
+
+void VirtualItemView::setTrailingRowGridLineAutoHideEnabled(bool enabled)
+{
+    if (m_trailingRowGridLineAutoHideEnabled == enabled)
+        return;
+    m_trailingRowGridLineAutoHideEnabled = enabled;
+    markDirty();
+    viewport()->update();
 }
 
 void VirtualItemView::paintRowSpacingBackground(QPainter *painter, const QRect &dirtyRect) const
@@ -3610,6 +3711,28 @@ void VirtualItemView::applyPendingAnchor()
 
 void VirtualItemView::syncScrollBars()
 {
+    if (m_autoHeightEnabled && (!m_layout || m_layout->orientation() == Qt::Vertical)) {
+        // Post the parent's layout request before publishing the new range. An
+        // expanding tree otherwise compares this frame's content with the previous
+        // frame's viewport, briefly showing a scrollbar on every animation tick.
+        updateAutoHeightGeometry();
+        if (!m_autoHeightScrollBarSyncPending) {
+            m_autoHeightScrollBarSyncPending = true;
+            QMetaObject::invokeMethod(this, [this]() {
+                if (!m_autoHeightScrollBarSyncPending)
+                    return;
+                m_autoHeightScrollBarSyncPending = false;
+                updateVerticalScrollBarRange();
+            }, Qt::QueuedConnection);
+        }
+        return;
+    }
+    m_autoHeightScrollBarSyncPending = false;
+    updateVerticalScrollBarRange();
+}
+
+void VirtualItemView::updateVerticalScrollBarRange()
+{
     detail::PerformanceScope performance(this, "layout.scrollbars");
     QScrollBar *bar = verticalScrollBar();
     const int viewExtent = viewportMainExtent();
@@ -3617,8 +3740,10 @@ void VirtualItemView::syncScrollBars()
 
     m_scrollMapper.setExtents(extent, viewExtent);
 
+    const int range = m_scrollMapper.scrollRange();
+    const bool rangeChanged = bar->minimum() != 0 || bar->maximum() != range;
     const QSignalBlocker blocker(bar);
-    bar->setRange(0, m_scrollMapper.scrollRange());
+    bar->setRange(0, range);
     const int value = m_scrollMapper.toScrollBarValue(m_scrollOffset);
     // Re-centre the compression window on the current viewport position so that
     // precision stays maximal where the user is looking.
@@ -3627,6 +3752,11 @@ void VirtualItemView::syncScrollBars()
     bar->setSingleStep(int(qBound<qint64>(qint64(1), scrollBarSingleStepPixels(),
                                           qint64(std::numeric_limits<int>::max()))));
     bar->setValue(value);
+    updateAutoHeightGeometry();
+    // Blocking rangeChanged also suppresses Qt's queued scrollbar layout.
+    // Restore that update without feeding mapped values back into scrolling.
+    if (rangeChanged)
+        QCoreApplication::postEvent(this, new QEvent(QEvent::LayoutRequest));
 }
 
 void VirtualItemView::scrollContentsBy(int dx, int dy)

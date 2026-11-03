@@ -19,6 +19,7 @@
 #include <QRegion>
 #include <QSet>
 #include <QSharedPointer>
+#include <QSizePolicy>
 #include <QVector>
 #include <functional>
 
@@ -120,6 +121,18 @@ public:
     /// An invalid color uses the palette's Mid color.
     void setFrameBorderColor(const QColor &color);
     QColor frameBorderColor() const { return m_frameBorderColor; }
+
+    /// Fits the preferred height to the vertical content, headers, frame and
+    /// horizontal scrollbar (default false). The parent layout may shrink it;
+    /// QWidget::setMaximumHeight() supplies an optional upper bound.
+    /// Uses Maximum vertical size policy while enabled, restoring the previous
+    /// vertical policy when disabled. Explicit minimum/fixed heights still apply.
+    void setAutoHeightEnabled(bool enabled);
+    bool autoHeightEnabled() const { return m_autoHeightEnabled; }
+    /// Content-based preferred height while auto height is enabled.
+    QSize sizeHint() const override;
+    /// Allows the parent to shrink the viewport down to its non-content chrome.
+    QSize minimumSizeHint() const override;
 
     // -- model ---------------------------------------------------------------
     virtual void setModel(QAbstractItemModel *model);
@@ -333,6 +346,11 @@ public:
     /// With zero spacing both modes use a single shared item boundary.
     virtual void setGridLinePlacement(GridLinePlacement placement);
     GridLinePlacement gridLinePlacement() const { return m_gridLinePlacement; }
+    /// Automatically hides the terminal row grid line for auto height or vertical
+    /// overflow (default true). False keeps it whenever row grid lines are enabled.
+    /// Shared by list, tree, table and tree-table views, including default row headers.
+    void setTrailingRowGridLineAutoHideEnabled(bool enabled);
+    bool trailingRowGridLineAutoHideEnabled() const { return m_trailingRowGridLineAutoHideEnabled; }
     /// Background of row gaps. An invalid color preserves the default palette behavior.
     /// The getter returns the configured color, including an invalid default.
     virtual void setSpacingBackgroundColor(const QColor &color);
@@ -582,6 +600,11 @@ protected:
     QVector<QRect> rowSpacingWidgetRectsInView() const;
     /// Hook called after a materialization pass (measurement feedback).
     virtual void afterMaterialize();
+    /// Invalidates the parent layout only when the adaptive height hints change.
+    /// Derived views call this after updating header margins or horizontal scrolling.
+    void updateAutoHeightGeometry();
+    /// Keeps the terminal row border only when it is separate from the outer frame.
+    bool trailingRowGridLineVisible() const;
     /// View-specific displacement used when materializing row spacing hosts.
     virtual int rowSpacingVisualOffset(qsizetype row) const;
     /// Adds rows that must stay materialized for view-specific cross-row content.
@@ -817,6 +840,13 @@ protected:
     bool eventFilter(QObject *watched, QEvent *event) override;
 
 private:
+    /// Non-content height reserved for the frame, viewport margins and scrollbar.
+    int autoHeightDecorationExtent() const;
+    bool m_autoHeightEnabled = false;
+    QSizePolicy::Policy m_autoHeightPreviousVerticalPolicy = QSizePolicy::Expanding;
+    QSize m_autoHeightLastHints;
+    bool m_autoHeightScrollBarSyncPending = false;
+
     /// Updates the owned Alpha effect and the frame's content inset.
     void updateFrameAppearance();
     /// Clips scroll-area child controls to the rounded outer frame.
@@ -839,6 +869,8 @@ private:
     void scheduleRelayout();
     void applyPendingAnchor();
     void syncScrollBars();
+    /// Publishes the vertical range after adaptive parent layouts have settled.
+    void updateVerticalScrollBarRange();
     void rebuildLookup();
 
     MaterializedItem createItem(const QPersistentModelIndex &index);
@@ -960,6 +992,7 @@ private:
     quint64 m_rowSpacingStateSerial = 0;
     int m_rowSpacing = 0;
     GridLinePlacement m_gridLinePlacement = GridLinePlacement::SpacingCenter;
+    bool m_trailingRowGridLineAutoHideEnabled = true;
     QColor m_spacingBackgroundColor;
     PaneSeparatorStyle m_itemPaneSeparatorStyle;
     ScrollAnchor m_pendingAnchor;

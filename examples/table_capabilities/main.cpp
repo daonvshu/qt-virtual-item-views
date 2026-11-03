@@ -39,6 +39,7 @@
 #include "29_smooth_scrolling/example.h"
 #endif
 #include "30_borders/example.h"
+#include "31_auto_height/example.h"
 
 namespace {
 
@@ -82,6 +83,7 @@ const ExampleEntry entries[] = {
     {29, u8"29 平滑滚动（可选）", table_smooth_scrolling::createExample},
 #endif
     {30, u8"30 外边框与圆角", table_borders::createExample},
+    {31, u8"31 自适应高度", table_auto_height::createExample},
 };
 
 constexpr int kExampleCount = int(sizeof(entries) / sizeof(entries[0]));
@@ -134,7 +136,7 @@ int main(int argc, char **argv)
     QCommandLineParser parser;
     parser.setApplicationDescription(QStringLiteral("一个进程演示 VirtualTableView 的 %1 项能力").arg(kExampleCount));
     parser.addHelpOption();
-    parser.addOption({QStringLiteral("example"), QStringLiteral("启动时选择章节编号（1–30；29 需要 SmoothScrollbar）"),
+    parser.addOption({QStringLiteral("example"), QStringLiteral("启动时选择章节编号（1–31；29 需要 SmoothScrollbar）"),
                       QStringLiteral("number"), QStringLiteral("1")});
     parser.process(app);
     bool ok = false;
@@ -147,7 +149,7 @@ int main(int argc, char **argv)
         }
     }
     if (initial < 0) {
-        qCritical() << "--example must name an available chapter (1-28, optional 29, or 30)";
+        qCritical() << "--example must name an available chapter (1-28, optional 29, or 30-31)";
         return 1;
     }
     Browser browser(initial);

@@ -241,10 +241,12 @@ void VirtualListView::syncRowGridLines()
     QHash<qsizetype, QRect> desired;
     const QRect viewportRect = viewport()->geometry();
     if (m_rowGridLinesVisible && m_listLayout && viewportRect.width() > 0) {
+        const qsizetype last = viewItemCount() - 1;
+        const bool showTrailingLine = trailingRowGridLineVisible();
         for (const VisibleRange &range : visibleItemRanges()) {
             for (qsizetype row = range.first; row >= 0 && row <= range.last; ++row) {
-                // Spacing hosts draw their own lines; keep the trailing edge too.
-                if (m_listLayout->spacingAfter(row) > 0)
+                // The outer frame supplies the terminal edge for fitted or scrolling views.
+                if ((row == last && !showTrailingLine) || m_listLayout->spacingAfter(row) > 0)
                     continue;
                 const QRect rowRect = visualRowRect(row);
                 if (!rowRect.intersects(viewport()->rect()))

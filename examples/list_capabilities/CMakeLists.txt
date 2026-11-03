@@ -21,6 +21,8 @@ add_executable(list_capabilities
     18_diagnostics/example.cpp
     20_borders/example.cpp
     20_borders/example.ui
+    21_auto_height/example.cpp
+    21_auto_height/auto_height.ui
 )
 
 set_target_properties(list_capabilities PROPERTIES AUTOUIC ON)

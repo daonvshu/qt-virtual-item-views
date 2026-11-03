@@ -132,6 +132,8 @@ bool VirtualItemView::event(QEvent *event)
     const bool handled = QAbstractScrollArea::event(event);
     if (refreshChildMasks && !m_frameEffect.isNull())
         updateFrameChildMasks();
+    if (refreshChildMasks || event->type() == QEvent::ContentsRectChange)
+        updateAutoHeightGeometry();
     return handled;
 }
 
@@ -173,6 +175,7 @@ void VirtualItemView::updateFrameAppearance()
             setLineWidth(m_savedLineWidth);
             setMidLineWidth(m_savedMidLineWidth);
         }
+        updateAutoHeightGeometry();
         return;
     }
     if (!m_frameEffect) {
@@ -189,6 +192,7 @@ void VirtualItemView::updateFrameAppearance()
     setLineWidth(m_frameBorderWidth);
     static_cast<FrameAlphaEffect *>(m_frameEffect.data())->invalidateMask();
     updateFrameChildMasks();
+    updateAutoHeightGeometry();
 }
 
 void VirtualItemView::updateFrameChildMasks()

@@ -212,6 +212,9 @@ void VirtualHeaderView::paintEvent(QPaintEvent *event)
         // content after its half-gap, while coincident pane edges keep only the divider.
         if (paneBoundary && !isPaneTailExposed(it.key()))
             continue;
+        if (!isHorizontal() && !m_trailingSectionSeparatorVisible
+            && it.key() + 1 == m_geometry->sectionCount())
+            continue;
         const bool sectionOwnsBorder = section->isVisible()
             && qobject_cast<const StyledHeaderSection *>(section);
         if (trailing > 0 || paneBoundary) {
@@ -700,6 +703,24 @@ void VirtualHeaderView::setSectionSeparatorsVisible(bool visible)
     for (QWidget *section : m_sectionWidgets)
         section->update();
     update();
+}
+
+void VirtualHeaderView::setTrailingSectionSeparatorVisible(bool visible)
+{
+    if (m_trailingSectionSeparatorVisible == visible)
+        return;
+    m_trailingSectionSeparatorVisible = visible;
+    if (m_geometry) {
+        if (QWidget *section = m_sectionWidgets.value(m_geometry->sectionCount() - 1, nullptr))
+            section->update();
+    }
+    update();
+}
+
+bool VirtualHeaderView::sectionSeparatorVisible(int logicalIndex) const
+{
+    return m_sectionSeparatorsVisible && (isHorizontal() || m_trailingSectionSeparatorVisible
+        || !m_geometry || logicalIndex + 1 != m_geometry->sectionCount());
 }
 
 void VirtualHeaderView::setGridLinePlacement(GridLinePlacement placement)

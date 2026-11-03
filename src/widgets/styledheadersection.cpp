@@ -100,7 +100,7 @@ void StyledHeaderSection::paintVisualStateBackground(QPainter *painter, const QR
     const bool roundRight = orientation() != Qt::Vertical
         || table->selectionBehavior() == VirtualItemView::SelectionBehavior::SelectItems;
     painter->save();
-    if (orientation() == Qt::Vertical && header->sectionSeparatorsVisible()
+    if (orientation() == Qt::Vertical && header->sectionSeparatorVisible(logicalIndex())
         && (!header->isPaneBoundaryAfter(logicalIndex()) || header->isPaneTailExposed(logicalIndex()))
         && !hasTrailingSectionGap(header, logicalIndex())
         && header->sectionTrailingEdgeSpacing(logicalIndex()) == 0)
@@ -139,7 +139,7 @@ void StyledHeaderSection::paintForeground(QPainter *painter)
     }
     const bool centeredGap = header && hasGap
         && header->gridLinePlacement() == GridLinePlacement::SpacingCenter;
-    if ((!header || (header->sectionSeparatorsVisible()
+    if ((!header || (header->sectionSeparatorVisible(logicalIndex())
             && (!header->isPaneBoundaryAfter(logicalIndex())
                 || (!hasGap && header->isPaneTailExposed(logicalIndex())))))
         && (!vertical || !hasGap) && !centeredGap) {

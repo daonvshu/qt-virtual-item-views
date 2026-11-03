@@ -270,6 +270,10 @@ protected:
 private:
     friend class VirtualTableView;
     friend class StyledHeaderSection;
+    /// Mirrors terminal row-border visibility from the owning table, including frozen strips.
+    void setTrailingSectionSeparatorVisible(bool visible);
+    /// Resolves section borders consistently for section widgets and spacing painting.
+    bool sectionSeparatorVisible(int logicalIndex) const;
     /// Shape bounds shared by section and gap painting; row panes remain separate.
     QRect sectionStateRect(int logicalIndex, const QRect &rect) const;
     /// Current section geometry, including clipped sections and slide animation.
@@ -447,6 +451,7 @@ private:
     qint64 m_paneOffset = kFollowGeometryOffset;
     int m_paneTerminalColumn = -1;
     bool m_sectionSeparatorsVisible = true;
+    bool m_trailingSectionSeparatorVisible = true;
     GridLinePlacement m_gridLinePlacement = GridLinePlacement::SpacingCenter;
     bool m_crossAxisSeparatorVisible = true;
     bool m_crossAxisSeparatorThroughSpacing = true;

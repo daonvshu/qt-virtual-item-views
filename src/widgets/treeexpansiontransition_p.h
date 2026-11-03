@@ -7,6 +7,7 @@
 #include "../core/performanceprobe_p.h"
 #include <QEvent>
 #include <QPointer>
+#include <QResizeEvent>
 #include <QScrollBar>
 #include <QSignalBlocker>
 #include <QTimer>
@@ -172,8 +173,14 @@ protected:
     {
         const bool input = event->type() == QEvent::Wheel
             || (watched == m_view->verticalScrollBar() && event->type() == QEvent::MouseButtonPress);
-        if (input || (watched == m_view && (event->type() == QEvent::Resize
-                                          || event->type() == QEvent::Hide)))
+        bool resized = watched == m_view && event->type() == QEvent::Resize;
+        if (resized && m_view->autoHeightEnabled()) {
+            const auto *resize = static_cast<QResizeEvent *>(event);
+            // The parent layout follows each adaptive height hint during the
+            // transition. Only width changes invalidate that live geometry.
+            resized = resize->size().width() != resize->oldSize().width();
+        }
+        if (input || resized || (watched == m_view && event->type() == QEvent::Hide))
             stop();
         return false;
     }
@@ -194,8 +201,18 @@ private:
         const qint64 natural = m_layout->naturalOffsetOf(end) - startOffset;
         // Once the subtree covers the viewport, its offscreen tail needs no
         // interpolation. Work per frame stays bounded by visible rows.
-        const qint64 visible = qMax<qint64>(1, m_view->verticalOffset()
-                                            + m_view->viewport()->height() - startOffset);
+        qint64 viewportHeight = m_view->viewport()->height();
+        if (m_view->autoHeightEnabled()) {
+            // A collapsed adaptive view can be only one row tall. Allow the
+            // transition to reveal more rows as the parent grants it space,
+            // while retaining a bounded animation for very large subtrees.
+            int budget = m_view->maximumHeight();
+            if (const QWidget *parent = m_view->parentWidget())
+                budget = qMin(budget, parent->contentsRect().height());
+            const int chrome = qMax(0, m_view->height() - m_view->viewport()->height());
+            viewportHeight = qMax(viewportHeight, qint64(qMax(0, budget - chrome)));
+        }
+        const qint64 visible = qMax<qint64>(1, m_view->verticalOffset() + viewportHeight - startOffset);
         const qint64 extent = qMin(natural, visible);
         m_layout->m_transitionFirst = first;
         m_layout->m_transitionEnd = end;

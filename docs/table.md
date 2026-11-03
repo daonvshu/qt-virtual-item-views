@@ -34,9 +34,12 @@
 | 28 | 运行统计与生命周期：读取统计快照和有界日志，区分累计创建次数与当前物化数量 | [examples/table_capabilities/28_diagnostics/example.cpp](../examples/table_capabilities/28_diagnostics/example.cpp) |
 | 29 | 平滑滚动（可选）：检测到匹配的 SmoothScrollbar 后才编译和显示，开关对比原生双向滚动 | [examples/table_capabilities/29_smooth_scrolling/example.cpp](../examples/table_capabilities/29_smooth_scrolling/example.cpp) |
 | 30 | 外边框与圆角：框架内置 Alpha 合成，支持透明圆角、边框与少量数据 | [examples/table_capabilities/30_borders/README.md](../examples/table_capabilities/30_borders/README.md) |
+| 31 | 自适应高度：表头、内容、水平滚动条和父布局约束 | [examples/table_capabilities/31_auto_height/example.cpp](../examples/table_capabilities/31_auto_height/example.cpp) |
 
 先看 `Example::setupExample()` 中的视图配置与信号连接，再看本文件的 model、adapter 和控件。`setupUi()` 只处理页面布局。Hover 与 selected 背景由框架绘制，圆角、颜色、时长和曲线直接调用接口配置。
 
 行控件模式适合整行一起管理状态与布局，使用 `ColumnHost` 自动跟随列几何；单元格模式会横向回收离屏格子，适合列数较多的表格。整行结构体绑定见第 04 项，事件处理中取得当前索引见第 13 项。
 
 构建、启动和复制方式见 [examples/table_capabilities/README.md](../examples/table_capabilities/README.md)。
+
+自适应高度见 [第 31 章](../examples/table_capabilities/31_auto_height/README.md)。`setAutoHeightEnabled(true)` 计入表头与内容，最大高度使用 `setMaximumHeight()`；父布局空间不足时显示滚动条。行控件与单元格模式共用此能力，完整约束见 [自适应高度](auto-height.md)。

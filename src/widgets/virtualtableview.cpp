@@ -16,6 +16,7 @@
 
 #include <QAbstractItemModel>
 #include <QApplication>
+#include <QCoreApplication>
 #include <QStyleOptionHeader>
 #include <QKeyEvent>
 #include <QMouseEvent>
@@ -1292,6 +1293,7 @@ void VirtualTableView::layoutHeaderWidgets()
         = (isVerticalHeaderShown() && m_verticalHeader) ? m_verticalHeaderWidth : 0;
 
     setViewportMargins(rowHeaderWidth, headerHeight, 0, 0);
+    updateAutoHeightGeometry();
 
     const QRect viewportRect = viewport()->geometry();
     // Every pane has its own header renderer, positioned on the pane rectangle
@@ -3160,8 +3162,10 @@ void VirtualTableView::syncHorizontalScrollBar()
     // window on the current position), exactly like the vertical scroll bar.
     m_horizontalMapper.setExtents(maximum + viewportWidth, viewportWidth);
 
+    const int range = m_horizontalMapper.scrollRange();
+    const bool rangeChanged = bar->minimum() != 0 || bar->maximum() != range;
     const QSignalBlocker blocker(bar);
-    bar->setRange(0, m_horizontalMapper.scrollRange());
+    bar->setRange(0, range);
     bar->setPageStep(qMax(1, viewportWidth));
     bar->setSingleStep(qMax(1, viewportWidth / 20));
     const int value = m_horizontalMapper.toScrollBarValue(m_columns->viewportOffset());
@@ -3172,6 +3176,10 @@ void VirtualTableView::syncHorizontalScrollBar()
     const qint64 mapped = m_horizontalMapper.toLogicalOffset(value);
     if (m_columns->viewportOffset() != mapped)
         m_columns->setViewportOffset(mapped);
+    updateAutoHeightGeometry();
+    // Keep Qt's scrollbar visibility in sync even though rangeChanged is blocked.
+    if (rangeChanged)
+        QCoreApplication::postEvent(this, new QEvent(QEvent::LayoutRequest));
 }
 
 // ---------------------------------------------------------------------------
@@ -3283,6 +3291,11 @@ void VirtualTableView::updateRowHeaderOffset()
     // Row panes can appear or disappear with a single call (setFrozenRows()), so the
     // strips are reconciled first, then placed, then given their offsets (§31).
     syncVerticalPaneHeaders();
+    const bool showTrailingLine = trailingRowGridLineVisible();
+    for (HeaderViewInterface *header : {m_verticalHeader, m_frozenTopRowsHeader, m_frozenBottomRowsHeader}) {
+        if (auto *strip = dynamic_cast<VirtualHeaderView *>(header))
+            strip->setTrailingSectionSeparatorVisible(showTrailingLine);
+    }
     // The frozen bands change the pane rectangles, so the strips are placed first (§31).
     layoutVerticalHeaderStrips();
     const QVector<ItemPane> panes = itemPanes();
@@ -5348,6 +5361,7 @@ void VirtualTableView::paintVisualStateBackgrounds(QPainter *target, const QRect
                 // A bottom border occupies the row body only when no trailing gap exists.
                 // Reserve the same physical band across actual columns and empty space.
                 const int bottomInset = m_horizontalGridLinesVisible && m_rowLayout
+                    && (row + 1 != viewItemCount() || trailingRowGridLineVisible())
                     && m_rowLayout->spacingAfter(row) == 0
                     && (row + 1 != viewItemCount() || m_rowLayout->trailingSpacing() == 0)
                     ? m_horizontalGridLineWidth : 0;
@@ -6151,8 +6165,12 @@ void VirtualTableView::syncRowGridLines()
     const QRect draggedPane = draggedRow >= 0
         ? itemPaneRect(itemPaneForRow(draggedRow)).intersected(viewport()->rect()) : QRect();
     if (m_horizontalGridLinesVisible && viewportRect.width() > 0) {
+        const qsizetype last = viewItemCount() - 1;
+        const bool showTrailingLine = trailingRowGridLineVisible();
         for (const VisibleRange &range : dragVisualRowRanges()) {
             for (qsizetype row = range.first; row >= 0 && row <= range.last; ++row) {
+                if (row == last && !showTrailingLine)
+                    continue;
                 const bool exposedTail = rowPaneTailIsExposed(row);
                 if (isItemPaneBoundaryAfter(row) && !exposedTail)
                     continue;
@@ -6541,8 +6559,12 @@ void VirtualTableView::updateColumnSpacingVisualRows()
     QVector<RowLine> rowLines;
     if (m_horizontalGridLinesVisible && horizontalSpacingLineThroughColumnSpacing()
         && spacing > 0) {
+        const qsizetype lastRow = viewItemCount() - 1;
+        const bool showTrailingLine = trailingRowGridLineVisible();
         for (const VisibleRange &range : visibleItemRanges()) {
             for (qsizetype row = range.first; row >= 0 && row <= range.last; ++row) {
+                if (row == lastRow && !showTrailingLine)
+                    continue;
                 const bool exposedTail = rowPaneTailIsExposed(row);
                 if (isItemPaneBoundaryAfter(row) && !exposedTail)
                     continue;
