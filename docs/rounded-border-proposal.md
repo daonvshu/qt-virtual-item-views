@@ -18,9 +18,25 @@ view->setFrameBorderColor(QColor("#4079ad"));
 
 ## 少量数据
 
-表格视口统一使用 `QPalette::Base`，不再按列宽把背景条延长到末行以外。默认行号背景和列间距的竖线仅覆盖实际行及其间距；冻结上下行分别裁剪，空白中心不绘制延长的列线。整行 hover／selected 在左右冻结列之间保持连续，显式列间距仍遵循原有状态贯通配置。自定义表头背景色保留整条容器填充语义。
+表格视口默认使用 `QPalette::Base`，不再按列宽把背景条延长到末行以外。默认行号背景和列间距的竖线仅覆盖实际行及其间距；冻结上下行分别裁剪，空白中心不绘制延长的列线。整行 hover／selected 在左右冻结列之间保持连续，显式列间距仍遵循原有状态贯通配置。自定义表头背景色保留整条容器填充语义。
 
 末行底边保留。普通行分隔线与冻结行分隔线均按实际列区域裁剪，不横穿冻结列之间的空白区域；水平滚动、列宽和冻结配置变化时同步更新裁剪。冻结边线包含真实列间距，底部冻结行的上边线位于行顶边外侧，避免遮挡状态背景的首行像素；中间空白的命中与拖放解析会排除属于冻结区域的行。
+
+## 主体背景
+
+`VirtualListView`、`VirtualTreeView`、`VirtualTableView` 和 `VirtualTreeTableView` 继承同一组主体背景接口：
+
+```cpp
+view->setBackgroundVisible(false);               // Expose the parent background.
+view->setBackgroundVisible(true);                // Restore the configured body base.
+view->setBackgroundColor(QColor("#f5f7fa"));      // Configure a body color.
+view->setBackgroundColor(QColor(Qt::transparent)); // Or use a transparent body color.
+view->setBackgroundColor(QColor());              // Follow QPalette::Base again.
+```
+
+默认 `backgroundVisible()` 为 `true`，`backgroundColor()` 为无效颜色，使用当前调色板的 `QPalette::Base`。显隐优先于颜色，关闭再开启后保留已配置颜色。`backgroundBrush()` 返回解析后的画刷，隐藏时返回 `Qt::NoBrush`，可供业务绘制复用。颜色与显隐修改立即刷新主体、内置间距和样式控件，无需重新绑定数据。
+
+表头基础背景默认开启，section、冻结表头与默认 corner 使用原生面板样式；通过 `horizontalHeader()`、`verticalHeader()` 的 `setBackgroundColor()` 单独配置颜色，或调用 `setBackgroundVisible(false)` 使对应表头透明。hover／selected、分割线及外框不受主体背景开关影响。显式间距颜色、业务 adapter 控件、自定义表头或 corner 自行绘制的底色仍由各自配置控制；滚动条保留 Qt 样式。
 
 ## 示例
 

@@ -32,7 +32,8 @@ void StyledTableCellHost::paintEvent(QPaintEvent *)
     if (!m_view || m_view->selectionBehavior() == VirtualItemView::SelectionBehavior::SelectRows)
         return;
     QPainter painter(this);
-    painter.fillRect(rect(), palette().color(QPalette::Base));
+    if (m_view->backgroundBrush().isOpaque())
+        painter.fillRect(rect(), m_view->backgroundBrush());
     if (m_index.isValid())
         m_view->paintVisualStateBackground(&painter, QRectF(rect()), QModelIndex(m_index));
 }
@@ -94,7 +95,8 @@ void StyledTableRowWidget::refreshVisualStates()
 void StyledTableRowWidget::paintEvent(QPaintEvent *)
 {
     QPainter painter(this);
-    painter.fillRect(rect(), palette().color(QPalette::Base));
+    if (m_view && m_view->backgroundBrush().isOpaque())
+        painter.fillRect(rect(), m_view->backgroundBrush());
     if (!m_view || !m_index.isValid()
         || m_view->selectionBehavior() != VirtualItemView::SelectionBehavior::SelectRows)
         return;
@@ -184,8 +186,9 @@ protected:
             painter.setClipRect(clip, Qt::IntersectClip);
             painter.setRenderHint(QPainter::Antialiasing,
                                   m_view->visualStateCornerRadius() > 0);
-            painter.fillPath(m_view->visualStateBackgroundPath(background),
-                             palette().color(QPalette::Base));
+            if (m_view->backgroundBrush().isOpaque())
+                painter.fillPath(m_view->visualStateBackgroundPath(background),
+                                 m_view->backgroundBrush());
             m_view->paintVisualStateBackground(&painter, background, index);
             painter.restore();
         };

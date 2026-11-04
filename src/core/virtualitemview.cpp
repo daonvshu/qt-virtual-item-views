@@ -153,7 +153,7 @@ public:
 class RowSpacingHost : public QWidget
 {
 public:
-    explicit RowSpacingHost(QWidget *parent = nullptr) : QWidget(parent)
+    explicit RowSpacingHost(VirtualItemView *view) : QWidget(view->viewport()), m_view(view)
     {
         setObjectName(QStringLiteral("vivRowSpacingHost"));
         setFocusPolicy(Qt::NoFocus);
@@ -198,8 +198,9 @@ protected:
         const QColor background = property("vivSpacingBackgroundColor").value<QColor>();
         if (background.isValid())
             painter.fillRect(rect(), background);
-        else if (property("vivFillSpacingBackground").toBool())
-            painter.fillRect(rect(), palette().brush(QPalette::Base));
+        else if (property("vivFillSpacingBackground").toBool()
+                 && m_view->backgroundBrush().isOpaque())
+            painter.fillRect(rect(), m_view->backgroundBrush());
         painter.setOpacity(1.0);
         if (m_statePainter)
             m_statePainter(&painter, rect());
@@ -238,6 +239,7 @@ private:
         return QWidget::event(event);
     }
 
+    VirtualItemView *const m_view;
     QPointer<QWidget> m_content;
     QColor m_lineColor;
     qreal m_itemOpacity = 1.0;
@@ -361,6 +363,38 @@ VirtualItemView::~VirtualItemView()
         m_layout = nullptr;
         m_ownLayout = false;
     }
+}
+
+void VirtualItemView::setBackgroundVisible(bool visible)
+{
+    if (m_backgroundVisible == visible)
+        return;
+    m_backgroundVisible = visible;
+    updateBackgroundAppearance();
+}
+
+void VirtualItemView::setBackgroundColor(const QColor &color)
+{
+    if (m_backgroundColor == color)
+        return;
+    m_backgroundColor = color;
+    updateBackgroundAppearance();
+}
+
+QBrush VirtualItemView::backgroundBrush() const
+{
+    if (!m_backgroundVisible)
+        return QBrush(Qt::NoBrush);
+    return m_backgroundColor.isValid() ? QBrush(m_backgroundColor) : palette().brush(QPalette::Base);
+}
+
+void VirtualItemView::updateBackgroundAppearance()
+{
+    update();
+    // Gap hosts can be reparented into scroll clips; styled hosts also cache no base color.
+    // Repaint descendants without rebinding items or changing layout and selection.
+    for (QWidget *widget : findChildren<QWidget *>())
+        widget->update();
 }
 
 void VirtualItemView::setAutoHeightEnabled(bool enabled)
@@ -694,6 +728,19 @@ QVector<QRect> VirtualItemView::rowSpacingWidgetRectsInView() const
                                widget->size()));
     }
     return rects;
+}
+
+QRegion VirtualItemView::rowSpacingWidgetRegionInView() const
+{
+    QRegion region;
+    for (QWidget *widget : m_rowSpacingWidgets) {
+        if (!widget->isVisible())
+            continue;
+        const QRegion mask = widget->mask();
+        region += (mask.isEmpty() ? QRegion(widget->rect()) : mask)
+            .translated(widget->mapTo(viewport(), QPoint()));
+    }
+    return region;
 }
 
 void VirtualItemView::setRowSpacing(int pixels)
@@ -2385,7 +2432,7 @@ void VirtualItemView::syncRowSpacingWidgets(const QVector<VisibleRange> &ranges)
         }
         if (!widget) {
             QVector<QWidget *> &pool = m_rowSpacingPool[depth];
-            widget = pool.isEmpty() ? new RowSpacingHost(viewport()) : pool.takeLast();
+            widget = pool.isEmpty() ? new RowSpacingHost(this) : pool.takeLast();
             m_rowSpacingWidgets.insert(row, widget);
             QPointer<QWidget> guardedWidget(widget);
             widget->setProperty("vivSpacingDepth", depth);
@@ -3815,7 +3862,7 @@ void VirtualItemView::paintEvent(QPaintEvent *event)
     detail::PerformanceScope performance(this, "paint.base", detail::PerformanceDomain::Paint);
     Q_UNUSED(event);
     QPainter painter(viewport());
-    painter.fillRect(viewport()->rect(), palette().brush(QPalette::Base));
+    painter.fillRect(viewport()->rect(), backgroundBrush());
 }
 
 void VirtualItemView::resizeEvent(QResizeEvent *event)

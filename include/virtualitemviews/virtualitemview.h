@@ -7,6 +7,7 @@
 #include <virtualitemviews/types.h>
 
 #include <QAbstractScrollArea>
+#include <QBrush>
 #include <QColor>
 #include <QEasingCurve>
 #include <QElapsedTimer>
@@ -109,6 +110,17 @@ public:
 
     explicit VirtualItemView(QWidget *parent = nullptr);
     ~VirtualItemView() override;
+
+    /// Shows the body base background (default true). False exposes the parent;
+    /// state layers, separators and explicitly colored spacing remain independent.
+    void setBackgroundVisible(bool visible);
+    bool backgroundVisible() const { return m_backgroundVisible; }
+    /// Body base color; invalid follows QPalette::Base. Visibility takes precedence.
+    /// Adapter widgets that paint their own backgrounds remain application-controlled.
+    void setBackgroundColor(const QColor &color);
+    QColor backgroundColor() const { return m_backgroundColor; }
+    /// Resolved body brush for custom painting; NoBrush while the base is hidden.
+    QBrush backgroundBrush() const;
 
     /// Rounded outer frame shared by all views (logical pixels; defaults to zero).
     /// Enabling radius or width installs an Alpha compositing graphics effect,
@@ -598,6 +610,8 @@ protected:
     void updateRowSpacingWidgetMasks();
     void raiseRowSpacingWidgets() const;
     QVector<QRect> rowSpacingWidgetRectsInView() const;
+    /// Visible row-gap coverage in viewport coordinates, including span and pane clipping.
+    QRegion rowSpacingWidgetRegionInView() const;
     /// Hook called after a materialization pass (measurement feedback).
     virtual void afterMaterialize();
     /// Invalidates the parent layout only when the adaptive height hints change.
@@ -840,6 +854,11 @@ protected:
     bool eventFilter(QObject *watched, QEvent *event) override;
 
 private:
+    /// Repaints the body and dependent framework widgets after a base style change.
+    void updateBackgroundAppearance();
+    bool m_backgroundVisible = true;
+    QColor m_backgroundColor;
+
     /// Non-content height reserved for the frame, viewport margins and scrollbar.
     int autoHeightDecorationExtent() const;
     bool m_autoHeightEnabled = false;

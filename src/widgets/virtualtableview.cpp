@@ -298,7 +298,8 @@ public:
         }
     };
 
-    ColumnSpacingHost(QWidget *parent, const LayoutPolicy *layout) : QWidget(parent), m_layout(layout)
+    ColumnSpacingHost(VirtualTableView *view, const LayoutPolicy *layout)
+        : QWidget(view), m_view(view), m_layout(layout)
     {
         setObjectName(QStringLiteral("vivColumnSpacingHost"));
         setFocusPolicy(Qt::NoFocus);
@@ -488,8 +489,9 @@ protected:
                 ? QBrush(m_headerBackground) : palette().brush(QPalette::Base));
         const QRect body(0, m_bodyTop, width(), height() - m_bodyTop);
         // Reset underlying item layers before compositing translucent gap colors and states.
-        if (m_bodyBackground.isValid() || property("vivFillSpacingBackground").toBool())
-            painter.fillRect(body, palette().brush(QPalette::Base));
+        if ((m_bodyBackground.isValid() || property("vivFillSpacingBackground").toBool())
+            && m_view->backgroundBrush().isOpaque())
+            painter.fillRect(body, m_view->backgroundBrush());
         if (m_bodyBackground.isValid())
             painter.fillRect(body, m_bodyBackground);
         if (m_bodyStatePainter) {
@@ -621,6 +623,7 @@ private:
         }
     }
 
+    VirtualTableView *const m_view;
     const LayoutPolicy *m_layout;
     QWidget *m_content = nullptr;
     QWidget *m_headerContent = nullptr;
@@ -5230,7 +5233,7 @@ void VirtualTableView::paintEvent(QPaintEvent *event)
 {
     detail::PerformanceScope performance(this, "paint.table", detail::PerformanceDomain::Paint);
     QPainter painter(viewport());
-    painter.fillRect(event->rect(), palette().brush(QPalette::Base));
+    painter.fillRect(event->rect(), backgroundBrush());
     if (spacingBackgroundColor().isValid()) {
         QRegion outer;
         for (int i = 0; i < m_panes.panes().size(); ++i) {
@@ -5269,8 +5272,14 @@ void VirtualTableView::paintEvent(QPaintEvent *event)
         painter.fillRect(event->rect(), spacingBackgroundColor());
         painter.restore();
     }
-    if (m_visualStateBackgroundVisible)
+    if (m_visualStateBackgroundVisible) {
+        // Transparent gap hosts inherit the body base. Give each state layer one
+        // owner instead of painting it both here and again in the gap host.
+        if (!backgroundBrush().isOpaque())
+            painter.setClipRegion(QRegion(event->rect()) - rowSpacingWidgetRegionInView(),
+                                  Qt::IntersectClip);
         paintVisualStateBackgrounds(&painter, event->rect());
+    }
 }
 
 QRegion VirtualTableView::columnContentRegion(bool includeTrailingSpacing) const
@@ -5328,11 +5337,13 @@ void VirtualTableView::paintRowSpacingBackground(QPainter *painter, const QRect 
 {
     if (m_visualStateBackgroundVisible && m_visualStateThroughRowSpacing
         && gridLinePlacement() == GridLinePlacement::SpacingCenter) {
-        // The viewport can already contain the extended layer below this gap host.
-        // Reset it before compositing translucent spacing colors and state brushes.
-        painter->fillRect(dirtyRect, palette().brush(QPalette::Base));
-        if (spacingBackgroundColor().isValid())
-            painter->fillRect(dirtyRect, spacingBackgroundColor());
+        // Opaque bases reset the viewport's extended state layer. Transparent bases
+        // and explicit gap colors are already below us and must not be composited twice.
+        if (backgroundBrush().isOpaque()) {
+            painter->fillRect(dirtyRect, backgroundBrush());
+            if (spacingBackgroundColor().isValid())
+                painter->fillRect(dirtyRect, spacingBackgroundColor());
+        }
         paintVisualStateBackgrounds(painter, dirtyRect);
     }
 }

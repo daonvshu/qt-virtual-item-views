@@ -123,8 +123,8 @@ bool VirtualItemView::event(QEvent *event)
         updateFrameChildMasks();
         // The QFrame shape reserves layout space only. Painting its native box
         // and scroll-area corner would leave rectangular edges inside the Alpha frame.
-        QPainter painter(this);
-        painter.fillRect(rect(), palette().brush(QPalette::Base));
+        // The viewport paints the body base once. Filling the entire effect source
+        // would cover transparent headers and composite translucent body colors twice.
         return true;
     }
     const bool refreshChildMasks = event->type() == QEvent::LayoutRequest
