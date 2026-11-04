@@ -258,7 +258,8 @@ private:
     using VirtualItemView::setFrozenBottomRows;
 
     /// Resolves the gap from node data, falling back to rowSpacing().
-    int effectiveRowSpacing(qsizetype row) const;
+    /// An explicit nextRow resolves the boundary after skipping a subtree.
+    int effectiveRowSpacing(qsizetype row, qsizetype nextRow = -1) const;
     void connectModelSignals(QAbstractItemModel *model);
     void onStructureChanged();
     /// A column change only invalidates the cells the visible-row index points at (the row

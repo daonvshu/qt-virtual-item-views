@@ -99,6 +99,9 @@ VirtualTreeTableView::VirtualTreeTableView(QWidget *parent)
                 viewport()->update();
             }
         },
+        [this](qsizetype parentRow, qsizetype nextRow) {
+            return nextRow < viewItemCount() ? effectiveRowSpacing(parentRow, nextRow) : 0;
+        },
         verticalHeaderGeometry());
     m_branchOverlay = new BranchOverlay([this](QPainter *painter) { paintBranches(painter); }, viewport());
     m_branchOverlay->setGeometry(viewport()->rect());
@@ -1027,14 +1030,19 @@ void VirtualTreeTableView::setBranchAreaVisible(bool visible)
     }
 }
 
-int VirtualTreeTableView::effectiveRowSpacing(qsizetype row) const
+int VirtualTreeTableView::effectiveRowSpacing(qsizetype row, qsizetype nextRow) const
 {
+    if (nextRow < 0)
+        nextRow = row + 1;
+    const QPointer<const VirtualTreeTableView> guard(this);
     const QVariant value = viewIndex(row).data(NodeRowSpacingBelowRole);
+    if (!guard)
+        return 0;
     bool valid = false;
     const int spacing = value.toInt(&valid);
     const int below = valid && spacing >= 0 ? spacing : rowSpacing();
-    const QVariant aboveValue = row + 1 < viewItemCount()
-        ? viewIndex(row + 1).data(NodeRowSpacingAboveRole) : QVariant();
+    const QVariant aboveValue = nextRow < viewItemCount()
+        ? viewIndex(nextRow).data(NodeRowSpacingAboveRole) : QVariant();
     const int above = aboveValue.toInt(&valid);
     return int(qMin<qint64>(qint64(below) + (valid ? qMax(0, above) : 0),
                            std::numeric_limits<int>::max()));

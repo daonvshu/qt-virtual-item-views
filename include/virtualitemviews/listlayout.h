@@ -77,9 +77,12 @@ private:
     friend class TreeExpansionTransition;
     qint64 naturalOffsetOf(qsizetype item) const;
     qint64 transitionEnd() const;
+    qint64 transitionSpacingAdjustment() const;
     qsizetype m_transitionFirst = -1;
     qsizetype m_transitionEnd = -1;
     qint64 m_transitionExtent = 0;
+    // Collapsed parent/next-node gap minus the expanded parent/first-child gap.
+    qint64 m_transitionSpacingDelta = 0;
     qreal m_transitionOpacity = 1.0;
     bool m_transitionFadeEnabled = true;
     qint64 clampToIntRange(qint64 value) const;

@@ -22,8 +22,11 @@ class TreeExpansionTransition : public QObject
 {
 public:
     TreeExpansionTransition(VirtualItemView *view, ListLayout *layout,
-                            std::function<void()> refreshLayout, HeaderGeometry *header = nullptr)
+                            std::function<void()> refreshLayout,
+                            std::function<int(qsizetype, qsizetype)> collapsedSpacing,
+                            HeaderGeometry *header = nullptr)
         : QObject(view), m_view(view), m_layout(layout), m_refresh(std::move(refreshLayout)),
+          m_collapsedSpacing(std::move(collapsedSpacing)),
           m_header(header)
     {
         setObjectName(QStringLiteral("vivTreeExpansionTransition"));
@@ -131,7 +134,7 @@ public:
 
     void expand(const QModelIndex &node, qsizetype first, qsizetype count)
     {
-        if (canAnimate() && first >= 0 && count > 0) {
+        if (canAnimate() && first > 0 && count > 0) {
             m_node = node;
             start(first, first + count, true);
         }
@@ -197,6 +200,19 @@ private:
         const qint64 current = m_layout->m_transitionExtent;
         const qreal currentOpacity = m_layout->m_transitionOpacity;
         m_animation.stop();
+        if (!reversing) {
+            const QPointer<TreeExpansionTransition> guard(this);
+            const QPersistentModelIndex node = m_node;
+            const auto spacing = m_collapsedSpacing;
+            const int closedGap = spacing(first - 1, end);
+            if (!guard || !node.isValid() || m_node != node)
+                return;
+            // The next visible node's above-gap survives the collapse. Replace
+            // the parent/first-child gap with the final parent/next-node gap,
+            // independently of clipping the outgoing children to zero height.
+            m_layout->m_transitionSpacingDelta = qint64(closedGap)
+                - m_layout->m_spacings.sizeOf(first - 1);
+        }
         const qint64 startOffset = m_layout->naturalOffsetOf(first);
         const qint64 natural = m_layout->naturalOffsetOf(end) - startOffset;
         // Once the subtree covers the viewport, its offscreen tail needs no
@@ -240,6 +256,7 @@ private:
     {
         m_layout->m_transitionFirst = -1;
         m_layout->m_transitionEnd = -1;
+        m_layout->m_transitionSpacingDelta = 0;
         m_layout->m_transitionOpacity = 1.0;
         if (m_header)
             m_header->m_transientRows = nullptr;
@@ -266,6 +283,7 @@ private:
     QPointer<VirtualItemView> m_view;
     ListLayout *m_layout;
     std::function<void()> m_refresh;
+    std::function<int(qsizetype, qsizetype)> m_collapsedSpacing;
     QPointer<HeaderGeometry> m_header;
     QPointer<QAbstractItemModel> m_model;
     QPersistentModelIndex m_node;

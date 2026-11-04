@@ -90,6 +90,8 @@ void ListLayout::setSpacingAfter(qsizetype item, int pixels)
 int ListLayout::spacingAfter(qsizetype item) const
 {
     const int spacing = item >= 0 && item + 1 < itemCount() ? m_spacings.sizeOf(item) : 0;
+    if (hasTransientGeometry() && item >= 0 && item == m_transitionFirst - 1)
+        return int(qint64(spacing) + transitionSpacingAdjustment());
     if (item >= m_transitionFirst && item < m_transitionEnd && hasTransientGeometry())
         return int(qBound(qint64(0), transitionEnd() - naturalOffsetOf(item)
                                      - m_sizeIndex->sizeOf(item), qint64(spacing)));
@@ -128,17 +130,24 @@ int ListLayout::itemSize(qsizetype item) const
 qint64 ListLayout::offsetOf(qsizetype item) const
 {
     const qint64 natural = naturalOffsetOf(item);
-    if (!hasTransientGeometry() || item <= m_transitionFirst)
+    if (!hasTransientGeometry() || item < m_transitionFirst)
         return natural;
+    const qint64 adjustment = transitionSpacingAdjustment();
     if (item < m_transitionEnd)
-        return qMin(natural, transitionEnd());
-    return natural - (naturalOffsetOf(m_transitionEnd) - transitionEnd());
+        return qMin(natural, transitionEnd()) + adjustment;
+    return natural - (naturalOffsetOf(m_transitionEnd) - transitionEnd()) + adjustment;
 }
 
 qint64 ListLayout::transitionEnd() const
 {
     return qMin(naturalOffsetOf(m_transitionEnd),
                 naturalOffsetOf(m_transitionFirst) + m_transitionExtent);
+}
+
+qint64 ListLayout::transitionSpacingAdjustment() const
+{
+    return hasTransientGeometry()
+        ? qRound64(qreal(m_transitionSpacingDelta) * (1.0 - m_transitionOpacity)) : 0;
 }
 
 void ListLayout::filterVisibleRanges(QVector<VisibleRange> &ranges) const
@@ -231,7 +240,8 @@ qint64 ListLayout::contentExtent() const
         : m_viewportMargins.left() + m_viewportMargins.right();
     const qint64 hidden = hasTransientGeometry()
         ? naturalOffsetOf(m_transitionEnd) - transitionEnd() : 0;
-    return total - hidden + margins + (itemCount() > 0 ? qint64(m_leadingSpacing) + m_trailingSpacing : 0);
+    return total - hidden + transitionSpacingAdjustment() + margins
+        + (itemCount() > 0 ? qint64(m_leadingSpacing) + m_trailingSpacing : 0);
 }
 
 void ListLayout::setCrossExtent(int extent)
