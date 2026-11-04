@@ -9,7 +9,7 @@ class QStyleOptionHeader;
 namespace viv {
 
 /// Header appearance shared by label sections, custom sections and the corner widget.
-/// Paints the native panel, animated state backgrounds, rounded corners and separators.
+/// Paints the QSS background or native panel, animated states, corners and separators.
 /// Provides no text or other content; section gaps remain VirtualHeaderView's responsibility.
 class VIRTUALITEMVIEWS_EXPORT StyledHeaderSection : public HeaderSection
 {
@@ -28,6 +28,7 @@ protected:
     /// corner geometry, animation, labels and separators. Coordinates are section-local.
     virtual QBrush visualStateBackgroundBrush(bool selected, const QColor &defaultColor) const;
     /// Draws the optional base background followed by the table's animated state backgrounds.
+    /// Explicit section color wins over the header base, then QSS/native defaults apply.
     void paintBackground(QPainter *painter) override;
     /// Draws section and cross-axis separators after content, excluding section gaps.
     void paintForeground(QPainter *painter) override;

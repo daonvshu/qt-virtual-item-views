@@ -4,9 +4,20 @@
 
 默认使用 `setGridLinePlacement(viv::GridLinePlacement::SpacingCenter)`，在非零间距中心绘制一条分割线，并始终贯通交叉方向的间距。切换为 `SpacingEdges` 后，在间距两侧绘制分割线，才可以用 `setVerticalSpacingLineThroughRowSpacing()` 和 `setHorizontalSpacingLineThroughColumnSpacing()` 设置是否贯通；中心模式忽略这两个设置，查询始终返回 `true`。任一方向间距为 0 时，两种模式都回退为相邻项共享的一条边界线。
 
-表格和树表格在中心模式下，自动在内容区四周各补半个对应方向的间距，让首尾行、首尾列的控件与内部单元格一样位于分割线之间。留白计入内容尺寸、滚动范围和列宽铺满计算，表头同步对齐；相邻冻结分区之间的间距拆成两半，分别放在各自分区内，总间距保持不变。奇数间距由前侧取整、后侧补齐剩余像素。切回两侧模式或把对应方向间距设为 0 时，外侧留白随之取消。
+表格和树表格在中心模式下，默认在内容四周保留半间距，使首尾行列与内部单元格保持对称留白。通过两个独立开关可以把表头交界处的半间距改为全间距；两侧模式下则从 0 改为全间距。方向参数表示表头方向：
 
-未指定间距颜色时，内容区与表头间距统一使用 `QPalette::Base`，四周半间距与内部间距保持一致。可分别调用 `horizontalHeader()->setSpacingBackgroundColor()`、`verticalHeader()->setSpacingBackgroundColor()` 设置表头间距颜色，或传入 `QColor()` 恢复默认；显式配置表头底色后，未指定颜色的表头间距跟随该底色。
+```cpp
+view->setHeaderContentSpacingEnabled(Qt::Horizontal, true); // Full rowSpacing() below the horizontal header.
+view->setHeaderContentSpacingEnabled(Qt::Vertical, true);   // Full columnSpacing() beside the vertical header.
+```
+
+两项默认均为 `false`，可用 `headerContentSpacingEnabled()` 分别查询。“水平表头与首行之间保留全间距”和“垂直表头与首列之间保留全间距”分别演示以上调用。它们控制内容起点的留白，随内容一起滚动；关闭开关、隐藏表头或将其尺寸设为 0 后，该边恢复普通外侧规则：中心模式为半间距，两侧模式为 0。对应方向间距为 0 时不增加留白。
+
+留白计入内容尺寸、滚动范围和列宽铺满计算，表头同步对齐；相邻冻结分区之间的间距始终拆成两半，分别放在各自分区内，不受上述开关影响。奇数间距由前侧取整、后侧补齐剩余像素。
+
+表头与内容之间的全间距也绘制分割线：中心模式在间距中心补一条；两侧模式只补靠内容的一条，即首行上方的间距下边线、首列左侧的间距右边线，靠表头的一侧沿用表头已有边线。关闭开关后，中心模式保留半间距，但不在这半间距内部额外补线。补线遵循网格显隐、颜色、物理像素线宽、穿过交叉间距及表头的设置；零间距不额外绘线。
+
+未指定间距颜色时，内容区与表头间距统一使用 `QPalette::Base`，表头交界间距、外侧半间距与内部间距保持一致。可分别调用 `horizontalHeader()->setSpacingBackgroundColor()`、`verticalHeader()->setSpacingBackgroundColor()` 设置表头间距颜色，或传入 `QColor()` 恢复默认；显式配置表头底色后，未指定颜色的表头间距跟随该底色。
 
 `setVerticalGridLinesThroughHeader()` 控制竖线是否绘制到水平表头，`setHorizontalGridLinesThroughHeader()` 控制横线是否绘制到垂直表头，两者默认启用，适用于两种模式及冻结表头区域。关闭后仍保留表头与内容区的边界线，只隐藏表头内部的网格线；自定义表头绘制仍由业务负责。
 

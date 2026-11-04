@@ -38,7 +38,20 @@ view->setBackgroundColor(QColor());              // Follow QPalette::Base again.
 
 表头基础背景默认开启，section、冻结表头与默认 corner 使用原生面板样式；通过 `horizontalHeader()`、`verticalHeader()` 的 `setBackgroundColor()` 单独配置颜色，或调用 `setBackgroundVisible(false)` 使对应表头透明。hover／selected、分割线及外框不受主体背景开关影响。显式间距颜色、业务 adapter 控件、自定义表头或 corner 自行绘制的底色仍由各自配置控制；滚动条保留 Qt 样式。
 
-## 示例
+## 项背景颜色
+
+四种视图均可通过 `setItemBackgroundColor()` 设置所有实际项目行的统一底色：
+
+```cpp
+view->setItemBackgroundColor(QColor("#fff0c2")); // Paint a uniform item base.
+view->setItemBackgroundColor(QColor());        // Restore the default: no item fill.
+```
+
+无效颜色（默认）或 alpha 为零的颜色均不绘制。项底色独立于主体背景显隐、选择模式和 hover／selected 开关，绘制顺序为主体、项底色、状态背景、业务控件。它按实际行高绘制，不沿用状态背景的固定高度、边距或圆角；树节点包含 branch 和缩进区域，表格与树表仅覆盖实际列的项目区域。行列间距、表头及末行之后的空白保留各自背景。颜色支持透明度，展开收起的淡入淡出和拖动位移使用当前项目几何；业务控件需保持背景透明才能看到框架底色。
+
+颜色与 stylesheet 对比源码：列表 [第 22 章](../examples/list_capabilities/22_colors/example.cpp)、树 [第 28 章](../examples/tree_capabilities/28_colors/example.cpp)、表格 [第 32 章](../examples/table_capabilities/32_colors/example.cpp)、树表 [第 37 章](../examples/treetable_capabilities/37_colors/example.cpp)。每章提供独立 `.ui`、model 和 adapter，以及可编辑的 QSS 预设；通过 View、viewport、业务 QLabel、滚动条等不同选择器比较作用范围。
+
+## 圆角示例
 
 运行 `table_capabilities --example 30`。页面直接调用框架接口，支持纯色、渐变和棋盘格背景，以及 200×12、3×3、1×1 和 0×3 数据。可组合表头、行列间距、四边冻结和滚动条策略，检查边缘、空白区及行状态。
 

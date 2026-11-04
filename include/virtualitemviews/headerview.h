@@ -59,9 +59,14 @@ public:
     /// Custom renderers may ignore the optional appearance settings below.
     virtual void setBackgroundVisible(bool visible) { Q_UNUSED(visible); }
     virtual bool backgroundVisible() const { return true; }
-    /// Flat base color; invalid restores the native panel in built-in headers.
+    /// Flat container base color; sections follow it unless independently overridden.
+    /// Invalid uses QSS or native panels in built-in headers.
     virtual void setBackgroundColor(const QColor &color) { Q_UNUSED(color); }
     virtual QColor backgroundColor() const { return QColor(); }
+    /// Built-in section base override; invalid follows the container/QSS/native defaults.
+    /// Does not change gaps, empty header space or the corner. Visibility still applies.
+    virtual void setSectionBackgroundColor(const QColor &color) { Q_UNUSED(color); }
+    virtual QColor sectionBackgroundColor() const { return QColor(); }
     /// Gap color; invalid follows this header's base background.
     virtual void setSpacingBackgroundColor(const QColor &color) { Q_UNUSED(color); }
     virtual QColor spacingBackgroundColor() const { return QColor(); }

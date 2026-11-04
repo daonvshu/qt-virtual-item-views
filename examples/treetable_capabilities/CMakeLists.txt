@@ -39,6 +39,8 @@ add_executable(treetable_capabilities
     35_borders/example.ui
     36_auto_height/auto_height.ui
     36_auto_height/example.cpp
+    37_colors/example.cpp
+    37_colors/colors.ui
 )
 
 set_target_properties(treetable_capabilities PROPERTIES AUTOUIC ON)

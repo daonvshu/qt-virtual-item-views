@@ -11,6 +11,7 @@ namespace viv {
 HeaderCornerWidget::HeaderCornerWidget(QWidget *parent)
     : StyledHeaderSection(parent)
 {
+    setObjectName(QStringLiteral("vivHeaderCorner"));
 }
 
 void HeaderCornerWidget::initStyleOption(QStyleOptionHeader *option) const

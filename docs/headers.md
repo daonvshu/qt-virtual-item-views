@@ -6,6 +6,8 @@
 
 ## Section 的继承层次
 
+内置表头、section 和 corner 均有默认对象名，可以直接写后代选择器，无需业务逐个命名；名称、冻结副本规则及颜色接口的作用范围见 [默认对象名与样式表](stylesheets.md)。
+
 ```text
 QWidget
   HeaderSection
@@ -53,6 +55,7 @@ table.setHeaderCornerWidget(nullptr); // Restore the default styled widget.
 ```cpp
 auto *header = table.horizontalHeader();
 header->setBackgroundColor(QColor("#fff3d6"));
+header->setSectionBackgroundColor(QColor("#dceaf8"));
 header->setForegroundColor(QColor("#334155"));
 header->setTextAlignment(Qt::AlignLeft | Qt::AlignVCenter);
 header->setContentPadding(QMargins(12, 2, 12, 2));
@@ -68,7 +71,8 @@ table.verticalHeader()->setTextAlignment(Qt::AlignCenter);
 
 | 配置 | 默认值与作用 |
 | --- | --- |
-| `setBackgroundColor()` / `backgroundColor()` | 无效颜色使用原生面板；支持 alpha，hover/selected 继续叠加 |
+| `setBackgroundColor()` / `backgroundColor()` | 显式颜色优先于 QSS；无效颜色使用 QSS 背景，未设置 QSS 背景时使用原生面板；支持 alpha，hover/selected 继续叠加 |
+| `setSectionBackgroundColor()` / `sectionBackgroundColor()` | 默认无效；独立覆盖所有内置 section，优先于区域底色；不改变间距、空白和 corner。无效颜色清除覆盖，透明色露出容器，半透明色叠加在容器上；受背景显隐控制 |
 | `setForegroundColor()` / `foregroundColor()` | 无效颜色使用 widget palette 的 `ButtonText` |
 | `setTextAlignment()` / `textAlignment()` | 居中；空 alignment 恢复居中 |
 | `setContentPadding()` / `contentPadding()` | 零附加内边距；负值归零，只调整文字与排序箭头 |

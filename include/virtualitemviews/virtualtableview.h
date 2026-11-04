@@ -219,6 +219,13 @@ public:
     /// Blank pixels between visible columns, including pane boundaries.
     void setColumnSpacing(int pixels);
     int columnSpacing() const { return m_columns ? m_columns->sectionSpacing() : 0; }
+    /// Adds a full gap between a visible header and the content in either grid mode.
+    /// Both axes default to false: SpacingCenter keeps its outer half-gap and
+    /// SpacingEdges keeps zero outer spacing. When enabled, Horizontal uses a full
+    /// rowSpacing() above the first row; Vertical uses a full columnSpacing() before
+    /// the first column. Hidden headers retain normal outer spacing. Zero adds no gap.
+    void setHeaderContentSpacingEnabled(Qt::Orientation orientation, bool enabled);
+    bool headerContentSpacingEnabled(Qt::Orientation orientation) const;
     /// Background of body row and column gaps; invalid restores palette defaults.
     void setSpacingBackgroundColor(const QColor &color) override;
     /// Extends whole-row hover/selection backgrounds across column gaps. Default true.
@@ -576,6 +583,8 @@ signals:
 protected:
     bool m_visualStateBackgroundVisible = true;
     void paintEvent(QPaintEvent *event) override;
+    /// Fills actual column bodies for every visible row, in either materialization mode.
+    void paintItemBackgrounds(QPainter *painter, const QRect &dirtyRect) const override;
     /// Paints visible item state layers, including configured half-row-gap extensions.
     /// Column gap hosts call with paintColumnSpacing=true; the viewport excludes their bands.
     virtual void paintVisualStateBackgrounds(QPainter *painter, const QRect &dirtyRect,
@@ -827,9 +836,11 @@ private:
     /// Lifts the body lines above the (re)materialized items.
     void raisePaneSeparatorLines();
     void syncColumnSpacingWidgets();
+    /// Keeps content and row-header edge geometry aligned without scanning tree nodes.
+    void updateRowEdgeSpacing();
     /// Updates existing column-gap hosts for moving row gaps and horizontal lines.
     void updateColumnSpacingVisualRows();
-    /// Cell-side borders of split pane gaps in edge placement, above spacing widgets.
+    /// Header-content gap lines and cell-side borders of split pane gaps, above spacing widgets.
     void syncPaneGapGridLines();
     /// Visual row bounds for grid lines; the hidden drag source supplies the
     /// insertion placeholder's trailing boundary instead of leaving it open.
@@ -939,7 +950,7 @@ private:
     QVector<QWidget *> m_columnSpacingPool;
     QHash<qsizetype, QWidget *> m_rowGridLines;
     QVector<QWidget *> m_rowGridLinePool;
-    /// Extra cell-side borders around pane half-gaps in edge placement.
+    /// Header-content gap lines and extra cell-side borders around pane half-gaps.
     QWidget *m_paneGapGridLines = nullptr;
     /// Leading edge of a lifted row, matching the row-number strip's drag border.
     QWidget *m_headerDragLeadingSeparator = nullptr;
@@ -951,6 +962,8 @@ private:
     bool m_horizontalSpacingLineThroughColumnSpacing = true;
     bool m_visualStateThroughColumnSpacing = true;
     bool m_visualStateThroughRowSpacing = true;
+    bool m_horizontalHeaderContentSpacingEnabled = false;
+    bool m_verticalHeaderContentSpacingEnabled = false;
     bool m_verticalGridLinesVisible = true;
     bool m_horizontalGridLinesVisible = true;
     bool m_verticalGridLinesThroughHeader = true;

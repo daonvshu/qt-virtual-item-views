@@ -54,6 +54,7 @@ public:
     explicit BranchOverlay(std::function<void(QPainter *)> paint, QWidget *parent)
         : QWidget(parent), m_paint(std::move(paint))
     {
+        setObjectName(QStringLiteral("vivBranchOverlay"));
         setAttribute(Qt::WA_TransparentForMouseEvents);
         setAttribute(Qt::WA_TranslucentBackground);
         setAttribute(Qt::WA_NoSystemBackground);
@@ -1371,7 +1372,8 @@ void VirtualTreeTableView::visualColumnGeometryChanged()
 {
     syncRowGridLines();
     invalidateBranches();
-    if (m_visualStateBackgroundVisible)
+    if (m_visualStateBackgroundVisible
+        || (itemBackgroundColor().isValid() && itemBackgroundColor().alpha() > 0))
         viewport()->update();
 }
 

@@ -1,7 +1,9 @@
 #include <virtualitemviews/virtualitemview.h>
 #include "performanceprobe_p.h"
+#include "viewbackground_p.h"
 
 #include <QEvent>
+#include <QChildEvent>
 #include <QGraphicsEffect>
 #include <QPainter>
 #include <QPainterPath>
@@ -116,20 +118,54 @@ private:
 
 bool VirtualItemView::event(QEvent *event)
 {
-    if (event->type() == QEvent::Paint && !m_frameEffect.isNull()) {
+    if (event->type() == QEvent::Paint) {
+        detail::PerformanceScope performance(this, "paint.view-background", detail::PerformanceDomain::Paint);
         // Qt5 can paint the scrollbars after the scroll-area's effect source has
         // been composed.  Refresh their local masks immediately before the
         // source is rendered so the rounded outer corners are clipped there too.
-        updateFrameChildMasks();
-        // The QFrame shape reserves layout space only. Painting its native box
-        // and scroll-area corner would leave rectangular edges inside the Alpha frame.
-        // The viewport paints the body base once. Filling the entire effect source
-        // would cover transparent headers and composite translucent body colors twice.
+        if (m_frameEffect)
+            updateFrameChildMasks();
+        QPainter painter(this);
+        painter.save();
+        painter.setClipRect(contentsRect());
+        // Paint once behind the viewport, transparent headers and scroll-area corner.
+        painter.fillRect(rect(), backgroundBrush());
+        painter.restore();
+        if (!m_frameEffect) {
+            // Keep native frame styling outside the content. Its QSS panel must not
+            // paint a second background under a translucent view or viewport.
+            painter.setClipRegion(QRegion(rect()) - QRegion(contentsRect()));
+            drawFrame(&painter);
+        }
         return true;
     }
     const bool refreshChildMasks = event->type() == QEvent::LayoutRequest
         || event->type() == QEvent::StyleChange;
+    const QPointer<VirtualItemView> self(this);
     const bool handled = QAbstractScrollArea::event(event);
+    if (!self)
+        return handled;
+    if ((event->type() == QEvent::Polish || event->type() == QEvent::StyleChange
+         || (event->type() == QEvent::ChildPolished
+             && static_cast<QChildEvent *>(event)->child() == viewport()))
+        && testAttribute(Qt::WA_StyleSheet) && viewport()->styleSheet().isEmpty()) {
+        // Qt skips independent QSS rules for an embedded viewport with an empty
+        // local stylesheet. A declaration-free sheet enables ancestor selectors
+        // without overriding them or replacing an application's viewport rules.
+        viewport()->setStyleSheet(QStringLiteral("/* Enable independent viewport QSS matching. */"));
+        if (!self)
+            return handled;
+    }
+    if (event->type() == QEvent::Polish || event->type() == QEvent::StyleChange
+        || event->type() == QEvent::PaletteChange) {
+        detail::prepareViewBackground(this);
+        detail::prepareViewBackground(viewport());
+        updateBackgroundAppearance();
+    } else if (event->type() == QEvent::ChildPolished
+               && static_cast<QChildEvent *>(event)->child() == viewport()) {
+        // Initial viewport polish can re-enable Qt's automatic background fill.
+        detail::prepareViewBackground(viewport());
+    }
     if (refreshChildMasks && !m_frameEffect.isNull())
         updateFrameChildMasks();
     if (refreshChildMasks || event->type() == QEvent::ContentsRectChange)

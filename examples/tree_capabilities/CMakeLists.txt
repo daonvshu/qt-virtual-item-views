@@ -29,6 +29,8 @@ add_executable(tree_capabilities
     26_borders/example.ui
     27_auto_height/example.cpp
     27_auto_height/auto_height.ui
+    28_colors/example.cpp
+    28_colors/colors.ui
 )
 
 set_target_properties(tree_capabilities PROPERTIES AUTOUIC ON)

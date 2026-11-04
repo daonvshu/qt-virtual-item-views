@@ -23,6 +23,8 @@ add_executable(list_capabilities
     20_borders/example.ui
     21_auto_height/example.cpp
     21_auto_height/auto_height.ui
+    22_colors/example.cpp
+    22_colors/colors.ui
 )
 
 set_target_properties(list_capabilities PROPERTIES AUTOUIC ON)

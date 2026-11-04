@@ -1,5 +1,6 @@
 #include <virtualitemviews/styledheadersection.h>
 #include "../core/pixelalignedlines_p.h"
+#include "../core/stylesheetbackground_p.h"
 
 #include <virtualitemviews/headergeometry.h>
 #include <virtualitemviews/virtualheaderview.h>
@@ -66,12 +67,25 @@ void StyledHeaderSection::paintBackground(QPainter *painter)
         : (!table || table->headerBackgroundVisible());
     const QColor backgroundColor = header ? header->backgroundColor()
         : (table ? table->headerBackgroundColor() : QColor());
+    const QColor sectionColor = header ? header->sectionBackgroundColor() : QColor();
     if (backgroundVisible) {
-        if (backgroundColor.isValid()) {
+        if (sectionColor.isValid()) {
+            // Composite the section override on its container; the corner stays independent.
+            painter->fillRect(rect(), sectionColor);
+        } else if (backgroundColor.isValid()) {
             // The header container already fills sections; avoid compositing alpha twice.
             // The corner has no header container and needs its own base fill.
             if (!header)
                 painter->fillRect(rect(), backgroundColor);
+        } else if (detail::hasStyleSheetBackground(this)) {
+            painter->fillRect(rect(), palette().brush(QPalette::Base));
+        } else if (header && detail::hasStyleSheetBackground(header)) {
+            // The container paints once across sections and gaps, including gradients.
+        } else if (!header && table && table->horizontalHeader()
+                   && detail::hasStyleSheetBackground(table->horizontalHeader()->headerWidget())) {
+            // The default corner follows the horizontal header unless styled directly.
+            painter->fillRect(rect(), table->horizontalHeader()->headerWidget()->palette()
+                                         .brush(QPalette::Base));
         } else {
             QStyleOptionHeader option;
             initStyleOption(&option);

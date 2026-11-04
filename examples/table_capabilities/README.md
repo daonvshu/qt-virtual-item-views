@@ -1,6 +1,6 @@
 # VirtualTableView 功能示例
 
-表中路径均相对于仓库根目录。每个编号目录独立包含 model、adapter、控件和页面配置，不引用其他示例实现；可直接复制当前目录。一个 `table_capabilities` 进程切换第 01–28、30–31 项，检测到与当前 Qt 主版本匹配的 SmoothScrollbar 时额外显示第 29 项。
+表中路径均相对于仓库根目录。每个编号目录独立包含 model、adapter、控件和页面配置，不引用其他示例实现；可直接复制当前目录。一个 `table_capabilities` 进程切换第 01–28、30–32 项，检测到与当前 Qt 主版本匹配的 SmoothScrollbar 时额外显示第 29 项。
 
 | 编号 | 功能 | 源码相对路径 |
 | --- | --- | --- |
@@ -35,6 +35,7 @@
 | 29 | 平滑滚动（可选）：检测到匹配的 SmoothScrollbar 后才编译和显示，开关对比原生双向滚动 | [examples/table_capabilities/29_smooth_scrolling/example.cpp](29_smooth_scrolling/example.cpp) |
 | 30 | 外边框与圆角：框架内置 Alpha 合成，支持透明圆角、边框与少量数据 | [examples/table_capabilities/30_borders/README.md](30_borders/README.md) |
 | 31 | 自适应高度：表头、内容、水平滚动条和父布局约束 | [examples/table_capabilities/31_auto_height/example.cpp](31_auto_height/example.cpp) |
+| 32 | 颜色与样式表：主体、项、状态与 QSS 的作用范围 | [examples/table_capabilities/32_colors/example.cpp](32_colors/example.cpp) |
 
 ## 构建与启动
 
@@ -46,7 +47,7 @@ cmake --build <BUILD_DIR> --target table_capabilities --config Debug
 
 运行 `table_capabilities`，或使用 `table_capabilities --example 24` 直接进入某一页。启动器 `main.cpp` 仅管理导航和延迟创建页面，各章的 `setupExample()` 说明关键视图接口，`setupUi()` 只管理简单页面布局。各目录 README 提供独立运行入口。
 
-第 01–28、30–31 项只依赖 VirtualItemViews 和 Qt Widgets。可选第 29 项要求 `VIRTUALITEMVIEWS_EXAMPLES_USE_SMOOTH_SCROLLBAR=ON`，通过 `SmoothScrollbar_DIR` 或 `CMAKE_PREFIX_PATH` 提供与当前 Qt 主版本匹配的包；依赖缺失或关闭集成时该页不编译，也不显示。第 30、31 项始终使用 `--example 30`、`--example 31` 定位，页面布局由 Qt 的 AUTOUIC 从各目录 `.ui` 文件生成。
+第 01–28、30–32 项只依赖 VirtualItemViews 和 Qt Widgets。可选第 29 项要求 `VIRTUALITEMVIEWS_EXAMPLES_USE_SMOOTH_SCROLLBAR=ON`，通过 `SmoothScrollbar_DIR` 或 `CMAKE_PREFIX_PATH` 提供与当前 Qt 主版本匹配的包；依赖缺失或关闭集成时该页不编译，也不显示。第 30、31 项始终使用 `--example 30`、`--example 31` 定位，页面布局由 Qt 的 AUTOUIC 从各目录 `.ui` 文件生成。
 
 ## 阅读和复制
 

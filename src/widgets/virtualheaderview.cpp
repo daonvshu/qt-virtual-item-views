@@ -4,6 +4,7 @@
 #include "../core/performanceprobe_p.h"
 #include "../core/pixelalignedlines_p.h"
 #include "../core/wheeleventforwarding_p.h"
+#include "../core/stylesheetbackground_p.h"
 
 #include <virtualitemviews/headergeometry.h>
 #include <virtualitemviews/labelheaderview.h>
@@ -62,6 +63,9 @@ VirtualHeaderView::VirtualHeaderView(Qt::Orientation orientation, QWidget *paren
     : QWidget(parent)
     , m_orientation(orientation)
 {
+    // Frozen-pane instances use the same orientation name as the primary header.
+    setObjectName(isHorizontal() ? QStringLiteral("vivHorizontalHeader")
+                                 : QStringLiteral("vivVerticalHeader"));
     // The renderer packs its sections along one axis: a horizontal instance derives
     // every section's x from a horizontal HeaderGeometry, a vertical one every
     // section's y from the row geometry. Everything axis dependent goes through the
@@ -134,7 +138,8 @@ void VirtualHeaderView::paintEvent(QPaintEvent *event)
     const QColor crossColor = m_crossAxisSeparatorColor.isValid()
         ? m_crossAxisSeparatorColor : headerSectionSeparatorColor(this);
     const bool fillSpacing = m_spacingBackgroundColor.isValid()
-        || (m_backgroundVisible && !m_backgroundColor.isValid());
+        || (m_backgroundVisible && !m_backgroundColor.isValid()
+            && !detail::hasStyleSheetBackground(this));
     const QBrush spacingBrush = m_spacingBackgroundColor.isValid()
         ? QBrush(m_spacingBackgroundColor) : palette().brush(QPalette::Base);
     // Fill every gap before state layers so iteration order cannot erase a neighbour's half.
@@ -782,6 +787,14 @@ void VirtualHeaderView::setBackgroundColor(const QColor &color)
     notifyAppearanceChanged();
 }
 
+void VirtualHeaderView::setSectionBackgroundColor(const QColor &color)
+{
+    if (m_sectionBackgroundColor == color)
+        return;
+    m_sectionBackgroundColor = color;
+    notifyAppearanceChanged();
+}
+
 void VirtualHeaderView::setForegroundColor(const QColor &color)
 {
     if (m_foregroundColor == color)
@@ -845,6 +858,7 @@ void VirtualHeaderView::copyAppearanceFrom(const VirtualHeaderView *source)
     setPalette(source->palette());
     setBackgroundVisible(source->backgroundVisible());
     setBackgroundColor(source->backgroundColor());
+    setSectionBackgroundColor(source->sectionBackgroundColor());
     setSpacingBackgroundColor(source->spacingBackgroundColor());
     setForegroundColor(source->foregroundColor());
     setTextAlignment(source->textAlignment());
@@ -1626,6 +1640,7 @@ void VirtualHeaderView::positionDraggedSections()
     if (m_sectionSeparatorsVisible && dragged && dragged->isVisible()) {
         if (!m_dragLeadingSeparator) {
             auto *line = new PixelAlignedLine(this, isHorizontal() ? Qt::Vertical : Qt::Horizontal);
+            line->setObjectName(QStringLiteral("vivHeaderDragSeparator"));
             line->setTrailingEdge(false);
             m_dragLeadingSeparator = line;
             m_dragLeadingSeparator->setAttribute(Qt::WA_TransparentForMouseEvents);

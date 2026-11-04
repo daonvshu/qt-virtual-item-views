@@ -61,6 +61,7 @@ class TransientItemClipHost : public QWidget
 public:
     TransientItemClipHost(QWidget *item, QWidget *parent) : QWidget(parent)
     {
+        setObjectName(QStringLiteral("vivTransientItemClipHost"));
         setAttribute(Qt::WA_NoSystemBackground);
         item->installEventFilter(this);
         connect(item, &QObject::destroyed, this, &QObject::deleteLater);

@@ -6,6 +6,7 @@ ColumnHost::ColumnHost(int logicalColumn, QWidget *parent)
     : QWidget(parent)
     , m_logicalColumn(logicalColumn)
 {
+    setObjectName(QStringLiteral("vivColumnHost"));
 }
 
 void ColumnHost::setLogicalColumn(int logicalColumn)

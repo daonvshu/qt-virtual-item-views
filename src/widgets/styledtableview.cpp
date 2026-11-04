@@ -1,4 +1,5 @@
 #include <virtualitemviews/styledtableview.h>
+#include "../core/viewbackground_p.h"
 
 #include <QPaintEvent>
 #include <QPainter>
@@ -32,8 +33,9 @@ void StyledTableCellHost::paintEvent(QPaintEvent *)
     if (!m_view || m_view->selectionBehavior() == VirtualItemView::SelectionBehavior::SelectRows)
         return;
     QPainter painter(this);
-    if (m_view->backgroundBrush().isOpaque())
-        painter.fillRect(rect(), m_view->backgroundBrush());
+    if (detail::bodyBackgroundIsOpaque(m_view)
+        && (!m_view->itemBackgroundColor().isValid() || m_view->itemBackgroundColor().alpha() == 0))
+        detail::paintBodyBackground(m_view, &painter, this, rect());
     if (m_index.isValid())
         m_view->paintVisualStateBackground(&painter, QRectF(rect()), QModelIndex(m_index));
 }
@@ -42,6 +44,7 @@ StyledTableRowWidget::StyledTableRowWidget(StyledTableView *view, QWidget *paren
     : QWidget(parent)
     , m_view(view)
 {
+    setObjectName(QStringLiteral("vivStyledTableRow"));
 }
 
 void StyledTableRowWidget::bindRow(const QModelIndex &index)
@@ -95,8 +98,9 @@ void StyledTableRowWidget::refreshVisualStates()
 void StyledTableRowWidget::paintEvent(QPaintEvent *)
 {
     QPainter painter(this);
-    if (m_view && m_view->backgroundBrush().isOpaque())
-        painter.fillRect(rect(), m_view->backgroundBrush());
+    if (m_view && detail::bodyBackgroundIsOpaque(m_view)
+        && (!m_view->itemBackgroundColor().isValid() || m_view->itemBackgroundColor().alpha() == 0))
+        detail::paintBodyBackground(m_view, &painter, this, rect());
     if (!m_view || !m_index.isValid()
         || m_view->selectionBehavior() != VirtualItemView::SelectionBehavior::SelectRows)
         return;
@@ -132,6 +136,7 @@ public:
         : QWidget(view)
         , m_view(view)
     {
+        setObjectName(QStringLiteral("vivGridCoverOverlay"));
         setAttribute(Qt::WA_TransparentForMouseEvents);
         setAttribute(Qt::WA_TranslucentBackground);
         setAttribute(Qt::WA_NoSystemBackground);
@@ -186,9 +191,15 @@ protected:
             painter.setClipRect(clip, Qt::IntersectClip);
             painter.setRenderHint(QPainter::Antialiasing,
                                   m_view->visualStateCornerRadius() > 0);
-            if (m_view->backgroundBrush().isOpaque())
-                painter.fillPath(m_view->visualStateBackgroundPath(background),
-                                 m_view->backgroundBrush());
+            if (detail::bodyBackgroundIsOpaque(m_view)) {
+                painter.save();
+                painter.setClipPath(m_view->visualStateBackgroundPath(background), Qt::IntersectClip);
+                detail::paintBodyBackground(m_view, &painter, this, clip);
+                painter.restore();
+                if (m_view->itemBackgroundColor().isValid())
+                    painter.fillPath(m_view->visualStateBackgroundPath(background),
+                                     m_view->itemBackgroundColor());
+            }
             m_view->paintVisualStateBackground(&painter, background, index);
             painter.restore();
         };

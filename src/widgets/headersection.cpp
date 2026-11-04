@@ -12,6 +12,7 @@ namespace viv {
 HeaderSection::HeaderSection(QWidget *parent)
     : QWidget(parent)
 {
+    setObjectName(QStringLiteral("vivHeaderSection"));
     setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
     // VirtualHeaderView filters the section's events to handle resize and drag gestures.
     setFocusPolicy(Qt::NoFocus);

@@ -44,7 +44,7 @@ private:
     void setupUi()
     {
         auto *layout = new QVBoxLayout(this);
-        auto *description = new QLabel(QStringLiteral("09 间距与分割线：中心模式自动补齐四周半间距，首尾行列与内部单元格保持对称留白"), this);
+        auto *description = new QLabel(QStringLiteral("09 间距与分割线：中心模式默认保留四周半间距，可独立将表头交界设为全间距"), this);
         description->setWordWrap(true);
         layout->addWidget(description);
         auto *controls = new QHBoxLayout;
@@ -88,6 +88,15 @@ private:
         placement->addWidget(m_horizontalHeaderLines);
         placement->addStretch();
         layout->addLayout(placement);
+        auto *headerGaps = new QHBoxLayout;
+        m_horizontalHeaderGap = new QCheckBox(QStringLiteral("水平表头与首行之间保留全间距"), this);
+        m_horizontalHeaderGap->setChecked(false);
+        headerGaps->addWidget(m_horizontalHeaderGap);
+        m_verticalHeaderGap = new QCheckBox(QStringLiteral("垂直表头与首列之间保留全间距"), this);
+        m_verticalHeaderGap->setChecked(false);
+        headerGaps->addWidget(m_verticalHeaderGap);
+        headerGaps->addStretch();
+        layout->addLayout(headerGaps);
         auto *colors = new QHBoxLayout;
         m_bodyColor = new QCheckBox(QStringLiteral("内容间距背景色"), this);
         colors->addWidget(m_bodyColor);
@@ -133,6 +142,18 @@ private:
         // Center placement extends each state to the adjacent half of each row gap.
         m_view->setRowSpacing(12);
         m_view->setColumnSpacing(12);
+        // The orientation names the header, not the direction of the gap.
+        // Default false: keep outer half-spacing in center mode, zero in edge mode.
+        m_view->setHeaderContentSpacingEnabled(Qt::Horizontal, false);
+        m_view->setHeaderContentSpacingEnabled(Qt::Vertical, false);
+        connect(m_horizontalHeaderGap, &QCheckBox::toggled, this, [this](bool enabled) {
+            // Horizontal header: add the full rowSpacing() above the first row.
+            m_view->setHeaderContentSpacingEnabled(Qt::Horizontal, enabled);
+        });
+        connect(m_verticalHeaderGap, &QCheckBox::toggled, this, [this](bool enabled) {
+            // Vertical header: add the full columnSpacing() before the first column.
+            m_view->setHeaderContentSpacingEnabled(Qt::Vertical, enabled);
+        });
         m_view->setVisualStateThroughColumnSpacing(true);
         m_view->setVisualStateThroughRowSpacing(true);
         // Enable resizing here to demonstrate handles aligned with the spacing grid lines.
@@ -283,6 +304,8 @@ private:
     QComboBox *m_placement = nullptr;
     QCheckBox *m_verticalHeaderLines = nullptr;
     QCheckBox *m_horizontalHeaderLines = nullptr;
+    QCheckBox *m_horizontalHeaderGap = nullptr;
+    QCheckBox *m_verticalHeaderGap = nullptr;
     QCheckBox *m_bodyColor = nullptr;
     QCheckBox *m_headerColor = nullptr;
     QCheckBox *m_stateCross = nullptr;

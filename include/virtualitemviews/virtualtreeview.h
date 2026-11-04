@@ -249,6 +249,7 @@ protected:
     void mouseReleaseEvent(QMouseEvent *event) override;
     void mouseDoubleClickEvent(QMouseEvent *event) override;
     void paintEvent(QPaintEvent *event) override;
+    QRect itemBackgroundRect(qsizetype row) const override;
 
 private:
     friend class TreeDragTransition;

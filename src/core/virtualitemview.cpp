@@ -4,6 +4,7 @@
 #include "pixelalignedlines_p.h"
 #include "dragpreview_p.h"
 #include "dragmoveselection_p.h"
+#include "viewbackground_p.h"
 
 #include <virtualitemviews/widgetadapter.h>
 #include <virtualitemviews/layoutpolicy.h>
@@ -199,8 +200,8 @@ protected:
         if (background.isValid())
             painter.fillRect(rect(), background);
         else if (property("vivFillSpacingBackground").toBool()
-                 && m_view->backgroundBrush().isOpaque())
-            painter.fillRect(rect(), m_view->backgroundBrush());
+                 && detail::bodyBackgroundIsOpaque(m_view))
+            detail::paintBodyBackground(m_view, &painter, this, rect());
         painter.setOpacity(1.0);
         if (m_statePainter)
             m_statePainter(&painter, rect());
@@ -316,13 +317,19 @@ inline QPoint dropPosition(const QDropEvent *event)
 VirtualItemView::VirtualItemView(QWidget *parent)
     : QAbstractScrollArea(parent)
 {
+    // Stable QSS targets shared by all view types; callers may override these names.
+    setObjectName(QStringLiteral("vivItemView"));
+    viewport()->setObjectName(QStringLiteral("vivViewport"));
+    horizontalScrollBar()->setObjectName(QStringLiteral("vivHorizontalScrollBar"));
+    verticalScrollBar()->setObjectName(QStringLiteral("vivVerticalScrollBar"));
     setFrameShape(QFrame::NoFrame);
     setFocusPolicy(Qt::StrongFocus);
     // v0.1 lists fill the viewport width; horizontal virtualization arrives
     // with VirtualTableView.
     setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
-    viewport()->setAutoFillBackground(false);
+    detail::prepareViewBackground(this);
+    detail::prepareViewBackground(viewport());
     viewport()->setAttribute(Qt::WA_Hover);
     viewport()->setMouseTracking(true);
     viewport()->installEventFilter(this);
@@ -386,6 +393,14 @@ QBrush VirtualItemView::backgroundBrush() const
     if (!m_backgroundVisible)
         return QBrush(Qt::NoBrush);
     return m_backgroundColor.isValid() ? QBrush(m_backgroundColor) : palette().brush(QPalette::Base);
+}
+
+void VirtualItemView::setItemBackgroundColor(const QColor &color)
+{
+    if (m_itemBackgroundColor == color)
+        return;
+    m_itemBackgroundColor = color;
+    updateBackgroundAppearance();
 }
 
 void VirtualItemView::updateBackgroundAppearance()
@@ -1113,6 +1128,12 @@ void VirtualItemView::updateHoveredIndex(const QModelIndex &index)
         return;
     const QPersistentModelIndex previous = m_hoveredIndex;
     const QPersistentModelIndex next(index);
+    if (m_selectionBehavior == SelectionBehavior::SelectRows && previous.isValid()
+        && next.isValid() && previous.parent() == next.parent() && previous.row() == next.row()) {
+        // Keep the exact hit column available without restarting or notifying an unchanged row.
+        m_hoveredIndex = next;
+        return;
+    }
     const QPointer<VirtualItemView> self(this);
     const quint64 modelSerial = m_modelChangeSerial;
     const auto isCurrent = [&self, modelSerial](const QPersistentModelIndex &hovered) {
@@ -1155,7 +1176,32 @@ void VirtualItemView::refreshHoveredIndex()
     detail::PerformanceScope performance(this, "state.refresh-hover");
     if (m_dragInProgress || m_destroying || isHoverTrackingLocked())
         return;
-    updateHoveredIndex(hoverIndexAtGlobalPosition(QCursor::pos()));
+    if (m_hoverRefreshInProgress) {
+        m_hoverRefreshPending = true;
+        return;
+    }
+    m_hoverRefreshInProgress = true;
+    const QPointer<VirtualItemView> self(this);
+    const auto finish = qScopeGuard([self]() {
+        if (!self)
+            return;
+        self->m_hoverRefreshInProgress = false;
+        if (!self->m_hoverRefreshPending || self->m_hoverRefreshScheduled)
+            return;
+        self->m_hoverRefreshScheduled = true;
+        // Re-read the pointer after all old/new row callbacks finish. Child visibility
+        // changes may deliver Enter/Leave synchronously inside those callbacks.
+        QMetaObject::invokeMethod(self.data(), [self]() {
+            if (!self)
+                return;
+            self->m_hoverRefreshScheduled = false;
+            self->m_hoverRefreshPending = false;
+            self->refreshHoveredIndex();
+        }, Qt::QueuedConnection);
+    });
+    const QModelIndex hovered = hoverIndexAtGlobalPosition(QCursor::pos());
+    if (self)
+        updateHoveredIndex(hovered);
 }
 
 QModelIndex VirtualItemView::hoverIndexAtGlobalPosition(const QPoint &position) const
@@ -1288,6 +1334,11 @@ bool VirtualItemView::eventFilter(QObject *watched, QEvent *event)
     if (m_destroying)
         return false;
     auto *widget = qobject_cast<QWidget *>(watched);
+    if (widget == viewport() && (event->type() == QEvent::StyleChange
+                                || event->type() == QEvent::PaletteChange)) {
+        detail::prepareViewBackground(widget);
+        updateBackgroundAppearance();
+    }
     if (widget && event->type() == QEvent::ChildAdded) {
         const QPointer<QObject> child(static_cast<QChildEvent *>(event)->child());
         QTimer::singleShot(0, this, [this, child]() {
@@ -1301,13 +1352,15 @@ bool VirtualItemView::eventFilter(QObject *watched, QEvent *event)
         QWidget *const viewPort = viewport();
         // QAbstractScrollArea also filters its scroll bars, which are outside
         // the viewport subtree. Reparented row widgets may retain this filter too.
-        // Only content widgets can be mapped to the viewport for row hover.
+        // Only content widgets drive viewport hover.
         if (viewPort && (widget == viewPort || viewPort->isAncestorOf(widget))) {
-            const QPoint pos = event->type() == QEvent::MouseMove
-                ? widget->mapTo(viewPort, mousePosition(static_cast<QMouseEvent *>(event)))
-                : viewPort->mapFromGlobal(QCursor::pos());
-            updateHoveredIndex(viewPort->rect().contains(pos) ? indexAt(pos)
-                : hoverIndexAtGlobalPosition(viewPort->mapToGlobal(pos)));
+            // Mixing an older MouseMove position with the current Enter/Leave position
+            // can send hover back to a row that the pointer has already passed.
+            const QPointer<VirtualItemView> self(this);
+            const QPointer<QWidget> guardedWidget(widget);
+            refreshHoveredIndex();
+            if (!self || !guardedWidget)
+                return true;
         }
     }
     return QAbstractScrollArea::eventFilter(watched, event);
@@ -1937,6 +1990,32 @@ QRect VirtualItemView::geometryForViewRow(qsizetype row) const
     if (!m_layout)
         return QRect();
     return m_layout->itemRect(row, itemPaneScrollOffset(itemPaneForRow(row)));
+}
+
+QRect VirtualItemView::itemBackgroundRect(qsizetype row) const
+{
+    return geometryForViewRow(row);
+}
+
+void VirtualItemView::paintItemBackgrounds(QPainter *painter, const QRect &dirtyRect) const
+{
+    if (!m_itemBackgroundColor.isValid() || m_itemBackgroundColor.alpha() == 0 || !m_layout)
+        return;
+    detail::PerformanceScope performance(this, "paint.item-background", detail::PerformanceDomain::Paint);
+    for (const MaterializedItem &item : materializedItems()) {
+        const qsizetype row = viewItemForIndex(item.index);
+        if (row < 0)
+            continue;
+        const QRect rect = itemBackgroundRect(row).intersected(itemPaneRect(itemPaneForRow(row)))
+            .intersected(viewport()->rect()).intersected(dirtyRect);
+        if (rect.isEmpty())
+            continue;
+        painter->save();
+        painter->setOpacity(painter->opacity() * m_layout->itemOpacity(row));
+        painter->fillRect(rect, m_itemBackgroundColor);
+        painter->restore();
+        performance.count("paint.item-background-rows");
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -3860,9 +3939,9 @@ void VirtualItemView::scrollContentsBy(int dx, int dy)
 void VirtualItemView::paintEvent(QPaintEvent *event)
 {
     detail::PerformanceScope performance(this, "paint.base", detail::PerformanceDomain::Paint);
-    Q_UNUSED(event);
     QPainter painter(viewport());
-    painter.fillRect(viewport()->rect(), backgroundBrush());
+    detail::paintViewportBackground(this, &painter, event->rect());
+    paintItemBackgrounds(&painter, event->rect());
 }
 
 void VirtualItemView::resizeEvent(QResizeEvent *event)

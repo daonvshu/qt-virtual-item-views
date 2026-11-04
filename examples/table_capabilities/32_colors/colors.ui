@@ -1,0 +1,414 @@
+<?xml version='1.0' encoding='utf-8'?>
+<ui version="4.0">
+ <class>TableColors</class>
+ <widget class="QWidget" name="TableColors">
+  <layout class="QVBoxLayout" name="pageLayout">
+   <item>
+    <widget class="QLabel" name="titleLabel">
+     <property name="text">
+      <string>32 颜色与样式表：函数设置各层颜色，QSS 按选择器影响控件</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QTabWidget" name="tabs">
+     <widget class="QWidget" name="colorsTab">
+      <attribute name="title">
+       <string>颜色接口</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="optionsLayout">
+       <item>
+        <layout class="QGridLayout" name="colorsLayout">
+         <item row="0" column="0">
+          <widget class="QLabel" name="bodyColorLabel">
+           <property name="text">
+            <string>主体底色</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QComboBox" name="bodyColor" />
+         </item>
+         <item row="0" column="2">
+          <widget class="QLabel" name="itemColorLabel">
+           <property name="text">
+            <string>项底色（默认透明）</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="3">
+          <widget class="QComboBox" name="itemColor" />
+         </item>
+         <item row="1" column="0">
+          <widget class="QLabel" name="hoverColorLabel">
+           <property name="text">
+            <string>Hover 底色</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="1">
+          <widget class="QComboBox" name="hoverColor" />
+         </item>
+         <item row="1" column="2">
+          <widget class="QLabel" name="selectedColorLabel">
+           <property name="text">
+            <string>选中底色</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="3">
+          <widget class="QComboBox" name="selectedColor" />
+         </item>
+         <item row="2" column="0">
+          <widget class="QLabel" name="gapColorLabel">
+           <property name="text">
+            <string>内容间距</string>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="1">
+          <widget class="QComboBox" name="gapColor" />
+         </item>
+         <item row="2" column="2">
+          <widget class="QLabel" name="lineColorLabel">
+           <property name="text">
+            <string>普通分割线</string>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="3">
+          <widget class="QComboBox" name="lineColor" />
+         </item>
+         <item row="3" column="0">
+          <widget class="QLabel" name="frameColorLabel">
+           <property name="text">
+            <string>外框</string>
+           </property>
+          </widget>
+         </item>
+         <item row="3" column="1">
+          <widget class="QComboBox" name="frameColor" />
+         </item>
+         <item row="3" column="2">
+          <widget class="QLabel" name="horizontalColorLabel">
+           <property name="text">
+            <string>水平表头区域底色</string>
+           </property>
+          </widget>
+         </item>
+         <item row="3" column="3">
+          <widget class="QComboBox" name="horizontalColor" />
+         </item>
+         <item row="4" column="0">
+          <widget class="QLabel" name="verticalColorLabel">
+           <property name="text">
+            <string>垂直表头区域底色</string>
+           </property>
+          </widget>
+         </item>
+         <item row="4" column="1">
+          <widget class="QComboBox" name="verticalColor" />
+         </item>
+         <item row="4" column="2">
+          <widget class="QLabel" name="headerGapColorLabel">
+           <property name="text">
+            <string>表头间距</string>
+           </property>
+          </widget>
+         </item>
+         <item row="4" column="3">
+          <widget class="QComboBox" name="headerGapColor" />
+         </item>
+         <item row="5" column="0">
+          <widget class="QLabel" name="headerTextColorLabel">
+           <property name="text">
+            <string>表头文字</string>
+           </property>
+          </widget>
+         </item>
+         <item row="5" column="1">
+          <widget class="QComboBox" name="headerTextColor" />
+         </item>
+         <item row="5" column="2">
+          <widget class="QLabel" name="dividerColorLabel">
+           <property name="text">
+            <string>冻结分隔线</string>
+           </property>
+          </widget>
+         </item>
+         <item row="5" column="3">
+          <widget class="QComboBox" name="dividerColor" />
+         </item>
+         <item row="6" column="0">
+          <widget class="QLabel" name="horizontalSectionColorLabel">
+           <property name="text">
+            <string>水平 section 底色</string>
+           </property>
+          </widget>
+         </item>
+         <item row="6" column="1">
+          <widget class="QComboBox" name="horizontalSectionColor" />
+         </item>
+         <item row="6" column="2">
+          <widget class="QLabel" name="verticalSectionColorLabel">
+           <property name="text">
+            <string>垂直 section 底色</string>
+           </property>
+          </widget>
+         </item>
+         <item row="6" column="3">
+          <widget class="QComboBox" name="verticalSectionColor" />
+         </item>
+        </layout>
+       </item>
+       <item>
+        <layout class="QGridLayout" name="switchesLayout">
+         <item row="0" column="0">
+          <widget class="QCheckBox" name="bodyVisible">
+           <property name="text">
+            <string>主体底色</string>
+           </property>
+           <property name="checked">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QCheckBox" name="statesVisible">
+           <property name="text">
+            <string>Hover / 选中</string>
+           </property>
+           <property name="checked">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="2">
+          <widget class="QCheckBox" name="gaps">
+           <property name="text">
+            <string>显示间距</string>
+           </property>
+           <property name="checked">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="3">
+          <widget class="QCheckBox" name="manyRows">
+           <property name="text">
+            <string>大量数据</string>
+           </property>
+           <property name="checked">
+            <bool>false</bool>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="0">
+          <widget class="QCheckBox" name="headersVisible">
+           <property name="text">
+            <string>表头底色</string>
+           </property>
+           <property name="checked">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="1">
+          <widget class="QCheckBox" name="headerStates">
+           <property name="text">
+            <string>表头状态</string>
+           </property>
+           <property name="checked">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="2">
+          <widget class="QCheckBox" name="customCorner">
+           <property name="text">
+            <string>粉色 QLabel Corner</string>
+           </property>
+           <property name="checked">
+            <bool>false</bool>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="3">
+          <widget class="QCheckBox" name="frozen">
+           <property name="text">
+            <string>冻结首末列</string>
+           </property>
+           <property name="checked">
+            <bool>false</bool>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="qssTab">
+      <attribute name="title">
+       <string>Stylesheet 对比</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="qssLayout">
+       <item>
+        <widget class="QComboBox" name="preset">
+         <item>
+          <property name="text">
+           <string>无样式表</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>仅 View：绿色背景</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>仅 View：渐变背景</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>仅 Viewport：粉色背景</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>仅业务 QLabel：橙色背景</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>宽泛 QWidget：所有子控件蓝色背景</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>滚动条：紫色背景</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>QHeaderView::section：不匹配本框架表头</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>整条表头：浅绿背景</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>默认名称：表头 section 文字</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>默认名称：section 与 corner 背景</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>整条表头：渐变背景</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>整条表头：透明背景</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>View 与 Viewport：半透明叠加</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>View 与 Viewport：内容渐变</string>
+          </property>
+         </item>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPlainTextEdit" name="qssEditor">
+         <property name="maximumHeight">
+          <number>125</number>
+         </property>
+         <property name="placeholderText">
+          <string>编辑 QSS 后点击应用；仅设置到下方示例 View。</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <layout class="QHBoxLayout" name="qssButtons">
+         <item>
+          <widget class="QPushButton" name="applyQss">
+           <property name="text">
+            <string>应用 QSS</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="clearQss">
+           <property name="text">
+            <string>清除 QSS</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <widget class="QLabel" name="qssHint">
+         <property name="wordWrap">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </widget>
+   </item>
+   <item>
+    <widget class="QLabel" name="statusLabel">
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+     <property name="textInteractionFlags">
+      <set>Qt::TextSelectableByMouse</set>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QWidget" name="previewHost">
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>180</height>
+      </size>
+     </property>
+     <layout class="QVBoxLayout" name="previewLayout">
+      <property name="leftMargin">
+       <number>12</number>
+      </property>
+      <property name="topMargin">
+       <number>12</number>
+      </property>
+      <property name="rightMargin">
+       <number>12</number>
+      </property>
+      <property name="bottomMargin">
+       <number>12</number>
+      </property>
+     </layout>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources />
+ <connections />
+</ui>

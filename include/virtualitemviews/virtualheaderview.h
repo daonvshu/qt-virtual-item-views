@@ -57,6 +57,7 @@ public:
     /// renderer packs its sections along x, a vertical one along y. Binding the other
     /// axis' geometry is refused (see setGeometryModel()).
     /// Installs and owns a LabelHeaderAdapter by default; setAdapter() replaces it.
+    /// Defaults to vivHorizontalHeader/vivVerticalHeader, including frozen copies.
     explicit VirtualHeaderView(Qt::Orientation orientation = Qt::Horizontal,
                                QWidget *parent = nullptr);
     ~VirtualHeaderView() override;
@@ -160,10 +161,16 @@ public:
     /// Explicit gap colors and custom section painting are independent.
     void setBackgroundVisible(bool visible) override;
     bool backgroundVisible() const override { return m_backgroundVisible; }
-    /// Flat container and built-in section base color; invalid restores native panels.
+    /// Flat container base color, also used by sections without an independent override.
+    /// Invalid uses QSS or native panels.
     /// Background visibility takes precedence; state layers and explicit gaps are independent.
     void setBackgroundColor(const QColor &color) override;
     QColor backgroundColor() const override { return m_backgroundColor; }
+    /// Base override for all built-in sections, including frozen copies. Invalid by default.
+    /// QColor() restores the container/QSS/native fallback; transparent exposes the container.
+    /// Does not affect gaps, empty space or the corner. Background visibility takes precedence.
+    void setSectionBackgroundColor(const QColor &color) override;
+    QColor sectionBackgroundColor() const override { return m_sectionBackgroundColor; }
     /// Default label color; invalid uses the widget palette. Model ForegroundRole wins.
     void setForegroundColor(const QColor &color) override;
     QColor foregroundColor() const override { return m_foregroundColor; }
@@ -463,6 +470,7 @@ private:
     bool m_crossAxisSeparatorThroughSpacing = true;
     bool m_backgroundVisible = true;
     QColor m_backgroundColor;
+    QColor m_sectionBackgroundColor;
     QColor m_foregroundColor;
     Qt::Alignment m_textAlignment = Qt::AlignCenter;
     QMargins m_contentPadding;

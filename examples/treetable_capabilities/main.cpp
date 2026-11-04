@@ -46,6 +46,7 @@
 #endif
 #include "35_borders/example.h"
 #include "36_auto_height/example.h"
+#include "37_colors/example.h"
 
 namespace {
 struct Entry { int number; const char *title; QWidget *(*create)(QWidget *); };
@@ -88,6 +89,7 @@ const Entry entries[] = {
 #endif
     {35, u8"35 圆角边框与透明视图", treetable_borders::createExample},
     {36, u8"36 自适应高度与滚动上限", treetable_auto_height::createExample},
+    {37, u8"37 颜色与样式表", treetable_colors::createExample},
 };
 constexpr int kCount = int(sizeof(entries) / sizeof(entries[0]));
 
@@ -137,7 +139,7 @@ int main(int argc, char **argv)
     QCommandLineParser parser;
     parser.setApplicationDescription(QStringLiteral("VirtualTreeTableView 功能示例"));
     parser.addHelpOption();
-    parser.addOption({QStringLiteral("example"), QStringLiteral("章节编号（1–36；34 需要 SmoothScrollbar）"),
+    parser.addOption({QStringLiteral("example"), QStringLiteral("章节编号（1–37；34 需要 SmoothScrollbar）"),
                       QStringLiteral("number"), QStringLiteral("1")});
     parser.addOption({QStringLiteral("exit-after"), QStringLiteral("指定毫秒后退出"), QStringLiteral("ms")});
     parser.process(app);
@@ -151,7 +153,7 @@ int main(int argc, char **argv)
         }
     }
     if (initial < 0) {
-        qCritical() << "--example must name an available chapter (1-36, optional 34)";
+        qCritical() << "--example must name an available chapter (1-37, optional 34)";
         return 1;
     }
     Browser browser(initial);

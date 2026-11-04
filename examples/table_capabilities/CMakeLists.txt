@@ -34,6 +34,8 @@ add_executable(table_capabilities
     30_borders/example.ui
     31_auto_height/example.cpp
     31_auto_height/auto_height.ui
+    32_colors/example.cpp
+    32_colors/colors.ui
 )
 
 set_target_properties(table_capabilities PROPERTIES AUTOUIC ON)

@@ -159,6 +159,11 @@ void VirtualListView::refreshVisualState(const QModelIndex &index)
         viewport()->update();
 }
 
+QRect VirtualListView::itemBackgroundRect(qsizetype row) const
+{
+    return visualRowRect(row);
+}
+
 void VirtualListView::paintEvent(QPaintEvent *event)
 {
     detail::PerformanceScope performance(this, "paint.list", detail::PerformanceDomain::Paint);

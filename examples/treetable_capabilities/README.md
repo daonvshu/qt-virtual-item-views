@@ -1,6 +1,6 @@
 # VirtualTreeTableView 独立能力示例
 
-一个 `treetable_capabilities` 进程，通过左侧导航按需创建各章页面。包含 35 个常规章节，检测到匹配当前 Qt 主版本的 SmoothScrollbar 时额外编译和显示第 34 章，共 36 章。
+一个 `treetable_capabilities` 进程，通过左侧导航按需创建各章页面。包含 36 个常规章节，检测到匹配当前 Qt 主版本的 SmoothScrollbar 时额外编译和显示第 34 章，共 37 章。
 
 每个编号目录独立包含自己的模型、adapter 和控件，不引用其他能力目录或 `examples/common`。重复的小类有意保留，复制一个章节即可作为接入参考；关键视图调用旁均使用英文注释。复杂的边框与自适应页面使用 Qt Designer 布局，`setupUi()` 和 `setupExample()` 分开管理界面与业务接线。
 
@@ -44,6 +44,7 @@
 | 34（可选） | 可选平滑滚动 | [examples/treetable_capabilities/34_smooth_scrolling/example.cpp](34_smooth_scrolling/example.cpp) |
 | 35 | 圆角边框与透明视图 | [examples/treetable_capabilities/35_borders/example.cpp](35_borders/example.cpp) |
 | 36 | 自适应高度与滚动上限 | [examples/treetable_capabilities/36_auto_height/example.cpp](36_auto_height/example.cpp) |
+| 37 | 颜色与样式表：主体、项、状态与 QSS 的作用范围 | [examples/treetable_capabilities/37_colors/example.cpp](37_colors/example.cpp) |
 
 ## 构建与运行
 

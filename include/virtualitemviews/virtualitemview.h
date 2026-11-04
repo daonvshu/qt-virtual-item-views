@@ -108,19 +108,29 @@ public:
     };
     Q_ENUM(ScrollHint)
 
+    /// Uses vivItemView, vivViewport and vivHorizontalScrollBar/vivVerticalScrollBar
+    /// as default object names. Callers may override them after construction.
     explicit VirtualItemView(QWidget *parent = nullptr);
     ~VirtualItemView() override;
 
-    /// Shows the body base background (default true). False exposes the parent;
+    /// Shows the overall view base and viewport QSS background (default true).
+    /// False exposes the parent beneath these two layers;
     /// state layers, separators and explicitly colored spacing remain independent.
     void setBackgroundVisible(bool visible);
     bool backgroundVisible() const { return m_backgroundVisible; }
-    /// Body base color; invalid follows QPalette::Base. Visibility takes precedence.
+    /// Overall view base color; invalid follows the view's QPalette::Base.
+    /// A viewport QSS background is composited above it. Visibility controls both layers.
     /// Adapter widgets that paint their own backgrounds remain application-controlled.
     void setBackgroundColor(const QColor &color);
     QColor backgroundColor() const { return m_backgroundColor; }
-    /// Resolved body brush for custom painting; NoBrush while the base is hidden.
+    /// Resolved view base brush; excludes the viewport layer. NoBrush while hidden.
     QBrush backgroundBrush() const;
+
+    /// Uniform item-row base below hover/selection, independent of body visibility.
+    /// Invalid (default) or fully transparent colors disable the fill. Headers and
+    /// spacing keep their own backgrounds; adapter widgets must remain transparent.
+    void setItemBackgroundColor(const QColor &color);
+    QColor itemBackgroundColor() const { return m_itemBackgroundColor; }
 
     /// Rounded outer frame shared by all views (logical pixels; defaults to zero).
     /// Enabling radius or width installs an Alpha compositing graphics effect,
@@ -644,7 +654,7 @@ protected:
     virtual void refreshVisualStates();
     /// Notifies only the materialized widget bound to this index's row.
     virtual void refreshVisualState(const QModelIndex &index);
-    /// Re-evaluates the index under the stationary pointer after scrolling.
+    /// Resolves hover from the current pointer position; nested refreshes are coalesced.
     void refreshHoveredIndex();
     /// Retains the current hover identity during view-specific pointer gestures.
     virtual bool isHoverTrackingLocked() const { return false; }
@@ -793,6 +803,10 @@ protected:
     /// Viewport geometry of a view row. The default is the layout's item rect; a
     /// tree insets it by the item depth (indentation).
     virtual QRect geometryForViewRow(qsizetype row) const;
+    /// Full item base geometry, including view-specific drag displacement and tree indentation.
+    virtual QRect itemBackgroundRect(qsizetype row) const;
+    /// Paints only visible item bases in viewport coordinates, before state layers.
+    virtual void paintItemBackgrounds(QPainter *painter, const QRect &dirtyRect) const;
     /// Number of materialized (visible + overscan) rows, used by paging keys.
     qsizetype visibleItemCount() const;
     /// Range of items intersecting the viewport (no overscan).
@@ -858,6 +872,7 @@ private:
     void updateBackgroundAppearance();
     bool m_backgroundVisible = true;
     QColor m_backgroundColor;
+    QColor m_itemBackgroundColor;
 
     /// Non-content height reserved for the frame, viewport margins and scrollbar.
     int autoHeightDecorationExtent() const;
@@ -956,6 +971,10 @@ private:
     quint64 m_modelChangeSerial = 0;
     QPointer<QItemSelectionModel> m_selectionModel;
     QPersistentModelIndex m_hoveredIndex;
+    /// Adapter-driven visibility changes must not interrupt an in-flight hover notification.
+    bool m_hoverRefreshInProgress = false;
+    bool m_hoverRefreshPending = false;
+    bool m_hoverRefreshScheduled = false;
     struct VisualTransition {
         qreal hoverProgress = 0.0;
         qreal selectedProgress = 0.0;

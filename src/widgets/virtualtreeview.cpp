@@ -990,7 +990,8 @@ void VirtualTreeView::afterMaterialize()
     }
     invalidateBranchIndicators();
     syncRowGridLines();
-    if (m_visualStateBackgroundVisible)
+    if (m_visualStateBackgroundVisible
+        || (itemBackgroundColor().isValid() && itemBackgroundColor().alpha() > 0))
         viewport()->update();
 }
 
@@ -1128,6 +1129,11 @@ void VirtualTreeView::invalidateBranchIndicators()
     m_indicatorStripWidth = width;
     if (strip > 0)
         viewport()->update(QRect(0, 0, strip, viewport()->height()));
+}
+
+QRect VirtualTreeView::itemBackgroundRect(qsizetype row) const
+{
+    return visualRowRect(row);
 }
 
 void VirtualTreeView::paintEvent(QPaintEvent *event)

@@ -111,6 +111,7 @@ protected:
     void configureRowSpacingWidget(QWidget *widget) const override;
     void afterMaterialize() override;
     void paintEvent(QPaintEvent *event) override;
+    QRect itemBackgroundRect(qsizetype row) const override;
     void refreshVisualStates() override;
     void refreshVisualState(const QModelIndex &index) override;
     bool updateDragFeedback(const DropTarget &target, const QPoint &position, Qt::DropAction action,

@@ -22,6 +22,7 @@ class VIRTUALITEMVIEWS_EXPORT HeaderSection : public QWidget
 
 public:
     /// Creates a section without taking focus from the owning header's gestures.
+    /// Defaults to objectName vivHeaderSection; reused sections keep their name.
     explicit HeaderSection(QWidget *parent = nullptr);
 
     /// Current logical section, or -1 while unbound. Read it when handling an event.
