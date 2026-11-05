@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ui version="4.0">
+ <class>FlowDragDrop</class>
+ <widget class="QWidget" name="FlowDragDrop">
+  <layout class="QVBoxLayout" name="pageLayout" stretch="0,0,1,0">
+   <item>
+    <widget class="QLabel" name="description">
+     <property name="text">
+      <string>08 项目拖放：拖到卡片左 / 右半插入，拖到末行空缺追加；Ctrl 复制，默认移动。</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <layout class="QGridLayout" name="controls">
+     <item row="0" column="0">
+      <widget class="QLabel" name="enabledLabel">
+       <property name="text">
+        <string>启用拖放</string>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="1">
+      <widget class="QCheckBox" name="enabled">
+       <property name="checked">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="2">
+      <widget class="QLabel" name="actionLabel">
+       <property name="text">
+        <string>默认动作</string>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="3">
+      <widget class="QComboBox" name="action">
+       <item>
+        <property name="text">
+         <string>移动</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>复制</string>
+        </property>
+       </item>
+      </widget>
+     </item>
+     <item row="1" column="0">
+      <widget class="QLabel" name="dashedLabel">
+       <property name="text">
+        <string>虚线指示器</string>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="1">
+      <widget class="QCheckBox" name="dashed">
+       <property name="checked">
+        <bool>false</bool>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="2">
+      <widget class="QLabel" name="widthLabel">
+       <property name="text">
+        <string>指示器宽度</string>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="3">
+      <widget class="QSpinBox" name="width">
+       <property name="minimum">
+        <number>1</number>
+       </property>
+       <property name="maximum">
+        <number>6</number>
+       </property>
+       <property name="value">
+        <number>2</number>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="viv::VirtualFlowTableView" name="view" />
+   </item>
+   <item>
+    <widget class="QLabel" name="status">
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>viv::VirtualFlowTableView</class>
+   <extends>QAbstractScrollArea</extends>
+   <header>virtualitemviews/virtualflowtableview.h</header>
+  </customwidget>
+ </customwidgets>
+ <resources />
+ <connections />
+</ui>

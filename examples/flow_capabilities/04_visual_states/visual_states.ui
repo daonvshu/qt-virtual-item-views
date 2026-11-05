@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ui version="4.0">
+ <class>FlowVisualStates</class>
+ <widget class="QWidget" name="FlowVisualStates">
+  <layout class="QVBoxLayout" name="pageLayout" stretch="0,0,1,0">
+   <item>
+    <widget class="QLabel" name="description">
+     <property name="text">
+      <string>04 状态背景与动画：框架绘制 hover / selected，业务 QLabel 保持透明。</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <layout class="QGridLayout" name="controls">
+     <item row="0" column="0">
+      <widget class="QLabel" name="visibleLabel">
+       <property name="text">
+        <string>绘制状态背景</string>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="1">
+      <widget class="QCheckBox" name="visible">
+       <property name="checked">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="2">
+      <widget class="QLabel" name="radiusLabel">
+       <property name="text">
+        <string>圆角</string>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="3">
+      <widget class="QSpinBox" name="radius">
+       <property name="minimum">
+        <number>0</number>
+       </property>
+       <property name="maximum">
+        <number>40</number>
+       </property>
+       <property name="value">
+        <number>10</number>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="0">
+      <widget class="QLabel" name="durationLabel">
+       <property name="text">
+        <string>动画时长 ms</string>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="1">
+      <widget class="QSpinBox" name="duration">
+       <property name="minimum">
+        <number>0</number>
+       </property>
+       <property name="maximum">
+        <number>1000</number>
+       </property>
+       <property name="value">
+        <number>180</number>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="2">
+      <widget class="QLabel" name="curveLabel">
+       <property name="text">
+        <string>动画曲线</string>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="3">
+      <widget class="QComboBox" name="curve">
+       <item>
+        <property name="text">
+         <string>OutCubic</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Linear</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>InOutCubic</string>
+        </property>
+       </item>
+      </widget>
+     </item>
+     <item row="2" column="0">
+      <widget class="QLabel" name="colorLabel">
+       <property name="text">
+        <string>状态颜色</string>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="1">
+      <widget class="QComboBox" name="color">
+       <item>
+        <property name="text">
+         <string>蓝色</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>绿色</string>
+        </property>
+       </item>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="viv::VirtualFlowTableView" name="view" />
+   </item>
+   <item>
+    <widget class="QLabel" name="status">
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>viv::VirtualFlowTableView</class>
+   <extends>QAbstractScrollArea</extends>
+   <header>virtualitemviews/virtualflowtableview.h</header>
+  </customwidget>
+ </customwidgets>
+ <resources />
+ <connections />
+</ui>

@@ -72,9 +72,7 @@ else()
     message(STATUS "Image examples: using threaded thumbnails")
 endif()
 
-viv_add_example(flow_table_view flow_table_view/main.cpp)
 viv_add_example(masonry_view masonry_view/main.cpp)
-target_link_libraries(flow_table_view PRIVATE viv_demo_images)
 target_link_libraries(masonry_view PRIVATE viv_demo_images)
 if(VIRTUALITEMVIEWS_BUILD_TESTS)
     find_package(Qt${QT_VERSION_MAJOR} ${VIRTUALITEMVIEWS_QT_MINIMUM_VERSION} REQUIRED COMPONENTS Test)
@@ -102,19 +100,13 @@ if(VIRTUALITEMVIEWS_BUILD_TESTS)
         add_dependencies(viv_demo_scroll_tests tst_smoothscrollbar)
     endif()
 endif()
-viv_add_example(tree_table_view tree_table_view/main.cpp)
-viv_add_example(drag_drop
-    drag_drop/main.cpp
-    drag_drop/dragmodels.h
-    drag_drop/dragwidgets.h
-    drag_drop/sampledata.cpp)
-
 add_subdirectory(list_capabilities)
 add_subdirectory(table_capabilities)
 add_subdirectory(tree_capabilities)
 add_subdirectory(treetable_capabilities)
+add_subdirectory(flow_capabilities)
 add_subdirectory(reference)
 
 get_property(_viv_example_targets DIRECTORY PROPERTY VIV_EXAMPLE_TARGETS)
 add_custom_target(viv_examples DEPENDS ${_viv_example_targets})
-add_dependencies(viv_examples viv_reference_examples list_capabilities table_capabilities tree_capabilities treetable_capabilities)
+add_dependencies(viv_examples viv_reference_examples list_capabilities table_capabilities tree_capabilities treetable_capabilities flow_capabilities)

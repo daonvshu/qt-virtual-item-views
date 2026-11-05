@@ -1148,8 +1148,7 @@ void TestVirtualTableView::columnZeroChangesReleaseTheRowWidgetsFirst()
 }
 
 /// Drops a row from another model onto \a view at \a viewportPos: the four events a real drag
-/// sends, with a payload of the kind a QStandardItemModel source hands over (the drag_drop
-/// example drags a tree node into the table exactly like this).
+/// sends, with a payload of the kind a QStandardItemModel source hands over.
 bool dropARowInto(VirtualTableView &view, const QPoint &viewportPos)
 {
     QStandardItemModel source(1, 1);
@@ -1174,8 +1173,8 @@ bool dropARowInto(VirtualTableView &view, const QPoint &viewportPos)
 
 void TestVirtualTableView::rowInsertKeepsTheColumnWidths()
 {
-    // Follow-up of the fourth review (found with examples/drag_drop: "dropping a row into the
-    // table collapses every column"): the native header mirrors QHeaderView::sectionResized()
+    // Regression: dropping a row into the table collapsed every column.
+    // The native header mirrors QHeaderView::sectionResized()
     // back into the geometry, but QHeaderView also emits it for its *own* layout work - a model
     // change re-lays out the sections and reports the size they had before that pass, which is 0.
     // Writing those 0s into the geometry clamped every column to the minimum width (24). It needs

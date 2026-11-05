@@ -51,4 +51,4 @@ cmake --build <BUILD_DIR> --target table_capabilities --config Debug
 
 ## 阅读和复制
 
-先复制目标功能所在目录。每个目录自带 model、adapter 和控件，命名空间独立；不需要复制其他功能目录或 `examples/common`。adapter 由视图持有，model 由 QObject 父对象持有，确保解绑期间依赖仍有效。更复杂的跨视图拖放组合见 [drag_drop](../drag_drop/README.md)。
+先复制目标功能所在目录。每个目录自带 model、adapter 和控件，命名空间独立；不需要复制其他功能目录或 `examples/common`。adapter 由视图持有，model 由 QObject 父对象持有，确保解绑期间依赖仍有效。

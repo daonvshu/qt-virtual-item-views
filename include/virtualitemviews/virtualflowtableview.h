@@ -10,8 +10,10 @@ class FlowTableLayout;
 /// Responsive item grid. Display columns share the viewport width; model rows
 /// remain item identities when resizing moves items between display rows.
 /// Use the cell height API below. Inherited size-index height setters are
-/// unsupported. Automatic sizeHint measurement is disabled and cannot be enabled;
-/// attempts to use either unsupported configuration report a warning.
+/// unsupported. Automatic item-widget sizeHint measurement is disabled and cannot
+/// be enabled; attempts to use either unsupported configuration report a warning.
+/// setAutoHeightEnabled() fits the whole view to its responsive grid, bounded by
+/// setMaximumHeight() and the parent layout's available height.
 class VIRTUALITEMVIEWS_EXPORT VirtualFlowTableView : public VirtualItemView
 {
     Q_OBJECT
@@ -38,8 +40,14 @@ public:
     void setColumnSpacing(int pixels);
     int columnSpacing() const;
     void setRowSpacing(int pixels) override;
+    /// Center mode adds outer half-gaps inside the configured content margins.
+    /// Edge mode has no outer half-gaps.
+    void setGridLinePlacement(GridLinePlacement placement) override;
     void setContentMargins(const QMargins &margins);
     QMargins contentMargins() const;
+    /// Colors row and column gaps; invalid colors restore the viewport background.
+    /// Content margins and absent cells retain the viewport background.
+    void setSpacingBackgroundColor(const QColor &color) override;
     /// Built-in item backgrounds; business widgets should be transparent to show them.
     void setVisualStateBackgroundVisible(bool visible);
     bool visualStateBackgroundVisible() const { return m_backgroundVisible; }
@@ -87,22 +95,32 @@ protected:
     bool isLayoutParent(const QModelIndex &parent) const override;
     bool preservesItemsOnLayoutChange() const override { return true; }
     bool isPersistentRowStateValid(const QModelIndex &index) const override;
+    /// Keep the scroll origin and leading margin stable while reflowing the grid.
+    qsizetype anchorItemAtOffset(qint64 offset) const override;
     bool usesExplicitRowSelection() const override { return true; }
     quint64 viewMappingSerial() const override { return m_revision; }
     bool canMeasureItem(qsizetype) const override { return false; }
     bool supportsItemHeightConfiguration() const override { return false; }
     bool supportsRowPanes() const override { return false; }
     bool supportsRowSpacingWidgets() const override { return false; }
+    qint64 autoHeightContentExtent() const override;
     void resizeEvent(QResizeEvent *event) override;
     void afterMaterialize() override;
     void paintEvent(QPaintEvent *event) override;
     void refreshVisualStates() override;
     void refreshVisualState(const QModelIndex &index) override;
+    /// Paints the union of row and column gaps without overlapping translucent fills.
+    void paintRowSpacingBackground(QPainter *painter, const QRect &dirtyRect) const override;
     /// Uses the same exclusive pixel edges for the complete state shape and clip.
     void paintVisualStateBackgrounds(QPainter *painter, const QRect &dirty) const;
-    /// Paints visible item boundaries once, without outer or absent-cell borders.
+    /// Paints visible item boundaries once, including the trailing column boundary
+    /// of a partial row, without viewport outer borders or grids over empty cells.
+    /// A bottom content margin keeps the terminal line; otherwise the final row
+    /// follows the shared trailing-row grid line auto-hide policy.
     void paintGridLines(QPainter *painter) const;
     bool handleItemKeyPress(QKeyEvent *event) override;
+    /// Includes viewport-painted backgrounds and separators within the source capture.
+    QPixmap grabDragPreview(QWidget *sourceWidget, const QRect &capture) override;
     DropTarget resolveDropTarget(const QPoint &position) const override;
     QRect resolveDropIndicatorRect(const DropTarget &target) const override;
     Qt::Orientation dropIndicatorOrientation() const override { return Qt::Vertical; }
@@ -110,6 +128,8 @@ protected:
 private:
     void reflow(const ScrollAnchor &anchor);
     void stabilizeScrollBar();
+    QSize scrollBarFreeViewportSize() const;
+    VisibleRange gridPaintRange() const;
     FlowTableLayout *m_flow = nullptr;
     QPersistentModelIndex m_root;
     quint64 m_revision = 0;
@@ -120,6 +140,7 @@ private:
     int m_reportedColumns = 0;
     int m_reportedHeight = 0;
     bool m_stabilizing = false;
+    bool m_autoHeightScrollBarPending = false;
     ScrollAnchor m_removalAnchor;
     QVector<QMetaObject::Connection> m_modelConnections;
     QWidget *m_gridOverlay = nullptr;

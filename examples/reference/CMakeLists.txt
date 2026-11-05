@@ -9,10 +9,6 @@ function(viv_add_reference name source)
     set_property(DIRECTORY APPEND PROPERTY VIV_REFERENCE_TARGETS ${name})
 endfunction()
 
-viv_add_reference(ref_tree_table_rows tree_table/row_widgets.cpp)
-viv_add_reference(ref_tree_table_cells tree_table/cell_widgets.cpp)
-viv_add_reference(ref_tree_table_binding_context tree_table/binding_context.cpp)
-viv_add_reference(ref_flow_basic flow/basic.cpp)
 viv_add_reference(ref_masonry_basic masonry/basic.cpp)
 
 get_property(_viv_reference_targets DIRECTORY PROPERTY VIV_REFERENCE_TARGETS)

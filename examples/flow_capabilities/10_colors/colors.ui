@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ui version="4.0">
+ <class>FlowColors</class>
+ <widget class="QWidget" name="FlowColors">
+  <layout class="QVBoxLayout" name="pageLayout" stretch="0,0,1,0">
+   <item>
+    <widget class="QLabel" name="description">
+     <property name="text">
+      <string>10 颜色与样式表：分别设置主体、hover / selected 与 viewport 颜色；业务控件底色会覆盖状态背景。</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <layout class="QGridLayout" name="controls">
+     <item row="0" column="0">
+      <widget class="QLabel" name="backgroundLabel">
+       <property name="text">
+        <string>主体底色</string>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="1">
+      <widget class="QComboBox" name="background">
+       <item>
+        <property name="text">
+         <string>默认 Base</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>米黄色</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>透明</string>
+        </property>
+       </item>
+      </widget>
+     </item>
+     <item row="0" column="2">
+      <widget class="QLabel" name="stateLabel">
+       <property name="text">
+        <string>状态背景</string>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="3">
+      <widget class="QCheckBox" name="state">
+       <property name="checked">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="0">
+      <widget class="QLabel" name="qssLabel">
+       <property name="text">
+        <string>样式表范围</string>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="1">
+      <widget class="QComboBox" name="qss">
+       <item>
+        <property name="text">
+         <string>无 QSS</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>仅 View 绿色</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>仅 viewport 粉色</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>业务 QLabel 橙色</string>
+        </property>
+       </item>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="viv::VirtualFlowTableView" name="view" />
+   </item>
+   <item>
+    <widget class="QLabel" name="status">
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>viv::VirtualFlowTableView</class>
+   <extends>QAbstractScrollArea</extends>
+   <header>virtualitemviews/virtualflowtableview.h</header>
+  </customwidget>
+ </customwidgets>
+ <resources />
+ <connections />
+</ui>

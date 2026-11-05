@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ui version="4.0">
+ <class>FlowSelectionEvents</class>
+ <widget class="QWidget" name="FlowSelectionEvents">
+  <layout class="QVBoxLayout" name="pageLayout" stretch="0,0,1,0">
+   <item>
+    <widget class="QLabel" name="description">
+     <property name="text">
+      <string>05 选择与项目事件：方向键导航，Ctrl / Shift 扩展选择；项目身份使用模型索引。</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <layout class="QGridLayout" name="controls">
+     <item row="0" column="0">
+      <widget class="QLabel" name="modeLabel">
+       <property name="text">
+        <string>选择模式</string>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="1">
+      <widget class="QComboBox" name="mode">
+       <item>
+        <property name="text">
+         <string>不选择</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>单选</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>多选</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>扩展选择</string>
+        </property>
+       </item>
+      </widget>
+     </item>
+     <item row="0" column="2">
+      <widget class="QLabel" name="selectRangeLabel">
+       <property name="text">
+        <string></string>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="3">
+      <widget class="QPushButton" name="selectRange">
+       <property name="text">
+        <string>程序选择第 2–5 项</string>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="0">
+      <widget class="QLabel" name="clearLabel">
+       <property name="text">
+        <string></string>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="1">
+      <widget class="QPushButton" name="clear">
+       <property name="text">
+        <string>清除选择</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="viv::VirtualFlowTableView" name="view" />
+   </item>
+   <item>
+    <widget class="QLabel" name="status">
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>viv::VirtualFlowTableView</class>
+   <extends>QAbstractScrollArea</extends>
+   <header>virtualitemviews/virtualflowtableview.h</header>
+  </customwidget>
+ </customwidgets>
+ <resources />
+ <connections />
+</ui>

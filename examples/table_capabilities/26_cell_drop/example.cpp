@@ -12,8 +12,7 @@
 
 namespace table_cell_drop {
 
-// Deliberately single-cell, same-model data. Multi-cell offsets belong to the
-// comprehensive drag_drop demo; they are not required for this minimal policy.
+// This minimal policy transfers a single cell within the same model.
 class CellMimeData : public QMimeData
 {
 public:

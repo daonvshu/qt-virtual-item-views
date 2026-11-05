@@ -441,7 +441,7 @@ QSize VirtualItemView::sizeHint() const
     if (!m_autoHeightEnabled || (m_layout && m_layout->orientation() != Qt::Vertical))
         return hint;
     // Read layout extents, never materialize or measure every logical item here.
-    qint64 content = qBound<qint64>(qint64(0), contentExtent(), qint64(QWIDGETSIZE_MAX));
+    qint64 content = qBound<qint64>(qint64(0), autoHeightContentExtent(), qint64(QWIDGETSIZE_MAX));
     // A first-item measurement needs a nonempty viewport to bootstrap. Do not
     // let an unmeasured zero-height layout collapse before it can measure a row.
     if (content == 0 && m_autoMeasure && m_layout && m_layout->itemCount() > 0

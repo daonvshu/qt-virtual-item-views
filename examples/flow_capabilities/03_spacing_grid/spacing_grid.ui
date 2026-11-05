@@ -1,0 +1,240 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ui version="4.0">
+ <class>FlowSpacingGrid</class>
+ <widget class="QWidget" name="FlowSpacingGrid">
+  <layout class="QVBoxLayout" name="pageLayout" stretch="0,0,1,0">
+   <item>
+    <widget class="QLabel" name="description">
+     <property name="text">
+      <string>03 间距、边距与分割线：比较间距中心和两侧模式；减少项目数量观察末行边界。</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <layout class="QGridLayout" name="controls">
+     <item row="0" column="0">
+      <widget class="QLabel" name="rowGapLabel">
+       <property name="text">
+        <string>行间距</string>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="1">
+      <widget class="QSpinBox" name="rowGap">
+       <property name="minimum">
+        <number>0</number>
+       </property>
+       <property name="maximum">
+        <number>40</number>
+       </property>
+       <property name="value">
+        <number>12</number>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="2">
+      <widget class="QLabel" name="columnGapLabel">
+       <property name="text">
+        <string>列间距</string>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="3">
+      <widget class="QSpinBox" name="columnGap">
+       <property name="minimum">
+        <number>0</number>
+       </property>
+       <property name="maximum">
+        <number>40</number>
+       </property>
+       <property name="value">
+        <number>12</number>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="0">
+      <widget class="QLabel" name="marginLabel">
+       <property name="text">
+        <string>内容四周边距</string>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="1">
+      <widget class="QSpinBox" name="margin">
+       <property name="minimum">
+        <number>0</number>
+       </property>
+       <property name="maximum">
+        <number>40</number>
+       </property>
+       <property name="value">
+        <number>8</number>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="2">
+      <widget class="QLabel" name="placementLabel">
+       <property name="text">
+        <string>分割线位置</string>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="3">
+      <widget class="QComboBox" name="placement">
+       <item>
+        <property name="text">
+         <string>间距中心</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>间距两侧</string>
+        </property>
+       </item>
+      </widget>
+     </item>
+     <item row="2" column="0">
+      <widget class="QLabel" name="horizontalLabel">
+       <property name="text">
+        <string>横线</string>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="1">
+      <widget class="QCheckBox" name="horizontal">
+       <property name="checked">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="2">
+      <widget class="QLabel" name="verticalLabel">
+       <property name="text">
+        <string>竖线</string>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="3">
+      <widget class="QCheckBox" name="vertical">
+       <property name="checked">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="0">
+      <widget class="QLabel" name="horizontalThroughLabel">
+       <property name="text">
+        <string>横线穿列间距</string>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="1">
+      <widget class="QCheckBox" name="horizontalThrough">
+       <property name="checked">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="2">
+      <widget class="QLabel" name="verticalThroughLabel">
+       <property name="text">
+        <string>竖线穿行间距</string>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="3">
+      <widget class="QCheckBox" name="verticalThrough">
+       <property name="checked">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+     <item row="4" column="0">
+      <widget class="QLabel" name="lineWidthLabel">
+       <property name="text">
+        <string>线宽（物理像素）</string>
+       </property>
+      </widget>
+     </item>
+     <item row="4" column="1">
+      <widget class="QSpinBox" name="lineWidth">
+       <property name="minimum">
+        <number>1</number>
+       </property>
+       <property name="maximum">
+        <number>6</number>
+       </property>
+       <property name="value">
+        <number>1</number>
+       </property>
+      </widget>
+     </item>
+     <item row="4" column="2">
+      <widget class="QLabel" name="countLabel">
+       <property name="text">
+        <string>项目数量</string>
+       </property>
+      </widget>
+     </item>
+     <item row="4" column="3">
+      <widget class="QSpinBox" name="count">
+       <property name="minimum">
+        <number>0</number>
+       </property>
+       <property name="maximum">
+        <number>100</number>
+       </property>
+       <property name="value">
+        <number>17</number>
+       </property>
+      </widget>
+     </item>
+     <item row="5" column="0" colspan="2">
+      <widget class="QCheckBox" name="spacingColorEnabled">
+       <property name="text"><string>自定义间距背景</string></property>
+      </widget>
+     </item>
+     <item row="5" column="2">
+      <widget class="QLabel" name="spacingColorLabel">
+       <property name="text"><string>间距颜色</string></property>
+      </widget>
+     </item>
+     <item row="5" column="3">
+      <widget class="QComboBox" name="spacingColor">
+       <item><property name="text"><string>浅橙色</string></property></item>
+       <item><property name="text"><string>浅蓝色</string></property></item>
+       <item><property name="text"><string>浅粉色</string></property></item>
+      </widget>
+     </item>
+     <item row="6" column="0" colspan="4">
+      <widget class="QCheckBox" name="trailingLine">
+       <property name="text"><string>始终绘制末行下边线</string></property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="viv::VirtualFlowTableView" name="view" />
+   </item>
+   <item>
+    <widget class="QLabel" name="status">
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>viv::VirtualFlowTableView</class>
+   <extends>QAbstractScrollArea</extends>
+   <header>virtualitemviews/virtualflowtableview.h</header>
+  </customwidget>
+ </customwidgets>
+ <resources />
+ <connections />
+</ui>

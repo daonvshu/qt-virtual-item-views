@@ -15,13 +15,19 @@ qint64 saturatedProduct(qint64 count, qint64 size)
 
 void FlowTableLayout::updateColumns()
 {
-    const qint64 available = qMax<qint64>(0, qint64(m_width) - m_margins.left() - m_margins.right());
+    qint64 available = qMax<qint64>(0, qint64(m_width) - m_margins.left() - m_margins.right());
+    // Keep one usable cell pixel when a narrow viewport cannot fit both outer halves.
+    const int columns = m_outerSpacingEnabled
+        ? int(qMin<qint64>(m_columnSpacing, qMax<qint64>(0, available - 1))) : 0;
+    const int rows = m_outerSpacingEnabled ? m_rowSpacing : 0;
+    m_outerSpacing = QMargins(columns / 2, rows / 2, columns - columns / 2, rows - rows / 2);
+    available -= columns;
     const qint64 denominator = qint64(m_maximum) + m_columnSpacing;
     const qint64 desired = qMax<qint64>(1, (available + m_columnSpacing + denominator - 1) / denominator);
     const qint64 fitting = qMax<qint64>(1, (available + m_columnSpacing) / (qint64(m_columnSpacing) + 1));
-    const qint64 columns = qMin(desired, fitting);
-    m_columns = int(columns);
-    m_cellSpace = int(qMax<qint64>(0, available - (columns - 1) * m_columnSpacing));
+    const qint64 count = qMin(desired, fitting);
+    m_columns = int(count);
+    m_cellSpace = int(qMax<qint64>(0, available - (count - 1) * m_columnSpacing));
 }
 
 void FlowTableLayout::setCrossExtent(int extent)
@@ -60,6 +66,14 @@ void FlowTableLayout::setMargins(const QMargins &margins)
     updateColumns();
 }
 
+void FlowTableLayout::setOuterSpacingEnabled(bool enabled)
+{
+    if (m_outerSpacingEnabled == enabled)
+        return;
+    m_outerSpacingEnabled = enabled;
+    updateColumns();
+}
+
 int FlowTableLayout::columnWidth(int column) const
 {
     return column >= 0 && column < m_columns
@@ -68,7 +82,8 @@ int FlowTableLayout::columnWidth(int column) const
 
 int FlowTableLayout::columnX(int column) const
 {
-    return m_margins.left() + int(qint64(column) * (m_cellSpace / m_columns + qint64(m_columnSpacing))
+    return m_margins.left() + m_outerSpacing.left()
+        + int(qint64(column) * (m_cellSpace / m_columns + qint64(m_columnSpacing))
                                 + qMin(column, m_cellSpace % m_columns));
 }
 
@@ -93,7 +108,8 @@ qint64 FlowTableLayout::offsetOf(qsizetype item) const
 {
     if (item >= m_count)
         return contentExtent();
-    return m_margins.top() + saturatedProduct(qMax<qsizetype>(0, item) / m_columns, stride());
+    return qint64(m_margins.top()) + m_outerSpacing.top()
+        + saturatedProduct(qMax<qsizetype>(0, item) / m_columns, stride());
 }
 
 qint64 FlowTableLayout::contentExtent() const
@@ -101,14 +117,14 @@ qint64 FlowTableLayout::contentExtent() const
     if (m_count <= 0 || m_cellSpace <= 0)
         return 0;
     return saturatedProduct(rowCount(), stride()) - m_rowSpacing
-        + qint64(m_margins.top()) + m_margins.bottom();
+        + qint64(m_margins.top()) + m_margins.bottom() + m_outerSpacing.top() + m_outerSpacing.bottom();
 }
 
 qsizetype FlowTableLayout::indexAtOffset(qint64 offset) const
 {
     if (m_count <= 0 || m_cellSpace <= 0 || offset >= contentExtent())
         return m_count;
-    const qint64 row = qMax<qint64>(0, offset - m_margins.top()) / stride();
+    const qint64 row = qMax<qint64>(0, offset - m_margins.top() - m_outerSpacing.top()) / stride();
     return qMin<qsizetype>(m_count, saturatedProduct(row, m_columns));
 }
 
@@ -129,10 +145,12 @@ QRect FlowTableLayout::itemRect(qsizetype item, qint64 scrollOffset) const
 
 qsizetype FlowTableLayout::itemAtPoint(const QPoint &point, qint64 scrollOffset) const
 {
-    if (point.x() < m_margins.left() || point.x() >= m_width - m_margins.right())
+    if (qint64(point.x()) < qint64(m_margins.left()) + m_outerSpacing.left()
+        || qint64(point.x()) >= qint64(m_width) - m_margins.right() - m_outerSpacing.right())
         return -1;
     const qint64 y = scrollOffset + point.y();
-    if (y < m_margins.top() || y >= contentExtent() - m_margins.bottom())
+    if (y < qint64(m_margins.top()) + m_outerSpacing.top()
+        || y >= contentExtent() - m_margins.bottom() - m_outerSpacing.bottom())
         return -1;
     const qsizetype first = indexAtOffset(y);
     int low = 0;

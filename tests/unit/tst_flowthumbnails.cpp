@@ -1,4 +1,4 @@
-#include "../../examples/flow_table_view/thumbnailcache.h"
+#include "../../examples/common/thumbnailcache.h"
 
 #include <QFile>
 #include <QDir>

@@ -9,6 +9,7 @@
 #include <QKeyEvent>
 #include <QPointer>
 #include <QPaintEvent>
+#include <QtMath>
 #include <functional>
 
 namespace viv {
@@ -41,6 +42,7 @@ private:
 VirtualFlowTableView::VirtualFlowTableView(QWidget *parent) : VirtualItemView(parent)
 {
     m_flow = new FlowTableLayout;
+    m_flow->setOuterSpacingEnabled(gridLinePlacement() == GridLinePlacement::SpacingCenter);
     setAutoMeasureItemHeight(false);
     setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
@@ -151,6 +153,15 @@ bool VirtualFlowTableView::isPersistentRowStateValid(const QModelIndex &index) c
     return viewItemForIndex(index) >= 0;
 }
 
+qsizetype VirtualFlowTableView::anchorItemAtOffset(qint64 offset) const
+{
+    // No item covers the leading margin. Anchoring its first item would scroll
+    // the margin away when spacing, column count or viewport dimensions change.
+    if (offset == 0 || offset < qint64(contentMargins().top()) + m_flow->outerSpacing().top())
+        return -1;
+    return m_flow->indexAtOffset(offset);
+}
+
 void VirtualFlowTableView::setRootIndex(const QModelIndex &index)
 {
     if (index.isValid() && index.model() != model()) {
@@ -181,6 +192,10 @@ void VirtualFlowTableView::reflow(const ScrollAnchor &anchor)
 
 void VirtualFlowTableView::setCellWidthRange(int minimum, int maximum)
 {
+    minimum = qMax(1, minimum);
+    maximum = qMax(minimum, maximum);
+    if (minimumCellWidth() == minimum && maximumCellWidth() == maximum)
+        return;
     const ScrollAnchor anchor = captureAnchor();
     m_flow->setWidthRange(minimum, maximum);
     reflow(anchor);
@@ -190,8 +205,11 @@ int VirtualFlowTableView::maximumCellWidth() const { return m_flow->maximumWidth
 
 void VirtualFlowTableView::setCellHeightMode(CellHeightMode mode)
 {
+    const bool proportional = mode == CellHeightMode::AspectRatio;
+    if (m_flow->isProportional() == proportional)
+        return;
     const ScrollAnchor anchor = captureAnchor();
-    m_flow->setProportional(mode == CellHeightMode::AspectRatio);
+    m_flow->setProportional(proportional);
     reflow(anchor);
 }
 VirtualFlowTableView::CellHeightMode VirtualFlowTableView::cellHeightMode() const
@@ -200,6 +218,9 @@ VirtualFlowTableView::CellHeightMode VirtualFlowTableView::cellHeightMode() cons
 }
 void VirtualFlowTableView::setFixedCellHeight(int height)
 {
+    height = qMax(1, height);
+    if (fixedCellHeight() == height)
+        return;
     const ScrollAnchor anchor = captureAnchor();
     m_flow->setFixedHeight(height);
     reflow(anchor);
@@ -208,6 +229,8 @@ int VirtualFlowTableView::fixedCellHeight() const { return m_flow->fixedHeight()
 
 void VirtualFlowTableView::setCellAspectRatio(qreal ratio)
 {
+    if (!qIsFinite(ratio) || ratio <= 0 || cellAspectRatio() == ratio)
+        return;
     const ScrollAnchor anchor = captureAnchor();
     m_flow->setAspectRatio(ratio);
     reflow(anchor);
@@ -216,6 +239,9 @@ qreal VirtualFlowTableView::cellAspectRatio() const { return m_flow->aspectRatio
 
 void VirtualFlowTableView::setColumnSpacing(int pixels)
 {
+    pixels = qMax(0, pixels);
+    if (columnSpacing() == pixels)
+        return;
     const ScrollAnchor anchor = captureAnchor();
     m_flow->setSpacing(rowSpacing(), pixels);
     reflow(anchor);
@@ -224,6 +250,9 @@ int VirtualFlowTableView::columnSpacing() const { return m_flow->columnSpacing()
 
 void VirtualFlowTableView::setRowSpacing(int pixels)
 {
+    pixels = qMax(0, pixels);
+    if (rowSpacing() == pixels)
+        return;
     const ScrollAnchor anchor = captureAnchor();
     m_flow->setSpacing(pixels, columnSpacing());
     setPendingAnchor(anchor);
@@ -234,11 +263,36 @@ void VirtualFlowTableView::setRowSpacing(int pixels)
 
 void VirtualFlowTableView::setContentMargins(const QMargins &margins)
 {
+    const QMargins bounded(qMax(0, margins.left()), qMax(0, margins.top()),
+                           qMax(0, margins.right()), qMax(0, margins.bottom()));
+    if (contentMargins() == bounded)
+        return;
     const ScrollAnchor anchor = captureAnchor();
-    m_flow->setMargins(margins);
+    m_flow->setMargins(bounded);
     reflow(anchor);
 }
 QMargins VirtualFlowTableView::contentMargins() const { return m_flow->margins(); }
+
+void VirtualFlowTableView::setGridLinePlacement(GridLinePlacement placement)
+{
+    if (gridLinePlacement() == placement)
+        return;
+    const ScrollAnchor anchor = captureAnchor();
+    m_flow->setOuterSpacingEnabled(placement == GridLinePlacement::SpacingCenter);
+    ++m_revision;
+    setPendingAnchor(anchor);
+    VirtualItemView::setGridLinePlacement(placement);
+}
+
+void VirtualFlowTableView::setSpacingBackgroundColor(const QColor &color)
+{
+    if (spacingBackgroundColor() == color)
+        return;
+    const QPointer<VirtualFlowTableView> self(this);
+    VirtualItemView::setSpacingBackgroundColor(color);
+    if (self)
+        viewport()->update();
+}
 
 void VirtualFlowTableView::setVisualStateBackgroundVisible(bool visible)
 {
@@ -320,10 +374,39 @@ void VirtualFlowTableView::paintEvent(QPaintEvent *event)
 {
     detail::PerformanceScope performance(this, "paint.flow", detail::PerformanceDomain::Paint);
     VirtualItemView::paintEvent(event);
-    if (m_backgroundVisible) {
-        QPainter painter(viewport());
+    QPainter painter(viewport());
+    paintRowSpacingBackground(&painter, event->rect());
+    if (m_backgroundVisible)
         paintVisualStateBackgrounds(&painter, event->rect());
+}
+
+void VirtualFlowTableView::paintRowSpacingBackground(QPainter *painter, const QRect &dirtyRect) const
+{
+    if (!spacingBackgroundColor().isValid() || (rowSpacing() == 0 && columnSpacing() == 0))
+        return;
+    detail::PerformanceScope performance(this, "paint.flow-spacing", detail::PerformanceDomain::Paint);
+    const VisibleRange range = gridPaintRange();
+    if (!range.isValid())
+        return;
+    const QRegion clip(dirtyRect.intersected(viewport()->rect()));
+    const QMargins outer = m_flow->outerSpacing();
+    const bool centered = gridLinePlacement() == GridLinePlacement::SpacingCenter;
+    QRegion gaps;
+    for (qsizetype ordinal = range.first; ordinal <= range.last; ++ordinal) {
+        const QRect rect = m_flow->itemRect(ordinal, verticalOffset());
+        const bool columnGap = ordinal % columnCount() + 1 < columnCount();
+        const bool rowGap = ordinal / columnCount() + 1 < displayRowCount();
+        const bool nextColumn = columnGap && ordinal + 1 < viewItemCount();
+        const int left = ordinal % columnCount() == 0 ? outer.left() : 0;
+        const int right = centered ? (nextColumn ? columnSpacing() : outer.right())
+                                   : (columnGap ? columnSpacing() : 0);
+        const int top = ordinal < columnCount() ? outer.top() : 0;
+        const int bottom = rowGap ? rowSpacing() : outer.bottom();
+        const QRect body(rect.x(), rect.y(), rect.width(), m_flow->rowHeight());
+        const QRect slot = body.adjusted(-left, -top, right, bottom);
+        gaps += QRegion(slot).subtracted(QRegion(body)).intersected(clip);
     }
+    fillPixelAlignedRegion(painter, gaps, spacingBackgroundColor());
 }
 
 void VirtualFlowTableView::paintVisualStateBackgrounds(QPainter *painter, const QRect &dirty) const
@@ -347,9 +430,23 @@ void VirtualFlowTableView::paintVisualStateBackgrounds(QPainter *painter, const 
     }
 }
 
+VisibleRange VirtualFlowTableView::gridPaintRange() const
+{
+    VisibleRange range = coreVisibleRange();
+    if (range.isValid()) {
+        // The previous row owns the far edge of the gap at the viewport top.
+        // Include its geometry even when its widgets have already been recycled.
+        range.first = qMax<qsizetype>(0, (range.first / columnCount() - 1) * columnCount());
+    }
+    return range;
+}
+
 void VirtualFlowTableView::paintGridLines(QPainter *painter) const
 {
     detail::PerformanceScope performance(this, "paint.flow-grid", detail::PerformanceDomain::Paint);
+    const VisibleRange range = gridPaintRange();
+    if (!range.isValid())
+        return;
     QVector<QRect> horizontal;
     QVector<QRect> vertical;
     QVector<QRect> horizontalLeading;
@@ -357,40 +454,65 @@ void VirtualFlowTableView::paintGridLines(QPainter *painter) const
     QVector<QRect> horizontalCenters;
     QVector<QRect> verticalCenters;
     const bool centered = gridLinePlacement() == GridLinePlacement::SpacingCenter;
-    for (const MaterializedItem &item : materializedItems()) {
-        const qsizetype ordinal = viewItemForIndex(item.index);
-        if (ordinal < 0)
-            continue;
+    const QMargins outer = m_flow->outerSpacing();
+    // A bottom content margin separates the terminal line from the outer frame.
+    const bool showTrailingLine = contentMargins().bottom() > 0 || trailingRowGridLineVisible();
+    for (qsizetype ordinal = range.first; ordinal <= range.last; ++ordinal) {
         const QRect rect = m_flow->itemRect(ordinal, verticalOffset());
-        const bool hasNextColumn = ordinal % columnCount() + 1 < columnCount()
-            && ordinal + 1 < viewItemCount();
+        const bool hasTrailingColumnBoundary = ordinal % columnCount() + 1 < columnCount();
+        const bool hasNextColumn = hasTrailingColumnBoundary && ordinal + 1 < viewItemCount();
         const bool hasNextRow = ordinal / columnCount() + 1 < displayRowCount();
-        const QRect verticalSegment(rect.x(), rect.y(), rect.width(),
-            m_flow->rowHeight() + (verticalSpacingLineThroughRowSpacing() && hasNextRow ? rowSpacing() : 0));
-        const QRect horizontalSegment(rect.x(), rect.y(),
-            rect.width() + (horizontalSpacingLineThroughColumnSpacing() && hasNextColumn ? columnSpacing() : 0),
-            m_flow->rowHeight());
+        const bool hasItemBelow = viewItemCount() - ordinal > columnCount();
+        const int top = ordinal < columnCount() ? outer.top() : 0;
+        // A partial next row only continues boundaries beside its real cards.
+        // Otherwise stop at the row-gap center instead of extending into empty cells.
+        const int rowGapTail = centered && !hasItemBelow ? rowSpacing() / 2 : rowSpacing();
+        const int bottom = hasNextRow ? (verticalSpacingLineThroughRowSpacing() ? rowGapTail : 0)
+                                      : outer.bottom();
+        const QRect verticalSegment(rect.x(), rect.y() - top, rect.width(),
+                                    m_flow->rowHeight() + top + bottom);
+        const int left = ordinal % columnCount() == 0 ? outer.left() : 0;
+        const int right = centered ? (hasNextColumn ? columnSpacing() : outer.right())
+            : (hasTrailingColumnBoundary && horizontalSpacingLineThroughColumnSpacing() ? columnSpacing() : 0);
+        const QRect horizontalSegment(rect.x() - left, rect.y(),
+                                      rect.width() + left + right, m_flow->rowHeight());
         if (m_verticalLines) {
-            if (hasNextColumn) {
+            // Close a partial final row even when the next display cell is empty.
+            if (hasTrailingColumnBoundary) {
+                // Keep the full virtual gap as the center reference even after the
+                // final real card, so its line aligns with the same column above.
                 if (centered && columnSpacing() > 0)
-                    verticalCenters.append(QRect(rect.right() + 1, rect.y(), columnSpacing(),
+                    verticalCenters.append(QRect(rect.right() + 1, verticalSegment.y(), columnSpacing(),
                                                  verticalSegment.height()));
                 else
                     vertical.append(verticalSegment);
+                if (!centered && columnSpacing() > 0) {
+                    // Both gap edges belong to the preceding real card, even when
+                    // the next display cell in a partial row has no model item.
+                    verticalLeading.append(QRect(rect.right() + 1 + columnSpacing(), rect.y(),
+                                                 rect.width(), verticalSegment.height()));
+                }
             }
-            if (!centered && columnSpacing() > 0 && ordinal % columnCount() > 0)
-                verticalLeading.append(verticalSegment);
         }
         if (m_horizontalLines) {
             if (hasNextRow) {
+                // Proportional cards can differ in height within the same display row.
+                // Its gap still starts after the tallest card, shared by all columns.
                 if (centered && rowSpacing() > 0)
-                    horizontalCenters.append(QRect(rect.x(), rect.bottom() + 1,
+                    horizontalCenters.append(QRect(horizontalSegment.x(), rect.y() + m_flow->rowHeight(),
                                                    horizontalSegment.width(), rowSpacing()));
                 else
                     horizontal.append(horizontalSegment);
+                if (!centered && rowSpacing() > 0) {
+                    horizontalLeading.append(QRect(rect.x(), rect.y() + m_flow->rowHeight() + rowSpacing(),
+                                                   horizontalSegment.width(), m_flow->rowHeight()));
+                }
+            } else if (showTrailingLine) {
+                // The terminal line closes the outer half-gap in center mode.
+                QRect boundary = horizontalSegment;
+                boundary.setHeight(boundary.height() + outer.bottom());
+                horizontal.append(boundary);
             }
-            if (!centered && rowSpacing() > 0 && ordinal >= columnCount())
-                horizontalLeading.append(horizontalSegment);
         }
     }
     fillPixelLines(painter, horizontal, m_horizontalLineWidth,
@@ -399,7 +521,7 @@ void VirtualFlowTableView::paintGridLines(QPainter *painter) const
     fillPixelLines(painter, vertical, m_verticalLineWidth,
         m_verticalLineColor.isValid() ? m_verticalLineColor : palette().color(QPalette::Mid),
         Qt::Vertical, true);
-    // Nonzero gaps have a second edge at the next real cell; zero gaps share one line.
+    // Each nonzero gap owns both edges; zero gaps share one line.
     fillPixelLines(painter, horizontalLeading, m_horizontalLineWidth,
         m_horizontalLineColor.isValid() ? m_horizontalLineColor : palette().color(QPalette::Mid),
         Qt::Horizontal);
@@ -442,15 +564,30 @@ void VirtualFlowTableView::resizeEvent(QResizeEvent *event)
         markDirty();
 }
 
+QSize VirtualFlowTableView::scrollBarFreeViewportSize() const
+{
+    const int barWidth = verticalScrollBarPolicy() == Qt::ScrollBarAlwaysOn
+        ? verticalScrollBar()->sizeHint().width() : 0;
+    return maximumViewportSize() + QSize(barWidth, 0);
+}
+
+qint64 VirtualFlowTableView::autoHeightContentExtent() const
+{
+    // A visible scrollbar must not reduce the preferred proportional height and
+    // prevent the parent from granting enough space to remove that scrollbar.
+    FlowTableLayout candidate = *m_flow;
+    candidate.setCrossExtent(scrollBarFreeViewportSize().width());
+    candidate.resetItems(viewItemCount(), 0);
+    return candidate.contentExtent();
+}
+
 void VirtualFlowTableView::stabilizeScrollBar()
 {
     if (m_stabilizing)
         return;
     // Solve using the scrollbar-free width. A narrower proportional grid may
     // fit again; retaining the bar in that case avoids a two-state resize loop.
-    const int barWidth = verticalScrollBarPolicy() == Qt::ScrollBarAlwaysOn
-        ? verticalScrollBar()->sizeHint().width() : 0;
-    const QSize full = maximumViewportSize() + QSize(barWidth, 0);
+    const QSize full = scrollBarFreeViewportSize();
     FlowTableLayout candidate = *m_flow;
     candidate.setCrossExtent(full.width());
     const bool needed = candidate.contentExtent() > full.height();
@@ -466,7 +603,19 @@ void VirtualFlowTableView::stabilizeScrollBar()
 void VirtualFlowTableView::afterMaterialize()
 {
     // Deliberately bypass sizeHint measurement: the flow owns height policy.
-    stabilizeScrollBar();
+    if (autoHeightEnabled()) {
+        // The base queues ancestor-layout activation before this callback.
+        // Compare against the allocated height, not the previous content height.
+        if (!m_autoHeightScrollBarPending) {
+            m_autoHeightScrollBarPending = true;
+            QMetaObject::invokeMethod(this, [this]() {
+                m_autoHeightScrollBarPending = false;
+                stabilizeScrollBar();
+            }, Qt::QueuedConnection);
+        }
+    } else {
+        stabilizeScrollBar();
+    }
     m_gridOverlay->setGeometry(viewport()->rect());
     m_gridOverlay->show();
     m_gridOverlay->raise();
@@ -510,6 +659,41 @@ bool VirtualFlowTableView::handleItemKeyPress(QKeyEvent *event)
     if (count > 0)
         moveCurrentToItem(target, event->modifiers());
     return true;
+}
+
+QPixmap VirtualFlowTableView::grabDragPreview(QWidget *sourceWidget, const QRect &capture)
+{
+    if (!sourceWidget || (sourceWidget != viewport() && !viewport()->isAncestorOf(sourceWidget)))
+        return VirtualItemView::grabDragPreview(sourceWidget, capture);
+
+    const QRect viewportCapture = capture.translated(sourceWidget->mapTo(viewport(), QPoint()));
+    QRegion visible(viewportCapture.intersected(viewport()->rect()));
+    for (QWidget *widget = sourceWidget; widget; widget = widget->parentWidget()) {
+        const QPoint origin = widget->mapTo(viewport(), QPoint());
+        visible &= QRect(origin, widget->size());
+        const QRegion mask = widget->mask();
+        if (!mask.isEmpty())
+            visible &= mask.translated(origin);
+        if (widget == viewport())
+            break;
+    }
+    if (visible.isEmpty())
+        return QPixmap();
+
+    // Capture the viewport background and grid overlay together with the card.
+    // Keep the source coordinate origin and DPR so the press hotspot stays fixed.
+    QPixmap pixmap = viewport()->grab(viewportCapture);
+    if (pixmap.isNull() || visible == QRegion(viewportCapture))
+        return pixmap;
+    QPixmap clipped(pixmap.size());
+    clipped.setDevicePixelRatio(pixmap.devicePixelRatio());
+    clipped.fill(Qt::transparent);
+    {
+        QPainter painter(&clipped);
+        painter.setClipRegion(visible.translated(-viewportCapture.topLeft()));
+        painter.drawPixmap(QPoint(), pixmap);
+    }
+    return clipped;
 }
 
 VirtualItemView::DropTarget VirtualFlowTableView::resolveDropTarget(const QPoint &position) const
@@ -559,11 +743,23 @@ QRect VirtualFlowTableView::resolveDropIndicatorRect(const DropTarget &target) c
     if (!target.isValid() || target.parent != rootIndex() || target.row > viewItemCount())
         return {};
     if (viewItemCount() == 0)
-        return QRect(contentMargins().left(), contentMargins().top(), 2, m_flow->rowHeight())
+        return QRect(contentMargins().left(), contentMargins().top() + m_flow->outerSpacing().top(),
+                     2, m_flow->rowHeight())
             .intersected(viewport()->rect());
     const bool trailing = target.row == viewItemCount();
-    const QRect rect = visualRect(viewIndex(trailing ? target.row - 1 : target.row));
-    return QRect(trailing ? rect.right() : rect.left() - 1, rect.top(), 2, rect.height())
+    const qsizetype item = trailing ? target.row - 1 : target.row;
+    const QRect rect = visualRect(viewIndex(item));
+    int boundary = trailing ? rect.right() + 1 : rect.left();
+    if (gridLinePlacement() == GridLinePlacement::SpacingCenter && columnSpacing() > 0) {
+        // Internal boundaries use gap centers; outer boundaries close the half-gaps.
+        if (trailing)
+            boundary += m_flow->outerSpacing().right();
+        else if (!trailing && item % columnCount() > 0)
+            boundary -= columnSpacing() / 2;
+        else
+            boundary -= m_flow->outerSpacing().left();
+    }
+    return QRect(boundary - 1, rect.top(), 2, m_flow->rowHeight())
         .intersected(viewport()->rect());
 }
 

@@ -370,7 +370,7 @@ public:
     GridLinePlacement gridLinePlacement() const { return m_gridLinePlacement; }
     /// Automatically hides the terminal row grid line for auto height or vertical
     /// overflow (default true). False keeps it whenever row grid lines are enabled.
-    /// Shared by list, tree, table and tree-table views, including default row headers.
+    /// Shared by list, tree, table, tree-table and flow views, including default row headers.
     void setTrailingRowGridLineAutoHideEnabled(bool enabled);
     bool trailingRowGridLineAutoHideEnabled() const { return m_trailingRowGridLineAutoHideEnabled; }
     /// Background of row gaps. An invalid color preserves the default palette behavior.
@@ -627,6 +627,9 @@ protected:
     /// Invalidates the parent layout only when the adaptive height hints change.
     /// Derived views call this after updating header margins or horizontal scrolling.
     void updateAutoHeightGeometry();
+    /// Content extent used by the preferred height; responsive layouts may
+    /// evaluate their geometry without a currently visible vertical scrollbar.
+    virtual qint64 autoHeightContentExtent() const { return contentExtent(); }
     /// Keeps the terminal row border only when it is separate from the outer frame.
     bool trailingRowGridLineVisible() const;
     /// View-specific displacement used when materializing row spacing hosts.

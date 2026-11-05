@@ -95,6 +95,75 @@ private slots:
         QCOMPARE(list.lastIndexAtOffset(44), list.indexAtOffset(44));
     }
 
+    void outerHalfSpacingAndModeSwitch()
+    {
+        viv::FlowTableLayout layout;
+        layout.setCrossExtent(610);
+        layout.setFixedHeight(30);
+        layout.setSpacing(19, 19);
+        layout.setMargins(QMargins(3, 5, 7, 11));
+        layout.resetItems(4, 1);
+        const QRect edgeFirst = layout.itemRect(0, 0);
+        const qint64 edgeExtent = layout.contentExtent();
+
+        layout.setOuterSpacingEnabled(true);
+        QCOMPARE(layout.outerSpacing(), QMargins(9, 9, 10, 10));
+        QCOMPARE(layout.margins(), QMargins(3, 5, 7, 11));
+        QCOMPARE(layout.columnCount(), 3);
+        QCOMPARE(layout.itemRect(0, 0), QRect(12, 14, 181, 30));
+        QCOMPARE(layout.itemRect(3, 0), QRect(12, 63, 181, 30));
+        QCOMPARE(layout.contentExtent(), qint64(114));
+        QCOMPARE(layout.offsetOf(layout.itemCount()), layout.contentExtent());
+        QCOMPARE(layout.columnX(2) + layout.columnWidth(2) + layout.outerSpacing().right()
+                     + layout.margins().right(), layout.crossExtent());
+
+        // Half-gaps and the absent last-row cells are not interactive item areas.
+        for (const QPoint &point : {QPoint(3, 20), QPoint(20, 5), QPoint(600, 20),
+                                   QPoint(20, 100), QPoint(200, 20), QPoint(20, 50), QPoint(220, 70)}) {
+            QCOMPARE(layout.itemAtPoint(point, 0), qsizetype(-1));
+        }
+        for (qsizetype item = 0; item < layout.itemCount(); ++item) {
+            const QRect rect = layout.itemRect(item, 13);
+            QCOMPARE(layout.itemAtPoint(rect.center(), 13), item);
+        }
+        QCOMPARE(layout.indexAtOffset(5), qsizetype(0));
+        QCOMPARE(layout.indexAtOffset(63), qsizetype(3));
+        QCOMPARE(layout.lastIndexAtOffset(100), qsizetype(3));
+
+        layout.setOuterSpacingEnabled(false);
+        QCOMPARE(layout.outerSpacing(), QMargins());
+        QCOMPARE(layout.itemRect(0, 0), edgeFirst);
+        QCOMPARE(layout.contentExtent(), edgeExtent);
+        layout.setOuterSpacingEnabled(true);
+        layout.setSpacing(0, 0);
+        QCOMPARE(layout.outerSpacing(), QMargins());
+        QCOMPARE(layout.itemRect(0, 0).topLeft(), QPoint(3, 5));
+        layout.resetItems(0, 1);
+        QCOMPARE(layout.contentExtent(), qint64(0));
+    }
+
+    void outerHalfSpacingAtNarrowWidths()
+    {
+        viv::FlowTableLayout layout;
+        layout.setOuterSpacingEnabled(true);
+        layout.setSpacing(19, 19);
+        layout.resetItems(20, 1);
+        for (int width : {1, 2, 9, 18, 19, 20, 201, 610}) {
+            layout.setCrossExtent(width);
+            int used = layout.outerSpacing().left();
+            for (int column = 0; column < layout.columnCount(); ++column) {
+                QCOMPARE(layout.columnX(column), used);
+                QVERIFY(layout.columnWidth(column) > 0);
+                used += layout.columnWidth(column);
+                if (column + 1 < layout.columnCount())
+                    used += layout.columnSpacing();
+            }
+            QCOMPARE(used + layout.outerSpacing().right(), width);
+        }
+        layout.setCrossExtent(0);
+        QCOMPARE(layout.contentExtent(), qint64(0));
+    }
+
     void mutationsEmptyAndLargeContent()
     {
         viv::FlowTableLayout layout;
@@ -124,5 +193,5 @@ private slots:
     }
 };
 
-QTEST_MAIN(TestFlowTableLayout)
+QTEST_APPLESS_MAIN(TestFlowTableLayout)
 #include "tst_flowtablelayout.moc"

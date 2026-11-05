@@ -5,7 +5,7 @@
 #include <aster/cache/service/imageservice.h>
 #include <aster/gui/imagebox.h>
 #else
-#include "../flow_table_view/thumbnailcache.h"
+#include "thumbnailcache.h"
 #endif
 
 #include <QPainter>

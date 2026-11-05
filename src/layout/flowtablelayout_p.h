@@ -43,6 +43,9 @@ public:
     int columnSpacing() const { return m_columnSpacing; }
     void setMargins(const QMargins &margins);
     QMargins margins() const { return m_margins; }
+    // Centered separators reserve half a gap at each outer grid edge.
+    void setOuterSpacingEnabled(bool enabled);
+    QMargins outerSpacing() const { return m_outerSpacing; }
     int columnCount() const { return m_columns; }
     qsizetype rowCount() const;
     int columnWidth(int column) const;
@@ -63,6 +66,8 @@ private:
     int m_columns = 1;
     int m_cellSpace = 0;
     QMargins m_margins;
+    QMargins m_outerSpacing;
+    bool m_outerSpacingEnabled = false;
     bool m_proportional = false;
     qreal m_ratio = 1.0;
 };
