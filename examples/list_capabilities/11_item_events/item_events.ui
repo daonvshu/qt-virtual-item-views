@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ui version="4.0">
+ <class>ListItemEventsPage</class>
+ <widget class="QWidget" name="ListItemEventsPage">
+  <layout class="QVBoxLayout" name="layout" stretch="0,1,0,0">
+   <item>
+    <widget class="QLabel" name="intro">
+     <property name="text">
+      <string>11 事件：点击或双击行空白区，按 ↑ / ↓ / PageUp / PageDown / Home / End / Enter；滚动后点行内按钮。</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="viv::VirtualListView" name="view" />
+   </item>
+   <item>
+    <widget class="QPushButton" name="locate">
+     <property name="text">
+      <string>查询当前项、选中项、控件、矩形和命中索引</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QPlainTextEdit" name="log">
+     <property name="readOnly">
+      <bool>true</bool>
+     </property>
+     <property name="maximumHeight">
+      <number>160</number>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>viv::VirtualListView</class>
+   <extends>QAbstractScrollArea</extends>
+   <header>virtualitemviews/virtuallistview.h</header>
+  </customwidget>
+ </customwidgets>
+ <resources />
+ <connections />
+</ui>

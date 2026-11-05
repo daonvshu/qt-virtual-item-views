@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ui version="4.0">
+ <class>ListStateContentPage</class>
+ <widget class="QWidget" name="ListStateContentPage">
+  <layout class="QVBoxLayout" name="layout" stretch="0,1">
+   <item>
+    <widget class="QLabel" name="intro">
+     <property name="text">
+      <string>09 状态关联内容：悬停或选中的行显示操作区；勾选数据独立存储，离开 hover 不会清除。</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="viv::VirtualListView" name="view" />
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>viv::VirtualListView</class>
+   <extends>QAbstractScrollArea</extends>
+   <header>virtualitemviews/virtuallistview.h</header>
+  </customwidget>
+ </customwidgets>
+ <resources />
+ <connections />
+</ui>

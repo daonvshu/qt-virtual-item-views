@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ui version="4.0">
+ <class>ListBasicPage</class>
+ <widget class="QWidget" name="ListBasicPage">
+  <layout class="QVBoxLayout" name="layout" stretch="0,0,1">
+   <item>
+    <widget class="QLabel" name="label1">
+     <property name="text">
+      <string>01 基础列表：切换显示模型根节点或某个父节点的直接子项。</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QComboBox" name="root">
+     <item>
+      <property name="text">
+       <string>模型根节点</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>分组 A 的子项</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>分组 B 的子项</string>
+      </property>
+     </item>
+    </widget>
+   </item>
+   <item>
+    <widget class="viv::VirtualListView" name="view" />
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>viv::VirtualListView</class>
+   <extends>QAbstractScrollArea</extends>
+   <header>virtualitemviews/virtuallistview.h</header>
+  </customwidget>
+ </customwidgets>
+ <resources />
+ <connections />
+</ui>

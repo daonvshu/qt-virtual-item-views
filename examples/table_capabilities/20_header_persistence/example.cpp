@@ -1,11 +1,11 @@
+#include "ui_header_persistence.h"
+#include <memory>
 #include "example.h"
 #include <virtualitemviews/virtualtableview.h>
 #include <virtualitemviews/tablewidgetadapter.h>
 #include <QStandardItemModel>
 #include <QLabel>
 #include <QPushButton>
-#include <QHBoxLayout>
-#include <QVBoxLayout>
 
 namespace table_header_persistence {
 
@@ -32,45 +32,33 @@ public:
 class Example : public QWidget
 {
 public:
-    explicit Example(QWidget *parent) : QWidget(parent)
+    explicit Example(QWidget *parent) : QWidget(parent), ui(new Ui::TableHeaderPersistencePage)
     {
         setupUi();
         setupExample();
     }
 
 private:
+    std::unique_ptr<Ui::TableHeaderPersistencePage> ui;
+
     void setupUi()
     {
-        auto *layout = new QVBoxLayout(this);
-        auto *description = new QLabel(QStringLiteral("20 列布局保存与恢复：保存列宽、顺序、隐藏、冻结设置，恢复前检查结果"), this);
-        description->setWordWrap(true);
-        layout->addWidget(description);
-        auto *controls = new QHBoxLayout;
-        m_save = new QPushButton(QStringLiteral("保存布局"), this);
-        controls->addWidget(m_save);
-        m_change = new QPushButton(QStringLiteral("改变布局"), this);
-        controls->addWidget(m_change);
-        m_restore = new QPushButton(QStringLiteral("恢复布局"), this);
-        controls->addWidget(m_restore);
-        controls->addStretch();
-        layout->addLayout(controls);
-        m_view = new viv::VirtualTableView(this);
-        layout->addWidget(m_view, 1);
-        m_status = new QLabel(this);
-        m_status->setWordWrap(true);
-        layout->addWidget(m_status);
+        ui->setupUi(this);
+
+        // Keep framework configuration and item data visible in the example.
+        ui->view->setObjectName(QStringLiteral("vivItemView"));
     }
 
     void setupExample()
     {
         // Materialize cells independently so horizontally offscreen cells can also be recycled.
-        m_view->setMaterializationMode(viv::VirtualTableView::MaterializationMode::CellWidgets);
-        m_view->setCellAdapter(new CellAdapter, true);
+        ui->view->setMaterializationMode(viv::VirtualTableView::MaterializationMode::CellWidgets);
+        ui->view->setCellAdapter(new CellAdapter, true);
         // Use a fixed row height to avoid measuring each row.
-        m_view->setUniformItemHeight(40);
+        ui->view->setUniformItemHeight(40);
         // The header and body share the same column geometry.
-        m_view->setDefaultColumnWidth(150);
-        m_model = new QStandardItemModel(120, 8, m_view);
+        ui->view->setDefaultColumnWidth(150);
+        m_model = new QStandardItemModel(120, 8, ui->view);
         for (int column = 0; column < m_model->columnCount(); ++column)
             m_model->setHeaderData(column, Qt::Horizontal, QStringLiteral("列 %1").arg(column + 1));
         for (int row = 0; row < m_model->rowCount(); ++row) {
@@ -79,36 +67,31 @@ private:
             }
         }
         // The QObject parent owns the model; Qt model signals report data and structure changes.
-        m_view->setModel(m_model);
+        ui->view->setModel(m_model);
         // Applications may persist this initial snapshot; this example keeps it in memory.
-        m_saved = m_view->saveHeaderState();
-        m_view->setColumnDragEnabled(true);
+        m_saved = ui->view->saveHeaderState();
+        ui->view->setColumnDragEnabled(true);
         // Allow manual column widths to be included in the saved header layout.
-        m_view->setColumnResizeEnabled(true);
+        ui->view->setColumnResizeEnabled(true);
 
-        connect(m_save, &QPushButton::clicked, this, [this] {
-            m_saved = m_view->saveHeaderState();
-            m_status->setText(QStringLiteral("已保存 %1 字节").arg(m_saved.size()));
+        connect(ui->save, &QPushButton::clicked, this, [this] {
+            m_saved = ui->view->saveHeaderState();
+            ui->status->setText(QStringLiteral("已保存 %1 字节").arg(m_saved.size()));
         });
-        connect(m_change, &QPushButton::clicked, this, [this] {
-            m_view->setColumnWidth(0, 240);
-            m_view->setColumnHidden(2, true);
-            m_view->moveColumn(3, 0);
-            m_view->setFrozenColumns({0});
-            m_view->setFrozenRows(1);
+        connect(ui->change, &QPushButton::clicked, this, [this] {
+            ui->view->setColumnWidth(0, 240);
+            ui->view->setColumnHidden(2, true);
+            ui->view->moveColumn(3, 0);
+            ui->view->setFrozenColumns({0});
+            ui->view->setFrozenRows(1);
         });
-        connect(m_restore, &QPushButton::clicked, this, [this] {
-            const bool restored = m_view->restoreHeaderState(m_saved);
-            m_status->setText(restored ? QStringLiteral("布局恢复成功") : QStringLiteral("布局数据无效，保留当前布局"));
+        connect(ui->restore, &QPushButton::clicked, this, [this] {
+            const bool restored = ui->view->restoreHeaderState(m_saved);
+            ui->status->setText(restored ? QStringLiteral("布局恢复成功") : QStringLiteral("布局数据无效，保留当前布局"));
         });
     }
 
-    viv::VirtualTableView *m_view = nullptr;
     QStandardItemModel *m_model = nullptr;
-    QLabel *m_status = nullptr;
-    QPushButton *m_save = nullptr;
-    QPushButton *m_change = nullptr;
-    QPushButton *m_restore = nullptr;
     QByteArray m_saved;
 };
 

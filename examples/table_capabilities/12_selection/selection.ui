@@ -1,0 +1,196 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ui version="4.0">
+ <class>TableSelectionPage</class>
+ <widget class="QWidget" name="TableSelectionPage">
+  <layout class="QVBoxLayout" name="layout" stretch="0,0,0,0,1,1,0">
+   <item>
+    <widget class="QLabel" name="description">
+     <property name="text">
+      <string>12 选择与当前项：行号默认选整行，列头可选整列；Ctrl 追加或取消，Shift 连选。上下视图共享选择</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="controls">
+     <item>
+      <widget class="QComboBox" name="mode">
+       <item>
+        <property name="text">
+         <string>扩展选择</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>单选</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>多选</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>无选择</string>
+        </property>
+       </item>
+      </widget>
+     </item>
+     <item>
+      <widget class="QComboBox" name="behavior">
+       <item>
+        <property name="text">
+         <string>按行</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>按格</string>
+        </property>
+       </item>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="select">
+       <property name="text">
+        <string>程序选择 2~5 行</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="query">
+       <property name="text">
+        <string>查询选择</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="spacer1">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeType">
+        <enum>QSizePolicy::Expanding</enum>
+       </property>
+       <property name="sizeHint">
+        <size>
+         <width>0</width>
+         <height>0</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="headerControls">
+     <item>
+      <widget class="QCheckBox" name="rowHeaderSelection">
+       <property name="text">
+        <string>点击行号选整行</string>
+       </property>
+       <property name="checked">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QCheckBox" name="columnHeaderSelection">
+       <property name="text">
+        <string>点击列头选整列</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="spacer2">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeType">
+        <enum>QSizePolicy::Expanding</enum>
+       </property>
+       <property name="sizeHint">
+        <size>
+         <width>0</width>
+         <height>0</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="backgroundControls">
+     <item>
+      <widget class="QCheckBox" name="rowHeaderBackground">
+       <property name="text">
+        <string>行号状态背景</string>
+       </property>
+       <property name="checked">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QCheckBox" name="columnHeaderBackground">
+       <property name="text">
+        <string>列头状态背景</string>
+       </property>
+       <property name="checked">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel" name="label3">
+       <property name="text">
+        <string>关闭两项后，仅 item 显示 hover/selected 背景</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="spacer4">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeType">
+        <enum>QSizePolicy::Expanding</enum>
+       </property>
+       <property name="sizeHint">
+        <size>
+         <width>0</width>
+         <height>0</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="viv::VirtualTableView" name="view" />
+   </item>
+   <item>
+    <widget class="viv::VirtualTableView" name="other" />
+   </item>
+   <item>
+    <widget class="QLabel" name="status">
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>viv::VirtualTableView</class>
+   <extends>QAbstractScrollArea</extends>
+   <header>virtualitemviews/virtualtableview.h</header>
+  </customwidget>
+ </customwidgets>
+ <resources />
+ <connections />
+</ui>

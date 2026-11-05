@@ -1,9 +1,10 @@
+#include "ui_basic.h"
+#include <memory>
 #include "example.h"
 #include <virtualitemviews/virtualtreeview.h>
 #include <virtualitemviews/widgetadapter.h>
 #include <QLabel>
 #include <QStandardItemModel>
-#include <QVBoxLayout>
 
 namespace tree_basic {
 
@@ -34,30 +35,27 @@ public:
 class Example : public QWidget
 {
 public:
-    explicit Example(QWidget *parent) : QWidget(parent)
+    explicit Example(QWidget *parent) : QWidget(parent), ui(new Ui::TreeBasicPage)
     {
         setupUi();
         setupExample();
     }
 
 private:
+    std::unique_ptr<Ui::TreeBasicPage> ui;
+
     void setupUi()
     {
-        auto *layout = new QVBoxLayout(this);
-        auto *description = new QLabel(QStringLiteral("01 基础树：模型保存层级，adapter 只处理行控件；点击三角展开子节点。"), this);
-        description->setWordWrap(true);
-        layout->addWidget(description);
-        m_view = new viv::VirtualTreeView(this);
-        layout->addWidget(m_view, 1);
-        m_status = new QLabel(this);
-        m_status->setWordWrap(true);
-        layout->addWidget(m_status);
+        ui->setupUi(this);
+
+        // Keep framework configuration and item data visible in the example.
+        ui->view->setObjectName(QStringLiteral("vivItemView"));
     }
 
     void setupExample()
     {
         // A plain QStandardItemModel owns the hierarchy; only column zero owns children.
-        m_model = new QStandardItemModel(m_view);
+        m_model = new QStandardItemModel(ui->view);
         for (int group = 0; group < 4; ++group) {
             auto *branch = new QStandardItem(QStringLiteral("分组 %1").arg(group + 1));
             m_model->appendRow(branch);
@@ -73,25 +71,23 @@ private:
         }
 
         // The view owns the adapter through teardown; the QObject parent owns the model.
-        m_view->setAdapter(new TextAdapter, true);
+        ui->view->setAdapter(new TextAdapter, true);
         // Uniform height avoids measuring each materialized node.
-        m_view->setUniformItemHeight(36);
+        ui->view->setUniformItemHeight(36);
         // Qt model signals update the visible mapping and reused widgets automatically.
-        m_view->setModel(m_model);
+        ui->view->setModel(m_model);
 
         // Expand through the view so mapping, branch state and signals stay synchronized.
-        m_view->expand(m_model->index(0, 0));
+        ui->view->expand(m_model->index(0, 0));
 
-        connect(m_view, &viv::VirtualItemView::clicked, this, [this](const QModelIndex &index) {
+        connect(ui->view, &viv::VirtualItemView::clicked, this, [this](const QModelIndex &index) {
             // Model row numbers are local to each parent; use the full index as identity.
-            m_status->setText(QStringLiteral("节点=%1 / parent=%2 / depth=%3")
-                .arg(index.data().toString()).arg(index.parent().data().toString()).arg(m_view->itemDepth(index)));
+            ui->status->setText(QStringLiteral("节点=%1 / parent=%2 / depth=%3")
+                .arg(index.data().toString()).arg(index.parent().data().toString()).arg(ui->view->itemDepth(index)));
         });
     }
 
-    viv::VirtualTreeView *m_view = nullptr;
     QStandardItemModel *m_model = nullptr;
-    QLabel *m_status = nullptr;
 };
 
 QWidget *createExample(QWidget *parent)

@@ -1,12 +1,12 @@
+#include "ui_lazy_loading.h"
+#include <memory>
 #include "example.h"
 #include <QPersistentModelIndex>
 #include <virtualitemviews/virtualtreetableview.h>
 #include <virtualitemviews/tablewidgetadapter.h>
-#include <QHBoxLayout>
 #include <QLabel>
 #include <QPushButton>
 #include <QStandardItemModel>
-#include <QVBoxLayout>
 #include <QTimer>
 
 namespace treetable_lazy_loading {
@@ -34,34 +34,26 @@ public:
 class Example : public QWidget
 {
 public:
-    explicit Example(QWidget *parent) : QWidget(parent)
+    explicit Example(QWidget *parent) : QWidget(parent), ui(new Ui::TreetableLazyLoadingPage)
     {
         setupUi();
         setupExample();
     }
 
 private:
+    std::unique_ptr<Ui::TreetableLazyLoadingPage> ui;
+
     void setupUi()
     {
-        auto *layout = new QVBoxLayout(this);
-        auto *description = new QLabel(QStringLiteral("31 异步加载子节点：先展开分组，再操作本章控件观察树表行为。"), this);
-        description->setWordWrap(true);
-        layout->addWidget(description);
-        auto *controls = new QHBoxLayout;
-        load = new QPushButton(QStringLiteral("加载当前分组"), this);
-        controls->addWidget(load);
-        controls->addStretch();
-        layout->addLayout(controls);
-        m_view = new viv::VirtualTreeTableView(this);
-        layout->addWidget(m_view, 1);
-        m_status = new QLabel(this);
-        m_status->setWordWrap(true);
-        layout->addWidget(m_status);
+        ui->setupUi(this);
+
+        // Keep framework configuration and item data visible in the example.
+        ui->view->setObjectName(QStringLiteral("vivItemView"));
     }
 
     void setupExample()
     {
-        m_model = new QStandardItemModel(m_view);
+        m_model = new QStandardItemModel(ui->view);
         m_model->setHorizontalHeaderLabels({QStringLiteral("名称"), QStringLiteral("类型"), QStringLiteral("状态")});
         for (int group = 0; group < 8; ++group) {
             auto *branch = new QStandardItem(QStringLiteral("待加载分组 %1").arg(group + 1));
@@ -74,26 +66,26 @@ private:
 
         // The view owns the adapter through teardown; the QObject parent owns the model.
         // CellWidgets applies tree indentation only to logical column zero.
-        m_view->setMaterializationMode(viv::VirtualTreeTableView::MaterializationMode::CellWidgets);
-        m_view->setCellAdapter(new CellAdapter, true);
-        m_view->setDefaultColumnWidth(150);
+        ui->view->setMaterializationMode(viv::VirtualTreeTableView::MaterializationMode::CellWidgets);
+        ui->view->setCellAdapter(new CellAdapter, true);
+        ui->view->setDefaultColumnWidth(150);
         // Uniform height avoids measuring each materialized node.
-        m_view->setUniformItemHeight(36);
+        ui->view->setUniformItemHeight(36);
         // Qt model signals update the visible mapping and reused widgets automatically.
-        m_view->setModel(m_model);
-        m_view->setColumnWidth(0, 280);
+        ui->view->setModel(m_model);
+        ui->view->setColumnWidth(0, 280);
 
-        connect(m_view, &viv::VirtualTreeTableView::expanded, this, [this](const QModelIndex &index) {
+        connect(ui->view, &viv::VirtualTreeTableView::expanded, this, [this](const QModelIndex &index) {
             loadChildren(index);
         });
-        connect(load, &QPushButton::clicked, this, [this] {
-            const QModelIndex index = m_view->currentIndex().siblingAtColumn(0);
+        connect(ui->load, &QPushButton::clicked, this, [this] {
+            const QModelIndex index = ui->view->currentIndex().siblingAtColumn(0);
             if (index.isValid() && !index.parent().isValid()) {
-                m_view->expand(index);
+                ui->view->expand(index);
                 loadChildren(index);
             }
         });
-        m_view->setCurrentIndex(m_model->index(0, 0));
+        ui->view->setCurrentIndex(m_model->index(0, 0));
     }
 
     void loadChildren(const QModelIndex &index)
@@ -117,14 +109,11 @@ private:
                     new QStandardItem(QStringLiteral("已加载"))});
             branch->removeRow(0);
             m_model->setData(target, 2, Qt::UserRole + 1);
-            m_status->setText(QStringLiteral("%1：已加载 20 个子节点").arg(target.data().toString()));
+            ui->status->setText(QStringLiteral("%1：已加载 20 个子节点").arg(target.data().toString()));
         });
     }
 
-    viv::VirtualTreeTableView *m_view = nullptr;
     QStandardItemModel *m_model = nullptr;
-    QLabel *m_status = nullptr;
-    QPushButton *load = nullptr;
 };
 
 QWidget *createExample(QWidget *parent)

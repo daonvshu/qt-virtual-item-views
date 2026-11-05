@@ -1,0 +1,241 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ui version="4.0">
+ <class>TreetableHeadersPage</class>
+ <widget class="QWidget" name="TreetableHeadersPage">
+  <layout class="QVBoxLayout" name="layout" stretch="0,0,0,0,1">
+   <item>
+    <widget class="QLabel" name="description">
+     <property name="text">
+      <string>23 表头交互与调整：先展开分组，再操作本章控件观察树表行为。</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="controls">
+     <item>
+      <widget class="QCheckBox" name="horizontal">
+       <property name="text">
+        <string>列头</string>
+       </property>
+       <property name="checked">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QCheckBox" name="vertical">
+       <property name="text">
+        <string>行号</string>
+       </property>
+       <property name="checked">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QSpinBox" name="height">
+       <property name="minimum">
+        <number>24</number>
+       </property>
+       <property name="maximum">
+        <number>80</number>
+       </property>
+       <property name="value">
+        <number>32</number>
+       </property>
+       <property name="prefix">
+        <string>表头高度 </string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QSpinBox" name="width">
+       <property name="minimum">
+        <number>30</number>
+       </property>
+       <property name="maximum">
+        <number>120</number>
+       </property>
+       <property name="value">
+        <number>50</number>
+       </property>
+       <property name="prefix">
+        <string>行号宽 </string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QCheckBox" name="follow">
+       <property name="text">
+        <string>主体跟随列动画</string>
+       </property>
+       <property name="checked">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="move">
+       <property name="text">
+        <string>第 3 列移到首列</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="spacer1">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeType">
+        <enum>QSizePolicy::Expanding</enum>
+       </property>
+       <property name="sizeHint">
+        <size>
+         <width>0</width>
+         <height>0</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="styleControls">
+     <item>
+      <widget class="QCheckBox" name="styles">
+       <property name="text">
+        <string>自定义表头文字样式</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QComboBox" name="alignment">
+       <item>
+        <property name="text">
+         <string>居左</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>居中</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>居右</string>
+        </property>
+       </item>
+      </widget>
+     </item>
+     <item>
+      <widget class="QSpinBox" name="padding">
+       <property name="minimum">
+        <number>0</number>
+       </property>
+       <property name="maximum">
+        <number>24</number>
+       </property>
+       <property name="value">
+        <number>8</number>
+       </property>
+       <property name="prefix">
+        <string>左右留白 </string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QSpinBox" name="fontSize">
+       <property name="minimum">
+        <number>8</number>
+       </property>
+       <property name="maximum">
+        <number>24</number>
+       </property>
+       <property name="value">
+        <number>11</number>
+       </property>
+       <property name="prefix">
+        <string>字号 pt </string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QCheckBox" name="bold">
+       <property name="text">
+        <string>加粗</string>
+       </property>
+       <property name="checked">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="spacer2">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeType">
+        <enum>QSizePolicy::Expanding</enum>
+       </property>
+       <property name="sizeHint">
+        <size>
+         <width>0</width>
+         <height>0</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="modelControls">
+     <item>
+      <widget class="QCheckBox" name="modelStyle">
+       <property name="text">
+        <string>第 2 列表头使用模型样式</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QCheckBox" name="freeze">
+       <property name="text">
+        <string>冻结首列，观察样式同步</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="spacer3">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeType">
+        <enum>QSizePolicy::Expanding</enum>
+       </property>
+       <property name="sizeHint">
+        <size>
+         <width>0</width>
+         <height>0</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="viv::VirtualTreeTableView" name="view" />
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>viv::VirtualTreeTableView</class>
+   <extends>QAbstractScrollArea</extends>
+   <header>virtualitemviews/virtualtreetableview.h</header>
+  </customwidget>
+ </customwidgets>
+ <resources />
+ <connections />
+</ui>

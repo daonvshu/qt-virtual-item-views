@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ui version="4.0">
+ <class>TableCustomHeaderPage</class>
+ <widget class="QWidget" name="TableCustomHeaderPage">
+  <layout class="QVBoxLayout" name="layout" stretch="0,0,1">
+   <item>
+    <widget class="QLabel" name="description">
+     <property name="text">
+      <string>19 自定义表头控件：每个可见列头是包含标题和排序按钮的 QWidget，支持冻结区复用</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QCheckBox" name="customCorner">
+     <property name="text">
+      <string>左上角使用全选按钮</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="viv::VirtualTableView" name="view" />
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>viv::VirtualTableView</class>
+   <extends>QAbstractScrollArea</extends>
+   <header>virtualitemviews/virtualtableview.h</header>
+  </customwidget>
+ </customwidgets>
+ <resources />
+ <connections />
+</ui>

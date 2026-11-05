@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ui version="4.0">
+ <class>TreeLazyLoadingPage</class>
+ <widget class="QWidget" name="TreeLazyLoadingPage">
+  <layout class="QVBoxLayout" name="layout" stretch="0,0,1,0">
+   <item>
+    <widget class="QLabel" name="description">
+     <property name="text">
+      <string>22 延迟加载：展开尚未加载的分组后模拟异步请求；请求结束通过 model 插入子节点。</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="controls">
+     <item>
+      <widget class="QPushButton" name="load">
+       <property name="text">
+        <string>加载当前分组</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="spacer1">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeType">
+        <enum>QSizePolicy::Expanding</enum>
+       </property>
+       <property name="sizeHint">
+        <size>
+         <width>0</width>
+         <height>0</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="viv::VirtualTreeView" name="view" />
+   </item>
+   <item>
+    <widget class="QLabel" name="status">
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>viv::VirtualTreeView</class>
+   <extends>QAbstractScrollArea</extends>
+   <header>virtualitemviews/virtualtreeview.h</header>
+  </customwidget>
+ </customwidgets>
+ <resources />
+ <connections />
+</ui>

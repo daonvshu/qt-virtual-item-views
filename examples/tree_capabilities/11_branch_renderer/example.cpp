@@ -1,11 +1,11 @@
+#include "ui_branch_renderer.h"
+#include <memory>
 #include "example.h"
 #include <virtualitemviews/virtualtreeview.h>
 #include <virtualitemviews/widgetadapter.h>
 #include <QCheckBox>
-#include <QHBoxLayout>
 #include <QLabel>
 #include <QStandardItemModel>
-#include <QVBoxLayout>
 #include <QPainter>
 #include <QPen>
 
@@ -70,36 +70,27 @@ public:
 class Example : public QWidget
 {
 public:
-    explicit Example(QWidget *parent) : QWidget(parent)
+    explicit Example(QWidget *parent) : QWidget(parent), ui(new Ui::TreeBranchRendererPage)
     {
         setupUi();
         setupExample();
     }
 
 private:
+    std::unique_ptr<Ui::TreeBranchRendererPage> ui;
+
     void setupUi()
     {
-        auto *layout = new QVBoxLayout(this);
-        auto *description = new QLabel(QStringLiteral("11 自定义分支：绘制祖先连接线和加减框，普通行控件无需绘制树装饰。"), this);
-        description->setWordWrap(true);
-        layout->addWidget(description);
-        auto *controls = new QHBoxLayout;
-        custom = new QCheckBox(QStringLiteral("使用连接线 renderer"), this);
-        custom->setChecked(true);
-        controls->addWidget(custom);
-        controls->addStretch();
-        layout->addLayout(controls);
-        m_view = new viv::VirtualTreeView(this);
-        layout->addWidget(m_view, 1);
-        m_status = new QLabel(this);
-        m_status->setWordWrap(true);
-        layout->addWidget(m_status);
+        ui->setupUi(this);
+
+        // Keep framework configuration and item data visible in the example.
+        ui->view->setObjectName(QStringLiteral("vivItemView"));
     }
 
     void setupExample()
     {
         // A plain QStandardItemModel owns the hierarchy; only column zero owns children.
-        m_model = new QStandardItemModel(m_view);
+        m_model = new QStandardItemModel(ui->view);
         for (int group = 0; group < 5; ++group) {
             auto *branch = new QStandardItem(QStringLiteral("分组 %1").arg(group + 1));
             m_model->appendRow(branch);
@@ -115,32 +106,29 @@ private:
         }
 
         // The view owns the adapter through teardown; the QObject parent owns the model.
-        m_view->setAdapter(new TextAdapter, true);
+        ui->view->setAdapter(new TextAdapter, true);
         // Uniform height avoids measuring each materialized node.
-        m_view->setUniformItemHeight(36);
+        ui->view->setUniformItemHeight(36);
         // Qt model signals update the visible mapping and reused widgets automatically.
-        m_view->setModel(m_model);
+        ui->view->setModel(m_model);
 
-        m_view->setIndentation(24);
+        ui->view->setIndentation(24);
         // Ownership transfer keeps the renderer alive until branch painting is finished.
-        m_view->setBranchIndicatorRenderer(new ConnectorRenderer, true);
-        m_view->expandRecursively(m_model->index(0, 0));
-        connect(custom, &QCheckBox::toggled, this, [this](bool enabled) {
-            m_view->setBranchIndicatorRenderer(enabled ? new ConnectorRenderer : nullptr, true);
+        ui->view->setBranchIndicatorRenderer(new ConnectorRenderer, true);
+        ui->view->expandRecursively(m_model->index(0, 0));
+        connect(ui->custom, &QCheckBox::toggled, this, [this](bool enabled) {
+            ui->view->setBranchIndicatorRenderer(enabled ? new ConnectorRenderer : nullptr, true);
         });
-        connect(m_view, &viv::VirtualItemView::clicked, this, [this](const QModelIndex &index) {
+        connect(ui->view, &viv::VirtualItemView::clicked, this, [this](const QModelIndex &index) {
             // Omitted cellDepth queries this node's own cell; an explicit depth queries an ancestor cell.
-            const auto state = m_view->branchState(index);
-            m_status->setText(QStringLiteral("depth=%1 / cellDepth=%2 / children=%3 / siblings=%4 / open=%5")
+            const auto state = ui->view->branchState(index);
+            ui->status->setText(QStringLiteral("depth=%1 / cellDepth=%2 / children=%3 / siblings=%4 / open=%5")
                 .arg(state.itemDepth).arg(state.cellDepth).arg(state.hasChildren)
                 .arg(state.hasSiblings).arg(state.isOpen()));
         });
     }
 
-    viv::VirtualTreeView *m_view = nullptr;
     QStandardItemModel *m_model = nullptr;
-    QLabel *m_status = nullptr;
-    QCheckBox *custom = nullptr;
 };
 
 QWidget *createExample(QWidget *parent)

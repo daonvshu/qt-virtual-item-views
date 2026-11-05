@@ -1,14 +1,14 @@
+#include "ui_scrolling.h"
+#include <memory>
 #include "example.h"
 #include <QAbstractItemModel>
 #include <virtualitemviews/virtualtreetableview.h>
 #include <virtualitemviews/tablewidgetadapter.h>
 #include <QCheckBox>
 #include <QComboBox>
-#include <QHBoxLayout>
 #include <QLabel>
 #include <QPushButton>
 #include <QSpinBox>
-#include <QVBoxLayout>
 
 namespace treetable_scrolling {
 
@@ -73,102 +73,62 @@ public:
 class Example : public QWidget
 {
 public:
-    explicit Example(QWidget *parent) : QWidget(parent)
+    explicit Example(QWidget *parent) : QWidget(parent), ui(new Ui::TreetableScrollingPage)
     {
         setupUi();
         setupExample();
     }
 
 private:
+    std::unique_ptr<Ui::TreetableScrollingPage> ui;
+
     void setupUi()
     {
-        auto *layout = new QVBoxLayout(this);
-        auto *description = new QLabel(QStringLiteral("19 大树定位与滚动：先展开分组，再操作本章控件观察树表行为。"), this);
-        description->setWordWrap(true);
-        layout->addWidget(description);
-        auto *controls = new QHBoxLayout;
-        group = new QSpinBox(this);
-        group->setRange(1, 5);
-        group->setValue(1);
-        group->setPrefix(QStringLiteral("分组 "));
-        controls->addWidget(group);
-        node = new QSpinBox(this);
-        node->setRange(1, 200000);
-        node->setValue(100000);
-        node->setPrefix(QStringLiteral("子节点 "));
-        controls->addWidget(node);
-        hint = new QComboBox(this);
-        hint->addItems({QStringLiteral("EnsureVisible"), QStringLiteral("PositionAtTop"), QStringLiteral("PositionAtBottom"), QStringLiteral("PositionAtCenter")});
-        controls->addWidget(hint);
-        go = new QPushButton(QStringLiteral("定位"), this);
-        controls->addWidget(go);
-        controls->addStretch();
-        layout->addLayout(controls);
-        auto *options = new QHBoxLayout;
-        step = new QPushButton(QStringLiteral("下移 120px"), this);
-        options->addWidget(step);
-        end = new QPushButton(QStringLiteral("到底部"), this);
-        options->addWidget(end);
-        wheel = new QCheckBox(QStringLiteral("滚轮按项"), this);
-        wheel->setChecked(false);
-        options->addWidget(wheel);
-        options->addStretch();
-        layout->addLayout(options);
-        m_view = new viv::VirtualTreeTableView(this);
-        layout->addWidget(m_view, 1);
-        m_status = new QLabel(this);
-        m_status->setWordWrap(true);
-        layout->addWidget(m_status);
+        ui->setupUi(this);
+
+        // Keep framework configuration and item data visible in the example.
+        ui->view->setObjectName(QStringLiteral("vivItemView"));
     }
 
     void setupExample()
     {
-        auto *model = new LargeTreeModel(m_view);
+        auto *model = new LargeTreeModel(ui->view);
         // CellWidgets applies tree indentation only to logical column zero.
-        m_view->setMaterializationMode(viv::VirtualTreeTableView::MaterializationMode::CellWidgets);
-        m_view->setCellAdapter(new CellAdapter, true);
-        m_view->setDefaultColumnWidth(150);
-        m_view->setUniformItemHeight(36);
+        ui->view->setMaterializationMode(viv::VirtualTreeTableView::MaterializationMode::CellWidgets);
+        ui->view->setCellAdapter(new CellAdapter, true);
+        ui->view->setDefaultColumnWidth(150);
+        ui->view->setUniformItemHeight(36);
         // Wheel units remain logical pixels even with very large scroll ranges.
-        m_view->setWheelScrollPixels(48);
-        m_view->setModel(model);
-        m_view->setColumnWidth(0, 280);
-        m_view->expand(model->index(0, 0));
-        connect(go, &QPushButton::clicked, this, [this, model] {
-            const QModelIndex parent = model->index(group->value() - 1, 0);
+        ui->view->setWheelScrollPixels(48);
+        ui->view->setModel(model);
+        ui->view->setColumnWidth(0, 280);
+        ui->view->expand(model->index(0, 0));
+        connect(ui->go, &QPushButton::clicked, this, [this, model] {
+            const QModelIndex parent = model->index(ui->group->value() - 1, 0);
             // scrollTo does not open arbitrary ancestors; expand the required path first.
-            m_view->expand(parent);
-            const QModelIndex index = model->index(node->value() - 1, 0, parent);
-            m_view->scrollTo(index, static_cast<viv::VirtualItemView::ScrollHint>(hint->currentIndex()));
-            m_view->setCurrentIndex(index);
+            ui->view->expand(parent);
+            const QModelIndex index = model->index(ui->node->value() - 1, 0, parent);
+            ui->view->scrollTo(index, static_cast<viv::VirtualItemView::ScrollHint>(ui->hint->currentIndex()));
+            ui->view->setCurrentIndex(index);
         });
-        connect(step, &QPushButton::clicked, this, [this] { m_view->scrollByPixels(120); });
-        connect(end, &QPushButton::clicked, this, [this] {
-            m_view->setVerticalOffset(m_view->maximumVerticalOffset());
+        connect(ui->step, &QPushButton::clicked, this, [this] { ui->view->scrollByPixels(120); });
+        connect(ui->end, &QPushButton::clicked, this, [this] {
+            ui->view->setVerticalOffset(ui->view->maximumVerticalOffset());
         });
-        connect(wheel, &QCheckBox::toggled, this, [this](bool items) {
+        connect(ui->wheel, &QCheckBox::toggled, this, [this](bool items) {
             if (items)
-                m_view->setWheelScrollItems(1);
+                ui->view->setWheelScrollItems(1);
             else
-                m_view->setWheelScrollMode(viv::VirtualItemView::WheelScrollMode::Pixels);
+                ui->view->setWheelScrollMode(viv::VirtualItemView::WheelScrollMode::Pixels);
         });
-        connect(m_view, &viv::VirtualItemView::virtualizationUpdated, this, [this] {
-            const QModelIndex index = m_view->currentIndex();
-            m_status->setText(QStringLiteral("offset=%1 / extent=%2 / maximum=%3 / 可见映射节点=%4 / 当前映射行=%5")
-                .arg(m_view->verticalOffset()).arg(m_view->contentExtent()).arg(m_view->maximumVerticalOffset())
-                .arg(m_view->visibleRowCount()).arg(m_view->visibilityIndex()->visibleRowForIndex(index)));
+        connect(ui->view, &viv::VirtualItemView::virtualizationUpdated, this, [this] {
+            const QModelIndex index = ui->view->currentIndex();
+            ui->status->setText(QStringLiteral("offset=%1 / extent=%2 / maximum=%3 / 可见映射节点=%4 / 当前映射行=%5")
+                .arg(ui->view->verticalOffset()).arg(ui->view->contentExtent()).arg(ui->view->maximumVerticalOffset())
+                .arg(ui->view->visibleRowCount()).arg(ui->view->visibilityIndex()->visibleRowForIndex(index)));
         });
     }
 
-    viv::VirtualTreeTableView *m_view = nullptr;
-    QLabel *m_status = nullptr;
-    QSpinBox *group = nullptr;
-    QSpinBox *node = nullptr;
-    QComboBox *hint = nullptr;
-    QPushButton *go = nullptr;
-    QPushButton *step = nullptr;
-    QPushButton *end = nullptr;
-    QCheckBox *wheel = nullptr;
 };
 
 QWidget *createExample(QWidget *parent)

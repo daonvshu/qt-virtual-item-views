@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ui version="4.0">
+ <class>TreetableRootIndexPage</class>
+ <widget class="QWidget" name="TreetableRootIndexPage">
+  <layout class="QVBoxLayout" name="layout" stretch="0,0,1,0">
+   <item>
+    <widget class="QLabel" name="description">
+     <property name="text">
+      <string>09 显示根与相对深度：先展开分组，再操作本章控件观察树表行为。</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="controls">
+     <item>
+      <widget class="QComboBox" name="root">
+       <item>
+        <property name="text">
+         <string>整棵树</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>仅分组 1 子树</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>仅分组 2 子树</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>仅分组 3 子树</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>仅分组 4 子树</string>
+        </property>
+       </item>
+      </widget>
+     </item>
+     <item>
+      <spacer name="spacer1">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeType">
+        <enum>QSizePolicy::Expanding</enum>
+       </property>
+       <property name="sizeHint">
+        <size>
+         <width>0</width>
+         <height>0</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="viv::VirtualTreeTableView" name="view" />
+   </item>
+   <item>
+    <widget class="QLabel" name="status">
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>viv::VirtualTreeTableView</class>
+   <extends>QAbstractScrollArea</extends>
+   <header>virtualitemviews/virtualtreetableview.h</header>
+  </customwidget>
+ </customwidgets>
+ <resources />
+ <connections />
+</ui>

@@ -1,10 +1,11 @@
+#include "ui_widget_types.h"
+#include <memory>
 #include "example.h"
 #include <virtualitemviews/virtuallistview.h>
 #include <virtualitemviews/widgetadapter.h>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QStandardItemModel>
-#include <QVBoxLayout>
 
 namespace list_widget_types {
 
@@ -82,24 +83,26 @@ public:
 class Example : public QWidget
 {
 public:
-    explicit Example(QWidget *parent) : QWidget(parent)
+    explicit Example(QWidget *parent) : QWidget(parent), ui(new Ui::ListWidgetTypesPage)
     {
         setupUi();
         setupExample();
     }
 
 private:
+    std::unique_ptr<Ui::ListWidgetTypesPage> ui;
+
     void setupUi()
     {
-        auto *layout = new QVBoxLayout(this);
-        layout->addWidget(new QLabel(QStringLiteral("03 多种行类型：标题和内容使用不同 QWidget 类型及复用池。"), this));
-        m_view = new viv::VirtualListView(this);
-        layout->addWidget(m_view, 1);
+        ui->setupUi(this);
+
+        // Keep framework configuration and item data visible in the example.
+        ui->view->setObjectName(QStringLiteral("vivItemView"));
     }
 
     void setupExample()
     {
-        auto *model = new QStandardItemModel(m_view);
+        auto *model = new QStandardItemModel(ui->view);
         for (int group = 0; group < 20; ++group) {
             auto *title = new QStandardItem(QStringLiteral("分组 %1 · 标题行 QLabel").arg(group + 1));
             title->setData(true, KindRole);
@@ -110,12 +113,11 @@ private:
         // widgetType() selects the recycler pool before createWidget/bindWidget.
         // HeaderRow and ContentRow therefore never get cast across pools.
         // true makes the view own the adapter; one fixed height serves both layouts.
-        m_view->setAdapter(new MixedAdapter, true);
-        m_view->setUniformItemHeight(36);
-        m_view->setModel(model);
+        ui->view->setAdapter(new MixedAdapter, true);
+        ui->view->setUniformItemHeight(36);
+        ui->view->setModel(model);
     }
 
-    viv::VirtualListView *m_view = nullptr;
 };
 
 QWidget *createExample(QWidget *parent)

@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ui version="4.0">
+ <class>TreeItemHeightsPage</class>
+ <widget class="QWidget" name="TreeItemHeightsPage">
+  <layout class="QVBoxLayout" name="layout" stretch="0,0,1">
+   <item>
+    <widget class="QLabel" name="description">
+     <property name="text">
+      <string>06 行高：点击节点切换详情高度；切换固定、首项测量、独立动态高度。</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="controls">
+     <item>
+      <widget class="QComboBox" name="mode">
+       <item>
+        <property name="text">
+         <string>固定 44 px</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>按首项测量统一高度</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>每节点动态高度</string>
+        </property>
+       </item>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="first">
+       <property name="text">
+        <string>切换首节点详情</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="spacer1">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeType">
+        <enum>QSizePolicy::Expanding</enum>
+       </property>
+       <property name="sizeHint">
+        <size>
+         <width>0</width>
+         <height>0</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="viv::VirtualTreeView" name="view" />
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>viv::VirtualTreeView</class>
+   <extends>QAbstractScrollArea</extends>
+   <header>virtualitemviews/virtualtreeview.h</header>
+  </customwidget>
+ </customwidgets>
+ <resources />
+ <connections />
+</ui>

@@ -4,6 +4,8 @@
 
 每个编号目录自带 model、adapter、节点控件和 `example.h`／`example.cpp`／`README.md`，不引用其他能力目录或 `examples/common`。重复的小类有意保留，复制单章即可参考。普通数据直接使用 `QStandardItemModel`，第 17 章因按需生成百万节点才实现自定义模型。所有代码注释为英文。
 
+每章页面布局、控件文字和初始值放在同目录的 `.ui` 文件中，可用 Qt Designer 编辑。`ui` 在堆上创建并由智能指针管理，`setupUi()` 加载界面；直接通过 `ui->控件名` 访问界面控件，`setupExample()` 展示视图配置和事件接线；阅读功能用法时可直接从后者开始。复制章节时一起复制 `.ui`，在自己的 CMake 目标启用 `AUTOUIC` 并列入该文件。节点控件内部的简单组合和运行时创建仍留在对应章节中。
+
 | 编号 | 能力 | 源码相对路径 |
 | --- | --- | --- |
 | 01 | 基础接入 | [examples/tree_capabilities/01_basic/example.cpp](01_basic/example.cpp) |

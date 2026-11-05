@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ui version="4.0">
+ <class>ListDiagnosticsPage</class>
+ <widget class="QWidget" name="ListDiagnosticsPage">
+  <layout class="QVBoxLayout" name="layout" stretch="0,0,1,0,0">
+   <item>
+    <widget class="QLabel" name="intro">
+     <property name="text">
+      <string>18 诊断：滚动列表后查看统计和生命周期日志；日志有界，默认最多 400 条。</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="controls">
+     <item>
+      <widget class="QCheckBox" name="logging">
+       <property name="text">
+        <string>记录生命周期</string>
+       </property>
+       <property name="checked">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="refresh">
+       <property name="text">
+        <string>刷新日志快照</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="clear">
+       <property name="text">
+        <string>清空日志</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="modify">
+       <property name="text">
+        <string>修改当前行</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="viv::VirtualListView" name="view" />
+   </item>
+   <item>
+    <widget class="QLabel" name="status">
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QPlainTextEdit" name="log">
+     <property name="readOnly">
+      <bool>true</bool>
+     </property>
+     <property name="maximumHeight">
+      <number>200</number>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>viv::VirtualListView</class>
+   <extends>QAbstractScrollArea</extends>
+   <header>virtualitemviews/virtuallistview.h</header>
+  </customwidget>
+ </customwidgets>
+ <resources />
+ <connections />
+</ui>

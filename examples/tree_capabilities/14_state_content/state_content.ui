@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ui version="4.0">
+ <class>TreeStateContentPage</class>
+ <widget class="QWidget" name="TreeStateContentPage">
+  <layout class="QVBoxLayout" name="layout" stretch="0,1,0">
+   <item>
+    <widget class="QLabel" name="description">
+     <property name="text">
+      <string>14 状态关联内容：仅 hover 或 selected 的节点显示操作按钮，背景仍由框架绘制。</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="viv::VirtualTreeView" name="view" />
+   </item>
+   <item>
+    <widget class="QLabel" name="status">
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>viv::VirtualTreeView</class>
+   <extends>QAbstractScrollArea</extends>
+   <header>virtualitemviews/virtualtreeview.h</header>
+  </customwidget>
+ </customwidgets>
+ <resources />
+ <connections />
+</ui>

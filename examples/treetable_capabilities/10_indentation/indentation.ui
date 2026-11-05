@@ -1,0 +1,276 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ui version="4.0">
+ <class>TreetableIndentationPage</class>
+ <widget class="QWidget" name="TreetableIndentationPage">
+  <layout class="QVBoxLayout" name="layout" stretch="0,0,0,0,1">
+   <item>
+    <widget class="QLabel" name="description">
+     <property name="text">
+      <string>10 缩进与分支配置：调整默认图标的大小、颜色、对齐及 padding。单图标随展开旋转，双图标直接切换；隐藏分支区域仍保留层级缩进。</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="controls">
+     <item>
+      <widget class="QSpinBox" name="width">
+       <property name="minimum">
+        <number>0</number>
+       </property>
+       <property name="maximum">
+        <number>60</number>
+       </property>
+       <property name="value">
+        <number>24</number>
+       </property>
+       <property name="prefix">
+        <string>分支格宽 </string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QCheckBox" name="icons">
+       <property name="text">
+        <string>显示分支图标</string>
+       </property>
+       <property name="checked">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QCheckBox" name="hideBranch">
+       <property name="text">
+        <string>隐藏 branch 区域</string>
+       </property>
+       <property name="toolTip">
+        <string>隐藏分支图标及其占位，保留父子层级缩进。双击或方向键仍可展开节点。</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="spacer1">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeType">
+        <enum>QSizePolicy::Expanding</enum>
+       </property>
+       <property name="sizeHint">
+        <size>
+         <width>0</width>
+         <height>0</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="appearance">
+     <item>
+      <widget class="QSpinBox" name="iconSize">
+       <property name="minimum">
+        <number>1</number>
+       </property>
+       <property name="maximum">
+        <number>32</number>
+       </property>
+       <property name="value">
+        <number>10</number>
+       </property>
+       <property name="prefix">
+        <string>图标大小 </string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QCheckBox" name="blueIcon">
+       <property name="text">
+        <string>蓝色图标</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QComboBox" name="iconMode">
+       <item>
+        <property name="text">
+         <string>内置三角（旋转）</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>仅展开图标（旋转）</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>仅收起图标（旋转）</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>展开与收起双图标（切换）</string>
+        </property>
+       </item>
+      </widget>
+     </item>
+     <item>
+      <spacer name="spacer2">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeType">
+        <enum>QSizePolicy::Expanding</enum>
+       </property>
+       <property name="sizeHint">
+        <size>
+         <width>0</width>
+         <height>0</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="alignment">
+     <item>
+      <widget class="QComboBox" name="horizontalAlignment">
+       <item>
+        <property name="text">
+         <string>左对齐</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>水平居中</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>右对齐</string>
+        </property>
+       </item>
+       <property name="currentIndex">
+        <number>1</number>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QComboBox" name="verticalAlignment">
+       <item>
+        <property name="text">
+         <string>顶对齐</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>垂直居中</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>底对齐</string>
+        </property>
+       </item>
+       <property name="currentIndex">
+        <number>1</number>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel" name="label3">
+       <property name="text">
+        <string>Padding</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QSpinBox" name="padding0">
+       <property name="minimum">
+        <number>0</number>
+       </property>
+       <property name="maximum">
+        <number>20</number>
+       </property>
+       <property name="prefix">
+        <string>左 </string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QSpinBox" name="padding1">
+       <property name="minimum">
+        <number>0</number>
+       </property>
+       <property name="maximum">
+        <number>20</number>
+       </property>
+       <property name="prefix">
+        <string>上 </string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QSpinBox" name="padding2">
+       <property name="minimum">
+        <number>0</number>
+       </property>
+       <property name="maximum">
+        <number>20</number>
+       </property>
+       <property name="prefix">
+        <string>右 </string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QSpinBox" name="padding3">
+       <property name="minimum">
+        <number>0</number>
+       </property>
+       <property name="maximum">
+        <number>20</number>
+       </property>
+       <property name="prefix">
+        <string>下 </string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="spacer4">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeType">
+        <enum>QSizePolicy::Expanding</enum>
+       </property>
+       <property name="sizeHint">
+        <size>
+         <width>0</width>
+         <height>0</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="viv::VirtualTreeTableView" name="view" />
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>viv::VirtualTreeTableView</class>
+   <extends>QAbstractScrollArea</extends>
+   <header>virtualitemviews/virtualtreetableview.h</header>
+  </customwidget>
+ </customwidgets>
+ <resources />
+ <connections />
+</ui>

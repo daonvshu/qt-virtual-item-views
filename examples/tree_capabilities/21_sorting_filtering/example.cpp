@@ -1,11 +1,11 @@
+#include "ui_sorting_filtering.h"
+#include <memory>
 #include "example.h"
 #include <virtualitemviews/virtualtreeview.h>
 #include <virtualitemviews/widgetadapter.h>
 #include <QComboBox>
-#include <QHBoxLayout>
 #include <QLabel>
 #include <QStandardItemModel>
-#include <QVBoxLayout>
 #include <QLineEdit>
 #include <QSortFilterProxyModel>
 
@@ -38,39 +38,27 @@ public:
 class Example : public QWidget
 {
 public:
-    explicit Example(QWidget *parent) : QWidget(parent)
+    explicit Example(QWidget *parent) : QWidget(parent), ui(new Ui::TreeSortingFilteringPage)
     {
         setupUi();
         setupExample();
     }
 
 private:
+    std::unique_ptr<Ui::TreeSortingFilteringPage> ui;
+
     void setupUi()
     {
-        auto *layout = new QVBoxLayout(this);
-        auto *description = new QLabel(QStringLiteral("21 代理模型：过滤后保留匹配节点的祖先，排序只改变兄弟节点顺序。"), this);
-        description->setWordWrap(true);
-        layout->addWidget(description);
-        auto *controls = new QHBoxLayout;
-        filter = new QLineEdit(this);
-        filter->setPlaceholderText(QStringLiteral("输入节点名称，例如 1.2"));
-        controls->addWidget(filter);
-        order = new QComboBox(this);
-        order->addItems({QStringLiteral("升序"), QStringLiteral("降序")});
-        controls->addWidget(order);
-        controls->addStretch();
-        layout->addLayout(controls);
-        m_view = new viv::VirtualTreeView(this);
-        layout->addWidget(m_view, 1);
-        m_status = new QLabel(this);
-        m_status->setWordWrap(true);
-        layout->addWidget(m_status);
+        ui->setupUi(this);
+
+        // Keep framework configuration and item data visible in the example.
+        ui->view->setObjectName(QStringLiteral("vivItemView"));
     }
 
     void setupExample()
     {
         // A plain QStandardItemModel owns the hierarchy; only column zero owns children.
-        m_model = new QStandardItemModel(m_view);
+        m_model = new QStandardItemModel(ui->view);
         for (int group = 0; group < 8; ++group) {
             auto *branch = new QStandardItem(QStringLiteral("分组 %1").arg(group + 1));
             m_model->appendRow(branch);
@@ -85,39 +73,35 @@ private:
             }
         }
 
-        auto *proxy = new QSortFilterProxyModel(m_view);
+        auto *proxy = new QSortFilterProxyModel(ui->view);
         proxy->setSourceModel(m_model);
         proxy->setFilterKeyColumn(0);
         proxy->setFilterCaseSensitivity(Qt::CaseInsensitive);
         // Available since Qt 5.10: keep ancestors when descendants match the text.
         proxy->setRecursiveFilteringEnabled(true);
-        m_view->setAdapter(new TextAdapter, true);
-        m_view->setUniformItemHeight(36);
+        ui->view->setAdapter(new TextAdapter, true);
+        ui->view->setUniformItemHeight(36);
         // All indexes passed to the view must belong to this proxy, not the source model.
-        m_view->setModel(proxy);
-        connect(filter, &QLineEdit::textChanged, this, [this, proxy](const QString &text) {
+        ui->view->setModel(proxy);
+        connect(ui->filter, &QLineEdit::textChanged, this, [this, proxy](const QString &text) {
             proxy->setFilterFixedString(text);
             // Reveal the matching descendants so the filter result is immediately visible.
             for (int row = 0; row < proxy->rowCount(); ++row)
-                m_view->expandRecursively(proxy->index(row, 0));
+                ui->view->expandRecursively(proxy->index(row, 0));
         });
-        connect(order, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [proxy](int value) {
+        connect(ui->order, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [proxy](int value) {
             proxy->sort(0, value == 0 ? Qt::AscendingOrder : Qt::DescendingOrder);
         });
-        connect(m_view, &viv::VirtualItemView::clicked, this, [this, proxy](const QModelIndex &index) {
+        connect(ui->view, &viv::VirtualItemView::clicked, this, [this, proxy](const QModelIndex &index) {
             const QModelIndex source = proxy->mapToSource(index);
-            m_status->setText(QStringLiteral("proxy=%1 / source.row=%2 / source.parent=%3")
+            ui->status->setText(QStringLiteral("proxy=%1 / source.row=%2 / source.parent=%3")
                 .arg(index.data().toString()).arg(source.row()).arg(source.parent().data().toString()));
         });
         proxy->sort(0, Qt::AscendingOrder);
-        m_view->expand(proxy->index(0, 0));
+        ui->view->expand(proxy->index(0, 0));
     }
 
-    viv::VirtualTreeView *m_view = nullptr;
     QStandardItemModel *m_model = nullptr;
-    QLabel *m_status = nullptr;
-    QLineEdit *filter = nullptr;
-    QComboBox *order = nullptr;
 };
 
 QWidget *createExample(QWidget *parent)

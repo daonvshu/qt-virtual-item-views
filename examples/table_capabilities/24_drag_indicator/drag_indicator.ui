@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ui version="4.0">
+ <class>TableDragIndicatorPage</class>
+ <widget class="QWidget" name="TableDragIndicatorPage">
+  <layout class="QVBoxLayout" name="layout" stretch="0,0,1">
+   <item>
+    <widget class="QLabel" name="description">
+     <property name="text">
+      <string>24 整行指示器拖动：整行 Move 与 Ctrl 复制，支持自动起拖或手柄手动起拖</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="controls">
+     <item>
+      <widget class="QComboBox" name="start">
+       <item>
+        <property name="text">
+         <string>Automatic 自动起拖</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Manual 手柄起拖</string>
+        </property>
+       </item>
+      </widget>
+     </item>
+     <item>
+      <widget class="QSpinBox" name="width">
+       <property name="minimum">
+        <number>0</number>
+       </property>
+       <property name="maximum">
+        <number>6</number>
+       </property>
+       <property name="value">
+        <number>2</number>
+       </property>
+       <property name="prefix">
+        <string>指示器宽 </string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QComboBox" name="pen">
+       <item>
+        <property name="text">
+         <string>实线</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>虚线</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>点线</string>
+        </property>
+       </item>
+      </widget>
+     </item>
+     <item>
+      <spacer name="spacer1">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeType">
+        <enum>QSizePolicy::Expanding</enum>
+       </property>
+       <property name="sizeHint">
+        <size>
+         <width>0</width>
+         <height>0</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="viv::VirtualTableView" name="view" />
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>viv::VirtualTableView</class>
+   <extends>QAbstractScrollArea</extends>
+   <header>virtualitemviews/virtualtableview.h</header>
+  </customwidget>
+ </customwidgets>
+ <resources />
+ <connections />
+</ui>

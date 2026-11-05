@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ui version="4.0">
+ <class>TreeWidgetTypesPage</class>
+ <widget class="QWidget" name="TreeWidgetTypesPage">
+  <layout class="QVBoxLayout" name="layout" stretch="0,1">
+   <item>
+    <widget class="QLabel" name="description">
+     <property name="text">
+      <string>03 节点类型：分组用文本，叶子用进度条，复用池按 WidgetType 隔离。</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="viv::VirtualTreeView" name="view" />
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>viv::VirtualTreeView</class>
+   <extends>QAbstractScrollArea</extends>
+   <header>virtualitemviews/virtualtreeview.h</header>
+  </customwidget>
+ </customwidgets>
+ <resources />
+ <connections />
+</ui>

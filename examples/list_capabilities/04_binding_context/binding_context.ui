@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ui version="4.0">
+ <class>ListBindingContextPage</class>
+ <widget class="QWidget" name="ListBindingContextPage">
+  <layout class="QVBoxLayout" name="layout" stretch="0,1">
+   <item>
+    <widget class="QLabel" name="label1">
+     <property name="text">
+      <string>04 整行数据绑定：model 每行存一份 Record，bind 直接接收 rowData。</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="viv::VirtualListView" name="view" />
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>viv::VirtualListView</class>
+   <extends>QAbstractScrollArea</extends>
+   <header>virtualitemviews/virtuallistview.h</header>
+  </customwidget>
+ </customwidgets>
+ <resources />
+ <connections />
+</ui>

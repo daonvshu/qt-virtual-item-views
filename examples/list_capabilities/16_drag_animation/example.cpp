@@ -1,3 +1,5 @@
+#include "ui_drag_animation.h"
+#include <memory>
 #include "example.h"
 #include <virtualitemviews/virtuallistview.h>
 #include <virtualitemviews/widgetadapter.h>
@@ -9,7 +11,6 @@
 #include <QPushButton>
 #include <QSpinBox>
 #include <QStandardItemModel>
-#include <QVBoxLayout>
 #include <functional>
 
 namespace list_drag_animation {
@@ -119,123 +120,93 @@ private:
 class Example : public QWidget
 {
 public:
-    explicit Example(QWidget *parent) : QWidget(parent)
+    explicit Example(QWidget *parent) : QWidget(parent), ui(new Ui::ListDragAnimationPage)
     {
         setupUi();
         setupExample();
     }
 
 private:
+    std::unique_ptr<Ui::ListDragAnimationPage> ui;
+
     void setupUi()
     {
-        auto *layout = new QVBoxLayout(this);
-        auto *intro = new QLabel(QStringLiteral("16 行移动动画拖动：拖动时其他行滑动让位，放下才改变数据。Automatic 和 Manual 均支持；复制时使用默认指示器，Esc 取消。"), this);
-        intro->setWordWrap(true);
-        layout->addWidget(intro);
-        auto *controls = new QHBoxLayout;
-        m_mode = new QComboBox(this);
-        m_mode->addItems({QStringLiteral("Automatic"), QStringLiteral("Manual")});
-        m_action = new QComboBox(this);
-        m_action->addItems({QStringLiteral("默认移动（Ctrl 复制）"), QStringLiteral("默认复制")});
-        controls->addWidget(m_mode);
-        controls->addWidget(m_action);
-        layout->addLayout(controls);
-        auto *animationControls = new QHBoxLayout;
-        m_animationDuration = new QSpinBox(this);
-        m_animationDuration->setRange(0, 2000);
-        m_animationDuration->setValue(180);
-        m_animationDuration->setSuffix(QStringLiteral(" ms"));
-        m_animationDuration->setToolTip(QStringLiteral("0 表示立即让位，不播放过渡动画"));
-        m_animationEasing = new QComboBox(this);
-        m_animationEasing->addItem(QStringLiteral("OutCubic"), int(QEasingCurve::OutCubic));
-        m_animationEasing->addItem(QStringLiteral("Linear"), int(QEasingCurve::Linear));
-        m_animationEasing->addItem(QStringLiteral("InOutCubic"), int(QEasingCurve::InOutCubic));
-        animationControls->addWidget(new QLabel(QStringLiteral("行移动时长"), this));
-        animationControls->addWidget(m_animationDuration);
-        animationControls->addWidget(new QLabel(QStringLiteral("动画曲线"), this));
-        animationControls->addWidget(m_animationEasing);
-        animationControls->addStretch();
-        layout->addLayout(animationControls);
-        m_view = new viv::VirtualListView(this);
-        layout->addWidget(m_view, 1);
-        m_status = new QLabel(QStringLiteral("QStandardItemModel 负责 MIME 与插入；view 在 Move 成功后删除源行，并让新条目继承原条目的选择。"), this);
-        m_status->setWordWrap(true);
-        layout->addWidget(m_status);
+        ui->setupUi(this);
+
+        // Keep framework configuration and item data visible in the example.
+        ui->view->setObjectName(QStringLiteral("vivItemView"));
+        ui->animationEasing->setItemData(0, int(QEasingCurve::OutCubic));
+        ui->animationEasing->setItemData(1, int(QEasingCurve::Linear));
+        ui->animationEasing->setItemData(2, int(QEasingCurve::InOutCubic));
     }
 
     void setupExample()
     {
-        auto *model = new QStandardItemModel(m_view);
+        auto *model = new QStandardItemModel(ui->view);
         for (int row = 0; row < 100; ++row) {
             auto *item = new QStandardItem(QStringLiteral("条目 %1").arg(row + 1));
             item->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable | Qt::ItemIsDragEnabled);
             model->appendRow(item);
         }
         model->invisibleRootItem()->setDropEnabled(true);
-        auto *adapter = new DragAdapter(*m_view);
+        auto *adapter = new DragAdapter(*ui->view);
         // Use built-in hover/selection backgrounds instead of custom row painting.
-        m_view->setVisualStateBackgroundVisible(true);
-        m_view->setVisualStateCornerRadius(6);
-        m_view->setHoverBackgroundColor(QColor(QStringLiteral("#e4effb")));
-        m_view->setSelectedBackgroundColor(QColor(QStringLiteral("#b8d5f3")));
+        ui->view->setVisualStateBackgroundVisible(true);
+        ui->view->setVisualStateCornerRadius(6);
+        ui->view->setHoverBackgroundColor(QColor(QStringLiteral("#e4effb")));
+        ui->view->setSelectedBackgroundColor(QColor(QStringLiteral("#b8d5f3")));
         // Keep the view-referencing adapter alive through row teardown callbacks.
-        m_view->setAdapter(adapter, true);
-        m_view->setUniformItemHeight(44);
+        ui->view->setAdapter(adapter, true);
+        ui->view->setUniformItemHeight(44);
         // This example drags one row. The model owns the MIME/data semantics.
-        m_view->setSelectionMode(viv::VirtualItemView::SelectionMode::SingleSelection);
+        ui->view->setSelectionMode(viv::VirtualItemView::SelectionMode::SingleSelection);
         // Enable native drag/drop processing. This does not replace model flags
         // or the model's canDropMimeData()/dropMimeData() implementation.
-        m_view->setDragEnabled(true);
+        ui->view->setDragEnabled(true);
         // Automatic starts after the platform drag distance; Manual requires startDrag().
-        m_view->setDragStartMode(viv::VirtualItemView::DragStartMode::Automatic);
+        ui->view->setDragStartMode(viv::VirtualItemView::DragStartMode::Automatic);
         // Offered actions restrict negotiation; default action chooses the preferred
         // result when the target allows it and modifiers do not request another action.
-        m_view->setDragDropActions(Qt::CopyAction | Qt::MoveAction);
-        m_view->setDefaultDropAction(Qt::MoveAction);
+        ui->view->setDragDropActions(Qt::CopyAction | Qt::MoveAction);
+        ui->view->setDefaultDropAction(Qt::MoveAction);
         // QStandardItemModel inserts the payload; it does not move existing row identities.
         // Let the view delete source rows after Move. Keep false for a model that
         // already performs moveRows(), or the moved rows could be deleted again.
         // For this row-insertion model, the view also transfers selection/current
         // to the inserted counterpart after deleting the selected source row.
-        m_view->setMoveRemovesSourceRows(true);
+        ui->view->setMoveRemovesSourceRows(true);
         // Neighboring rows make room during a single-row Move. The model stays
         // unchanged until drop; Automatic and Manual use the same animation.
         // Copy, external drags and other unsupported cases retain the default indicator.
-        m_view->setDragFeedbackMode(viv::VirtualListView::DragFeedbackMode::RowMoveAnimation);
+        ui->view->setDragFeedbackMode(viv::VirtualListView::DragFeedbackMode::RowMoveAnimation);
         // These settings control row movement, independently of hover animation.
         // Zero duration makes room immediately; the default is 180ms / OutCubic.
-        m_view->setDragReorderAnimationDuration(180);
-        m_view->setDragReorderAnimationEasingCurve(QEasingCurve::OutCubic);
-        m_view->setModel(model);
-        connect(m_mode, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int mode) {
-            m_view->setDragStartMode(mode == 0 ? viv::VirtualItemView::DragStartMode::Automatic
+        ui->view->setDragReorderAnimationDuration(180);
+        ui->view->setDragReorderAnimationEasingCurve(QEasingCurve::OutCubic);
+        ui->view->setModel(model);
+        connect(ui->mode, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int mode) {
+            ui->view->setDragStartMode(mode == 0 ? viv::VirtualItemView::DragStartMode::Automatic
                                               : viv::VirtualItemView::DragStartMode::Manual);
         });
-        connect(m_action, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int action) {
-            m_view->setDefaultDropAction(action == 0 ? Qt::MoveAction : Qt::CopyAction);
+        connect(ui->action, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int action) {
+            ui->view->setDefaultDropAction(action == 0 ? Qt::MoveAction : Qt::CopyAction);
         });
-        connect(m_animationDuration, QOverload<int>::of(&QSpinBox::valueChanged), this, [this](int duration) {
-            m_view->setDragReorderAnimationDuration(duration);
+        connect(ui->animationDuration, QOverload<int>::of(&QSpinBox::valueChanged), this, [this](int duration) {
+            ui->view->setDragReorderAnimationDuration(duration);
         });
-        connect(m_animationEasing, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int) {
-            m_view->setDragReorderAnimationEasingCurve(
-                QEasingCurve(static_cast<QEasingCurve::Type>(m_animationEasing->currentData().toInt())));
+        connect(ui->animationEasing, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int) {
+            ui->view->setDragReorderAnimationEasingCurve(
+                QEasingCurve(static_cast<QEasingCurve::Type>(ui->animationEasing->currentData().toInt())));
         });
         // Emitted only after the model accepts a drop. Source cleanup may still
         // follow when the native drag returns, so this is not a final-state snapshot.
-        connect(m_view, &viv::VirtualItemView::itemDropped, this,
+        connect(ui->view, &viv::VirtualItemView::itemDropped, this,
                 [this](const QModelIndex &, int row, int, Qt::DropAction action) {
-            m_status->setText(QStringLiteral("model 已接受落点：插入 row=%1，action=%2；拖动结束后框架恢复普通 hover。")
+            ui->status->setText(QStringLiteral("model 已接受落点：插入 row=%1，action=%2；拖动结束后框架恢复普通 hover。")
                 .arg(row).arg(action == Qt::MoveAction ? QStringLiteral("Move") : QStringLiteral("Copy")));
         });
     }
 
-    viv::VirtualListView *m_view = nullptr;
-    QComboBox *m_mode = nullptr;
-    QComboBox *m_action = nullptr;
-    QSpinBox *m_animationDuration = nullptr;
-    QComboBox *m_animationEasing = nullptr;
-    QLabel *m_status = nullptr;
 };
 
 QWidget *createExample(QWidget *parent)

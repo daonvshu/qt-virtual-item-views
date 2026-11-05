@@ -1,13 +1,13 @@
+#include "ui_expansion.h"
+#include <memory>
 #include "example.h"
 #include <virtualitemviews/virtualtreeview.h>
 #include <virtualitemviews/widgetadapter.h>
 #include <QCheckBox>
-#include <QHBoxLayout>
 #include <QLabel>
 #include <QPushButton>
 #include <QSpinBox>
 #include <QStandardItemModel>
-#include <QVBoxLayout>
 
 namespace tree_expansion {
 
@@ -38,57 +38,27 @@ public:
 class Example : public QWidget
 {
 public:
-    explicit Example(QWidget *parent) : QWidget(parent)
+    explicit Example(QWidget *parent) : QWidget(parent), ui(new Ui::TreeExpansionPage)
     {
         setupUi();
         setupExample();
     }
 
 private:
+    std::unique_ptr<Ui::TreeExpansionPage> ui;
+
     void setupUi()
     {
-        auto *layout = new QVBoxLayout(this);
-        auto *description = new QLabel(QStringLiteral("07 展开：当前节点可展开、收起、切换或递归展开。方向键右/左和 * 也可操作。"), this);
-        description->setWordWrap(true);
-        layout->addWidget(description);
-        auto *controls = new QHBoxLayout;
-        open = new QPushButton(QStringLiteral("展开"), this);
-        controls->addWidget(open);
-        close = new QPushButton(QStringLiteral("收起"), this);
-        controls->addWidget(close);
-        toggle = new QPushButton(QStringLiteral("切换"), this);
-        controls->addWidget(toggle);
-        recursive = new QPushButton(QStringLiteral("递归展开"), this);
-        controls->addWidget(recursive);
-        all = new QPushButton(QStringLiteral("全部收起"), this);
-        controls->addWidget(all);
-        controls->addStretch();
-        layout->addLayout(controls);
-        auto *options = new QHBoxLayout;
-        animated = new QCheckBox(QStringLiteral("动画"), this);
-        animated->setChecked(true);
-        options->addWidget(animated);
-        fade = new QCheckBox(QStringLiteral("子节点淡入淡出"), this);
-        fade->setChecked(true);
-        options->addWidget(fade);
-        duration = new QSpinBox(this);
-        duration->setRange(0, 1000);
-        duration->setValue(300);
-        duration->setPrefix(QStringLiteral("时长 ms "));
-        options->addWidget(duration);
-        options->addStretch();
-        layout->addLayout(options);
-        m_view = new viv::VirtualTreeView(this);
-        layout->addWidget(m_view, 1);
-        m_status = new QLabel(this);
-        m_status->setWordWrap(true);
-        layout->addWidget(m_status);
+        ui->setupUi(this);
+
+        // Keep framework configuration and item data visible in the example.
+        ui->view->setObjectName(QStringLiteral("vivItemView"));
     }
 
     void setupExample()
     {
         // A plain QStandardItemModel owns the hierarchy; only column zero owns children.
-        m_model = new QStandardItemModel(m_view);
+        m_model = new QStandardItemModel(ui->view);
         for (int group = 0; group < 8; ++group) {
             auto *branch = new QStandardItem(QStringLiteral("分组 %1").arg(group + 1));
             m_model->appendRow(branch);
@@ -104,54 +74,44 @@ private:
         }
 
         // The view owns the adapter through teardown; the QObject parent owns the model.
-        m_view->setAdapter(new TextAdapter, true);
+        ui->view->setAdapter(new TextAdapter, true);
         // Uniform height avoids measuring each materialized node.
-        m_view->setUniformItemHeight(36);
+        ui->view->setUniformItemHeight(36);
         // Qt model signals update the visible mapping and reused widgets automatically.
-        m_view->setModel(m_model);
+        ui->view->setModel(m_model);
 
         // Expansion animation is enabled by default; it changes visuals, not model identities.
-        m_view->setExpansionAnimationDuration(300);
+        ui->view->setExpansionAnimationDuration(300);
         // Fading is enabled by default. The checkbox calls setExpansionFadeEnabled(false)
         // to disable it without disabling the live height transition.
-        fade->setChecked(m_view->expansionFadeEnabled());
-        m_view->setCurrentIndex(m_model->index(0, 0));
-        connect(open, &QPushButton::clicked, this, [this] { m_view->expand(m_view->currentIndex()); });
-        connect(close, &QPushButton::clicked, this, [this] { m_view->collapse(m_view->currentIndex()); });
-        connect(toggle, &QPushButton::clicked, this, [this] { m_view->toggleExpanded(m_view->currentIndex()); });
-        connect(recursive, &QPushButton::clicked, this, [this] { m_view->expandRecursively(m_view->currentIndex()); });
-        connect(animated, &QCheckBox::toggled, m_view, &viv::VirtualTreeView::setExpansionAnimationEnabled);
-        connect(fade, &QCheckBox::toggled, m_view, &viv::VirtualTreeView::setExpansionFadeEnabled);
-        connect(animated, &QCheckBox::toggled, fade, &QWidget::setEnabled);
-        connect(duration, QOverload<int>::of(&QSpinBox::valueChanged), m_view,
+        ui->fade->setChecked(ui->view->expansionFadeEnabled());
+        ui->view->setCurrentIndex(m_model->index(0, 0));
+        connect(ui->open, &QPushButton::clicked, this, [this] { ui->view->expand(ui->view->currentIndex()); });
+        connect(ui->close, &QPushButton::clicked, this, [this] { ui->view->collapse(ui->view->currentIndex()); });
+        connect(ui->toggle, &QPushButton::clicked, this, [this] { ui->view->toggleExpanded(ui->view->currentIndex()); });
+        connect(ui->recursive, &QPushButton::clicked, this, [this] { ui->view->expandRecursively(ui->view->currentIndex()); });
+        connect(ui->animated, &QCheckBox::toggled, ui->view, &viv::VirtualTreeView::setExpansionAnimationEnabled);
+        connect(ui->fade, &QCheckBox::toggled, ui->view, &viv::VirtualTreeView::setExpansionFadeEnabled);
+        connect(ui->animated, &QCheckBox::toggled, ui->fade, &QWidget::setEnabled);
+        connect(ui->duration, QOverload<int>::of(&QSpinBox::valueChanged), ui->view,
                 &viv::VirtualTreeView::setExpansionAnimationDuration);
         const auto report = [this](const QModelIndex &index) {
-            m_status->setText(QStringLiteral("%1 / expanded=%2 / hasChildren=%3 / 可见树节点=%4")
-                .arg(index.data().toString()).arg(m_view->isExpanded(index))
-                .arg(m_view->hasChildren(index)).arg(m_view->visibleRowCount()));
+            ui->status->setText(QStringLiteral("%1 / expanded=%2 / hasChildren=%3 / 可见树节点=%4")
+                .arg(index.data().toString()).arg(ui->view->isExpanded(index))
+                .arg(ui->view->hasChildren(index)).arg(ui->view->visibleRowCount()));
         };
-        connect(m_view, &viv::VirtualTreeView::expanded, this, report);
-        connect(m_view, &viv::VirtualTreeView::collapsed, this, report);
-        connect(all, &QPushButton::clicked, this, [this, report] {
-            m_view->collapseAll();
-            report(m_view->currentIndex());
+        connect(ui->view, &viv::VirtualTreeView::expanded, this, report);
+        connect(ui->view, &viv::VirtualTreeView::collapsed, this, report);
+        connect(ui->all, &QPushButton::clicked, this, [this, report] {
+            ui->view->collapseAll();
+            report(ui->view->currentIndex());
         });
         // Populate the status before showing the page. An initially empty label
         // grows on the first expanded signal, resizing the tree and ending its animation.
-        report(m_view->currentIndex());
+        report(ui->view->currentIndex());
     }
 
-    viv::VirtualTreeView *m_view = nullptr;
     QStandardItemModel *m_model = nullptr;
-    QLabel *m_status = nullptr;
-    QPushButton *open = nullptr;
-    QPushButton *close = nullptr;
-    QPushButton *toggle = nullptr;
-    QPushButton *recursive = nullptr;
-    QPushButton *all = nullptr;
-    QCheckBox *animated = nullptr;
-    QCheckBox *fade = nullptr;
-    QSpinBox *duration = nullptr;
 };
 
 QWidget *createExample(QWidget *parent)

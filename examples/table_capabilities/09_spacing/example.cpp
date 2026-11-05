@@ -1,3 +1,5 @@
+#include "ui_spacing.h"
+#include <memory>
 #include "example.h"
 #include <virtualitemviews/virtualtableview.h>
 #include <virtualitemviews/tablewidgetadapter.h>
@@ -6,8 +8,6 @@
 #include <QSpinBox>
 #include <QCheckBox>
 #include <QComboBox>
-#include <QHBoxLayout>
-#include <QVBoxLayout>
 
 namespace table_spacing {
 
@@ -34,235 +34,163 @@ public:
 class Example : public QWidget
 {
 public:
-    explicit Example(QWidget *parent) : QWidget(parent)
+    explicit Example(QWidget *parent) : QWidget(parent), ui(new Ui::TableSpacingPage)
     {
         setupUi();
         setupExample();
     }
 
 private:
+    std::unique_ptr<Ui::TableSpacingPage> ui;
+
     void setupUi()
     {
-        auto *layout = new QVBoxLayout(this);
-        auto *description = new QLabel(QStringLiteral("09 间距与分割线：中心模式默认保留四周半间距，可独立将表头交界设为全间距"), this);
-        description->setWordWrap(true);
-        layout->addWidget(description);
-        auto *controls = new QHBoxLayout;
-        m_rows = new QSpinBox(this);
-        m_rows->setRange(0, 40);
-        m_rows->setValue(12);
-        m_rows->setPrefix(QStringLiteral("行间距 "));
-        controls->addWidget(m_rows);
-        m_columns = new QSpinBox(this);
-        m_columns->setRange(0, 40);
-        m_columns->setValue(12);
-        m_columns->setPrefix(QStringLiteral("列间距 "));
-        controls->addWidget(m_columns);
-        m_lines = new QSpinBox(this);
-        m_lines->setRange(1, 6);
-        m_lines->setValue(1);
-        m_lines->setPrefix(QStringLiteral("线宽 "));
-        controls->addWidget(m_lines);
-        m_grid = new QCheckBox(QStringLiteral("显示网格"), this);
-        m_grid->setChecked(true);
-        controls->addWidget(m_grid);
-        m_custom = new QCheckBox(QStringLiteral("自定义间距控件"), this);
-        m_custom->setChecked(false);
-        controls->addWidget(m_custom);
-        m_cross = new QCheckBox(QStringLiteral("网格穿过间距"), this);
-        m_cross->setChecked(true);
-        m_cross->setEnabled(false);
-        controls->addWidget(m_cross);
-        controls->addStretch();
-        layout->addLayout(controls);
-        auto *placement = new QHBoxLayout;
-        m_placement = new QComboBox(this);
-        m_placement->addItem(QStringLiteral("间距中心（默认；零间距回退单线）"));
-        m_placement->addItem(QStringLiteral("间距两侧"));
-        placement->addWidget(m_placement);
-        m_verticalHeaderLines = new QCheckBox(QStringLiteral("竖线穿过水平表头"), this);
-        m_verticalHeaderLines->setChecked(true);
-        placement->addWidget(m_verticalHeaderLines);
-        m_horizontalHeaderLines = new QCheckBox(QStringLiteral("横线穿过垂直表头"), this);
-        m_horizontalHeaderLines->setChecked(true);
-        placement->addWidget(m_horizontalHeaderLines);
-        placement->addStretch();
-        layout->addLayout(placement);
-        auto *headerGaps = new QHBoxLayout;
-        m_horizontalHeaderGap = new QCheckBox(QStringLiteral("水平表头与首行之间保留全间距"), this);
-        m_horizontalHeaderGap->setChecked(false);
-        headerGaps->addWidget(m_horizontalHeaderGap);
-        m_verticalHeaderGap = new QCheckBox(QStringLiteral("垂直表头与首列之间保留全间距"), this);
-        m_verticalHeaderGap->setChecked(false);
-        headerGaps->addWidget(m_verticalHeaderGap);
-        headerGaps->addStretch();
-        layout->addLayout(headerGaps);
-        auto *colors = new QHBoxLayout;
-        m_bodyColor = new QCheckBox(QStringLiteral("内容间距背景色"), this);
-        colors->addWidget(m_bodyColor);
-        m_headerColor = new QCheckBox(QStringLiteral("表头间距背景色"), this);
-        colors->addWidget(m_headerColor);
-        m_stateCross = new QCheckBox(QStringLiteral("Hover / 选中背景穿过列间距"), this);
-        m_stateCross->setChecked(true);
-        colors->addWidget(m_stateCross);
-        m_rowStateCross = new QCheckBox(QStringLiteral("状态延伸到上下半行间距"), this);
-        m_rowStateCross->setChecked(true);
-        colors->addWidget(m_rowStateCross);
-        colors->addStretch();
-        layout->addLayout(colors);
-        auto *scenarios = new QHBoxLayout;
-        m_frozenColumns = new QCheckBox(QStringLiteral("冻结左右列（各一列）"), this);
-        scenarios->addWidget(m_frozenColumns);
-        m_frozenRows = new QCheckBox(QStringLiteral("冻结上下行（各一行）"), this);
-        scenarios->addWidget(m_frozenRows);
-        m_smallData = new QCheckBox(QStringLiteral("少量数据（4 行 × 3 列）"), this);
-        scenarios->addWidget(m_smallData);
-        scenarios->addStretch();
-        layout->addLayout(scenarios);
-        m_view = new viv::VirtualTableView(this);
-        m_view->setObjectName(QStringLiteral("spacingTable"));
+        ui->setupUi(this);
+
+        // Keep framework configuration and item data visible in the example.
+        ui->view->setObjectName(QStringLiteral("vivItemView"));
+        ui->view->setObjectName(QStringLiteral("spacingTable"));
         // Match the grid color; target only the table's outer frame.
-        m_view->setStyleSheet(QStringLiteral("#spacingTable { border: 1px solid #8aa2bb; }"));
-        layout->addWidget(m_view, 1);
+        ui->view->setStyleSheet(QStringLiteral("#spacingTable { border: 1px solid #8aa2bb; }"));
     }
 
     void setupExample()
     {
         // Materialize cells independently so horizontally offscreen cells can also be recycled.
-        m_view->setMaterializationMode(viv::VirtualTableView::MaterializationMode::CellWidgets);
-        m_view->setCellAdapter(new CellAdapter, true);
+        ui->view->setMaterializationMode(viv::VirtualTableView::MaterializationMode::CellWidgets);
+        ui->view->setCellAdapter(new CellAdapter, true);
         // Use a fixed row height to avoid measuring each row.
-        m_view->setUniformItemHeight(40);
+        ui->view->setUniformItemHeight(40);
         // The header and body share the same column geometry.
-        m_view->setDefaultColumnWidth(150);
-        m_model = new QStandardItemModel(m_view);
+        ui->view->setDefaultColumnWidth(150);
+        m_model = new QStandardItemModel(ui->view);
         populateModel(false);
         // The QObject parent owns the model; Qt model signals report data and structure changes.
-        m_view->setModel(m_model);
+        ui->view->setModel(m_model);
         // Center placement extends each state to the adjacent half of each row gap.
-        m_view->setRowSpacing(12);
-        m_view->setColumnSpacing(12);
+        ui->view->setRowSpacing(12);
+        ui->view->setColumnSpacing(12);
         // The orientation names the header, not the direction of the gap.
         // Default false: keep outer half-spacing in center mode, zero in edge mode.
-        m_view->setHeaderContentSpacingEnabled(Qt::Horizontal, false);
-        m_view->setHeaderContentSpacingEnabled(Qt::Vertical, false);
-        connect(m_horizontalHeaderGap, &QCheckBox::toggled, this, [this](bool enabled) {
+        ui->view->setHeaderContentSpacingEnabled(Qt::Horizontal, false);
+        ui->view->setHeaderContentSpacingEnabled(Qt::Vertical, false);
+        connect(ui->horizontalHeaderGap, &QCheckBox::toggled, this, [this](bool enabled) {
             // Horizontal header: add the full rowSpacing() above the first row.
-            m_view->setHeaderContentSpacingEnabled(Qt::Horizontal, enabled);
+            ui->view->setHeaderContentSpacingEnabled(Qt::Horizontal, enabled);
         });
-        connect(m_verticalHeaderGap, &QCheckBox::toggled, this, [this](bool enabled) {
+        connect(ui->verticalHeaderGap, &QCheckBox::toggled, this, [this](bool enabled) {
             // Vertical header: add the full columnSpacing() before the first column.
-            m_view->setHeaderContentSpacingEnabled(Qt::Vertical, enabled);
+            ui->view->setHeaderContentSpacingEnabled(Qt::Vertical, enabled);
         });
-        m_view->setVisualStateThroughColumnSpacing(true);
-        m_view->setVisualStateThroughRowSpacing(true);
+        ui->view->setVisualStateThroughColumnSpacing(true);
+        ui->view->setVisualStateThroughRowSpacing(true);
         // Enable resizing here to demonstrate handles aligned with the spacing grid lines.
-        m_view->setColumnResizeEnabled(true);
-        m_view->setVerticalHeaderResizeEnabled(true);
-        m_view->setHorizontalGridLineColor(QColor(QStringLiteral("#8aa2bb")));
-        m_view->setVerticalGridLineColor(QColor(QStringLiteral("#8aa2bb")));
+        ui->view->setColumnResizeEnabled(true);
+        ui->view->setVerticalHeaderResizeEnabled(true);
+        ui->view->setHorizontalGridLineColor(QColor(QStringLiteral("#8aa2bb")));
+        ui->view->setVerticalGridLineColor(QColor(QStringLiteral("#8aa2bb")));
         // One style configures both row and column pane dividers, independently of the grid.
         viv::PaneSeparatorStyle frozenSeparator;
         frozenSeparator.width = 2;
         frozenSeparator.color = QColor(Qt::red);
         frozenSeparator.lineStyle = Qt::DashLine;
-        m_view->setPaneSeparatorStyle(frozenSeparator);
+        ui->view->setPaneSeparatorStyle(frozenSeparator);
         // Center placement always crosses gaps; zero spacing shares one item boundary.
-        m_view->setGridLinePlacement(viv::GridLinePlacement::SpacingCenter);
-        connect(m_placement, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int mode) {
-            m_view->setGridLinePlacement(mode == 0 ? viv::GridLinePlacement::SpacingCenter
+        ui->view->setGridLinePlacement(viv::GridLinePlacement::SpacingCenter);
+        connect(ui->placement, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int mode) {
+            ui->view->setGridLinePlacement(mode == 0 ? viv::GridLinePlacement::SpacingCenter
                                                   : viv::GridLinePlacement::SpacingEdges);
-            m_cross->setEnabled(mode != 0);
-            m_rowStateCross->setEnabled(mode == 0);
+            ui->cross->setEnabled(mode != 0);
+            ui->rowStateCross->setEnabled(mode == 0);
             if (mode == 0) {
-                m_cross->setChecked(true);
+                ui->cross->setChecked(true);
             } else {
-                m_view->setVerticalSpacingLineThroughRowSpacing(m_cross->isChecked());
-                m_view->setHorizontalSpacingLineThroughColumnSpacing(m_cross->isChecked());
+                ui->view->setVerticalSpacingLineThroughRowSpacing(ui->cross->isChecked());
+                ui->view->setHorizontalSpacingLineThroughColumnSpacing(ui->cross->isChecked());
             }
         });
-        connect(m_verticalHeaderLines, &QCheckBox::toggled, m_view,
+        connect(ui->verticalHeaderLines, &QCheckBox::toggled, ui->view,
                 &viv::VirtualTableView::setVerticalGridLinesThroughHeader);
-        connect(m_horizontalHeaderLines, &QCheckBox::toggled, m_view,
+        connect(ui->horizontalHeaderLines, &QCheckBox::toggled, ui->view,
                 &viv::VirtualTableView::setHorizontalGridLinesThroughHeader);
-        connect(m_frozenColumns, &QCheckBox::toggled, this, [this](bool) {
+        connect(ui->frozenColumns, &QCheckBox::toggled, this, [this](bool) {
             applyFrozenColumns();
         });
-        connect(m_frozenRows, &QCheckBox::toggled, this, [this](bool enabled) {
+        connect(ui->frozenRows, &QCheckBox::toggled, this, [this](bool enabled) {
             // Both placements split pane gaps; edge placement also outlines each cell side.
-            m_view->setFrozenRows(enabled ? 1 : 0);
-            m_view->setFrozenBottomRows(enabled ? 1 : 0);
+            ui->view->setFrozenRows(enabled ? 1 : 0);
+            ui->view->setFrozenBottomRows(enabled ? 1 : 0);
         });
-        connect(m_smallData, &QCheckBox::toggled, this, [this](bool small) {
+        connect(ui->smallData, &QCheckBox::toggled, this, [this](bool small) {
             // Release old logical column indexes before changing the model dimensions.
-            m_view->clearFrozenColumns();
+            ui->view->clearFrozenColumns();
             populateModel(small);
             applyFrozenColumns();
             // Return to the content origin while keeping normal scrollbar visibility rules.
-            m_view->scrollByHorizontalPixels(-m_view->horizontalOffset());
-            m_view->scrollTo(m_model->index(0, 0), viv::VirtualItemView::PositionAtTop);
+            ui->view->scrollByHorizontalPixels(-ui->view->horizontalOffset());
+            ui->view->scrollTo(m_model->index(0, 0), viv::VirtualItemView::PositionAtTop);
         });
 
-        connect(m_bodyColor, &QCheckBox::toggled, this, [this](bool enabled) {
+        connect(ui->bodyColor, &QCheckBox::toggled, this, [this](bool enabled) {
             // Color only body row/column gaps; invalid restores the palette defaults.
-            m_view->setSpacingBackgroundColor(enabled ? QColor(QStringLiteral("#e3edf7")) : QColor());
+            ui->view->setSpacingBackgroundColor(enabled ? QColor(QStringLiteral("#e3edf7")) : QColor());
         });
-        connect(m_headerColor, &QCheckBox::toggled, this, [this](bool enabled) {
+        connect(ui->headerColor, &QCheckBox::toggled, this, [this](bool enabled) {
             // Both header axes and frozen header panes share this gap color.
             const QColor color = enabled ? QColor(QStringLiteral("#e3edf7")) : QColor();
-            m_view->horizontalHeader()->setSpacingBackgroundColor(color);
-            m_view->verticalHeader()->setSpacingBackgroundColor(color);
+            ui->view->horizontalHeader()->setSpacingBackgroundColor(color);
+            ui->view->verticalHeader()->setSpacingBackgroundColor(color);
         });
-        connect(m_stateCross, &QCheckBox::toggled, this, [this](bool enabled) {
+        connect(ui->stateCross, &QCheckBox::toggled, this, [this](bool enabled) {
             // This controls horizontal gap coverage for whole-row hover and selection.
-            m_view->setVisualStateThroughColumnSpacing(enabled);
+            ui->view->setVisualStateThroughColumnSpacing(enabled);
         });
-        connect(m_rowStateCross, &QCheckBox::toggled, m_view,
+        connect(ui->rowStateCross, &QCheckBox::toggled, ui->view,
                 &viv::VirtualTableView::setVisualStateThroughRowSpacing);
-        connect(m_rows, QOverload<int>::of(&QSpinBox::valueChanged), this, [this](int value) {
-            m_view->setRowSpacing(value);
+        connect(ui->rows, QOverload<int>::of(&QSpinBox::valueChanged), this, [this](int value) {
+            ui->view->setRowSpacing(value);
         });
-        connect(m_columns, QOverload<int>::of(&QSpinBox::valueChanged), this, [this](int value) {
-            m_view->setColumnSpacing(value);
+        connect(ui->columns, QOverload<int>::of(&QSpinBox::valueChanged), this, [this](int value) {
+            ui->view->setColumnSpacing(value);
         });
-        connect(m_lines, QOverload<int>::of(&QSpinBox::valueChanged), this, [this](int value) {
-            m_view->setHorizontalGridLineWidth(value);
-            m_view->setVerticalGridLineWidth(value);
+        connect(ui->lines, QOverload<int>::of(&QSpinBox::valueChanged), this, [this](int value) {
+            ui->view->setHorizontalGridLineWidth(value);
+            ui->view->setVerticalGridLineWidth(value);
         });
-        connect(m_grid, &QCheckBox::toggled, this, [this](bool enabled) {
-            m_view->setHorizontalGridLinesVisible(enabled);
-            m_view->setVerticalGridLinesVisible(enabled);
+        connect(ui->grid, &QCheckBox::toggled, this, [this](bool enabled) {
+            ui->view->setHorizontalGridLinesVisible(enabled);
+            ui->view->setVerticalGridLinesVisible(enabled);
         });
-        connect(m_cross, &QCheckBox::toggled, this, [this](bool enabled) {
+        connect(ui->cross, &QCheckBox::toggled, this, [this](bool enabled) {
             // Only edge placement accepts this option; center placement always crosses gaps.
-            m_view->setVerticalSpacingLineThroughRowSpacing(enabled);
-            m_view->setHorizontalSpacingLineThroughColumnSpacing(enabled);
+            ui->view->setVerticalSpacingLineThroughRowSpacing(enabled);
+            ui->view->setHorizontalSpacingLineThroughColumnSpacing(enabled);
         });
-        connect(m_custom, &QCheckBox::toggled, this, [this](bool enabled) {
+        connect(ui->custom, &QCheckBox::toggled, this, [this](bool enabled) {
             if (enabled) {
                 // The factory only creates widgets; the binder replaces their content on every reuse.
-                m_view->setRowSpacingFactory(
+                ui->view->setRowSpacingFactory(
                     [](const QModelIndex &, QWidget *parent) -> QWidget * {
                         return new QLabel(parent);
                     },
                     [](QWidget *widget, const QModelIndex &above) {
                         static_cast<QLabel *>(widget)->setText(QStringLiteral("行 %1 下方").arg(above.row() + 1));
                     });
-                m_view->setColumnSpacingFactory(
+                ui->view->setColumnSpacingFactory(
                     [](int, QWidget *parent) -> QWidget * { return new QLabel(parent); },
                     [](QWidget *widget, int column) {
                         static_cast<QLabel *>(widget)->setText(QString::number(column + 1));
                     });
                 // Header gaps use a separate factory and may show different content from body gaps.
-                m_view->setHeaderColumnSpacingFactory(
+                ui->view->setHeaderColumnSpacingFactory(
                     [](int, QWidget *parent) -> QWidget * { return new QLabel(parent); },
                     [](QWidget *widget, int) {
                         static_cast<QLabel *>(widget)->setText(QStringLiteral("·"));
                     });
             } else {
-                m_view->setRowSpacingFactory({}, {});
-                m_view->setColumnSpacingFactory({}, {});
-                m_view->setHeaderColumnSpacingFactory({}, {});
+                ui->view->setRowSpacingFactory({}, {});
+                ui->view->setColumnSpacingFactory({}, {});
+                ui->view->setHeaderColumnSpacingFactory({}, {});
             }
         });
     }
@@ -285,34 +213,15 @@ private:
     void applyFrozenColumns()
     {
         // Recompute the last logical index for both data sizes; the middle stays scrollable.
-        if (m_frozenColumns->isChecked()) {
-            m_view->setFrozenColumns({0});
-            m_view->setFrozenRightColumns({m_model->columnCount() - 1});
+        if (ui->frozenColumns->isChecked()) {
+            ui->view->setFrozenColumns({0});
+            ui->view->setFrozenRightColumns({m_model->columnCount() - 1});
         } else {
-            m_view->clearFrozenColumns();
+            ui->view->clearFrozenColumns();
         }
     }
 
-    viv::VirtualTableView *m_view = nullptr;
     QStandardItemModel *m_model = nullptr;
-    QSpinBox *m_rows = nullptr;
-    QSpinBox *m_columns = nullptr;
-    QSpinBox *m_lines = nullptr;
-    QCheckBox *m_grid = nullptr;
-    QCheckBox *m_custom = nullptr;
-    QCheckBox *m_cross = nullptr;
-    QComboBox *m_placement = nullptr;
-    QCheckBox *m_verticalHeaderLines = nullptr;
-    QCheckBox *m_horizontalHeaderLines = nullptr;
-    QCheckBox *m_horizontalHeaderGap = nullptr;
-    QCheckBox *m_verticalHeaderGap = nullptr;
-    QCheckBox *m_bodyColor = nullptr;
-    QCheckBox *m_headerColor = nullptr;
-    QCheckBox *m_stateCross = nullptr;
-    QCheckBox *m_rowStateCross = nullptr;
-    QCheckBox *m_frozenColumns = nullptr;
-    QCheckBox *m_frozenRows = nullptr;
-    QCheckBox *m_smallData = nullptr;
 };
 
 QWidget *createExample(QWidget *parent)

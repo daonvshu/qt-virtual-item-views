@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ui version="4.0">
+ <class>TreetableBasicPage</class>
+ <widget class="QWidget" name="TreetableBasicPage">
+  <layout class="QVBoxLayout" name="layout" stretch="0,1">
+   <item>
+    <widget class="QLabel" name="description">
+     <property name="text">
+      <string>01 基础多列树：先展开分组，再操作本章控件观察树表行为。</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="viv::VirtualTreeTableView" name="view" />
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>viv::VirtualTreeTableView</class>
+   <extends>QAbstractScrollArea</extends>
+   <header>virtualitemviews/virtualtreetableview.h</header>
+  </customwidget>
+ </customwidgets>
+ <resources />
+ <connections />
+</ui>

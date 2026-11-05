@@ -1,3 +1,5 @@
+#include "ui_selection.h"
+#include <memory>
 #include "example.h"
 #include <virtualitemviews/virtualtreetableview.h>
 #include <virtualitemviews/tablewidgetadapter.h>
@@ -6,8 +8,6 @@
 #include <QPushButton>
 #include <QComboBox>
 #include <QCheckBox>
-#include <QHBoxLayout>
-#include <QVBoxLayout>
 #include <QItemSelectionModel>
 
 namespace treetable_selection {
@@ -63,69 +63,34 @@ static void appendChildren(QStandardItemModel *model)
 class Example : public QWidget
 {
 public:
-    explicit Example(QWidget *parent) : QWidget(parent)
+    explicit Example(QWidget *parent) : QWidget(parent), ui(new Ui::TreetableSelectionPage)
     {
         setupUi();
         setupExample();
     }
 
 private:
+    std::unique_ptr<Ui::TreetableSelectionPage> ui;
+
     void setupUi()
     {
-        auto *layout = new QVBoxLayout(this);
-        auto *description = new QLabel(QStringLiteral("17 共享选择与键盘导航：先展开分组，再操作本章控件观察树表行为。"), this);
-        description->setWordWrap(true);
-        layout->addWidget(description);
-        auto *controls = new QHBoxLayout;
-        m_mode = new QComboBox(this);
-        m_mode->addItems({QStringLiteral("扩展选择"), QStringLiteral("单选"), QStringLiteral("多选"), QStringLiteral("无选择")});
-        controls->addWidget(m_mode);
-        m_behavior = new QComboBox(this);
-        m_behavior->addItems({QStringLiteral("按行"), QStringLiteral("按格")});
-        controls->addWidget(m_behavior);
-        m_select = new QPushButton(QStringLiteral("程序选择 2~5 行"), this);
-        controls->addWidget(m_select);
-        m_query = new QPushButton(QStringLiteral("查询选择"), this);
-        controls->addWidget(m_query);
-        controls->addStretch();
-        layout->addLayout(controls);
-        auto *headerControls = new QHBoxLayout;
-        m_rowHeaderSelection = new QCheckBox(QStringLiteral("点击行号选整行"), this);
-        m_rowHeaderSelection->setChecked(true);
-        headerControls->addWidget(m_rowHeaderSelection);
-        m_columnHeaderSelection = new QCheckBox(QStringLiteral("点击列头选整列"), this);
-        headerControls->addWidget(m_columnHeaderSelection);
-        headerControls->addStretch();
-        layout->addLayout(headerControls);
-        auto *backgroundControls = new QHBoxLayout;
-        m_rowHeaderBackground = new QCheckBox(QStringLiteral("行号状态背景"), this);
-        m_rowHeaderBackground->setChecked(true);
-        backgroundControls->addWidget(m_rowHeaderBackground);
-        m_columnHeaderBackground = new QCheckBox(QStringLiteral("列头状态背景"), this);
-        m_columnHeaderBackground->setChecked(true);
-        backgroundControls->addWidget(m_columnHeaderBackground);
-        backgroundControls->addWidget(new QLabel(QStringLiteral("关闭两项后，仅 item 显示 hover/selected 背景"), this));
-        backgroundControls->addStretch();
-        layout->addLayout(backgroundControls);
-        m_view = new viv::VirtualTreeTableView(this);
-        layout->addWidget(m_view, 1);
-        m_other = new viv::VirtualTreeTableView(this);
-        layout->addWidget(m_other, 1);
-        m_status = new QLabel(this);
-        m_status->setWordWrap(true);
-        layout->addWidget(m_status);
+        ui->setupUi(this);
+
+        // Keep framework configuration and item data visible in the example.
+        ui->other->setObjectName(QStringLiteral("vivItemView"));
+        ui->view->setObjectName(QStringLiteral("vivItemView"));
     }
 
     void setupExample()
     {
         // Materialize cells independently so horizontally offscreen cells can also be recycled.
-        m_view->setMaterializationMode(viv::VirtualTreeTableView::MaterializationMode::CellWidgets);
-        m_view->setCellAdapter(new CellAdapter, true);
+        ui->view->setMaterializationMode(viv::VirtualTreeTableView::MaterializationMode::CellWidgets);
+        ui->view->setCellAdapter(new CellAdapter, true);
         // Use a fixed row height to avoid measuring each row.
-        m_view->setUniformItemHeight(40);
+        ui->view->setUniformItemHeight(40);
         // The header and body share the same column geometry.
-        m_view->setDefaultColumnWidth(150);
-        m_model = new QStandardItemModel(8, 8, m_view);
+        ui->view->setDefaultColumnWidth(150);
+        m_model = new QStandardItemModel(8, 8, ui->view);
         for (int column = 0; column < m_model->columnCount(); ++column)
             m_model->setHeaderData(column, Qt::Horizontal, QStringLiteral("列 %1").arg(column + 1));
         for (int row = 0; row < m_model->rowCount(); ++row) {
@@ -135,32 +100,32 @@ private:
         }
         // The QObject parent owns the model; Qt model signals report data and structure changes.
         appendChildren(m_model);
-        m_view->setModel(m_model);
+        ui->view->setModel(m_model);
         // Expand through the view; model row numbers remain local to each parent.
-        m_view->setExpansionAnimationEnabled(false);
-        m_view->expandRecursively(m_model->index(0, 0));
-        m_view->setExpansionAnimationEnabled(true);
-        m_view->setColumnWidth(0, 280);
-        m_other->setMaterializationMode(viv::VirtualTreeTableView::MaterializationMode::CellWidgets);
-        m_other->setCellAdapter(new CellAdapter, true);
-        m_other->setUniformItemHeight(40);
-        m_other->setDefaultColumnWidth(150);
-        m_other->setModel(m_model);
-        m_other->setColumnWidth(0, 280);
-        m_other->setExpansionAnimationEnabled(false);
-        m_other->expandRecursively(m_model->index(0, 0));
-        m_other->setExpansionAnimationEnabled(true);
+        ui->view->setExpansionAnimationEnabled(false);
+        ui->view->expandRecursively(m_model->index(0, 0));
+        ui->view->setExpansionAnimationEnabled(true);
+        ui->view->setColumnWidth(0, 280);
+        ui->other->setMaterializationMode(viv::VirtualTreeTableView::MaterializationMode::CellWidgets);
+        ui->other->setCellAdapter(new CellAdapter, true);
+        ui->other->setUniformItemHeight(40);
+        ui->other->setDefaultColumnWidth(150);
+        ui->other->setModel(m_model);
+        ui->other->setColumnWidth(0, 280);
+        ui->other->setExpansionAnimationEnabled(false);
+        ui->other->expandRecursively(m_model->index(0, 0));
+        ui->other->setExpansionAnimationEnabled(true);
         // Views of the same model can share selection; each view still maintains its own hover state.
         auto *selection = new QItemSelectionModel(m_model, this);
-        m_view->setSelectionModel(selection);
-        m_other->setSelectionModel(selection);
-        m_other->setSelectionMode(viv::VirtualItemView::SelectionMode::ExtendedSelection);
-        m_other->setSelectionBehavior(viv::VirtualItemView::SelectionBehavior::SelectRows);
+        ui->view->setSelectionModel(selection);
+        ui->other->setSelectionModel(selection);
+        ui->other->setSelectionMode(viv::VirtualItemView::SelectionMode::ExtendedSelection);
+        ui->other->setSelectionBehavior(viv::VirtualItemView::SelectionBehavior::SelectRows);
         // Use Ctrl and Shift with ExtendedSelection; select programmatically through selectionModel.
-        m_view->setSelectionMode(viv::VirtualItemView::SelectionMode::ExtendedSelection);
-        m_view->setSelectionBehavior(viv::VirtualItemView::SelectionBehavior::SelectRows);
+        ui->view->setSelectionMode(viv::VirtualItemView::SelectionMode::ExtendedSelection);
+        ui->view->setSelectionBehavior(viv::VirtualItemView::SelectionBehavior::SelectRows);
 
-        for (auto *view : {m_view, m_other}) {
+        for (auto *view : {ui->view, ui->other}) {
             // Header click selection is independent of body click selection behavior.
             // Row-header selection is on by default; column-header selection is opt-in.
             view->setVerticalHeaderSelectionEnabled(true);
@@ -171,64 +136,53 @@ private:
             view->setHeaderVisualStateBackgroundVisible(Qt::Horizontal, true);
         }
 
-        connect(m_rowHeaderSelection, &QCheckBox::toggled, this, [this](bool enabled) {
-            m_view->setVerticalHeaderSelectionEnabled(enabled);
-            m_other->setVerticalHeaderSelectionEnabled(enabled);
+        connect(ui->rowHeaderSelection, &QCheckBox::toggled, this, [this](bool enabled) {
+            ui->view->setVerticalHeaderSelectionEnabled(enabled);
+            ui->other->setVerticalHeaderSelectionEnabled(enabled);
         });
-        connect(m_columnHeaderSelection, &QCheckBox::toggled, this, [this](bool enabled) {
-            m_view->setHorizontalHeaderSelectionEnabled(enabled);
-            m_other->setHorizontalHeaderSelectionEnabled(enabled);
+        connect(ui->columnHeaderSelection, &QCheckBox::toggled, this, [this](bool enabled) {
+            ui->view->setHorizontalHeaderSelectionEnabled(enabled);
+            ui->other->setHorizontalHeaderSelectionEnabled(enabled);
         });
-        connect(m_rowHeaderBackground, &QCheckBox::toggled, this, [this](bool visible) {
-            m_view->setHeaderVisualStateBackgroundVisible(Qt::Vertical, visible);
-            m_other->setHeaderVisualStateBackgroundVisible(Qt::Vertical, visible);
+        connect(ui->rowHeaderBackground, &QCheckBox::toggled, this, [this](bool visible) {
+            ui->view->setHeaderVisualStateBackgroundVisible(Qt::Vertical, visible);
+            ui->other->setHeaderVisualStateBackgroundVisible(Qt::Vertical, visible);
         });
-        connect(m_columnHeaderBackground, &QCheckBox::toggled, this, [this](bool visible) {
-            m_view->setHeaderVisualStateBackgroundVisible(Qt::Horizontal, visible);
-            m_other->setHeaderVisualStateBackgroundVisible(Qt::Horizontal, visible);
+        connect(ui->columnHeaderBackground, &QCheckBox::toggled, this, [this](bool visible) {
+            ui->view->setHeaderVisualStateBackgroundVisible(Qt::Horizontal, visible);
+            ui->other->setHeaderVisualStateBackgroundVisible(Qt::Horizontal, visible);
         });
 
-        connect(m_mode, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int value) {
+        connect(ui->mode, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int value) {
             using Mode = viv::VirtualItemView::SelectionMode;
             const Mode modes[] = {Mode::ExtendedSelection, Mode::SingleSelection, Mode::MultiSelection, Mode::NoSelection};
-            m_view->setSelectionMode(modes[value]);
-            m_other->setSelectionMode(modes[value]);
+            ui->view->setSelectionMode(modes[value]);
+            ui->other->setSelectionMode(modes[value]);
         });
         // Selection behavior also determines both hover and selected background scope.
-        connect(m_behavior, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int value) {
+        connect(ui->behavior, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int value) {
             using Behavior = viv::VirtualItemView::SelectionBehavior;
             const Behavior behaviors[] = {Behavior::SelectRows, Behavior::SelectItems};
-            m_view->selectionModel()->clearSelection();
-            m_view->setSelectionBehavior(behaviors[value]);
-            m_other->setSelectionBehavior(behaviors[value]);
+            ui->view->selectionModel()->clearSelection();
+            ui->view->setSelectionBehavior(behaviors[value]);
+            ui->other->setSelectionBehavior(behaviors[value]);
         });
-        connect(m_select, &QPushButton::clicked, this, [this] {
+        connect(ui->select, &QPushButton::clicked, this, [this] {
             // One QItemSelectionRange covers siblings only; use multiple ranges across parents.
             const QModelIndex parent = m_model->index(0, 0);
-            m_view->expand(parent);
-            m_other->expand(parent);
+            ui->view->expand(parent);
+            ui->other->expand(parent);
             const QItemSelection range(m_model->index(1, 0, parent), m_model->index(4, m_model->columnCount() - 1, parent));
-            m_view->selectionModel()->select(range, QItemSelectionModel::ClearAndSelect);
+            ui->view->selectionModel()->select(range, QItemSelectionModel::ClearAndSelect);
             // Current and selected items are separate; NoUpdate preserves the selected range.
-            m_view->selectionModel()->setCurrentIndex(m_model->index(4, 0, parent), QItemSelectionModel::NoUpdate);
+            ui->view->selectionModel()->setCurrentIndex(m_model->index(4, 0, parent), QItemSelectionModel::NoUpdate);
         });
-        connect(m_query, &QPushButton::clicked, this, [this] {
-            m_status->setText(QStringLiteral("当前 row=%1，选中单元格=%2").arg(m_view->currentIndex().row()).arg(m_view->selectionModel()->selectedIndexes().size()));
+        connect(ui->query, &QPushButton::clicked, this, [this] {
+            ui->status->setText(QStringLiteral("当前 row=%1，选中单元格=%2").arg(ui->view->currentIndex().row()).arg(ui->view->selectionModel()->selectedIndexes().size()));
         });
     }
 
-    viv::VirtualTreeTableView *m_view = nullptr;
-    viv::VirtualTreeTableView *m_other = nullptr;
     QStandardItemModel *m_model = nullptr;
-    QLabel *m_status = nullptr;
-    QComboBox *m_mode = nullptr;
-    QComboBox *m_behavior = nullptr;
-    QCheckBox *m_rowHeaderSelection = nullptr;
-    QCheckBox *m_columnHeaderSelection = nullptr;
-    QCheckBox *m_rowHeaderBackground = nullptr;
-    QCheckBox *m_columnHeaderBackground = nullptr;
-    QPushButton *m_select = nullptr;
-    QPushButton *m_query = nullptr;
 };
 
 QWidget *createExample(QWidget *parent)

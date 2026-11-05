@@ -1,3 +1,5 @@
+#include "ui_binding_context.h"
+#include <memory>
 #include "example.h"
 #include <virtualitemviews/virtualtreetableview.h>
 #include <virtualitemviews/tablewidgetadapter.h>
@@ -6,7 +8,6 @@
 #include <QPushButton>
 #include <QComboBox>
 #include <QHBoxLayout>
-#include <QVBoxLayout>
 
 struct TreeTableRecord
 {
@@ -113,43 +114,35 @@ static void appendChildren(QStandardItemModel *model)
 class Example : public QWidget
 {
 public:
-    explicit Example(QWidget *parent) : QWidget(parent)
+    explicit Example(QWidget *parent) : QWidget(parent), ui(new Ui::TreetableBindingContextPage)
     {
         setupUi();
         setupExample();
     }
 
 private:
+    std::unique_ptr<Ui::TreetableBindingContextPage> ui;
+
     void setupUi()
     {
-        auto *layout = new QVBoxLayout(this);
-        auto *description = new QLabel(QStringLiteral("05 节点结构体与绑定上下文：先展开分组，再操作本章控件观察树表行为。"), this);
-        description->setWordWrap(true);
-        layout->addWidget(description);
-        auto *controls = new QHBoxLayout;
-        m_mode = new QComboBox(this);
-        m_mode->addItems({QStringLiteral("单元格物化"), QStringLiteral("整行物化")});
-        controls->addWidget(m_mode);
-        m_update = new QPushButton(QStringLiteral("更新当前行结构体"), this);
-        controls->addWidget(m_update);
-        controls->addStretch();
-        layout->addLayout(controls);
-        m_view = new viv::VirtualTreeTableView(this);
-        layout->addWidget(m_view, 1);
+        ui->setupUi(this);
+
+        // Keep framework configuration and item data visible in the example.
+        ui->view->setObjectName(QStringLiteral("vivItemView"));
     }
 
     void setupExample()
     {
         // Both adapters receive complete rowData; switching modes changes widget granularity.
-        m_view->setTableAdapter(new RowAdapter, true);
+        ui->view->setTableAdapter(new RowAdapter, true);
         // Materialize cells independently so horizontally offscreen cells can also be recycled.
-        m_view->setMaterializationMode(viv::VirtualTreeTableView::MaterializationMode::CellWidgets);
-        m_view->setCellAdapter(new CellAdapter, true);
+        ui->view->setMaterializationMode(viv::VirtualTreeTableView::MaterializationMode::CellWidgets);
+        ui->view->setCellAdapter(new CellAdapter, true);
         // Use a fixed row height to avoid measuring each row.
-        m_view->setUniformItemHeight(40);
+        ui->view->setUniformItemHeight(40);
         // The header and body share the same column geometry.
-        m_view->setDefaultColumnWidth(150);
-        m_model = new QStandardItemModel(8, 3, m_view);
+        ui->view->setDefaultColumnWidth(150);
+        m_model = new QStandardItemModel(8, 3, ui->view);
         for (int column = 0; column < m_model->columnCount(); ++column)
             m_model->setHeaderData(column, Qt::Horizontal, QStringLiteral("列 %1").arg(column + 1));
         for (int row = 0; row < m_model->rowCount(); ++row) {
@@ -160,7 +153,7 @@ private:
         // The QObject parent owns the model; Qt model signals report data and structure changes.
         appendChildren(m_model);
         // The payload role is read from column zero of this node, never from its parent.
-        m_view->setItemDataRole(viv::kDefaultItemDataRole);
+        ui->view->setItemDataRole(viv::kDefaultItemDataRole);
         const auto assignPayloads = [this](const auto &visit, const QModelIndex &parent, int depth) -> void {
             for (int row = 0; row < m_model->rowCount(parent); ++row) {
                 const QModelIndex node = m_model->index(row, 0, parent);
@@ -171,19 +164,19 @@ private:
             }
         };
         assignPayloads(assignPayloads, {}, 0);
-        m_view->setModel(m_model);
+        ui->view->setModel(m_model);
         // Expand through the view; model row numbers remain local to each parent.
-        m_view->setExpansionAnimationEnabled(false);
-        m_view->expandRecursively(m_model->index(0, 0));
-        m_view->setExpansionAnimationEnabled(true);
-        m_view->setColumnWidth(0, 280);
+        ui->view->setExpansionAnimationEnabled(false);
+        ui->view->expandRecursively(m_model->index(0, 0));
+        ui->view->setExpansionAnimationEnabled(true);
+        ui->view->setColumnWidth(0, 280);
 
-        connect(m_mode, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int mode) {
-            m_view->setMaterializationMode(mode == 0 ? viv::VirtualTreeTableView::MaterializationMode::CellWidgets
+        connect(ui->mode, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int mode) {
+            ui->view->setMaterializationMode(mode == 0 ? viv::VirtualTreeTableView::MaterializationMode::CellWidgets
                                                     : viv::VirtualTreeTableView::MaterializationMode::RowWidgets);
         });
-        connect(m_update, &QPushButton::clicked, this, [this] {
-            const QModelIndex current = m_view->currentIndex();
+        connect(ui->update, &QPushButton::clicked, this, [this] {
+            const QModelIndex current = ui->view->currentIndex();
             if (!current.isValid()) return;
             const QModelIndex payloadIndex = current.siblingAtColumn(0);
             auto record = payloadIndex.data(viv::kDefaultItemDataRole).value<TreeTableRecord>();
@@ -193,10 +186,7 @@ private:
         });
     }
 
-    viv::VirtualTreeTableView *m_view = nullptr;
     QStandardItemModel *m_model = nullptr;
-    QPushButton *m_update = nullptr;
-    QComboBox *m_mode = nullptr;
 };
 
 QWidget *createExample(QWidget *parent)

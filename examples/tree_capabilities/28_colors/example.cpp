@@ -1,4 +1,5 @@
 #include "example.h"
+#include <memory>
 #include "ui_colors.h"
 
 #include <virtualitemviews/virtualtreeview.h>
@@ -36,24 +37,26 @@ public:
 class Example : public QWidget
 {
 public:
-    explicit Example(QWidget *parent) : QWidget(parent)
+    explicit Example(QWidget *parent) : QWidget(parent), ui(new Ui::TreeColors)
     {
         setupUi();
         setupExample();
     }
 
 private:
+    std::unique_ptr<Ui::TreeColors> ui;
+
     void setupUi()
     {
-        m_ui.setupUi(this);
-        m_ui.pageLayout->setStretch(m_ui.pageLayout->count() - 1, 1);
+        ui->setupUi(this);
+        ui->pageLayout->setStretch(ui->pageLayout->count() - 1, 1);
         // Parent color makes body transparency and unoccupied space easy to distinguish.
-        QPalette palette = m_ui.previewHost->palette();
+        QPalette palette = ui->previewHost->palette();
         palette.setColor(QPalette::Window, QColor(QStringLiteral("#dde4ec")));
-        m_ui.previewHost->setPalette(palette);
-        m_ui.previewHost->setAutoFillBackground(true);
-        for (QComboBox *combo : {m_ui.bodyColor, m_ui.itemColor, m_ui.hoverColor, m_ui.selectedColor,
-                                m_ui.gapColor, m_ui.lineColor, m_ui.frameColor, m_ui.branchColor}) {
+        ui->previewHost->setPalette(palette);
+        ui->previewHost->setAutoFillBackground(true);
+        for (QComboBox *combo : {ui->bodyColor, ui->itemColor, ui->hoverColor, ui->selectedColor,
+                                ui->gapColor, ui->lineColor, ui->frameColor, ui->branchColor}) {
             combo->addItem(QStringLiteral("默认 / 未设置"), QColor());
             combo->addItem(QStringLiteral("透明"), QColor(Qt::transparent));
             combo->addItem(QStringLiteral("暖黄 #fff0c2"), QColor(QStringLiteral("#fff0c2")));
@@ -65,9 +68,9 @@ private:
 
     void setupExample()
     {
-        m_view = new viv::VirtualTreeView(m_ui.previewHost);
+        m_view = new viv::VirtualTreeView(ui->previewHost);
         // View internals already have stable object names for descendant QSS selectors.
-        m_ui.previewLayout->addWidget(m_view);
+        ui->previewLayout->addWidget(m_view);
         m_view->setAdapter(new RowAdapter, true);
         m_view->setUniformItemHeight(42);
         m_view->setVisualStateCornerRadius(6);
@@ -79,19 +82,19 @@ private:
         m_view->setModel(m_model);
         m_view->setExpansionAnimationEnabled(true);
         populateModel();
-        for (QComboBox *combo : {m_ui.bodyColor, m_ui.itemColor, m_ui.hoverColor, m_ui.selectedColor,
-                                m_ui.gapColor, m_ui.lineColor, m_ui.frameColor, m_ui.branchColor})
+        for (QComboBox *combo : {ui->bodyColor, ui->itemColor, ui->hoverColor, ui->selectedColor,
+                                ui->gapColor, ui->lineColor, ui->frameColor, ui->branchColor})
             connect(combo, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int) { applyColors(); });
-        for (QCheckBox *check : {m_ui.bodyVisible, m_ui.statesVisible, m_ui.gaps})
+        for (QCheckBox *check : {ui->bodyVisible, ui->statesVisible, ui->gaps})
             connect(check, &QCheckBox::toggled, this, [this](bool) { applyColors(); });
-        connect(m_ui.manyRows, &QCheckBox::toggled, this, [this](bool) { populateModel(); });
-        connect(m_ui.preset, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int) { applyPreset(); });
-        connect(m_ui.applyQss, &QPushButton::clicked, this, [this]() { applyStyleSheet(); });
-        connect(m_ui.clearQss, &QPushButton::clicked, this, [this]() {
-            if (m_ui.preset->currentIndex() == 0)
+        connect(ui->manyRows, &QCheckBox::toggled, this, [this](bool) { populateModel(); });
+        connect(ui->preset, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int) { applyPreset(); });
+        connect(ui->applyQss, &QPushButton::clicked, this, [this]() { applyStyleSheet(); });
+        connect(ui->clearQss, &QPushButton::clicked, this, [this]() {
+            if (ui->preset->currentIndex() == 0)
                 applyPreset();
             else
-                m_ui.preset->setCurrentIndex(0);
+                ui->preset->setCurrentIndex(0);
         });
         applyPreset();
     }
@@ -102,22 +105,22 @@ private:
     {
         // Paint the overall view base first; a viewport QSS background is layered above it.
         // Visibility controls both layers. Invalid color follows the view's QPalette::Base.
-        m_view->setBackgroundVisible(m_ui.bodyVisible->isChecked());
-        m_view->setBackgroundColor(color(m_ui.bodyColor));
+        m_view->setBackgroundVisible(ui->bodyVisible->isChecked());
+        m_view->setBackgroundColor(color(ui->bodyColor));
         // Item color affects actual rows only; invalid/transparent disables this layer.
-        m_view->setItemBackgroundColor(color(m_ui.itemColor));
+        m_view->setItemBackgroundColor(color(ui->itemColor));
         // State backgrounds are independent of the normal item base.
-        m_view->setVisualStateBackgroundVisible(m_ui.statesVisible->isChecked());
-        m_view->setHoverBackgroundColor(color(m_ui.hoverColor).isValid() ? color(m_ui.hoverColor) : m_defaultHover);
-        m_view->setSelectedBackgroundColor(color(m_ui.selectedColor).isValid() ? color(m_ui.selectedColor) : m_defaultSelected);
+        m_view->setVisualStateBackgroundVisible(ui->statesVisible->isChecked());
+        m_view->setHoverBackgroundColor(color(ui->hoverColor).isValid() ? color(ui->hoverColor) : m_defaultHover);
+        m_view->setSelectedBackgroundColor(color(ui->selectedColor).isValid() ? color(ui->selectedColor) : m_defaultSelected);
         // Explicit gap colors remain visible even when the body base is hidden.
-        m_view->setRowSpacing(m_ui.gaps->isChecked() ? 8 : 0);
-        m_view->setSpacingBackgroundColor(color(m_ui.gapColor));
-        m_view->setFrameBorderColor(color(m_ui.frameColor));
+        m_view->setRowSpacing(ui->gaps->isChecked() ? 8 : 0);
+        m_view->setSpacingBackgroundColor(color(ui->gapColor));
+        m_view->setFrameBorderColor(color(ui->frameColor));
         m_view->setRowGridLinesVisible(true);
-        m_view->setRowGridLineColor(color(m_ui.lineColor));
+        m_view->setRowGridLineColor(color(ui->lineColor));
         // Branches have no separate panel background; only the icon color changes.
-        m_view->setBranchIconColor(color(m_ui.branchColor));
+        m_view->setBranchIconColor(color(ui->branchColor));
         updateStatus();
     }
 
@@ -125,7 +128,7 @@ private:
     {
         m_model->clear();
         m_model->setColumnCount(1);
-        const int count = m_ui.manyRows->isChecked() ? 60 : 2;
+        const int count = ui->manyRows->isChecked() ? 60 : 2;
         for (int row = 0; row < count; ++row) {
             auto *first = new QStandardItem(QStringLiteral("条目 %1").arg(row + 1));
             m_model->appendRow(first);
@@ -142,7 +145,7 @@ private:
     {
         QString text;
         QString hint;
-        switch (m_ui.preset->currentIndex()) {
+        switch (ui->preset->currentIndex()) {
         case 1:
             text = QStringLiteral("#vivItemView { background-color: #c4edda; }");
             hint = QStringLiteral("仅匹配 View。主体颜色为默认时读取该 View 的 Base 调色板；显式 setBackgroundColor 优先。项、状态和间距的显式颜色独立。");
@@ -181,8 +184,8 @@ private:
             hint = QStringLiteral("无 QSS：主体默认 Base，项默认透明，父背景为灰蓝。先设置项底色再关闭 Hover / 选中，可确认普通项底色独立；选择 QSS 预设后可以继续切换颜色接口对比优先级。");
             break;
         }
-        m_ui.qssEditor->setPlainText(text);
-        m_ui.qssHint->setText(hint);
+        ui->qssEditor->setPlainText(text);
+        ui->qssHint->setText(hint);
         applyStyleSheet();
     }
 
@@ -190,7 +193,7 @@ private:
     {
         // Keep the stylesheet scoped to this preview, not the navigation or option controls.
         // Object selectors intentionally distinguish the view, viewport and business widgets.
-        m_view->setStyleSheet(m_ui.qssEditor->toPlainText());
+        m_view->setStyleSheet(ui->qssEditor->toPlainText());
         m_view->ensurePolished();
         m_view->viewport()->ensurePolished();
         // Read palette values after style propagation; this is diagnostic text, not a repaint loop.
@@ -200,14 +203,13 @@ private:
     void updateStatus()
     {
         const QColor item = m_view->itemBackgroundColor();
-        m_ui.statusLabel->setText(QStringLiteral("View Base=%1 / Viewport Base=%2 / 主体画刷 style=%3 / 项底色=%4。点击行选中，鼠标划过比较。")
+        ui->statusLabel->setText(QStringLiteral("View Base=%1 / Viewport Base=%2 / 主体画刷 style=%3 / 项底色=%4。点击行选中，鼠标划过比较。")
             .arg(m_view->palette().color(QPalette::Base).name(QColor::HexArgb))
             .arg(m_view->viewport()->palette().color(QPalette::Base).name(QColor::HexArgb))
             .arg(int(m_view->backgroundBrush().style()))
             .arg(item.isValid() ? item.name(QColor::HexArgb) : QStringLiteral("不绘制")));
     }
 
-    Ui::TreeColors m_ui;
     viv::VirtualTreeView *m_view = nullptr;
     QStandardItemModel *m_model = nullptr;
     QColor m_defaultHover;

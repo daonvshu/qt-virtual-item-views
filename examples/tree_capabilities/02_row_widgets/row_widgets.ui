@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ui version="4.0">
+ <class>TreeRowWidgetsPage</class>
+ <widget class="QWidget" name="TreeRowWidgetsPage">
+  <layout class="QVBoxLayout" name="layout" stretch="0,1">
+   <item>
+    <widget class="QLabel" name="description">
+     <property name="text">
+      <string>02 组合控件：编辑名称或勾选复选框，滚动复用后数据仍来自 model。</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="viv::VirtualTreeView" name="view" />
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>viv::VirtualTreeView</class>
+   <extends>QAbstractScrollArea</extends>
+   <header>virtualitemviews/virtualtreeview.h</header>
+  </customwidget>
+ </customwidgets>
+ <resources />
+ <connections />
+</ui>

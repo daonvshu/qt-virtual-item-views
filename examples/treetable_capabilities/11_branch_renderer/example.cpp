@@ -1,11 +1,11 @@
+#include "ui_branch_renderer.h"
+#include <memory>
 #include "example.h"
 #include <virtualitemviews/virtualtreetableview.h>
 #include <virtualitemviews/tablewidgetadapter.h>
 #include <QCheckBox>
-#include <QHBoxLayout>
 #include <QLabel>
 #include <QStandardItemModel>
-#include <QVBoxLayout>
 #include <QPainter>
 #include <QPen>
 #include <QSpinBox>
@@ -110,41 +110,27 @@ static void appendChildren(QStandardItemModel *model)
 class Example : public QWidget
 {
 public:
-    explicit Example(QWidget *parent) : QWidget(parent)
+    explicit Example(QWidget *parent) : QWidget(parent), ui(new Ui::TreetableBranchRendererPage)
     {
         setupUi();
         setupExample();
     }
 
 private:
+    std::unique_ptr<Ui::TreetableBranchRendererPage> ui;
+
     void setupUi()
     {
-        auto *layout = new QVBoxLayout(this);
-        auto *description = new QLabel(QStringLiteral("11 自定义分支绘制：先展开分组，再操作本章控件观察树表行为。"), this);
-        description->setWordWrap(true);
-        layout->addWidget(description);
-        auto *controls = new QHBoxLayout;
-        custom = new QCheckBox(QStringLiteral("使用连接线 renderer"), this);
-        custom->setChecked(true);
-        controls->addWidget(custom);
-        size = new QSpinBox(this);
-        size->setRange(4, 24);
-        size->setValue(10);
-        size->setPrefix(QStringLiteral("三角图标大小 "));
-        controls->addWidget(size);
-        controls->addStretch();
-        layout->addLayout(controls);
-        m_view = new viv::VirtualTreeTableView(this);
-        layout->addWidget(m_view, 1);
-        m_status = new QLabel(this);
-        m_status->setWordWrap(true);
-        layout->addWidget(m_status);
+        ui->setupUi(this);
+
+        // Keep framework configuration and item data visible in the example.
+        ui->view->setObjectName(QStringLiteral("vivItemView"));
     }
 
     void setupExample()
     {
         // A node is identified by its column-zero index, never by its visible row number.
-        m_model = new QStandardItemModel(6, 6, m_view);
+        m_model = new QStandardItemModel(6, 6, ui->view);
         for (int column = 0; column < m_model->columnCount(); ++column) {
             m_model->setHeaderData(column, Qt::Horizontal, QStringLiteral("列 %1").arg(column + 1));
             for (int row = 0; row < m_model->rowCount(); ++row)
@@ -155,43 +141,39 @@ private:
 
         // The view owns the adapter through teardown; the QObject parent owns the model.
         // CellWidgets applies tree indentation only to logical column zero.
-        m_view->setMaterializationMode(viv::VirtualTreeTableView::MaterializationMode::CellWidgets);
-        m_view->setCellAdapter(new CellAdapter, true);
-        m_view->setDefaultColumnWidth(150);
+        ui->view->setMaterializationMode(viv::VirtualTreeTableView::MaterializationMode::CellWidgets);
+        ui->view->setCellAdapter(new CellAdapter, true);
+        ui->view->setDefaultColumnWidth(150);
         // Uniform height avoids measuring each materialized node.
-        m_view->setUniformItemHeight(36);
+        ui->view->setUniformItemHeight(36);
         // Qt model signals update the visible mapping and reused widgets automatically.
-        m_view->setModel(m_model);
-        m_view->setColumnWidth(0, 280);
+        ui->view->setModel(m_model);
+        ui->view->setColumnWidth(0, 280);
 
-        m_view->setIndentation(24);
+        ui->view->setIndentation(24);
         // Ownership transfer keeps the renderer alive until branch painting is finished.
-        m_view->setBranchIndicatorRenderer(new ConnectorRenderer, true);
-        m_view->expandRecursively(m_model->index(0, 0));
-        connect(custom, &QCheckBox::toggled, this, [this](bool enabled) {
+        ui->view->setBranchIndicatorRenderer(new ConnectorRenderer, true);
+        ui->view->expandRecursively(m_model->index(0, 0));
+        connect(ui->custom, &QCheckBox::toggled, this, [this](bool enabled) {
             // A custom renderer replaces built-in decoration without affecting expansion or hit testing.
             viv::BranchIndicatorRenderer *renderer = enabled
                 ? static_cast<viv::BranchIndicatorRenderer *>(new ConnectorRenderer)
-                : static_cast<viv::BranchIndicatorRenderer *>(new TriangleRenderer(size->value()));
-            m_view->setBranchIndicatorRenderer(renderer, true);
+                : static_cast<viv::BranchIndicatorRenderer *>(new TriangleRenderer(ui->size->value()));
+            ui->view->setBranchIndicatorRenderer(renderer, true);
         });
-        connect(size, QOverload<int>::of(&QSpinBox::valueChanged), this, [this](int value) {
-            if (!custom->isChecked()) m_view->setBranchIndicatorRenderer(new TriangleRenderer(value), true);
+        connect(ui->size, QOverload<int>::of(&QSpinBox::valueChanged), this, [this](int value) {
+            if (!ui->custom->isChecked()) ui->view->setBranchIndicatorRenderer(new TriangleRenderer(value), true);
         });
-        connect(m_view, &viv::VirtualItemView::clicked, this, [this](const QModelIndex &index) {
+        connect(ui->view, &viv::VirtualItemView::clicked, this, [this](const QModelIndex &index) {
             // Omitted cellDepth queries this node's own cell; an explicit depth queries an ancestor cell.
-            const auto state = m_view->branchState(index);
-            m_status->setText(QStringLiteral("depth=%1 / cellDepth=%2 / children=%3 / siblings=%4 / open=%5")
+            const auto state = ui->view->branchState(index);
+            ui->status->setText(QStringLiteral("depth=%1 / cellDepth=%2 / children=%3 / siblings=%4 / open=%5")
                 .arg(state.itemDepth).arg(state.cellDepth).arg(state.hasChildren)
                 .arg(state.hasSiblings).arg(state.isOpen()));
         });
     }
 
-    viv::VirtualTreeTableView *m_view = nullptr;
     QStandardItemModel *m_model = nullptr;
-    QLabel *m_status = nullptr;
-    QCheckBox *custom = nullptr;
-    QSpinBox *size = nullptr;
 };
 
 QWidget *createExample(QWidget *parent)

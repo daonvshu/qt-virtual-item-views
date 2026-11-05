@@ -1,12 +1,12 @@
+#include "ui_item_heights.h"
+#include <memory>
 #include "example.h"
 #include <virtualitemviews/virtualtreeview.h>
 #include <virtualitemviews/widgetadapter.h>
 #include <QComboBox>
-#include <QHBoxLayout>
 #include <QLabel>
 #include <QPushButton>
 #include <QStandardItemModel>
-#include <QVBoxLayout>
 
 namespace tree_item_heights {
 
@@ -47,35 +47,27 @@ public:
 class Example : public QWidget
 {
 public:
-    explicit Example(QWidget *parent) : QWidget(parent)
+    explicit Example(QWidget *parent) : QWidget(parent), ui(new Ui::TreeItemHeightsPage)
     {
         setupUi();
         setupExample();
     }
 
 private:
+    std::unique_ptr<Ui::TreeItemHeightsPage> ui;
+
     void setupUi()
     {
-        auto *layout = new QVBoxLayout(this);
-        auto *description = new QLabel(QStringLiteral("06 行高：点击节点切换详情高度；切换固定、首项测量、独立动态高度。"), this);
-        description->setWordWrap(true);
-        layout->addWidget(description);
-        auto *controls = new QHBoxLayout;
-        mode = new QComboBox(this);
-        mode->addItems({QStringLiteral("固定 44 px"), QStringLiteral("按首项测量统一高度"), QStringLiteral("每节点动态高度")});
-        controls->addWidget(mode);
-        first = new QPushButton(QStringLiteral("切换首节点详情"), this);
-        controls->addWidget(first);
-        controls->addStretch();
-        layout->addLayout(controls);
-        m_view = new viv::VirtualTreeView(this);
-        layout->addWidget(m_view, 1);
+        ui->setupUi(this);
+
+        // Keep framework configuration and item data visible in the example.
+        ui->view->setObjectName(QStringLiteral("vivItemView"));
     }
 
     void setupExample()
     {
         // A plain QStandardItemModel owns the hierarchy; only column zero owns children.
-        m_model = new QStandardItemModel(m_view);
+        m_model = new QStandardItemModel(ui->view);
         for (int group = 0; group < 5; ++group) {
             auto *branch = new QStandardItem(QStringLiteral("分组 %1").arg(group + 1));
             m_model->appendRow(branch);
@@ -89,45 +81,42 @@ private:
             m_model->item(0)->child(row)->setData(row % 3 == 0, DetailRole);
 
         // The view owns the adapter through teardown; the QObject parent owns the model.
-        m_view->setAdapter(new HeightAdapter, true);
+        ui->view->setAdapter(new HeightAdapter, true);
         // Uniform height avoids measuring each materialized node.
-        m_view->setUniformItemHeight(36);
+        ui->view->setUniformItemHeight(36);
         // Qt model signals update the visible mapping and reused widgets automatically.
-        m_view->setModel(m_model);
+        ui->view->setModel(m_model);
 
         // Expand through the view so mapping, branch state and signals stay synchronized.
-        m_view->expand(m_model->index(0, 0));
+        ui->view->expand(m_model->index(0, 0));
 
-        connect(mode, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int value) {
+        connect(ui->mode, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int value) {
             applyHeightMode(value);
         });
-        connect(m_view, &viv::VirtualItemView::clicked, this, [this](const QModelIndex &index) {
+        connect(ui->view, &viv::VirtualItemView::clicked, this, [this](const QModelIndex &index) {
             // A data change triggers binding and size measurement of this node.
             m_model->setData(index, !index.data(DetailRole).toBool(), DetailRole);
         });
-        connect(first, &QPushButton::clicked, this, [this] {
+        connect(ui->first, &QPushButton::clicked, this, [this] {
             const QModelIndex index = m_model->index(0, 0);
             m_model->setData(index, !index.data(DetailRole).toBool(), DetailRole);
         });
-        mode->setCurrentIndex(2);
+        ui->mode->setCurrentIndex(2);
     }
 
-    void applyHeightMode(int mode)
+    void applyHeightMode(int heightMode)
     {
         // Measurement reads each bound row's sizeHint; estimates cover unmeasured nodes.
-        m_view->setAutoMeasureItemHeight(mode != 0);
-        m_view->setEstimatedItemHeight(36);
-        if (mode == 2)
-            m_view->setItemHeightMode(viv::VirtualItemView::ItemHeightMode::Variable);
+        ui->view->setAutoMeasureItemHeight(heightMode != 0);
+        ui->view->setEstimatedItemHeight(36);
+        if (heightMode == 2)
+            ui->view->setItemHeightMode(viv::VirtualItemView::ItemHeightMode::Variable);
         else
             // setUniformItemHeight also selects Uniform mode; zero fits the first item.
-            m_view->setUniformItemHeight(mode == 1 ? 0 : 44);
+            ui->view->setUniformItemHeight(heightMode == 1 ? 0 : 44);
     }
 
-    viv::VirtualTreeView *m_view = nullptr;
     QStandardItemModel *m_model = nullptr;
-    QComboBox *mode = nullptr;
-    QPushButton *first = nullptr;
 };
 
 QWidget *createExample(QWidget *parent)

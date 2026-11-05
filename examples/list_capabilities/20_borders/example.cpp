@@ -1,5 +1,6 @@
 #include "example.h"
-#include "ui_example.h"
+#include <memory>
+#include "ui_borders.h"
 
 #include <virtualitemviews/virtuallistview.h>
 #include <virtualitemviews/widgetadapter.h>
@@ -85,20 +86,22 @@ public:
 class Example : public QWidget
 {
 public:
-    explicit Example(QWidget *parent) : QWidget(parent)
+    explicit Example(QWidget *parent) : QWidget(parent), ui(new Ui::ListBorderExample)
     {
         setupUi();
         setupExample();
     }
 
 private:
+    std::unique_ptr<Ui::ListBorderExample> ui;
+
     void setupUi()
     {
-        m_ui.setupUi(this);
-        m_ui.pageLayout->setStretch(m_ui.pageLayout->count() - 1, 1);
-        m_stage = new BackgroundStage(m_ui.previewHost);
-        m_ui.previewLayout->addWidget(m_stage);
-        for (QPushButton *button : {m_ui.firstButton, m_ui.lastButton})
+        ui->setupUi(this);
+        ui->pageLayout->setStretch(ui->pageLayout->count() - 1, 1);
+        m_stage = new BackgroundStage(ui->previewHost);
+        ui->previewLayout->addWidget(m_stage);
+        for (QPushButton *button : {ui->firstButton, ui->lastButton})
             button->setFocusPolicy(Qt::NoFocus);
     }
 
@@ -121,21 +124,21 @@ private:
         applyOptions();
         selectRow(0);
 
-        connect(m_ui.backgroundCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
+        connect(ui->backgroundCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
                 this, [this](int mode) { m_stage->setBackground(mode); });
-        for (QSpinBox *spin : {m_ui.radiusSpin, m_ui.widthSpin, m_ui.stateRadiusSpin})
+        for (QSpinBox *spin : {ui->radiusSpin, ui->widthSpin, ui->stateRadiusSpin})
             connect(spin, QOverload<int>::of(&QSpinBox::valueChanged), this, [this](int) { applyOptions(); });
-        connect(m_ui.colorCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
+        connect(ui->colorCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
                 this, [this](int) { applyOptions(); });
-        for (QCheckBox *check : {m_ui.gapsCheck, m_ui.linesCheck, m_ui.frozenCheck, m_ui.scrollBarsCheck})
+        for (QCheckBox *check : {ui->gapsCheck, ui->linesCheck, ui->frozenCheck, ui->scrollBarsCheck})
             connect(check, &QCheckBox::toggled, this, [this](bool) { applyOptions(); });
-        connect(m_ui.dataCombo, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int mode) {
+        connect(ui->dataCombo, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int mode) {
             populateModel(mode);
             applyOptions();
             selectRow(0);
         });
-        connect(m_ui.firstButton, &QPushButton::clicked, this, [this]() { selectRow(0); });
-        connect(m_ui.lastButton, &QPushButton::clicked, this, [this]() { selectRow(m_model->rowCount() - 1); });
+        connect(ui->firstButton, &QPushButton::clicked, this, [this]() { selectRow(0); });
+        connect(ui->lastButton, &QPushButton::clicked, this, [this]() { selectRow(m_model->rowCount() - 1); });
     }
 
     void populateModel(int mode)
@@ -151,23 +154,23 @@ private:
     {
         // Logical pixels; the framework composes the view, its rows and scrollbars.
         // Setting BOTH radius and width to zero removes the frame effect.
-        m_view->setFrameCornerRadius(m_ui.radiusSpin->value());
-        m_view->setFrameBorderWidth(m_ui.widthSpin->value());
+        m_view->setFrameCornerRadius(ui->radiusSpin->value());
+        m_view->setFrameBorderWidth(ui->widthSpin->value());
         const QColor colors[] = {QColor(QStringLiteral("#4079ad")), QColor(QStringLiteral("#485260")),
                                  QColor(QStringLiteral("#cf668f")), QColor()};
         // An invalid color restores QPalette::Mid instead of a custom border color.
-        m_view->setFrameBorderColor(colors[m_ui.colorCombo->currentIndex()]);
+        m_view->setFrameBorderColor(colors[ui->colorCombo->currentIndex()]);
         // Row hover/selection corners are independent of the outer frame.
-        m_view->setVisualStateCornerRadius(m_ui.stateRadiusSpin->value());
+        m_view->setVisualStateCornerRadius(ui->stateRadiusSpin->value());
         // Gaps and separators are still drawn by the framework, inside the same frame.
-        m_view->setRowSpacing(m_ui.gapsCheck->isChecked() ? 10 : 0);
-        m_view->setRowGridLinesVisible(m_ui.linesCheck->isChecked());
-        const bool frozen = m_ui.frozenCheck->isChecked();
+        m_view->setRowSpacing(ui->gapsCheck->isChecked() ? 10 : 0);
+        m_view->setRowGridLinesVisible(ui->linesCheck->isChecked());
+        const bool frozen = ui->frozenCheck->isChecked();
         // Do not overlap the frozen bands for the single-row or empty datasets.
         m_view->setFrozenRows(frozen && m_model->rowCount() > 0 ? 1 : 0);
         m_view->setFrozenBottomRows(frozen && m_model->rowCount() > 1 ? 1 : 0);
         // AsNeeded also demonstrates the frame without a scrollbar for compact data.
-        m_view->setVerticalScrollBarPolicy(m_ui.scrollBarsCheck->isChecked()
+        m_view->setVerticalScrollBarPolicy(ui->scrollBarsCheck->isChecked()
             ? Qt::ScrollBarAlwaysOn : Qt::ScrollBarAsNeeded);
     }
 
@@ -183,7 +186,6 @@ private:
                                         : viv::VirtualItemView::PositionAtBottom);
     }
 
-    Ui::ListBorderExample m_ui;
     BackgroundStage *m_stage = nullptr;
     viv::VirtualListView *m_view = nullptr;
     QStandardItemModel *m_model = nullptr;

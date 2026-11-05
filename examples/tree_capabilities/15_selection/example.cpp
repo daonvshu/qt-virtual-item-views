@@ -1,14 +1,14 @@
+#include "ui_selection.h"
+#include <memory>
 #include "example.h"
 #include <QItemSelectionModel>
 #include <QStringList>
 #include <virtualitemviews/virtualtreeview.h>
 #include <virtualitemviews/widgetadapter.h>
 #include <QComboBox>
-#include <QHBoxLayout>
 #include <QLabel>
 #include <QPushButton>
 #include <QStandardItemModel>
-#include <QVBoxLayout>
 
 namespace tree_selection {
 
@@ -39,42 +39,27 @@ public:
 class Example : public QWidget
 {
 public:
-    explicit Example(QWidget *parent) : QWidget(parent)
+    explicit Example(QWidget *parent) : QWidget(parent), ui(new Ui::TreeSelectionPage)
     {
         setupUi();
         setupExample();
     }
 
 private:
+    std::unique_ptr<Ui::TreeSelectionPage> ui;
+
     void setupUi()
     {
-        auto *layout = new QVBoxLayout(this);
-        auto *description = new QLabel(QStringLiteral("15 选择：节点身份和当前项独立；程序选择可跨父节点，扩展选择支持 Ctrl/Shift。"), this);
-        description->setWordWrap(true);
-        layout->addWidget(description);
-        auto *controls = new QHBoxLayout;
-        mode = new QComboBox(this);
-        mode->addItems({QStringLiteral("NoSelection"), QStringLiteral("SingleSelection"), QStringLiteral("MultiSelection"), QStringLiteral("ExtendedSelection")});
-        controls->addWidget(mode);
-        select = new QPushButton(QStringLiteral("程序选择多个节点"), this);
-        controls->addWidget(select);
-        clear = new QPushButton(QStringLiteral("清空选择"), this);
-        controls->addWidget(clear);
-        query = new QPushButton(QStringLiteral("查询当前和选中"), this);
-        controls->addWidget(query);
-        controls->addStretch();
-        layout->addLayout(controls);
-        m_view = new viv::VirtualTreeView(this);
-        layout->addWidget(m_view, 1);
-        m_status = new QLabel(this);
-        m_status->setWordWrap(true);
-        layout->addWidget(m_status);
+        ui->setupUi(this);
+
+        // Keep framework configuration and item data visible in the example.
+        ui->view->setObjectName(QStringLiteral("vivItemView"));
     }
 
     void setupExample()
     {
         // A plain QStandardItemModel owns the hierarchy; only column zero owns children.
-        m_model = new QStandardItemModel(m_view);
+        m_model = new QStandardItemModel(ui->view);
         for (int group = 0; group < 5; ++group) {
             auto *branch = new QStandardItem(QStringLiteral("分组 %1").arg(group + 1));
             m_model->appendRow(branch);
@@ -85,51 +70,45 @@ private:
         }
 
         // The view owns the adapter through teardown; the QObject parent owns the model.
-        m_view->setAdapter(new TextAdapter, true);
+        ui->view->setAdapter(new TextAdapter, true);
         // Uniform height avoids measuring each materialized node.
-        m_view->setUniformItemHeight(36);
+        ui->view->setUniformItemHeight(36);
         // Qt model signals update the visible mapping and reused widgets automatically.
-        m_view->setModel(m_model);
+        ui->view->setModel(m_model);
 
         // Expand through the view so mapping, branch state and signals stay synchronized.
-        m_view->expand(m_model->index(0, 0));
+        ui->view->expand(m_model->index(0, 0));
 
         // Tree rows have one logical column. The selection model retains offscreen identities.
-        m_view->setSelectionMode(viv::VirtualItemView::SelectionMode::ExtendedSelection);
-        connect(mode, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int value) {
-            m_view->setSelectionMode(static_cast<viv::VirtualItemView::SelectionMode>(value));
+        ui->view->setSelectionMode(viv::VirtualItemView::SelectionMode::ExtendedSelection);
+        connect(ui->mode, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int value) {
+            ui->view->setSelectionMode(static_cast<viv::VirtualItemView::SelectionMode>(value));
         });
-        mode->setCurrentIndex(3);
-        connect(select, &QPushButton::clicked, this, [this] {
+        ui->mode->setCurrentIndex(3);
+        connect(ui->select, &QPushButton::clicked, this, [this] {
             const QModelIndex parent = m_model->index(0, 0);
             // Select a range in one parent and another node in a different parent explicitly.
             QItemSelection selection(m_model->index(1, 0, parent), m_model->index(4, 0, parent));
             selection.select(m_model->index(1, 0), m_model->index(1, 0));
-            m_view->selectionModel()->select(selection, QItemSelectionModel::ClearAndSelect);
-            m_view->selectionModel()->setCurrentIndex(m_model->index(4, 0, parent), QItemSelectionModel::NoUpdate);
+            ui->view->selectionModel()->select(selection, QItemSelectionModel::ClearAndSelect);
+            ui->view->selectionModel()->setCurrentIndex(m_model->index(4, 0, parent), QItemSelectionModel::NoUpdate);
         });
-        connect(clear, &QPushButton::clicked, this, [this] { m_view->selectionModel()->clearSelection(); });
-        connect(query, &QPushButton::clicked, this, [this] { reportSelection(); });
-        connect(m_view->selectionModel(), &QItemSelectionModel::selectionChanged, this, [this] { reportSelection(); });
-        connect(m_view->selectionModel(), &QItemSelectionModel::currentChanged, this, [this] { reportSelection(); });
+        connect(ui->clear, &QPushButton::clicked, this, [this] { ui->view->selectionModel()->clearSelection(); });
+        connect(ui->query, &QPushButton::clicked, this, [this] { reportSelection(); });
+        connect(ui->view->selectionModel(), &QItemSelectionModel::selectionChanged, this, [this] { reportSelection(); });
+        connect(ui->view->selectionModel(), &QItemSelectionModel::currentChanged, this, [this] { reportSelection(); });
     }
 
     void reportSelection()
     {
         QStringList names;
-        for (const QModelIndex &index : m_view->selectionModel()->selectedIndexes())
+        for (const QModelIndex &index : ui->view->selectionModel()->selectedIndexes())
             names.append(index.data().toString());
-        m_status->setText(QStringLiteral("current=%1 / selected=[%2]")
-            .arg(m_view->currentIndex().data().toString()).arg(names.join(QStringLiteral(", "))));
+        ui->status->setText(QStringLiteral("current=%1 / selected=[%2]")
+            .arg(ui->view->currentIndex().data().toString()).arg(names.join(QStringLiteral(", "))));
     }
 
-    viv::VirtualTreeView *m_view = nullptr;
     QStandardItemModel *m_model = nullptr;
-    QLabel *m_status = nullptr;
-    QComboBox *mode = nullptr;
-    QPushButton *select = nullptr;
-    QPushButton *clear = nullptr;
-    QPushButton *query = nullptr;
 };
 
 QWidget *createExample(QWidget *parent)

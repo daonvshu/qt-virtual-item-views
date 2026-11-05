@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ui version="4.0">
+ <class>ListPinningPage</class>
+ <widget class="QWidget" name="ListPinningPage">
+  <layout class="QVBoxLayout" name="layout" stretch="0,0,0,1,0">
+   <item>
+    <widget class="QLabel" name="intro">
+     <property name="text">
+      <string>17 屏外保留：保留某行后滚动离开再返回，控件编号保持不变。编辑器持有焦点时，框架也会暂时保留它。</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="target">
+     <item>
+      <widget class="QSpinBox" name="row">
+       <property name="minimum">
+        <number>1</number>
+       </property>
+       <property name="maximum">
+        <number>1000</number>
+       </property>
+       <property name="prefix">
+        <string>第 </string>
+       </property>
+       <property name="suffix">
+        <string> 行</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pinIndex">
+       <property name="text">
+        <string>按 index 保留</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pinWidget">
+       <property name="text">
+        <string>定位并按 widget 保留</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="release">
+     <item>
+      <widget class="QPushButton" name="unpin">
+       <property name="text">
+        <string>释放指定行</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="releaseAll">
+       <property name="text">
+        <string>释放全部显式保留</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QSpinBox" name="cap">
+       <property name="minimum">
+        <number>0</number>
+       </property>
+       <property name="maximum">
+        <number>50</number>
+       </property>
+       <property name="value">
+        <number>5</number>
+       </property>
+       <property name="prefix">
+        <string>诊断软上限 </string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="viv::VirtualListView" name="view" />
+   </item>
+   <item>
+    <widget class="QLabel" name="status">
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>viv::VirtualListView</class>
+   <extends>QAbstractScrollArea</extends>
+   <header>virtualitemviews/virtuallistview.h</header>
+  </customwidget>
+ </customwidgets>
+ <resources />
+ <connections />
+</ui>

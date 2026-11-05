@@ -23,7 +23,7 @@ view->setVisualStateCornerRadius(6);
 
 ## 独立运行
 
-将本目录的 `example.cpp`、`example.h` 和 `example.ui` 加入目标，链接 VirtualItemViews 与 Qt Widgets，并启用 `AUTOUIC`。MSVC 使用 `/utf-8` 编译选项。
+将本目录的 `example.cpp`、`example.h` 和 `borders.ui` 加入目标，链接 VirtualItemViews 与 Qt Widgets，并启用 `AUTOUIC`。MSVC 使用 `/utf-8` 编译选项。
 
 ```cpp
 #include "example.h"

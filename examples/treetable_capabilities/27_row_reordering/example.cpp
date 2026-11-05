@@ -1,3 +1,5 @@
+#include "ui_row_reordering.h"
+#include <memory>
 #include "example.h"
 #include <virtualitemviews/virtualtreetableview.h>
 #include <virtualitemviews/tablewidgetadapter.h>
@@ -5,8 +7,6 @@
 #include <QLabel>
 #include <QPushButton>
 #include <QCheckBox>
-#include <QHBoxLayout>
-#include <QVBoxLayout>
 #include <QAbstractItemModel>
 #include <QtAlgorithms>
 #include <algorithm>
@@ -129,80 +129,62 @@ public:
 class Example : public QWidget
 {
 public:
-    explicit Example(QWidget *parent) : QWidget(parent)
+    explicit Example(QWidget *parent) : QWidget(parent), ui(new Ui::TreetableRowReorderingPage)
     {
         setupUi();
         setupExample();
     }
 
 private:
+    std::unique_ptr<Ui::TreetableRowReorderingPage> ui;
+
     void setupUi()
     {
-        auto *layout = new QVBoxLayout(this);
-        auto *description = new QLabel(QStringLiteral("27 同级行号拖动排序：行号拖动仅在同一个父节点内排序。"), this);
-        description->setWordWrap(true);
-        layout->addWidget(description);
-        auto *controls = new QHBoxLayout;
-        m_move = new QPushButton(QStringLiteral("当前节点移到同级末尾"), this);
-        controls->addWidget(m_move);
-        m_reset = new QPushButton(QStringLiteral("恢复原始顺序"), this);
-        controls->addWidget(m_reset);
-        m_follow = new QCheckBox(QStringLiteral("主体跟随行动画"), this);
-        m_follow->setChecked(true);
-        controls->addWidget(m_follow);
-        controls->addStretch();
-        layout->addLayout(controls);
-        m_view = new viv::VirtualTreeTableView(this);
-        layout->addWidget(m_view, 1);
-        m_status = new QLabel(this);
-        m_status->setWordWrap(true);
-        layout->addWidget(m_status);
+        ui->setupUi(this);
+
+        // Keep framework configuration and item data visible in the example.
+        ui->view->setObjectName(QStringLiteral("vivItemView"));
     }
 
     void setupExample()
     {
         // Materialize cells independently so horizontally offscreen cells can also be recycled.
-        m_view->setMaterializationMode(viv::VirtualTreeTableView::MaterializationMode::CellWidgets);
-        m_view->setCellAdapter(new CellAdapter, true);
+        ui->view->setMaterializationMode(viv::VirtualTreeTableView::MaterializationMode::CellWidgets);
+        ui->view->setCellAdapter(new CellAdapter, true);
         // Use a fixed row height to avoid measuring each row.
-        m_view->setUniformItemHeight(40);
+        ui->view->setUniformItemHeight(40);
         // The header and body share the same column geometry.
-        m_view->setDefaultColumnWidth(150);
-        m_model = new Model(m_view);
+        ui->view->setDefaultColumnWidth(150);
+        m_model = new Model(ui->view);
         // The QObject parent owns the model; Qt model signals report data and structure changes.
-        m_view->setModel(m_model);
-        m_view->setColumnWidth(0, 280);
-        m_view->expand(m_model->index(0, 0));
-        m_view->setCurrentIndex(m_model->index(0, 0, m_model->index(0, 0)));
+        ui->view->setModel(m_model);
+        ui->view->setColumnWidth(0, 280);
+        ui->view->expand(m_model->index(0, 0));
+        ui->view->setCurrentIndex(m_model->index(0, 0, m_model->index(0, 0)));
         // The model must implement moveRows; the default QAbstractItemModel implementation rejects moves.
-        m_view->setVerticalHeaderDragEnabled(true);
-        m_view->setRowFollowsHeaderVisual(true);
-        connect(m_view, &viv::VirtualTreeTableView::rowMoveRequested, this, [this](int from, int to) {
-            m_status->setText(QStringLiteral("行号拖动 from=%1 to=%2").arg(from).arg(to));
+        ui->view->setVerticalHeaderDragEnabled(true);
+        ui->view->setRowFollowsHeaderVisual(true);
+        connect(ui->view, &viv::VirtualTreeTableView::rowMoveRequested, this, [this](int from, int to) {
+            ui->status->setText(QStringLiteral("行号拖动 from=%1 to=%2").arg(from).arg(to));
         });
 
-        connect(m_move, &QPushButton::clicked, this, [this] {
-            const QModelIndex current = m_view->currentIndex();
+        connect(ui->move, &QPushButton::clicked, this, [this] {
+            const QModelIndex current = ui->view->currentIndex();
             if (!current.isValid()) return;
             const QModelIndex parent = current.parent();
             // Model row numbers are sibling-local; the view's rowMoveRequested uses visible rows.
             m_model->moveRows(parent, current.row(), 1, parent, m_model->rowCount(parent));
         });
-        connect(m_reset, &QPushButton::clicked, this, [this] {
+        connect(ui->reset, &QPushButton::clicked, this, [this] {
             m_model->resetRowOrder();
-            m_view->expand(m_model->index(0, 0));
+            ui->view->expand(m_model->index(0, 0));
         });
-        connect(m_follow, &QCheckBox::toggled, this, [this](bool enabled) {
-            m_view->setRowFollowsHeaderVisual(enabled);
+        connect(ui->follow, &QCheckBox::toggled, this, [this](bool enabled) {
+            ui->view->setRowFollowsHeaderVisual(enabled);
         });
     }
 
-    viv::VirtualTreeTableView *m_view = nullptr;
     Model *m_model = nullptr;
-    QLabel *m_status = nullptr;
-    QPushButton *m_move = nullptr;
-    QPushButton *m_reset = nullptr;
-    QCheckBox *m_follow = nullptr;
 };
 
 QWidget *createExample(QWidget *parent)

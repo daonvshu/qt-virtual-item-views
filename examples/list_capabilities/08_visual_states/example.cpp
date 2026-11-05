@@ -1,12 +1,12 @@
+#include "ui_visual_states.h"
+#include <memory>
 #include "example.h"
 #include <virtualitemviews/virtuallistview.h>
 #include <virtualitemviews/widgetadapter.h>
 #include <QComboBox>
-#include <QHBoxLayout>
 #include <QLabel>
 #include <QSpinBox>
 #include <QStringListModel>
-#include <QVBoxLayout>
 
 namespace list_visual_states {
 
@@ -44,72 +44,24 @@ public:
 class Example : public QWidget
 {
 public:
-    explicit Example(QWidget *parent) : QWidget(parent)
+    explicit Example(QWidget *parent) : QWidget(parent), ui(new Ui::ListVisualStatesPage)
     {
         setupUi();
         setupExample();
     }
 
 private:
+    std::unique_ptr<Ui::ListVisualStatesPage> ui;
+
     void setupUi()
     {
-        auto *layout = new QVBoxLayout(this);
-        auto *intro = new QLabel(QStringLiteral("08 状态背景：移动鼠标、点击选择；框架默认绘制 item 背景，可直接设置圆角、颜色和动画。"), this);
-        intro->setWordWrap(true);
-        layout->addWidget(intro);
-        auto *controls = new QHBoxLayout;
-        m_duration = new QSpinBox(this);
-        m_duration->setRange(0, 1000);
-        m_duration->setValue(180);
-        m_duration->setSuffix(QStringLiteral(" ms"));
-        m_colors = new QComboBox(this);
-        m_colors->addItems({QStringLiteral("蓝色"), QStringLiteral("绿色")});
-        m_easing = new QComboBox(this);
-        m_easing->addItem(QStringLiteral("OutCubic"), int(QEasingCurve::OutCubic));
-        m_easing->addItem(QStringLiteral("InOutCubic"), int(QEasingCurve::InOutCubic));
-        m_easing->addItem(QStringLiteral("Linear"), int(QEasingCurve::Linear));
-        m_radius = new QSpinBox(this);
-        m_radius->setRange(0, 24);
-        m_radius->setValue(8);
-        m_radius->setPrefix(QStringLiteral("圆角 "));
-        m_radius->setSuffix(QStringLiteral(" px"));
-        controls->addWidget(m_duration);
-        controls->addWidget(m_colors);
-        controls->addWidget(m_easing);
-        controls->addWidget(m_radius);
-        layout->addLayout(controls);
-        auto *backgroundGeometry = new QHBoxLayout;
-        m_extent = new QComboBox(this);
-        m_extent->addItems({QStringLiteral("整行 (FullWidth)"), QStringLiteral("仅控件 (WidgetOnly)")});
-        backgroundGeometry->addWidget(m_extent);
-        m_backgroundHeight = new QSpinBox(this);
-        m_backgroundHeight->setRange(0, 120);
-        m_backgroundHeight->setSpecialValueText(QStringLiteral("自动高度"));
-        m_backgroundHeight->setPrefix(QStringLiteral("背景高度 "));
-        backgroundGeometry->addWidget(m_backgroundHeight);
-        backgroundGeometry->addStretch();
-        layout->addLayout(backgroundGeometry);
-        auto *margins = new QHBoxLayout;
-        m_marginLeft = new QSpinBox(this);
-        m_marginLeft->setRange(0, 80);
-        m_marginLeft->setPrefix(QStringLiteral("左边距 "));
-        margins->addWidget(m_marginLeft);
-        m_marginTop = new QSpinBox(this);
-        m_marginTop->setRange(0, 80);
-        m_marginTop->setPrefix(QStringLiteral("上边距 "));
-        margins->addWidget(m_marginTop);
-        m_marginRight = new QSpinBox(this);
-        m_marginRight->setRange(0, 80);
-        m_marginRight->setPrefix(QStringLiteral("右边距 "));
-        margins->addWidget(m_marginRight);
-        m_marginBottom = new QSpinBox(this);
-        m_marginBottom->setRange(0, 80);
-        m_marginBottom->setPrefix(QStringLiteral("下边距 "));
-        margins->addWidget(m_marginBottom);
-        margins->addStretch();
-        layout->addLayout(margins);
-        m_view = new viv::VirtualListView(this);
-        layout->addWidget(m_view, 1);
+        ui->setupUi(this);
+
+        // Keep framework configuration and item data visible in the example.
+        ui->view->setObjectName(QStringLiteral("vivItemView"));
+        ui->easing->setItemData(0, int(QEasingCurve::OutCubic));
+        ui->easing->setItemData(1, int(QEasingCurve::InOutCubic));
+        ui->easing->setItemData(2, int(QEasingCurve::Linear));
     }
 
     void setupExample()
@@ -117,65 +69,54 @@ private:
         QStringList records;
         for (int row = 0; row < 100; ++row)
             records.append(QStringLiteral("条目 %1 · 支持 hover 与 selected 同时存在").arg(row + 1));
-        auto *model = new QStringListModel(records, m_view);
+        auto *model = new QStringListModel(records, ui->view);
         // The framework paints states by default; the adapter only provides text.
-        m_view->setAdapter(new StateAdapter, true);
-        m_view->setUniformItemHeight(36);
+        ui->view->setAdapter(new StateAdapter, true);
+        ui->view->setUniformItemHeight(36);
         // Radius only affects the item; row spacing always keeps its own background.
-        m_view->setVisualStateCornerRadius(8);
-        m_view->setRowGridLinesVisible(false);
-        m_view->setSelectionMode(viv::VirtualItemView::SelectionMode::ExtendedSelection);
+        ui->view->setVisualStateCornerRadius(8);
+        ui->view->setRowGridLinesVisible(false);
+        ui->view->setSelectionMode(viv::VirtualItemView::SelectionMode::ExtendedSelection);
         // The view paints these colors below the transparent row labels.
-        m_view->setHoverBackgroundColor(QColor(QStringLiteral("#e6effb")));
-        m_view->setSelectedBackgroundColor(QColor(QStringLiteral("#afcbee")));
+        ui->view->setHoverBackgroundColor(QColor(QStringLiteral("#e6effb")));
+        ui->view->setSelectedBackgroundColor(QColor(QStringLiteral("#afcbee")));
         // OutCubic responds quickly when the pointer only visits a row briefly.
         // OutCubic is also the framework default; the explicit call demonstrates the API.
-        m_view->setVisualStateAnimationEasingCurve(QEasingCurve::OutCubic);
-        m_view->setModel(model);
+        ui->view->setVisualStateAnimationEasingCurve(QEasingCurve::OutCubic);
+        ui->view->setModel(model);
         // Both painting and mouse hits follow the chosen rectangle; selection APIs stay unchanged.
-        connect(m_extent, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int value) {
-            m_view->setVisualStateBackgroundExtent(
+        connect(ui->extent, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int value) {
+            ui->view->setVisualStateBackgroundExtent(
                 static_cast<viv::VirtualListView::VisualStateBackgroundExtent>(value));
         });
         // Insets shrink the state area without changing widget geometry or row height.
         const auto applyMargins = [this] {
-            m_view->setVisualStateBackgroundMargins(m_marginLeft->value(), m_marginTop->value(),
-                                                   m_marginRight->value(), m_marginBottom->value());
+            ui->view->setVisualStateBackgroundMargins(ui->marginLeft->value(), ui->marginTop->value(),
+                                                   ui->marginRight->value(), ui->marginBottom->value());
         };
-        for (QSpinBox *spin : {m_marginLeft, m_marginTop, m_marginRight, m_marginBottom})
+        for (QSpinBox *spin : {ui->marginLeft, ui->marginTop, ui->marginRight, ui->marginBottom})
             connect(spin, QOverload<int>::of(&QSpinBox::valueChanged), this, applyMargins);
         // Zero restores automatic height; a positive height is centered after margins.
-        connect(m_backgroundHeight, QOverload<int>::of(&QSpinBox::valueChanged),
-                m_view, &viv::VirtualListView::setVisualStateBackgroundHeight);
+        connect(ui->backgroundHeight, QOverload<int>::of(&QSpinBox::valueChanged),
+                ui->view, &viv::VirtualListView::setVisualStateBackgroundHeight);
         // Duration is shared by hover and selection transitions; 0 switches immediately.
-        connect(m_duration, QOverload<int>::of(&QSpinBox::valueChanged),
-                m_view, &viv::VirtualItemView::setVisualStateAnimationDuration);
+        connect(ui->duration, QOverload<int>::of(&QSpinBox::valueChanged),
+                ui->view, &viv::VirtualItemView::setVisualStateAnimationDuration);
         // Zero gives square corners; the radius applies to both visual states.
-        connect(m_radius, QOverload<int>::of(&QSpinBox::valueChanged),
-                m_view, &viv::VirtualListView::setVisualStateCornerRadius);
-        connect(m_easing, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int) {
+        connect(ui->radius, QOverload<int>::of(&QSpinBox::valueChanged),
+                ui->view, &viv::VirtualListView::setVisualStateCornerRadius);
+        connect(ui->easing, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int) {
             // The same curve controls hover and selection, including fade-out.
-            const auto type = static_cast<QEasingCurve::Type>(m_easing->currentData().toInt());
-            m_view->setVisualStateAnimationEasingCurve(QEasingCurve(type));
+            const auto type = static_cast<QEasingCurve::Type>(ui->easing->currentData().toInt());
+            ui->view->setVisualStateAnimationEasingCurve(QEasingCurve(type));
         });
-        connect(m_colors, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int color) {
+        connect(ui->colors, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int color) {
             // Changing a visual-state color notifies materialized rows to repaint.
-            m_view->setHoverBackgroundColor(QColor(color == 0 ? QStringLiteral("#e6effb") : QStringLiteral("#e1f1e5")));
-            m_view->setSelectedBackgroundColor(QColor(color == 0 ? QStringLiteral("#afcbee") : QStringLiteral("#a2d4b0")));
+            ui->view->setHoverBackgroundColor(QColor(color == 0 ? QStringLiteral("#e6effb") : QStringLiteral("#e1f1e5")));
+            ui->view->setSelectedBackgroundColor(QColor(color == 0 ? QStringLiteral("#afcbee") : QStringLiteral("#a2d4b0")));
         });
     }
 
-    viv::VirtualListView *m_view = nullptr;
-    QSpinBox *m_duration = nullptr;
-    QSpinBox *m_radius = nullptr;
-    QSpinBox *m_backgroundHeight = nullptr;
-    QSpinBox *m_marginLeft = nullptr;
-    QSpinBox *m_marginTop = nullptr;
-    QSpinBox *m_marginRight = nullptr;
-    QSpinBox *m_marginBottom = nullptr;
-    QComboBox *m_extent = nullptr;
-    QComboBox *m_colors = nullptr;
-    QComboBox *m_easing = nullptr;
 };
 
 QWidget *createExample(QWidget *parent)

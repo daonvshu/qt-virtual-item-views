@@ -1,11 +1,11 @@
+#include "ui_model_updates.h"
+#include <memory>
 #include "example.h"
 #include <virtualitemviews/virtualtableview.h>
 #include <virtualitemviews/tablewidgetadapter.h>
 #include <QStandardItemModel>
 #include <QLabel>
 #include <QPushButton>
-#include <QHBoxLayout>
-#include <QVBoxLayout>
 
 namespace table_model_updates {
 
@@ -32,46 +32,33 @@ public:
 class Example : public QWidget
 {
 public:
-    explicit Example(QWidget *parent) : QWidget(parent)
+    explicit Example(QWidget *parent) : QWidget(parent), ui(new Ui::TableModelUpdatesPage)
     {
         setupUi();
         setupExample();
     }
 
 private:
+    std::unique_ptr<Ui::TableModelUpdatesPage> ui;
+
     void setupUi()
     {
-        auto *layout = new QVBoxLayout(this);
-        auto *description = new QLabel(QStringLiteral("05 模型更新：修改数据、插入删除行列和重置模型，依靠 Qt model 信号自动刷新"), this);
-        description->setWordWrap(true);
-        layout->addWidget(description);
-        auto *controls = new QHBoxLayout;
-        m_edit = new QPushButton(QStringLiteral("修改当前格"), this);
-        controls->addWidget(m_edit);
-        m_add = new QPushButton(QStringLiteral("插入行"), this);
-        controls->addWidget(m_add);
-        m_remove = new QPushButton(QStringLiteral("删除当前行"), this);
-        controls->addWidget(m_remove);
-        m_column = new QPushButton(QStringLiteral("增加列"), this);
-        controls->addWidget(m_column);
-        m_reset = new QPushButton(QStringLiteral("重置"), this);
-        controls->addWidget(m_reset);
-        controls->addStretch();
-        layout->addLayout(controls);
-        m_view = new viv::VirtualTableView(this);
-        layout->addWidget(m_view, 1);
+        ui->setupUi(this);
+
+        // Keep framework configuration and item data visible in the example.
+        ui->view->setObjectName(QStringLiteral("vivItemView"));
     }
 
     void setupExample()
     {
         // Materialize cells independently so horizontally offscreen cells can also be recycled.
-        m_view->setMaterializationMode(viv::VirtualTableView::MaterializationMode::CellWidgets);
-        m_view->setCellAdapter(new CellAdapter, true);
+        ui->view->setMaterializationMode(viv::VirtualTableView::MaterializationMode::CellWidgets);
+        ui->view->setCellAdapter(new CellAdapter, true);
         // Use a fixed row height to avoid measuring each row.
-        m_view->setUniformItemHeight(40);
+        ui->view->setUniformItemHeight(40);
         // The header and body share the same column geometry.
-        m_view->setDefaultColumnWidth(150);
-        m_model = new QStandardItemModel(120, 8, m_view);
+        ui->view->setDefaultColumnWidth(150);
+        m_model = new QStandardItemModel(120, 8, ui->view);
         for (int column = 0; column < m_model->columnCount(); ++column)
             m_model->setHeaderData(column, Qt::Horizontal, QStringLiteral("列 %1").arg(column + 1));
         for (int row = 0; row < m_model->rowCount(); ++row) {
@@ -80,26 +67,26 @@ private:
             }
         }
         // The QObject parent owns the model; Qt model signals report data and structure changes.
-        m_view->setModel(m_model);
+        ui->view->setModel(m_model);
 
-        connect(m_edit, &QPushButton::clicked, this, [this] {
-            const QModelIndex index = m_view->currentIndex();
+        connect(ui->edit, &QPushButton::clicked, this, [this] {
+            const QModelIndex index = ui->view->currentIndex();
             if (index.isValid()) m_model->setData(index, QStringLiteral("内容已更新"));
         });
-        connect(m_add, &QPushButton::clicked, this, [this] {
+        connect(ui->add, &QPushButton::clicked, this, [this] {
             m_model->insertRow(0);
             m_model->setData(m_model->index(0, 0), QStringLiteral("新行"));
         });
-        connect(m_remove, &QPushButton::clicked, this, [this] {
-            const int row = m_view->currentIndex().row();
+        connect(ui->remove, &QPushButton::clicked, this, [this] {
+            const int row = ui->view->currentIndex().row();
             if (row >= 0) m_model->removeRow(row);
         });
-        connect(m_column, &QPushButton::clicked, this, [this] {
+        connect(ui->column, &QPushButton::clicked, this, [this] {
             const int c = m_model->columnCount();
             m_model->insertColumn(c);
             m_model->setHeaderData(c, Qt::Horizontal, QStringLiteral("新增列"));
         });
-        connect(m_reset, &QPushButton::clicked, this, [this] {
+        connect(ui->reset, &QPushButton::clicked, this, [this] {
             m_model->clear();
             m_model->setColumnCount(8);
             m_model->setRowCount(40);
@@ -107,13 +94,7 @@ private:
         });
     }
 
-    viv::VirtualTableView *m_view = nullptr;
     QStandardItemModel *m_model = nullptr;
-    QPushButton *m_edit = nullptr;
-    QPushButton *m_add = nullptr;
-    QPushButton *m_remove = nullptr;
-    QPushButton *m_column = nullptr;
-    QPushButton *m_reset = nullptr;
 };
 
 QWidget *createExample(QWidget *parent)

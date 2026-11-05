@@ -1,0 +1,224 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ui version="4.0">
+ <class>ListVisualStatesPage</class>
+ <widget class="QWidget" name="ListVisualStatesPage">
+  <layout class="QVBoxLayout" name="layout" stretch="0,0,0,0,1">
+   <item>
+    <widget class="QLabel" name="intro">
+     <property name="text">
+      <string>08 状态背景：移动鼠标、点击选择；框架默认绘制 item 背景，可直接设置圆角、颜色和动画。</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="controls">
+     <item>
+      <widget class="QSpinBox" name="duration">
+       <property name="minimum">
+        <number>0</number>
+       </property>
+       <property name="maximum">
+        <number>1000</number>
+       </property>
+       <property name="value">
+        <number>180</number>
+       </property>
+       <property name="suffix">
+        <string> ms</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QComboBox" name="colors">
+       <item>
+        <property name="text">
+         <string>蓝色</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>绿色</string>
+        </property>
+       </item>
+      </widget>
+     </item>
+     <item>
+      <widget class="QComboBox" name="easing">
+       <item>
+        <property name="text">
+         <string>OutCubic</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>InOutCubic</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Linear</string>
+        </property>
+       </item>
+      </widget>
+     </item>
+     <item>
+      <widget class="QSpinBox" name="radius">
+       <property name="minimum">
+        <number>0</number>
+       </property>
+       <property name="maximum">
+        <number>24</number>
+       </property>
+       <property name="value">
+        <number>8</number>
+       </property>
+       <property name="prefix">
+        <string>圆角 </string>
+       </property>
+       <property name="suffix">
+        <string> px</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="backgroundGeometry">
+     <item>
+      <widget class="QComboBox" name="extent">
+       <item>
+        <property name="text">
+         <string>整行 (FullWidth)</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>仅控件 (WidgetOnly)</string>
+        </property>
+       </item>
+      </widget>
+     </item>
+     <item>
+      <widget class="QSpinBox" name="backgroundHeight">
+       <property name="minimum">
+        <number>0</number>
+       </property>
+       <property name="maximum">
+        <number>120</number>
+       </property>
+       <property name="specialValueText">
+        <string>自动高度</string>
+       </property>
+       <property name="prefix">
+        <string>背景高度 </string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="spacer1">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeType">
+        <enum>QSizePolicy::Expanding</enum>
+       </property>
+       <property name="sizeHint">
+        <size>
+         <width>0</width>
+         <height>0</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="margins">
+     <item>
+      <widget class="QSpinBox" name="marginLeft">
+       <property name="minimum">
+        <number>0</number>
+       </property>
+       <property name="maximum">
+        <number>80</number>
+       </property>
+       <property name="prefix">
+        <string>左边距 </string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QSpinBox" name="marginTop">
+       <property name="minimum">
+        <number>0</number>
+       </property>
+       <property name="maximum">
+        <number>80</number>
+       </property>
+       <property name="prefix">
+        <string>上边距 </string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QSpinBox" name="marginRight">
+       <property name="minimum">
+        <number>0</number>
+       </property>
+       <property name="maximum">
+        <number>80</number>
+       </property>
+       <property name="prefix">
+        <string>右边距 </string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QSpinBox" name="marginBottom">
+       <property name="minimum">
+        <number>0</number>
+       </property>
+       <property name="maximum">
+        <number>80</number>
+       </property>
+       <property name="prefix">
+        <string>下边距 </string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="spacer2">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeType">
+        <enum>QSizePolicy::Expanding</enum>
+       </property>
+       <property name="sizeHint">
+        <size>
+         <width>0</width>
+         <height>0</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="viv::VirtualListView" name="view" />
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>viv::VirtualListView</class>
+   <extends>QAbstractScrollArea</extends>
+   <header>virtualitemviews/virtuallistview.h</header>
+  </customwidget>
+ </customwidgets>
+ <resources />
+ <connections />
+</ui>

@@ -1,10 +1,11 @@
+#include "ui_basic.h"
+#include <memory>
 #include "example.h"
 #include <virtualitemviews/virtuallistview.h>
 #include <virtualitemviews/widgetadapter.h>
 #include <QComboBox>
 #include <QLabel>
 #include <QStandardItemModel>
-#include <QVBoxLayout>
 
 namespace list_basic {
 
@@ -42,27 +43,26 @@ public:
 class Example : public QWidget
 {
 public:
-    explicit Example(QWidget *parent) : QWidget(parent)
+    explicit Example(QWidget *parent) : QWidget(parent), ui(new Ui::ListBasicPage)
     {
         setupUi();
         setupExample();
     }
 
 private:
+    std::unique_ptr<Ui::ListBasicPage> ui;
+
     void setupUi()
     {
-        auto *layout = new QVBoxLayout(this);
-        layout->addWidget(new QLabel(QStringLiteral("01 基础列表：切换显示模型根节点或某个父节点的直接子项。"), this));
-        m_root = new QComboBox(this);
-        m_root->addItems({QStringLiteral("模型根节点"), QStringLiteral("分组 A 的子项"), QStringLiteral("分组 B 的子项")});
-        layout->addWidget(m_root);
-        m_view = new viv::VirtualListView(this);
-        layout->addWidget(m_view, 1);
+        ui->setupUi(this);
+
+        // Keep framework configuration and item data visible in the example.
+        ui->view->setObjectName(QStringLiteral("vivItemView"));
     }
 
     void setupExample()
     {
-        m_model = new QStandardItemModel(m_view);
+        m_model = new QStandardItemModel(ui->view);
         for (const auto &name : {QStringLiteral("分组 A"), QStringLiteral("分组 B")}) {
             auto *group = new QStandardItem(name);
             for (int row = 0; row < 80; ++row)
@@ -72,24 +72,22 @@ private:
         // setAdapter installs the row-widget lifecycle. The second argument
         // transfers adapter ownership to the view; it will be destroyed after
         // the view has finished unbinding its rows.
-        m_view->setAdapter(new TextAdapter, true);
+        ui->view->setAdapter(new TextAdapter, true);
         // Uniform mode avoids measuring every row when all rows have the same height.
-        m_view->setUniformItemHeight(36);
+        ui->view->setUniformItemHeight(36);
         // setModel starts materialization. Model notifications update the view
         // automatically; there is no reload() call in the business code.
         // setModel does not take ownership: this model is owned through its
-        // QObject parent, assigned when QStandardItemModel(m_view) was constructed.
-        m_view->setModel(m_model);
-        connect(m_root, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int root) {
+        // QObject parent, assigned when QStandardItemModel(ui->view) was constructed.
+        ui->view->setModel(m_model);
+        connect(ui->root, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int root) {
             // An invalid root means the model's invisible root. A valid root
             // makes the list show that item's direct children.
-            m_view->setRootIndex(root == 0 ? QModelIndex() : m_model->index(root - 1, 0));
+            ui->view->setRootIndex(root == 0 ? QModelIndex() : m_model->index(root - 1, 0));
         });
     }
 
-    viv::VirtualListView *m_view = nullptr;
     QStandardItemModel *m_model = nullptr;
-    QComboBox *m_root = nullptr;
 };
 
 QWidget *createExample(QWidget *parent)

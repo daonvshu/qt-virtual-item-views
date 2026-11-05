@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ui version="4.0">
+ <class>ListItemHeightsPage</class>
+ <widget class="QWidget" name="ListItemHeightsPage">
+  <layout class="QVBoxLayout" name="layout" stretch="0,0,1">
+   <item>
+    <widget class="QLabel" name="intro">
+     <property name="text">
+      <string>06 行高：点击行展开详情。动态模式下滚动到中间，再改变首行高度，观察滚动锚点。</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="controls">
+     <item>
+      <widget class="QComboBox" name="mode">
+       <item>
+        <property name="text">
+         <string>固定 44 px</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>按首个物化项测量统一高度</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>每行动态高度</string>
+        </property>
+       </item>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="first">
+       <property name="text">
+        <string>切换首行详情</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QCheckBox" name="async">
+       <property name="text">
+        <string>模拟后台更新高度</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="viv::VirtualListView" name="view" />
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>viv::VirtualListView</class>
+   <extends>QAbstractScrollArea</extends>
+   <header>virtualitemviews/virtuallistview.h</header>
+  </customwidget>
+ </customwidgets>
+ <resources />
+ <connections />
+</ui>

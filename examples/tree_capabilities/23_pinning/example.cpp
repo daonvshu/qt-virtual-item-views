@@ -1,3 +1,5 @@
+#include "ui_pinning.h"
+#include <memory>
 #include "example.h"
 #include <QPersistentModelIndex>
 #include <virtualitemviews/virtualtreeview.h>
@@ -7,7 +9,6 @@
 #include <QLabel>
 #include <QPushButton>
 #include <QStandardItemModel>
-#include <QVBoxLayout>
 #include <QLineEdit>
 #include <QSignalBlocker>
 
@@ -76,41 +77,27 @@ private:
 class Example : public QWidget
 {
 public:
-    explicit Example(QWidget *parent) : QWidget(parent)
+    explicit Example(QWidget *parent) : QWidget(parent), ui(new Ui::TreePinningPage)
     {
         setupUi();
         setupExample();
     }
 
 private:
+    std::unique_ptr<Ui::TreePinningPage> ui;
+
     void setupUi()
     {
-        auto *layout = new QVBoxLayout(this);
-        auto *description = new QLabel(QStringLiteral("23 屏外保留：选择节点后保留控件，再滚出屏幕查询实例编号；数据仍应写回 model。"), this);
-        description->setWordWrap(true);
-        layout->addWidget(description);
-        auto *controls = new QHBoxLayout;
-        pin = new QPushButton(QStringLiteral("按 index 保留当前项"), this);
-        controls->addWidget(pin);
-        widgetPin = new QPushButton(QStringLiteral("按 widget 保留"), this);
-        controls->addWidget(widgetPin);
-        unpin = new QPushButton(QStringLiteral("释放目标保留"), this);
-        controls->addWidget(unpin);
-        query = new QPushButton(QStringLiteral("查询目标实例"), this);
-        controls->addWidget(query);
-        controls->addStretch();
-        layout->addLayout(controls);
-        m_view = new viv::VirtualTreeView(this);
-        layout->addWidget(m_view, 1);
-        m_status = new QLabel(this);
-        m_status->setWordWrap(true);
-        layout->addWidget(m_status);
+        ui->setupUi(this);
+
+        // Keep framework configuration and item data visible in the example.
+        ui->view->setObjectName(QStringLiteral("vivItemView"));
     }
 
     void setupExample()
     {
         // A plain QStandardItemModel owns the hierarchy; only column zero owns children.
-        m_model = new QStandardItemModel(m_view);
+        m_model = new QStandardItemModel(ui->view);
         for (int group = 0; group < 5; ++group) {
             auto *branch = new QStandardItem(QStringLiteral("分组 %1").arg(group + 1));
             m_model->appendRow(branch);
@@ -121,57 +108,51 @@ private:
         }
 
         // The view owns the adapter through teardown; the QObject parent owns the model.
-        m_view->setAdapter(new PinAdapter(*m_view), true);
+        ui->view->setAdapter(new PinAdapter(*ui->view), true);
         // Uniform height avoids measuring each materialized node.
-        m_view->setUniformItemHeight(40);
+        ui->view->setUniformItemHeight(40);
         // Qt model signals update the visible mapping and reused widgets automatically.
-        m_view->setModel(m_model);
+        ui->view->setModel(m_model);
 
         // Expand through the view so mapping, branch state and signals stay synchronized.
-        m_view->expand(m_model->index(0, 0));
+        ui->view->expand(m_model->index(0, 0));
 
         // A soft diagnostic limit warns about excessive pins; it never force-recycles them.
-        m_view->setMaxPinnedItems(8);
-        connect(pin, &QPushButton::clicked, this, [this] {
-            const QModelIndex index = m_view->currentIndex();
+        ui->view->setMaxPinnedItems(8);
+        connect(ui->pin, &QPushButton::clicked, this, [this] {
+            const QModelIndex index = ui->view->currentIndex();
             if (!index.isValid())
                 return;
             if (m_target.isValid() && m_target != index)
-                m_view->setItemPinned(m_target, false);
+                ui->view->setItemPinned(m_target, false);
             m_target = QPersistentModelIndex(index);
             // Explicit pin retains a visible-mapping node even outside the overscan window.
-            m_view->setItemPinned(index, true);
+            ui->view->setItemPinned(index, true);
         });
-        connect(widgetPin, &QPushButton::clicked, this, [this] {
-            const QModelIndex index = m_view->currentIndex();
-            if (QWidget *widget = m_view->widgetForIndex(index)) {
+        connect(ui->widgetPin, &QPushButton::clicked, this, [this] {
+            const QModelIndex index = ui->view->currentIndex();
+            if (QWidget *widget = ui->view->widgetForIndex(index)) {
                 if (m_target.isValid() && m_target != index)
-                    m_view->setItemPinned(m_target, false);
+                    ui->view->setItemPinned(m_target, false);
                 m_target = QPersistentModelIndex(index);
-                m_view->pinWidget(widget);
+                ui->view->pinWidget(widget);
             }
         });
-        connect(unpin, &QPushButton::clicked, this, [this] {
+        connect(ui->unpin, &QPushButton::clicked, this, [this] {
             // Explicit retention is independent of temporary focus/popup/drag retention.
             if (m_target.isValid())
-                m_view->setItemPinned(m_target, false);
+                ui->view->setItemPinned(m_target, false);
         });
-        connect(query, &QPushButton::clicked, this, [this] {
-            QWidget *widget = m_view->widgetForIndex(m_target);
-            m_status->setText(QStringLiteral("目标=%1 / 映射可见=%2 / pinned=%3 / 控件实例=%4 / 当前保留=%5")
-                .arg(m_target.data().toString()).arg(m_view->visibilityIndex()->isVisible(m_target))
-                .arg(m_view->isItemPinned(m_target)).arg(widget ? widget->property("instance").toInt() : -1)
-                .arg(m_view->pinnedItemCount()));
+        connect(ui->query, &QPushButton::clicked, this, [this] {
+            QWidget *widget = ui->view->widgetForIndex(m_target);
+            ui->status->setText(QStringLiteral("目标=%1 / 映射可见=%2 / pinned=%3 / 控件实例=%4 / 当前保留=%5")
+                .arg(m_target.data().toString()).arg(ui->view->visibilityIndex()->isVisible(m_target))
+                .arg(ui->view->isItemPinned(m_target)).arg(widget ? widget->property("instance").toInt() : -1)
+                .arg(ui->view->pinnedItemCount()));
         });
     }
 
-    viv::VirtualTreeView *m_view = nullptr;
     QStandardItemModel *m_model = nullptr;
-    QLabel *m_status = nullptr;
-    QPushButton *pin = nullptr;
-    QPushButton *widgetPin = nullptr;
-    QPushButton *unpin = nullptr;
-    QPushButton *query = nullptr;
     QPersistentModelIndex m_target;
 };
 

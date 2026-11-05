@@ -1,3 +1,5 @@
+#include "ui_item_events.h"
+#include <memory>
 #include "example.h"
 #include <QStringList>
 #include <QPersistentModelIndex>
@@ -7,7 +9,6 @@
 #include <QLabel>
 #include <QPushButton>
 #include <QStandardItemModel>
-#include <QVBoxLayout>
 
 namespace tree_item_events {
 
@@ -73,37 +74,27 @@ private:
 class Example : public QWidget
 {
 public:
-    explicit Example(QWidget *parent) : QWidget(parent)
+    explicit Example(QWidget *parent) : QWidget(parent), ui(new Ui::TreeItemEventsPage)
     {
         setupUi();
         setupExample();
     }
 
 private:
+    std::unique_ptr<Ui::TreeItemEventsPage> ui;
+
     void setupUi()
     {
-        auto *layout = new QVBoxLayout(this);
-        auto *description = new QLabel(QStringLiteral("16 行事件：按钮使用每次绑定更新的持久索引；查询屏外项的索引、控件和几何各不相同。"), this);
-        description->setWordWrap(true);
-        layout->addWidget(description);
-        auto *controls = new QHBoxLayout;
-        query = new QPushButton(QStringLiteral("查询当前和选中项"), this);
-        controls->addWidget(query);
-        activate = new QPushButton(QStringLiteral("程序触发 activated"), this);
-        controls->addWidget(activate);
-        controls->addStretch();
-        layout->addLayout(controls);
-        m_view = new viv::VirtualTreeView(this);
-        layout->addWidget(m_view, 1);
-        m_status = new QLabel(this);
-        m_status->setWordWrap(true);
-        layout->addWidget(m_status);
+        ui->setupUi(this);
+
+        // Keep framework configuration and item data visible in the example.
+        ui->view->setObjectName(QStringLiteral("vivItemView"));
     }
 
     void setupExample()
     {
         // A plain QStandardItemModel owns the hierarchy; only column zero owns children.
-        m_model = new QStandardItemModel(m_view);
+        m_model = new QStandardItemModel(ui->view);
         for (int group = 0; group < 6; ++group) {
             auto *branch = new QStandardItem(QStringLiteral("分组 %1").arg(group + 1));
             m_model->appendRow(branch);
@@ -114,45 +105,41 @@ private:
         }
 
         // The view owns the adapter through teardown; the QObject parent owns the model.
-        m_view->setAdapter(new EventAdapter(*m_status), true);
+        ui->view->setAdapter(new EventAdapter(*ui->status), true);
         // Uniform height avoids measuring each materialized node.
-        m_view->setUniformItemHeight(40);
+        ui->view->setUniformItemHeight(40);
         // Qt model signals update the visible mapping and reused widgets automatically.
-        m_view->setModel(m_model);
+        ui->view->setModel(m_model);
 
         // Expand through the view so mapping, branch state and signals stay synchronized.
-        m_view->expand(m_model->index(0, 0));
+        ui->view->expand(m_model->index(0, 0));
 
-        m_view->setCurrentIndex(m_model->index(0, 0, m_model->index(0, 0)));
-        connect(query, &QPushButton::clicked, this, [this] {
-            const QModelIndex index = m_view->currentIndex();
-            const QRect rect = m_view->visualRect(index);
-            QWidget *widget = m_view->widgetForIndex(index);
-            const QModelIndex hit = m_view->indexAt(rect.center());
+        ui->view->setCurrentIndex(m_model->index(0, 0, m_model->index(0, 0)));
+        connect(ui->query, &QPushButton::clicked, this, [this] {
+            const QModelIndex index = ui->view->currentIndex();
+            const QRect rect = ui->view->visualRect(index);
+            QWidget *widget = ui->view->widgetForIndex(index);
+            const QModelIndex hit = ui->view->indexAt(rect.center());
             QStringList selected;
-            for (const QModelIndex &node : m_view->selectionModel()->selectedIndexes())
+            for (const QModelIndex &node : ui->view->selectionModel()->selectedIndexes())
                 selected.append(node.data().toString());
-            m_status->setText(QStringLiteral("current=%1 / selected=[%2] / widget=%3 / rect=(%4,%5 %6x%7) / hit=%8")
+            ui->status->setText(QStringLiteral("current=%1 / selected=[%2] / widget=%3 / rect=(%4,%5 %6x%7) / hit=%8")
                 .arg(index.data().toString()).arg(selected.join(QStringLiteral(", ")))
                 .arg(widget ? QStringLiteral("已物化") : QStringLiteral("未物化"))
                 .arg(rect.x()).arg(rect.y()).arg(rect.width()).arg(rect.height()).arg(hit.data().toString()));
         });
-        connect(m_view, &viv::VirtualItemView::doubleClicked, this, [this](const QModelIndex &index) {
-            m_status->setText(QStringLiteral("doubleClicked: %1").arg(index.data().toString()));
+        connect(ui->view, &viv::VirtualItemView::doubleClicked, this, [this](const QModelIndex &index) {
+            ui->status->setText(QStringLiteral("doubleClicked: %1").arg(index.data().toString()));
         });
-        connect(m_view, &viv::VirtualItemView::activated, this, [this](const QModelIndex &index) {
-            m_status->setText(QStringLiteral("activated: %1").arg(index.data().toString()));
+        connect(ui->view, &viv::VirtualItemView::activated, this, [this](const QModelIndex &index) {
+            ui->status->setText(QStringLiteral("activated: %1").arg(index.data().toString()));
         });
-        connect(activate, &QPushButton::clicked, this, [this] {
-            m_view->activateIndex(m_view->currentIndex());
+        connect(ui->activate, &QPushButton::clicked, this, [this] {
+            ui->view->activateIndex(ui->view->currentIndex());
         });
     }
 
-    viv::VirtualTreeView *m_view = nullptr;
     QStandardItemModel *m_model = nullptr;
-    QLabel *m_status = nullptr;
-    QPushButton *query = nullptr;
-    QPushButton *activate = nullptr;
 };
 
 QWidget *createExample(QWidget *parent)

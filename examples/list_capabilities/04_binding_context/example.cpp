@@ -1,3 +1,5 @@
+#include "ui_binding_context.h"
+#include <memory>
 #include "example.h"
 #include <virtualitemviews/virtuallistview.h>
 #include <virtualitemviews/widgetadapter.h>
@@ -6,7 +8,6 @@
 #include <QMetaType>
 #include <QPushButton>
 #include <QStandardItemModel>
-#include <QVBoxLayout>
 
 namespace list_binding_context {
 
@@ -91,39 +92,40 @@ private:
 class Example : public QWidget
 {
 public:
-    explicit Example(QWidget *parent) : QWidget(parent)
+    explicit Example(QWidget *parent) : QWidget(parent), ui(new Ui::ListBindingContextPage)
     {
         setupUi();
         setupExample();
     }
 
 private:
+    std::unique_ptr<Ui::ListBindingContextPage> ui;
+
     void setupUi()
     {
-        auto *layout = new QVBoxLayout(this);
-        layout->addWidget(new QLabel(QStringLiteral("04 整行数据绑定：model 每行存一份 Record，bind 直接接收 rowData。"), this));
-        m_view = new viv::VirtualListView(this);
-        layout->addWidget(m_view, 1);
+        ui->setupUi(this);
+
+        // Keep framework configuration and item data visible in the example.
+        ui->view->setObjectName(QStringLiteral("vivItemView"));
     }
 
     void setupExample()
     {
-        auto *model = new QStandardItemModel(m_view);
+        auto *model = new QStandardItemModel(ui->view);
         for (int row = 0; row < 100; ++row) {
             auto *item = new QStandardItem;
             item->setData(QVariant::fromValue(Record{row + 1, QStringLiteral("记录 %1").arg(row + 1), false}), RecordRole);
             model->appendRow(item);
         }
         // The adapter receives the complete row payload through ItemBindingContext.
-        m_view->setAdapter(new RecordAdapter(*m_view), true);
+        ui->view->setAdapter(new RecordAdapter(*ui->view), true);
         // rowData is read from this role using the row's canonical model index.
         // Changing the payload through model.setData() emits dataChanged and rebinds it.
-        m_view->setItemDataRole(RecordRole);
-        m_view->setUniformItemHeight(40);
-        m_view->setModel(model);
+        ui->view->setItemDataRole(RecordRole);
+        ui->view->setUniformItemHeight(40);
+        ui->view->setModel(model);
     }
 
-    viv::VirtualListView *m_view = nullptr;
 };
 
 QWidget *createExample(QWidget *parent)

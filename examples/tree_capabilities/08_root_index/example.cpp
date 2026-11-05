@@ -1,11 +1,11 @@
+#include "ui_root_index.h"
+#include <memory>
 #include "example.h"
 #include <virtualitemviews/virtualtreeview.h>
 #include <virtualitemviews/widgetadapter.h>
 #include <QComboBox>
-#include <QHBoxLayout>
 #include <QLabel>
 #include <QStandardItemModel>
-#include <QVBoxLayout>
 
 namespace tree_root_index {
 
@@ -36,36 +36,27 @@ public:
 class Example : public QWidget
 {
 public:
-    explicit Example(QWidget *parent) : QWidget(parent)
+    explicit Example(QWidget *parent) : QWidget(parent), ui(new Ui::TreeRootIndexPage)
     {
         setupUi();
         setupExample();
     }
 
 private:
+    std::unique_ptr<Ui::TreeRootIndexPage> ui;
+
     void setupUi()
     {
-        auto *layout = new QVBoxLayout(this);
-        auto *description = new QLabel(QStringLiteral("08 显示根：切换整棵树或仅显示某个分组的子树；显示根本身不作为一行。"), this);
-        description->setWordWrap(true);
-        layout->addWidget(description);
-        auto *controls = new QHBoxLayout;
-        root = new QComboBox(this);
-        root->addItems({QStringLiteral("整棵树"), QStringLiteral("仅分组 1 子树"), QStringLiteral("仅分组 2 子树"), QStringLiteral("仅分组 3 子树"), QStringLiteral("仅分组 4 子树")});
-        controls->addWidget(root);
-        controls->addStretch();
-        layout->addLayout(controls);
-        m_view = new viv::VirtualTreeView(this);
-        layout->addWidget(m_view, 1);
-        m_status = new QLabel(this);
-        m_status->setWordWrap(true);
-        layout->addWidget(m_status);
+        ui->setupUi(this);
+
+        // Keep framework configuration and item data visible in the example.
+        ui->view->setObjectName(QStringLiteral("vivItemView"));
     }
 
     void setupExample()
     {
         // A plain QStandardItemModel owns the hierarchy; only column zero owns children.
-        m_model = new QStandardItemModel(m_view);
+        m_model = new QStandardItemModel(ui->view);
         for (int group = 0; group < 4; ++group) {
             auto *branch = new QStandardItem(QStringLiteral("分组 %1").arg(group + 1));
             m_model->appendRow(branch);
@@ -81,31 +72,28 @@ private:
         }
 
         // The view owns the adapter through teardown; the QObject parent owns the model.
-        m_view->setAdapter(new TextAdapter, true);
+        ui->view->setAdapter(new TextAdapter, true);
         // Uniform height avoids measuring each materialized node.
-        m_view->setUniformItemHeight(36);
+        ui->view->setUniformItemHeight(36);
         // Qt model signals update the visible mapping and reused widgets automatically.
-        m_view->setModel(m_model);
+        ui->view->setModel(m_model);
 
         // Expand through the view so mapping, branch state and signals stay synchronized.
-        m_view->expand(m_model->index(0, 0));
+        ui->view->expand(m_model->index(0, 0));
 
-        connect(root, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int value) {
+        connect(ui->root, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int value) {
             // Invalid index displays the whole model; a valid root must belong to this model.
-            m_view->setRootIndex(value == 0 ? QModelIndex() : m_model->index(value - 1, 0));
-            m_view->setCurrentIndex(m_model->index(0, 0, m_view->rootIndex()));
+            ui->view->setRootIndex(value == 0 ? QModelIndex() : m_model->index(value - 1, 0));
+            ui->view->setCurrentIndex(m_model->index(0, 0, ui->view->rootIndex()));
         });
-        connect(m_view, &viv::VirtualItemView::clicked, this, [this](const QModelIndex &index) {
-            m_status->setText(QStringLiteral("当前显示根=%1 / 节点=%2 / 相对深度=%3 / 可见映射行=%4")
-                .arg(m_view->rootIndex().data().toString()).arg(index.data().toString())
-                .arg(m_view->itemDepth(index)).arg(m_view->visibilityIndex()->visibleRowForIndex(index)));
+        connect(ui->view, &viv::VirtualItemView::clicked, this, [this](const QModelIndex &index) {
+            ui->status->setText(QStringLiteral("当前显示根=%1 / 节点=%2 / 相对深度=%3 / 可见映射行=%4")
+                .arg(ui->view->rootIndex().data().toString()).arg(index.data().toString())
+                .arg(ui->view->itemDepth(index)).arg(ui->view->visibilityIndex()->visibleRowForIndex(index)));
         });
     }
 
-    viv::VirtualTreeView *m_view = nullptr;
     QStandardItemModel *m_model = nullptr;
-    QLabel *m_status = nullptr;
-    QComboBox *root = nullptr;
 };
 
 QWidget *createExample(QWidget *parent)

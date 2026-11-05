@@ -1,3 +1,5 @@
+#include "ui_row_widgets.h"
+#include <memory>
 #include "example.h"
 #include <virtualitemviews/virtuallistview.h>
 #include <virtualitemviews/widgetadapter.h>
@@ -8,7 +10,6 @@
 #include <QPushButton>
 #include <QSignalBlocker>
 #include <QStandardItemModel>
-#include <QVBoxLayout>
 
 namespace list_row_widgets {
 
@@ -90,37 +91,36 @@ private:
 class Example : public QWidget
 {
 public:
-    explicit Example(QWidget *parent) : QWidget(parent)
+    explicit Example(QWidget *parent) : QWidget(parent), ui(new Ui::ListRowWidgetsPage)
     {
         setupUi();
         setupExample();
     }
 
 private:
+    std::unique_ptr<Ui::ListRowWidgetsPage> ui;
+
     void setupUi()
     {
-        auto *layout = new QVBoxLayout(this);
-        auto *intro = new QLabel(QStringLiteral("02 自定义行控件：修改名称后按 Enter，或勾选复选框；滚动回来检查数据。"), this);
-        intro->setWordWrap(true);
-        layout->addWidget(intro);
-        m_view = new viv::VirtualListView(this);
-        layout->addWidget(m_view, 1);
+        ui->setupUi(this);
+
+        // Keep framework configuration and item data visible in the example.
+        ui->view->setObjectName(QStringLiteral("vivItemView"));
     }
 
     void setupExample()
     {
-        auto *model = new QStandardItemModel(m_view);
+        auto *model = new QStandardItemModel(ui->view);
         for (int row = 0; row < 200; ++row)
             model->appendRow(new QStandardItem(QStringLiteral("条目 %1").arg(row + 1)));
         // The adapter owns the create/bind/unbind contract for a real QWidget row.
-        m_view->setAdapter(new EntryAdapter(*m_view), true);
+        ui->view->setAdapter(new EntryAdapter(*ui->view), true);
         // The editor row has a known fixed height, so no sizeHint measurement is needed.
-        m_view->setUniformItemHeight(44);
+        ui->view->setUniformItemHeight(44);
         // The model remains the source of truth for text and check state.
-        m_view->setModel(model);
+        ui->view->setModel(model);
     }
 
-    viv::VirtualListView *m_view = nullptr;
 };
 
 QWidget *createExample(QWidget *parent)

@@ -1,3 +1,5 @@
+#include "ui_row_widgets.h"
+#include <memory>
 #include "example.h"
 #include <virtualitemviews/virtualtreetableview.h>
 #include <virtualitemviews/tablewidgetadapter.h>
@@ -5,7 +7,6 @@
 #include <QLabel>
 #include <QPushButton>
 #include <QHBoxLayout>
-#include <QVBoxLayout>
 
 namespace treetable_row_widgets {
 
@@ -77,37 +78,32 @@ static void appendChildren(QStandardItemModel *model)
 class Example : public QWidget
 {
 public:
-    explicit Example(QWidget *parent) : QWidget(parent)
+    explicit Example(QWidget *parent) : QWidget(parent), ui(new Ui::TreetableRowWidgetsPage)
     {
         setupUi();
         setupExample();
     }
 
 private:
+    std::unique_ptr<Ui::TreetableRowWidgetsPage> ui;
+
     void setupUi()
     {
-        auto *layout = new QVBoxLayout(this);
-        auto *description = new QLabel(QStringLiteral("02 整行物化与 ColumnHost：每个节点物化一行；ColumnHost 负责列宽、换序和首列树缩进。"), this);
-        description->setWordWrap(true);
-        layout->addWidget(description);
-        auto *controls = new QHBoxLayout;
-        m_move = new QPushButton(QStringLiteral("将第 3 列移到首列"), this);
-        controls->addWidget(m_move);
-        controls->addStretch();
-        layout->addLayout(controls);
-        m_view = new viv::VirtualTreeTableView(this);
-        layout->addWidget(m_view, 1);
+        ui->setupUi(this);
+
+        // Keep framework configuration and item data visible in the example.
+        ui->view->setObjectName(QStringLiteral("vivItemView"));
     }
 
     void setupExample()
     {
         // Use one QWidget per row and transfer adapter ownership to the view.
-        m_view->setTableAdapter(new RowAdapter, true);
+        ui->view->setTableAdapter(new RowAdapter, true);
         // Use a fixed row height to avoid measuring each row.
-        m_view->setUniformItemHeight(40);
+        ui->view->setUniformItemHeight(40);
         // The header and body share the same column geometry.
-        m_view->setDefaultColumnWidth(150);
-        m_model = new QStandardItemModel(8, 8, m_view);
+        ui->view->setDefaultColumnWidth(150);
+        m_model = new QStandardItemModel(8, 8, ui->view);
         for (int column = 0; column < m_model->columnCount(); ++column)
             m_model->setHeaderData(column, Qt::Horizontal, QStringLiteral("列 %1").arg(column + 1));
         for (int row = 0; row < m_model->rowCount(); ++row) {
@@ -117,22 +113,20 @@ private:
         }
         // The QObject parent owns the model; Qt model signals report data and structure changes.
         appendChildren(m_model);
-        m_view->setModel(m_model);
+        ui->view->setModel(m_model);
         // Expand through the view; model row numbers remain local to each parent.
-        m_view->setExpansionAnimationEnabled(false);
-        m_view->expandRecursively(m_model->index(0, 0));
-        m_view->setExpansionAnimationEnabled(true);
-        m_view->setColumnWidth(0, 280);
+        ui->view->setExpansionAnimationEnabled(false);
+        ui->view->expandRecursively(m_model->index(0, 0));
+        ui->view->setExpansionAnimationEnabled(true);
+        ui->view->setColumnWidth(0, 280);
 
-        connect(m_move, &QPushButton::clicked, this, [this] {
+        connect(ui->move, &QPushButton::clicked, this, [this] {
             // Reordering changes visual positions without changing logical model columns.
-            m_view->moveColumn(2, 0, viv::VirtualTreeTableView::MoveAnimation::Animate);
+            ui->view->moveColumn(2, 0, viv::VirtualTreeTableView::MoveAnimation::Animate);
         });
     }
 
-    viv::VirtualTreeTableView *m_view = nullptr;
     QStandardItemModel *m_model = nullptr;
-    QPushButton *m_move = nullptr;
 };
 
 QWidget *createExample(QWidget *parent)

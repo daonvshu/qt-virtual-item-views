@@ -6,4 +6,4 @@
 
 在已有示例构建配置中构建 `treetable_capabilities`，运行 `treetable_capabilities --example 35`。
 
-本目录包含自己的模型、adapter 和控件实现；复制本章时无需其他能力目录。布局见 [example.ui](example.ui)，需要启用 CMake `AUTOUIC`。
+本目录包含自己的模型、adapter 和控件实现；复制本章时无需其他能力目录。布局见 [borders.ui](borders.ui)，需要启用 CMake `AUTOUIC`。

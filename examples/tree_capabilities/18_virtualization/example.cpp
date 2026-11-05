@@ -1,12 +1,12 @@
+#include "ui_virtualization.h"
+#include <memory>
 #include "example.h"
 #include <virtualitemviews/virtualtreeview.h>
 #include <virtualitemviews/widgetadapter.h>
-#include <QHBoxLayout>
 #include <QLabel>
 #include <QPushButton>
 #include <QSpinBox>
 #include <QStandardItemModel>
-#include <QVBoxLayout>
 #include <virtualitemviews/widgetrecycler.h>
 
 namespace tree_virtualization {
@@ -38,50 +38,27 @@ public:
 class Example : public QWidget
 {
 public:
-    explicit Example(QWidget *parent) : QWidget(parent)
+    explicit Example(QWidget *parent) : QWidget(parent), ui(new Ui::TreeVirtualizationPage)
     {
         setupUi();
         setupExample();
     }
 
 private:
+    std::unique_ptr<Ui::TreeVirtualizationPage> ui;
+
     void setupUi()
     {
-        auto *layout = new QVBoxLayout(this);
-        auto *description = new QLabel(QStringLiteral("18 复用：只有视口、overscan 和保留项有控件，折叠子树不创建行；可调整复用池。"), this);
-        description->setWordWrap(true);
-        layout->addWidget(description);
-        auto *controls = new QHBoxLayout;
-        before = new QSpinBox(this);
-        before->setRange(0, 50);
-        before->setValue(3);
-        before->setPrefix(QStringLiteral("前预加载 "));
-        controls->addWidget(before);
-        after = new QSpinBox(this);
-        after->setRange(0, 50);
-        after->setValue(6);
-        after->setPrefix(QStringLiteral("后预加载 "));
-        controls->addWidget(after);
-        pool = new QSpinBox(this);
-        pool->setRange(0, 256);
-        pool->setValue(32);
-        pool->setPrefix(QStringLiteral("池上限 "));
-        controls->addWidget(pool);
-        clear = new QPushButton(QStringLiteral("清空池"), this);
-        controls->addWidget(clear);
-        controls->addStretch();
-        layout->addLayout(controls);
-        m_view = new viv::VirtualTreeView(this);
-        layout->addWidget(m_view, 1);
-        m_status = new QLabel(this);
-        m_status->setWordWrap(true);
-        layout->addWidget(m_status);
+        ui->setupUi(this);
+
+        // Keep framework configuration and item data visible in the example.
+        ui->view->setObjectName(QStringLiteral("vivItemView"));
     }
 
     void setupExample()
     {
         // A plain QStandardItemModel owns the hierarchy; only column zero owns children.
-        m_model = new QStandardItemModel(m_view);
+        m_model = new QStandardItemModel(ui->view);
         for (int group = 0; group < 30; ++group) {
             auto *branch = new QStandardItem(QStringLiteral("分组 %1").arg(group + 1));
             m_model->appendRow(branch);
@@ -92,54 +69,48 @@ private:
         }
 
         // The view owns the adapter through teardown; the QObject parent owns the model.
-        m_view->setAdapter(new TextAdapter, true);
+        ui->view->setAdapter(new TextAdapter, true);
         // Uniform height avoids measuring each materialized node.
-        m_view->setUniformItemHeight(36);
+        ui->view->setUniformItemHeight(36);
         // Qt model signals update the visible mapping and reused widgets automatically.
-        m_view->setModel(m_model);
+        ui->view->setModel(m_model);
 
         // Expand through the view so mapping, branch state and signals stay synchronized.
-        m_view->expand(m_model->index(0, 0));
+        ui->view->expand(m_model->index(0, 0));
 
         // Overscan is measured in flattened visible rows, not model siblings or depth.
-        m_view->setOverscan(3, 6);
+        ui->view->setOverscan(3, 6);
         // This adapter uses the default widget type; limits are per recycler type.
-        m_view->recycler()->setMaxPoolSize(viv::kDefaultWidgetType, 32);
-        connect(before, QOverload<int>::of(&QSpinBox::valueChanged), this, [this](int value) {
-            m_view->setOverscan(value, after->value());
+        ui->view->recycler()->setMaxPoolSize(viv::kDefaultWidgetType, 32);
+        connect(ui->before, QOverload<int>::of(&QSpinBox::valueChanged), this, [this](int value) {
+            ui->view->setOverscan(value, ui->after->value());
         });
-        connect(after, QOverload<int>::of(&QSpinBox::valueChanged), this, [this](int value) {
-            m_view->setOverscan(before->value(), value);
+        connect(ui->after, QOverload<int>::of(&QSpinBox::valueChanged), this, [this](int value) {
+            ui->view->setOverscan(ui->before->value(), value);
         });
-        connect(pool, QOverload<int>::of(&QSpinBox::valueChanged), this, [this](int value) {
-            m_view->recycler()->setMaxPoolSize(viv::kDefaultWidgetType, value);
-            m_view->recycler()->trim();
+        connect(ui->pool, QOverload<int>::of(&QSpinBox::valueChanged), this, [this](int value) {
+            ui->view->recycler()->setMaxPoolSize(viv::kDefaultWidgetType, value);
+            ui->view->recycler()->trim();
         });
-        connect(clear, &QPushButton::clicked, this, [this] {
+        connect(ui->clear, &QPushButton::clicked, this, [this] {
             // Clear unbound pooled widgets only; do not delete materialized widgets yourself.
-            m_view->recycler()->clear();
+            ui->view->recycler()->clear();
             report();
         });
-        connect(m_view, &viv::VirtualItemView::virtualizationUpdated, this, [this] { report(); });
+        connect(ui->view, &viv::VirtualItemView::virtualizationUpdated, this, [this] { report(); });
     }
 
     void report()
     {
-        const auto range = m_view->visibleItemRange();
-        const auto stats = m_view->stats();
-        m_status->setText(QStringLiteral("映射行=%1 / 屏幕范围=[%2,%3] / 物化=%4 / 池=%5 / 累计创建=%6 / 累计复用=%7")
-            .arg(m_view->visibleRowCount()).arg(range.first).arg(range.last)
+        const auto range = ui->view->visibleItemRange();
+        const auto stats = ui->view->stats();
+        ui->status->setText(QStringLiteral("映射行=%1 / 屏幕范围=[%2,%3] / 物化=%4 / 池=%5 / 累计创建=%6 / 累计复用=%7")
+            .arg(ui->view->visibleRowCount()).arg(range.first).arg(range.last)
             .arg(stats.materializedItems).arg(stats.pooledWidgets).arg(stats.createCount)
-            .arg(m_view->recycler()->reuseCount()));
+            .arg(ui->view->recycler()->reuseCount()));
     }
 
-    viv::VirtualTreeView *m_view = nullptr;
     QStandardItemModel *m_model = nullptr;
-    QLabel *m_status = nullptr;
-    QSpinBox *before = nullptr;
-    QSpinBox *after = nullptr;
-    QSpinBox *pool = nullptr;
-    QPushButton *clear = nullptr;
 };
 
 QWidget *createExample(QWidget *parent)

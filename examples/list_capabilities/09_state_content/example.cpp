@@ -1,3 +1,5 @@
+#include "ui_state_content.h"
+#include <memory>
 #include "example.h"
 #include <virtualitemviews/virtuallistview.h>
 #include <virtualitemviews/widgetadapter.h>
@@ -7,7 +9,6 @@
 #include <QPushButton>
 #include <QSignalBlocker>
 #include <QStandardItemModel>
-#include <QVBoxLayout>
 
 namespace list_state_content {
 
@@ -99,36 +100,35 @@ private:
 class Example : public QWidget
 {
 public:
-    explicit Example(QWidget *parent) : QWidget(parent)
+    explicit Example(QWidget *parent) : QWidget(parent), ui(new Ui::ListStateContentPage)
     {
         setupUi();
         setupExample();
     }
 
 private:
+    std::unique_ptr<Ui::ListStateContentPage> ui;
+
     void setupUi()
     {
-        auto *layout = new QVBoxLayout(this);
-        auto *intro = new QLabel(QStringLiteral("09 状态关联内容：悬停或选中的行显示操作区；勾选数据独立存储，离开 hover 不会清除。"), this);
-        intro->setWordWrap(true);
-        layout->addWidget(intro);
-        m_view = new viv::VirtualListView(this);
-        layout->addWidget(m_view, 1);
+        ui->setupUi(this);
+
+        // Keep framework configuration and item data visible in the example.
+        ui->view->setObjectName(QStringLiteral("vivItemView"));
     }
 
     void setupExample()
     {
-        auto *model = new QStandardItemModel(m_view);
+        auto *model = new QStandardItemModel(ui->view);
         for (int row = 0; row < 100; ++row)
             model->appendRow(new QStandardItem(QStringLiteral("条目 %1").arg(row + 1)));
         // visualStateChanged() controls whether the row's action widgets are visible.
-        m_view->setAdapter(new ActionAdapter(*m_view), true);
-        m_view->setUniformItemHeight(40);
-        m_view->setSelectionMode(viv::VirtualItemView::SelectionMode::ExtendedSelection);
-        m_view->setModel(model);
+        ui->view->setAdapter(new ActionAdapter(*ui->view), true);
+        ui->view->setUniformItemHeight(40);
+        ui->view->setSelectionMode(viv::VirtualItemView::SelectionMode::ExtendedSelection);
+        ui->view->setModel(model);
     }
 
-    viv::VirtualListView *m_view = nullptr;
 };
 
 QWidget *createExample(QWidget *parent)

@@ -1,3 +1,5 @@
+#include "ui_item_events.h"
+#include <memory>
 #include "example.h"
 #include <virtualitemviews/virtuallistview.h>
 #include <virtualitemviews/widgetadapter.h>
@@ -7,7 +9,6 @@
 #include <QPlainTextEdit>
 #include <QPushButton>
 #include <QStandardItemModel>
-#include <QVBoxLayout>
 #include <functional>
 #include <utility>
 
@@ -71,71 +72,65 @@ private:
 class Example : public QWidget
 {
 public:
-    explicit Example(QWidget *parent) : QWidget(parent)
+    explicit Example(QWidget *parent) : QWidget(parent), ui(new Ui::ListItemEventsPage)
     {
         setupUi();
         setupExample();
     }
 
 private:
+    std::unique_ptr<Ui::ListItemEventsPage> ui;
+
     void setupUi()
     {
-        auto *layout = new QVBoxLayout(this);
-        auto *intro = new QLabel(QStringLiteral("11 事件：点击或双击行空白区，按 ↑ / ↓ / PageUp / PageDown / Home / End / Enter；滚动后点行内按钮。"), this);
-        intro->setWordWrap(true);
-        layout->addWidget(intro);
-        m_view = new viv::VirtualListView(this);
-        layout->addWidget(m_view, 1);
-        m_locate = new QPushButton(QStringLiteral("查询当前项、选中项、控件、矩形和命中索引"), this);
-        layout->addWidget(m_locate);
-        m_log = new QPlainTextEdit(this);
-        m_log->setReadOnly(true);
-        m_log->setMaximumBlockCount(100);
-        m_log->setMaximumHeight(160);
-        layout->addWidget(m_log);
+        ui->setupUi(this);
+
+        // Keep framework configuration and item data visible in the example.
+        ui->view->setObjectName(QStringLiteral("vivItemView"));
+        ui->log->setMaximumBlockCount(100);
     }
 
     void setupExample()
     {
-        auto *model = new QStandardItemModel(m_view);
+        auto *model = new QStandardItemModel(ui->view);
         for (int row = 0; row < 200; ++row)
             model->appendRow(new QStandardItem(QStringLiteral("条目 %1").arg(row + 1)));
         // The adapter resolves a reused row's current index when its button is clicked.
-        m_view->setAdapter(new EventAdapter(*m_view, [this](const QString &text) {
-            m_log->appendPlainText(text);
+        ui->view->setAdapter(new EventAdapter(*ui->view, [this](const QString &text) {
+            ui->log->appendPlainText(text);
         }), true);
-        m_view->setUniformItemHeight(40);
-        m_view->setSelectionMode(viv::VirtualItemView::SelectionMode::SingleSelection);
-        m_view->setModel(model);
+        ui->view->setUniformItemHeight(40);
+        ui->view->setSelectionMode(viv::VirtualItemView::SelectionMode::SingleSelection);
+        ui->view->setModel(model);
         // Row signals report model indexes. A child button keeps its own clicked
         // signal, handled separately by EventAdapter rather than as a row click.
-        connect(m_view, &viv::VirtualItemView::clicked, this, [this](const QModelIndex &index) {
+        connect(ui->view, &viv::VirtualItemView::clicked, this, [this](const QModelIndex &index) {
             report(QStringLiteral("clicked"), index);
         });
-        connect(m_view, &viv::VirtualItemView::doubleClicked, this, [this](const QModelIndex &index) {
+        connect(ui->view, &viv::VirtualItemView::doubleClicked, this, [this](const QModelIndex &index) {
             report(QStringLiteral("doubleClicked"), index);
         });
-        connect(m_view, &viv::VirtualItemView::activated, this, [this](const QModelIndex &index) {
+        connect(ui->view, &viv::VirtualItemView::activated, this, [this](const QModelIndex &index) {
             report(QStringLiteral("activated"), index);
         });
         // Obtain selectionModel() after assigning the model; keyboard navigation
         // also changes the current index and reaches this connection.
-        connect(m_view->selectionModel(), &QItemSelectionModel::currentChanged,
+        connect(ui->view->selectionModel(), &QItemSelectionModel::currentChanged,
                 this, [this](const QModelIndex &index) { report(QStringLiteral("currentChanged"), index); });
-        connect(m_view->selectionModel(), &QItemSelectionModel::selectionChanged,
+        connect(ui->view->selectionModel(), &QItemSelectionModel::selectionChanged,
                 this, [this] { reportSelection(); });
-        connect(m_locate, &QPushButton::clicked, this, [this] {
-            const QModelIndex index = m_view->currentIndex();
+        connect(ui->locate, &QPushButton::clicked, this, [this] {
+            const QModelIndex index = ui->view->currentIndex();
             report(QStringLiteral("当前项"), index);
             reportSelection();
             // visualRect is in viewport coordinates; indexAt performs the reverse lookup.
-            const QRect rect = m_view->visualRect(index);
-            const bool visible = rect.intersects(m_view->viewport()->rect());
-            const auto hit = visible ? m_view->indexAt(rect.intersected(m_view->viewport()->rect()).center()) : QModelIndex();
-            m_log->appendPlainText(QStringLiteral("widget=%1；rect=(%2,%3 %4×%5)；hit.row=%6")
+            const QRect rect = ui->view->visualRect(index);
+            const bool visible = rect.intersects(ui->view->viewport()->rect());
+            const auto hit = visible ? ui->view->indexAt(rect.intersected(ui->view->viewport()->rect()).center()) : QModelIndex();
+            ui->log->appendPlainText(QStringLiteral("widget=%1；rect=(%2,%3 %4×%5)；hit.row=%6")
                 // Lookup does not create a widget: an unmaterialized row returns null.
                 // Offscreen rows retained by pinning may still have a widget.
-                .arg(m_view->widgetForIndex(index) ? QStringLiteral("已物化") : QStringLiteral("未物化"))
+                .arg(ui->view->widgetForIndex(index) ? QStringLiteral("已物化") : QStringLiteral("未物化"))
                 .arg(rect.x()).arg(rect.y()).arg(rect.width()).arg(rect.height()).arg(hit.row()));
         });
     }
@@ -144,21 +139,18 @@ private:
     {
         // Selection belongs to model indexes, even when their widgets are recycled.
         // The current index alone does not describe which items are selected.
-        const QModelIndexList selected = m_view->selectionModel()->selectedIndexes();
-        m_log->appendPlainText(QStringLiteral("选中项：共 %1 项").arg(selected.size()));
+        const QModelIndexList selected = ui->view->selectionModel()->selectedIndexes();
+        ui->log->appendPlainText(QStringLiteral("选中项：共 %1 项").arg(selected.size()));
         for (const QModelIndex &index : selected)
             report(QStringLiteral("选中项"), index);
     }
 
     void report(const QString &event, const QModelIndex &index)
     {
-        m_log->appendPlainText(QStringLiteral("%1 -> row=%2，数据=%3")
+        ui->log->appendPlainText(QStringLiteral("%1 -> row=%2，数据=%3")
             .arg(event).arg(index.row()).arg(index.data().toString()));
     }
 
-    viv::VirtualListView *m_view = nullptr;
-    QPushButton *m_locate = nullptr;
-    QPlainTextEdit *m_log = nullptr;
 };
 
 QWidget *createExample(QWidget *parent)

@@ -1,5 +1,6 @@
 #include "example.h"
-#include "ui_example.h"
+#include <memory>
+#include "ui_borders.h"
 
 #include <virtualitemviews/treevisibilityindex.h>
 #include <virtualitemviews/virtualtreeview.h>
@@ -86,20 +87,22 @@ public:
 class Example : public QWidget
 {
 public:
-    explicit Example(QWidget *parent) : QWidget(parent)
+    explicit Example(QWidget *parent) : QWidget(parent), ui(new Ui::TreeBorderExample)
     {
         setupUi();
         setupExample();
     }
 
 private:
+    std::unique_ptr<Ui::TreeBorderExample> ui;
+
     void setupUi()
     {
-        m_ui.setupUi(this);
-        m_ui.pageLayout->setStretch(m_ui.pageLayout->count() - 1, 1);
-        m_stage = new BackgroundStage(m_ui.previewHost);
-        m_ui.previewLayout->addWidget(m_stage);
-        for (QPushButton *button : {m_ui.firstButton, m_ui.lastButton, m_ui.expandButton, m_ui.collapseButton})
+        ui->setupUi(this);
+        ui->pageLayout->setStretch(ui->pageLayout->count() - 1, 1);
+        m_stage = new BackgroundStage(ui->previewHost);
+        ui->previewLayout->addWidget(m_stage);
+        for (QPushButton *button : {ui->firstButton, ui->lastButton, ui->expandButton, ui->collapseButton})
             button->setFocusPolicy(Qt::NoFocus);
     }
 
@@ -123,24 +126,24 @@ private:
         expandAll(false);
         selectNode(false);
 
-        connect(m_ui.backgroundCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
+        connect(ui->backgroundCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
                 this, [this](int mode) { m_stage->setBackground(mode); });
-        for (QSpinBox *spin : {m_ui.radiusSpin, m_ui.widthSpin, m_ui.stateRadiusSpin})
+        for (QSpinBox *spin : {ui->radiusSpin, ui->widthSpin, ui->stateRadiusSpin})
             connect(spin, QOverload<int>::of(&QSpinBox::valueChanged), this, [this](int) { applyOptions(); });
-        connect(m_ui.colorCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
+        connect(ui->colorCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
                 this, [this](int) { applyOptions(); });
-        for (QCheckBox *check : {m_ui.gapsCheck, m_ui.linesCheck, m_ui.branchCheck, m_ui.scrollBarsCheck})
+        for (QCheckBox *check : {ui->gapsCheck, ui->linesCheck, ui->branchCheck, ui->scrollBarsCheck})
             connect(check, &QCheckBox::toggled, this, [this](bool) { applyOptions(); });
-        connect(m_ui.dataCombo, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int mode) {
+        connect(ui->dataCombo, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int mode) {
             populateModel(mode);
             applyOptions();
             expandAll(false);
             selectNode(false);
         });
-        connect(m_ui.expandButton, &QPushButton::clicked, this, [this]() { expandAll(true); });
-        connect(m_ui.collapseButton, &QPushButton::clicked, m_view, &viv::VirtualTreeView::collapseAll);
-        connect(m_ui.firstButton, &QPushButton::clicked, this, [this]() { selectNode(false); });
-        connect(m_ui.lastButton, &QPushButton::clicked, this, [this]() { selectNode(true); });
+        connect(ui->expandButton, &QPushButton::clicked, this, [this]() { expandAll(true); });
+        connect(ui->collapseButton, &QPushButton::clicked, m_view, &viv::VirtualTreeView::collapseAll);
+        connect(ui->firstButton, &QPushButton::clicked, this, [this]() { selectNode(false); });
+        connect(ui->lastButton, &QPushButton::clicked, this, [this]() { selectNode(true); });
     }
 
     void populateModel(int mode)
@@ -168,20 +171,20 @@ private:
     {
         // Logical pixels; branch icons, node widgets and scrollbars share one frame.
         // Setting BOTH radius and width to zero removes the frame effect.
-        m_view->setFrameCornerRadius(m_ui.radiusSpin->value());
-        m_view->setFrameBorderWidth(m_ui.widthSpin->value());
+        m_view->setFrameCornerRadius(ui->radiusSpin->value());
+        m_view->setFrameBorderWidth(ui->widthSpin->value());
         const QColor colors[] = {QColor(QStringLiteral("#4079ad")), QColor(QStringLiteral("#485260")),
                                  QColor(QStringLiteral("#cf668f")), QColor()};
         // An invalid color restores QPalette::Mid.
-        m_view->setFrameBorderColor(colors[m_ui.colorCombo->currentIndex()]);
+        m_view->setFrameBorderColor(colors[ui->colorCombo->currentIndex()]);
         // Hover/selection corners remain independent of the outer frame.
-        m_view->setVisualStateCornerRadius(m_ui.stateRadiusSpin->value());
-        m_view->setRowSpacing(m_ui.gapsCheck->isChecked() ? 10 : 0);
-        m_view->setRowGridLinesVisible(m_ui.linesCheck->isChecked());
+        m_view->setVisualStateCornerRadius(ui->stateRadiusSpin->value());
+        m_view->setRowSpacing(ui->gapsCheck->isChecked() ? 10 : 0);
+        m_view->setRowGridLinesVisible(ui->linesCheck->isChecked());
         // Hide branch decoration without removing hierarchical indentation.
-        m_view->setBranchAreaVisible(m_ui.branchCheck->isChecked());
+        m_view->setBranchAreaVisible(ui->branchCheck->isChecked());
         // AsNeeded demonstrates compact and empty models without a scrollbar.
-        m_view->setVerticalScrollBarPolicy(m_ui.scrollBarsCheck->isChecked()
+        m_view->setVerticalScrollBarPolicy(ui->scrollBarsCheck->isChecked()
             ? Qt::ScrollBarAlwaysOn : Qt::ScrollBarAsNeeded);
     }
 
@@ -210,7 +213,6 @@ private:
                                     : viv::VirtualItemView::PositionAtTop);
     }
 
-    Ui::TreeBorderExample m_ui;
     BackgroundStage *m_stage = nullptr;
     viv::VirtualTreeView *m_view = nullptr;
     QStandardItemModel *m_model = nullptr;

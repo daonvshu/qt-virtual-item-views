@@ -1,15 +1,15 @@
+#include "ui_model_updates.h"
+#include <memory>
 #include "example.h"
 #include <virtualitemviews/virtuallistview.h>
 #include <virtualitemviews/widgetadapter.h>
 #include <QAbstractListModel>
 #include <QCheckBox>
-#include <QHBoxLayout>
 #include <QLabel>
 #include <QLineEdit>
 #include <QPushButton>
 #include <QSortFilterProxyModel>
 #include <QStringList>
-#include <QVBoxLayout>
 
 namespace list_model_updates {
 
@@ -116,86 +116,62 @@ public:
 class Example : public QWidget
 {
 public:
-    explicit Example(QWidget *parent) : QWidget(parent)
+    explicit Example(QWidget *parent) : QWidget(parent), ui(new Ui::ListModelUpdatesPage)
     {
         setupUi();
         setupExample();
     }
 
 private:
+    std::unique_ptr<Ui::ListModelUpdatesPage> ui;
+
     void setupUi()
     {
-        auto *layout = new QVBoxLayout(this);
-        auto *intro = new QLabel(QStringLiteral("05 数据更新：选择行后修改或删除；排序和过滤由代理模型完成。"), this);
-        intro->setWordWrap(true);
-        layout->addWidget(intro);
-        auto *actions = new QHBoxLayout;
-        m_add = new QPushButton(QStringLiteral("新增"), this);
-        m_edit = new QPushButton(QStringLiteral("修改当前"), this);
-        m_remove = new QPushButton(QStringLiteral("删除当前"), this);
-        m_move = new QPushButton(QStringLiteral("源首行移到末尾"), this);
-        m_reset = new QPushButton(QStringLiteral("重置"), this);
-        for (auto *button : {m_add, m_edit, m_remove, m_move, m_reset})
-            actions->addWidget(button);
-        layout->addLayout(actions);
-        auto *filters = new QHBoxLayout;
-        m_filter = new QLineEdit(this);
-        m_filter->setPlaceholderText(QStringLiteral("输入过滤文本；移动源行时关闭排序可直接观察结果"));
-        m_sort = new QCheckBox(QStringLiteral("按名称排序"), this);
-        filters->addWidget(m_filter, 1);
-        filters->addWidget(m_sort);
-        layout->addLayout(filters);
-        m_view = new viv::VirtualListView(this);
-        layout->addWidget(m_view, 1);
+        ui->setupUi(this);
+
+        // Keep framework configuration and item data visible in the example.
+        ui->view->setObjectName(QStringLiteral("vivItemView"));
     }
 
     void setupExample()
     {
-        m_model = new RecordModel(m_view);
-        m_proxy = new QSortFilterProxyModel(m_view);
+        m_model = new RecordModel(ui->view);
+        m_proxy = new QSortFilterProxyModel(ui->view);
         m_proxy->setSourceModel(m_model);
         m_proxy->setFilterCaseSensitivity(Qt::CaseInsensitive);
         m_proxy->setDynamicSortFilter(true);
         // View ownership keeps the adapter alive through unbind callbacks;
         // row size is configured explicitly before the proxy is assigned.
-        m_view->setAdapter(new TextAdapter, true);
-        m_view->setUniformItemHeight(36);
+        ui->view->setAdapter(new TextAdapter, true);
+        ui->view->setUniformItemHeight(36);
         // The view binds proxy indexes. Map currentIndex() back to the source
         // model before editing or removing source data.
-        m_view->setModel(m_proxy);
+        ui->view->setModel(m_proxy);
         // Limit user gestures to one row; data changes still arrive through model signals.
-        m_view->setSelectionMode(viv::VirtualItemView::SelectionMode::SingleSelection);
-        connect(m_add, &QPushButton::clicked, m_model, &RecordModel::appendRecord);
-        connect(m_reset, &QPushButton::clicked, m_model, &RecordModel::resetRecords);
-        connect(m_edit, &QPushButton::clicked, this, [this] {
-            const QModelIndex source = m_proxy->mapToSource(m_view->currentIndex());
+        ui->view->setSelectionMode(viv::VirtualItemView::SelectionMode::SingleSelection);
+        connect(ui->add, &QPushButton::clicked, m_model, &RecordModel::appendRecord);
+        connect(ui->reset, &QPushButton::clicked, m_model, &RecordModel::resetRecords);
+        connect(ui->edit, &QPushButton::clicked, this, [this] {
+            const QModelIndex source = m_proxy->mapToSource(ui->view->currentIndex());
             if (source.isValid())
                 m_model->setData(source, source.data().toString() + QStringLiteral(" *"));
         });
-        connect(m_remove, &QPushButton::clicked, this, [this] {
-            const QModelIndex source = m_proxy->mapToSource(m_view->currentIndex());
+        connect(ui->remove, &QPushButton::clicked, this, [this] {
+            const QModelIndex source = m_proxy->mapToSource(ui->view->currentIndex());
             if (source.isValid())
                 m_model->removeRows(source.row(), 1);
         });
-        connect(m_move, &QPushButton::clicked, this, [this] {
+        connect(ui->move, &QPushButton::clicked, this, [this] {
             m_model->moveRows({}, 0, 1, {}, m_model->rowCount());
         });
-        connect(m_filter, &QLineEdit::textChanged, m_proxy, &QSortFilterProxyModel::setFilterFixedString);
-        connect(m_sort, &QCheckBox::toggled, this, [this](bool enabled) {
+        connect(ui->filter, &QLineEdit::textChanged, m_proxy, &QSortFilterProxyModel::setFilterFixedString);
+        connect(ui->sort, &QCheckBox::toggled, this, [this](bool enabled) {
             m_proxy->sort(enabled ? 0 : -1);
         });
     }
 
-    viv::VirtualListView *m_view = nullptr;
     RecordModel *m_model = nullptr;
     QSortFilterProxyModel *m_proxy = nullptr;
-    QPushButton *m_add = nullptr;
-    QPushButton *m_edit = nullptr;
-    QPushButton *m_remove = nullptr;
-    QPushButton *m_move = nullptr;
-    QPushButton *m_reset = nullptr;
-    QLineEdit *m_filter = nullptr;
-    QCheckBox *m_sort = nullptr;
 };
 
 QWidget *createExample(QWidget *parent)

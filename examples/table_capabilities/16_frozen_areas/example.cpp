@@ -1,3 +1,5 @@
+#include "ui_frozen_areas.h"
+#include <memory>
 #include "example.h"
 #include <virtualitemviews/virtualtableview.h>
 #include <virtualitemviews/tablewidgetadapter.h>
@@ -5,8 +7,6 @@
 #include <QLabel>
 #include <QSpinBox>
 #include <QCheckBox>
-#include <QHBoxLayout>
-#include <QVBoxLayout>
 
 namespace table_frozen_areas {
 
@@ -53,92 +53,69 @@ public:
 class Example : public QWidget
 {
 public:
-    explicit Example(QWidget *parent) : QWidget(parent)
+    explicit Example(QWidget *parent) : QWidget(parent), ui(new Ui::TableFrozenAreasPage)
     {
         setupUi();
         setupExample();
     }
 
 private:
+    std::unique_ptr<Ui::TableFrozenAreasPage> ui;
+
     void setupUi()
     {
-        auto *layout = new QVBoxLayout(this);
-        auto *description = new QLabel(QStringLiteral("16 冻结行列与分隔线：左右冻结列与上下冻结行组合，滚动内容在各自区域裁剪"), this);
-        description->setWordWrap(true);
-        layout->addWidget(description);
-        auto *controls = new QHBoxLayout;
-        m_top = new QSpinBox(this);
-        m_top->setRange(0, 8);
-        m_top->setValue(2);
-        m_top->setPrefix(QStringLiteral("顶部行 "));
-        controls->addWidget(m_top);
-        m_bottom = new QSpinBox(this);
-        m_bottom->setRange(0, 8);
-        m_bottom->setValue(1);
-        m_bottom->setPrefix(QStringLiteral("底部行 "));
-        controls->addWidget(m_bottom);
-        m_width = new QSpinBox(this);
-        m_width->setRange(0, 6);
-        m_width->setValue(2);
-        m_width->setPrefix(QStringLiteral("分隔线宽 "));
-        controls->addWidget(m_width);
-        m_columns = new QCheckBox(QStringLiteral("冻结左右列"), this);
-        m_columns->setChecked(true);
-        controls->addWidget(m_columns);
-        m_spacing = new QCheckBox(QStringLiteral("显示间距"), this);
-        controls->addWidget(m_spacing);
-        controls->addStretch();
-        layout->addLayout(controls);
-        m_view = new viv::VirtualTableView(this);
-        layout->addWidget(m_view, 1);
+        ui->setupUi(this);
+
+        // Keep framework configuration and item data visible in the example.
+        ui->view->setObjectName(QStringLiteral("vivItemView"));
     }
 
     void setupExample()
     {
         // Materialize cells independently so horizontally offscreen cells can also be recycled.
-        m_view->setMaterializationMode(viv::VirtualTableView::MaterializationMode::CellWidgets);
-        m_view->setCellAdapter(new CellAdapter, true);
+        ui->view->setMaterializationMode(viv::VirtualTableView::MaterializationMode::CellWidgets);
+        ui->view->setCellAdapter(new CellAdapter, true);
         // Use a fixed row height to avoid measuring each row.
-        m_view->setUniformItemHeight(40);
+        ui->view->setUniformItemHeight(40);
         // The header and body share the same column geometry.
-        m_view->setDefaultColumnWidth(150);
-        m_model = new Model(m_view);
+        ui->view->setDefaultColumnWidth(150);
+        m_model = new Model(ui->view);
         // The QObject parent owns the model; Qt model signals report data and structure changes.
-        m_view->setModel(m_model);
+        ui->view->setModel(m_model);
         // Header dragging reorders columns; row dragging needs the model's moveRows support.
-        m_view->setColumnDragEnabled(true);
-        m_view->setVerticalHeaderDragEnabled(true);
+        ui->view->setColumnDragEnabled(true);
+        ui->view->setVerticalHeaderDragEnabled(true);
         // Section edges resize column widths and row heights, including frozen header panes.
-        m_view->setColumnResizeEnabled(true);
-        m_view->setVerticalHeaderResizeEnabled(true);
+        ui->view->setColumnResizeEnabled(true);
+        ui->view->setVerticalHeaderResizeEnabled(true);
         // Frozen column sets use logical indexes and are unaffected by visual reordering.
-        m_view->setFrozenColumns({0, 1});
-        m_view->setFrozenRightColumns({6,7});
-        m_view->setFrozenRows(2);
-        m_view->setFrozenBottomRows(1);
+        ui->view->setFrozenColumns({0, 1});
+        ui->view->setFrozenRightColumns({6,7});
+        ui->view->setFrozenRows(2);
+        ui->view->setFrozenBottomRows(1);
         applySeparator(2);
 
-        connect(m_top, QOverload<int>::of(&QSpinBox::valueChanged), this, [this](int value) {
-            m_view->setFrozenRows(value);
+        connect(ui->top, QOverload<int>::of(&QSpinBox::valueChanged), this, [this](int value) {
+            ui->view->setFrozenRows(value);
         });
-        connect(m_bottom, QOverload<int>::of(&QSpinBox::valueChanged), this, [this](int value) {
-            m_view->setFrozenBottomRows(value);
+        connect(ui->bottom, QOverload<int>::of(&QSpinBox::valueChanged), this, [this](int value) {
+            ui->view->setFrozenBottomRows(value);
         });
-        connect(m_width, QOverload<int>::of(&QSpinBox::valueChanged), this, [this](int value) {
+        connect(ui->width, QOverload<int>::of(&QSpinBox::valueChanged), this, [this](int value) {
             applySeparator(value);
         });
-        connect(m_columns, &QCheckBox::toggled, this, [this](bool enabled) {
+        connect(ui->columns, &QCheckBox::toggled, this, [this](bool enabled) {
             if (enabled) {
-                m_view->setFrozenColumns({0});
-                m_view->setFrozenRightColumns({7});
+                ui->view->setFrozenColumns({0});
+                ui->view->setFrozenRightColumns({7});
             } else {
-                m_view->clearFrozenColumns();
+                ui->view->clearFrozenColumns();
             }
         });
-        connect(m_spacing, &QCheckBox::toggled, this, [this](bool enabled) {
+        connect(ui->spacing, &QCheckBox::toggled, this, [this](bool enabled) {
             // Toggle both axes to inspect frozen boundaries and header alignment with gaps.
-            m_view->setRowSpacing(enabled ? 12 : 0);
-            m_view->setColumnSpacing(enabled ? 12 : 0);
+            ui->view->setRowSpacing(enabled ? 12 : 0);
+            ui->view->setColumnSpacing(enabled ? 12 : 0);
         });
     }
 
@@ -149,16 +126,10 @@ private:
         style.color = QColor(QStringLiteral("#3074b5"));
         style.lineStyle = Qt::DashLine;
         // Configure separators for column panes and row panes separately.
-        m_view->setPaneSeparatorStyle(style);
-        m_view->setItemPaneSeparatorStyle(style);
+        ui->view->setPaneSeparatorStyle(style);
+        ui->view->setItemPaneSeparatorStyle(style);
     }
-    viv::VirtualTableView *m_view = nullptr;
     Model *m_model = nullptr;
-    QSpinBox *m_top = nullptr;
-    QSpinBox *m_bottom = nullptr;
-    QSpinBox *m_width = nullptr;
-    QCheckBox *m_columns = nullptr;
-    QCheckBox *m_spacing = nullptr;
 };
 
 QWidget *createExample(QWidget *parent)

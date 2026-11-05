@@ -1,3 +1,5 @@
+#include "ui_row_heights.h"
+#include <memory>
 #include "example.h"
 #include <virtualitemviews/virtualtreetableview.h>
 #include <virtualitemviews/tablewidgetadapter.h>
@@ -6,7 +8,6 @@
 #include <QPushButton>
 #include <QComboBox>
 #include <QHBoxLayout>
-#include <QVBoxLayout>
 
 namespace treetable_row_heights {
 
@@ -89,47 +90,32 @@ static void appendChildren(QStandardItemModel *model)
 class Example : public QWidget
 {
 public:
-    explicit Example(QWidget *parent) : QWidget(parent)
+    explicit Example(QWidget *parent) : QWidget(parent), ui(new Ui::TreetableRowHeightsPage)
     {
         setupUi();
         setupExample();
     }
 
 private:
+    std::unique_ptr<Ui::TreetableRowHeightsPage> ui;
+
     void setupUi()
     {
-        auto *layout = new QVBoxLayout(this);
-        auto *description = new QLabel(QStringLiteral("07 固定与动态行高：先展开分组，再操作本章控件观察树表行为。"), this);
-        description->setWordWrap(true);
-        layout->addWidget(description);
-        auto *controls = new QHBoxLayout;
-        m_mode = new QComboBox(this);
-        m_mode->addItems({QStringLiteral("动态高度"), QStringLiteral("固定 40px")});
-        controls->addWidget(m_mode);
-        m_explicit = new QPushButton(QStringLiteral("当前节点设为 100px"), this);
-        controls->addWidget(m_explicit);
-        m_clear = new QPushButton(QStringLiteral("清除当前节点显式高度"), this);
-        controls->addWidget(m_clear);
-        m_text = new QPushButton(QStringLiteral("追加当前节点文本"), this);
-        controls->addWidget(m_text);
-        m_policy = new QComboBox(this);
-        m_policy->addItems({QStringLiteral("显式优先"), QStringLiteral("测量优先")});
-        controls->addWidget(m_policy);
-        controls->addStretch();
-        layout->addLayout(controls);
-        m_view = new viv::VirtualTreeTableView(this);
-        layout->addWidget(m_view, 1);
+        ui->setupUi(this);
+
+        // Keep framework configuration and item data visible in the example.
+        ui->view->setObjectName(QStringLiteral("vivItemView"));
     }
 
     void setupExample()
     {
         // Use one QWidget per row and transfer adapter ownership to the view.
-        m_view->setTableAdapter(new RowAdapter, true);
+        ui->view->setTableAdapter(new RowAdapter, true);
         // The header and body share the same column geometry.
-        m_view->setDefaultColumnWidth(150);
+        ui->view->setDefaultColumnWidth(150);
         // Resize columns to demonstrate wrapping; row resizing stays disabled for automatic heights.
-        m_view->setColumnResizeEnabled(true);
-        m_model = new QStandardItemModel(8, 8, m_view);
+        ui->view->setColumnResizeEnabled(true);
+        m_model = new QStandardItemModel(8, 8, ui->view);
         for (int column = 0; column < m_model->columnCount(); ++column)
             m_model->setHeaderData(column, Qt::Horizontal, QStringLiteral("列 %1").arg(column + 1));
         for (int row = 0; row < m_model->rowCount(); ++row) {
@@ -139,20 +125,20 @@ private:
         }
         // The QObject parent owns the model; Qt model signals report data and structure changes.
         appendChildren(m_model);
-        m_view->setModel(m_model);
+        ui->view->setModel(m_model);
         // Expand through the view; model row numbers remain local to each parent.
-        m_view->setExpansionAnimationEnabled(false);
-        m_view->expandRecursively(m_model->index(0, 0));
-        m_view->setExpansionAnimationEnabled(true);
-        m_view->setColumnWidth(0, 280);
-        m_view->setCurrentIndex(m_model->index(0, 0));
+        ui->view->setExpansionAnimationEnabled(false);
+        ui->view->expandRecursively(m_model->index(0, 0));
+        ui->view->setExpansionAnimationEnabled(true);
+        ui->view->setColumnWidth(0, 280);
+        ui->view->setCurrentIndex(m_model->index(0, 0));
         // Variable allows different row heights; estimatedSize supplies estimates until measurement.
-        m_view->setItemHeightMode(viv::VirtualItemView::ItemHeightMode::Variable);
-        m_view->setEstimatedItemHeight(40);
+        ui->view->setItemHeightMode(viv::VirtualItemView::ItemHeightMode::Variable);
+        ui->view->setEstimatedItemHeight(40);
         // Column resizing also schedules measurement; sizeHint() reads the current host widths.
-        m_view->setAutoMeasureItemHeight(true);
+        ui->view->setAutoMeasureItemHeight(true);
         // Explicit heights take precedence by default; MeasuredWins gives content measurement priority.
-        m_view->setRowSizePolicy(viv::VirtualTreeTableView::RowSizePolicy::ExplicitWins);
+        ui->view->setRowSizePolicy(viv::VirtualTreeTableView::RowSizePolicy::ExplicitWins);
         const auto fillText = [this](const auto &visit, const QModelIndex &parent) -> void {
             for (int row = 0; row < m_model->rowCount(parent); ++row) {
                 const QModelIndex node = m_model->index(row, 0, parent);
@@ -162,39 +148,33 @@ private:
         };
         fillText(fillText, {});
 
-        connect(m_mode, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int mode) {
-            m_view->setAutoMeasureItemHeight(mode == 0);
+        connect(ui->mode, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int mode) {
+            ui->view->setAutoMeasureItemHeight(mode == 0);
             if (mode == 0)
-                m_view->setItemHeightMode(viv::VirtualItemView::ItemHeightMode::Variable);
+                ui->view->setItemHeightMode(viv::VirtualItemView::ItemHeightMode::Variable);
             else
-                m_view->setUniformItemHeight(40);
+                ui->view->setUniformItemHeight(40);
         });
-        connect(m_explicit, &QPushButton::clicked, this, [this] {
+        connect(ui->explicitHeight, &QPushButton::clicked, this, [this] {
             // Geometry row APIs use flattened visible rows; model indexes remain hierarchical.
-            const auto row = m_view->visibilityIndex()->visibleRowForIndex(m_view->currentIndex());
-            if (row >= 0) m_view->setRowHeight(int(row), 100);
+            const auto row = ui->view->visibilityIndex()->visibleRowForIndex(ui->view->currentIndex());
+            if (row >= 0) ui->view->setRowHeight(int(row), 100);
         });
-        connect(m_clear, &QPushButton::clicked, this, [this] {
-            const auto row = m_view->visibilityIndex()->visibleRowForIndex(m_view->currentIndex());
-            if (row >= 0) m_view->clearRowHeight(int(row));
+        connect(ui->clear, &QPushButton::clicked, this, [this] {
+            const auto row = ui->view->visibilityIndex()->visibleRowForIndex(ui->view->currentIndex());
+            if (row >= 0) ui->view->clearRowHeight(int(row));
         });
-        connect(m_text, &QPushButton::clicked, this, [this] {
-            const auto index = m_view->currentIndex().siblingAtColumn(0);
+        connect(ui->text, &QPushButton::clicked, this, [this] {
+            const auto index = ui->view->currentIndex().siblingAtColumn(0);
             if (!index.isValid()) return;
             m_model->setData(index, index.data().toString() + QStringLiteral("追加文本 ").repeated(12));
         });
-        connect(m_policy, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int value) {
-            m_view->setRowSizePolicy(value == 0 ? viv::VirtualTreeTableView::RowSizePolicy::ExplicitWins : viv::VirtualTreeTableView::RowSizePolicy::MeasuredWins);
+        connect(ui->policy, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int value) {
+            ui->view->setRowSizePolicy(value == 0 ? viv::VirtualTreeTableView::RowSizePolicy::ExplicitWins : viv::VirtualTreeTableView::RowSizePolicy::MeasuredWins);
         });
     }
 
-    viv::VirtualTreeTableView *m_view = nullptr;
     QStandardItemModel *m_model = nullptr;
-    QPushButton *m_explicit = nullptr;
-    QPushButton *m_clear = nullptr;
-    QPushButton *m_text = nullptr;
-    QComboBox *m_policy = nullptr;
-    QComboBox *m_mode = nullptr;
 };
 
 QWidget *createExample(QWidget *parent)

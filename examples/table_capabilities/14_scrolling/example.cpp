@@ -1,11 +1,11 @@
+#include "ui_scrolling.h"
+#include <memory>
 #include "example.h"
 #include <virtualitemviews/virtualtableview.h>
 #include <virtualitemviews/tablewidgetadapter.h>
 #include <QStandardItemModel>
 #include <QLabel>
 #include <QPushButton>
-#include <QHBoxLayout>
-#include <QVBoxLayout>
 #include <QAbstractTableModel>
 #include <QScrollBar>
 #include <QTimer>
@@ -53,80 +53,63 @@ public:
 class Example : public QWidget
 {
 public:
-    explicit Example(QWidget *parent) : QWidget(parent)
+    explicit Example(QWidget *parent) : QWidget(parent), ui(new Ui::TableScrollingPage)
     {
         setupUi();
         setupExample();
     }
 
 private:
+    std::unique_ptr<Ui::TableScrollingPage> ui;
+
     void setupUi()
     {
-        auto *layout = new QVBoxLayout(this);
-        auto *description = new QLabel(QStringLiteral("14 双向滚动与定位：一亿行按需生成数据，纵向 64 位像素偏移，横向像素偏移定位"), this);
-        description->setWordWrap(true);
-        layout->addWidget(description);
-        auto *controls = new QHBoxLayout;
-        m_end = new QPushButton(QStringLiteral("定位最后一格"), this);
-        controls->addWidget(m_end);
-        m_home = new QPushButton(QStringLiteral("回到左上"), this);
-        controls->addWidget(m_home);
-        m_step = new QPushButton(QStringLiteral("双向滚动 100px"), this);
-        controls->addWidget(m_step);
-        controls->addStretch();
-        layout->addLayout(controls);
-        m_view = new viv::VirtualTableView(this);
-        layout->addWidget(m_view, 1);
-        m_status = new QLabel(this);
-        m_status->setWordWrap(true);
-        layout->addWidget(m_status);
+        ui->setupUi(this);
+
+        // Keep framework configuration and item data visible in the example.
+        ui->view->setObjectName(QStringLiteral("vivItemView"));
     }
 
     void setupExample()
     {
         // Materialize cells independently so horizontally offscreen cells can also be recycled.
-        m_view->setMaterializationMode(viv::VirtualTableView::MaterializationMode::CellWidgets);
-        m_view->setCellAdapter(new CellAdapter, true);
+        ui->view->setMaterializationMode(viv::VirtualTableView::MaterializationMode::CellWidgets);
+        ui->view->setCellAdapter(new CellAdapter, true);
         // Disable the row header for this large-model example.
-        m_view->setVerticalHeaderVisible(false);
+        ui->view->setVerticalHeaderVisible(false);
         // Use a fixed row height to avoid measuring each row.
-        m_view->setUniformItemHeight(40);
+        ui->view->setUniformItemHeight(40);
         // The header and body share the same column geometry.
-        m_view->setDefaultColumnWidth(150);
-        m_model = new Model(m_view);
+        ui->view->setDefaultColumnWidth(150);
+        m_model = new Model(ui->view);
         // The QObject parent owns the model; Qt model signals report data and structure changes.
-        m_view->setModel(m_model);
+        ui->view->setModel(m_model);
         // Scroll in pixels; logical offsets are not limited by the integer scrollbar range.
-        m_view->setWheelScrollMode(viv::VirtualItemView::WheelScrollMode::Pixels);
-        m_view->setWheelScrollPixels(48);
-        m_view->setHorizontalWheelPixels(48);
+        ui->view->setWheelScrollMode(viv::VirtualItemView::WheelScrollMode::Pixels);
+        ui->view->setWheelScrollPixels(48);
+        ui->view->setHorizontalWheelPixels(48);
         auto *timer = new QTimer(this);
         connect(timer, &QTimer::timeout, this, [this] {
-            m_status->setText(QStringLiteral("y=%1 / %2，x=%3 / %4").arg(m_view->verticalOffset()).arg(m_view->maximumVerticalOffset()).arg(m_view->horizontalOffset()).arg(m_view->maximumHorizontalOffset()));
+            ui->status->setText(QStringLiteral("y=%1 / %2，x=%3 / %4").arg(ui->view->verticalOffset()).arg(ui->view->maximumVerticalOffset()).arg(ui->view->horizontalOffset()).arg(ui->view->maximumHorizontalOffset()));
         });
         timer->start(250);
 
-        connect(m_end, &QPushButton::clicked, this, [this] {
+        connect(ui->end, &QPushButton::clicked, this, [this] {
             // scrollTo positions only the row; position the last column separately.
-            m_view->scrollTo(m_model->index(m_model->rowCount() - 1, m_model->columnCount() - 1));
-            m_view->setHorizontalOffset(m_view->maximumHorizontalOffset());
+            ui->view->scrollTo(m_model->index(m_model->rowCount() - 1, m_model->columnCount() - 1));
+            ui->view->setHorizontalOffset(ui->view->maximumHorizontalOffset());
         });
-        connect(m_home, &QPushButton::clicked, this, [this] {
-            m_view->setVerticalOffset(0);
-            m_view->setHorizontalOffset(0);
+        connect(ui->home, &QPushButton::clicked, this, [this] {
+            ui->view->setVerticalOffset(0);
+            ui->view->setHorizontalOffset(0);
         });
-        connect(m_step, &QPushButton::clicked, this, [this] {
-            m_view->scrollByPixels(100);
-            m_view->scrollByHorizontalPixels(100);
+        connect(ui->step, &QPushButton::clicked, this, [this] {
+            ui->view->scrollByPixels(100);
+            ui->view->scrollByHorizontalPixels(100);
         });
     }
 
-    viv::VirtualTableView *m_view = nullptr;
     Model *m_model = nullptr;
-    QLabel *m_status = nullptr;
-    QPushButton *m_end = nullptr;
-    QPushButton *m_home = nullptr;
-    QPushButton *m_step = nullptr;
 };
 
 QWidget *createExample(QWidget *parent)

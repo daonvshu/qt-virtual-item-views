@@ -1,11 +1,11 @@
+#include "ui_binding_context.h"
+#include <memory>
 #include "example.h"
 #include <virtualitemviews/virtualtreeview.h>
 #include <virtualitemviews/widgetadapter.h>
-#include <QHBoxLayout>
 #include <QLabel>
 #include <QPushButton>
 #include <QStandardItemModel>
-#include <QVBoxLayout>
 
 namespace tree_binding_context {
 struct GroupData { QString name; int count = 0; };
@@ -53,31 +53,26 @@ public:
 class Example : public QWidget
 {
 public:
-    explicit Example(QWidget *parent) : QWidget(parent)
+    explicit Example(QWidget *parent) : QWidget(parent), ui(new Ui::TreeBindingContextPage)
     {
         setupUi();
         setupExample();
     }
 
 private:
+    std::unique_ptr<Ui::TreeBindingContextPage> ui;
+
     void setupUi()
     {
-        auto *layout = new QVBoxLayout(this);
-        auto *description = new QLabel(QStringLiteral("04 整节点数据：不同层级分别存结构体，bind 直接读取 rowData 和 depth。"), this);
-        description->setWordWrap(true);
-        layout->addWidget(description);
-        auto *controls = new QHBoxLayout;
-        change = new QPushButton(QStringLiteral("更新第一个记录"), this);
-        controls->addWidget(change);
-        controls->addStretch();
-        layout->addLayout(controls);
-        m_view = new viv::VirtualTreeView(this);
-        layout->addWidget(m_view, 1);
+        ui->setupUi(this);
+
+        // Keep framework configuration and item data visible in the example.
+        ui->view->setObjectName(QStringLiteral("vivItemView"));
     }
 
     void setupExample()
     {
-        m_model = new QStandardItemModel(m_view);
+        m_model = new QStandardItemModel(ui->view);
         for (int group = 0; group < 6; ++group) {
             auto *branch = new QStandardItem;
             branch->setData(QVariant::fromValue(GroupData{QStringLiteral("分组 %1").arg(group + 1), 20}),
@@ -92,19 +87,19 @@ private:
         }
 
         // The view owns the adapter through teardown; the QObject parent owns the model.
-        m_view->setAdapter(new PayloadAdapter, true);
+        ui->view->setAdapter(new PayloadAdapter, true);
         // Uniform height avoids measuring each materialized node.
-        m_view->setUniformItemHeight(36);
+        ui->view->setUniformItemHeight(36);
         // Qt model signals update the visible mapping and reused widgets automatically.
-        m_view->setModel(m_model);
+        ui->view->setModel(m_model);
 
         // Set a different role here when the application's payload uses another role.
-        m_view->setItemDataRole(viv::kDefaultItemDataRole);
+        ui->view->setItemDataRole(viv::kDefaultItemDataRole);
 
         // Expand through the view so mapping, branch state and signals stay synchronized.
-        m_view->expand(m_model->index(0, 0));
+        ui->view->expand(m_model->index(0, 0));
 
-        connect(change, &QPushButton::clicked, this, [this] {
+        connect(ui->change, &QPushButton::clicked, this, [this] {
             const QModelIndex index = m_model->index(0, 0, m_model->index(0, 0));
             auto record = index.data(viv::kDefaultItemDataRole).value<RecordData>();
             record.name += QStringLiteral(" *");
@@ -113,9 +108,7 @@ private:
         });
     }
 
-    viv::VirtualTreeView *m_view = nullptr;
     QStandardItemModel *m_model = nullptr;
-    QPushButton *change = nullptr;
 };
 
 QWidget *createExample(QWidget *parent)

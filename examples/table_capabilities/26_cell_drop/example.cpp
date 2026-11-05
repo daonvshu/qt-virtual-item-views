@@ -1,11 +1,11 @@
+#include "ui_cell_drop.h"
+#include <memory>
 #include "example.h"
 #include <virtualitemviews/virtualtableview.h>
 #include <virtualitemviews/tablewidgetadapter.h>
 #include <QStandardItemModel>
 #include <QLabel>
 #include <QComboBox>
-#include <QHBoxLayout>
-#include <QVBoxLayout>
 #include <QMap>
 #include <QMimeData>
 #include <QPersistentModelIndex>
@@ -125,60 +125,52 @@ public:
 class Example : public QWidget
 {
 public:
-    explicit Example(QWidget *parent) : QWidget(parent)
+    explicit Example(QWidget *parent) : QWidget(parent), ui(new Ui::TableCellDropPage)
     {
         setupUi();
         setupExample();
     }
 
 private:
+    std::unique_ptr<Ui::TableCellDropPage> ui;
+
     void setupUi()
     {
-        auto *layout = new QVBoxLayout(this);
-        auto *description = new QLabel(QStringLiteral("26 单格插入与空白格投放：格子上下边缘插入新行，中间只接受空白格；Move 只清空源格"), this);
-        description->setWordWrap(true);
-        layout->addWidget(description);
-        auto *controls = new QHBoxLayout;
-        m_target = new QComboBox(this);
-        m_target->addItems({QStringLiteral("行间插入 + 格内投放"), QStringLiteral("仅行间插入"), QStringLiteral("仅格内投放")});
-        controls->addWidget(m_target);
-        controls->addStretch();
-        layout->addLayout(controls);
-        m_view = new viv::VirtualTableView(this);
-        layout->addWidget(m_view, 1);
+        ui->setupUi(this);
+
+        // Keep framework configuration and item data visible in the example.
+        ui->view->setObjectName(QStringLiteral("vivItemView"));
     }
 
     void setupExample()
     {
         // Materialize cells independently so horizontally offscreen cells can also be recycled.
-        m_view->setMaterializationMode(viv::VirtualTableView::MaterializationMode::CellWidgets);
-        m_view->setCellAdapter(new CellAdapter, true);
+        ui->view->setMaterializationMode(viv::VirtualTableView::MaterializationMode::CellWidgets);
+        ui->view->setCellAdapter(new CellAdapter, true);
         // Use a fixed row height to avoid measuring each row.
-        m_view->setUniformItemHeight(40);
+        ui->view->setUniformItemHeight(40);
         // The header and body share the same column geometry.
-        m_view->setDefaultColumnWidth(150);
-        m_model = new Model(m_view);
+        ui->view->setDefaultColumnWidth(150);
+        m_model = new Model(ui->view);
         // The QObject parent owns the model; Qt model signals report data and structure changes.
-        m_view->setModel(m_model);
+        ui->view->setModel(m_model);
         // SelectItems uses a single-cell payload, with different data semantics from whole-row dragging.
-        m_view->setSelectionBehavior(viv::VirtualItemView::SelectionBehavior::SelectItems);
-        m_view->setSelectionMode(viv::VirtualItemView::SelectionMode::SingleSelection);
-        m_view->setDragEnabled(true);
-        m_view->setDragDropActions(Qt::CopyAction | Qt::MoveAction);
-        m_view->setDefaultDropAction(Qt::MoveAction);
+        ui->view->setSelectionBehavior(viv::VirtualItemView::SelectionBehavior::SelectItems);
+        ui->view->setSelectionMode(viv::VirtualItemView::SelectionMode::SingleSelection);
+        ui->view->setDragEnabled(true);
+        ui->view->setDragDropActions(Qt::CopyAction | Qt::MoveAction);
+        ui->view->setDefaultDropAction(Qt::MoveAction);
         // The framework handles hit testing and cell indicators; the model checks empty cells, inserts and clears the source.
-        m_view->setDropTargetMode(viv::VirtualTableView::DropTargetMode::BetweenRowsOrOnCell);
-        m_view->setMoveRemovesSourceRows(false);
+        ui->view->setDropTargetMode(viv::VirtualTableView::DropTargetMode::BetweenRowsOrOnCell);
+        ui->view->setMoveRemovesSourceRows(false);
 
-        connect(m_target, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int value) {
+        connect(ui->target, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int value) {
             const viv::VirtualTableView::DropTargetMode modes[] = {viv::VirtualTableView::DropTargetMode::BetweenRowsOrOnCell, viv::VirtualTableView::DropTargetMode::BetweenRows, viv::VirtualTableView::DropTargetMode::OnCell};
-            m_view->setDropTargetMode(modes[value]);
+            ui->view->setDropTargetMode(modes[value]);
         });
     }
 
-    viv::VirtualTableView *m_view = nullptr;
     Model *m_model = nullptr;
-    QComboBox *m_target = nullptr;
 };
 
 QWidget *createExample(QWidget *parent)

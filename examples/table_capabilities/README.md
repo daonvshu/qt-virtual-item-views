@@ -2,6 +2,8 @@
 
 表中路径均相对于仓库根目录。每个编号目录独立包含 model、adapter、控件和页面配置，不引用其他示例实现；可直接复制当前目录。一个 `table_capabilities` 进程切换第 01–28、30–32 项，检测到与当前 Qt 主版本匹配的 SmoothScrollbar 时额外显示第 29 项。
 
+每章页面布局、控件文字和初始值放在同目录的 `.ui` 文件中，可用 Qt Designer 编辑。`ui` 在堆上创建并由智能指针管理，`setupUi()` 加载界面；直接通过 `ui->控件名` 访问界面控件，`setupExample()` 展示视图配置和事件接线；阅读功能用法时可直接从后者开始。复制章节时一起复制 `.ui`，在自己的 CMake 目标启用 `AUTOUIC` 并列入该文件。ColumnHost 中按列创建的控件和 adapter 创建的简单组合仍保留在 C++ 中，用于说明物化和复用。
+
 | 编号 | 功能 | 源码相对路径 |
 | --- | --- | --- |
 | 01 | 行控件与 ColumnHost：固定八列，一行一个 QWidget，列几何由框架管理 | [examples/table_capabilities/01_row_widgets/example.cpp](01_row_widgets/example.cpp) |

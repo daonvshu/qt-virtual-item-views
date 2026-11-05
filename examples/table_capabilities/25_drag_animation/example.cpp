@@ -1,3 +1,5 @@
+#include "ui_drag_animation.h"
+#include <memory>
 #include "example.h"
 #include <virtualitemviews/virtualtableview.h>
 #include <virtualitemviews/tablewidgetadapter.h>
@@ -6,8 +8,6 @@
 #include <QPushButton>
 #include <QComboBox>
 #include <QSpinBox>
-#include <QHBoxLayout>
-#include <QVBoxLayout>
 #include <QMouseEvent>
 #include <QApplication>
 #include <functional>
@@ -96,48 +96,34 @@ private:
 class Example : public QWidget
 {
 public:
-    explicit Example(QWidget *parent) : QWidget(parent)
+    explicit Example(QWidget *parent) : QWidget(parent), ui(new Ui::TableDragAnimationPage)
     {
         setupUi();
         setupExample();
     }
 
 private:
+    std::unique_ptr<Ui::TableDragAnimationPage> ui;
+
     void setupUi()
     {
-        auto *layout = new QVBoxLayout(this);
-        auto *description = new QLabel(QStringLiteral("25 整行移动动画拖动：整行 Move 与 Ctrl 复制，支持自动起拖或手柄手动起拖"), this);
-        description->setWordWrap(true);
-        layout->addWidget(description);
-        auto *controls = new QHBoxLayout;
-        m_start = new QComboBox(this);
-        m_start->addItems({QStringLiteral("Automatic 自动起拖"), QStringLiteral("Manual 手柄起拖")});
-        controls->addWidget(m_start);
-        m_duration = new QSpinBox(this);
-        m_duration->setRange(0, 800);
-        m_duration->setValue(180);
-        m_duration->setPrefix(QStringLiteral("让位 ms "));
-        controls->addWidget(m_duration);
-        m_curve = new QComboBox(this);
-        m_curve->addItems({QStringLiteral("OutCubic"), QStringLiteral("InOutCubic"), QStringLiteral("Linear")});
-        controls->addWidget(m_curve);
-        controls->addStretch();
-        layout->addLayout(controls);
-        m_view = new viv::VirtualTableView(this);
-        layout->addWidget(m_view, 1);
+        ui->setupUi(this);
+
+        // Keep framework configuration and item data visible in the example.
+        ui->view->setObjectName(QStringLiteral("vivItemView"));
     }
 
     void setupExample()
     {
-        m_view->setMaterializationMode(viv::VirtualTableView::MaterializationMode::CellWidgets);
-        m_adapter = new CellAdapter(*m_view);
-        m_view->setCellAdapter(m_adapter, true);
+        ui->view->setMaterializationMode(viv::VirtualTableView::MaterializationMode::CellWidgets);
+        m_adapter = new CellAdapter(*ui->view);
+        ui->view->setCellAdapter(m_adapter, true);
 
         // Use a fixed row height to avoid measuring each row.
-        m_view->setUniformItemHeight(40);
+        ui->view->setUniformItemHeight(40);
         // The header and body share the same column geometry.
-        m_view->setDefaultColumnWidth(150);
-        m_model = new QStandardItemModel(80, 8, m_view);
+        ui->view->setDefaultColumnWidth(150);
+        m_model = new QStandardItemModel(80, 8, ui->view);
         for (int column = 0; column < m_model->columnCount(); ++column)
             m_model->setHeaderData(column, Qt::Horizontal, QStringLiteral("列 %1").arg(column + 1));
         for (int row = 0; row < m_model->rowCount(); ++row) {
@@ -146,36 +132,32 @@ private:
             }
         }
         // The QObject parent owns the model; Qt model signals report data and structure changes.
-        m_view->setModel(m_model);
+        ui->view->setModel(m_model);
         // SelectRows collects whole rows for MIME; the model must allow dragging and root-level insertion.
-        m_view->setSelectionBehavior(viv::VirtualItemView::SelectionBehavior::SelectRows);
-        m_view->setSelectionMode(viv::VirtualItemView::SelectionMode::SingleSelection);
-        m_view->setDragEnabled(true);
-        m_view->setDragDropActions(Qt::CopyAction | Qt::MoveAction);
-        m_view->setDefaultDropAction(Qt::MoveAction);
+        ui->view->setSelectionBehavior(viv::VirtualItemView::SelectionBehavior::SelectRows);
+        ui->view->setSelectionMode(viv::VirtualItemView::SelectionMode::SingleSelection);
+        ui->view->setDragEnabled(true);
+        ui->view->setDragDropActions(Qt::CopyAction | Qt::MoveAction);
+        ui->view->setDefaultDropAction(Qt::MoveAction);
         // QStandardItemModel inserts copied data; after a successful Move, the view removes source rows and transfers selection.
         // Disable this option if the model already moves its data through moveRows.
-        m_view->setMoveRemovesSourceRows(true);
+        ui->view->setMoveRemovesSourceRows(true);
         // Change drag feedback without changing model data or drop semantics.
-        m_view->setDragFeedbackMode(viv::VirtualTableView::DragFeedbackMode::RowMoveAnimation);
+        ui->view->setDragFeedbackMode(viv::VirtualTableView::DragFeedbackMode::RowMoveAnimation);
 
-        connect(m_start, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int value) {
-            m_view->setDragStartMode(value == 0 ? viv::VirtualItemView::DragStartMode::Automatic : viv::VirtualItemView::DragStartMode::Manual);
+        connect(ui->start, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int value) {
+            ui->view->setDragStartMode(value == 0 ? viv::VirtualItemView::DragStartMode::Automatic : viv::VirtualItemView::DragStartMode::Manual);
         });
-        connect(m_duration, QOverload<int>::of(&QSpinBox::valueChanged), this, [this](int value) {
-            m_view->setDragReorderAnimationDuration(value);
+        connect(ui->duration, QOverload<int>::of(&QSpinBox::valueChanged), this, [this](int value) {
+            ui->view->setDragReorderAnimationDuration(value);
         });
-        connect(m_curve, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int value) {
+        connect(ui->curve, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int value) {
             const QEasingCurve::Type curves[] = {QEasingCurve::OutCubic, QEasingCurve::InOutCubic, QEasingCurve::Linear};
-            m_view->setDragReorderAnimationEasingCurve(QEasingCurve(curves[value]));
+            ui->view->setDragReorderAnimationEasingCurve(QEasingCurve(curves[value]));
         });
     }
 
-    viv::VirtualTableView *m_view = nullptr;
     QStandardItemModel *m_model = nullptr;
-    QComboBox *m_start = nullptr;
-    QSpinBox *m_duration = nullptr;
-    QComboBox *m_curve = nullptr;
     CellAdapter *m_adapter = nullptr;
 };
 

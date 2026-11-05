@@ -1,3 +1,5 @@
+#include "ui_state_content.h"
+#include <memory>
 #include "example.h"
 #include <virtualitemviews/virtualtableview.h>
 #include <virtualitemviews/tablewidgetadapter.h>
@@ -5,7 +7,6 @@
 #include <QLabel>
 #include <QPushButton>
 #include <QHBoxLayout>
-#include <QVBoxLayout>
 
 namespace table_state_content {
 
@@ -72,33 +73,33 @@ private:
 class Example : public QWidget
 {
 public:
-    explicit Example(QWidget *parent) : QWidget(parent)
+    explicit Example(QWidget *parent) : QWidget(parent), ui(new Ui::TableStateContentPage)
     {
         setupUi();
         setupExample();
     }
 
 private:
+    std::unique_ptr<Ui::TableStateContentPage> ui;
+
     void setupUi()
     {
-        auto *layout = new QVBoxLayout(this);
-        auto *description = new QLabel(QStringLiteral("11 状态关联控件：鼠标悬停或选中行时显示第 3 列操作按钮，业务数据与视觉状态分开"), this);
-        description->setWordWrap(true);
-        layout->addWidget(description);
-        m_view = new viv::VirtualTableView(this);
-        layout->addWidget(m_view, 1);
+        ui->setupUi(this);
+
+        // Keep framework configuration and item data visible in the example.
+        ui->view->setObjectName(QStringLiteral("vivItemView"));
     }
 
     void setupExample()
     {
         // The view owns this adapter so it remains available while widgets are being unbound.
-        m_view->setMaterializationMode(viv::VirtualTableView::MaterializationMode::CellWidgets);
-        m_view->setCellAdapter(new CellAdapter(*m_view), true);
+        ui->view->setMaterializationMode(viv::VirtualTableView::MaterializationMode::CellWidgets);
+        ui->view->setCellAdapter(new CellAdapter(*ui->view), true);
         // Use a fixed row height to avoid measuring each row.
-        m_view->setUniformItemHeight(40);
+        ui->view->setUniformItemHeight(40);
         // The header and body share the same column geometry.
-        m_view->setDefaultColumnWidth(150);
-        m_model = new QStandardItemModel(120, 8, m_view);
+        ui->view->setDefaultColumnWidth(150);
+        m_model = new QStandardItemModel(120, 8, ui->view);
         for (int column = 0; column < m_model->columnCount(); ++column)
             m_model->setHeaderData(column, Qt::Horizontal, QStringLiteral("列 %1").arg(column + 1));
         for (int row = 0; row < m_model->rowCount(); ++row) {
@@ -107,12 +108,11 @@ private:
             }
         }
         // The QObject parent owns the model; Qt model signals report data and structure changes.
-        m_view->setModel(m_model);
-        m_view->setVisualStateCornerRadius(6);
-        m_view->setColumnWidth(2, 240);
+        ui->view->setModel(m_model);
+        ui->view->setVisualStateCornerRadius(6);
+        ui->view->setColumnWidth(2, 240);
     }
 
-    viv::VirtualTableView *m_view = nullptr;
     QStandardItemModel *m_model = nullptr;
 };
 

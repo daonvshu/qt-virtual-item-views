@@ -1,3 +1,5 @@
+#include "ui_custom_header.h"
+#include <memory>
 #include "example.h"
 #include "styled_headers.h"
 #include <virtualitemviews/virtualtableview.h>
@@ -8,7 +10,6 @@
 #include <QCheckBox>
 #include <QTabWidget>
 #include <QHBoxLayout>
-#include <QVBoxLayout>
 #include <virtualitemviews/styledheadersection.h>
 #include <QPointer>
 
@@ -90,35 +91,33 @@ public:
 class Example : public QWidget
 {
 public:
-    explicit Example(QWidget *parent) : QWidget(parent)
+    explicit Example(QWidget *parent) : QWidget(parent), ui(new Ui::TableCustomHeaderPage)
     {
         setupUi();
         setupExample();
     }
 
 private:
+    std::unique_ptr<Ui::TableCustomHeaderPage> ui;
+
     void setupUi()
     {
-        auto *layout = new QVBoxLayout(this);
-        auto *description = new QLabel(QStringLiteral("19 自定义表头控件：每个可见列头是包含标题和排序按钮的 QWidget，支持冻结区复用"), this);
-        description->setWordWrap(true);
-        layout->addWidget(description);
-        m_customCorner = new QCheckBox(QStringLiteral("左上角使用全选按钮"), this);
-        layout->addWidget(m_customCorner);
-        m_view = new viv::VirtualTableView(this);
-        layout->addWidget(m_view, 1);
+        ui->setupUi(this);
+
+        // Keep framework configuration and item data visible in the example.
+        ui->view->setObjectName(QStringLiteral("vivItemView"));
     }
 
     void setupExample()
     {
         // Materialize cells independently so horizontally offscreen cells can also be recycled.
-        m_view->setMaterializationMode(viv::VirtualTableView::MaterializationMode::CellWidgets);
-        m_view->setCellAdapter(new CellAdapter, true);
+        ui->view->setMaterializationMode(viv::VirtualTableView::MaterializationMode::CellWidgets);
+        ui->view->setCellAdapter(new CellAdapter, true);
         // Use a fixed row height to avoid measuring each row.
-        m_view->setUniformItemHeight(40);
+        ui->view->setUniformItemHeight(40);
         // The header and body share the same column geometry.
-        m_view->setDefaultColumnWidth(150);
-        m_model = new QStandardItemModel(120, 8, m_view);
+        ui->view->setDefaultColumnWidth(150);
+        m_model = new QStandardItemModel(120, 8, ui->view);
         for (int column = 0; column < m_model->columnCount(); ++column)
             m_model->setHeaderData(column, Qt::Horizontal, QStringLiteral("列 %1").arg(column + 1));
         for (int row = 0; row < m_model->rowCount(); ++row) {
@@ -127,38 +126,36 @@ private:
             }
         }
         // The QObject parent owns the model; Qt model signals report data and structure changes.
-        m_view->setModel(m_model);
+        ui->view->setModel(m_model);
         // Replace the default header's section adapter directly; true transfers ownership.
         // The header supplies the current model and geometry and rebuilds frozen pane clones.
-        m_view->horizontalHeader()->setAdapter(new HeaderAdapter(*m_view), true);
-        m_view->setHeaderHeight(48);
-        m_view->setColumnDragEnabled(true);
-        m_view->setSortingEnabled(true);
-        m_view->setFrozenColumns({0});
+        ui->view->horizontalHeader()->setAdapter(new HeaderAdapter(*ui->view), true);
+        ui->view->setHeaderHeight(48);
+        ui->view->setColumnDragEnabled(true);
+        ui->view->setSortingEnabled(true);
+        ui->view->setFrozenColumns({0});
 
         // The default corner shares the built-in header style, without a separate adapter.
-        connect(m_customCorner, &QCheckBox::toggled, this, [this](bool enabled) {
+        connect(ui->customCorner, &QCheckBox::toggled, this, [this](bool enabled) {
             if (!enabled) {
                 // nullptr restores the default; the view releases the old custom widget.
-                m_view->setHeaderCornerWidget(nullptr);
+                ui->view->setHeaderCornerWidget(nullptr);
                 return;
             }
             auto *button = new QPushButton(QStringLiteral("全选"));
             button->setFocusPolicy(Qt::NoFocus);
-            connect(button, &QPushButton::clicked, m_view, [this] {
+            connect(button, &QPushButton::clicked, ui->view, [this] {
                 // Corner events belong to the application; select the model's full range.
                 const QItemSelection all(m_model->index(0, 0),
                     m_model->index(m_model->rowCount() - 1, m_model->columnCount() - 1));
-                m_view->selectionModel()->select(all, QItemSelectionModel::ClearAndSelect);
+                ui->view->selectionModel()->select(all, QItemSelectionModel::ClearAndSelect);
             });
             // The view owns the widget and tracks both header sizes and visibility.
-            m_view->setHeaderCornerWidget(button);
+            ui->view->setHeaderCornerWidget(button);
         });
     }
 
-    viv::VirtualTableView *m_view = nullptr;
     QStandardItemModel *m_model = nullptr;
-    QCheckBox *m_customCorner = nullptr;
 };
 
 QWidget *createExample(QWidget *parent)
