@@ -4926,6 +4926,13 @@ void VirtualItemView::stopDragAutoscroll()
 
 void VirtualItemView::wheelEvent(QWheelEvent *event)
 {
+    // A fitting view must not consume the enclosing scroll area's wheel input.
+    // Use the content range: forced scrollbar visibility and maximumHeight do
+    // not tell whether the parent layout has left enough room for the content.
+    if (maximumVerticalOffset() == 0) {
+        event->ignore();
+        return;
+    }
     // High resolution pixel deltas take precedence even in Items mode.
     const QPoint pixel = event->pixelDelta();
     const QPoint angle = event->angleDelta();

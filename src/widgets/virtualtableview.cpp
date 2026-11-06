@@ -438,7 +438,7 @@ protected:
     {
         auto *view = qobject_cast<VirtualTableView *>(parentWidget());
         if (view)
-            forwardWheelToViewport(view->viewport(), event);
+            forwardWheelToViewport(this, view->viewport(), event);
         else
             QWidget::wheelEvent(event);
     }
@@ -1428,19 +1428,26 @@ void VirtualTableView::layoutVerticalHeaderStrips()
         = (isVerticalHeaderShown() && m_verticalHeader) ? m_verticalHeaderWidth : 0;
     const QRect viewportRect = viewport()->geometry();
     const QVector<ItemPane> panes = itemPanes();
-    for (const ItemPane &pane : panes) {
-        HeaderViewInterface *header = m_verticalHeader;
-        if (pane.type == ItemPane::Type::FrozenTop)
-            header = m_frozenTopRowsHeader;
-        else if (pane.type == ItemPane::Type::FrozenBottom)
-            header = m_frozenBottomRowsHeader;
+    for (HeaderViewInterface *header : {m_verticalHeader, m_frozenTopRowsHeader,
+                                        m_frozenBottomRowsHeader}) {
         if (!header)
             continue;
         QWidget *strip = header->headerWidget();
+        const ItemPane::Type type = header == m_verticalHeader ? ItemPane::Type::Scrollable
+            : (header == m_frozenTopRowsHeader ? ItemPane::Type::FrozenTop
+                                              : ItemPane::Type::FrozenBottom);
+        const auto pane = std::find_if(panes.cbegin(), panes.cend(),
+            [type](const ItemPane &candidate) { return candidate.type == type; });
+        // Empty models and zero-height viewports have no row panes. Hide every
+        // unused strip so its default or previous geometry cannot cover the column header.
+        if (pane == panes.cend()) {
+            strip->hide();
+            continue;
+        }
         // The pane rects are viewport relative, the strips live in the view: the viewport's
         // own origin is the bridge (with one pane - nothing frozen - the pane rect *is* the
         // viewport rect, so this covers both cases).
-        const QRect rect = pane.viewportRect;
+        const QRect rect = pane->viewportRect;
         strip->setGeometry(viewportRect.x() - rowHeaderWidth, viewportRect.y() + rect.y(),
                            rowHeaderWidth, rect.height());
         strip->setVisible(rowHeaderWidth > 0 && rect.height() > 0);
@@ -7053,6 +7060,10 @@ void VirtualTableView::wheelEvent(QWheelEvent *event)
                 if (!pane.isFrozen())
                     scrollGroup = pane.scrollGroup;
                 break;
+            }
+            if (maximumHorizontalOffset(scrollGroup) == 0) {
+                event->ignore();
+                return;
             }
             setHorizontalOffset(scrollGroup, horizontalOffset(scrollGroup) - delta);
             event->accept();

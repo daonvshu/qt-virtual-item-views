@@ -29,6 +29,7 @@ public:
 
 protected:
     void resizeEvent(QResizeEvent *event) override;
+    void wheelEvent(QWheelEvent *event) override;
     bool event(QEvent *event) override;
 
 private:

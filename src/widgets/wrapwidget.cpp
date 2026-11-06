@@ -3,6 +3,7 @@
 #include <QEvent>
 #include <QScrollBar>
 #include <QResizeEvent>
+#include <QWheelEvent>
 
 namespace viv {
 
@@ -79,6 +80,16 @@ void WrapWidget::resizeEvent(QResizeEvent *event)
 {
     QScrollArea::resizeEvent(event);
     scheduleUpdate();
+}
+void WrapWidget::wheelEvent(QWheelEvent *event)
+{
+    // Let fitting real-widget collections scroll their enclosing scroll area.
+    if (verticalScrollBar()->maximum() == verticalScrollBar()->minimum()
+        && horizontalScrollBar()->maximum() == horizontalScrollBar()->minimum()) {
+        event->ignore();
+        return;
+    }
+    QScrollArea::wheelEvent(event);
 }
 bool WrapWidget::event(QEvent *event)
 {

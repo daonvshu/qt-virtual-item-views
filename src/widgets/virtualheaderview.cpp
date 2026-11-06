@@ -2329,7 +2329,7 @@ void VirtualHeaderView::wheelEvent(QWheelEvent *event)
 {
     auto *table = qobject_cast<VirtualTableView *>(parentWidget());
     if (table)
-        forwardWheelToViewport(table->viewport(), event);
+        forwardWheelToViewport(this, table->viewport(), event);
     else
         QWidget::wheelEvent(event);
 }

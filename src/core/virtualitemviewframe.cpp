@@ -24,6 +24,39 @@ QPainterPath roundedFramePath(const QRectF &rect, qreal radius)
     return path;
 }
 
+QPainterPath visibleFrameBorder(const QRectF &outer, const QPainterPath &border, Qt::Edges edges)
+{
+    const Qt::Edges allEdges = Qt::LeftEdge | Qt::TopEdge | Qt::RightEdge | Qt::BottomEdge;
+    if (edges == allEdges)
+        return border;
+    if (!edges || outer.isEmpty())
+        return QPainterPath();
+
+    // Split adjacent edges at 45 degrees so each owns half of the rounded corner.
+    const qreal depth = qMin(outer.width(), outer.height()) / 2;
+    const QPointF tl = outer.topLeft();
+    const QPointF tr = outer.topRight();
+    const QPointF bl = outer.bottomLeft();
+    const QPointF br = outer.bottomRight();
+    QPainterPath coverage;
+    coverage.setFillRule(Qt::WindingFill);
+    const auto addEdge = [&coverage, edges](Qt::Edge edge, const QPolygonF &polygon) {
+        if (edges.testFlag(edge)) {
+            coverage.addPolygon(polygon);
+            coverage.closeSubpath();
+        }
+    };
+    addEdge(Qt::TopEdge, QPolygonF() << tl << tr
+        << tr + QPointF(-depth, depth) << tl + QPointF(depth, depth));
+    addEdge(Qt::RightEdge, QPolygonF() << tr << br
+        << br + QPointF(-depth, -depth) << tr + QPointF(-depth, depth));
+    addEdge(Qt::BottomEdge, QPolygonF() << br << bl
+        << bl + QPointF(depth, -depth) << br + QPointF(-depth, -depth));
+    addEdge(Qt::LeftEdge, QPolygonF() << bl << tl
+        << tl + QPointF(depth, depth) << bl + QPointF(depth, -depth));
+    return border.intersected(coverage);
+}
+
 QRectF pixelAlignedRect(const QRectF &logical, const QTransform &transform)
 {
     bool invertible = false;
@@ -96,12 +129,14 @@ protected:
             buffer.setCompositionMode(QPainter::CompositionMode_DestinationIn);
             // Transparent mask pixels must clear the source outside the inner contour too.
             buffer.drawPixmap(QPointF(), m_mask);
-            if (borderPixels > 0) {
+            if (borderPixels > 0 && m_view->frameBorderEdges()) {
                 // The border and content have complementary coverage at the inner edge.
                 buffer.setCompositionMode(QPainter::CompositionMode_Plus);
                 buffer.setRenderHint(QPainter::Antialiasing);
                 const QColor color = m_view->frameBorderColor();
-                buffer.fillPath(roundedFramePath(outer, radius).subtracted(innerPath),
+                buffer.fillPath(visibleFrameBorder(outer,
+                                    roundedFramePath(outer, radius).subtracted(innerPath),
+                                    m_view->frameBorderEdges()),
                                 color.isValid() ? color : m_view->palette().color(QPalette::Mid));
             }
         }
@@ -199,6 +234,29 @@ void VirtualItemView::setFrameBorderColor(const QColor &color)
     m_frameBorderColor = color;
     if (m_frameEffect)
         m_frameEffect->update();
+}
+
+void VirtualItemView::setFrameBorderEdges(Qt::Edges edges)
+{
+    edges &= Qt::LeftEdge | Qt::TopEdge | Qt::RightEdge | Qt::BottomEdge;
+    if (m_frameBorderEdges == edges)
+        return;
+    m_frameBorderEdges = edges;
+    if (m_frameEffect)
+        m_frameEffect->update();
+}
+
+void VirtualItemView::setFrameBorderVisible(Qt::Edge edge, bool visible)
+{
+    Qt::Edges edges = m_frameBorderEdges;
+    edges.setFlag(edge, visible);
+    setFrameBorderEdges(edges);
+}
+
+bool VirtualItemView::frameBorderVisible(Qt::Edge edge) const
+{
+    const Qt::Edges allEdges = Qt::LeftEdge | Qt::TopEdge | Qt::RightEdge | Qt::BottomEdge;
+    return allEdges.testFlag(edge) && m_frameBorderEdges.testFlag(edge);
 }
 
 void VirtualItemView::updateFrameAppearance()

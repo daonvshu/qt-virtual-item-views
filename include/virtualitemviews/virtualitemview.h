@@ -143,12 +143,20 @@ public:
     /// An invalid color uses the palette's Mid color.
     void setFrameBorderColor(const QColor &color);
     QColor frameBorderColor() const { return m_frameBorderColor; }
+    /// Painted outer edges (default all four). Hidden edges keep their reserved
+    /// border space; content geometry and rounded clipping remain unchanged.
+    void setFrameBorderEdges(Qt::Edges edges);
+    Qt::Edges frameBorderEdges() const { return m_frameBorderEdges; }
+    /// Changes or queries one outer edge without affecting the other edges.
+    void setFrameBorderVisible(Qt::Edge edge, bool visible);
+    bool frameBorderVisible(Qt::Edge edge) const;
 
     /// Fits the preferred height to the vertical content, headers, frame and
     /// horizontal scrollbar (default false). The parent layout may shrink it;
     /// QWidget::setMaximumHeight() supplies an optional upper bound.
     /// Uses Maximum vertical size policy while enabled, restoring the previous
     /// vertical policy when disabled. Explicit minimum/fixed heights still apply.
+    /// Wheel input without a content scroll range is ignored for ancestor scrolling.
     void setAutoHeightEnabled(bool enabled);
     bool autoHeightEnabled() const { return m_autoHeightEnabled; }
     /// Content-based preferred height while auto height is enabled.
@@ -891,6 +899,7 @@ private:
     int m_frameCornerRadius = 0;
     int m_frameBorderWidth = 0;
     QColor m_frameBorderColor;
+    Qt::Edges m_frameBorderEdges = Qt::LeftEdge | Qt::TopEdge | Qt::RightEdge | Qt::BottomEdge;
     QPointer<QGraphicsEffect> m_frameEffect;
     int m_savedFrameStyle = QFrame::NoFrame;
     int m_savedLineWidth = 1;

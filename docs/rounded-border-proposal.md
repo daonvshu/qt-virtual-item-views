@@ -8,6 +8,21 @@ view->setFrameBorderWidth(2);
 view->setFrameBorderColor(QColor("#4079ad"));
 ```
 
+外边框默认绘制四条边，可逐边控制，也可一次指定需要绘制的边：
+
+```cpp
+view->setFrameBorderVisible(Qt::TopEdge, true);
+view->setFrameBorderVisible(Qt::BottomEdge, false);
+view->setFrameBorderVisible(Qt::LeftEdge, true);
+view->setFrameBorderVisible(Qt::RightEdge, true);
+const bool bottomVisible = view->frameBorderVisible(Qt::BottomEdge);
+
+view->setFrameBorderEdges(Qt::LeftEdge | Qt::TopEdge | Qt::RightEdge);
+view->setFrameBorderEdges(Qt::Edges()); // Hide all four borders.
+```
+
+`frameBorderEdges()` 返回当前绘制的边。边框颜色和宽度仍由原有接口统一配置，宽度为零时均不绘制。显隐仅影响外边框描边，隐藏边仍保留原有边框占位和圆角裁剪，切换时表头、视口、滚动条及自适应高度不变。圆角由相邻两边各负责一半；关闭一边后，该边负责的半段圆角也不再描边。表头和内容中的分隔线独立控制，不受外边框显隐影响。
+
 半径和宽度使用逻辑像素，默认均为零，不安装合成效果。负数归零，边框宽度上限为 32767；合成时将外轮廓对齐到源图的物理像素边界，边框宽度乘设备像素比后统一四舍五入，四边使用相同的物理像素厚度。绘制半径按当前尺寸限制到短边的一半。无效边框颜色使用调色板的 `QPalette::Mid`。对应读取接口为 `frameCornerRadius()`、`frameBorderWidth()` 和 `frameBorderColor()`。
 
 边框在视图内部预留空间，表头、视口和滚动条随之布局。内轮廓半径为 `max(0, 外框半径 - 边框宽度)`；hover／selected 圆角仍通过 `setVisualStateCornerRadius()` 独立配置。将外框半径和宽度都设为零会移除框架的合成效果并恢复启用前的 QFrame 样式。

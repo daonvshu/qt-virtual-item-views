@@ -50,6 +50,8 @@ parentLayout->addWidget(wrap);
 
 `WrapWidget` 默认启用自适应高度，可以用 `setAutoHeightEnabled(false)` 关闭；高度上限使用 QWidget 的 `setMaximumHeight()`，父布局仍可分配更小的空间。不要额外 `setFixedHeight()`，否则会阻止动态收缩。
 
+`VirtualWrapView` 内容没有竖向滚动范围时，竖向滚轮事件交给外层处理；`WrapWidget` 内容无需滚动时也会放行滚轮，便于放入外层滚动区域。是否可以内部滚动按实际内容范围判断，不依赖滚动条是否可见或是否达到最大高度。
+
 真实控件宽度取自身 `sizeHint()` 并考虑最小、最大尺寸。隐藏控件默认不占位置；设置 `retainSizeWhenHidden` 后保留位置。控件文本、size hint 或可见性变化通过布局失效更新，不需要手动重建。显式最小尺寸仍是 QWidget 的约束，超出可用空间的部分由容器裁剪；应避免给标签设置超过容器的最小宽度。
 
 `addWidget()` / `insertWidget()` 将 QWidget 所有权交给容器；`takeWidget(index)` 隐藏并解除父对象后返回，调用者负责销毁或重新加入；`clear()` 销毁全部容器内控件。通过 `wrapLayout()->takeAt()` 直接移除时遵循 QLayout 规则，调用者负责布局项，控件 QObject 所有权不自动变化。内置 content widget 和 layout 不能替换。
