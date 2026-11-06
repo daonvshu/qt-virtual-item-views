@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ui version="4.0">
+ <class>WrapBrowser</class>
+ <widget class="QMainWindow" name="WrapBrowser">
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QHBoxLayout" name="mainLayout">
+    <item><widget class="QListWidget" name="navigation">
+     <property name="minimumSize"><size><width>250</width><height>0</height></size></property>
+     <property name="maximumSize"><size><width>300</width><height>16777215</height></size></property>
+     <property name="styleSheet"><string>QListWidget::item { min-height: 36px; }</string></property>
+    </widget></item>
+    <item><widget class="QStackedWidget" name="pages"/></item>
+   </layout>
+  </widget>
+ </widget>
+ <resources/><connections/>
+</ui>

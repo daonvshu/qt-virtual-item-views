@@ -1,0 +1,40 @@
+<?xml version='1.0' encoding='utf-8'?>
+<ui version="4.0">
+ <class>WrapBasicPage</class>
+ <widget class="QWidget" name="WrapBasicPage">
+  <layout class="QVBoxLayout" name="pageLayout">
+   <item>
+    <widget class="QLabel" name="description">
+     <property name="text">
+      <string>不同项目保持自己的自然宽度，超过视口宽度自动换行。</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="controls" />
+   </item>
+   <item>
+    <widget class="viv::VirtualWrapView" name="view" />
+   </item>
+   <item>
+    <widget class="QLabel" name="status">
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>viv::VirtualWrapView</class>
+   <extends>QAbstractScrollArea</extends>
+   <header>virtualitemviews/virtualwrapview.h</header>
+  </customwidget>
+ </customwidgets>
+ <resources />
+ <connections />
+</ui>

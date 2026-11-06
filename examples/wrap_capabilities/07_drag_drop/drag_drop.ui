@@ -1,0 +1,55 @@
+<?xml version='1.0' encoding='utf-8'?>
+<ui version="4.0">
+ <class>WrapDragDropPage</class>
+ <widget class="QWidget" name="WrapDragDropPage">
+  <layout class="QVBoxLayout" name="pageLayout">
+   <item>
+    <widget class="QLabel" name="description">
+     <property name="text">
+      <string>支持项前后插入和末行空白追加。自动模式可直接拖动标签；勾选手动起拖后，只能按住标签左侧的小按钮拖动，由按钮手势调用 startDrag。</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="controls">
+     <item>
+      <widget class="QCheckBox" name="manual">
+       <property name="text">
+        <string>手动起拖</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QCheckBox" name="dashed">
+       <property name="text">
+        <string>虚线指示器</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="viv::VirtualWrapView" name="view" />
+   </item>
+   <item>
+    <widget class="QLabel" name="status">
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>viv::VirtualWrapView</class>
+   <extends>QAbstractScrollArea</extends>
+   <header>virtualitemviews/virtualwrapview.h</header>
+  </customwidget>
+ </customwidgets>
+ <resources />
+ <connections />
+</ui>

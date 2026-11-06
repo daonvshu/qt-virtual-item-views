@@ -1,0 +1,48 @@
+<?xml version='1.0' encoding='utf-8'?>
+<ui version="4.0">
+ <class>WrapBindingEventsPage</class>
+ <widget class="QWidget" name="WrapBindingEventsPage">
+  <layout class="QVBoxLayout" name="pageLayout">
+   <item>
+    <widget class="QLabel" name="description">
+     <property name="text">
+      <string>每项存一份结构体；按钮事件通过当前控件重新查询索引，适用于缓存复用。</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="controls">
+     <item>
+      <widget class="QPushButton" name="change">
+       <property name="text">
+        <string>更改第一项结构体</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="viv::VirtualWrapView" name="view" />
+   </item>
+   <item>
+    <widget class="QLabel" name="status">
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>viv::VirtualWrapView</class>
+   <extends>QAbstractScrollArea</extends>
+   <header>virtualitemviews/virtualwrapview.h</header>
+  </customwidget>
+ </customwidgets>
+ <resources />
+ <connections />
+</ui>

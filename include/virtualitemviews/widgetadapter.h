@@ -84,7 +84,8 @@ public:
     }
 
     /// Estimated size of an index before it is materialized. Used for newly
-    /// inserted rows in variable-height layouts. The type is widgetType(index).
+    /// inserted rows in variable-height layouts, and for natural item widths in
+    /// VirtualWrapView. The type is widgetType(index).
     virtual QSize estimatedSize(WidgetType type, const QModelIndex &index) const = 0;
 };
 

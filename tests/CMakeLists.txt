@@ -28,6 +28,11 @@ add_executable(tst_bindingcontext unit/tst_bindingcontext.cpp)
 target_link_libraries(tst_bindingcontext PRIVATE VirtualItemViews Qt${QT_VERSION_MAJOR}::Test)
 add_test(NAME tst_bindingcontext COMMAND tst_bindingcontext)
 
+# Pure packing and cached-layout checks; no widgets or platform plugin.
+add_executable(tst_wraplayout unit/tst_wraplayout.cpp)
+target_link_libraries(tst_wraplayout PRIVATE VirtualItemViews Qt${QT_VERSION_MAJOR}::Test)
+add_test(NAME tst_wraplayout COMMAND tst_wraplayout)
+
 # Preview geometry and optional coordinates need neither widgets nor a platform drag session.
 add_executable(tst_dragpreview unit/tst_dragpreview.cpp)
 target_link_libraries(tst_dragpreview PRIVATE VirtualItemViews Qt${QT_VERSION_MAJOR}::Test)

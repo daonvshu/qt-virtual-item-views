@@ -1,0 +1,83 @@
+<?xml version='1.0' encoding='utf-8'?>
+<ui version="4.0">
+ <class>WrapModelRootPage</class>
+ <widget class="QWidget" name="WrapModelRootPage">
+  <layout class="QVBoxLayout" name="pageLayout">
+   <item>
+    <widget class="QLabel" name="description">
+     <property name="text">
+      <string>代理排序、过滤、增删与文本宽度变更由模型信号驱动。</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="controls">
+     <item>
+      <widget class="QPushButton" name="add">
+       <property name="text">
+        <string>添加</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="remove">
+       <property name="text">
+        <string>删除当前</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="rename">
+       <property name="text">
+        <string>加长当前文本</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QCheckBox" name="filter">
+       <property name="text">
+        <string>仅含 1</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QCheckBox" name="sort">
+       <property name="text">
+        <string>倒序</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QCheckBox" name="root">
+       <property name="text">
+        <string>显示分组子项</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="viv::VirtualWrapView" name="view" />
+   </item>
+   <item>
+    <widget class="QLabel" name="status">
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>viv::VirtualWrapView</class>
+   <extends>QAbstractScrollArea</extends>
+   <header>virtualitemviews/virtualwrapview.h</header>
+  </customwidget>
+ </customwidgets>
+ <resources />
+ <connections />
+</ui>

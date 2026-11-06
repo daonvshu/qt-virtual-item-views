@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>WrapVisualStatesPage</class>
+ <widget class="QWidget" name="WrapVisualStatesPage">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>383</width>
+    <height>98</height>
+   </rect>
+  </property>
+  <layout class="QVBoxLayout" name="pageLayout">
+   <item>
+    <widget class="QLabel" name="description">
+     <property name="text">
+      <string>状态只覆盖项目；每行尾部空白不响应 hover 或选择。业务标签保持透明。</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="controls">
+     <item>
+      <widget class="QCheckBox" name="states">
+       <property name="text">
+        <string>状态背景</string>
+       </property>
+       <property name="checked">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel" name="radiusText">
+       <property name="text">
+        <string>圆角</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QSpinBox" name="radius">
+       <property name="minimum">
+        <number>0</number>
+       </property>
+       <property name="maximum">
+        <number>24</number>
+       </property>
+       <property name="value">
+        <number>10</number>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="horizontalSpacer">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QComboBox" name="colors">
+       <item>
+        <property name="text">
+         <string>默认颜色</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>函数颜色</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>仅 viewport 样式表</string>
+        </property>
+       </item>
+      </widget>
+     </item>
+     <item>
+      <widget class="QComboBox" name="selection">
+       <item>
+        <property name="text">
+         <string>单选</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>扩展选择</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>多选</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>不选择</string>
+        </property>
+       </item>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="viv::VirtualWrapView" name="view" native="true"/>
+   </item>
+   <item>
+    <widget class="QLabel" name="status">
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>viv::VirtualWrapView</class>
+   <extends>QWidget</extends>
+   <header>virtualitemviews/virtualwrapview.h</header>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections/>
+</ui>

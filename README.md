@@ -11,6 +11,7 @@
 | 列表 | 行控件、数据绑定、行高、状态、选择、拖放、滚动与复用 | [VirtualListView 功能示例源码](docs/list.md) |
 | 表格 | 行控件与单元格控件两种模式、行列间距、行高与选择 | [VirtualTableView 功能示例源码](docs/table.md) |
 | 流式表格 | 随窗口宽度动态换列、均分铺满列宽、固定高度或宽高比 | [流式表格](docs/flow-table.md) |
+| 自动换行 | 项目独立宽度、统一高度、虚拟控件或直接添加真实控件、自适应高度 | [Wrap 视图与布局](docs/wrap.md) |
 | 瀑布流 | 最短列布局、独立项目高度、图片估算和动态列数 | [瀑布流](docs/masonry.md) |
 | 表格布局 | 列宽比例分配、左右冻结列、上下冻结行、多滚动组、合并单元格 | [布局与合并](docs/table-layout-guide.md) |
 | 表头 | 排序、自定义控件、行列拖动换序、动画与状态恢复 | [表头与排序](docs/headers.md)、[列布局持久化](docs/header-persistence.md) |

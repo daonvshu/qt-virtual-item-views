@@ -12,6 +12,8 @@
 
 瀑布流保留最小参考程序和综合图片演示。
 
+`VirtualWrapView`、`WrapLayout` 和 `WrapWidget` 使用 [wrap_capabilities](wrap_capabilities/README.md) 演示不等宽换行、虚拟控件复用和少量真实控件。按功能查找见 [docs/wrap.md](../docs/wrap.md)。
+
 ## 按视图入门
 
 | 视图 | 首先阅读 | Adapter / 控件 | 后续参考 |
