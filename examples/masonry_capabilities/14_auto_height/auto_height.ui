@@ -85,12 +85,6 @@
       <bool>true</bool>
      </property>
      <widget class="QWidget" name="scrollContent">
-      <property name="minimumSize">
-       <size>
-        <width>0</width>
-        <height>850</height>
-       </size>
-      </property>
       <layout class="QVBoxLayout" name="contentLayout">
        <item>
         <widget class="QLabel" name="outerHint">
@@ -106,7 +100,7 @@
         <widget class="viv::VirtualMasonryView" name="view" />
        </item>
        <item>
-        <spacer name="outerSpacer">
+        <spacer name="outerSpacer"><property name="sizeType"><enum>QSizePolicy::MinimumExpanding</enum></property>
          <property name="orientation">
           <enum>Qt::Vertical</enum>
          </property>

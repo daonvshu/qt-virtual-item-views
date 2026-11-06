@@ -143,8 +143,8 @@ public:
     /// An invalid color uses the palette's Mid color.
     void setFrameBorderColor(const QColor &color);
     QColor frameBorderColor() const { return m_frameBorderColor; }
-    /// Painted outer edges (default all four). Hidden edges keep their reserved
-    /// border space; content geometry and rounded clipping remain unchanged.
+    /// Painted outer edges (default all four). Only visible edges reserve space;
+    /// hidden edges retain the outer corner clipping without a border inset.
     void setFrameBorderEdges(Qt::Edges edges);
     Qt::Edges frameBorderEdges() const { return m_frameBorderEdges; }
     /// Changes or queries one outer edge without affecting the other edges.
@@ -156,12 +156,15 @@ public:
     /// QWidget::setMaximumHeight() supplies an optional upper bound.
     /// Uses Maximum vertical size policy while enabled, restoring the previous
     /// vertical policy when disabled. Explicit minimum/fixed heights still apply.
+    /// Inside a resizable QScrollArea, keeps the bounded content height as a
+    /// layout minimum unless an intermediate container imposes a height limit.
     /// Wheel input without a content scroll range is ignored for ancestor scrolling.
     void setAutoHeightEnabled(bool enabled);
     bool autoHeightEnabled() const { return m_autoHeightEnabled; }
     /// Content-based preferred height while auto height is enabled.
     QSize sizeHint() const override;
-    /// Allows the parent to shrink the viewport down to its non-content chrome.
+    /// Allows bounded parent layouts to shrink the viewport to its chrome;
+    /// preserves the content-based height in a resizable outer QScrollArea.
     QSize minimumSizeHint() const override;
 
     // -- model ---------------------------------------------------------------
@@ -887,15 +890,32 @@ private:
 
     /// Non-content height reserved for the frame, viewport margins and scrollbar.
     int autoHeightDecorationExtent() const;
+    /// Whether an unbounded path reaches a resizable outer content widget.
+    bool autoHeightPreservesContentMinimum() const;
+    /// Observes ancestor constraints and reparents without modifying their layouts.
+    void updateAutoHeightAncestorTracking();
+    /// Rechecks height hints after the current ancestor layout event has completed.
+    void scheduleAutoHeightGeometryUpdate();
     bool m_autoHeightEnabled = false;
     QSizePolicy::Policy m_autoHeightPreviousVerticalPolicy = QSizePolicy::Expanding;
     QSize m_autoHeightLastHints;
     bool m_autoHeightScrollBarSyncPending = false;
+    QVector<QPointer<QWidget>> m_autoHeightAncestors;
+    bool m_autoHeightLastContentMinimumPreserved = false;
+    bool m_autoHeightGeometryUpdatePending = false;
 
     /// Updates the owned Alpha effect and the frame's content inset.
     void updateFrameAppearance();
+    /// Replaces native frame insets with the enabled edges' content insets.
+    bool updateFrameContentsMargins();
+    /// Restores native margins before Qt recalculates frame metrics.
+    void restoreFrameContentsMargins();
     /// Clips scroll-area child controls to the rounded outer frame.
     void updateFrameChildMasks();
+    bool m_updatingFrameContentsMargins = false;
+    bool m_hasFrameContentsMargins = false;
+    QMargins m_nativeFrameContentsMargins;
+    QMargins m_appliedFrameContentsMargins;
     int m_frameCornerRadius = 0;
     int m_frameBorderWidth = 0;
     QColor m_frameBorderColor;

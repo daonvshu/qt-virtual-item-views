@@ -32,6 +32,7 @@
 #include <QPair>
 #include <QPointF>
 #include <QResizeEvent>
+#include <QScrollArea>
 #include <QScrollBar>
 #include <QScopeGuard>
 #include <QShowEvent>
@@ -345,6 +346,7 @@ VirtualItemView::VirtualItemView(QWidget *parent)
 VirtualItemView::~VirtualItemView()
 {
     m_destroying = true;
+    updateAutoHeightAncestorTracking();
     setPerformanceLoggingEnabled(false);
     viewport()->removeEventFilter(this);
     for (QWidget *widget : m_rowSpacingWidgets)
@@ -428,6 +430,7 @@ void VirtualItemView::setAutoHeightEnabled(bool enabled)
     }
     setSizePolicy(policy);
     m_autoHeightLastHints = QSize();
+    updateAutoHeightAncestorTracking();
     updateGeometry();
     if (enabled)
         updateAutoHeightGeometry();
@@ -459,14 +462,87 @@ QSize VirtualItemView::minimumSizeHint() const
         // Do not inherit the scroll area's minimum scrollbar length: even a
         // single row (or an empty list) must be allowed to occupy less space.
         hint.setHeight(qMin(maximumHeight(), autoHeightDecorationExtent()));
+        // A resizable outer scroll area sizes its content from layout minima.
+        // Preserve this view's bounded content height there, or a long form can
+        // shrink every nested view to its header before the outer area scrolls.
+        if (autoHeightPreservesContentMinimum())
+            hint.setHeight(sizeHint().height());
     }
     return hint;
+}
+
+bool VirtualItemView::autoHeightPreservesContentMinimum() const
+{
+    for (QWidget *ancestor = parentWidget(); ancestor; ancestor = ancestor->parentWidget()) {
+        if (auto *area = qobject_cast<QAbstractScrollArea *>(ancestor)) {
+            auto *outer = qobject_cast<QScrollArea *>(area);
+            return outer && outer->widgetResizable() && outer->widget()
+                && (outer->widget() == this || outer->widget()->isAncestorOf(this));
+        }
+        // Explicitly bounded intermediate containers still control their
+        // own layout budget (including animated collapse containers).
+        if (ancestor->isWindow() || ancestor->maximumHeight() < QWIDGETSIZE_MAX)
+            break;
+    }
+    return false;
+}
+
+void VirtualItemView::updateAutoHeightAncestorTracking()
+{
+    QVector<QPointer<QWidget>> ancestors;
+    if (m_autoHeightEnabled && !m_destroying) {
+        // Observe beyond a temporary height cap so removing that cap is seen.
+        for (QWidget *ancestor = parentWidget(); ancestor; ancestor = ancestor->parentWidget()) {
+            ancestors.append(ancestor);
+            if (ancestor->isWindow() || qobject_cast<QAbstractScrollArea *>(ancestor))
+                break;
+        }
+    }
+    if (ancestors != m_autoHeightAncestors) {
+        for (const QPointer<QWidget> &ancestor : m_autoHeightAncestors) {
+            if (ancestor)
+                ancestor->removeEventFilter(this);
+        }
+        m_autoHeightAncestors = ancestors;
+        for (const QPointer<QWidget> &ancestor : m_autoHeightAncestors) {
+            if (ancestor)
+                ancestor->installEventFilter(this);
+        }
+        m_autoHeightLastHints = QSize();
+    }
+    const bool preservesMinimum = m_autoHeightEnabled && !m_destroying
+        && autoHeightPreservesContentMinimum();
+    if (preservesMinimum != m_autoHeightLastContentMinimumPreserved) {
+        m_autoHeightLastContentMinimumPreserved = preservesMinimum;
+        // A QWidgetItem may have cached hints during an ancestor's animation.
+        // Invalidate even if the final hints match those from before collapse.
+        m_autoHeightLastHints = QSize();
+    }
+}
+
+void VirtualItemView::scheduleAutoHeightGeometryUpdate()
+{
+    if (!m_autoHeightEnabled || m_destroying || m_autoHeightGeometryUpdatePending)
+        return;
+    m_autoHeightGeometryUpdatePending = true;
+    QTimer::singleShot(0, this, [this]() {
+        m_autoHeightGeometryUpdatePending = false;
+        if (!m_autoHeightEnabled || m_destroying)
+            return;
+        updateAutoHeightAncestorTracking();
+        updateAutoHeightGeometry();
+    });
 }
 
 int VirtualItemView::autoHeightDecorationExtent() const
 {
     const QMargins margins = viewportMargins();
-    qint64 height = qint64(2) * frameWidth() + margins.top() + margins.bottom();
+    // The composited frame reserves space only for its enabled edges, regardless of QSS.
+    const int borderHeight = !m_frameEffect.isNull()
+        ? m_frameBorderWidth * (int(m_frameBorderEdges.testFlag(Qt::TopEdge))
+                             + int(m_frameBorderEdges.testFlag(Qt::BottomEdge)))
+        : 2 * frameWidth();
+    qint64 height = qint64(borderHeight) + margins.top() + margins.bottom();
     const QScrollBar *bar = horizontalScrollBar();
     const bool scrollBarNeeded = horizontalScrollBarPolicy() == Qt::ScrollBarAlwaysOn
         || (horizontalScrollBarPolicy() == Qt::ScrollBarAsNeeded && bar->maximum() > bar->minimum());
@@ -1334,6 +1410,22 @@ bool VirtualItemView::eventFilter(QObject *watched, QEvent *event)
     if (m_destroying)
         return false;
     auto *widget = qobject_cast<QWidget *>(watched);
+    if (widget && m_autoHeightEnabled && m_autoHeightAncestors.contains(widget)) {
+        switch (event->type()) {
+        case QEvent::LayoutRequest:
+        case QEvent::Resize:
+        case QEvent::ContentsRectChange:
+        case QEvent::Show:
+        case QEvent::Hide:
+        case QEvent::ParentChange:
+            scheduleAutoHeightGeometryUpdate();
+            break;
+        default:
+            break;
+        }
+        // Ancestors are observed only; they do not drive content hover tracking.
+        return false;
+    }
     if (widget == viewport() && (event->type() == QEvent::StyleChange
                                 || event->type() == QEvent::PaletteChange)) {
         detail::prepareViewBackground(widget);
@@ -3960,6 +4052,13 @@ void VirtualItemView::showEvent(QShowEvent *event)
 {
     detail::PerformanceScope performance(this, "layout.show");
     QAbstractScrollArea::showEvent(event);
+    if (m_autoHeightEnabled) {
+        // Hidden widget geometry notifications do not invalidate parent items.
+        // Publish fresh hints after visibility and ancestor constraints settle.
+        m_autoHeightLastHints = QSize();
+        updateAutoHeightAncestorTracking();
+        scheduleAutoHeightGeometryUpdate();
+    }
     if (m_layout)
         m_layout->setCrossExtent(viewport()->width());
     relayout();

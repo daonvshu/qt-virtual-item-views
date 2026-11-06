@@ -49,6 +49,8 @@ private:
     void setupUi()
     {
         ui->setupUi(this);
+        // The Designer page embeds this view in a widget-resizable QScrollArea.
+        // When auto height leaves no internal scroll range, wheel events reach the outer area.
         ui->pageLayout->setStretch(ui->pageLayout->count() - 1, 1);
         // This expanding sibling makes unused vertical layout space visible.
         QPalette colors = ui->remainingLabel->palette();

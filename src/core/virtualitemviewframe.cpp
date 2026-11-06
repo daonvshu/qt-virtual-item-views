@@ -4,12 +4,14 @@
 
 #include <QEvent>
 #include <QChildEvent>
+#include <QCoreApplication>
 #include <QGraphicsEffect>
 #include <QPainter>
 #include <QPainterPath>
 #include <QPolygon>
 #include <QPixmap>
 #include <QScrollBar>
+#include <QResizeEvent>
 
 namespace viv {
 namespace {
@@ -57,6 +59,26 @@ QPainterPath visibleFrameBorder(const QRectF &outer, const QPainterPath &border,
     return border.intersected(coverage);
 }
 
+QPainterPath frameContentPath(const QRectF &outer, qreal radius, qreal width, Qt::Edges edges)
+{
+    radius = qBound(qreal(0), radius, qMax(qreal(0), qMin(outer.width(), outer.height()) / 2));
+    if (radius == 0) {
+        return roundedFramePath(outer.adjusted(edges.testFlag(Qt::LeftEdge) ? width : 0,
+                                               edges.testFlag(Qt::TopEdge) ? width : 0,
+                                               edges.testFlag(Qt::RightEdge) ? -width : 0,
+                                               edges.testFlag(Qt::BottomEdge) ? -width : 0), 0);
+    }
+    const QPainterPath outerPath = roundedFramePath(outer, radius);
+    if (width <= 0 || !edges)
+        return outerPath;
+    const QPainterPath innerPath = roundedFramePath(outer.adjusted(width, width, -width, -width),
+                                                    qMax(qreal(0), radius - width));
+    if (edges == (Qt::LeftEdge | Qt::TopEdge | Qt::RightEdge | Qt::BottomEdge))
+        return innerPath;
+    // Restore content under hidden border segments while keeping the outer rounded contour.
+    return outerPath.subtracted(visibleFrameBorder(outer, outerPath.subtracted(innerPath), edges));
+}
+
 QRectF pixelAlignedRect(const QRectF &logical, const QTransform &transform)
 {
     bool invertible = false;
@@ -102,14 +124,10 @@ protected:
         const QRectF outer = pixelAlignedRect(logicalBounds, transform);
         const qreal radius = qMin(qreal(m_view->frameCornerRadius()),
                                  qMin(outer.width(), outer.height()) / 2);
-        const QRectF outerDevice = transform.mapRect(outer);
         const int borderPixels = qMax(0, qRound(m_view->frameBorderWidth() * dpr));
         const qreal borderLogical = dpr > 0 ? qreal(borderPixels) / dpr : 0;
-        const QRectF innerDevice = outerDevice.adjusted(borderPixels, borderPixels,
-                                                        -borderPixels, -borderPixels);
-        const QRectF inner = transform.inverted().mapRect(innerDevice);
-        const QPainterPath innerPath = roundedFramePath(inner,
-                                                        qMax(qreal(0), radius - borderLogical));
+        const QPainterPath innerPath = frameContentPath(outer, radius, borderLogical,
+                                                        m_view->frameBorderEdges());
         if (m_mask.size() != source.size() || m_mask.devicePixelRatioF() != dpr
             || m_maskBounds != outer) {
             m_mask = QPixmap(source.size());
@@ -134,9 +152,7 @@ protected:
                 buffer.setCompositionMode(QPainter::CompositionMode_Plus);
                 buffer.setRenderHint(QPainter::Antialiasing);
                 const QColor color = m_view->frameBorderColor();
-                buffer.fillPath(visibleFrameBorder(outer,
-                                    roundedFramePath(outer, radius).subtracted(innerPath),
-                                    m_view->frameBorderEdges()),
+                buffer.fillPath(roundedFramePath(outer, radius).subtracted(innerPath),
                                 color.isValid() ? color : m_view->palette().color(QPalette::Mid));
             }
         }
@@ -153,6 +169,27 @@ private:
 
 bool VirtualItemView::event(QEvent *event)
 {
+    const QPointer<VirtualItemView> self(this);
+    if (m_frameEffect && event->type() == QEvent::Resize) {
+        const auto *resize = static_cast<QResizeEvent *>(event);
+        if (resize->size() == resize->oldSize()
+            && (m_updatingFrameContentsMargins || updateFrameContentsMargins())) {
+            // setFrameRect() emits a same-size resize before ContentsRectChange.
+            // Restore the inset before the scroll-area layout reads contentsRect(),
+            // without recursively restarting that layout from setContentsMargins().
+            return true;
+        }
+        if (!self)
+            return true;
+    }
+    if (event->type() == QEvent::ContentsRectChange) {
+        if (m_updatingFrameContentsMargins)
+            return true;
+        // Hidden widgets defer their resize event but send this event immediately.
+        updateFrameContentsMargins();
+        if (!self)
+            return true;
+    }
     if (event->type() == QEvent::Paint) {
         detail::PerformanceScope performance(this, "paint.view-background", detail::PerformanceDomain::Paint);
         // Qt5 can paint the scrollbars after the scroll-area's effect source has
@@ -176,10 +213,31 @@ bool VirtualItemView::event(QEvent *event)
     }
     const bool refreshChildMasks = event->type() == QEvent::LayoutRequest
         || event->type() == QEvent::StyleChange;
-    const QPointer<VirtualItemView> self(this);
+    const bool refreshFrameMetrics = m_frameEffect && !m_updatingFrameContentsMargins
+        && (event->type() == QEvent::Polish || event->type() == QEvent::StyleChange
+            || event->type() == QEvent::ParentChange);
+    if (refreshFrameMetrics) {
+        restoreFrameContentsMargins();
+        if (!self)
+            return true;
+    }
+    // QFrame preserves frameRect() when changing style metrics. Let it see native
+    // margins throughout that operation, then apply our per-edge correction once.
+    if (refreshFrameMetrics)
+        m_updatingFrameContentsMargins = true;
     const bool handled = QAbstractScrollArea::event(event);
     if (!self)
         return handled;
+    if (refreshFrameMetrics)
+        m_updatingFrameContentsMargins = false;
+    if (m_frameEffect)
+        updateFrameContentsMargins();
+    if (!self)
+        return handled;
+    if (event->type() == QEvent::ParentChange && m_autoHeightEnabled) {
+        updateAutoHeightAncestorTracking();
+        scheduleAutoHeightGeometryUpdate();
+    }
     if ((event->type() == QEvent::Polish || event->type() == QEvent::StyleChange
          || (event->type() == QEvent::ChildPolished
              && static_cast<QChildEvent *>(event)->child() == viewport()))
@@ -203,6 +261,15 @@ bool VirtualItemView::event(QEvent *event)
     }
     if (refreshChildMasks && !m_frameEffect.isNull())
         updateFrameChildMasks();
+    if (m_frameEffect && (event->type() == QEvent::Polish || event->type() == QEvent::StyleChange
+        || event->type() == QEvent::ParentChange || event->type() == QEvent::Show)) {
+        // A style can reset frame metrics after the scroll area's own layout pass.
+        // Queue one pass for that lifecycle change, never for the correction itself.
+        updateFrameContentsMargins();
+        if (!self)
+            return handled;
+        QCoreApplication::postEvent(this, new QEvent(QEvent::LayoutRequest));
+    }
     if (refreshChildMasks || event->type() == QEvent::ContentsRectChange)
         updateAutoHeightGeometry();
     return handled;
@@ -242,8 +309,7 @@ void VirtualItemView::setFrameBorderEdges(Qt::Edges edges)
     if (m_frameBorderEdges == edges)
         return;
     m_frameBorderEdges = edges;
-    if (m_frameEffect)
-        m_frameEffect->update();
+    updateFrameAppearance();
 }
 
 void VirtualItemView::setFrameBorderVisible(Qt::Edge edge, bool visible)
@@ -261,6 +327,10 @@ bool VirtualItemView::frameBorderVisible(Qt::Edge edge) const
 
 void VirtualItemView::updateFrameAppearance()
 {
+    const QPointer<VirtualItemView> self(this);
+    restoreFrameContentsMargins();
+    if (!self)
+        return;
     if (m_frameCornerRadius == 0 && m_frameBorderWidth == 0) {
         updateFrameChildMasks();
         if (m_frameEffect) {
@@ -268,6 +338,9 @@ void VirtualItemView::updateFrameAppearance()
             setFrameStyle(m_savedFrameStyle);
             setLineWidth(m_savedLineWidth);
             setMidLineWidth(m_savedMidLineWidth);
+            // Remove any inset supplied for a style whose native frame was zero.
+            setFrameRect(rect());
+            QCoreApplication::postEvent(this, new QEvent(QEvent::LayoutRequest));
         }
         updateAutoHeightGeometry();
         return;
@@ -281,12 +354,65 @@ void VirtualItemView::updateFrameAppearance()
     }
     // QAbstractScrollArea lays out the viewport, headers and scrollbar containers
     // inside this frame inset. The effect replaces the native rectangular border.
+    m_updatingFrameContentsMargins = true;
     setFrameStyle(QFrame::Box | QFrame::Plain);
     setMidLineWidth(0);
     setLineWidth(m_frameBorderWidth);
+    // Reset the previous correction when reducing the width, including to zero.
+    setFrameRect(rect());
+    m_updatingFrameContentsMargins = false;
+    updateFrameContentsMargins();
+    QCoreApplication::postEvent(this, new QEvent(QEvent::LayoutRequest));
     static_cast<FrameAlphaEffect *>(m_frameEffect.data())->invalidateMask();
     updateFrameChildMasks();
     updateAutoHeightGeometry();
+}
+
+bool VirtualItemView::updateFrameContentsMargins()
+{
+    if (!m_frameEffect || m_updatingFrameContentsMargins || m_destroying)
+        return false;
+    const QMargins current = contentsMargins();
+    if (m_hasFrameContentsMargins && current == m_appliedFrameContentsMargins)
+        return false;
+    // Native per-side frame insets may differ under QSS. Keep any remaining
+    // frameRect offsets (such as scrollbar space) and replace only the border.
+    const QRect content = contentsRect();
+    const QRect frame = frameRect();
+    const QMargins required(
+        current.left() - (content.left() - frame.left())
+            + (m_frameBorderEdges.testFlag(Qt::LeftEdge) ? m_frameBorderWidth : 0),
+        current.top() - (content.top() - frame.top())
+            + (m_frameBorderEdges.testFlag(Qt::TopEdge) ? m_frameBorderWidth : 0),
+        current.right() - (frame.right() - content.right())
+            + (m_frameBorderEdges.testFlag(Qt::RightEdge) ? m_frameBorderWidth : 0),
+        current.bottom() - (frame.bottom() - content.bottom())
+            + (m_frameBorderEdges.testFlag(Qt::BottomEdge) ? m_frameBorderWidth : 0));
+    m_nativeFrameContentsMargins = current;
+    m_appliedFrameContentsMargins = required;
+    m_hasFrameContentsMargins = true;
+    if (required == current)
+        return false;
+    const QPointer<VirtualItemView> self(this);
+    m_updatingFrameContentsMargins = true;
+    setContentsMargins(required);
+    if (self)
+        m_updatingFrameContentsMargins = false;
+    return true;
+}
+
+void VirtualItemView::restoreFrameContentsMargins()
+{
+    if (!m_hasFrameContentsMargins || m_updatingFrameContentsMargins)
+        return;
+    m_hasFrameContentsMargins = false;
+    if (contentsMargins() != m_appliedFrameContentsMargins)
+        return;
+    const QPointer<VirtualItemView> self(this);
+    m_updatingFrameContentsMargins = true;
+    setContentsMargins(m_nativeFrameContentsMargins);
+    if (self)
+        m_updatingFrameContentsMargins = false;
 }
 
 void VirtualItemView::updateFrameChildMasks()
@@ -300,9 +426,8 @@ void VirtualItemView::updateFrameChildMasks()
     const qreal inset = m_frameBorderWidth > 0
         ? qreal(m_frameBorderWidth) + qreal(1) / dpr
         : 0;
-    const QRectF contentRect = QRectF(rect()).adjusted(inset, inset, -inset, -inset);
-    const QPainterPath contentPath = roundedFramePath(
-        contentRect, qMax(qreal(0), qreal(m_frameCornerRadius) - inset));
+    const QPainterPath contentPath = frameContentPath(QRectF(rect()), m_frameCornerRadius,
+                                                     inset, m_frameBorderEdges);
     const QPolygon contentPolygon = contentPath.toFillPolygon().toPolygon();
 
     for (QWidget *child : children) {

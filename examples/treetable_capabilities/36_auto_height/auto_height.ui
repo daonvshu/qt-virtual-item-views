@@ -2,7 +2,7 @@
 <ui version="4.0">
  <class>TreeTableAutoHeightExample</class>
  <widget class="QWidget" name="TreeTableAutoHeightExample">
-  <layout class="QVBoxLayout" name="pageLayout">
+  <layout class="QVBoxLayout" name="pageLayout" stretch="0,0,0,0,0,0,1">
    <item><widget class="QLabel" name="titleLabel"><property name="text"><string>36 自适应高度：少量数据随内容增高，达到限制后滚动</string></property><property name="wordWrap"><bool>true</bool></property></widget></item>
    <item><layout class="QGridLayout" name="controlsLayout">
     <item row="0" column="0"><widget class="QLabel" name="rowCountSpinLabel"><property name="text"><string>根节点数量</string></property><property name="buddy"><cstring>rowCountSpin</cstring></property></widget></item>
@@ -10,7 +10,7 @@
     <item row="0" column="2"><widget class="QLabel" name="maxHeightSpinLabel"><property name="text"><string>控件最大高度</string></property><property name="buddy"><cstring>maxHeightSpin</cstring></property></widget></item>
     <item row="0" column="3"><widget class="QSpinBox" name="maxHeightSpin"><property name="maximum"><number>800</number></property><property name="value"><number>260</number></property><property name="specialValueText"><string>不限</string></property></widget></item>
     <item row="0" column="4"><widget class="QLabel" name="parentLimitSpinLabel"><property name="text"><string>父区域高度上限</string></property><property name="buddy"><cstring>parentLimitSpin</cstring></property></widget></item>
-    <item row="0" column="5"><widget class="QSpinBox" name="parentLimitSpin"><property name="maximum"><number>800</number></property><property name="value"><number>0</number></property><property name="specialValueText"><string>随窗口</string></property></widget></item>
+    <item row="0" column="5"><widget class="QSpinBox" name="parentLimitSpin"><property name="maximum"><number>800</number></property><property name="value"><number>0</number></property><property name="specialValueText"><string>不额外限制</string></property></widget></item>
     <item row="1" column="0"><widget class="QLabel" name="heightSpinLabel"><property name="text"><string>项目高度</string></property><property name="buddy"><cstring>heightSpin</cstring></property></widget></item>
     <item row="1" column="1"><widget class="QSpinBox" name="heightSpin"><property name="minimum"><number>24</number></property><property name="maximum"><number>120</number></property><property name="value"><number>40</number></property></widget></item>
     <item row="1" column="2"><widget class="QLabel" name="spacingSpinLabel"><property name="text"><string>行间距</string></property><property name="buddy"><cstring>spacingSpin</cstring></property></widget></item>
@@ -25,19 +25,34 @@
     <item><widget class="QPushButton" name="collapseButton"><property name="text"><string>全部收起</string></property><property name="focusPolicy"><enum>Qt::NoFocus</enum></property></widget></item>
     <item><spacer name="toggleSpacer"><property name="orientation"><enum>Qt::Horizontal</enum></property><property name="sizeHint" stdset="0"><size><width>10</width><height>1</height></size></property></spacer></item>
    </layout></item>
-   <item><widget class="QLabel" name="hintLabel"><property name="wordWrap"><bool>true</bool></property><property name="text"><string>在下方垂直布局中，视图优先使用内容所需高度。最大高度设为“不限”后仍受父布局可用空间约束。拖动窗口或修改父区域上限，观察达到限制后出现的竖向滚动条。</string></property></widget></item>
+   <item><widget class="QLabel" name="hintLabel"><property name="wordWrap"><bool>true</bool></property><property name="text"><string>下方视图位于外层滚动容器中。少量内容时高度随内容变化，滚轮交给外层；超过控件或父区域高度上限后，视图内部滚动。取消显式上限后，仍由外层内容布局分配视图高度。</string></property></widget></item>
    <item><widget class="QCheckBox" name="autoHideTrailingLineCheck"><property name="text"><string>自动隐藏末行分割线（取消后始终绘制）</string></property><property name="checked"><bool>true</bool></property></widget></item>
    <item><widget class="QLabel" name="statusLabel"><property name="wordWrap"><bool>true</bool></property><property name="text"><string/></property></widget></item>
-   <item><widget class="QFrame" name="previewHost">
-    <property name="frameShape"><enum>QFrame::StyledPanel</enum></property>
-    <layout class="QVBoxLayout" name="previewLayout">
-     <item><widget class="QLabel" name="remainingLabel">
-      <property name="minimumSize"><size><width>0</width><height>32</height></size></property>
-      <property name="sizePolicy"><sizepolicy hsizetype="Expanding" vsizetype="Expanding"><horstretch>0</horstretch><verstretch>1</verstretch></sizepolicy></property>
-      <property name="text"><string>垂直布局的剩余空间</string></property>
-      <property name="alignment"><set>Qt::AlignCenter</set></property>
-     </widget></item>
-    </layout>
+   <item><widget class="QScrollArea" name="outerScrollArea">
+    <property name="widgetResizable"><bool>true</bool></property>
+    <property name="minimumSize"><size><width>0</width><height>160</height></size></property>
+    <widget class="QWidget" name="scrollContent">
+     <layout class="QVBoxLayout" name="outerContentLayout">
+      <item><widget class="QLabel" name="outerHint">
+       <property name="wordWrap"><bool>true</bool></property>
+       <property name="text"><string>外层滚动区域：少量内容时在视图上滚动，观察外层页面移动；增加数据超过高度上限后，观察视图内部滚动。</string></property>
+      </widget></item>
+      <item><widget class="QFrame" name="previewHost">
+       <property name="sizePolicy"><sizepolicy hsizetype="Expanding" vsizetype="Maximum"><horstretch>0</horstretch><verstretch>0</verstretch></sizepolicy></property>
+       <property name="frameShape"><enum>QFrame::StyledPanel</enum></property>
+       <layout class="QVBoxLayout" name="previewLayout">
+        <item><widget class="QLabel" name="remainingLabel">
+         <property name="minimumSize"><size><width>0</width><height>32</height></size></property>
+         <property name="sizePolicy"><sizepolicy hsizetype="Expanding" vsizetype="Expanding"><horstretch>0</horstretch><verstretch>1</verstretch></sizepolicy></property>
+         <property name="text"><string>垂直布局的剩余空间</string></property>
+         <property name="alignment"><set>Qt::AlignCenter</set></property>
+        </widget></item>
+       </layout>
+      </widget></item>
+      <item><spacer name="outerSpacer"><property name="sizeType"><enum>QSizePolicy::MinimumExpanding</enum></property><property name="orientation"><enum>Qt::Vertical</enum></property><property name="sizeHint" stdset="0"><size><width>20</width><height>500</height></size></property></spacer></item>
+      <item><widget class="QLabel" name="outerBottom"><property name="text"><string>外层内容底部</string></property></widget></item>
+     </layout>
+    </widget>
    </widget></item>
   </layout>
  </widget>

@@ -54,6 +54,8 @@ public:
     explicit Example(QWidget *parent) : QWidget(parent), ui(new Ui::WrapAutoHeightPage)
     {
         ui->setupUi(this);
+        // The Designer page embeds this view in a widget-resizable QScrollArea.
+        // When auto height leaves no internal scroll range, wheel events reach the outer area.
         setupExample();
     }
 private:
