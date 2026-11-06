@@ -1,4 +1,4 @@
-#include "../../examples/common/thumbnailcache.h"
+#include "../../examples/flow_capabilities/09_images/thumbnailcache.h"
 
 #include <QFile>
 #include <QDir>
@@ -26,11 +26,11 @@ void FlowThumbnailsTest::sharedCacheAvoidsRereading()
     QImage image(1600, 800, QImage::Format_RGB32);
     image.fill(Qt::red);
     QVERIFY(image.save(path));
-    flowdemo::ThumbnailCache cache;
+    flow_images_cache::ThumbnailCache cache;
     QObject first, second;
     int delivered = 0;
     QSize size;
-    const auto receive = [&](const flowdemo::Thumbnail &thumbnail) {
+    const auto receive = [&](const flow_images_cache::Thumbnail &thumbnail) {
         size = thumbnail.image.size();
         if (!thumbnail.image.isNull())
             ++delivered;
@@ -51,18 +51,18 @@ void FlowThumbnailsTest::cancelledRequestsDoNotReachReusedReceiver()
     QVERIFY(directory.isValid());
     QImage image(64, 64, QImage::Format_RGB32);
     image.fill(Qt::blue);
-    flowdemo::ThumbnailCache cache;
+    flow_images_cache::ThumbnailCache cache;
     QObject receiver;
     int obsolete = 0;
     for (int i = 0; i < 20; ++i) {
         const QString path = directory.filePath(QStringLiteral("%1.png").arg(i));
         QVERIFY(image.save(path));
-        cache.request(path, &receiver, [&](const flowdemo::Thumbnail &) { ++obsolete; });
+        cache.request(path, &receiver, [&](const flow_images_cache::Thumbnail &) { ++obsolete; });
     }
     cache.cancel(&receiver);
     int current = 0;
     cache.request(directory.filePath(QStringLiteral("19.png")), &receiver,
-        [&](const flowdemo::Thumbnail &thumbnail) { if (!thumbnail.image.isNull()) ++current; });
+        [&](const flow_images_cache::Thumbnail &thumbnail) { if (!thumbnail.image.isNull()) ++current; });
     QTRY_COMPARE(current, 1);
     QCOMPARE(obsolete, 0);
 }
@@ -75,29 +75,29 @@ void FlowThumbnailsTest::folderResetDiscardsOldResults()
     QImage image(64, 64, QImage::Format_RGB32);
     image.fill(Qt::green);
     QVERIFY(image.save(path));
-    flowdemo::ThumbnailCache cache;
+    flow_images_cache::ThumbnailCache cache;
     QObject receiver;
     int obsolete = 0, current = 0;
-    cache.request(path, &receiver, [&](const flowdemo::Thumbnail &) { ++obsolete; });
+    cache.request(path, &receiver, [&](const flow_images_cache::Thumbnail &) { ++obsolete; });
     cache.reset();
     cache.request(path, &receiver,
-        [&](const flowdemo::Thumbnail &thumbnail) { if (!thumbnail.image.isNull()) ++current; });
+        [&](const flow_images_cache::Thumbnail &thumbnail) { if (!thumbnail.image.isNull()) ++current; });
     QTRY_COMPARE(current, 1);
     QCOMPARE(obsolete, 0);
 }
 
 void FlowThumbnailsTest::destroyedReceiverAndFailedImage()
 {
-    flowdemo::ThumbnailCache cache;
+    flow_images_cache::ThumbnailCache cache;
     int obsolete = 0;
     auto *receiver = new QObject;
     cache.request(QStringLiteral("missing-image.png"), receiver,
-        [&](const flowdemo::Thumbnail &) { ++obsolete; });
+        [&](const flow_images_cache::Thumbnail &) { ++obsolete; });
     delete receiver;
     QObject liveReceiver;
     bool delivered = false, failed = false;
     cache.request(QStringLiteral("missing-image.png"), &liveReceiver,
-        [&](const flowdemo::Thumbnail &thumbnail) {
+        [&](const flow_images_cache::Thumbnail &thumbnail) {
             failed = thumbnail.image.isNull() && !thumbnail.error.isEmpty();
             delivered = true;
         });
@@ -118,7 +118,7 @@ void FlowThumbnailsTest::suppliedFolderRemainsResponsive()
         filters.append(QStringLiteral("*.%1").arg(QString::fromLatin1(format)));
     const auto files = directory.entryInfoList(filters, QDir::Files | QDir::Readable, QDir::Name);
     QVERIFY(!files.isEmpty());
-    flowdemo::ThumbnailCache cache;
+    flow_images_cache::ThumbnailCache cache;
     QObject receiver;
     QElapsedTimer elapsed;
     elapsed.start();
@@ -133,7 +133,7 @@ void FlowThumbnailsTest::suppliedFolderRemainsResponsive()
     });
     heartbeat.start(10);
     for (const auto &file : files) {
-        cache.request(file.absoluteFilePath(), &receiver, [&](const flowdemo::Thumbnail &thumbnail) {
+        cache.request(file.absoluteFilePath(), &receiver, [&](const flow_images_cache::Thumbnail &thumbnail) {
             ++delivered;
             if (thumbnail.image.isNull())
                 ++failed;

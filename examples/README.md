@@ -10,7 +10,7 @@
 
 `VirtualFlowTableView` 按功能查找见 [docs/flow-table.md](../docs/flow-table.md)，由 [flow_capabilities](flow_capabilities/README.md) 统一演示，每章自带模型、adapter、控件和布局文件。
 
-瀑布流保留最小参考程序和综合图片演示。
+`VirtualMasonryView` 按功能查找见 [docs/masonry.md](../docs/masonry.md)，由 [masonry_capabilities](masonry_capabilities/README.md) 演示独立卡片高度、最短列布局、图片和自适应高度。
 
 `VirtualWrapView`、`WrapLayout` 和 `WrapWidget` 使用 [wrap_capabilities](wrap_capabilities/README.md) 演示不等宽换行、虚拟控件复用和少量真实控件。按功能查找见 [docs/wrap.md](../docs/wrap.md)。
 
@@ -24,7 +24,7 @@
 | `VirtualTreeView` | [独立能力示例](tree_capabilities/README.md)、[基础树](tree_capabilities/01_basic/example.cpp) | 各能力目录自行定义 | [展开动画](tree_capabilities/07_expansion/example.cpp)、[branch 图标](tree_capabilities/10_branch_icons/example.cpp)、[节点结构体](tree_capabilities/04_binding_context/example.cpp) |
 | `VirtualTreeTableView` | [独立能力示例](treetable_capabilities/README.md)、[基础多列树](treetable_capabilities/01_basic/example.cpp) | 各能力目录自行定义 | [行控件](treetable_capabilities/02_row_widgets/example.cpp)、[cell 控件](treetable_capabilities/03_cell_widgets/example.cpp)、[节点结构体](treetable_capabilities/05_binding_context/example.cpp) |
 | `VirtualFlowTableView` | [基础接入](flow_capabilities/01_basic/example.cpp) | 各能力目录自行定义 | [尺寸与换列](flow_capabilities/02_cell_sizes/example.cpp)、[分割线](flow_capabilities/03_spacing_grid/example.cpp)、[图片卡片](flow_capabilities/09_images/example.cpp) |
-| `VirtualMasonryView` | [按数据估算卡片尺寸](reference/masonry/basic.cpp) | [CardAdapter](reference/masonry/basic.cpp) | [完整图片演示](masonry_view/main.cpp) |
+| `VirtualMasonryView` | [基础接入](masonry_capabilities/01_basic/example.cpp) | 各能力目录自行定义 | [高度更新](masonry_capabilities/05_height_updates/example.cpp)、[图片卡片](masonry_capabilities/12_images/example.cpp)、[自适应高度](masonry_capabilities/14_auto_height/example.cpp) |
 
 ## 按交互查找
 
@@ -41,14 +41,4 @@
 | cell 行间插入和空白格放下 | [单格投放](table_capabilities/26_cell_drop/example.cpp) |
 | 仅从手柄启动拖动、自定义预览 | [列表手柄起拖](list_capabilities/15_drag_drop/example.cpp)、[预览参数](../docs/interaction.md#手动触发与自定义预览) |
 
-完整的目标名称、构建方式、文件依赖和模型责任见 [reference/README.md](reference/README.md)。
-
-## 综合演示
-
-以下程序保留可交互的工具栏和参数，用于比较配置、观察边界和性能。它们也是更完整的实现参考，但不作为第一次接入的入口。
-
-| 目标 | 用途 / 源码 |
-| --- | --- |
-| `masonry_view` | [瀑布流图片](masonry_view/main.cpp) |
-
-`list_capabilities`、`table_capabilities`、`tree_capabilities`、`treetable_capabilities`、`flow_capabilities` 分别构建对应视图的功能示例；`viv_reference_examples` 构建瀑布流最小参考程序，`viv_examples` 构建全部示例。
+各 capabilities 目录的 README 说明构建、复制方式和模型责任。`list_capabilities`、`table_capabilities`、`tree_capabilities`、`treetable_capabilities`、`flow_capabilities`、`wrap_capabilities`、`masonry_capabilities` 分别构建对应示例，`viv_examples` 构建全部示例。

@@ -12,7 +12,7 @@
 
 渐变由框架临时容器的 `QGraphicsOpacityEffect` 合成实时控件，不替换业务控件自身的 effect。Qt 可能使用离屏缓冲，因此开启渐变会增加绘制成本；没有静态截图覆盖层。
 
-运行 `tree_capabilities --example 7` 进入本章。复制本目录即可使用，不依赖其他能力目录或 `examples/common`。独立入口如下，将 `example.cpp` 一起编译并链接 VirtualItemViews 与 Qt Widgets：
+运行 `tree_capabilities --example 7` 进入本章。复制本目录即可使用，不依赖其他能力目录。独立入口如下，将 `example.cpp` 一起编译并链接 VirtualItemViews 与 Qt Widgets：
 
 ```cpp
 #include "example.h"

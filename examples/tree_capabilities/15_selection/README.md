@@ -8,7 +8,7 @@
 
 先看 `Example::setupExample()` 中的视图配置和信号连接，再看本目录的 adapter、model 和节点控件。`setupUi()` 仅创建页面布局，hover／selected 背景由框架绘制。
 
-运行 `tree_capabilities --example 15` 进入本章。复制本目录即可使用，不依赖其他能力目录或 `examples/common`。独立入口如下，将 `example.cpp` 一起编译并链接 VirtualItemViews 与 Qt Widgets：
+运行 `tree_capabilities --example 15` 进入本章。复制本目录即可使用，不依赖其他能力目录。独立入口如下，将 `example.cpp` 一起编译并链接 VirtualItemViews 与 Qt Widgets：
 
 ```cpp
 #include "example.h"

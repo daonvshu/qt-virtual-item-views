@@ -51,6 +51,9 @@ public:
     int columnSpacing() const { return m_columnSpacing; }
     void setMargins(const QMargins &margins);
     QMargins margins() const { return m_margins; }
+    /// Centered separators reserve half a gap inside each content margin.
+    void setOuterSpacingEnabled(bool enabled);
+    QMargins outerSpacing() const { return m_outerSpacing; }
 
     void setHeightMode(HeightMode mode);
     HeightMode heightMode() const { return m_heightMode; }
@@ -117,6 +120,8 @@ private:
     int m_fixedHeight = 100;
     qreal m_aspectRatio = 1.0;
     QMargins m_margins;
+    QMargins m_outerSpacing;
+    bool m_outerSpacingEnabled = false;
     HeightMode m_heightMode = HeightMode::Fixed;
     QVector<QSize> m_estimatedSizes;
     QVector<int> m_explicitHeights;

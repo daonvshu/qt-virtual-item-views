@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ui version="4.0">
+ <class>MasonryHeightModesPage</class>
+ <widget class="QWidget" name="MasonryHeightModesPage">
+  <layout class="QVBoxLayout" name="pageLayout" stretch="0,0,1,0">
+   <item>
+    <widget class="QLabel" name="description">
+     <property name="text">
+      <string>Fixed 使用统一高度；AspectRatio 使用全局宽高比；AdapterEstimate 使用每项 QSize 比例，非法估算回退到固定高度。</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <layout class="QGridLayout" name="controls">
+     <item row="0" column="0">
+      <widget class="QComboBox" name="mode">
+       <item>
+        <property name="text">
+         <string>AdapterEstimate</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Fixed</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>AspectRatio</string>
+        </property>
+       </item>
+      </widget>
+     </item>
+     <item row="0" column="1">
+      <widget class="QSpinBox" name="fixed">
+       <property name="prefix">
+        <string>固定/回退高度 </string>
+       </property>
+       <property name="minimum">
+        <number>30</number>
+       </property>
+       <property name="maximum">
+        <number>300</number>
+       </property>
+       <property name="value">
+        <number>100</number>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="2">
+      <widget class="QDoubleSpinBox" name="ratio">
+       <property name="prefix">
+        <string>宽高比 </string>
+       </property>
+       <property name="minimum">
+        <double>0.25</double>
+       </property>
+       <property name="maximum">
+        <double>4</double>
+       </property>
+       <property name="value">
+        <double>1.5</double>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="0">
+      <widget class="QCheckBox" name="invalid">
+       <property name="text">
+        <string>首项使用无效估算</string>
+       </property>
+       <property name="checked">
+        <bool>false</bool>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="viv::VirtualMasonryView" name="view" />
+   </item>
+   <item>
+    <widget class="QLabel" name="status">
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>42</height>
+      </size>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>viv::VirtualMasonryView</class>
+   <extends>QAbstractScrollArea</extends>
+   <header>virtualitemviews/virtualmasonryview.h</header>
+  </customwidget>
+ </customwidgets>
+ <resources />
+ <connections />
+</ui>

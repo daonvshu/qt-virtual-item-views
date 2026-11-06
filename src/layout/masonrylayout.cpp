@@ -32,8 +32,15 @@ int roundedHeight(qreal height)
 
 void MasonryLayout::updateColumns()
 {
-    const qint64 available = qMax<qint64>(0, qint64(m_width)
+    qint64 available = qMax<qint64>(0, qint64(m_width)
         - m_margins.left() - m_margins.right());
+    // Keep one usable pixel when a narrow viewport cannot fit both half-gaps.
+    const int columns = m_outerSpacingEnabled
+        ? int(qMin<qint64>(m_columnSpacing, qMax<qint64>(0, available - 1))) : 0;
+    const int rows = m_outerSpacingEnabled ? m_rowSpacing : 0;
+    m_outerSpacing = QMargins(columns / 2, rows / 2,
+                             columns - columns / 2, rows - rows / 2);
+    available -= columns;
     if (available <= 0) {
         m_columns = 0;
         return;
@@ -85,6 +92,14 @@ void MasonryLayout::setMargins(const QMargins &margins)
 {
     m_margins = QMargins(qMax(0, margins.left()), qMax(0, margins.top()),
                          qMax(0, margins.right()), qMax(0, margins.bottom()));
+    rebuild();
+}
+
+void MasonryLayout::setOuterSpacingEnabled(bool enabled)
+{
+    if (m_outerSpacingEnabled == enabled)
+        return;
+    m_outerSpacingEnabled = enabled;
     rebuild();
 }
 
@@ -180,6 +195,7 @@ int MasonryLayout::columnWidth(int column) const
         return 0;
     const qint64 available = qMax<qint64>(0, qint64(m_width)
         - qint64(m_margins.left()) - qint64(m_margins.right())
+        - m_outerSpacing.left() - m_outerSpacing.right()
         - qint64(m_columns - 1) * qint64(m_columnSpacing));
     const qint64 width = available / m_columns
         + (column < available % m_columns ? 1 : 0);
@@ -193,8 +209,9 @@ int MasonryLayout::columnX(int column) const
         return -1;
     const qint64 available = qMax<qint64>(0, qint64(m_width)
         - qint64(m_margins.left()) - qint64(m_margins.right())
+        - m_outerSpacing.left() - m_outerSpacing.right()
         - qint64(m_columns - 1) * qint64(m_columnSpacing));
-    const qint64 position = qint64(m_margins.left())
+    const qint64 position = qint64(m_margins.left()) + m_outerSpacing.left()
         + qint64(column) * (available / m_columns + qint64(m_columnSpacing))
         + qMin<qint64>(column, available % m_columns);
     return int(qBound<qint64>(qint64(std::numeric_limits<int>::min()), position,
@@ -243,7 +260,7 @@ void MasonryLayout::rebuildFrom(qsizetype firstItem)
         return;
 
     const qsizetype first = qBound<qsizetype>(0, firstItem, m_count);
-    QVector<qint64> bottoms(m_columns, m_margins.top());
+    QVector<qint64> bottoms(m_columns, qint64(m_margins.top()) + m_outerSpacing.top());
     QVector<bool> occupied(m_columns, false);
     m_contentExtent = 0;
 
@@ -275,7 +292,7 @@ void MasonryLayout::rebuildFrom(qsizetype firstItem)
         occupied[column] = true;
         m_contentExtent = qMax(m_contentExtent, bottom);
     }
-    m_contentExtent = safeAdd(m_contentExtent, m_margins.bottom());
+    m_contentExtent = safeAdd(m_contentExtent, qint64(m_margins.bottom()) + m_outerSpacing.bottom());
 }
 
 int MasonryLayout::itemSize(qsizetype item) const

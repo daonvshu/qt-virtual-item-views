@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ui version="4.0">
+ <class>MasonrySelectionPage</class>
+ <widget class="QWidget" name="MasonrySelectionPage">
+  <layout class="QVBoxLayout" name="pageLayout" stretch="0,0,1,0">
+   <item>
+    <widget class="QLabel" name="description">
+     <property name="text">
+      <string>选择保存的是模型索引，与物化控件是否还在屏幕内无关。ExtendedSelection 使用 Ctrl 增减、Shift 扩选；键盘按空间邻近项目导航。</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <layout class="QGridLayout" name="controls">
+     <item row="0" column="0">
+      <widget class="QComboBox" name="mode">
+       <item>
+        <property name="text">
+         <string>ExtendedSelection</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>SingleSelection</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>MultiSelection</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>NoSelection</string>
+        </property>
+       </item>
+      </widget>
+     </item>
+     <item row="0" column="1">
+      <widget class="QPushButton" name="select">
+       <property name="text">
+        <string>程序选择 2～5</string>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="2">
+      <widget class="QPushButton" name="clear">
+       <property name="text">
+        <string>清空选择</string>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="0">
+      <widget class="QPushButton" name="query">
+       <property name="text">
+        <string>查询当前与选中</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="viv::VirtualMasonryView" name="view" />
+   </item>
+   <item>
+    <widget class="QLabel" name="status">
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>42</height>
+      </size>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>viv::VirtualMasonryView</class>
+   <extends>QAbstractScrollArea</extends>
+   <header>virtualitemviews/virtualmasonryview.h</header>
+  </customwidget>
+ </customwidgets>
+ <resources />
+ <connections />
+</ui>

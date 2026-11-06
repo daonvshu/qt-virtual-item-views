@@ -51,6 +51,7 @@ private:
 VirtualMasonryView::VirtualMasonryView(QWidget *parent) : VirtualItemView(parent)
 {
     m_masonry = new MasonryLayout;
+    m_masonry->setOuterSpacingEnabled(gridLinePlacement() == GridLinePlacement::SpacingCenter);
     m_heightAnimation = new QVariantAnimation(this);
     connect(m_heightAnimation, &QVariantAnimation::valueChanged, this,
         [this](const QVariant &value) {
@@ -66,7 +67,6 @@ VirtualMasonryView::VirtualMasonryView(QWidget *parent) : VirtualItemView(parent
         [this]() { finishItemHeightAnimation(); });
     setAutoMeasureItemHeight(false);
     setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     m_gridOverlay = new MasonryGridOverlay(viewport(),
         [this](QPainter *painter) { paintGridLines(painter); });
     setLayoutPolicy(m_masonry, true);
@@ -433,6 +433,30 @@ void VirtualMasonryView::setRowSpacing(int pixels)
     emit masonryLayoutChanged();
 }
 
+void VirtualMasonryView::setGridLinePlacement(GridLinePlacement placement)
+{
+    if (gridLinePlacement() == placement)
+        return;
+    finishItemHeightAnimation();
+    const ScrollAnchor anchor = captureAnchor();
+    m_masonry->setOuterSpacingEnabled(placement == GridLinePlacement::SpacingCenter);
+    ++m_revision;
+    setPendingAnchor(anchor);
+    VirtualItemView::setGridLinePlacement(placement);
+    viewport()->update();
+    emit masonryLayoutChanged();
+}
+
+void VirtualMasonryView::setSpacingBackgroundColor(const QColor &color)
+{
+    if (spacingBackgroundColor() == color)
+        return;
+    const QPointer<VirtualMasonryView> self(this);
+    VirtualItemView::setSpacingBackgroundColor(color);
+    if (self)
+        viewport()->update();
+}
+
 void VirtualMasonryView::setContentMargins(const QMargins &margins)
 {
     finishItemHeightAnimation();
@@ -795,10 +819,35 @@ void VirtualMasonryView::paintEvent(QPaintEvent *event)
 {
     detail::PerformanceScope performance(this, "paint.masonry", detail::PerformanceDomain::Paint);
     VirtualItemView::paintEvent(event);
-    if (m_backgroundVisible) {
-        QPainter painter(viewport());
+    QPainter painter(viewport());
+    paintRowSpacingBackground(&painter, event->rect());
+    if (m_backgroundVisible)
         paintVisualStateBackgrounds(&painter, event->rect());
+}
+
+void VirtualMasonryView::paintRowSpacingBackground(QPainter *painter, const QRect &dirtyRect) const
+{
+    if (!spacingBackgroundColor().isValid() || (rowSpacing() == 0 && columnSpacing() == 0))
+        return;
+    detail::PerformanceScope performance(this, "paint.masonry-spacing", detail::PerformanceDomain::Paint);
+    const QMargins outer = m_masonry->outerSpacing();
+    const QRegion clip(dirtyRect.intersected(viewport()->rect()));
+    const int columns = int(qMin<qsizetype>(m_masonry->columnCount(), viewItemCount()));
+    const QVector<qsizetype> items = m_masonry->itemsInVerticalRange(
+        verticalOffset(), verticalOffset() + viewportMainExtent() - 1, 1, 1);
+    QRegion gaps;
+    for (qsizetype item : items) {
+        const QRect rect = m_masonry->itemRect(item, verticalOffset());
+        const int column = m_masonry->itemColumn(item);
+        // Either neighbor may be taller, so both sides contribute to shared gaps.
+        const int left = column == 0 ? outer.left() : columnSpacing();
+        const int right = column + 1 < columns ? columnSpacing() : outer.right();
+        const int top = item < columns ? outer.top() : 0;
+        const int bottom = m_masonry->nextItemInColumn(item) >= 0 ? rowSpacing() : outer.bottom();
+        const QRect slot = rect.adjusted(-left, -top, right, bottom);
+        gaps += QRegion(slot).subtracted(QRegion(rect)).intersected(clip);
     }
+    fillPixelAlignedRegion(painter, gaps, spacingBackgroundColor());
 }
 
 void VirtualMasonryView::afterMaterialize()
@@ -816,17 +865,45 @@ void VirtualMasonryView::paintGridLines(QPainter *painter) const
     QVector<QRect> horizontalLeading;
     QVector<QRect> verticalTrailing;
     QVector<QRect> verticalLeading;
-    QVector<QRect> horizontalCenters;
     QVector<QRect> verticalCenters;
+    QRegion horizontalCenterBands;
     const bool centered = gridLinePlacement() == GridLinePlacement::SpacingCenter;
+    const QMargins outer = m_masonry->outerSpacing();
+    const int columns = int(qMin<qsizetype>(m_masonry->columnCount(), viewItemCount()));
+    const bool throughColumns = horizontalSpacingLineThroughColumnSpacing();
+    QVector<qint64> columnBottoms(columns, 0);
+    if (!centered && m_horizontalLines && throughColumns) {
+        for (int column = 0; column < columns; ++column) {
+            const qsizetype last = m_masonry->itemBeforeOffset(
+                std::numeric_limits<qint64>::max(), column);
+            if (last >= 0)
+                columnBottoms[column] = m_masonry->offsetOf(last) + m_masonry->itemSize(last);
+        }
+    }
+    const bool showTrailingLine = contentMargins().bottom() > 0 || trailingRowGridLineVisible();
+    const QTransform transform = painter->deviceTransform();
+    bool invertible = false;
+    const QTransform inverse = transform.inverted(&invertible);
+    if (!invertible)
+        return;
     const auto colorFor = [this](const QColor &color) {
         return color.isValid() ? color : palette().color(QPalette::Mid);
     };
+    const auto columnBoundary = [this, &transform](int column) {
+        const int start = m_masonry->columnX(column - 1) + m_masonry->columnWidth(column - 1);
+        const int gap = m_masonry->columnX(column) - start;
+        const QRectF deviceGap = transform.mapRect(QRectF(start, 0, gap, 1));
+        // Match fillPixelLines() exactly, including fractional DPI and thick lines.
+        const int left = gap > 0
+            ? qRound((deviceGap.left() + deviceGap.right() - m_verticalLineWidth) / 2.0)
+            : qRound(deviceGap.left()) - m_verticalLineWidth;
+        return qMakePair(left, left + m_verticalLineWidth);
+    };
 
-    for (const MaterializedItem &materialized : materializedItems()) {
-        const qsizetype item = viewItemForIndex(materialized.index);
-        if (item < 0)
-            continue;
+    // Gap edges remain visible even after the adjacent card widget is recycled.
+    const QVector<qsizetype> items = m_masonry->itemsInVerticalRange(
+        verticalOffset(), verticalOffset() + viewportMainExtent() - 1, 1, 1);
+    for (qsizetype item : items) {
         const QRect rect = m_masonry->itemRect(item, verticalOffset());
         if (rect.isEmpty())
             continue;
@@ -836,41 +913,90 @@ void VirtualMasonryView::paintGridLines(QPainter *painter) const
         const qsizetype next = m_masonry->nextItemInColumn(item);
         const QRect nextRect = next >= 0 ? m_masonry->itemRect(next, verticalOffset()) : QRect();
         const bool hasLeftColumn = column > 0;
-        const bool hasRightColumn = column + 1 < m_masonry->columnCount();
+        const bool hasRightColumn = column + 1 < columns;
+        // Keep the boundary before unused layout columns when only a few items exist.
+        const bool hasRightBoundary = column + 1 < m_masonry->columnCount();
 
         QRect verticalSegment = rect;
+        if (item < columns)
+            verticalSegment.setTop(rect.top() - outer.top());
         if (verticalSpacingLineThroughRowSpacing() && !nextRect.isEmpty() && nextRect.top() > rect.bottom())
             verticalSegment.setBottom(nextRect.top() - 1);
+        else if (next < 0)
+            verticalSegment.setBottom(rect.bottom() + outer.bottom());
         if (m_verticalLines) {
-            if (hasRightColumn) {
+            if (hasRightBoundary) {
                 const int gap = m_masonry->columnX(column + 1) - rect.right() - 1;
                 if (centered && gap > 0)
-                    verticalCenters.append(QRect(rect.right() + 1, rect.y(), gap, verticalSegment.height()));
+                    verticalCenters.append(QRect(rect.right() + 1, verticalSegment.y(), gap, verticalSegment.height()));
                 else
                     verticalTrailing.append(verticalSegment);
             }
-            if (!centered && hasLeftColumn && m_masonry->columnSpacing() > 0)
+            if (centered && hasLeftColumn) {
+                // Either adjacent column can extend farther down; merge their shared edge.
+                if (m_masonry->columnSpacing() > 0) {
+                    verticalCenters.append(QRect(rect.x() - m_masonry->columnSpacing(), verticalSegment.y(),
+                                                 m_masonry->columnSpacing(), verticalSegment.height()));
+                } else {
+                    QRect boundary = verticalSegment;
+                    boundary.moveRight(rect.left() - 1);
+                    verticalTrailing.append(boundary);
+                }
+            } else if (!centered && hasLeftColumn && m_masonry->columnSpacing() > 0) {
                 verticalLeading.append(verticalSegment);
+            }
         }
 
-        if (next < 0 || !m_horizontalLines)
+        // A shorter column never touches the bottom frame and must keep its tail.
+        const qint64 columnBottom = m_masonry->offsetOf(item) + rect.height() + outer.bottom();
+        const bool showColumnTail = showTrailingLine
+            || columnBottom < m_masonry->contentExtent() - contentMargins().bottom();
+        if (!m_horizontalLines || (next < 0 && !showColumnTail))
             continue;
-        const bool throughColumns = horizontalSpacingLineThroughColumnSpacing() && hasRightColumn;
-        const int segmentRight = throughColumns
+        const int gap = next >= 0 ? nextRect.top() - rect.bottom() - 1 : 0;
+        if (centered) {
+            const QRect boundary = rect.adjusted(hasLeftColumn ? 0 : -outer.left(), 0,
+                                                hasRightColumn ? 0 : outer.right(),
+                                                next < 0 ? outer.bottom() : 0);
+            const QRectF deviceRect = transform.mapRect(QRectF(boundary));
+            // A masonry row ends at the adjoining column separators, not at the
+            // next card's leading edge. Join both sides in physical pixel space.
+            const int left = hasLeftColumn ? columnBoundary(column).first : qRound(deviceRect.left());
+            const int right = hasRightBoundary ? columnBoundary(column + 1).second : qRound(deviceRect.right());
+            int top = qRound(deviceRect.bottom()) - m_horizontalLineWidth;
+            if (gap > 0) {
+                const QRectF deviceGap = transform.mapRect(
+                    QRectF(rect.x(), rect.bottom() + 1, rect.width(), gap));
+                top = qRound((deviceGap.top() + deviceGap.bottom() - m_horizontalLineWidth) / 2.0);
+            }
+            if (right > left)
+                horizontalCenterBands += QRect(left, top, right - left, m_horizontalLineWidth);
+            continue;
+        }
+
+        // Bridge a gap only while its opposite column still reaches this line.
+        // Otherwise the extension would protrude beyond the remaining vertical edge.
+        const qint64 logicalBottom = m_masonry->offsetOf(item) + m_masonry->itemSize(item);
+        const bool extendLeft = next < 0 && throughColumns && hasLeftColumn
+            && columnBottoms.at(column - 1) >= logicalBottom;
+        const bool extendRight = throughColumns && hasRightColumn
+            && columnBottoms.at(column + 1) >= logicalBottom;
+        const int segmentLeft = rect.x()
+            - (extendLeft ? columnSpacing() : 0);
+        const int segmentRight = extendRight
             ? m_masonry->columnX(column + 1) - 1 : rect.right();
-        QRect horizontalSegment(rect.x(), rect.y(),
-                                qMax(0, segmentRight - rect.x() + 1), rect.height());
+        QRect horizontalSegment(segmentLeft, rect.y(),
+                                qMax(0, segmentRight - segmentLeft + 1), rect.height());
         if (horizontalSegment.width() <= 0)
             continue;
-        const int gap = nextRect.top() - rect.bottom() - 1;
-        if (centered && gap > 0)
-            horizontalCenters.append(QRect(rect.x(), rect.bottom() + 1, horizontalSegment.width(), gap));
-        else
-            horizontalTrailing.append(horizontalSegment);
-        if (!centered && m_masonry->rowSpacing() > 0) {
+        horizontalTrailing.append(horizontalSegment);
+        if (next >= 0 && m_masonry->rowSpacing() > 0) {
             const int nextColumn = m_masonry->itemColumn(next);
-            const bool nextHasRightColumn = nextColumn + 1 < m_masonry->columnCount();
-            const int nextRight = horizontalSpacingLineThroughColumnSpacing() && nextHasRightColumn
+            const bool nextHasRightColumn = nextColumn + 1 < columns;
+            // Leading lines sit outside an equal-height neighbor's trailing edge.
+            const bool extendNextRight = throughColumns && nextHasRightColumn
+                && columnBottoms.at(nextColumn + 1) > m_masonry->offsetOf(next);
+            const int nextRight = extendNextRight
                 ? m_masonry->columnX(nextColumn + 1) - 1 : nextRect.right();
             horizontalLeading.append(QRect(nextRect.x(), nextRect.y(),
                                            qMax(0, nextRight - nextRect.x() + 1),
@@ -879,12 +1005,16 @@ void VirtualMasonryView::paintGridLines(QPainter *painter) const
     }
 
     if (m_horizontalLines) {
-        fillPixelLines(painter, horizontalCenters, m_horizontalLineWidth,
-                       colorFor(m_horizontalLineColor), Qt::Horizontal, false, false, true);
+        painter->save();
+        painter->setRenderHint(QPainter::Antialiasing, false);
+        const QColor color = colorFor(m_horizontalLineColor);
+        for (const QRect &band : horizontalCenterBands)
+            painter->fillRect(inverse.mapRect(QRectF(band)), color);
+        painter->restore();
         fillPixelLines(painter, horizontalTrailing, m_horizontalLineWidth,
-                       colorFor(m_horizontalLineColor), Qt::Horizontal, true);
+                       color, Qt::Horizontal, true);
         fillPixelLines(painter, horizontalLeading, m_horizontalLineWidth,
-                       colorFor(m_horizontalLineColor), Qt::Horizontal);
+                       color, Qt::Horizontal);
     }
     if (m_verticalLines) {
         fillPixelLines(painter, verticalCenters, m_verticalLineWidth,

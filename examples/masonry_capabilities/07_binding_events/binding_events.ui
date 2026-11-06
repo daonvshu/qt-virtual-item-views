@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ui version="4.0">
+ <class>MasonryBindingEventsPage</class>
+ <widget class="QWidget" name="MasonryBindingEventsPage">
+  <layout class="QVBoxLayout" name="pageLayout" stretch="0,0,1,0">
+   <item>
+    <widget class="QLabel" name="description">
+     <property name="text">
+      <string>完整结构体保存在默认数据 role；bind 直接读取 context.rowData。事件只连接一次，在触发时解析控件当前索引；hover/selected 时显示操作控件。</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <layout class="QGridLayout" name="controls"></layout>
+   </item>
+   <item>
+    <widget class="viv::VirtualMasonryView" name="view" />
+   </item>
+   <item>
+    <widget class="QLabel" name="status">
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>42</height>
+      </size>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>viv::VirtualMasonryView</class>
+   <extends>QAbstractScrollArea</extends>
+   <header>virtualitemviews/virtualmasonryview.h</header>
+  </customwidget>
+ </customwidgets>
+ <resources />
+ <connections />
+</ui>

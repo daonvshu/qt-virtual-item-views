@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ui version="4.0">
+ <class>MasonryEventCard</class>
+ <widget class="QWidget" name="MasonryEventCard">
+  <layout class="QVBoxLayout" name="cardLayout">
+   <item>
+    <widget class="QLabel" name="title">
+     <property name="alignment">
+      <set>Qt::AlignCenter</set>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QPushButton" name="action">
+     <property name="text">
+      <string>行内事件</string>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources />
+ <connections />
+</ui>

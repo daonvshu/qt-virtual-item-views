@@ -9,6 +9,8 @@ class MasonryLayoutTest : public QObject
 private slots:
     void shortestColumnPlacement();
     void exactColumnWidthsAndMargins();
+    void centeredOuterSpacingAndHitTesting();
+    void outerSpacingSurvivesReflow();
     void fixedColumnCountRespectsMinimumWidth();
     void zeroWidthAndEmptyModelAreSafe();
     void invalidSpacingAndHeightsClamp();
@@ -72,6 +74,78 @@ void MasonryLayoutTest::exactColumnWidthsAndMargins()
     QCOMPARE(layout.columnX(1), 171);
     QCOMPARE(layout.columnX(2), 334);
     QCOMPARE(layout.columnX(2) + layout.columnWidth(2), 489);
+}
+
+void MasonryLayoutTest::centeredOuterSpacingAndHitTesting()
+{
+    viv::MasonryLayout layout;
+    layout.setMargins(QMargins(7, 11, 9, 13));
+    layout.setSpacing(9, 11);
+    layout.setCrossExtent(601);
+    layout.setColumnCount(3);
+    layout.setOuterSpacingEnabled(true);
+    layout.resetItems(5, 100);
+
+    QCOMPARE(layout.outerSpacing(), QMargins(5, 4, 6, 5));
+    QCOMPARE(layout.margins(), QMargins(7, 11, 9, 13));
+    QCOMPARE(layout.columnCount(), 3);
+    QCOMPARE(layout.logicalItemRect(0), QRect(12, 15, 184, 100));
+    QCOMPARE(layout.columnX(2) + layout.columnWidth(2), 586);
+    QCOMPARE(layout.logicalItemRect(3).top(), 124);
+    QCOMPARE(layout.contentExtent(), qint64(242));
+    QCOMPARE(layout.itemAtPoint(QPoint(12, 15), 0), qsizetype(0));
+    QCOMPARE(layout.itemAtPoint(QPoint(11, 15), 0), qsizetype(-1));
+    QCOMPARE(layout.itemAtPoint(QPoint(12, 14), 0), qsizetype(-1));
+    QCOMPARE(layout.itemAtPoint(QPoint(196, 15), 0), qsizetype(-1));
+    QCOMPARE(layout.itemAtPoint(QPoint(586, 15), 0), qsizetype(-1));
+    QCOMPARE(layout.itemAtPoint(QPoint(12, 224), 0), qsizetype(-1));
+    // Painting a half-gap still needs its adjacent geometry at zero overscan.
+    QVERIFY(layout.itemsInVerticalRange(224, 228, 1, 1).contains(3));
+
+    layout.setItemSize(4, 160);
+    QCOMPARE(layout.offsetOf(4), qint64(124));
+    QCOMPARE(layout.contentExtent(), qint64(302));
+    layout.resetItems(0, 100);
+    QCOMPARE(layout.contentExtent(), qint64(0));
+    QVERIFY(layout.itemsInVerticalRange(0, 300, 1, 1).isEmpty());
+}
+
+void MasonryLayoutTest::outerSpacingSurvivesReflow()
+{
+    viv::MasonryLayout layout;
+    layout.setCrossExtent(420);
+    layout.setColumnCount(2);
+    layout.setSpacing(10, 10);
+    layout.resetItems(5, 100);
+    const QRect edgeRect = layout.logicalItemRect(0);
+    const qint64 edgeExtent = layout.contentExtent();
+    layout.setOuterSpacingEnabled(true);
+    QCOMPARE(layout.outerSpacing(), QMargins(5, 5, 5, 5));
+    QCOMPARE(layout.logicalItemRect(0).topLeft(), QPoint(5, 5));
+    QCOMPARE(layout.contentExtent(), edgeExtent + 10);
+
+    layout.setOuterSpacingEnabled(false);
+    QCOMPARE(layout.outerSpacing(), QMargins());
+    QCOMPARE(layout.logicalItemRect(0), edgeRect);
+    QCOMPARE(layout.contentExtent(), edgeExtent);
+    layout.setOuterSpacingEnabled(true);
+    layout.setSpacing(0, 0);
+    QCOMPARE(layout.outerSpacing(), QMargins());
+    QCOMPARE(layout.logicalItemRect(0).topLeft(), QPoint(0, 0));
+
+    layout.setSpacing(9, 20);
+    layout.setCrossExtent(9);
+    QCOMPARE(layout.columnCount(), 1);
+    QCOMPARE(layout.outerSpacing(), QMargins(4, 4, 4, 5));
+    QCOMPARE(layout.columnWidth(0), 1);
+    QCOMPARE(layout.columnX(0), 4);
+    layout.resetItems(1, 100);
+    QCOMPARE(layout.contentExtent(), qint64(109));
+    layout.setCrossExtent(0);
+    QCOMPARE(layout.contentExtent(), qint64(0));
+    layout.setCrossExtent(9);
+    QCOMPARE(layout.logicalItemRect(0), QRect(4, 4, 1, 100));
+    QCOMPARE(layout.contentExtent(), qint64(109));
 }
 
 void MasonryLayoutTest::fixedColumnCountRespectsMinimumWidth()
@@ -496,5 +570,5 @@ void MasonryLayoutTest::extremeHeightConversionAndProjectionAreSafe()
     QCOMPARE(layout.itemSize(2), maxHeight);
 }
 
-QTEST_MAIN(MasonryLayoutTest)
+QTEST_APPLESS_MAIN(MasonryLayoutTest)
 #include "tst_masonrylayout.moc"

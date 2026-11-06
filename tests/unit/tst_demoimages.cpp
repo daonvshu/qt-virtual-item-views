@@ -1,8 +1,10 @@
-#include "../../examples/common/demoimage.h"
-#include "../../examples/masonry_view/cards.h"
+#include "../../examples/masonry_capabilities/12_images/imagebackend.h"
+#include "../../examples/masonry_capabilities/12_images/imagecatalog.h"
+#include "../../examples/masonry_capabilities/12_images/cards.h"
 #include <virtualitemviews/virtualmasonryview.h>
 
 #include <QFile>
+#include <QFileInfo>
 #include <QTemporaryDir>
 #include <QtTest>
 
@@ -34,10 +36,10 @@ private slots:
         QVERIFY(broken.open(QIODevice::WriteOnly));
         broken.write("invalid image");
         broken.close();
-        vivdemo::ImageCatalog catalog;
+        masonry_images_catalog::ImageCatalog catalog;
         int stale = 0;
         int completed = 0;
-        QVector<vivdemo::ImageEntry> entries;
+        QVector<masonry_images_catalog::ImageEntry> entries;
         catalog.loadFolder(directory.path(), [&](const auto &) { ++stale; });
         catalog.cancel();
         catalog.loadFolder(directory.path(), [&](const auto &result) {
@@ -67,14 +69,19 @@ private slots:
             QVERIFY(image.save(directory.filePath(
                 QStringLiteral("%1.png").arg(row, 2, 10, QLatin1Char('0')))));
         }
-        vivdemo::ImageCatalog catalog;
-        QVector<vivdemo::ImageEntry> entries;
+        masonry_images_catalog::ImageCatalog catalog;
+        QVector<masonry_images_catalog::ImageEntry> entries;
         catalog.loadFolder(directory.path(), [&](const auto &result) { entries = result; });
         QTRY_COMPARE(entries.size(), 12);
-        masonrydemo::MasonryModel model(0);
-        model.setImages(entries);
-        vivdemo::ImageBackend backend;
-        masonrydemo::MasonryAdapter adapter(&model, &backend);
+        QStandardItemModel model;
+        for (const auto &entry : entries) {
+            auto *item = new QStandardItem(QFileInfo(entry.path).fileName());
+            item->setData(entry.path, Qt::UserRole);
+            item->setData(entry.size, Qt::UserRole + 1);
+            model.appendRow(item);
+        }
+        masonry_images_backend::ImageBackend backend;
+        masonry_images::ImageAdapter adapter(&backend);
         viv::VirtualMasonryView view;
         view.resize(420, 1200);
         view.setColumnCount(3);
@@ -100,7 +107,7 @@ private slots:
                     return false;
                 bool loaded = false;
                 for (QObject *child : widget->children()) {
-                    if (auto *content = dynamic_cast<vivdemo::ImageContent *>(child))
+                    if (auto *content = dynamic_cast<masonry_images_backend::ImageContent *>(child))
                         loaded = content->hasImage();
                 }
                 if (!loaded)
@@ -113,7 +120,7 @@ private slots:
         QCOMPARE(changes.count(), 0);
         for (int row = 0; row < entries.size(); ++row) {
             const QModelIndex index = model.index(row, 0);
-            QCOMPARE(model.estimatedSize(index), entries.at(row).size);
+            QCOMPARE(index.data(Qt::UserRole + 1).toSize(), entries.at(row).size);
             QCOMPARE(view.visualRect(index), before.at(row));
             QCOMPARE(view.itemColumn(index), columns.at(row));
         }
@@ -127,8 +134,8 @@ private slots:
         image.fill(Qt::red);
         const QString path = directory.filePath(QStringLiteral("wide.png"));
         QVERIFY(image.save(path));
-        vivdemo::ImageBackend backend;
-        vivdemo::ImageContent content(&backend, nullptr);
+        masonry_images_backend::ImageBackend backend;
+        masonry_images_backend::ImageContent content(&backend, nullptr);
         content.resize(180, 100);
         content.show();
         int loaded = 0;
@@ -165,8 +172,8 @@ private slots:
         image.fill(Qt::blue);
         const QString tall = directory.filePath(QStringLiteral("tall.png"));
         QVERIFY(image.save(tall));
-        vivdemo::ImageBackend backend;
-        vivdemo::ImageContent content(&backend, nullptr);
+        masonry_images_backend::ImageBackend backend;
+        masonry_images_backend::ImageContent content(&backend, nullptr);
         content.resize(120, 180);
         content.show();
         int stale = 0;

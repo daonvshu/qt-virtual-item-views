@@ -1,6 +1,6 @@
 # VirtualFlowTableView 独立能力示例
 
-一个 `flow_capabilities` 进程通过左侧导航演示各章。页面首次访问时创建；每章自带模型、adapter、控件和 Qt Designer 布局，不引用其他章节或 `examples/common` 的业务代码。注释使用英文。
+一个 `flow_capabilities` 进程通过左侧导航演示各章。页面首次访问时创建；每章自带模型、adapter、控件和 Qt Designer 布局，不引用其他章节的业务代码。注释使用英文。
 
 ## 功能索引
 

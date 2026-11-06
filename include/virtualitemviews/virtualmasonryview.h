@@ -48,8 +48,14 @@ public:
     int columnSpacing() const;
     void setRowSpacing(int pixels) override;
     int rowSpacing() const;
+    /// Center mode adds outer half-gaps inside the configured content margins.
+    /// Edge mode has no outer half-gaps.
+    void setGridLinePlacement(GridLinePlacement placement) override;
     void setContentMargins(const QMargins &margins);
     QMargins contentMargins() const;
+    /// Colors row and column gaps, including the outer half-gaps in center mode.
+    /// Content margins and absent items retain the viewport background.
+    void setSpacingBackgroundColor(const QColor &color) override;
 
     void setItemHeightMode(ItemHeightMode mode);
     ItemHeightMode itemHeightMode() const;
@@ -130,8 +136,10 @@ protected:
     void refreshVisualState(const QModelIndex &index) override;
     /// Uses the same exclusive pixel edges for the complete state shape and clip.
     void paintVisualStateBackgrounds(QPainter *painter, const QRect &dirty) const;
-    /// Paints visible item boundaries once, without outer or absent-item borders.
+    /// Paints visible boundaries and column tails, without absent-item borders.
     void paintGridLines(QPainter *painter) const;
+    /// Paints gap geometry independently of widget materialization.
+    void paintRowSpacingBackground(QPainter *painter, const QRect &dirtyRect) const override;
 
 private:
     struct SavedItemSize {
