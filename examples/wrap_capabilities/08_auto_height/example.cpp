@@ -76,11 +76,11 @@ private:
         ui->view->setContentMargins(QMargins(12, 12, 12, 12));
         ui->view->setModel(model);
 
-        // The parent may allocate less than the maximum; overflow remains scrollable.
+        // The framework fixes the content height; only the independent cap enables overflow scrolling.
         ui->view->setAutoHeightEnabled(true);
-        ui->view->setMaximumHeight(180);
+        ui->view->setAutoHeightMaximumHeight(180);
         connect(ui->adaptive, &QCheckBox::toggled, ui->view, &viv::VirtualItemView::setAutoHeightEnabled);
-        connect(ui->maximum, QOverload<int>::of(&QSpinBox::valueChanged), ui->view, &QWidget::setMaximumHeight);
+        connect(ui->maximum, QOverload<int>::of(&QSpinBox::valueChanged), ui->view, &viv::VirtualItemView::setAutoHeightMaximumHeight);
         connect(ui->count, QOverload<int>::of(&QSpinBox::valueChanged), this, [this](int count) {
             while (model->rowCount() > count) model->removeRow(model->rowCount() - 1);
             while (model->rowCount() < count)

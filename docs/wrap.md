@@ -4,9 +4,9 @@
 
 | 使用场景 | 类型 | 数据与控件 | 高度和滚动 |
 | --- | --- | --- | --- |
-| 大量项目，需要模型、选择和控件复用 | `VirtualWrapView` | model + `WidgetAdapter` | 可启用自适应高度，超出分配空间后垂直滚动 |
+| 大量项目，需要模型、选择和控件复用 | `VirtualWrapView` | model + `WidgetAdapter` | 可启用自适应固定高度，超过独立上限后垂直滚动 |
 | 少量控件，放进现有 QWidget | `WrapLayout` | 直接 `addWidget()` | 提供 `heightForWidth()`，高度由父布局分配；布局本身不滚动 |
-| 少量控件，需要自动缩高和上限 | `WrapWidget` | 内置公开的 `WrapLayout` | 默认自适应高度；超出最大高度或父布局空间后垂直滚动 |
+| 少量控件，需要自动缩高和上限 | `WrapWidget` | 内置公开的 `WrapLayout` | 默认按内容固定高度；超过独立的自适应高度上限后内部滚动 |
 
 三种用法共用换行计算，支持独立项目间距、行间距、内容边距、行对齐及 RTL。默认统一高度为 32，项目和行间距均为 8；不自动加入外侧半间距，内容边距由调用者明确配置。行尾空白不创建项目，也不参与选择和 hover。
 
@@ -22,7 +22,7 @@ view->setRowSpacing(8);
 view->setContentMargins(QMargins(8, 8, 8, 8));
 view->setModel(model);
 view->setAutoHeightEnabled(true);
-view->setMaximumHeight(240);
+view->setAutoHeightMaximumHeight(240);
 ```
 
 宽度依次取 `setItemWidth(index, width)`、模型 `Qt::SizeHintRole` 的 `QSize::width()`、adapter 的 `estimatedSize(type, index).width()`；没有有效值时使用 100。先应用全局宽度范围，再限制到当前行的可用宽度。过宽项目独占一行，文本省略由业务控件处理。`SizeHintRole` 的高度不影响统一高度。
@@ -41,14 +41,18 @@ view->setMaximumHeight(240);
 
 ```cpp
 auto *wrap = new viv::WrapWidget(parent);
-wrap->setMaximumHeight(180);
+wrap->setAutoHeightMaximumHeight(180);
 wrap->wrapLayout()->setFixedItemHeight(32);
 wrap->wrapLayout()->setContentsMargins(8, 8, 8, 8);
 wrap->addWidget(new QPushButton(tr("Pending")));
 parentLayout->addWidget(wrap);
 ```
 
-`WrapWidget` 默认启用自适应高度，可以用 `setAutoHeightEnabled(false)` 关闭；高度上限使用 QWidget 的 `setMaximumHeight()`，父布局仍可分配更小的空间。不要额外 `setFixedHeight()`，否则会阻止动态收缩。
+`WrapWidget` 默认启用自适应高度。内容、控件宽度、字体或布局参数变化后，框架合并更新并使用 `setFixedHeight()` 将控件高度设为完整换行高度，加上边框、视口边距和占位的强制水平滚动条。父布局不能把它压缩到更小的高度；父容器空间不足时，由业务安排外层滚动或设置合适的上限。
+
+`setAutoHeightMaximumHeight(height)` 设置控件总高度上限，`autoHeightMaximumHeight()` 查询；默认 `0` 表示不限，负值也按 `0` 处理。不设上限时始终按内容高度计算，设置后超出部分使用内部滚动。该上限独立于 QWidget 的尺寸约束，不会被内部 `setFixedHeight()` 覆盖。autoheight 开启期间不要用 QWidget 的 `setMinimumHeight()`、`setMaximumHeight()` 或 `setFixedHeight()` 管理高度。
+
+调用 `setAutoHeightEnabled(false)` 会释放内部固定高度，恢复接管高度前的 QWidget 最小、最大高度及原垂直尺寸策略，回到普通 `QScrollArea` 的布局行为；再次开启时重新按内容计算。自适应高度上限会保留。`VirtualWrapView` 也使用相同的固定高度和独立上限规则。
 
 `VirtualWrapView` 内容没有竖向滚动范围时，竖向滚轮事件交给外层处理；`WrapWidget` 内容无需滚动时也会放行滚轮，便于放入外层滚动区域。是否可以内部滚动按实际内容范围判断，不依赖滚动条是否可见或是否达到最大高度。
 

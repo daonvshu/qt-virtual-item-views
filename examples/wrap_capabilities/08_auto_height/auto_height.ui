@@ -6,7 +6,7 @@
    <item>
     <widget class="QLabel" name="description">
      <property name="text">
-      <string>内容较少时缩小整个视图；超过最大高度或父布局空间才滚动。调整窗口宽度观察重新换行。</string>
+      <string>内容较少时缩小整个视图；超过自适应高度上限才滚动；0 表示不限高，父空间不足由业务处理。调整窗口宽度观察重新换行。</string>
      </property>
      <property name="wordWrap">
       <bool>true</bool>
@@ -43,9 +43,9 @@
       </widget>
      </item>
      <item>
-      <widget class="QSpinBox" name="maximum">
+      <widget class="QSpinBox" name="maximum"><property name="specialValueText"><string>不限高</string></property>
        <property name="minimum">
-        <number>40</number>
+        <number>0</number>
        </property>
        <property name="maximum">
         <number>500</number>

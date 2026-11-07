@@ -22,6 +22,6 @@
 
 Flow 的列宽范围为目标值，优先铺满可用宽度；末行已有项目保持正常列宽，空缺位置不物化、不命中。高度使用 `setFixedCellHeight()` 或 `setCellAspectRatio()`，不通过业务控件 sizeHint 动态测量。冻结行、固定业务列表头、冻结列、合并格和树展开不属于 Flow API。
 
-调用 `setAutoHeightEnabled(true)` 可让整个视图随网格内容自适应高度，`setMaximumHeight()` 设置可选上限；超出父布局空间或上限后滚动。窗口换列和宽高比变化也会更新建议高度，具体见第 11 章。
+调用 `setAutoHeightEnabled(true)` 可让整个视图随网格内容自适应高度，`setAutoHeightMaximumHeight()` 设置可选上限（0 表示不限）；超出指定上限后内部滚动，父布局空间不足由业务处理。窗口换列和宽高比变化也会更新建议高度，具体见第 11 章。
 
 选择、滚动与事件使用真实模型索引，不能把显示行列当作持久 ID。拖放权限和数据变更由 model 决定，详见 [交互与拖放](interaction.md)。

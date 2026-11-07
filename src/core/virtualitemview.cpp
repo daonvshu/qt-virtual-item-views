@@ -24,7 +24,6 @@
 #include <QCursor>
 #include <QEasingCurve>
 #include <QKeyEvent>
-#include <QLayout>
 #include <QMimeData>
 #include <QMouseEvent>
 #include <QPainter>
@@ -32,7 +31,6 @@
 #include <QPair>
 #include <QPointF>
 #include <QResizeEvent>
-#include <QScrollArea>
 #include <QScrollBar>
 #include <QScopeGuard>
 #include <QShowEvent>
@@ -346,7 +344,6 @@ VirtualItemView::VirtualItemView(QWidget *parent)
 VirtualItemView::~VirtualItemView()
 {
     m_destroying = true;
-    updateAutoHeightAncestorTracking();
     setPerformanceLoggingEnabled(false);
     viewport()->removeEventFilter(this);
     for (QWidget *widget : m_rowSpacingWidgets)
@@ -418,24 +415,45 @@ void VirtualItemView::setAutoHeightEnabled(bool enabled)
 {
     if (m_autoHeightEnabled == enabled)
         return;
+    const QPointer<VirtualItemView> self(this);
     m_autoHeightEnabled = enabled;
     QSizePolicy policy = sizePolicy();
     if (enabled) {
         m_autoHeightPreviousVerticalPolicy = policy.verticalPolicy();
-        // Maximum prevents spare layout space from stretching a short view,
-        // while retaining the ability to shrink below its preferred height.
-        policy.setVerticalPolicy(QSizePolicy::Maximum);
-    } else if (policy.verticalPolicy() == QSizePolicy::Maximum) {
+        policy.setVerticalPolicy(QSizePolicy::Fixed);
+    } else {
+        m_autoHeightScrollBarSyncPending = false;
         policy.setVerticalPolicy(m_autoHeightPreviousVerticalPolicy);
+        if (m_autoHeightFixedHeightApplied) {
+            m_autoHeightFixedHeightApplied = false;
+            setMinimumHeight(0);
+            if (!self) return;
+            setMaximumHeight(m_autoHeightPreviousMaximumHeight);
+            if (!self) return;
+            setMinimumHeight(m_autoHeightPreviousMinimumHeight);
+            if (!self) return;
+        }
     }
     setSizePolicy(policy);
     m_autoHeightLastHints = QSize();
-    updateAutoHeightAncestorTracking();
     updateGeometry();
     if (enabled)
         updateAutoHeightGeometry();
+    if (!self) return;
     // Separator visibility can change even when the allocated height stays the same.
     markDirty();
+}
+
+void VirtualItemView::setAutoHeightMaximumHeight(int height)
+{
+    height = qBound(0, height, QWIDGETSIZE_MAX);
+    if (m_autoHeightMaximumHeight == height)
+        return;
+    m_autoHeightMaximumHeight = height;
+    if (m_autoHeightEnabled) {
+        scheduleAutoHeightGeometryUpdate();
+        markDirty();
+    }
 }
 
 QSize VirtualItemView::sizeHint() const
@@ -451,7 +469,9 @@ QSize VirtualItemView::sizeHint() const
         && m_layout->needsInitialMeasurement())
         content = qMax(1, m_estimatedItemHeight);
     const qint64 height = content + autoHeightDecorationExtent();
-    hint.setHeight(int(qBound<qint64>(qint64(minimumHeight()), height, qint64(maximumHeight()))));
+    // QWidget's minimum/maximum contain our previous fixed height, not the cap.
+    const int limit = m_autoHeightMaximumHeight > 0 ? m_autoHeightMaximumHeight : QWIDGETSIZE_MAX;
+    hint.setHeight(int(qBound(qint64(0), height, qint64(limit))));
     return hint;
 }
 
@@ -459,65 +479,9 @@ QSize VirtualItemView::minimumSizeHint() const
 {
     QSize hint = QAbstractScrollArea::minimumSizeHint();
     if (m_autoHeightEnabled && (!m_layout || m_layout->orientation() == Qt::Vertical)) {
-        // Do not inherit the scroll area's minimum scrollbar length: even a
-        // single row (or an empty list) must be allowed to occupy less space.
-        hint.setHeight(qMin(maximumHeight(), autoHeightDecorationExtent()));
-        // A resizable outer scroll area sizes its content from layout minima.
-        // Preserve this view's bounded content height there, or a long form can
-        // shrink every nested view to its header before the outer area scrolls.
-        if (autoHeightPreservesContentMinimum())
-            hint.setHeight(sizeHint().height());
+        hint.setHeight(sizeHint().height());
     }
     return hint;
-}
-
-bool VirtualItemView::autoHeightPreservesContentMinimum() const
-{
-    for (QWidget *ancestor = parentWidget(); ancestor; ancestor = ancestor->parentWidget()) {
-        if (auto *area = qobject_cast<QAbstractScrollArea *>(ancestor)) {
-            auto *outer = qobject_cast<QScrollArea *>(area);
-            return outer && outer->widgetResizable() && outer->widget()
-                && (outer->widget() == this || outer->widget()->isAncestorOf(this));
-        }
-        // Explicitly bounded intermediate containers still control their
-        // own layout budget (including animated collapse containers).
-        if (ancestor->isWindow() || ancestor->maximumHeight() < QWIDGETSIZE_MAX)
-            break;
-    }
-    return false;
-}
-
-void VirtualItemView::updateAutoHeightAncestorTracking()
-{
-    QVector<QPointer<QWidget>> ancestors;
-    if (m_autoHeightEnabled && !m_destroying) {
-        // Observe beyond a temporary height cap so removing that cap is seen.
-        for (QWidget *ancestor = parentWidget(); ancestor; ancestor = ancestor->parentWidget()) {
-            ancestors.append(ancestor);
-            if (ancestor->isWindow() || qobject_cast<QAbstractScrollArea *>(ancestor))
-                break;
-        }
-    }
-    if (ancestors != m_autoHeightAncestors) {
-        for (const QPointer<QWidget> &ancestor : m_autoHeightAncestors) {
-            if (ancestor)
-                ancestor->removeEventFilter(this);
-        }
-        m_autoHeightAncestors = ancestors;
-        for (const QPointer<QWidget> &ancestor : m_autoHeightAncestors) {
-            if (ancestor)
-                ancestor->installEventFilter(this);
-        }
-        m_autoHeightLastHints = QSize();
-    }
-    const bool preservesMinimum = m_autoHeightEnabled && !m_destroying
-        && autoHeightPreservesContentMinimum();
-    if (preservesMinimum != m_autoHeightLastContentMinimumPreserved) {
-        m_autoHeightLastContentMinimumPreserved = preservesMinimum;
-        // A QWidgetItem may have cached hints during an ancestor's animation.
-        // Invalidate even if the final hints match those from before collapse.
-        m_autoHeightLastHints = QSize();
-    }
 }
 
 void VirtualItemView::scheduleAutoHeightGeometryUpdate()
@@ -529,8 +493,7 @@ void VirtualItemView::scheduleAutoHeightGeometryUpdate()
         m_autoHeightGeometryUpdatePending = false;
         if (!m_autoHeightEnabled || m_destroying)
             return;
-        updateAutoHeightAncestorTracking();
-        updateAutoHeightGeometry();
+        syncScrollBars();
     });
 }
 
@@ -538,10 +501,14 @@ int VirtualItemView::autoHeightDecorationExtent() const
 {
     const QMargins margins = viewportMargins();
     // The composited frame reserves space only for its enabled edges, regardless of QSS.
+    const QRect frame = frameRect();
+    const QRect contents = contentsRect();
     const int borderHeight = !m_frameEffect.isNull()
         ? m_frameBorderWidth * (int(m_frameBorderEdges.testFlag(Qt::TopEdge))
                              + int(m_frameBorderEdges.testFlag(Qt::BottomEdge)))
-        : 2 * frameWidth();
+        : qMax(0, contents.top() - frame.top()) + qMax(0, frame.bottom() - contents.bottom());
+    // Native per-edge frame widths can differ under QSS. Exclude frameRect's
+    // offset for a scrollbar: its occupied height is counted separately below.
     qint64 height = qint64(borderHeight) + margins.top() + margins.bottom();
     const QScrollBar *bar = horizontalScrollBar();
     const bool scrollBarNeeded = horizontalScrollBarPolicy() == Qt::ScrollBarAlwaysOn
@@ -561,13 +528,31 @@ int VirtualItemView::autoHeightDecorationExtent() const
 
 void VirtualItemView::updateAutoHeightGeometry()
 {
-    if (!m_autoHeightEnabled || m_destroying)
+    if (!m_autoHeightEnabled || m_destroying || m_updatingAutoHeightGeometry
+        || (m_layout && m_layout->orientation() != Qt::Vertical))
         return;
-    const QSize hints(sizeHint().height(), minimumSizeHint().height());
-    if (hints == m_autoHeightLastHints)
+    const int targetHeight = sizeHint().height();
+    const QSize hints(targetHeight, targetHeight);
+    if (hints == m_autoHeightLastHints
+        && minimumHeight() == targetHeight && maximumHeight() == targetHeight)
         return;
+    const QPointer<VirtualItemView> self(this);
+    m_updatingAutoHeightGeometry = true;
+    if (!m_autoHeightFixedHeightApplied) {
+        m_autoHeightPreviousMinimumHeight = minimumHeight();
+        m_autoHeightPreviousMaximumHeight = maximumHeight();
+        m_autoHeightFixedHeightApplied = true;
+    }
     m_autoHeightLastHints = hints;
+    if (minimumHeight() != targetHeight || maximumHeight() != targetHeight) {
+        setFixedHeight(targetHeight);
+        if (!self) return;
+    }
+    m_updatingAutoHeightGeometry = false;
     updateGeometry();
+    // Resizing can change wrapping, header margins or the horizontal scrollbar.
+    // Finish that new geometry in a queued pass instead of recursively resizing.
+    scheduleAutoHeightGeometryUpdate();
 }
 
 bool VirtualItemView::trailingRowGridLineVisible() const
@@ -1410,22 +1395,6 @@ bool VirtualItemView::eventFilter(QObject *watched, QEvent *event)
     if (m_destroying)
         return false;
     auto *widget = qobject_cast<QWidget *>(watched);
-    if (widget && m_autoHeightEnabled && m_autoHeightAncestors.contains(widget)) {
-        switch (event->type()) {
-        case QEvent::LayoutRequest:
-        case QEvent::Resize:
-        case QEvent::ContentsRectChange:
-        case QEvent::Show:
-        case QEvent::Hide:
-        case QEvent::ParentChange:
-            scheduleAutoHeightGeometryUpdate();
-            break;
-        default:
-            break;
-        }
-        // Ancestors are observed only; they do not drive content hover tracking.
-        return false;
-    }
     if (widget == viewport() && (event->type() == QEvent::StyleChange
                                 || event->type() == QEvent::PaletteChange)) {
         detail::prepareViewBackground(widget);
@@ -3931,44 +3900,23 @@ void VirtualItemView::applyPendingAnchor()
 void VirtualItemView::syncScrollBars()
 {
     if (m_autoHeightEnabled && (!m_layout || m_layout->orientation() == Qt::Vertical)) {
-        // Post the parent's layout request before publishing the new range. An
-        // expanding tree otherwise compares this frame's content with the previous
-        // frame's viewport, briefly showing a scrollbar on every animation tick.
+        // Apply this frame's content height before publishing its scroll range.
+        // Qt may defer viewport geometry even after the host is fixed in height.
+        const QPointer<VirtualItemView> self(this);
         updateAutoHeightGeometry();
+        if (!self) return;
         if (!m_autoHeightScrollBarSyncPending) {
             m_autoHeightScrollBarSyncPending = true;
             QMetaObject::invokeMethod(this, [this]() {
                 if (!m_autoHeightScrollBarSyncPending)
                     return;
-                // Header and horizontal scrollbar updates can invalidate an
-                // ancestor layout after this callback was queued. Apply its
-                // latest height budget before comparing content and viewport.
+                // Header and horizontal scrollbar updates can change decoration
+                // height during resize. Settle them without activating ancestors.
                 const QPointer<VirtualItemView> guard(this);
-                const QSize hints = m_autoHeightLastHints;
-                QVector<QPointer<QLayout>> layouts;
-                for (QWidget *ancestor = parentWidget(); ancestor;
-                     ancestor = ancestor->parentWidget()) {
-                    if (ancestor->layout())
-                        layouts.append(QPointer<QLayout>(ancestor->layout()));
-                    if (ancestor->isWindow())
-                        break;
-                }
-                // An already active outer layout does not activate dirty
-                // layouts inside child widgets. Settle the whole ancestor
-                // chain from the outside in, including the immediate parent.
-                for (auto it = layouts.crbegin(); it != layouts.crend(); ++it) {
-                    if (*it)
-                        (*it)->activate();
-                    if (!guard || !m_autoHeightScrollBarSyncPending)
-                        return;
-                }
-                m_autoHeightScrollBarSyncPending = false;
-                // A resize may change the horizontal scrollbar's height. Let
-                // that new hint settle too, without publishing a stale range.
-                if (hints != m_autoHeightLastHints) {
-                    syncScrollBars();
+                updateAutoHeightGeometry();
+                if (!guard || !m_autoHeightScrollBarSyncPending)
                     return;
-                }
+                m_autoHeightScrollBarSyncPending = false;
                 updateVerticalScrollBarRange();
             }, Qt::QueuedConnection);
         }
@@ -3982,9 +3930,9 @@ void VirtualItemView::updateVerticalScrollBarRange()
 {
     detail::PerformanceScope performance(this, "layout.scrollbars");
     QScrollBar *bar = verticalScrollBar();
-    // QAbstractScrollArea may resize its viewport after the parent has already
-    // allocated this widget's height. Use that allocation and the same chrome
-    // as sizeHint(), rather than the previous frame's viewport, for auto height.
+    // QAbstractScrollArea may resize its viewport after the host height changes.
+    // Use the fixed height and the same chrome as sizeHint(), rather than the
+    // previous frame's viewport, for auto height.
     const int viewExtent = m_autoHeightEnabled
             && (!m_layout || m_layout->orientation() == Qt::Vertical)
         ? qMax(0, height() - autoHeightDecorationExtent()) : viewportMainExtent();
@@ -3994,17 +3942,21 @@ void VirtualItemView::updateVerticalScrollBarRange()
 
     const int range = m_scrollMapper.scrollRange();
     const bool rangeChanged = bar->minimum() != 0 || bar->maximum() != range;
-    const QSignalBlocker blocker(bar);
-    bar->setRange(0, range);
-    const int value = m_scrollMapper.toScrollBarValue(m_scrollOffset);
-    // Re-centre the compression window on the current viewport position so that
-    // precision stays maximal where the user is looking.
-    m_scrollMapper.setAnchor(m_scrollOffset, value);
-    bar->setPageStep(qMax(1, viewExtent));
-    bar->setSingleStep(int(qBound<qint64>(qint64(1), scrollBarSingleStepPixels(),
-                                          qint64(std::numeric_limits<int>::max()))));
-    bar->setValue(value);
+    {
+        const QSignalBlocker blocker(bar);
+        bar->setRange(0, range);
+        const int value = m_scrollMapper.toScrollBarValue(m_scrollOffset);
+        // Re-centre the compression window on the current viewport position so that
+        // precision stays maximal where the user is looking.
+        m_scrollMapper.setAnchor(m_scrollOffset, value);
+        bar->setPageStep(qMax(1, viewExtent));
+        bar->setSingleStep(int(qBound<qint64>(qint64(1), scrollBarSingleStepPixels(),
+                                              qint64(std::numeric_limits<int>::max()))));
+        bar->setValue(value);
+    }
+    const QPointer<VirtualItemView> self(this);
     updateAutoHeightGeometry();
+    if (!self) return;
     // Blocking rangeChanged also suppresses Qt's queued scrollbar layout.
     // Restore that update without feeding mapped values back into scrolling.
     if (rangeChanged)
@@ -4054,9 +4006,8 @@ void VirtualItemView::showEvent(QShowEvent *event)
     QAbstractScrollArea::showEvent(event);
     if (m_autoHeightEnabled) {
         // Hidden widget geometry notifications do not invalidate parent items.
-        // Publish fresh hints after visibility and ancestor constraints settle.
+        // Reapply content height after visibility and local geometry settle.
         m_autoHeightLastHints = QSize();
-        updateAutoHeightAncestorTracking();
         scheduleAutoHeightGeometryUpdate();
     }
     if (m_layout)

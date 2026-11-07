@@ -35,9 +35,9 @@ private:
         layout->setItemSpacing(8);
         layout->setRowSpacing(8);
         layout->setContentsMargins(8, 8, 8, 8);
-        // Auto height is enabled by default. In the outer resizable QScrollArea,
-        // the bounded content height also supplies this host's layout minimum.
-        ui->view->setMaximumHeight(180);
+        // Auto height fixes the host to its content height, capped independently
+        // by this limit. Zero removes the cap; the outer area handles page overflow.
+        ui->view->setAutoHeightMaximumHeight(ui->maximum->value());
         for (int i = 0; i < 12; ++i) addWidget();
         connect(ui->add, &QPushButton::clicked, this, [this]() { addWidget(); });
         connect(ui->take, &QPushButton::clicked, this, [this]() {
@@ -52,7 +52,8 @@ private:
             if (layout->itemAt(0)) layout->itemAt(0)->widget()->setVisible(!hidden);
         });
         connect(ui->clear, &QPushButton::clicked, ui->view, &viv::WrapWidget::clear);
-        connect(ui->maximum, QOverload<int>::of(&QSpinBox::valueChanged), ui->view, &QWidget::setMaximumHeight);
+        connect(ui->maximum, QOverload<int>::of(&QSpinBox::valueChanged),
+                ui->view, &viv::WrapWidget::setAutoHeightMaximumHeight);
         ui->status->setText(QStringLiteral("不使用缓存复用；控件事件、编辑状态和 QObject 生命周期都由普通 QWidget 机制管理。"));
     }
     void addWidget()

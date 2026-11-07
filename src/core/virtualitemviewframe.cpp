@@ -235,7 +235,7 @@ bool VirtualItemView::event(QEvent *event)
     if (!self)
         return handled;
     if (event->type() == QEvent::ParentChange && m_autoHeightEnabled) {
-        updateAutoHeightAncestorTracking();
+        m_autoHeightLastHints = QSize();
         scheduleAutoHeightGeometryUpdate();
     }
     if ((event->type() == QEvent::Polish || event->type() == QEvent::StyleChange

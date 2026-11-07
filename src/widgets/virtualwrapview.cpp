@@ -366,8 +366,8 @@ void VirtualWrapView::afterMaterialize()
 {
     // Heights come from the layout; never measure all child widgets.
     if (autoHeightEnabled()) {
-        // Let the ancestor layout consume the new height hint before deciding
-        // whether the scrollbar still has to reserve horizontal space.
+        // Let Qt settle the viewport after the host height changes before
+        // deciding whether a scrollbar still has to reserve horizontal space.
         if (!m_settlePending) {
             m_settlePending = true;
             QMetaObject::invokeMethod(this, [this]() {

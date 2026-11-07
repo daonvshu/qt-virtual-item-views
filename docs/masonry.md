@@ -35,7 +35,7 @@
 - `setItemEstimatedSize()` 提交单项估算，`setItemEstimatedSizes()` 一次提交清单。`invalidateItemSize()` 合并读取 adapter 的新估算。
 - `setItemHeight()` 设置权威像素高度，优先于高度模式与估算；可使用 `setItemHeightAnimationEnabled()` 启用高度变化动画。
 - 不使用继承自列表的统一/逐行高度设置，也不启用自动 sizeHint 测量。
-- 自适应控件高度见第 14 节：`setAutoHeightEnabled(true)` 配合 `setMaximumHeight()`，以所有列的最大底部计算高度，超限后内部滚动。
+- 自适应控件高度见第 14 节：`setAutoHeightEnabled(true)` 配合 `setAutoHeightMaximumHeight()`（0 表示不限），以所有列的最大底部计算高度，超限后内部滚动。
 
 ## 复用与业务事件
 

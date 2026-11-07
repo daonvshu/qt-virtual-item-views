@@ -1358,7 +1358,9 @@ void VirtualTableView::layoutHeaderWidgets()
         = (isVerticalHeaderShown() && m_verticalHeader) ? m_verticalHeaderWidth : 0;
 
     setViewportMargins(rowHeaderWidth, headerHeight, 0, 0);
+    const QPointer<VirtualTableView> self(this);
     updateAutoHeightGeometry();
+    if (!self) return;
 
     const QRect viewportRect = viewport()->geometry();
     // Every pane has its own header renderer, positioned on the pane rectangle
@@ -3270,19 +3272,23 @@ void VirtualTableView::syncHorizontalScrollBar()
 
     const int range = m_horizontalMapper.scrollRange();
     const bool rangeChanged = bar->minimum() != 0 || bar->maximum() != range;
-    const QSignalBlocker blocker(bar);
-    bar->setRange(0, range);
-    bar->setPageStep(qMax(1, viewportWidth));
-    bar->setSingleStep(qMax(1, viewportWidth / 20));
     const int value = m_horizontalMapper.toScrollBarValue(m_columns->viewportOffset());
-    m_horizontalMapper.setAnchor(m_columns->viewportOffset(), value);
-    bar->setValue(value);
+    {
+        const QSignalBlocker blocker(bar);
+        bar->setRange(0, range);
+        bar->setPageStep(qMax(1, viewportWidth));
+        bar->setSingleStep(qMax(1, viewportWidth / 20));
+        m_horizontalMapper.setAnchor(m_columns->viewportOffset(), value);
+        bar->setValue(value);
+    }
     // The raw offset is never written back: only the mapped value is, and only
     // when the round trip cannot represent the offset exactly.
     const qint64 mapped = m_horizontalMapper.toLogicalOffset(value);
     if (m_columns->viewportOffset() != mapped)
         m_columns->setViewportOffset(mapped);
+    const QPointer<VirtualTableView> self(this);
     updateAutoHeightGeometry();
+    if (!self) return;
     // Keep Qt's scrollbar visibility in sync even though rangeChanged is blocked.
     if (rangeChanged)
         QCoreApplication::postEvent(this, new QEvent(QEvent::LayoutRequest));

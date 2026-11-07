@@ -67,7 +67,7 @@ private:
         m_view->setFrameBorderWidth(1);
         m_view->setFrameBorderColor(QColor("#879bb4"));
         m_view->setContentMargins(QMargins(8, 8, 8, 8));
-        // No fixed height or vertical alignment: let the parent's layout size the view.
+        // The framework fixes the content height; spare space belongs to the sibling.
         m_ui.previewLayout->insertWidget(0, m_view);
         m_ui.previewLayout->setStretch(1, 1);
         applyOptions();
@@ -92,8 +92,8 @@ private:
     {
         // Reuse the inherited whole-view auto-height API; cell height remains a Flow setting.
         m_view->setAutoHeightEnabled(m_ui.enabled->isChecked());
-        // Zero in the example means no explicit limit; the parent still limits available space.
-        m_view->setMaximumHeight(m_ui.maximum->value() > 0 ? m_ui.maximum->value() : QWIDGETSIZE_MAX);
+        // Zero means full content height; parent space does not reduce the computed height.
+        m_view->setAutoHeightMaximumHeight(m_ui.maximum->value());
         m_ui.previewHost->setMaximumHeight(m_ui.parentLimit->value() > 0
             ? m_ui.parentLimit->value() : QWIDGETSIZE_MAX);
         m_view->setCellWidthRange(100, m_ui.cellWidth->value());

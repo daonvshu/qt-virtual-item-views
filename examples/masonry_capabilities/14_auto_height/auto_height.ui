@@ -6,7 +6,7 @@
    <item>
     <widget class="QLabel" name="description">
      <property name="text">
-      <string>少量项目时高度跟随所有列的最大底部；超过最大高度或父布局可用高度才滚动。不需要内部滚动时，滚轮交给外层滚动区域。</string>
+      <string>少量项目时高度跟随所有列的最大底部；超过自适应高度上限才滚动；0 表示不限高，父空间不足由业务处理。不需要内部滚动时，滚轮交给外层滚动区域。</string>
      </property>
      <property name="wordWrap">
       <bool>true</bool>
@@ -32,12 +32,12 @@
       </widget>
      </item>
      <item row="0" column="1">
-      <widget class="QSpinBox" name="maximum">
+      <widget class="QSpinBox" name="maximum"><property name="specialValueText"><string>不限高</string></property>
        <property name="prefix">
         <string>最大高度 </string>
        </property>
        <property name="minimum">
-        <number>80</number>
+        <number>0</number>
        </property>
        <property name="maximum">
         <number>600</number>

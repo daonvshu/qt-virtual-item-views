@@ -70,7 +70,7 @@ private:
         m_view->setVisualStateCornerRadius(6);
         m_model = new QStandardItemModel(m_view);
         m_view->setModel(m_model);
-        // No stretch or vertical alignment on the view: its size policy supplies the upper bound.
+        // Auto height fixes the view's height; spare space belongs to the sibling.
         ui->previewLayout->insertWidget(0, m_view);
         ui->previewLayout->setStretch(1, 1);
         applyOptions();
@@ -82,7 +82,7 @@ private:
             connect(check, &QCheckBox::toggled, this, [this](bool) { applyOptions(); });
         connect(ui->rowCountSpin, QOverload<int>::of(&QSpinBox::valueChanged),
                 this, [this](int) { populateModel(); });
-        // A queued observer reads geometry after the parent has applied the new size hint.
+        // A queued observer reads geometry after content and scrollbar updates settle.
         connect(m_view, &viv::VirtualItemView::virtualizationUpdated,
                 this, [this]() { updateStatus(); }, Qt::QueuedConnection);
         updateStatus();
@@ -91,14 +91,14 @@ private:
     void applyOptions()
     {
         // One inherited switch works for lists, trees, tables and tree tables.
-        // It updates size hints and lets the parent layout grant or reduce space.
+        // It fixes the content height independently of available parent layout space.
         m_view->setAutoHeightEnabled(ui->enabledCheck->isChecked());
         // Disabling auto hide keeps the terminal line even when the view fits its content.
         m_view->setTrailingRowGridLineAutoHideEnabled(ui->autoHideTrailingLineCheck->isChecked());
-        // Reuse QWidget's normal maximum height; zero in this UI means no explicit limit.
+        // The independent auto-height limit includes content and decorations; zero means unlimited.
         const int maximum = ui->maxHeightSpin->value();
-        m_view->setMaximumHeight(maximum > 0 ? maximum : QWIDGETSIZE_MAX);
-        // A separate parent limit demonstrates shrinking to the available layout budget.
+        m_view->setAutoHeightMaximumHeight(maximum);
+        // This only limits the parent. Handling insufficient parent space belongs to the application.
         const int parentMaximum = ui->parentLimitSpin->value();
         ui->previewHost->setMaximumHeight(parentMaximum > 0 ? parentMaximum : QWIDGETSIZE_MAX);
         // Layout extents include row spacing and reflect uniform-height changes automatically.

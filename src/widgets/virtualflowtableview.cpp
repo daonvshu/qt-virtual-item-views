@@ -573,8 +573,8 @@ QSize VirtualFlowTableView::scrollBarFreeViewportSize() const
 
 qint64 VirtualFlowTableView::autoHeightContentExtent() const
 {
-    // A visible scrollbar must not reduce the preferred proportional height and
-    // prevent the parent from granting enough space to remove that scrollbar.
+    // A visible scrollbar must not reduce the computed proportional height and
+    // prevent the view from growing enough to remove that scrollbar.
     FlowTableLayout candidate = *m_flow;
     candidate.setCrossExtent(scrollBarFreeViewportSize().width());
     candidate.resetItems(viewItemCount(), 0);
@@ -604,8 +604,8 @@ void VirtualFlowTableView::afterMaterialize()
 {
     // Deliberately bypass sizeHint measurement: the flow owns height policy.
     if (autoHeightEnabled()) {
-        // The base queues ancestor-layout activation before this callback.
-        // Compare against the allocated height, not the previous content height.
+        // The base fixes the content height before this callback. Let Qt settle
+        // viewport geometry before deciding whether a scrollbar is needed.
         if (!m_autoHeightScrollBarPending) {
             m_autoHeightScrollBarPending = true;
             QMetaObject::invokeMethod(this, [this]() {

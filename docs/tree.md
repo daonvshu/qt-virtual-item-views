@@ -35,7 +35,7 @@
 
 先看各章的 `Example::setupExample()`，再看本目录的 model、adapter 和节点控件；`setupUi()` 只创建页面布局。普通数据直接创建 `QStandardItemModel` 填充，不为简单数据额外派生模型类。每个目录都有英文代码注释和独立运行入口，构建与启动见 [examples/tree_capabilities/README.md](../examples/tree_capabilities/README.md)。
 
-自适应高度见 [第 27 章](../examples/tree_capabilities/27_auto_height/README.md)。`setAutoHeightEnabled(true)` 按当前展开内容更新高度，最大高度沿用 `setMaximumHeight()`；父布局空间不足时压缩视口并滚动。共同约束见 [自适应高度](auto-height.md)。
+自适应高度见 [第 27 章](../examples/tree_capabilities/27_auto_height/README.md)。`setAutoHeightEnabled(true)` 按当前展开内容更新高度，最大高度使用 `setAutoHeightMaximumHeight()`（0 表示不限）；父布局空间不足由业务处理。共同约束见 [自适应高度](auto-height.md)。
 
 ## 节点身份与生命周期
 

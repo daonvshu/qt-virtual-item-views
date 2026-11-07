@@ -6,7 +6,7 @@
    <item>
     <widget class="QLabel" name="description">
      <property name="text">
-      <string>11 自适应高度：少量项目时收缩整个视图；超出最大高度或父布局空间后滚动。拖动窗口观察换列后的高度变化。</string>
+      <string>11 自适应高度：少量项目时收缩整个视图；超出自适应高度上限后滚动，0 表示不限高；父空间不足由业务处理。拖动窗口观察换列后的高度变化。</string>
      </property>
      <property name="wordWrap">
       <bool>true</bool>
@@ -58,7 +58,7 @@
      <item row="1" column="0">
       <widget class="QLabel" name="parentLimitLabel">
        <property name="text">
-        <string>父区域高度上限（0 不额外限制）</string>
+        <string>父区域上限（不压缩视图，0 不限）</string>
        </property>
       </widget>
      </item>

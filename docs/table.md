@@ -43,4 +43,4 @@
 
 构建、启动和复制方式见 [examples/table_capabilities/README.md](../examples/table_capabilities/README.md)。
 
-自适应高度见 [第 31 章](../examples/table_capabilities/31_auto_height/README.md)。`setAutoHeightEnabled(true)` 计入表头与内容，最大高度使用 `setMaximumHeight()`；父布局空间不足时显示滚动条。行控件与单元格模式共用此能力，完整约束见 [自适应高度](auto-height.md)。
+自适应高度见 [第 31 章](../examples/table_capabilities/31_auto_height/README.md)。`setAutoHeightEnabled(true)` 计入表头与内容，最大高度使用 `setAutoHeightMaximumHeight()`（0 表示不限）；父布局空间不足由业务处理。行控件与单元格模式共用此能力，完整约束见 [自适应高度](auto-height.md)。

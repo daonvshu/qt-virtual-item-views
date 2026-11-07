@@ -2,7 +2,7 @@
 
 `VirtualTreeTableView` 使用树形 `QAbstractItemModel`，纵向只物化展开后的可见节点，横向沿用 `VirtualTableView` 的列布局、表头、控件模式和 pane。单列且不需要表格布局时使用 `VirtualTreeView`；没有父子节点时使用 `VirtualTableView`。
 
-支持继承的 `setAutoHeightEnabled(true)`，按表头与当前展开内容计算建议高度；最大高度沿用 `setMaximumHeight()`，父布局可进一步缩小视口，超出时才滚动。具体约束见 [自适应高度](auto-height.md)，完整示例见 [第 36 章](../examples/treetable_capabilities/36_auto_height/example.cpp)。
+支持继承的 `setAutoHeightEnabled(true)`，按表头与当前展开内容计算建议高度；最大高度使用 `setAutoHeightMaximumHeight()`（0 表示不限），视图按内容固定高度，超出指定上限时才内部滚动。具体约束见 [自适应高度](auto-height.md)，完整示例见 [第 36 章](../examples/treetable_capabilities/36_auto_height/example.cpp)。
 
 ## 按功能查找独立示例
 

@@ -9,7 +9,7 @@
     <item row="0" column="1"><widget class="QSpinBox" name="rowCountSpin"><property name="maximum"><number>200</number></property><property name="value"><number>3</number></property></widget></item>
     <item row="0" column="2"><widget class="QLabel" name="maxHeightSpinLabel"><property name="text"><string>控件最大高度</string></property><property name="buddy"><cstring>maxHeightSpin</cstring></property></widget></item>
     <item row="0" column="3"><widget class="QSpinBox" name="maxHeightSpin"><property name="maximum"><number>800</number></property><property name="value"><number>260</number></property><property name="specialValueText"><string>不限</string></property></widget></item>
-    <item row="0" column="4"><widget class="QLabel" name="parentLimitSpinLabel"><property name="text"><string>父区域高度上限</string></property><property name="buddy"><cstring>parentLimitSpin</cstring></property></widget></item>
+    <item row="0" column="4"><widget class="QLabel" name="parentLimitSpinLabel"><property name="text"><string>父区域上限（不压缩视图）</string></property><property name="buddy"><cstring>parentLimitSpin</cstring></property></widget></item>
     <item row="0" column="5"><widget class="QSpinBox" name="parentLimitSpin"><property name="maximum"><number>800</number></property><property name="value"><number>0</number></property><property name="specialValueText"><string>不额外限制</string></property></widget></item>
     <item row="1" column="0"><widget class="QLabel" name="heightSpinLabel"><property name="text"><string>项目高度</string></property><property name="buddy"><cstring>heightSpin</cstring></property></widget></item>
     <item row="1" column="1"><widget class="QSpinBox" name="heightSpin"><property name="minimum"><number>24</number></property><property name="maximum"><number>120</number></property><property name="value"><number>40</number></property></widget></item>
@@ -23,7 +23,7 @@
 
     <item><spacer name="toggleSpacer"><property name="orientation"><enum>Qt::Horizontal</enum></property><property name="sizeHint" stdset="0"><size><width>10</width><height>1</height></size></property></spacer></item>
    </layout></item>
-   <item><widget class="QLabel" name="hintLabel"><property name="wordWrap"><bool>true</bool></property><property name="text"><string>下方视图位于外层滚动容器中。少量内容时高度随内容变化，滚轮交给外层；超过控件或父区域高度上限后，视图内部滚动。取消显式上限后，仍由外层内容布局分配视图高度。</string></property></widget></item>
+   <item><widget class="QLabel" name="hintLabel"><property name="wordWrap"><bool>true</bool></property><property name="text"><string>视图按内容固定高度，未设置上限时完整展示内容；超过自适应高度上限后内部滚动。无内部滚动范围时，滚轮交给外层。父区域空间不足由业务处理，不会压缩视图。</string></property></widget></item>
    <item><widget class="QCheckBox" name="autoHideTrailingLineCheck"><property name="text"><string>自动隐藏末行分割线（取消后始终绘制）</string></property><property name="checked"><bool>true</bool></property></widget></item>
    <item><widget class="QLabel" name="statusLabel"><property name="wordWrap"><bool>true</bool></property><property name="text"><string/></property></widget></item>
    <item><widget class="QScrollArea" name="outerScrollArea">

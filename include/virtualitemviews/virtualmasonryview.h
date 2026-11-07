@@ -125,6 +125,8 @@ protected:
     bool supportsRowPanes() const override { return false; }
     bool supportsRowSpacingWidgets() const override { return false; }
     qsizetype anchorItemAtOffset(qint64 offset) const override;
+    /// Measures the full viewport width so an old scrollbar cannot keep itself alive.
+    qint64 autoHeightContentExtent() const override;
     void resizeEvent(QResizeEvent *event) override;
     void afterMaterialize() override;
     QVector<qsizetype> materializationItems(const QVector<VisibleRange> &ranges) const override;
@@ -176,6 +178,11 @@ private:
     ScrollAnchor m_sizeChangeAnchor;
     ColumnChange m_columnChange;
     bool m_itemSizesScheduled = false;
+    bool m_autoHeightWidthUpdatePending = false;
+    mutable int m_autoHeightCachedWidth = -1;
+    mutable qsizetype m_autoHeightCachedCount = -1;
+    mutable quint64 m_autoHeightCachedRevision = 0;
+    mutable qint64 m_autoHeightCachedExtent = 0;
     QVariantAnimation *m_heightAnimation = nullptr;
     qsizetype m_animatingItem = -1;
     int m_animationTargetHeight = 0;

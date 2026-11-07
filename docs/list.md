@@ -33,6 +33,6 @@ Hover 和选中背景默认由框架绘制，普通圆角、颜色和动画直�
 
 整体圆角和外边框见 [第 20 章](../examples/list_capabilities/20_borders/README.md)，直接使用 `setFrameCornerRadius()`、`setFrameBorderWidth()` 和 `setFrameBorderColor()`；行状态圆角仍由 `setVisualStateCornerRadius()` 独立配置。
 
-自适应高度见 [第 21 章](../examples/list_capabilities/21_auto_height/README.md)。`setAutoHeightEnabled(true)` 让少量数据按内容收缩，最大高度沿用 `setMaximumHeight()`，达到父布局可用空间后才滚动。共同约束见 [自适应高度](auto-height.md)。
+自适应高度见 [第 21 章](../examples/list_capabilities/21_auto_height/README.md)。`setAutoHeightEnabled(true)` 让少量数据按内容收缩，最大高度使用 `setAutoHeightMaximumHeight()`（0 表示不限），超过指定上限后才内部滚动，父布局空间不参与高度限制。共同约束见 [自适应高度](auto-height.md)。
 
 所有示例由一个 `list_capabilities` 程序演示，启动器位于 [examples/list_capabilities/main.cpp](../examples/list_capabilities/main.cpp)。构建、启动和复制方式见 [examples/list_capabilities/README.md](../examples/list_capabilities/README.md)。第 19 项仅在检测到与当前 Qt 主版本匹配的 SmoothScrollbar 时编译和显示。

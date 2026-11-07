@@ -850,8 +850,45 @@ void VirtualMasonryView::paintRowSpacingBackground(QPainter *painter, const QRec
     fillPixelAlignedRegion(painter, gaps, spacingBackgroundColor());
 }
 
+qint64 VirtualMasonryView::autoHeightContentExtent() const
+{
+    const int width = maximumViewportSize().width();
+    if (width == m_masonry->crossExtent())
+        return m_masonry->contentExtent();
+    if (m_autoHeightCachedWidth != width || m_autoHeightCachedRevision != m_revision
+        || m_autoHeightCachedCount != m_masonry->itemCount()) {
+        // Reuse the alternate-width result while scrolling the same layout.
+        MasonryLayout candidate = *m_masonry;
+        candidate.setCrossExtent(width);
+        m_autoHeightCachedExtent = candidate.contentExtent();
+        m_autoHeightCachedWidth = width;
+        m_autoHeightCachedRevision = m_revision;
+        m_autoHeightCachedCount = m_masonry->itemCount();
+    }
+    return m_autoHeightCachedExtent;
+}
+
 void VirtualMasonryView::afterMaterialize()
 {
+    if (autoHeightEnabled() && !m_autoHeightWidthUpdatePending
+        && verticalScrollBarPolicy() == Qt::ScrollBarAsNeeded
+        && maximumViewportSize().width() > m_masonry->crossExtent()) {
+        m_autoHeightWidthUpdatePending = true;
+        QMetaObject::invokeMethod(this, [this]() {
+            m_autoHeightWidthUpdatePending = false;
+            if (!autoHeightEnabled() || verticalScrollBarPolicy() != Qt::ScrollBarAsNeeded)
+                return;
+            const QSize full = maximumViewportSize();
+            if (full.width() <= m_masonry->crossExtent()
+                || autoHeightContentExtent() > full.height())
+                return;
+            // Commit fitting geometry before publishing a zero scroll range.
+            // A stale narrow viewport must not keep an otherwise unnecessary bar.
+            const ScrollAnchor anchor = captureAnchor();
+            m_masonry->setCrossExtent(full.width());
+            reflow(anchor);
+        }, Qt::QueuedConnection);
+    }
     m_gridOverlay->setGeometry(viewport()->rect());
     m_gridOverlay->show();
     m_gridOverlay->raise();

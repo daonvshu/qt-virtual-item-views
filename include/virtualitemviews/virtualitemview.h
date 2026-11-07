@@ -151,20 +151,21 @@ public:
     void setFrameBorderVisible(Qt::Edge edge, bool visible);
     bool frameBorderVisible(Qt::Edge edge) const;
 
-    /// Fits the preferred height to the vertical content, headers, frame and
-    /// horizontal scrollbar (default false). The parent layout may shrink it;
-    /// QWidget::setMaximumHeight() supplies an optional upper bound.
-    /// Uses Maximum vertical size policy while enabled, restoring the previous
-    /// vertical policy when disabled. Explicit minimum/fixed heights still apply.
-    /// Inside a resizable QScrollArea, keeps the bounded content height as a
-    /// layout minimum unless an intermediate container imposes a height limit.
+    /// Fixes the height to the vertical content, headers, frame and horizontal
+    /// scrollbar (default false), bounded by autoHeightMaximumHeight().
+    /// Parent layout space does not reduce this height. Uses Fixed vertical size
+    /// policy and restores the previous policy and height constraints on disable.
     /// Wheel input without a content scroll range is ignored for ancestor scrolling.
     void setAutoHeightEnabled(bool enabled);
     bool autoHeightEnabled() const { return m_autoHeightEnabled; }
+    /// Independent total-height limit for auto height; 0 (default) means unlimited.
+    /// Negative values are treated as 0. Do not use QWidget's height constraints
+    /// to configure this limit: they store the computed fixed height while enabled.
+    void setAutoHeightMaximumHeight(int height);
+    int autoHeightMaximumHeight() const { return m_autoHeightMaximumHeight; }
     /// Content-based preferred height while auto height is enabled.
     QSize sizeHint() const override;
-    /// Allows bounded parent layouts to shrink the viewport to its chrome;
-    /// preserves the content-based height in a resizable outer QScrollArea.
+    /// Preserves the computed content height in any parent layout.
     QSize minimumSizeHint() const override;
 
     // -- model ---------------------------------------------------------------
@@ -635,7 +636,7 @@ protected:
     QRegion rowSpacingWidgetRegionInView() const;
     /// Hook called after a materialization pass (measurement feedback).
     virtual void afterMaterialize();
-    /// Invalidates the parent layout only when the adaptive height hints change.
+    /// Applies the fixed content height only when its value or constraints change.
     /// Derived views call this after updating header margins or horizontal scrolling.
     void updateAutoHeightGeometry();
     /// Content extent used by the preferred height; responsive layouts may
@@ -890,18 +891,17 @@ private:
 
     /// Non-content height reserved for the frame, viewport margins and scrollbar.
     int autoHeightDecorationExtent() const;
-    /// Whether an unbounded path reaches a resizable outer content widget.
-    bool autoHeightPreservesContentMinimum() const;
-    /// Observes ancestor constraints and reparents without modifying their layouts.
-    void updateAutoHeightAncestorTracking();
-    /// Rechecks height hints after the current ancestor layout event has completed.
+    /// Rechecks content height after the current geometry event has completed.
     void scheduleAutoHeightGeometryUpdate();
     bool m_autoHeightEnabled = false;
+    bool m_autoHeightFixedHeightApplied = false;
+    bool m_updatingAutoHeightGeometry = false;
+    int m_autoHeightMaximumHeight = 0;
+    int m_autoHeightPreviousMinimumHeight = 0;
+    int m_autoHeightPreviousMaximumHeight = QWIDGETSIZE_MAX;
     QSizePolicy::Policy m_autoHeightPreviousVerticalPolicy = QSizePolicy::Expanding;
     QSize m_autoHeightLastHints;
     bool m_autoHeightScrollBarSyncPending = false;
-    QVector<QPointer<QWidget>> m_autoHeightAncestors;
-    bool m_autoHeightLastContentMinimumPreserved = false;
     bool m_autoHeightGeometryUpdatePending = false;
 
     /// Updates the owned Alpha effect and the frame's content inset.
