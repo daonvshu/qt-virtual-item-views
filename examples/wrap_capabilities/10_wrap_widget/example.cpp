@@ -35,7 +35,8 @@ private:
         layout->setItemSpacing(8);
         layout->setRowSpacing(8);
         layout->setContentsMargins(8, 8, 8, 8);
-        // Auto height is enabled by default. The upper limit belongs to the host.
+        // Auto height is enabled by default. In the outer resizable QScrollArea,
+        // the bounded content height also supplies this host's layout minimum.
         ui->view->setMaximumHeight(180);
         for (int i = 0; i < 12; ++i) addWidget();
         connect(ui->add, &QPushButton::clicked, this, [this]() { addWidget(); });

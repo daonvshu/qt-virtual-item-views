@@ -24,6 +24,12 @@ WrapWidget::WrapWidget(QWidget *parent) : QScrollArea(parent)
     connect(m_layout, &WrapLayout::layoutChanged, this, &WrapWidget::scheduleUpdate);
     scheduleUpdate();
 }
+WrapWidget::~WrapWidget()
+{
+    m_destroying = true;
+    updateAutoHeightAncestorTracking();
+    disconnect(m_layout, nullptr, this, nullptr);
+}
 void WrapWidget::addWidget(QWidget *widget) { insertWidget(m_layout->count(), widget); }
 void WrapWidget::insertWidget(int index, QWidget *widget)
 {
@@ -62,6 +68,7 @@ void WrapWidget::setAutoHeightEnabled(bool enabled)
         policy.setVerticalPolicy(m_previousPolicy);
     }
     setSizePolicy(policy);
+    updateAutoHeightAncestorTracking();
     updateGeometry();
     scheduleUpdate();
 }
@@ -74,7 +81,57 @@ QSize WrapWidget::sizeHint() const
 }
 QSize WrapWidget::minimumSizeHint() const
 {
-    return m_autoHeight ? QSize(2 * frameWidth(), 2 * frameWidth()) : QScrollArea::minimumSizeHint();
+    if (!m_autoHeight) return QScrollArea::minimumSizeHint();
+    QSize hint(2 * frameWidth(), qMin(maximumHeight(), 2 * frameWidth()));
+    // A resizable outer scroll area allocates space from layout minima. Keep
+    // all wrapped rows there, bounded by this host's own maximum height.
+    if (autoHeightPreservesContentMinimum())
+        hint.setHeight(sizeHint().height());
+    return hint;
+}
+bool WrapWidget::autoHeightPreservesContentMinimum() const
+{
+    for (QWidget *ancestor = parentWidget(); ancestor; ancestor = ancestor->parentWidget()) {
+        if (auto *area = qobject_cast<QAbstractScrollArea *>(ancestor)) {
+            auto *outer = qobject_cast<QScrollArea *>(area);
+            return outer && outer->widgetResizable() && outer->widget()
+                && (outer->widget() == this || outer->widget()->isAncestorOf(this));
+        }
+        if (ancestor->isWindow() || ancestor->maximumHeight() < QWIDGETSIZE_MAX)
+            break;
+    }
+    return false;
+}
+void WrapWidget::updateAutoHeightAncestorTracking()
+{
+    QVector<QPointer<QWidget>> ancestors;
+    if (m_autoHeight && !m_destroying) {
+        // Observe beyond temporary height limits so removing a collapse limit
+        // also refreshes the parent's cached layout hints.
+        for (QWidget *ancestor = parentWidget(); ancestor; ancestor = ancestor->parentWidget()) {
+            ancestors.append(ancestor);
+            if (ancestor->isWindow() || qobject_cast<QAbstractScrollArea *>(ancestor))
+                break;
+        }
+    }
+    if (ancestors != m_autoHeightAncestors) {
+        for (const QPointer<QWidget> &ancestor : m_autoHeightAncestors) {
+            if (ancestor) ancestor->removeEventFilter(this);
+        }
+        m_autoHeightAncestors = ancestors;
+        for (const QPointer<QWidget> &ancestor : m_autoHeightAncestors) {
+            if (ancestor) ancestor->installEventFilter(this);
+        }
+        m_lastHint = QSize();
+        m_lastMinimumHint = QSize();
+    }
+    const bool preservesMinimum = m_autoHeight && !m_destroying
+        && autoHeightPreservesContentMinimum();
+    if (preservesMinimum != m_preservesContentMinimum) {
+        m_preservesContentMinimum = preservesMinimum;
+        m_lastHint = QSize();
+        m_lastMinimumHint = QSize();
+    }
 }
 void WrapWidget::resizeEvent(QResizeEvent *event)
 {
@@ -93,15 +150,45 @@ void WrapWidget::wheelEvent(QWheelEvent *event)
 }
 bool WrapWidget::event(QEvent *event)
 {
+    const QPointer<WrapWidget> self(this);
     const bool result = QScrollArea::event(event);
+    if (!self || m_destroying) return result;
+    if (event->type() == QEvent::Show || event->type() == QEvent::ParentChange) {
+        // Hidden geometry updates may not invalidate the parent's QWidgetItem.
+        m_lastHint = QSize();
+        m_lastMinimumHint = QSize();
+        updateAutoHeightAncestorTracking();
+    }
     if (event->type() == QEvent::LayoutDirectionChange || event->type() == QEvent::StyleChange
-        || event->type() == QEvent::Show || event->type() == QEvent::LayoutRequest)
+        || event->type() == QEvent::Show || event->type() == QEvent::LayoutRequest
+        || event->type() == QEvent::ParentChange || event->type() == QEvent::ContentsRectChange)
         scheduleUpdate();
     return result;
 }
+bool WrapWidget::eventFilter(QObject *watched, QEvent *event)
+{
+    if (m_destroying) return false;
+    auto *widget = qobject_cast<QWidget *>(watched);
+    if (widget && m_autoHeight && m_autoHeightAncestors.contains(widget)) {
+        switch (event->type()) {
+        case QEvent::LayoutRequest:
+        case QEvent::Resize:
+        case QEvent::ContentsRectChange:
+        case QEvent::Show:
+        case QEvent::Hide:
+        case QEvent::ParentChange:
+            scheduleUpdate();
+            break;
+        default:
+            break;
+        }
+        return false;
+    }
+    return QScrollArea::eventFilter(watched, event);
+}
 void WrapWidget::scheduleUpdate()
 {
-    if (m_updatePending || !m_layout) return;
+    if (m_destroying || m_updatePending || !m_layout) return;
     m_updatePending = true;
     QMetaObject::invokeMethod(this, [this]() {
         m_updatePending = false;
@@ -110,8 +197,9 @@ void WrapWidget::scheduleUpdate()
 }
 void WrapWidget::updateContent()
 {
-    if (m_updating) return;
+    if (m_destroying || m_updating) return;
     m_updating = true;
+    updateAutoHeightAncestorTracking();
     // Compute from the scrollbar-free width first. Narrowing a wrap layout can
     // only increase its height, so this decision cannot oscillate at a threshold.
     const QSize full = maximumViewportSize();
@@ -123,8 +211,10 @@ void WrapWidget::updateContent()
     m_content->resize(width, qMax(1, m_layout->heightForWidth(width)));
     m_layout->setGeometry(m_content->rect());
     const QSize hint = sizeHint();
-    if (hint != m_lastHint) {
+    const QSize minimumHint = minimumSizeHint();
+    if (hint != m_lastHint || minimumHint != m_lastMinimumHint) {
         m_lastHint = hint;
+        m_lastMinimumHint = minimumHint;
         updateGeometry();
     }
     m_updating = false;
