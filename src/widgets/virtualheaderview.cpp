@@ -130,7 +130,7 @@ void VirtualHeaderView::paintEvent(QPaintEvent *event)
     if (m_backgroundVisible)
         painter.fillRect(rect(), m_backgroundColor.isValid()
             ? QBrush(m_backgroundColor)
-            : palette().brush(QPalette::Base));
+            : detail::resolvedBackgroundBrush(this));
     if (!m_geometry)
         return;
     const QColor sectionColor = m_sectionSeparatorColor.isValid()

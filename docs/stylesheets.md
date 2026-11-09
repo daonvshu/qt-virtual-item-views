@@ -60,6 +60,8 @@ viewport 颜色不改变表头或滚动条自身的背景；透明表头能露�
 
 框架在 View 启用 QSS 时自动让 viewport 参与独立样式匹配，因此规则直接写在 View 或其祖先的 stylesheet 中即可，无需再调用 `viewport()->setStyleSheet()`。业务已为 viewport 设置本地 stylesheet 时，框架保留其内容。
 
+背景默认读取 `QPalette::Base`。Qt 对透明或半透明的 viewport QSS 背景可能将 `Base` 清为 `NoBrush`；框架仅在已匹配 QSS 背景且出现该情况时读取 `Window` 中保留的画刷，保留透明度和渐变。无需业务修改调色板，也不会解析 stylesheet 字符串。
+
 - List：[examples/list_capabilities/22_colors/example.cpp](../examples/list_capabilities/22_colors/example.cpp)
 - Tree：[examples/tree_capabilities/28_colors/example.cpp](../examples/tree_capabilities/28_colors/example.cpp)
 - Table：[examples/table_capabilities/32_colors/example.cpp](../examples/table_capabilities/32_colors/example.cpp)

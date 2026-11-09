@@ -78,14 +78,14 @@ void StyledHeaderSection::paintBackground(QPainter *painter)
             if (!header)
                 painter->fillRect(rect(), backgroundColor);
         } else if (detail::hasStyleSheetBackground(this)) {
-            painter->fillRect(rect(), palette().brush(QPalette::Base));
+            painter->fillRect(rect(), detail::resolvedBackgroundBrush(this));
         } else if (header && detail::hasStyleSheetBackground(header)) {
             // The container paints once across sections and gaps, including gradients.
         } else if (!header && table && table->horizontalHeader()
                    && detail::hasStyleSheetBackground(table->horizontalHeader()->headerWidget())) {
             // The default corner follows the horizontal header unless styled directly.
-            painter->fillRect(rect(), table->horizontalHeader()->headerWidget()->palette()
-                                         .brush(QPalette::Base));
+            painter->fillRect(rect(), detail::resolvedBackgroundBrush(
+                                         table->horizontalHeader()->headerWidget()));
         } else {
             QStyleOptionHeader option;
             initStyleOption(&option);

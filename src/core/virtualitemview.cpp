@@ -391,7 +391,7 @@ QBrush VirtualItemView::backgroundBrush() const
 {
     if (!m_backgroundVisible)
         return QBrush(Qt::NoBrush);
-    return m_backgroundColor.isValid() ? QBrush(m_backgroundColor) : palette().brush(QPalette::Base);
+    return m_backgroundColor.isValid() ? QBrush(m_backgroundColor) : detail::resolvedBackgroundBrush(this);
 }
 
 void VirtualItemView::setItemBackgroundColor(const QColor &color)

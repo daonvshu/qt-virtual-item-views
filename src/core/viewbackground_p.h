@@ -20,7 +20,7 @@ inline void prepareViewBackground(QWidget *widget)
 inline QBrush viewportBackgroundBrush(const VirtualItemView *view)
 {
     return view->backgroundVisible() && hasStyleSheetBackground(view->viewport())
-        ? view->viewport()->palette().brush(QPalette::Base) : QBrush(Qt::NoBrush);
+        ? resolvedBackgroundBrush(view->viewport()) : QBrush(Qt::NoBrush);
 }
 
 // Only opaque combined layers can safely erase an already painted item/state below a host.
