@@ -128,6 +128,19 @@ protected:
         const qreal borderLogical = dpr > 0 ? qreal(borderPixels) / dpr : 0;
         const QPainterPath innerPath = frameContentPath(outer, radius, borderLogical,
                                                         m_view->frameBorderEdges());
+        const QPainterPath outerPath = roundedFramePath(outer, radius);
+        QPainterPath borderPath;
+        if (borderPixels > 0 && m_view->frameBorderEdges()) {
+            borderPath = outerPath;
+            const Qt::Edges allEdges = Qt::LeftEdge | Qt::TopEdge | Qt::RightEdge | Qt::BottomEdge;
+            if (m_view->frameBorderEdges() == allEdges) {
+                // Preserve curves instead of flattening them through boolean subtraction.
+                borderPath.setFillRule(Qt::OddEvenFill);
+                borderPath.addPath(innerPath);
+            } else {
+                borderPath = borderPath.subtracted(innerPath);
+            }
+        }
         if (m_mask.size() != source.size() || m_mask.devicePixelRatioF() != dpr
             || m_maskBounds != outer) {
             m_mask = QPixmap(source.size());
@@ -136,7 +149,11 @@ protected:
             m_maskBounds = outer;
             QPainter maskPainter(&m_mask);
             maskPainter.setRenderHint(QPainter::Antialiasing);
-            maskPainter.fillPath(innerPath, Qt::white);
+            // Like Qt's stylesheet background, end content at the border centerline.
+            // Keep smooth coverage beneath the inner half of the border so normal
+            // SourceOver composition does not leave transparent gaps at the join.
+            maskPainter.fillPath(frameContentPath(outer, radius, borderLogical / 2,
+                                                   m_view->frameBorderEdges()), Qt::white);
         }
         QPixmap result(source.size());
         result.setDevicePixelRatio(dpr);
@@ -145,14 +162,14 @@ protected:
             QPainter buffer(&result);
             buffer.drawPixmap(QPointF(), source);
             buffer.setCompositionMode(QPainter::CompositionMode_DestinationIn);
-            // Transparent mask pixels must clear the source outside the inner contour too.
+            // Clear source pixels outside the antialiased content contour.
             buffer.drawPixmap(QPointF(), m_mask);
             if (borderPixels > 0 && m_view->frameBorderEdges()) {
-                // The border and content have complementary coverage at the inner edge.
-                buffer.setCompositionMode(QPainter::CompositionMode_Plus);
+                // Blend the border over the clipped content without adding their colors.
+                buffer.setCompositionMode(QPainter::CompositionMode_SourceOver);
                 buffer.setRenderHint(QPainter::Antialiasing);
                 const QColor color = m_view->frameBorderColor();
-                buffer.fillPath(roundedFramePath(outer, radius).subtracted(innerPath),
+                buffer.fillPath(borderPath,
                                 color.isValid() ? color : m_view->palette().color(QPalette::Mid));
             }
         }
@@ -301,6 +318,8 @@ void VirtualItemView::setFrameBorderColor(const QColor &color)
     m_frameBorderColor = color;
     if (m_frameEffect)
         m_frameEffect->update();
+    // A transparent frame must not suppress an adjacent terminal grid line.
+    markDirty();
 }
 
 void VirtualItemView::setFrameBorderEdges(Qt::Edges edges)
@@ -327,6 +346,8 @@ bool VirtualItemView::frameBorderVisible(Qt::Edge edge) const
 
 void VirtualItemView::updateFrameAppearance()
 {
+    // Reconcile grid edges even when the frame change leaves viewport size unchanged.
+    markDirty();
     const QPointer<VirtualItemView> self(this);
     restoreFrameContentsMargins();
     if (!self)

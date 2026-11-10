@@ -849,6 +849,8 @@ private:
     bool rowPaneTailIsExposed(qsizetype row) const;
     /// Same content-tail distinction for split column-pane spacing.
     bool columnPaneTailIsExposed(int logicalColumn) const;
+    /// Whether the terminal column edge coincides with the visible right frame.
+    bool columnGridLineTouchesRightFrame(int logicalColumn) const;
     /// Viewport bands occupied by visible row bodies and their trailing spacing.
     QRegion rowContentRegion() const;
     void applyGridLineVisibilityToHeaders();

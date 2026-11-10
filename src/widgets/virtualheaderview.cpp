@@ -217,6 +217,8 @@ void VirtualHeaderView::paintEvent(QPaintEvent *event)
         // content after its half-gap, while coincident pane edges keep only the divider.
         if (paneBoundary && !isPaneTailExposed(it.key()))
             continue;
+        if (isHorizontal() && it.key() == m_frameAdjacentColumn)
+            continue;
         if (!isHorizontal() && !m_trailingSectionSeparatorVisible
             && it.key() + 1 == m_geometry->sectionCount())
             continue;
@@ -729,8 +731,25 @@ void VirtualHeaderView::setTrailingSectionSeparatorVisible(bool visible)
     update();
 }
 
+void VirtualHeaderView::setFrameAdjacentColumn(int logicalIndex)
+{
+    if (m_frameAdjacentColumn == logicalIndex)
+        return;
+    if (QWidget *section = m_sectionWidgets.value(m_frameAdjacentColumn, nullptr))
+        section->update();
+    m_frameAdjacentColumn = logicalIndex;
+    if (QWidget *section = m_sectionWidgets.value(m_frameAdjacentColumn, nullptr))
+        section->update();
+    update();
+}
+
 bool VirtualHeaderView::sectionSeparatorVisible(int logicalIndex) const
 {
+    // With a trailing half-gap, an edge-mode section still owns its inner line.
+    // Only the container's outer gap line coincides with the table frame.
+    if (isHorizontal() && logicalIndex == m_frameAdjacentColumn
+        && sectionTrailingEdgeSpacing(logicalIndex) == 0)
+        return false;
     return m_sectionSeparatorsVisible && (isHorizontal() || m_trailingSectionSeparatorVisible
         || !m_geometry || logicalIndex + 1 != m_geometry->sectionCount());
 }

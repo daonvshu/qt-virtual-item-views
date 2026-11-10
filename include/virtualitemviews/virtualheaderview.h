@@ -279,6 +279,8 @@ private:
     friend class StyledHeaderSection;
     /// Mirrors terminal row-border visibility from the owning table, including frozen strips.
     void setTrailingSectionSeparatorVisible(bool visible);
+    /// Suppresses only the column border already supplied by the owning table's frame.
+    void setFrameAdjacentColumn(int logicalIndex);
     /// Resolves section borders consistently for section widgets and spacing painting.
     bool sectionSeparatorVisible(int logicalIndex) const;
     /// Shape bounds shared by section and gap painting; row panes remain separate.
@@ -465,6 +467,7 @@ private:
     int m_paneTerminalColumn = -1;
     bool m_sectionSeparatorsVisible = true;
     bool m_trailingSectionSeparatorVisible = true;
+    int m_frameAdjacentColumn = -1;
     GridLinePlacement m_gridLinePlacement = GridLinePlacement::SpacingCenter;
     bool m_crossAxisSeparatorVisible = true;
     bool m_crossAxisSeparatorThroughSpacing = true;

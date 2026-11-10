@@ -6219,6 +6219,37 @@ bool VirtualTableView::columnPaneTailIsExposed(int logicalColumn) const
     return end > pane.viewportRect.left() && end < qint64(pane.viewportRect.right()) + 1;
 }
 
+bool VirtualTableView::columnGridLineTouchesRightFrame(int logicalColumn) const
+{
+    if (!m_columns || logicalColumn < 0 || frameBorderWidth() <= 0
+        || !frameBorderVisible(Qt::RightEdge))
+        return false;
+    const QColor border = frameBorderColor().isValid()
+        ? frameBorderColor() : palette().color(QPalette::Mid);
+    if (border.alpha() == 0)
+        return false;
+    const int paneIndex = m_panes.paneIndexOfColumn(logicalColumn);
+    if (paneIndex < 0)
+        return false;
+    const QRect viewportRect = viewport()->geometry();
+    // Test occupied geometry, not policy or range: an AlwaysOn bar can have no
+    // scroll range, and a left-side bar does not separate this edge from the frame.
+    const QScrollBar *bar = verticalScrollBar();
+    if (bar->isVisibleTo(this)) {
+        const QRect barRect(bar->mapTo(this, QPoint()), bar->size());
+        if (barRect.right() >= viewportRect.right())
+            return false;
+    }
+    int columnX = m_panes.columnViewportX(logicalColumn);
+    columnVisualX(logicalColumn, &columnX);
+    const qint64 end = qint64(columnX) + m_columns->sectionSize(logicalColumn)
+        + m_panes.trailingSpacingForPane(paneIndex);
+    // Retain exposed short-table edges and offscreen edges; hide only the edge
+    // that actually reaches the viewport and the composited frame's inner edge.
+    return end == viewportRect.width()
+        && qint64(viewportRect.x()) + end == qint64(width()) - frameBorderWidth();
+}
+
 void VirtualTableView::syncPaneGapGridLines()
 {
     detail::PerformanceScope performance(this, "grid.pane-gaps");
@@ -6600,18 +6631,26 @@ void VirtualTableView::syncColumnSpacingWidgets()
     const QColor horizontalColor = resolvedHorizontalGridLineColor();
     const QRect viewportRect = viewport()->geometry();
     int last = -1;
+    const QVector<TablePane> &panes = m_panes.panes();
+    for (int i = panes.size() - 1; i >= 0; --i) {
+        if (!panes.at(i).logicalColumns.isEmpty()) {
+            last = panes.at(i).logicalColumns.last();
+            break;
+        }
+    }
+    const bool hideTerminalLine = columnGridLineTouchesRightFrame(last);
+    const auto syncHeaderEdge = [last, hideTerminalLine](HeaderViewInterface *header) {
+        if (auto *widget = dynamic_cast<VirtualHeaderView *>(header))
+            widget->setFrameAdjacentColumn(hideTerminalLine ? last : -1);
+    };
+    syncHeaderEdge(m_horizontalHeader);
+    for (HeaderViewInterface *header : m_paneHeaders)
+        syncHeaderEdge(header);
     if ((spacing > 0 || m_verticalGridLinesVisible) && m_columns
         && viewport()->height() > 0) {
         const int headerTop = m_horizontalHeaderVisible && m_horizontalHeader
             ? viewportRect.y() - m_headerHeight : viewportRect.y();
         const int bottom = viewportRect.y() + viewportRect.height();
-        const QVector<TablePane> &panes = m_panes.panes();
-        for (int i = panes.size() - 1; i >= 0; --i) {
-            if (!panes.at(i).logicalColumns.isEmpty()) {
-                last = panes.at(i).logicalColumns.last();
-                break;
-            }
-        }
         for (int logical : m_panes.columnsForLayout(1)) {
             if (m_columns->isSectionHidden(logical))
                 continue;
@@ -6627,7 +6666,8 @@ void VirtualTableView::syncColumnSpacingWidgets()
             const bool exposedTail = paneBoundary && columnPaneTailIsExposed(logical);
             const int columnEnd = x + m_columns->sectionSize(logical)
                 + (terminal ? m_panes.trailingSpacingForPane(paneIndex) : 0);
-            if (terminal && (!m_verticalGridLinesVisible || columnEnd > pane.right() + 1))
+            if (terminal && (hideTerminalLine || !m_verticalGridLinesVisible
+                             || columnEnd > pane.right() + 1))
                 continue;
             const int boundarySpacing = m_panes.columnSpacingAfter(logical)
                 + (paneBoundary ? m_panes.trailingSpacingForPane(paneIndex) : 0);
