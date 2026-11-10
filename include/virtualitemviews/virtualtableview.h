@@ -851,6 +851,8 @@ private:
     bool columnPaneTailIsExposed(int logicalColumn) const;
     /// Whether the terminal column edge coincides with the visible right frame.
     bool columnGridLineTouchesRightFrame(int logicalColumn) const;
+    /// Whether an empty table's horizontal header ends at the visible bottom frame.
+    bool headerGridLineTouchesBottomFrame(const HeaderViewInterface *header) const;
     /// Viewport bands occupied by visible row bodies and their trailing spacing.
     QRegion rowContentRegion() const;
     void applyGridLineVisibilityToHeaders();

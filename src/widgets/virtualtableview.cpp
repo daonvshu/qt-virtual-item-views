@@ -2196,6 +2196,7 @@ void VirtualTableView::applyGridLineVisibilityToHeaders()
                 ? m_verticalGridLinesThroughHeader : m_horizontalGridLinesThroughHeader));
             // Header/body boundaries remain visible independently of header-internal grids.
             widget->setCrossAxisSeparatorVisible(crossVisible);
+            widget->setFrameAdjacentCrossAxis(horizontal && headerGridLineTouchesBottomFrame(header));
             widget->setSectionSeparatorColor(horizontal ? verticalColor : horizontalColor);
             widget->setCrossAxisSeparatorColor(horizontal ? horizontalColor : verticalColor);
             widget->setSectionSeparatorWidth(horizontal ? m_verticalGridLineWidth : m_horizontalGridLineWidth);
@@ -6250,6 +6251,29 @@ bool VirtualTableView::columnGridLineTouchesRightFrame(int logicalColumn) const
         && qint64(viewportRect.x()) + end == qint64(width()) - frameBorderWidth();
 }
 
+bool VirtualTableView::headerGridLineTouchesBottomFrame(const HeaderViewInterface *header) const
+{
+    if (!header || !m_horizontalHeaderVisible || viewItemCount() > 0
+        || frameBorderWidth() <= 0 || !frameBorderVisible(Qt::BottomEdge))
+        return false;
+    const QColor border = frameBorderColor().isValid()
+        ? frameBorderColor() : palette().color(QPalette::Mid);
+    if (border.alpha() == 0)
+        return false;
+    const QWidget *widget = header->headerWidget();
+    if (!widget || !widget->isVisibleTo(this) || widget->height() <= 0)
+        return false;
+    const QRect headerRect(widget->mapTo(this, QPoint()), widget->size());
+    const QScrollBar *bar = horizontalScrollBar();
+    // Visible bars separate the header from the frame even with a zero scroll range.
+    if (bar->isVisibleTo(this)) {
+        const QRect barRect(bar->mapTo(this, QPoint()), bar->size());
+        if (barRect.bottom() >= headerRect.bottom())
+            return false;
+    }
+    return qint64(headerRect.bottom()) + 1 == qint64(height()) - frameBorderWidth();
+}
+
 void VirtualTableView::syncPaneGapGridLines()
 {
     detail::PerformanceScope performance(this, "grid.pane-gaps");
@@ -6639,9 +6663,11 @@ void VirtualTableView::syncColumnSpacingWidgets()
         }
     }
     const bool hideTerminalLine = columnGridLineTouchesRightFrame(last);
-    const auto syncHeaderEdge = [last, hideTerminalLine](HeaderViewInterface *header) {
-        if (auto *widget = dynamic_cast<VirtualHeaderView *>(header))
+    const auto syncHeaderEdge = [this, last, hideTerminalLine](HeaderViewInterface *header) {
+        if (auto *widget = dynamic_cast<VirtualHeaderView *>(header)) {
             widget->setFrameAdjacentColumn(hideTerminalLine ? last : -1);
+            widget->setFrameAdjacentCrossAxis(headerGridLineTouchesBottomFrame(header));
+        }
     };
     syncHeaderEdge(m_horizontalHeader);
     for (HeaderViewInterface *header : m_paneHeaders)

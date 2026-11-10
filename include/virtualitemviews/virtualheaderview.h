@@ -197,7 +197,7 @@ public:
     int sectionSpacingAfter(int logicalIndex) const;
     /// Controls the edge perpendicular to the section sequence.
     void setCrossAxisSeparatorVisible(bool visible);
-    bool crossAxisSeparatorVisible() const { return m_crossAxisSeparatorVisible; }
+    bool crossAxisSeparatorVisible() const { return m_crossAxisSeparatorVisible && !m_frameAdjacentCrossAxis; }
     /// Optional shared color supplied by the owning table.
     void setSectionSeparatorColor(const QColor &color);
     QColor sectionSeparatorColor() const { return m_sectionSeparatorColor; }
@@ -281,6 +281,8 @@ private:
     void setTrailingSectionSeparatorVisible(bool visible);
     /// Suppresses only the column border already supplied by the owning table's frame.
     void setFrameAdjacentColumn(int logicalIndex);
+    /// Suppresses the body boundary when the owning table's frame supplies it.
+    void setFrameAdjacentCrossAxis(bool adjacent);
     /// Resolves section borders consistently for section widgets and spacing painting.
     bool sectionSeparatorVisible(int logicalIndex) const;
     /// Shape bounds shared by section and gap painting; row panes remain separate.
@@ -470,6 +472,7 @@ private:
     int m_frameAdjacentColumn = -1;
     GridLinePlacement m_gridLinePlacement = GridLinePlacement::SpacingCenter;
     bool m_crossAxisSeparatorVisible = true;
+    bool m_frameAdjacentCrossAxis = false;
     bool m_crossAxisSeparatorThroughSpacing = true;
     bool m_backgroundVisible = true;
     QColor m_backgroundColor;

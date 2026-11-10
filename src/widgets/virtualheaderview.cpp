@@ -196,7 +196,7 @@ void VirtualHeaderView::paintEvent(QPaintEvent *event)
         const int spacing = sectionSpacingAfter(it.key());
         const int leading = sectionLeadingEdgeSpacing(it.key());
         const int trailing = sectionTrailingEdgeSpacing(it.key());
-        if (m_crossAxisSeparatorVisible && m_crossAxisSeparatorThroughSpacing) {
+        if (crossAxisSeparatorVisible() && m_crossAxisSeparatorThroughSpacing) {
             if (isHorizontal())
                 fillHorizontalPixelLines(&painter,
                     {QRect(sectionRect.left() - leading, height() - m_crossAxisSeparatorWidth,
@@ -244,7 +244,7 @@ void VirtualHeaderView::paintEvent(QPaintEvent *event)
         if (isHorizontal()) {
             if (spacing > 0 && m_gridLinePlacement == GridLinePlacement::SpacingCenter) {
                 // Center gap hosts leave header input and its body boundary to this widget.
-                if (m_crossAxisSeparatorVisible && m_crossAxisSeparatorThroughSpacing)
+                if (crossAxisSeparatorVisible() && m_crossAxisSeparatorThroughSpacing)
                     fillHorizontalPixelLines(&painter,
                         {QRect(sectionEnd, height() - m_crossAxisSeparatorWidth,
                                spacing, m_crossAxisSeparatorWidth)},
@@ -278,7 +278,7 @@ void VirtualHeaderView::paintEvent(QPaintEvent *event)
             continue;
         }
         const int top = sectionEnd;
-        if (m_crossAxisSeparatorVisible && m_crossAxisSeparatorThroughSpacing && width() > 0)
+        if (crossAxisSeparatorVisible() && m_crossAxisSeparatorThroughSpacing && width() > 0)
             fillVerticalPixelLines(&painter,
                 {QRect(width() - m_crossAxisSeparatorWidth, top, m_crossAxisSeparatorWidth, spacing)},
                 m_crossAxisSeparatorWidth, crossColor, true);
@@ -785,6 +785,16 @@ void VirtualHeaderView::setCrossAxisSeparatorVisible(bool visible)
     if (m_crossAxisSeparatorVisible == visible)
         return;
     m_crossAxisSeparatorVisible = visible;
+    for (QWidget *section : m_sectionWidgets)
+        section->update();
+    update();
+}
+
+void VirtualHeaderView::setFrameAdjacentCrossAxis(bool adjacent)
+{
+    if (m_frameAdjacentCrossAxis == adjacent)
+        return;
+    m_frameAdjacentCrossAxis = adjacent;
     for (QWidget *section : m_sectionWidgets)
         section->update();
     update();
