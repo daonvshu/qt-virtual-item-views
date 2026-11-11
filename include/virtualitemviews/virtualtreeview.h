@@ -212,6 +212,8 @@ signals:
     void collapsed(const QModelIndex &index);
 
 protected:
+    /// Adds the reserved ancestor and own-branch widths to adapter/editor metadata.
+    ItemBindingContext bindingContext(const QModelIndex &index) const override;
     qsizetype viewItemCount() const override;
     QModelIndex viewIndex(qsizetype item, int column = 0) const override;
     qsizetype viewItemForIndex(const QModelIndex &index) const override;

@@ -101,6 +101,7 @@ set(VIRTUALITEMVIEWS_PUBLIC_HEADERS
     include/virtualitemviews/virtualtreetableview.h
     include/virtualitemviews/virtualheaderview.h
     include/virtualitemviews/virtualtreeview.h
+    include/virtualitemviews/itemeditoradapter.h
     include/virtualitemviews/widgetadapter.h
     include/virtualitemviews/widgetrecycler.h)
 
@@ -109,6 +110,8 @@ set(VIRTUALITEMVIEWS_SOURCES
     src/core/scrollmapper.cpp
     src/core/reorderabletablemodel.cpp
     src/core/performanceprobe.cpp
+    src/core/itemeditoradapter.cpp
+    src/core/virtualitemviewediting.cpp
     src/core/virtualitemview.cpp
     src/core/virtualitemviewframe.cpp
     src/layout/headergeometry.cpp

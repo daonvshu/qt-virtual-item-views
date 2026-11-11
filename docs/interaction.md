@@ -178,3 +178,79 @@ view.setItemPinned(editing, false);
 ```
 
 也可用 `pinWidget()` / `unpinWidget()`。`setMaxPinnedItems()` 可帮助发现忘记解除的 pin。控件被复用时可能仍有未结束的输入法、弹窗或异步活动；adapter 应在 `unbindWidget()` 中清理与旧模型项关联的状态。
+
+## 框架管理的覆盖编辑器
+
+完整写法可直接复制对应视图的独立章节：
+[列表第 23 节](../examples/list_capabilities/23_editors/README.md)、
+[树第 29 节](../examples/tree_capabilities/29_editors/README.md)、
+[表格第 33 节](../examples/table_capabilities/33_editors/README.md)、
+[树表第 38 节](../examples/treetable_capabilities/38_editors/README.md)。
+所有 `VirtualItemView` 派生视图共用此接口；表格在 CellWidgets 模式使用 CellWidgetAdapter，
+其他模式使用 WidgetAdapter（包含 TableWidgetAdapter）的编辑回调。
+
+```cpp
+// Default automatic gestures; the adapter can override them for each index.
+view.setEditTriggers(viv::EditTrigger::DoubleClicked | viv::EditTrigger::EditKeyPressed);
+view.edit(index);       // Explicit entry: child button, toolbar, or external action.
+view.commitEditor();   // Returns false if the adapter rejects the value.
+view.closeEditor();    // Cancel without writing the draft.
+```
+
+重载 adapter 的 `editTriggers(index, defaults)` 可让某列单击编辑，其他列双击编辑，
+或返回 `EditTrigger::NoEditTriggers` 只允许显式进入。模型的 `ItemIsEditable` 和
+`ItemIsEnabled` 对所有入口都生效。自动鼠标手势来自视图命中事件；会消费鼠标事件的子控件
+应在自身信号中调用 `edit(index)`，并在触发时查询当前绑定索引，避免复用后使用旧索引。
+
+adapter 提供 `createEditor`、`setEditorData`、`updateEditorGeometry`、`commitEditorData`
+和 `destroyEditor`。默认不创建编辑器；启用后默认覆盖整项/整格，并通过 Qt USER property
+与 EditRole 交换数据。框架管理 Qt delegate 的键盘/失焦提交、取消、Tab 导航及编辑控件释放。
+提交回调返回 false 会保留草稿；模型重置或结构失效时取消，不提交到其他条目。
+
+
+### Adapter 接管编辑请求
+
+重载 `ItemEditorAdapter::editRequest(const EditRequestContext &request)` 可以自行打开 Popup。
+默认返回 false，继续原有 `createEditor()`；返回 true 表示已处理，框架不创建覆盖编辑器。
+该回调共用于自动手势和显式 `edit(index)`，在模型编辑权限检查及目标定位后调用。
+
+`request.binding` 提供索引与绑定数据，`request.view` / `request.viewport` 提供所属控件。
+`viewportRect`、`viewRect`、`globalRect` 分别是完整项/单元格在三个坐标系中的矩形，均为 Qt
+逻辑像素，可直接用于控件定位，不需乘设备像素比。这些几何是请求时的快照。
+
+接管后框架记录编辑会话；重载 `cancelEditRequest(const ItemBindingContext &)` 关闭弹窗，
+无需在 Popup 内连接模型或滚动条。`closeEditor()`、切换编辑目标、模型重置/布局或行列结构变化、
+更换模型/adapter、目标隐藏或不再可编辑、滚动、定位矩形变化、视图或祖先隐藏/移动/缩放、
+视图禁用和应用失活都会取消请求。取消先解除会话，再调用 adapter，避免关闭信号导致递归取消。
+取消回调可能发生在 `editRequest()` 的嵌套事件循环中，销毁弹窗应使用延迟删除。
+
+Popup 自行校验和写回模型。把 `request.finish` 连接到 Popup 的 `finished` 信号，并在直接销毁时
+调用它作为兜底；该回调只结束对应会话，不写数据，也不会再调用取消回调。旧弹窗的延迟信号
+不会误关新会话。Qt Popup 自身负责 Esc 和点击外部的关闭行为，不需要另写事件过滤器。
+`editingIndex()` 包含 Popup 的目标；`editorWidget()` 对 Popup 返回空。
+`commitEditor()` 仅提交框架覆盖编辑器，Popup 会话下返回 false，请在弹窗内部确认提交。
+跨事件保存索引和控件时使用 `QPersistentModelIndex` / `QPointer`。
+完整定位、屏幕边界处理和业务提交示例见 [第 33 节 Popup 列](../examples/table_capabilities/33_editors/example.cpp)。
+
+### 树形编辑的缩进与 branch 宽度
+
+`ItemBindingContext::indentationWidth` 提供祖先层级占用的缩进，`branchWidth` 提供当前节点
+自己的 branch 格占位。两者均为 Qt 逻辑像素、裁剪前的布局宽度，不能用图标大小代替。
+`updateEditorGeometry()` 等 adapter 回调直接读取 context；Popup 从 `request.binding` 读取。
+普通视图两项都是 0；TreeTable 只有逻辑第 0 列提供这两个宽度。
+
+```cpp
+void updateEditorGeometry(QWidget *editor, const QRect &rect,
+                          const viv::ItemBindingContext &context) override
+{
+    // Preserve ancestor indentation and the node's own branch cell.
+    const int left = qBound(0, context.indentationWidth + context.branchWidth,
+                            qMax(0, rect.width()));
+    editor->setGeometry(rect.adjusted(left, 0, 0, 0));
+}
+```
+
+只保留祖先缩进时用 `indentationWidth`；覆盖整个区域时直接使用 rect。隐藏 branch 区域后
+`branchWidth` 为 0；仅隐藏图标则仍保留占位。TreeView 的叶子占位策略也会反映在字段中。
+缩进或 branch 占位变化时框架重新调用覆盖编辑器的几何回调；依赖旧定位的 Popup 会收到取消通知。
+范围选择示例见树第 29 节和树表第 38 节。

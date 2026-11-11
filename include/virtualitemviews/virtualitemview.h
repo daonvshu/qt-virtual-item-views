@@ -2,6 +2,7 @@
 
 #include <virtualitemviews/global.h>
 #include <virtualitemviews/itempane.h>
+#include <virtualitemviews/itemeditoradapter.h>
 #include <virtualitemviews/materializeditem.h>
 #include <virtualitemviews/scrollmapper.h>
 #include <virtualitemviews/types.h>
@@ -47,6 +48,7 @@ class LayoutPolicy;
 class WidgetAdapter;
 class WidgetRecycler;
 class DragMoveSelection;
+class ItemEditorSession;
 
 /// Snapshot of the virtualization state.
 ///
@@ -359,6 +361,27 @@ public:
     WidgetAdapter *adapter() const { return m_adapter; }
     WidgetRecycler *recycler() const { return m_recycler; }
 
+    // -- overlay editing ----------------------------------------------------
+    /// Default gestures, initially DoubleClicked | EditKeyPressed (F2).
+    /// An adapter can override them per index; child controls use edit(index).
+    void setEditTriggers(EditTriggers triggers) { m_editTriggers = triggers; }
+    EditTriggers editTriggers() const { return m_editTriggers; }
+    /// Requests editing for an enabled, editable index, independently of automatic
+    /// triggers. Commits the previous overlay editor or cancels the previous
+    /// adapter-owned request, then calls editRequest().
+    /// True means the adapter handled the request or an overlay editor was opened.
+    bool edit(const QModelIndex &index);
+    /// Commits and closes an overlay editor. False keeps a rejected editor open;
+    /// also returns false for adapter-owned requests, whose popup owns submission.
+    bool commitEditor();
+    /// Cancels without writing the draft, including adapter-owned requests via
+    /// cancelEditRequest().
+    void closeEditor();
+    /// Currently edited index/widget, or an invalid index/null when not editing.
+    /// Adapter-owned requests expose their index, but editorWidget() is null.
+    QModelIndex editingIndex() const;
+    QWidget *editorWidget() const;
+
     /// Model role containing one complete business payload for a row or tree node.
     /// Cell widgets read this role from their row's canonical column (column 0).
     /// Changing it rebinds materialized items. A negative role disables payload reads.
@@ -605,7 +628,17 @@ protected:
     /// Logical column reported to table adapters; -1 for list/tree row widgets.
     virtual int bindingColumn(const QModelIndex &index) const;
     /// Context passed to context-aware adapter lifecycle callbacks.
-    ItemBindingContext bindingContext(const QModelIndex &index) const;
+    virtual ItemBindingContext bindingContext(const QModelIndex &index) const;
+    /// Adapter and viewport geometry used by the shared overlay editor lifecycle.
+    virtual ItemEditorAdapter *editorAdapter() const;
+    virtual QRect editorRect(const QModelIndex &index) const;
+    /// Reveals an index before opening its editor (tables include horizontal scrolling).
+    virtual void ensureEditorVisible(const QModelIndex &index);
+    virtual QRect editorClipRect(const QModelIndex &index) const;
+    /// Next displayed index for Tab/Backtab; tables traverse visible columns too.
+    virtual QModelIndex adjacentEditorIndex(const QModelIndex &index, bool forward) const;
+    /// Repositions an active editor after materialization or column geometry changes.
+    void updateEditorGeometry();
     /// Rebinds current widgets after changing the complete row/node payload role.
     virtual void refreshItemData();
     /// Index used when the current item moves to \a item. The default is
@@ -883,6 +916,14 @@ protected:
     bool eventFilter(QObject *watched, QEvent *event) override;
 
 private:
+    friend class ItemEditorSession;
+    /// Applies adapter-specific trigger filtering before entering editing.
+    bool triggerEdit(const QModelIndex &index, EditTrigger trigger);
+    ItemEditorSession *m_editorSession = nullptr;
+    EditTriggers m_editTriggers = EditTrigger::DoubleClicked | EditTrigger::EditKeyPressed;
+    bool m_closingEditor = false;
+    bool m_editRequestActive = false;
+    bool m_editRequestCancelled = false;
     /// Repaints the body and dependent framework widgets after a base style change.
     void updateBackgroundAppearance();
     bool m_backgroundVisible = true;

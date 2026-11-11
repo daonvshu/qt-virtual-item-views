@@ -55,6 +55,9 @@ add_executable(tree_capabilities
     27_auto_height/auto_height.ui
     28_colors/example.cpp
     28_colors/colors.ui
+    29_editors/example.cpp
+    29_editors/editors.ui
+    29_editors/popup.ui
 )
 
 set_target_properties(tree_capabilities PROPERTIES AUTOUIC ON)

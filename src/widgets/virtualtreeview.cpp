@@ -886,6 +886,22 @@ QModelIndex VirtualTreeView::indexAt(const QPoint &viewportPos) const
     return hitRect.contains(viewportPos) ? index : QModelIndex();
 }
 
+ItemBindingContext VirtualTreeView::bindingContext(const QModelIndex &index) const
+{
+    const QPointer<const VirtualTreeView> self(this);
+    const QPersistentModelIndex target(index);
+    ItemBindingContext context = VirtualItemView::bindingContext(index);
+    if (!self || !target.isValid() || target.model() != model() || context.depth < 0)
+        return context;
+    const bool ownBranch = hasOwnBranchCell(target);
+    if (!self || !target.isValid() || target.model() != model())
+        return context;
+    context.branchWidth = ownBranch ? m_indentation : 0;
+    context.indentationWidth = int(qMin<qint64>(qint64(context.depth) * m_indentation,
+        std::numeric_limits<int>::max() - context.branchWidth));
+    return context;
+}
+
 QRect VirtualTreeView::geometryForViewRow(qsizetype row) const
 {
     const QRect rowRect = VirtualItemView::geometryForViewRow(row);

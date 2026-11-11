@@ -344,6 +344,7 @@ VirtualItemView::VirtualItemView(QWidget *parent)
 VirtualItemView::~VirtualItemView()
 {
     m_destroying = true;
+    closeEditor();
     setPerformanceLoggingEnabled(false);
     viewport()->removeEventFilter(this);
     for (QWidget *widget : m_rowSpacingWidgets)
@@ -574,6 +575,9 @@ void VirtualItemView::setModel(QAbstractItemModel *model)
     const QPointer<VirtualItemView> self(this);
     const quint64 changeSerial = ++m_modelChangeSerial;
     const QPointer<QAbstractItemModel> requestedModel(model);
+    closeEditor();
+    if (!self || m_modelChangeSerial != changeSerial)
+        return;
 
     disconnectModel(m_model.data());
     // A drag or drop in flight refers to the outgoing model (§38).
@@ -1395,6 +1399,12 @@ bool VirtualItemView::eventFilter(QObject *watched, QEvent *event)
     if (m_destroying)
         return false;
     auto *widget = qobject_cast<QWidget *>(watched);
+    if (watched == viewport() && event->type() == QEvent::Paint && m_editorSession) {
+        const QPointer<VirtualItemView> self(this);
+        updateEditorGeometry();
+        if (!self)
+            return true;
+    }
     if (widget == viewport() && (event->type() == QEvent::StyleChange
                                 || event->type() == QEvent::PaletteChange)) {
         detail::prepareViewBackground(widget);
@@ -1608,6 +1618,10 @@ bool VirtualItemView::installAdapter(WidgetAdapter *adapter, bool takeOwnership,
     const quint64 modelSerial = m_modelChangeSerial;
     const quint64 mappingSerial = viewMappingSerial();
     WidgetAdapter *const previous = m_adapter;
+    const QPointer<VirtualItemView> self(this);
+    closeEditor();
+    if (!self || m_adapterChangeSerial != changeSerial || m_adapter != previous)
+        return false;
     // Order matters: hand the materialized widgets back through the *old*
     // adapter, drop every pooled widget (a widget class of another adapter must
     // never be handed out through the new adapter's WidgetType namespace), and
@@ -3280,6 +3294,10 @@ void VirtualItemView::relayout()
         m_inRelayout = false;
         syncScrollBars();
         afterMaterialize();
+        const QPointer<VirtualItemView> editorGuard(this);
+        updateEditorGeometry();
+        if (!editorGuard)
+            return;
         refreshHoveredIndex();
         detail::performanceCall(this, "callback.signal.virtualization-updated", [&] {
             emit virtualizationUpdated();
@@ -3415,6 +3433,10 @@ void VirtualItemView::relayout()
     if (abortStalePass())
         return;
     afterMaterialize();
+    const QPointer<VirtualItemView> editorGuard(this);
+    updateEditorGeometry();
+    if (!editorGuard)
+        return;
     if (abortStalePass())
         return;
     refreshHoveredIndex();
@@ -4042,8 +4064,13 @@ void VirtualItemView::mouseReleaseEvent(QMouseEvent *event)
         && QModelIndex(m_pressedIndex) == index;
     m_pressedIndex = QPersistentModelIndex();
     event->accept();
-    if (sameIndex)
+    if (sameIndex) {
+        const QPointer<VirtualItemView> self(this);
+        const QPersistentModelIndex target(index);
         emit clicked(index);
+        if (self && target.isValid())
+            triggerEdit(target, EditTrigger::SingleClicked);
+    }
 }
 
 void VirtualItemView::mouseDoubleClickEvent(QMouseEvent *event)
@@ -4064,6 +4091,10 @@ void VirtualItemView::mouseDoubleClickEvent(QMouseEvent *event)
         || target.model() != model())
         return;
     emit activated(target);
+    if (!self || modelChangeSerial() != modelSerial || !target.isValid()
+        || target.model() != model())
+        return;
+    triggerEdit(target, EditTrigger::DoubleClicked);
 }
 
 // ---------------------------------------------------------------------------
@@ -4211,7 +4242,7 @@ Qt::DropAction VirtualItemView::startDrag(const QModelIndex &index, const DragOp
 Qt::DropAction VirtualItemView::startDragImpl(const QModelIndex &index, const DragOptions &options,
                                             bool useDefaultPreview)
 {
-    if (m_destroying || !m_model || m_dragInProgress || !m_dragSourceIndexes.isEmpty())
+    if (m_destroying || m_editorSession || !m_model || m_dragInProgress || !m_dragSourceIndexes.isEmpty())
         return Qt::IgnoreAction;
     const QPointer<VirtualItemView> self(this);
     m_dragInProgress = true;
@@ -5025,6 +5056,14 @@ void VirtualItemView::wheelEvent(QWheelEvent *event)
 
 void VirtualItemView::keyPressEvent(QKeyEvent *event)
 {
+    if (event->key() == Qt::Key_F2) {
+        const QPointer<VirtualItemView> self(this);
+        const bool started = triggerEdit(currentIndex(), EditTrigger::EditKeyPressed);
+        if (!self || started) {
+            event->accept();
+            return;
+        }
+    }
     if (handleItemKeyPress(event)) {
         event->accept();
         return;

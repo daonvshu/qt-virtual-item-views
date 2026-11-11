@@ -72,6 +72,13 @@ struct ItemBindingContext
     int logicalColumn = -1;
     /// Node depth relative to the displayed root; flat items have depth 0.
     int depth = -1;
+    /// Ancestor indentation before the node's own branch cell, in Qt logical pixels.
+    /// Layout widths before viewport/cell clipping; zero for non-tree items and
+    /// tree-table columns other than logical column zero.
+    int indentationWidth = 0;
+    /// Width reserved for the node's own branch cell, not the icon's pixel size.
+    /// Zero when that cell is omitted; hiding only the indicator keeps its space.
+    int branchWidth = 0;
 };
 
 /// Default model role used by VirtualItemView for one complete row/node payload.

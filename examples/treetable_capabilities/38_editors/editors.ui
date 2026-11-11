@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ui version="4.0">
+ <class>TreetableEditorsPage</class>
+ <widget class="QWidget" name="TreetableEditorsPage">
+  <layout class="QVBoxLayout" name="layout">
+   <item><widget class="QLabel" name="description">
+    <property name="text"><string>38 覆盖编辑器：列1单击，列2双击/F2，列3格内按钮编辑数量（UserRole+1），列4外部触发，列5单击打开业务 Popup（用弹窗内按钮确认/取消）。Enter提交，Esc取消，Tab/Shift+Tab切换；空文本拒绝提交。分组及每组末行只读。收起父节点会取消不可见子节点的编辑。</string></property>
+    <property name="wordWrap"><bool>true</bool></property>
+   </widget></item>
+   <item><layout class="QHBoxLayout" name="controls">
+    <item><widget class="QPushButton" name="editCurrent"><property name="text"><string>编辑当前单元格（外部触发）</string></property></widget></item>
+    <item><widget class="QPushButton" name="commit"><property name="text"><string>提交覆盖编辑器</string></property><property name="focusPolicy"><enum>Qt::NoFocus</enum></property></widget></item>
+    <item><widget class="QPushButton" name="cancel"><property name="text"><string>取消当前编辑（含 Popup）</string></property><property name="focusPolicy"><enum>Qt::NoFocus</enum></property></widget></item>
+   </layout></item>
+   <item><layout class="QHBoxLayout" name="treeActions">
+    <item><widget class="QLabel" name="extentLabel"><property name="text"><string>编辑覆盖范围</string></property></widget></item>
+    <item><widget class="QComboBox" name="editorExtent">
+     <property name="currentIndex"><number>2</number></property>
+     <item><property name="text"><string>整行/整格（包含缩进和 branch）</string></property></item>
+     <item><property name="text"><string>保留祖先缩进，覆盖 branch 和内容</string></property></item>
+     <item><property name="text"><string>保留缩进和 branch，只覆盖内容</string></property></item>
+    </widget></item>
+    <item><widget class="QPushButton" name="expand"><property name="text"><string>展开各分组</string></property><property name="focusPolicy"><enum>Qt::NoFocus</enum></property></widget></item>
+    <item><widget class="QPushButton" name="collapse"><property name="text"><string>收起全部（取消隐藏项的编辑）</string></property><property name="focusPolicy"><enum>Qt::NoFocus</enum></property></widget></item>
+   </layout></item>
+   <item><widget class="viv::VirtualTreeTableView" name="view"/></item>
+   <item><widget class="QLabel" name="status"><property name="text"><string>单元格展示控件保持不变；编辑器由框架覆盖显示和销毁。</string></property></widget></item>
+  </layout>
+ </widget>
+ <customwidgets><customwidget><class>viv::VirtualTreeTableView</class><extends>QAbstractScrollArea</extends><header>virtualitemviews/virtualtreetableview.h</header></customwidget></customwidgets>
+ <resources/>
+ <connections/>
+</ui>

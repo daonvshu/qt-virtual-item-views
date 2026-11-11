@@ -1449,6 +1449,20 @@ QRect VirtualTreeTableView::spanRowRect(qsizetype row) const
     return geometryForViewRow(row);
 }
 
+ItemBindingContext VirtualTreeTableView::bindingContext(const QModelIndex &index) const
+{
+    const QPointer<const VirtualTreeTableView> self(this);
+    const QPersistentModelIndex target(index);
+    ItemBindingContext context = VirtualTableView::bindingContext(index);
+    if (!self || !target.isValid() || target.model() != model()
+        || context.depth < 0 || context.logicalColumn != 0)
+        return context;
+    context.branchWidth = m_branchAreaVisible ? m_indentation : 0;
+    context.indentationWidth = int(qMin<qint64>(qint64(context.depth) * m_indentation,
+        std::numeric_limits<int>::max() - context.branchWidth));
+    return context;
+}
+
 int VirtualTreeTableView::leadingCellInset(const QModelIndex &index) const
 {
     if (index.column() != 0)

@@ -47,6 +47,7 @@
 | 35 | 圆角边框与透明视图 | [examples/treetable_capabilities/35_borders/example.cpp](../examples/treetable_capabilities/35_borders/example.cpp) |
 | 36 | 自适应高度与滚动上限 | [examples/treetable_capabilities/36_auto_height/example.cpp](../examples/treetable_capabilities/36_auto_height/example.cpp) |
 | 37 | 颜色与样式表：主体、项、状态与 QSS 的作用范围 | [examples/treetable_capabilities/37_colors/example.cpp](../examples/treetable_capabilities/37_colors/example.cpp) |
+| 38 | 覆盖编辑器、触发策略与 Popup 取消 | [examples/treetable_capabilities/38_editors/README.md](../examples/treetable_capabilities/38_editors/README.md) |
 
 ## 节点的整行数据
 

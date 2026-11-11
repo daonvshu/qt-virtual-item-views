@@ -31,6 +31,7 @@
 #include "20_borders/example.h"
 #include "21_auto_height/example.h"
 #include "22_colors/example.h"
+#include "23_editors/example.h"
 
 namespace {
 
@@ -66,6 +67,7 @@ const ExampleEntry entries[] = {
     {20, u8"20 外边框与圆角", list_borders::createExample},
     {21, u8"21 自适应高度", list_auto_height::createExample},
     {22, u8"22 颜色与样式表", list_colors::createExample},
+    {23, u8"23 覆盖编辑器与 Popup", list_editors::createExample},
 };
 
 constexpr int kExampleCount = int(sizeof(entries) / sizeof(entries[0]));

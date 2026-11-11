@@ -26,6 +26,7 @@
 | 20 | 外边框与圆角：框架接口、透明角、状态圆角、间距和冻结行 | [examples/list_capabilities/20_borders/example.cpp](../examples/list_capabilities/20_borders/example.cpp) |
 | 21 | 自适应高度：内容、最大高度和父布局约束 | [examples/list_capabilities/21_auto_height/example.cpp](../examples/list_capabilities/21_auto_height/example.cpp) |
 | 22 | 颜色与样式表：主体、项、状态与 QSS 的作用范围 | [examples/list_capabilities/22_colors/example.cpp](../examples/list_capabilities/22_colors/example.cpp) |
+| 23 | 覆盖编辑器、触发策略与 Popup 取消 | [examples/list_capabilities/23_editors/README.md](../examples/list_capabilities/23_editors/README.md) |
 
 阅读时先看 `Example::setupExample()` 中的 `VirtualListView` 配置和信号连接，再看本文件的 adapter 与行控件。`setupUi()` 负责演示页面布局，各目录的 `README.md` 提供该功能的说明和独立运行入口。
 

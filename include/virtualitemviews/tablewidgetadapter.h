@@ -248,7 +248,7 @@ public:
 ///
 /// Only `visibleRows x visibleColumns` cells own a QWidget; a pooled cell widget
 /// is unbound and must not keep the state of its previous index.
-class VIRTUALITEMVIEWS_EXPORT CellWidgetAdapter
+class VIRTUALITEMVIEWS_EXPORT CellWidgetAdapter : public ItemEditorAdapter
 {
 public:
     virtual ~CellWidgetAdapter() = default;

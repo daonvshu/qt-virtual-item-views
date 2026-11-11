@@ -43,6 +43,9 @@ add_executable(list_capabilities
     21_auto_height/auto_height.ui
     22_colors/example.cpp
     22_colors/colors.ui
+    23_editors/example.cpp
+    23_editors/editors.ui
+    23_editors/popup.ui
 )
 
 set_target_properties(list_capabilities PROPERTIES AUTOUIC ON)

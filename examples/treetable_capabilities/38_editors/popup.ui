@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ui version="4.0">
+ <class>TreetableEditorPopup</class>
+ <widget class="QDialog" name="TreetableEditorPopup">
+  <property name="windowTitle"><string>业务 Popup 编辑</string></property>
+  <layout class="QVBoxLayout" name="layout">
+   <item><widget class="QLabel" name="description"><property name="text"><string>editRequest 返回 true：业务负责加载和提交；框架通过 cancelEditRequest 通知关闭。点击外部或 Esc 取消。</string></property><property name="wordWrap"><bool>true</bool></property></widget></item>
+   <item><widget class="QLabel" name="coordinates"><property name="text"><string>Cell coordinates</string></property><property name="wordWrap"><bool>true</bool></property></widget></item>
+   <item><widget class="QLineEdit" name="input"/></item>
+   <item><widget class="QLabel" name="validation"><property name="text"><string/></property></widget></item>
+   <item><widget class="QDialogButtonBox" name="buttons"><property name="standardButtons"><set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set></property></widget></item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

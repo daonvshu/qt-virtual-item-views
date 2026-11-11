@@ -1,6 +1,7 @@
 #pragma once
 
 #include <virtualitemviews/global.h>
+#include <virtualitemviews/itemeditoradapter.h>
 #include <virtualitemviews/types.h>
 
 #include <QModelIndex>
@@ -15,7 +16,7 @@ namespace viv {
 /// be able to bind the same widget to a different QModelIndex many times, and
 /// unbindWidget() must stop every activity that is tied to the old index
 /// (QTimer, animation, QMovie, async image requests, business subscriptions).
-class VIRTUALITEMVIEWS_EXPORT WidgetAdapter
+class VIRTUALITEMVIEWS_EXPORT WidgetAdapter : public ItemEditorAdapter
 {
 public:
     virtual ~WidgetAdapter() = default;

@@ -1,6 +1,6 @@
 # VirtualListView 独立能力示例
 
-构建目标：`list_capabilities`。一个进程通过左侧导航切换 21 个基础示例（01–18、20–22），按需创建页面；检测到 SmoothScrollbar 时额外加入第 19 项平滑滚动示例。下表路径均相对于仓库根目录。
+构建目标：`list_capabilities`。一个进程通过左侧导航切换 22 个基础示例（01–18、20–23），按需创建页面；检测到 SmoothScrollbar 时额外加入第 19 项平滑滚动示例。下表路径均相对于仓库根目录。
 
 每个编号目录都有自己的 `example.h`、`example.cpp` 和说明。model、adapter、行控件、手柄等代码都在该目录内定义，不引用其他示例。重复的小类是有意保留的，便于复制整个目录。每个目录使用独立命名空间，统一编译时不会出现重名冲突。
 
@@ -32,6 +32,7 @@
 | 20 | 外边框与圆角：框架接口、透明角、状态圆角、间距和冻结行 | [examples/list_capabilities/20_borders/example.cpp](20_borders/example.cpp) / [说明](20_borders/README.md) |
 | 21 | 自适应高度：内容、最大高度和父布局约束 | [examples/list_capabilities/21_auto_height/example.cpp](21_auto_height/example.cpp) / [说明](21_auto_height/README.md) |
 | 22 | 颜色与样式表：主体、项、状态与 QSS 的作用范围 | [examples/list_capabilities/22_colors/example.cpp](22_colors/example.cpp) |
+| 23 | 覆盖编辑器、触发策略与 Popup 取消 | [examples/list_capabilities/23_editors/example.cpp](23_editors/example.cpp) |
 
 ## 构建与启动
 

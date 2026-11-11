@@ -131,6 +131,8 @@ signals:
     void visibleRowsChanged();
 
 protected:
+    /// Adds the reserved ancestor and own-branch widths to adapter/editor metadata.
+    ItemBindingContext bindingContext(const QModelIndex &index) const override;
     QModelIndex columnSchemaParent() const override;
     qsizetype viewItemCount() const override;
     QModelIndex viewIndex(qsizetype item, int column = 0) const override;

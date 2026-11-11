@@ -36,6 +36,7 @@
 | 30 | 外边框与圆角：框架内置 Alpha 合成，支持透明圆角、边框与少量数据 | [examples/table_capabilities/30_borders/README.md](../examples/table_capabilities/30_borders/README.md) |
 | 31 | 自适应高度：表头、内容、水平滚动条和父布局约束 | [examples/table_capabilities/31_auto_height/example.cpp](../examples/table_capabilities/31_auto_height/example.cpp) |
 | 32 | 颜色与样式表：主体、项、状态与 QSS 的作用范围 | [examples/table_capabilities/32_colors/example.cpp](../examples/table_capabilities/32_colors/example.cpp) |
+| 33 | 覆盖编辑器：单击、双击、格内按钮、外部触发与提交校验 | [examples/table_capabilities/33_editors/README.md](../examples/table_capabilities/33_editors/README.md) |
 
 先看 `Example::setupExample()` 中的视图配置与信号连接，再看本文件的 model、adapter 和控件。`setupUi()` 只处理页面布局。Hover 与 selected 背景由框架绘制，圆角、颜色、时长和曲线直接调用接口配置。
 

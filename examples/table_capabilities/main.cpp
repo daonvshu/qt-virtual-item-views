@@ -41,6 +41,7 @@
 #include "30_borders/example.h"
 #include "31_auto_height/example.h"
 #include "32_colors/example.h"
+#include "33_editors/example.h"
 
 namespace {
 
@@ -86,6 +87,7 @@ const ExampleEntry entries[] = {
     {30, u8"30 外边框与圆角", table_borders::createExample},
     {31, u8"31 自适应高度", table_auto_height::createExample},
     {32, u8"32 颜色与样式表", table_colors::createExample},
+    {33, u8"33 覆盖编辑器与编辑触发", table_editors::createExample},
 };
 
 constexpr int kExampleCount = int(sizeof(entries) / sizeof(entries[0]));

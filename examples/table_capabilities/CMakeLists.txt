@@ -65,6 +65,9 @@ add_executable(table_capabilities
     31_auto_height/auto_height.ui
     32_colors/example.cpp
     32_colors/colors.ui
+    33_editors/example.cpp
+    33_editors/editors.ui
+    33_editors/popup.ui
 )
 
 set_target_properties(table_capabilities PROPERTIES AUTOUIC ON)

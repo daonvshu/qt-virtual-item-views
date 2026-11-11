@@ -1,6 +1,6 @@
 # VirtualTreeView 独立能力示例
 
-一个 `tree_capabilities` 进程通过左侧导航演示 27 项基础功能（01–24、26–28）。检测到匹配的 SmoothScrollbar 时才编译和显示第 25 项。本目录仅演示 `VirtualTreeView`，树表的独立示例继续保留。
+一个 `tree_capabilities` 进程通过左侧导航演示 28 项基础功能（01–24、26–29）。检测到匹配的 SmoothScrollbar 时才编译和显示第 25 项。本目录仅演示 `VirtualTreeView`，树表的独立示例继续保留。
 
 每个编号目录自带 model、adapter、节点控件和 `example.h`／`example.cpp`／`README.md`，不引用其他能力目录。重复的小类有意保留，复制单章即可参考。普通数据直接使用 `QStandardItemModel`，第 17 章因按需生成百万节点才实现自定义模型。所有代码注释为英文。
 
@@ -36,6 +36,7 @@
 | 26 | 外边框与圆角：框架接口、透明角、状态圆角与展开收起 | [examples/tree_capabilities/26_borders/example.cpp](26_borders/example.cpp) |
 | 27 | 自适应高度：展开内容、最大高度和父布局约束 | [examples/tree_capabilities/27_auto_height/example.cpp](27_auto_height/example.cpp) |
 | 28 | 颜色与样式表：主体、项、状态与 QSS 的作用范围 | [examples/tree_capabilities/28_colors/example.cpp](28_colors/example.cpp) |
+| 29 | 覆盖编辑器、触发策略与 Popup 取消 | [examples/tree_capabilities/29_editors/example.cpp](29_editors/example.cpp) |
 
 ## 构建与启动
 

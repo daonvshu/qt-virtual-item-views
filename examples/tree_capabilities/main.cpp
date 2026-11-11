@@ -38,6 +38,7 @@
 #include "26_borders/example.h"
 #include "27_auto_height/example.h"
 #include "28_colors/example.h"
+#include "29_editors/example.h"
 
 namespace {
 struct Entry { int number; const char *title; QWidget *(*create)(QWidget *); };
@@ -72,6 +73,7 @@ const Entry entries[] = {
     {26, u8"26 外边框与圆角", tree_borders::createExample},
     {27, u8"27 自适应高度", tree_auto_height::createExample},
     {28, u8"28 颜色与样式表", tree_colors::createExample},
+    {29, u8"29 覆盖编辑器与 Popup", tree_editors::createExample},
 };
 constexpr int kCount = int(sizeof(entries) / sizeof(entries[0]));
 

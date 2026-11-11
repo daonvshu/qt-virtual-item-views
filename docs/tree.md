@@ -32,6 +32,7 @@
 | 26 | 外边框与圆角：框架接口、透明角、状态圆角与展开收起 | [examples/tree_capabilities/26_borders/example.cpp](../examples/tree_capabilities/26_borders/example.cpp) |
 | 27 | 自适应高度：展开内容、最大高度和父布局约束 | [examples/tree_capabilities/27_auto_height/example.cpp](../examples/tree_capabilities/27_auto_height/example.cpp) |
 | 28 | 颜色与样式表：主体、项、状态与 QSS 的作用范围 | [examples/tree_capabilities/28_colors/example.cpp](../examples/tree_capabilities/28_colors/example.cpp) |
+| 29 | 覆盖编辑器、触发策略与 Popup 取消 | [examples/tree_capabilities/29_editors/README.md](../examples/tree_capabilities/29_editors/README.md) |
 
 先看各章的 `Example::setupExample()`，再看本目录的 model、adapter 和节点控件；`setupUi()` 只创建页面布局。普通数据直接创建 `QStandardItemModel` 填充，不为简单数据额外派生模型类。每个目录都有英文代码注释和独立运行入口，构建与启动见 [examples/tree_capabilities/README.md](../examples/tree_capabilities/README.md)。
 

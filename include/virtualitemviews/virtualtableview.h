@@ -581,6 +581,12 @@ signals:
     void rowHeightChanged(qsizetype row, int height);
 
 protected:
+    /// Cell geometry and the active materialization adapter drive overlay editing.
+    ItemEditorAdapter *editorAdapter() const override;
+    QRect editorRect(const QModelIndex &index) const override;
+    void ensureEditorVisible(const QModelIndex &index) override;
+    QRect editorClipRect(const QModelIndex &index) const override;
+    QModelIndex adjacentEditorIndex(const QModelIndex &index, bool forward) const override;
     bool m_visualStateBackgroundVisible = true;
     void paintEvent(QPaintEvent *event) override;
     /// Fills actual column bodies for every visible row, in either materialization mode.

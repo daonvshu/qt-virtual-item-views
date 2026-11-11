@@ -714,6 +714,7 @@ VirtualTableView::VirtualTableView(QWidget *parent)
 
 VirtualTableView::~VirtualTableView()
 {
+    closeEditor();
     m_dragReorderAnimation->stop();
     m_dragRowPreview->clear();
     for (QWidget *widget : m_columnSpacingWidgets)
@@ -3885,6 +3886,10 @@ void VirtualTableView::setMaterializationMode(MaterializationMode mode)
     const quint64 changeSerial = ++m_cellConfigurationSerial;
     const quint64 modelSerial = modelChangeSerial();
     const quint64 mappingSerial = viewMappingSerial();
+    const QPointer<VirtualTableView> editorGuard(this);
+    closeEditor();
+    if (!editorGuard || m_cellConfigurationSerial != changeSerial)
+        return;
     // Both directions have to release the widgets owned by the old mode: the
     // kernel does not recycle row widgets while cell mode is active.
     recycleAllCells();
@@ -3923,6 +3928,10 @@ void VirtualTableView::setCellAdapter(CellWidgetAdapter *adapter, bool takeOwner
     const quint64 changeSerial = ++m_cellConfigurationSerial;
     const quint64 modelSerial = modelChangeSerial();
     const quint64 mappingSerial = viewMappingSerial();
+    const QPointer<VirtualTableView> editorGuard(this);
+    closeEditor();
+    if (!editorGuard || m_cellConfigurationSerial != changeSerial)
+        return;
     // Recycle (unbind with the old adapter) and drop the pool *before* the old
     // adapter is deleted - same reasoning as setAdapter()/setTableAdapter().
     recycleAllCells();
@@ -4444,6 +4453,74 @@ QRect VirtualTableView::spanRect(const QModelIndex &index) const
         : QRect();
     const int bottom = last.height() > 0 ? last.bottom() : first.bottom();
     return QRect(left, first.top(), right - left, bottom - first.top() + 1);
+}
+
+ItemEditorAdapter *VirtualTableView::editorAdapter() const
+{
+    return m_materializationMode == MaterializationMode::CellWidgets
+        ? static_cast<ItemEditorAdapter *>(m_cellAdapter) : VirtualItemView::editorAdapter();
+}
+
+void VirtualTableView::ensureEditorVisible(const QModelIndex &index)
+{
+    const QPointer<VirtualTableView> self(this);
+    const QPersistentModelIndex target(index);
+    VirtualItemView::ensureEditorVisible(target);
+    if (self && target.isValid() && target.model() == model())
+        scrollToColumn(target.column());
+}
+
+QRect VirtualTableView::editorRect(const QModelIndex &index) const
+{
+    const QPointer<const VirtualTableView> self(this);
+    const QPersistentModelIndex target(index);
+    QRect rect = cellRect(target);
+    if (!self || !target.isValid() || target.model() != model())
+        return {};
+    const qsizetype row = viewItemForIndex(target);
+    int visualY = 0;
+    if (!rect.isEmpty() && rowVisualY(row, &visualY))
+        rect.translate(0, visualY - geometryForViewRow(row).top());
+    return rect;
+}
+
+QRect VirtualTableView::editorClipRect(const QModelIndex &index) const
+{
+    const int pane = m_panes.paneIndexOfColumn(index.column());
+    return pane < 0 ? QRect() : VirtualItemView::editorClipRect(index)
+        .intersected(m_panes.paneAt(pane).viewportRect);
+}
+
+QModelIndex VirtualTableView::adjacentEditorIndex(const QModelIndex &index, bool forward) const
+{
+    const QPointer<const VirtualTableView> self(this);
+    const quint64 modelSerial = modelChangeSerial();
+    const quint64 mappingSerial = viewMappingSerial();
+    const QVector<int> columns = m_columns->visibleSectionsInVisualOrder();
+    if (columns.isEmpty())
+        return {};
+    qsizetype row = viewItemForIndex(index);
+    int column = int(columns.indexOf(index.column()));
+    if (row < 0 || column < 0)
+        return {};
+    while (true) {
+        column += forward ? 1 : -1;
+        if (column >= columns.size()) {
+            column = 0;
+            ++row;
+        } else if (column < 0) {
+            column = int(columns.size()) - 1;
+            --row;
+        }
+        if (row < 0 || row >= viewItemCount())
+            return {};
+        const QPersistentModelIndex next(viewIndex(row, columns.at(column)));
+        const QModelIndex anchor = next.isValid() ? anchorIndex(next) : QModelIndex();
+        if (!self || modelChangeSerial() != modelSerial || viewMappingSerial() != mappingSerial)
+            return {};
+        if (next.isValid() && anchor == next)
+            return next;
+    }
 }
 
 QRect VirtualTableView::cellRect(const QModelIndex &index) const
@@ -6013,6 +6090,7 @@ void VirtualTableView::updateColumnLayout()
     syncRowGridLines();
     raiseItemPaneSeparatorLines();
     viewport()->update();
+    updateEditorGeometry();
 }
 
 void VirtualTableView::refreshPreviewGridMasks()
