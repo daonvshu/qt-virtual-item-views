@@ -1,4 +1,5 @@
 #include <virtualitemviews/tablewidgetadapter.h>
+#include "../core/transparenthost_p.h"
 
 namespace viv {
 
@@ -7,6 +8,7 @@ ColumnHost::ColumnHost(int logicalColumn, QWidget *parent)
     , m_logicalColumn(logicalColumn)
 {
     setObjectName(QStringLiteral("vivColumnHost"));
+    detail::prepareTransparentHost(this);
 }
 
 void ColumnHost::setLogicalColumn(int logicalColumn)

@@ -103,7 +103,7 @@ examples: examples/tree_capabilities/13_visual_states/example.cpp examples/list_
 ### background | 背景 / 项底色 / 透明 / QSS
 api: setBackgroundVisible setBackgroundColor backgroundBrush setItemBackgroundColor setSectionBackgroundColor setSpacingBackgroundColor
 headers: include/virtualitemviews/virtualitemview.h include/virtualitemviews/headerview.h include/virtualitemviews/virtualheaderview.h
-rules: 整体默认 QPalette::Base，项底色默认透明。View 底色→viewport QSS 背景→项与状态层；setBackgroundVisible(false) 关闭主体两层，不控制表头和显式间距色。QSS 使用 vivItemView/vivViewport/vivHorizontalHeader/vivVerticalHeader/vivHeaderSection/vivHeaderCorner 对象名，不使用 QHeaderView::section。QSS 背景由 Qt 画刷驱动，不解析 stylesheet 字符串。框架边框/圆角使用专用接口；不要假定自绘部件支持所有 QSS border/image 属性。
+rules: 整体默认 QPalette::Base，项底色默认透明。View 底色→viewport QSS 背景→项与状态层；setBackgroundVisible(false) 关闭主体两层，不控制表头和显式间距色。QSS 使用 vivItemView/vivViewport/vivHorizontalHeader/vivVerticalHeader/vivHeaderSection/vivHeaderCorner 对象名，不使用 QHeaderView::section。QSS 背景由 Qt 画刷驱动，不解析 stylesheet 字符串。框架边框/圆角使用专用接口；不要假定自绘部件支持所有 QSS border/image 属性。 编辑器、冻结区域和动画的纯裁剪宿主，以及 ColumnHost/Wrap 内容层保持透明，屏蔽外层 QSS 的背景和边框；宿主透明规则不匹配业务子控件。
 impl: src/core/virtualitemviewframe.cpp src/core/stylesheetbackground_p.h src/core/viewbackground_p.h src/widgets/styledheadersection.cpp
 doc: docs/stylesheets.md
 examples: examples/flow_capabilities/10_colors/example.cpp examples/list_capabilities/22_colors/example.cpp examples/masonry_capabilities/13_borders_colors/example.cpp examples/table_capabilities/32_colors/example.cpp examples/tree_capabilities/28_colors/example.cpp examples/treetable_capabilities/37_colors/example.cpp

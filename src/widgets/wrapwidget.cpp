@@ -1,5 +1,6 @@
 #include <virtualitemviews/wrapwidget.h>
 #include <virtualitemviews/wraplayout.h>
+#include "../core/transparenthost_p.h"
 #include <QEvent>
 #include <QPointer>
 #include <QScrollBar>
@@ -24,6 +25,8 @@ WrapWidget::WrapWidget(QWidget *parent) : QScrollArea(parent)
     // the scroll area itself to grow beyond the parent layout's allocation.
     m_layout->setSizeConstraint(QLayout::SetNoConstraint);
     setWidget(m_content);
+    // QScrollArea::setWidget enables auto-fill; apply transparency afterwards.
+    detail::prepareTransparentHost(m_content);
     connect(m_layout, &WrapLayout::layoutChanged, this, &WrapWidget::scheduleUpdate);
     scheduleUpdate();
 }

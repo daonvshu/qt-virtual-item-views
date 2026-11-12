@@ -93,7 +93,7 @@ feature('state-extent', '状态范围 / 命中范围 / 固定高度 / padding',
 feature('background', '背景 / 项底色 / 透明 / QSS',
     'virtualitemview headerview virtualheaderview',
     'setBackgroundVisible setBackgroundColor backgroundBrush setItemBackgroundColor setSectionBackgroundColor setSpacingBackgroundColor',
-    '整体默认 QPalette::Base，项底色默认透明。View 底色→viewport QSS 背景→项与状态层；setBackgroundVisible(false) 关闭主体两层，不控制表头和显式间距色。QSS 使用 vivItemView/vivViewport/vivHorizontalHeader/vivVerticalHeader/vivHeaderSection/vivHeaderCorner 对象名，不使用 QHeaderView::section。QSS 背景由 Qt 画刷驱动，不解析 stylesheet 字符串。框架边框/圆角使用专用接口；不要假定自绘部件支持所有 QSS border/image 属性。',
+    '整体默认 QPalette::Base，项底色默认透明。View 底色→viewport QSS 背景→项与状态层；setBackgroundVisible(false) 关闭主体两层，不控制表头和显式间距色。QSS 使用 vivItemView/vivViewport/vivHorizontalHeader/vivVerticalHeader/vivHeaderSection/vivHeaderCorner 对象名，不使用 QHeaderView::section。QSS 背景由 Qt 画刷驱动，不解析 stylesheet 字符串。框架边框/圆角使用专用接口；不要假定自绘部件支持所有 QSS border/image 属性。 编辑器、冻结区域和动画的纯裁剪宿主，以及 ColumnHost/Wrap 内容层保持透明，屏蔽外层 QSS 的背景和边框；宿主透明规则不匹配业务子控件。',
     'src/core/virtualitemviewframe.cpp src/core/stylesheetbackground_p.h src/core/viewbackground_p.h src/widgets/styledheadersection.cpp',
     'examples/*_capabilities/*colors/example.cpp', 'docs/stylesheets.md')
 feature('frame', '外边框 / 四边开关 / 抗锯齿圆角',

@@ -1,5 +1,6 @@
 #include <virtualitemviews/virtualitemview.h>
 #include <virtualitemviews/widgetadapter.h>
+#include "transparenthost_p.h"
 
 #include <QAbstractItemModel>
 #include <QApplication>
@@ -123,6 +124,7 @@ public:
     {
         host = new QWidget(view->viewport());
         host->setObjectName(QStringLiteral("vivEditorHost"));
+        detail::prepareTransparentHost(host);
         host->setFocusPolicy(Qt::NoFocus);
         host->hide();
         const QPointer<ItemEditorSession> self(this);

@@ -1,6 +1,7 @@
 #include <virtualitemviews/virtualtableview.h>
 #include "../core/stylesheetbackground_p.h"
 #include "../core/viewbackground_p.h"
+#include "../core/transparenthost_p.h"
 #include "../core/transientitemgeometry_p.h"
 #include "../core/performanceprobe_p.h"
 #include "../core/pixelalignedlines_p.h"
@@ -113,6 +114,7 @@ public:
         : QWidget(parent)
     {
         setObjectName(QStringLiteral("vivPaneClipHost"));
+        detail::prepareTransparentHost(this);
         setProperty(paneIndexProperty(), paneIndex);
         setFocusPolicy(Qt::NoFocus);
     }
@@ -129,6 +131,7 @@ public:
         : PaneClipHost(paneIndex, parent), m_content(new QWidget(this))
     {
         m_content->setObjectName(QStringLiteral("vivCellPaneContent"));
+        detail::prepareTransparentHost(m_content);
         m_content->setFocusPolicy(Qt::NoFocus);
         m_content->show();
     }

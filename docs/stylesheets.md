@@ -46,6 +46,12 @@ view->setStyleSheet(QStringLiteral(
 
 内部绘制与裁剪组件也有名称，便于定位：`vivItemPaneClipHost`、`vivPaneClipHost`、`vivCellPaneContent`、`vivTransientItemClipHost`、`vivItemPaneSeparatorLine`、`vivPaneSeparatorLine`、`vivPaneGapGridLines`、`vivHeaderDragSeparator`、`vivListRowGridLine`、`vivTreeRowGridLine`、`vivRowGridLine`、`vivTreeDragPlaceholderOutline`。兼容样式控件使用 `vivStyledTableRow` / `vivGridCoverOverlay`；流式和瀑布流网格层使用 `vivFlowGridOverlay` / `vivMasonryGridOverlay`。这些组件按需创建，不保证始终存在，不应依赖它们的数量或层级组织业务逻辑。
 
+## 透明托管层
+
+编辑器宿主 `vivEditorHost`、行/列裁剪容器 `vivItemPaneClipHost` / `vivPaneClipHost`、cell 滚动内容层 `vivCellPaneContent`、树动画裁剪层 `vivTransientItemClipHost`、`ColumnHost` 和 `WrapWidget` 的 `vivWrapContent` 只负责托管、定位或裁剪。它们默认保持透明，不显示来自外层通配 QSS 的背景、背景图片或边框，也不引入 QSS padding/margin。
+
+透明规则只命中这些托管层，不匹配其中的业务子控件。编辑器、按钮、标签等仍可通过各自的 stylesheet 设置外观。需要设置整行或 cell 底色时，使用 `setItemBackgroundColor()` 或配置业务控件；需要设置表头、间距和分割线时，使用对应组件接口。
+
 ## 可运行示例
 
 例如同时设置整体底色和内容区域底色：

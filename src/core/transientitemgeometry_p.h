@@ -1,5 +1,7 @@
 #pragma once
 
+#include "transparenthost_p.h"
+
 #include <QEvent>
 #include <QGraphicsOpacityEffect>
 #include <QPainter>
@@ -62,7 +64,7 @@ public:
     TransientItemClipHost(QWidget *item, QWidget *parent) : QWidget(parent)
     {
         setObjectName(QStringLiteral("vivTransientItemClipHost"));
-        setAttribute(Qt::WA_NoSystemBackground);
+        prepareTransparentHost(this);
         item->installEventFilter(this);
         connect(item, &QObject::destroyed, this, &QObject::deleteLater);
     }

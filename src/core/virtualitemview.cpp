@@ -5,6 +5,7 @@
 #include "dragpreview_p.h"
 #include "dragmoveselection_p.h"
 #include "viewbackground_p.h"
+#include "transparenthost_p.h"
 
 #include <virtualitemviews/widgetadapter.h>
 #include <virtualitemviews/layoutpolicy.h>
@@ -146,6 +147,7 @@ public:
         : QWidget(parent)
     {
         setObjectName(QStringLiteral("vivItemPaneClipHost"));
+        detail::prepareTransparentHost(this);
         setFocusPolicy(Qt::NoFocus);
     }
 };
