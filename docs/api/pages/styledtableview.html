@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>StyledTableCellHost / StyledTableRowWidget / StyledTableView · VirtualItemViews</title>
+<link rel="stylesheet" href="../assets/reference.css">
+</head>
+<body>
+<header>
+<div class="header-top">
+<a href="../index.html">VirtualItemViews / API</a>
+<div id="language-switch" class="language-switch" role="group" aria-label="Language / 语言" hidden>
+<button type="button" data-language="zh" aria-pressed="true" lang="zh-CN">中文</button>
+<button type="button" data-language="en" aria-pressed="false" lang="en">English</button>
+</div>
+</div>
+<h1>StyledTableCellHost / StyledTableRowWidget / StyledTableView</h1>
+<p><span data-zh="公开辅助接口与扩展契约" data-en="Public helper interfaces and extension contracts">公开辅助接口与扩展契约</span></p>
+</header>
+<main>
+<nav>
+<a href="../index.html"><span data-zh="能力总览" data-en="Capabilities">能力总览</span></a>
+<a href="../../AGENT_GUIDE.md"><span data-zh="Agent 索引" data-en="Agent guide">Agent 索引</span></a>
+<a href="../../../examples/README.md"><span data-zh="独立示例" data-en="Examples">独立示例</span></a>
+<a href="../../../README.md"><span data-zh="项目首页" data-en="Project home">项目首页</span></a>
+</nav>
+<label for="filter"><span data-zh="搜索本页：能力、API 名称或关键词" data-en="Search this page: capability, API name or keyword">搜索本页：能力、API 名称或关键词</span></label>
+<input id="filter" type="search" placeholder="例如：Popup、setAutoHeight、冻结、branch">
+<p class="muted search-help"><span data-zh="无需网络或服务器。所有内容默认可见；搜索只筛选当前页。完整继承 API 请沿基类链接查阅。" data-en="No network or server required. All content is initially visible; search filters this page only. Follow base-class links for inherited APIs.">无需网络或服务器。所有内容默认可见；搜索只筛选当前页。完整继承 API 请沿基类链接查阅。</span></p>
+<p id="search-status" role="status" aria-live="polite">
+</p>
+<p>
+<a href="../../../include/virtualitemviews/styledtableview.h"><span data-zh="公开头文件：include/virtualitemviews/styledtableview.h" data-en="Public header: include/virtualitemviews/styledtableview.h">公开头文件：include/virtualitemviews/styledtableview.h</span></a>
+</p>
+<p class="api-jump">
+<a href="#public-api"><span data-zh="公开函数列表" data-en="Public function index">公开函数列表</span></a>
+</p>
+<h2><span data-zh="能力与配套设置" data-en="Capabilities and related settings">能力与配套设置</span></h2>
+<article id="styled-table" data-search="StyledTableView StyledTableRowWidget StyledTableCellHost visualStateBackgroundPath paintVisualStateBackground setBackgroundCoversGridLines styledtableview virtualtableview">
+<h3><span data-zh="扩展自绘状态形状 / StyledTableView" data-en="Custom state shapes / StyledTableView">扩展自绘状态形状 / StyledTableView</span></h3>
+<p>
+<code>StyledTableView · StyledTableRowWidget · StyledTableCellHost · visualStateBackgroundPath · paintVisualStateBackground · setBackgroundCoversGridLines</code>
+</p>
+<p class="rules"><span data-zh="普通 hover/selection、颜色和圆角直接用 VirtualTableView 的函数即可。只有自定义背景形状/绘制才考虑 StyledTableView 和配套 row/cell host；默认状态圆角为 6 逻辑像素。不要为了常规背景重复引入一套业务状态动画。" data-en="Use VirtualTableView functions for ordinary hover/selection colors and corners. Use StyledTableView and matching row/cell hosts only for custom shapes/painting. Its default state radius is 6 logical pixels. Standard backgrounds do not need another business animation system.">普通 hover/selection、颜色和圆角直接用 VirtualTableView 的函数即可。只有自定义背景形状/绘制才考虑 StyledTableView 和配套 row/cell host；默认状态圆角为 6 逻辑像素。不要为了常规背景重复引入一套业务状态动画。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../../src/widgets/styledtableview.cpp">src/widgets/styledtableview.cpp</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../../table.md">docs/table.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（0）" data-en="Independent source examples (0)">独立源码示例（0）</span></summary>
+<ul>
+</ul>
+</details>
+</article>
+<h2 id="public-api" tabindex="-1"><span data-zh="公开 API、类型与信号" data-en="Public API, types and signals">公开 API、类型与信号</span></h2>
+<section class="function-index" id="function-index" tabindex="-1">
+<h3><span data-zh="公开函数列表" data-en="Public function index">公开函数列表</span></h3>
+<p class="muted"><span data-zh="按声明类型分组；每个重载单独列出，点击签名跳转到说明。信号单独列出；类型和数据成员仍保留在下方。" data-en="Grouped by declaring type. Each overload has its own link to the details. Signals are listed separately; types and data members remain below.">按声明类型分组；每个重载单独列出，点击签名跳转到说明。信号单独列出；类型和数据成员仍保留在下方。</span></p>
+<h4>StyledTableCellHost</h4>
+<ul>
+<li data-search="StyledTableCellHost StyledTableCellHost">
+<a href="#StyledTableCellHost-StyledTableCellHost-0">
+<code>StyledTableCellHost(int logicalColumn, StyledTableView *view, QWidget *parent = nullptr);</code>
+</a>
+</li>
+<li data-search="StyledTableCellHost bindIndex">
+<a href="#StyledTableCellHost-bindIndex-1">
+<code>void bindIndex(const QModelIndex &amp;index);</code>
+</a>
+</li>
+<li data-search="StyledTableCellHost clearIndex">
+<a href="#StyledTableCellHost-clearIndex-2">
+<code>void clearIndex();</code>
+</a>
+</li>
+</ul>
+<h4>StyledTableRowWidget</h4>
+<ul>
+<li data-search="StyledTableRowWidget StyledTableRowWidget">
+<a href="#StyledTableRowWidget-StyledTableRowWidget-0">
+<code>explicit StyledTableRowWidget(StyledTableView *view, QWidget *parent = nullptr);</code>
+</a>
+</li>
+<li data-search="StyledTableRowWidget bindRow">
+<a href="#StyledTableRowWidget-bindRow-1">
+<code>void bindRow(const QModelIndex &amp;index);</code>
+</a>
+</li>
+<li data-search="StyledTableRowWidget unbindRow">
+<a href="#StyledTableRowWidget-unbindRow-2">
+<code>void unbindRow();</code>
+</a>
+</li>
+<li data-search="StyledTableRowWidget refreshVisualState">
+<a href="#StyledTableRowWidget-refreshVisualState-3">
+<code>void refreshVisualState(const QModelIndex &amp;index);</code>
+</a>
+</li>
+<li data-search="StyledTableRowWidget refreshVisualStates">
+<a href="#StyledTableRowWidget-refreshVisualStates-4">
+<code>void refreshVisualStates();</code>
+</a>
+</li>
+</ul>
+<h4>StyledTableView</h4>
+<ul>
+<li data-search="StyledTableView StyledTableView">
+<a href="#StyledTableView-StyledTableView-0">
+<code>explicit StyledTableView(QWidget *parent = nullptr);</code>
+</a>
+</li>
+<li data-search="StyledTableView setVisualStateCornerRadius">
+<a href="#StyledTableView-setVisualStateCornerRadius-1">
+<code>void setVisualStateCornerRadius(int radius);</code>
+</a>
+</li>
+<li data-search="StyledTableView visualStateCornerRadius">
+<a href="#StyledTableView-visualStateCornerRadius-2">
+<code>int visualStateCornerRadius() const;</code>
+</a>
+</li>
+<li data-search="StyledTableView setBackgroundCoversGridLines">
+<a href="#StyledTableView-setBackgroundCoversGridLines-3">
+<code>void setBackgroundCoversGridLines(bool enabled);</code>
+</a>
+</li>
+<li data-search="StyledTableView backgroundCoversGridLines">
+<a href="#StyledTableView-backgroundCoversGridLines-4">
+<code>bool backgroundCoversGridLines() const;</code>
+</a>
+</li>
+<li data-search="StyledTableView refreshRoundedEdges">
+<a href="#StyledTableView-refreshRoundedEdges-5">
+<code>void refreshRoundedEdges();</code>
+</a>
+</li>
+<li data-search="StyledTableView hasLeftRowEdge">
+<a href="#StyledTableView-hasLeftRowEdge-6">
+<code>bool hasLeftRowEdge() const;</code>
+</a>
+</li>
+<li data-search="StyledTableView hasRightRowEdge">
+<a href="#StyledTableView-hasRightRowEdge-7">
+<code>bool hasRightRowEdge() const;</code>
+</a>
+</li>
+<li data-search="StyledTableView visualStateBackgroundPath">
+<a href="#StyledTableView-visualStateBackgroundPath-8">
+<code>virtual QPainterPath visualStateBackgroundPath(const QRectF &amp;rect) const;</code>
+</a>
+</li>
+<li data-search="StyledTableView paintVisualStateBackground">
+<a href="#StyledTableView-paintVisualStateBackground-9">
+<code>virtual void paintVisualStateBackground(QPainter *painter, const QRectF &amp;rect, const QModelIndex &amp;index) const;</code>
+</a>
+</li>
+</ul>
+</section>
+<h2><span data-zh="函数说明" data-en="Function details">函数说明</span></h2>
+<p class="muted"><span data-zh="按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。" data-en="Read each function for its purpose and related settings. Overloads are listed separately; follow related capabilities to find examples.">按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。</span></p>
+<section>
+<h3 id="StyledTableCellHost">StyledTableCellHost</h3>
+<pre>class VIRTUALITEMVIEWS_EXPORT StyledTableCellHost : public ColumnHost</pre>
+<article tabindex="-1" id="StyledTableCellHost-StyledTableCellHost-0" data-search="StyledTableCellHost StyledTableCellHost">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/styledtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L20</span>
+<pre>StyledTableCellHost(int logicalColumn, StyledTableView *view, QWidget *parent = nullptr);</pre>
+<p class="doc" data-zh="构造 StyledTableCellHost；按此重载传入父对象、模型或布局参数。带 parent 的 QObject/QWidget 遵循 Qt 父子生命周期。" data-en="Construct StyledTableCellHost with the parent, model or layout arguments in this overload. QObject/QWidget parent arguments follow Qt parent-child lifetime rules.">构造 StyledTableCellHost；按此重载传入父对象、模型或布局参数。带 parent 的 QObject/QWidget 遵循 Qt 父子生命周期。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#styled-table"><span data-zh="扩展自绘状态形状 / StyledTableView" data-en="Custom state shapes / StyledTableView">扩展自绘状态形状 / StyledTableView</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="StyledTableCellHost-bindIndex-1" data-search="StyledTableCellHost bindIndex">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/styledtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L22</span>
+<pre>void bindIndex(const QModelIndex &amp;index);</pre>
+<p class="doc" data-zh="把单元格宿主关联到给定模型索引。" data-en="Associate the cell host with the supplied model index.">把单元格宿主关联到给定模型索引。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="StyledTableCellHost-clearIndex-2" data-search="StyledTableCellHost clearIndex">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/styledtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L23</span>
+<pre>void clearIndex();</pre>
+<p class="doc" data-zh="清除单元格宿主当前绑定索引。" data-en="Clear the cell host&#x27;s bound index.">清除单元格宿主当前绑定索引。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+</section>
+<section>
+<h3 id="StyledTableRowWidget">StyledTableRowWidget</h3>
+<pre>class VIRTUALITEMVIEWS_EXPORT StyledTableRowWidget : public QWidget</pre>
+<article tabindex="-1" id="StyledTableRowWidget-StyledTableRowWidget-0" data-search="StyledTableRowWidget StyledTableRowWidget">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/styledtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L37</span>
+<pre>explicit StyledTableRowWidget(StyledTableView *view, QWidget *parent = nullptr);</pre>
+<p class="doc" data-zh="构造 StyledTableRowWidget；按此重载传入父对象、模型或布局参数。带 parent 的 QObject/QWidget 遵循 Qt 父子生命周期。" data-en="Construct StyledTableRowWidget with the parent, model or layout arguments in this overload. QObject/QWidget parent arguments follow Qt parent-child lifetime rules.">构造 StyledTableRowWidget；按此重载传入父对象、模型或布局参数。带 parent 的 QObject/QWidget 遵循 Qt 父子生命周期。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#styled-table"><span data-zh="扩展自绘状态形状 / StyledTableView" data-en="Custom state shapes / StyledTableView">扩展自绘状态形状 / StyledTableView</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="StyledTableRowWidget-bindRow-1" data-search="StyledTableRowWidget bindRow">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/styledtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L40</span>
+<pre>void bindRow(const QModelIndex &amp;index);</pre>
+<p class="doc" data-zh="将整行控件绑定到当前模型行。" data-en="Bind the row widget to the current model row.">将整行控件绑定到当前模型行。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="StyledTableRowWidget-unbindRow-2" data-search="StyledTableRowWidget unbindRow">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/styledtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L41</span>
+<pre>void unbindRow();</pre>
+<p class="doc" data-zh="解除整行控件与当前模型行的绑定。" data-en="Detach the row widget from its current model row.">解除整行控件与当前模型行的绑定。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="StyledTableRowWidget-refreshVisualState-3" data-search="StyledTableRowWidget refreshVisualState">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/styledtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L42</span>
+<pre>void refreshVisualState(const QModelIndex &amp;index);</pre>
+<p class="doc" data-zh="将最新框架状态重新应用到物化控件并刷新对应显示。业务不应因此重新构造全部行。" data-en="Reapply framework state to materialized widgets and refresh their appearance. This should not rebuild all rows.">将最新框架状态重新应用到物化控件并刷新对应显示。业务不应因此重新构造全部行。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="StyledTableRowWidget-refreshVisualStates-4" data-search="StyledTableRowWidget refreshVisualStates">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/styledtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L43</span>
+<pre>void refreshVisualStates();</pre>
+<p class="doc" data-zh="将最新框架状态重新应用到物化控件并刷新对应显示。业务不应因此重新构造全部行。" data-en="Reapply framework state to materialized widgets and refresh their appearance. This should not rebuild all rows.">将最新框架状态重新应用到物化控件并刷新对应显示。业务不应因此重新构造全部行。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+</section>
+<section>
+<h3 id="StyledTableView">StyledTableView</h3>
+<pre>class VIRTUALITEMVIEWS_EXPORT StyledTableView : public VirtualTableView</pre>
+<article tabindex="-1" id="StyledTableView-StyledTableView-0" data-search="StyledTableView StyledTableView">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/styledtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L58</span>
+<pre>explicit StyledTableView(QWidget *parent = nullptr);</pre>
+<p class="doc" data-zh="构造 StyledTableView；按此重载传入父对象、模型或布局参数。带 parent 的 QObject/QWidget 遵循 Qt 父子生命周期。" data-en="Construct StyledTableView with the parent, model or layout arguments in this overload. QObject/QWidget parent arguments follow Qt parent-child lifetime rules.">构造 StyledTableView；按此重载传入父对象、模型或布局参数。带 parent 的 QObject/QWidget 遵循 Qt 父子生命周期。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#styled-table"><span data-zh="扩展自绘状态形状 / StyledTableView" data-en="Custom state shapes / StyledTableView">扩展自绘状态形状 / StyledTableView</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="StyledTableView-setVisualStateCornerRadius-1" data-search="StyledTableView setVisualStateCornerRadius">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/styledtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L60</span>
+<pre>void setVisualStateCornerRadius(int radius);</pre>
+<p class="doc" data-zh="设置状态背景圆角半径。" data-en="Set the state background corner radius.">设置状态背景圆角半径。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="StyledTableView-visualStateCornerRadius-2" data-search="StyledTableView visualStateCornerRadius">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/styledtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L61</span>
+<pre>    int visualStateCornerRadius() const;</pre>
+<p class="doc" data-zh="返回状态背景圆角半径。" data-en="Return the state background corner radius.">返回状态背景圆角半径。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="StyledTableView-setBackgroundCoversGridLines-3" data-search="StyledTableView setBackgroundCoversGridLines">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/styledtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L62</span>
+<pre>void setBackgroundCoversGridLines(bool enabled);</pre>
+<p class="doc" data-zh="设置状态背景覆盖分割线的开关。" data-en="Set the whether state backgrounds cover grid lines.">设置状态背景覆盖分割线的开关。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#styled-table"><span data-zh="扩展自绘状态形状 / StyledTableView" data-en="Custom state shapes / StyledTableView">扩展自绘状态形状 / StyledTableView</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="StyledTableView-backgroundCoversGridLines-4" data-search="StyledTableView backgroundCoversGridLines">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/styledtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L63</span>
+<pre>    bool backgroundCoversGridLines() const;</pre>
+<p class="doc" data-zh="返回状态背景覆盖分割线的开关。" data-en="Return the whether state backgrounds cover grid lines.">返回状态背景覆盖分割线的开关。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#styled-table"><span data-zh="扩展自绘状态形状 / StyledTableView" data-en="Custom state shapes / StyledTableView">扩展自绘状态形状 / StyledTableView</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="StyledTableView-refreshRoundedEdges-5" data-search="StyledTableView refreshRoundedEdges">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/styledtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L64</span>
+<pre>void refreshRoundedEdges();</pre>
+<p class="doc" data-zh="重新计算并刷新行背景的圆角边缘。" data-en="Recalculate and refresh rounded edges of row backgrounds.">重新计算并刷新行背景的圆角边缘。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="StyledTableView-hasLeftRowEdge-6" data-search="StyledTableView hasLeftRowEdge">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/styledtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L65</span>
+<pre>bool hasLeftRowEdge() const;</pre>
+<p class="doc" data-zh="判断指定控件是否位于行背景左端或右端，以选择圆角。" data-en="Check whether a widget lies at a row background&#x27;s left or right edge for rounding.">判断指定控件是否位于行背景左端或右端，以选择圆角。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="StyledTableView-hasRightRowEdge-7" data-search="StyledTableView hasRightRowEdge">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/styledtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L66</span>
+<pre>bool hasRightRowEdge() const;</pre>
+<p class="doc" data-zh="判断指定控件是否位于行背景左端或右端，以选择圆角。" data-en="Check whether a widget lies at a row background&#x27;s left or right edge for rounding.">判断指定控件是否位于行背景左端或右端，以选择圆角。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="StyledTableView-visualStateBackgroundPath-8" data-search="StyledTableView visualStateBackgroundPath">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/styledtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L68</span>
+<pre>virtual QPainterPath visualStateBackgroundPath(const QRectF &amp;rect) const;</pre>
+<p class="doc" data-zh="计算状态背景路径，包含适用圆角和边界。" data-en="Compute the state background path, including applicable rounding and boundaries.">计算状态背景路径，包含适用圆角和边界。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#styled-table"><span data-zh="扩展自绘状态形状 / StyledTableView" data-en="Custom state shapes / StyledTableView">扩展自绘状态形状 / StyledTableView</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="StyledTableView-paintVisualStateBackground-9" data-search="StyledTableView paintVisualStateBackground">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/styledtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L69</span>
+<pre>virtual void paintVisualStateBackground(QPainter *painter, const QRectF &amp;rect,
+                                             const QModelIndex &amp;index) const;</pre>
+<p class="doc" data-zh="按给定区域与视觉状态绘制背景；仅在默认颜色、边距和圆角配置不足时重载。" data-en="Paint a background from bounds and visual state; override only when standard colors, margins and rounding are insufficient.">按给定区域与视觉状态绘制背景；仅在默认颜色、边距和圆角配置不足时重载。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#styled-table"><span data-zh="扩展自绘状态形状 / StyledTableView" data-en="Custom state shapes / StyledTableView">扩展自绘状态形状 / StyledTableView</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+</section>
+<footer class="muted">
+<p><span data-zh="按能力查找配套设置与独立示例；通用接口请沿基类链接查阅，Qt 继承接口请参考 Qt 文档。" data-en="Find related settings and independent examples by capability. Follow base-class links for shared APIs and consult Qt documentation for inherited Qt APIs.">按能力查找配套设置与独立示例；通用接口请沿基类链接查阅，Qt 继承接口请参考 Qt 文档。</span></p>
+</footer>
+</main>
+<script src="../assets/reference.js">
+</script>
+</body>
+</html>

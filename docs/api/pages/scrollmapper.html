@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ScrollMapper · VirtualItemViews</title>
+<link rel="stylesheet" href="../assets/reference.css">
+</head>
+<body>
+<header>
+<div class="header-top">
+<a href="../index.html">VirtualItemViews / API</a>
+<div id="language-switch" class="language-switch" role="group" aria-label="Language / 语言" hidden>
+<button type="button" data-language="zh" aria-pressed="true" lang="zh-CN">中文</button>
+<button type="button" data-language="en" aria-pressed="false" lang="en">English</button>
+</div>
+</div>
+<h1>ScrollMapper</h1>
+<p><span data-zh="公开辅助接口与扩展契约" data-en="Public helper interfaces and extension contracts">公开辅助接口与扩展契约</span></p>
+</header>
+<main>
+<nav>
+<a href="../index.html"><span data-zh="能力总览" data-en="Capabilities">能力总览</span></a>
+<a href="../../AGENT_GUIDE.md"><span data-zh="Agent 索引" data-en="Agent guide">Agent 索引</span></a>
+<a href="../../../examples/README.md"><span data-zh="独立示例" data-en="Examples">独立示例</span></a>
+<a href="../../../README.md"><span data-zh="项目首页" data-en="Project home">项目首页</span></a>
+</nav>
+<label for="filter"><span data-zh="搜索本页：能力、API 名称或关键词" data-en="Search this page: capability, API name or keyword">搜索本页：能力、API 名称或关键词</span></label>
+<input id="filter" type="search" placeholder="例如：Popup、setAutoHeight、冻结、branch">
+<p class="muted search-help"><span data-zh="无需网络或服务器。所有内容默认可见；搜索只筛选当前页。完整继承 API 请沿基类链接查阅。" data-en="No network or server required. All content is initially visible; search filters this page only. Follow base-class links for inherited APIs.">无需网络或服务器。所有内容默认可见；搜索只筛选当前页。完整继承 API 请沿基类链接查阅。</span></p>
+<p id="search-status" role="status" aria-live="polite">
+</p>
+<p>
+<a href="../../../include/virtualitemviews/scrollmapper.h"><span data-zh="公开头文件：include/virtualitemviews/scrollmapper.h" data-en="Public header: include/virtualitemviews/scrollmapper.h">公开头文件：include/virtualitemviews/scrollmapper.h</span></a>
+</p>
+<p class="api-jump">
+<a href="#public-api"><span data-zh="公开函数列表" data-en="Public function index">公开函数列表</span></a>
+</p>
+<h2><span data-zh="能力与配套设置" data-en="Capabilities and related settings">能力与配套设置</span></h2>
+<article id="scroll" data-search="scrollTo setVerticalOffset scrollByPixels setWheelScrollMode setWheelScrollPixels setWheelScrollItems indexAt visualRect widgetForIndex indexForWidget setHorizontalOffset virtualitemview virtualtableview scrollmapper">
+<h3><span data-zh="滚动 / 定位 / 几何 / 命中 / 平滑滚动" data-en="Scrolling / positioning / geometry / hits / smooth scrolling">滚动 / 定位 / 几何 / 命中 / 平滑滚动</span></h3>
+<p>
+<code>scrollTo · setVerticalOffset · scrollByPixels · setWheelScrollMode · setWheelScrollPixels · setWheelScrollItems · indexAt · visualRect · widgetForIndex · indexForWidget · setHorizontalOffset</code>
+</p>
+<p class="rules"><span data-zh="indexAt 输入 viewport 坐标，visualRect/cellRect 可在屏外仍有效；widgetForIndex/cellWidget 仅查询物化控件，空指针不表示模型项或选择丢失。长期保存项目用 QPersistentModelIndex。64 位 offset 通过 ScrollMapper 映射到滚动条；不要自己用 scrollbar int 作为巨大模型的逻辑偏移。无内部范围的滚轮交外层。smoothscroll 是可选依赖，仅检测到该库时编译/显示对应章节，不是核心内置 timer 动画接口。" data-en="indexAt accepts viewport coordinates; visualRect/cellRect can remain valid offscreen. widgetForIndex/cellWidget query materialized widgets only: null does not mean data or selection disappeared. Preserve item identity with QPersistentModelIndex. ScrollMapper maps 64-bit logical offsets onto scroll bars; do not treat scrollbar int values as large-model logical offsets. Wheel input propagates when no internal range exists. smoothscroll is an optional dependency; its chapters are compiled/shown only when detected, not a core timer-animation API.">indexAt 输入 viewport 坐标，visualRect/cellRect 可在屏外仍有效；widgetForIndex/cellWidget 仅查询物化控件，空指针不表示模型项或选择丢失。长期保存项目用 QPersistentModelIndex。64 位 offset 通过 ScrollMapper 映射到滚动条；不要自己用 scrollbar int 作为巨大模型的逻辑偏移。无内部范围的滚轮交外层。smoothscroll 是可选依赖，仅检测到该库时编译/显示对应章节，不是核心内置 timer 动画接口。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../../src/core/scrollmapper.cpp">src/core/scrollmapper.cpp</a> · <a href="../../../src/core/virtualitemview.cpp">src/core/virtualitemview.cpp</a> · <a href="../../../src/core/wheeleventforwarding_p.h">src/core/wheeleventforwarding_p.h</a> · <a href="../../../src/widgets/virtualheaderview.cpp">src/widgets/virtualheaderview.cpp</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../../interaction.md">docs/interaction.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（12）" data-en="Independent source examples (12)">独立源码示例（12）</span></summary>
+<ul>
+<li>
+<a href="../../../examples/flow_capabilities/07_scrolling/example.cpp">examples/flow_capabilities/07_scrolling/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/list_capabilities/12_scrolling/example.cpp">examples/list_capabilities/12_scrolling/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/list_capabilities/19_smooth_scrolling/example.cpp">examples/list_capabilities/19_smooth_scrolling/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/masonry_capabilities/10_scrolling/example.cpp">examples/masonry_capabilities/10_scrolling/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/table_capabilities/14_scrolling/example.cpp">examples/table_capabilities/14_scrolling/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/table_capabilities/29_smooth_scrolling/example.cpp">examples/table_capabilities/29_smooth_scrolling/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/tree_capabilities/17_scrolling/example.cpp">examples/tree_capabilities/17_scrolling/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/tree_capabilities/25_smooth_scrolling/example.cpp">examples/tree_capabilities/25_smooth_scrolling/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/treetable_capabilities/19_scrolling/example.cpp">examples/treetable_capabilities/19_scrolling/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/treetable_capabilities/34_smooth_scrolling/example.cpp">examples/treetable_capabilities/34_smooth_scrolling/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/wrap_capabilities/06_scrolling/example.cpp">examples/wrap_capabilities/06_scrolling/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/list_capabilities/11_item_events/example.cpp">examples/list_capabilities/11_item_events/example.cpp</a>
+</li>
+</ul>
+</details>
+</article>
+<article id="layout-kernel" data-search="LayoutPolicy ListLayout SizeIndex FixedSizeIndex BlockSizeIndex ScrollMapper TreeVisibilityIndex layoutpolicy listlayout sizeindex scrollmapper treevisibilityindex virtualitemview">
+<h3><span data-zh="布局与尺寸索引扩展" data-en="Layout and size-index extensions">布局与尺寸索引扩展</span></h3>
+<p>
+<code>LayoutPolicy · ListLayout · SizeIndex · FixedSizeIndex · BlockSizeIndex · ScrollMapper · TreeVisibilityIndex</code>
+</p>
+<p class="rules"><span data-zh="这些公开基础类型服务于布局扩展和定位查询。正常业务接入通过具体视图和模型通知；不要同时手工操作 sizeIndex/resetItems 和模型结构来维护两份状态。ListLayout 持有 SizeIndex，内部行布局区分固定/动态尺寸；TreeVisibilityIndex 管理展开后的映射。此层没有“任意改内部布局后自动保持所有业务状态”的契约，扩展时逐项阅读源码。" data-en="These public primitives support layout extensions and geometry queries. Normal integrations use concrete views and model notifications. Do not manually mutate sizeIndex/resetItems alongside model structure to maintain duplicate state. ListLayout owns a SizeIndex for fixed/variable sizing; TreeVisibilityIndex manages the expanded mapping. Arbitrary internal layout changes do not promise to preserve all business state automatically; inspect the implementation when extending this layer.">这些公开基础类型服务于布局扩展和定位查询。正常业务接入通过具体视图和模型通知；不要同时手工操作 sizeIndex/resetItems 和模型结构来维护两份状态。ListLayout 持有 SizeIndex，内部行布局区分固定/动态尺寸；TreeVisibilityIndex 管理展开后的映射。此层没有“任意改内部布局后自动保持所有业务状态”的契约，扩展时逐项阅读源码。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../../src/layout/listlayout.cpp">src/layout/listlayout.cpp</a> · <a href="../../../src/index/sizeindex.cpp">src/index/sizeindex.cpp</a> · <a href="../../../src/index/treevisibilityindex.cpp">src/index/treevisibilityindex.cpp</a> · <a href="../../../src/core/scrollmapper.cpp">src/core/scrollmapper.cpp</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../../models.md">docs/models.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（0）" data-en="Independent source examples (0)">独立源码示例（0）</span></summary>
+<ul>
+</ul>
+</details>
+</article>
+<h2 id="public-api" tabindex="-1"><span data-zh="公开 API、类型与信号" data-en="Public API, types and signals">公开 API、类型与信号</span></h2>
+<section class="function-index" id="function-index" tabindex="-1">
+<h3><span data-zh="公开函数列表" data-en="Public function index">公开函数列表</span></h3>
+<p class="muted"><span data-zh="按声明类型分组；每个重载单独列出，点击签名跳转到说明。信号单独列出；类型和数据成员仍保留在下方。" data-en="Grouped by declaring type. Each overload has its own link to the details. Signals are listed separately; types and data members remain below.">按声明类型分组；每个重载单独列出，点击签名跳转到说明。信号单独列出；类型和数据成员仍保留在下方。</span></p>
+<h4>ScrollMapper</h4>
+<ul>
+<li data-search="ScrollMapper setExtents">
+<a href="#ScrollMapper-setExtents-1">
+<code>void setExtents(qint64 contentExtent, int viewportExtent);</code>
+</a>
+</li>
+<li data-search="ScrollMapper contentExtent">
+<a href="#ScrollMapper-contentExtent-2">
+<code>qint64 contentExtent() const;</code>
+</a>
+</li>
+<li data-search="ScrollMapper viewportExtent">
+<a href="#ScrollMapper-viewportExtent-3">
+<code>int viewportExtent() const;</code>
+</a>
+</li>
+<li data-search="ScrollMapper maximumOffset">
+<a href="#ScrollMapper-maximumOffset-4">
+<code>qint64 maximumOffset() const;</code>
+</a>
+</li>
+<li data-search="ScrollMapper scrollRange">
+<a href="#ScrollMapper-scrollRange-5">
+<code>int scrollRange() const;</code>
+</a>
+</li>
+<li data-search="ScrollMapper isScaled">
+<a href="#ScrollMapper-isScaled-6">
+<code>bool isScaled() const;</code>
+</a>
+</li>
+<li data-search="ScrollMapper toScrollBarValue">
+<a href="#ScrollMapper-toScrollBarValue-7">
+<code>int toScrollBarValue(qint64 offset) const;</code>
+</a>
+</li>
+<li data-search="ScrollMapper toLogicalOffset">
+<a href="#ScrollMapper-toLogicalOffset-8">
+<code>qint64 toLogicalOffset(int value) const;</code>
+</a>
+</li>
+<li data-search="ScrollMapper setAnchor">
+<a href="#ScrollMapper-setAnchor-9">
+<code>void setAnchor(qint64 offset, int value);</code>
+</a>
+</li>
+<li data-search="ScrollMapper resetAnchor">
+<a href="#ScrollMapper-resetAnchor-10">
+<code>void resetAnchor();</code>
+</a>
+</li>
+<li data-search="ScrollMapper anchorOffset">
+<a href="#ScrollMapper-anchorOffset-11">
+<code>qint64 anchorOffset() const;</code>
+</a>
+</li>
+<li data-search="ScrollMapper anchorValue">
+<a href="#ScrollMapper-anchorValue-12">
+<code>int anchorValue() const;</code>
+</a>
+</li>
+</ul>
+</section>
+<h2><span data-zh="函数说明" data-en="Function details">函数说明</span></h2>
+<p class="muted"><span data-zh="按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。" data-en="Read each function for its purpose and related settings. Overloads are listed separately; follow related capabilities to find examples.">按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。</span></p>
+<section>
+<h3 id="ScrollMapper">ScrollMapper</h3>
+<pre>class VIRTUALITEMVIEWS_EXPORT ScrollMapper</pre>
+<article tabindex="-1" id="ScrollMapper-kMaxScrollRange-0" data-search="ScrollMapper kMaxScrollRange">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/scrollmapper.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L30</span>
+<pre>static constexpr int kMaxScrollRange = 2000000000;</pre>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ScrollMapper-setExtents-1" data-search="ScrollMapper setExtents">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/scrollmapper.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L34</span>
+<pre>void setExtents(qint64 contentExtent, int viewportExtent);</pre>
+<p class="doc" data-zh="设置内容长度和视口长度，用于计算有效滚动范围及缩放映射。" data-en="Set content and viewport extents to calculate the scroll range and scaled mapping.">设置内容长度和视口长度，用于计算有效滚动范围及缩放映射。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ScrollMapper-contentExtent-2" data-search="ScrollMapper contentExtent">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/scrollmapper.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L36</span>
+<pre>    qint64 contentExtent() const;</pre>
+<p class="doc" data-zh="返回布局或尺寸索引的内容总长度。" data-en="Return the total content extent of the layout or size index.">返回布局或尺寸索引的内容总长度。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ScrollMapper-viewportExtent-3" data-search="ScrollMapper viewportExtent">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/scrollmapper.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L37</span>
+<pre>    int viewportExtent() const;</pre>
+<p class="doc" data-zh="返回滚动映射使用的视口长度。" data-en="Return the viewport extent used by scroll mapping.">返回滚动映射使用的视口长度。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ScrollMapper-maximumOffset-4" data-search="ScrollMapper maximumOffset">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/scrollmapper.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L40</span>
+<pre>qint64 maximumOffset() const;</pre>
+<p class="doc" data-zh="返回有效滚动偏移上限。" data-en="Return the maximum valid scroll offset.">返回有效滚动偏移上限。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ScrollMapper-scrollRange-5" data-search="ScrollMapper scrollRange">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/scrollmapper.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L43</span>
+<pre>int scrollRange() const;</pre>
+<p class="doc" data-zh="返回原生滚动条映射范围。" data-en="Return the native scrollbar mapping range.">返回原生滚动条映射范围。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ScrollMapper-isScaled-6" data-search="ScrollMapper isScaled">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/scrollmapper.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L46</span>
+<pre>bool isScaled() const;</pre>
+<p class="doc" data-zh="判断逻辑范围是否超过原生滚动条可表达范围而需要缩放。" data-en="Check whether logical scrolling requires scaling to fit the native scrollbar range.">判断逻辑范围是否超过原生滚动条可表达范围而需要缩放。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ScrollMapper-toScrollBarValue-7" data-search="ScrollMapper toScrollBarValue">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/scrollmapper.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L48</span>
+<pre>int toScrollBarValue(qint64 offset) const;</pre>
+<p class="doc" data-zh="在逻辑滚动偏移和原生滚动条整数值之间转换；长内容可能需要比例缩放。" data-en="Convert between logical scroll offsets and native integer scrollbar values; large content may require scaling.">在逻辑滚动偏移和原生滚动条整数值之间转换；长内容可能需要比例缩放。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ScrollMapper-toLogicalOffset-8" data-search="ScrollMapper toLogicalOffset">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/scrollmapper.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L49</span>
+<pre>qint64 toLogicalOffset(int value) const;</pre>
+<p class="doc" data-zh="在逻辑滚动偏移和原生滚动条整数值之间转换；长内容可能需要比例缩放。" data-en="Convert between logical scroll offsets and native integer scrollbar values; large content may require scaling.">在逻辑滚动偏移和原生滚动条整数值之间转换；长内容可能需要比例缩放。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ScrollMapper-setAnchor-9" data-search="ScrollMapper setAnchor">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/scrollmapper.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L54</span>
+<pre>void setAnchor(qint64 offset, int value);</pre>
+<p class="doc" data-zh="设置逻辑偏移与滚动条值的映射锚点，减少大范围滚动的量化误差。" data-en="Set an anchor between logical offsets and scrollbar values to reduce quantization error over large ranges.">设置逻辑偏移与滚动条值的映射锚点，减少大范围滚动的量化误差。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ScrollMapper-resetAnchor-10" data-search="ScrollMapper resetAnchor">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/scrollmapper.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L55</span>
+<pre>void resetAnchor();</pre>
+<p class="doc" data-zh="清除滚动映射锚点。" data-en="Clear the scrollbar mapping anchor.">清除滚动映射锚点。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ScrollMapper-anchorOffset-11" data-search="ScrollMapper anchorOffset">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/scrollmapper.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L57</span>
+<pre>    qint64 anchorOffset() const;</pre>
+<p class="doc" data-zh="返回滚动映射锚点的逻辑偏移。" data-en="Return the logical offset of the scroll mapping anchor.">返回滚动映射锚点的逻辑偏移。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ScrollMapper-anchorValue-12" data-search="ScrollMapper anchorValue">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/scrollmapper.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L58</span>
+<pre>    int anchorValue() const;</pre>
+<p class="doc" data-zh="返回滚动映射锚点的滚动条值。" data-en="Return the scrollbar value of the mapping anchor.">返回滚动映射锚点的滚动条值。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+</section>
+<footer class="muted">
+<p><span data-zh="按能力查找配套设置与独立示例；通用接口请沿基类链接查阅，Qt 继承接口请参考 Qt 文档。" data-en="Find related settings and independent examples by capability. Follow base-class links for shared APIs and consult Qt documentation for inherited Qt APIs.">按能力查找配套设置与独立示例；通用接口请沿基类链接查阅，Qt 继承接口请参考 Qt 文档。</span></p>
+</footer>
+</main>
+<script src="../assets/reference.js">
+</script>
+</body>
+</html>

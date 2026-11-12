@@ -1,0 +1,662 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SizeIndex / FixedSizeIndex / BlockSizeIndex · VirtualItemViews</title>
+<link rel="stylesheet" href="../assets/reference.css">
+</head>
+<body>
+<header>
+<div class="header-top">
+<a href="../index.html">VirtualItemViews / API</a>
+<div id="language-switch" class="language-switch" role="group" aria-label="Language / 语言" hidden>
+<button type="button" data-language="zh" aria-pressed="true" lang="zh-CN">中文</button>
+<button type="button" data-language="en" aria-pressed="false" lang="en">English</button>
+</div>
+</div>
+<h1>SizeIndex / FixedSizeIndex / BlockSizeIndex</h1>
+<p><span data-zh="公开辅助接口与扩展契约" data-en="Public helper interfaces and extension contracts">公开辅助接口与扩展契约</span></p>
+</header>
+<main>
+<nav>
+<a href="../index.html"><span data-zh="能力总览" data-en="Capabilities">能力总览</span></a>
+<a href="../../AGENT_GUIDE.md"><span data-zh="Agent 索引" data-en="Agent guide">Agent 索引</span></a>
+<a href="../../../examples/README.md"><span data-zh="独立示例" data-en="Examples">独立示例</span></a>
+<a href="../../../README.md"><span data-zh="项目首页" data-en="Project home">项目首页</span></a>
+</nav>
+<label for="filter"><span data-zh="搜索本页：能力、API 名称或关键词" data-en="Search this page: capability, API name or keyword">搜索本页：能力、API 名称或关键词</span></label>
+<input id="filter" type="search" placeholder="例如：Popup、setAutoHeight、冻结、branch">
+<p class="muted search-help"><span data-zh="无需网络或服务器。所有内容默认可见；搜索只筛选当前页。完整继承 API 请沿基类链接查阅。" data-en="No network or server required. All content is initially visible; search filters this page only. Follow base-class links for inherited APIs.">无需网络或服务器。所有内容默认可见；搜索只筛选当前页。完整继承 API 请沿基类链接查阅。</span></p>
+<p id="search-status" role="status" aria-live="polite">
+</p>
+<p>
+<a href="../../../include/virtualitemviews/sizeindex.h"><span data-zh="公开头文件：include/virtualitemviews/sizeindex.h" data-en="Public header: include/virtualitemviews/sizeindex.h">公开头文件：include/virtualitemviews/sizeindex.h</span></a>
+</p>
+<p class="api-jump">
+<a href="#public-api"><span data-zh="公开函数列表" data-en="Public function index">公开函数列表</span></a>
+</p>
+<h2><span data-zh="能力与配套设置" data-en="Capabilities and related settings">能力与配套设置</span></h2>
+<article id="layout-kernel" data-search="LayoutPolicy ListLayout SizeIndex FixedSizeIndex BlockSizeIndex ScrollMapper TreeVisibilityIndex layoutpolicy listlayout sizeindex scrollmapper treevisibilityindex virtualitemview">
+<h3><span data-zh="布局与尺寸索引扩展" data-en="Layout and size-index extensions">布局与尺寸索引扩展</span></h3>
+<p>
+<code>LayoutPolicy · ListLayout · SizeIndex · FixedSizeIndex · BlockSizeIndex · ScrollMapper · TreeVisibilityIndex</code>
+</p>
+<p class="rules"><span data-zh="这些公开基础类型服务于布局扩展和定位查询。正常业务接入通过具体视图和模型通知；不要同时手工操作 sizeIndex/resetItems 和模型结构来维护两份状态。ListLayout 持有 SizeIndex，内部行布局区分固定/动态尺寸；TreeVisibilityIndex 管理展开后的映射。此层没有“任意改内部布局后自动保持所有业务状态”的契约，扩展时逐项阅读源码。" data-en="These public primitives support layout extensions and geometry queries. Normal integrations use concrete views and model notifications. Do not manually mutate sizeIndex/resetItems alongside model structure to maintain duplicate state. ListLayout owns a SizeIndex for fixed/variable sizing; TreeVisibilityIndex manages the expanded mapping. Arbitrary internal layout changes do not promise to preserve all business state automatically; inspect the implementation when extending this layer.">这些公开基础类型服务于布局扩展和定位查询。正常业务接入通过具体视图和模型通知；不要同时手工操作 sizeIndex/resetItems 和模型结构来维护两份状态。ListLayout 持有 SizeIndex，内部行布局区分固定/动态尺寸；TreeVisibilityIndex 管理展开后的映射。此层没有“任意改内部布局后自动保持所有业务状态”的契约，扩展时逐项阅读源码。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../../src/layout/listlayout.cpp">src/layout/listlayout.cpp</a> · <a href="../../../src/index/sizeindex.cpp">src/index/sizeindex.cpp</a> · <a href="../../../src/index/treevisibilityindex.cpp">src/index/treevisibilityindex.cpp</a> · <a href="../../../src/core/scrollmapper.cpp">src/core/scrollmapper.cpp</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../../models.md">docs/models.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（0）" data-en="Independent source examples (0)">独立源码示例（0）</span></summary>
+<ul>
+</ul>
+</details>
+</article>
+<h2 id="public-api" tabindex="-1"><span data-zh="公开 API、类型与信号" data-en="Public API, types and signals">公开 API、类型与信号</span></h2>
+<section class="function-index" id="function-index" tabindex="-1">
+<h3><span data-zh="公开函数列表" data-en="Public function index">公开函数列表</span></h3>
+<p class="muted"><span data-zh="按声明类型分组；每个重载单独列出，点击签名跳转到说明。信号单独列出；类型和数据成员仍保留在下方。" data-en="Grouped by declaring type. Each overload has its own link to the details. Signals are listed separately; types and data members remain below.">按声明类型分组；每个重载单独列出，点击签名跳转到说明。信号单独列出；类型和数据成员仍保留在下方。</span></p>
+<h4>SizeIndex</h4>
+<ul>
+<li data-search="SizeIndex SizeIndex">
+<a href="#SizeIndex-SizeIndex-0">
+<code>virtual ~SizeIndex() = default;</code>
+</a>
+</li>
+<li data-search="SizeIndex count">
+<a href="#SizeIndex-count-1">
+<code>qsizetype count() const;</code>
+</a>
+</li>
+<li data-search="SizeIndex totalSize">
+<a href="#SizeIndex-totalSize-2">
+<code>virtual qint64 totalSize() const = 0;</code>
+</a>
+</li>
+<li data-search="SizeIndex offsetOf">
+<a href="#SizeIndex-offsetOf-3">
+<code>virtual qint64 offsetOf(qsizetype index) const = 0;</code>
+</a>
+</li>
+<li data-search="SizeIndex indexAt">
+<a href="#SizeIndex-indexAt-4">
+<code>virtual qsizetype indexAt(qint64 offset) const = 0;</code>
+</a>
+</li>
+<li data-search="SizeIndex sizeOf">
+<a href="#SizeIndex-sizeOf-5">
+<code>virtual int sizeOf(qsizetype index) const = 0;</code>
+</a>
+</li>
+<li data-search="SizeIndex reset">
+<a href="#SizeIndex-reset-6">
+<code>virtual void reset(qsizetype count, int estimatedSize) = 0;</code>
+</a>
+</li>
+<li data-search="SizeIndex setSize">
+<a href="#SizeIndex-setSize-7">
+<code>virtual void setSize(qsizetype index, int size) = 0;</code>
+</a>
+</li>
+<li data-search="SizeIndex insert">
+<a href="#SizeIndex-insert-8">
+<code>virtual void insert(qsizetype index, qsizetype count, int estimate) = 0;</code>
+</a>
+</li>
+<li data-search="SizeIndex remove">
+<a href="#SizeIndex-remove-9">
+<code>virtual void remove(qsizetype index, qsizetype count) = 0;</code>
+</a>
+</li>
+<li data-search="SizeIndex isUniform">
+<a href="#SizeIndex-isUniform-10">
+<code>virtual bool isUniform() const = 0;</code>
+</a>
+</li>
+<li data-search="SizeIndex uniformSize">
+<a href="#SizeIndex-uniformSize-11">
+<code>virtual int uniformSize() const;</code>
+</a>
+</li>
+</ul>
+<h4>FixedSizeIndex</h4>
+<ul>
+<li data-search="FixedSizeIndex FixedSizeIndex">
+<a href="#FixedSizeIndex-FixedSizeIndex-0">
+<code>FixedSizeIndex() = default;</code>
+</a>
+</li>
+<li data-search="FixedSizeIndex FixedSizeIndex">
+<a href="#FixedSizeIndex-FixedSizeIndex-1">
+<code>FixedSizeIndex(qsizetype count, int size);</code>
+</a>
+</li>
+<li data-search="FixedSizeIndex setItemSize">
+<a href="#FixedSizeIndex-setItemSize-2">
+<code>void setItemSize(int size);</code>
+</a>
+</li>
+<li data-search="FixedSizeIndex itemSize">
+<a href="#FixedSizeIndex-itemSize-3">
+<code>int itemSize() const;</code>
+</a>
+</li>
+<li data-search="FixedSizeIndex totalSize">
+<a href="#FixedSizeIndex-totalSize-4">
+<code>qint64 totalSize() const override;</code>
+</a>
+</li>
+<li data-search="FixedSizeIndex offsetOf">
+<a href="#FixedSizeIndex-offsetOf-5">
+<code>qint64 offsetOf(qsizetype index) const override;</code>
+</a>
+</li>
+<li data-search="FixedSizeIndex indexAt">
+<a href="#FixedSizeIndex-indexAt-6">
+<code>qsizetype indexAt(qint64 offset) const override;</code>
+</a>
+</li>
+<li data-search="FixedSizeIndex sizeOf">
+<a href="#FixedSizeIndex-sizeOf-7">
+<code>int sizeOf(qsizetype index) const override;</code>
+</a>
+</li>
+<li data-search="FixedSizeIndex reset">
+<a href="#FixedSizeIndex-reset-8">
+<code>void reset(qsizetype count, int estimatedSize) override;</code>
+</a>
+</li>
+<li data-search="FixedSizeIndex setSize">
+<a href="#FixedSizeIndex-setSize-9">
+<code>void setSize(qsizetype index, int size) override;</code>
+</a>
+</li>
+<li data-search="FixedSizeIndex insert">
+<a href="#FixedSizeIndex-insert-10">
+<code>void insert(qsizetype index, qsizetype count, int estimate) override;</code>
+</a>
+</li>
+<li data-search="FixedSizeIndex remove">
+<a href="#FixedSizeIndex-remove-11">
+<code>void remove(qsizetype index, qsizetype count) override;</code>
+</a>
+</li>
+<li data-search="FixedSizeIndex isUniform">
+<a href="#FixedSizeIndex-isUniform-12">
+<code>bool isUniform() const override;</code>
+</a>
+</li>
+<li data-search="FixedSizeIndex uniformSize">
+<a href="#FixedSizeIndex-uniformSize-13">
+<code>int uniformSize() const override;</code>
+</a>
+</li>
+</ul>
+<h4>BlockSizeIndex</h4>
+<ul>
+<li data-search="BlockSizeIndex BlockSizeIndex">
+<a href="#BlockSizeIndex-BlockSizeIndex-1">
+<code>explicit BlockSizeIndex(qsizetype blockCapacity = kDefaultBlockCapacity);</code>
+</a>
+</li>
+<li data-search="BlockSizeIndex BlockSizeIndex">
+<a href="#BlockSizeIndex-BlockSizeIndex-2">
+<code>BlockSizeIndex(qsizetype count, int estimatedSize, qsizetype blockCapacity = kDefaultBlockCapacity);</code>
+</a>
+</li>
+<li data-search="BlockSizeIndex totalSize">
+<a href="#BlockSizeIndex-totalSize-3">
+<code>qint64 totalSize() const override;</code>
+</a>
+</li>
+<li data-search="BlockSizeIndex offsetOf">
+<a href="#BlockSizeIndex-offsetOf-4">
+<code>qint64 offsetOf(qsizetype index) const override;</code>
+</a>
+</li>
+<li data-search="BlockSizeIndex indexAt">
+<a href="#BlockSizeIndex-indexAt-5">
+<code>qsizetype indexAt(qint64 offset) const override;</code>
+</a>
+</li>
+<li data-search="BlockSizeIndex sizeOf">
+<a href="#BlockSizeIndex-sizeOf-6">
+<code>int sizeOf(qsizetype index) const override;</code>
+</a>
+</li>
+<li data-search="BlockSizeIndex reset">
+<a href="#BlockSizeIndex-reset-7">
+<code>void reset(qsizetype count, int estimatedSize) override;</code>
+</a>
+</li>
+<li data-search="BlockSizeIndex setSize">
+<a href="#BlockSizeIndex-setSize-8">
+<code>void setSize(qsizetype index, int size) override;</code>
+</a>
+</li>
+<li data-search="BlockSizeIndex insert">
+<a href="#BlockSizeIndex-insert-9">
+<code>void insert(qsizetype index, qsizetype count, int estimate) override;</code>
+</a>
+</li>
+<li data-search="BlockSizeIndex remove">
+<a href="#BlockSizeIndex-remove-10">
+<code>void remove(qsizetype index, qsizetype count) override;</code>
+</a>
+</li>
+<li data-search="BlockSizeIndex isUniform">
+<a href="#BlockSizeIndex-isUniform-11">
+<code>bool isUniform() const override;</code>
+</a>
+</li>
+<li data-search="BlockSizeIndex blockCapacity">
+<a href="#BlockSizeIndex-blockCapacity-12">
+<code>qsizetype blockCapacity() const;</code>
+</a>
+</li>
+<li data-search="BlockSizeIndex blockCount">
+<a href="#BlockSizeIndex-blockCount-13">
+<code>qsizetype blockCount() const;</code>
+</a>
+</li>
+<li data-search="BlockSizeIndex maxBlockRowCount">
+<a href="#BlockSizeIndex-maxBlockRowCount-14">
+<code>qsizetype maxBlockRowCount() const;</code>
+</a>
+</li>
+<li data-search="BlockSizeIndex estimatedSize">
+<a href="#BlockSizeIndex-estimatedSize-15">
+<code>int estimatedSize() const;</code>
+</a>
+</li>
+<li data-search="BlockSizeIndex sizes">
+<a href="#BlockSizeIndex-sizes-16">
+<code>QVector&lt;int&gt; sizes() const;</code>
+</a>
+</li>
+<li data-search="BlockSizeIndex explicitSizeCount">
+<a href="#BlockSizeIndex-explicitSizeCount-17">
+<code>qsizetype explicitSizeCount() const;</code>
+</a>
+</li>
+</ul>
+</section>
+<h2><span data-zh="函数说明" data-en="Function details">函数说明</span></h2>
+<p class="muted"><span data-zh="按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。" data-en="Read each function for its purpose and related settings. Overloads are listed separately; follow related capabilities to find examples.">按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。</span></p>
+<section>
+<h3 id="SizeIndex">SizeIndex</h3>
+<pre>class VIRTUALITEMVIEWS_EXPORT SizeIndex</pre>
+<article tabindex="-1" id="SizeIndex-SizeIndex-0" data-search="SizeIndex SizeIndex">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/sizeindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L22</span>
+<pre>virtual ~SizeIndex() = default;</pre>
+<p class="doc" data-zh="销毁 SizeIndex 并释放其拥有的资源；不在析构回调中继续使用该对象。" data-en="Destroy SizeIndex and release its owned resources; do not keep using the object during destruction callbacks.">销毁 SizeIndex 并释放其拥有的资源；不在析构回调中继续使用该对象。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="SizeIndex-count-1" data-search="SizeIndex count">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/sizeindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L24</span>
+<pre>    qsizetype count() const;</pre>
+<p class="doc" data-zh="返回布局、索引或范围中的项目数量。" data-en="Return the item count in the layout, index or range.">返回布局、索引或范围中的项目数量。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="SizeIndex-totalSize-2" data-search="SizeIndex totalSize">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/sizeindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L27</span>
+<pre>virtual qint64 totalSize() const = 0;</pre>
+<p class="doc" data-zh="返回布局或尺寸索引的内容总长度。" data-en="Return the total content extent of the layout or size index.">返回布局或尺寸索引的内容总长度。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="SizeIndex-offsetOf-3" data-search="SizeIndex offsetOf">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/sizeindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L31</span>
+<pre>virtual qint64 offsetOf(qsizetype index) const = 0;</pre>
+<p class="doc" data-zh="返回指定项目之前的累计主轴偏移。" data-en="Return the accumulated main-axis offset before an item.">返回指定项目之前的累计主轴偏移。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="SizeIndex-indexAt-4" data-search="SizeIndex indexAt">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/sizeindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L35</span>
+<pre>virtual qsizetype indexAt(qint64 offset) const = 0;</pre>
+<p class="doc" data-zh="返回包含主轴 offset 的项目序号；offset 达到或超过总长度返回 count()，空索引或非正 offset 返回 0。" data-en="Return the item containing offset along the main axis. Return count() at or past total size, or 0 for an empty index or a nonpositive offset.">返回包含主轴 offset 的项目序号；offset 达到或超过总长度返回 count()，空索引或非正 offset 返回 0。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="SizeIndex-sizeOf-5" data-search="SizeIndex sizeOf">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/sizeindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L37</span>
+<pre>virtual int sizeOf(qsizetype index) const = 0;</pre>
+<p class="doc" data-zh="查询尺寸索引中指定项目的主轴尺寸。" data-en="Query an item&#x27;s main-axis size in the size index.">查询尺寸索引中指定项目的主轴尺寸。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="SizeIndex-reset-6" data-search="SizeIndex reset">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/sizeindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L39</span>
+<pre>virtual void reset(qsizetype count, int estimatedSize) = 0;</pre>
+<p class="doc" data-zh="重建尺寸或布局索引的项目集合，使用给定数量与初始尺寸。" data-en="Reinitialize the item collection in the size or layout index using the supplied count and initial sizes.">重建尺寸或布局索引的项目集合，使用给定数量与初始尺寸。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="SizeIndex-setSize-7" data-search="SizeIndex setSize">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/sizeindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L40</span>
+<pre>virtual void setSize(qsizetype index, int size) = 0;</pre>
+<p class="doc" data-zh="更新尺寸索引中指定项目的尺寸并维护后续偏移。" data-en="Update an item size in the size index and maintain subsequent offsets.">更新尺寸索引中指定项目的尺寸并维护后续偏移。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="SizeIndex-insert-8" data-search="SizeIndex insert">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/sizeindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L41</span>
+<pre>virtual void insert(qsizetype index, qsizetype count, int estimate) = 0;</pre>
+<p class="doc" data-zh="在指定位置插入几何/尺寸记录并更新后续索引。" data-en="Insert geometry or size records at the specified position and update subsequent indexes.">在指定位置插入几何/尺寸记录并更新后续索引。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="SizeIndex-remove-9" data-search="SizeIndex remove">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/sizeindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L42</span>
+<pre>virtual void remove(qsizetype index, qsizetype count) = 0;</pre>
+<p class="doc" data-zh="删除指定范围的几何/尺寸记录并更新后续索引。" data-en="Remove a range of geometry or size records and update subsequent indexes.">删除指定范围的几何/尺寸记录并更新后续索引。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="SizeIndex-isUniform-10" data-search="SizeIndex isUniform">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/sizeindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L45</span>
+<pre>virtual bool isUniform() const = 0;</pre>
+<p class="doc" data-zh="判断尺寸索引是否全部使用统一尺寸。" data-en="Check whether the size index uses one uniform size.">判断尺寸索引是否全部使用统一尺寸。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="SizeIndex-uniformSize-11" data-search="SizeIndex uniformSize">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/sizeindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L48</span>
+<pre>    virtual int uniformSize() const;</pre>
+<p class="doc" data-zh="返回统一尺寸索引的共同尺寸。" data-en="Return the common size in a uniform size index.">返回统一尺寸索引的共同尺寸。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+</section>
+<section>
+<h3 id="FixedSizeIndex">FixedSizeIndex</h3>
+<pre>class VIRTUALITEMVIEWS_EXPORT FixedSizeIndex : public SizeIndex</pre>
+<article tabindex="-1" id="FixedSizeIndex-FixedSizeIndex-0" data-search="FixedSizeIndex FixedSizeIndex">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/sizeindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L58</span>
+<pre>FixedSizeIndex() = default;</pre>
+<p class="doc" data-zh="构造 FixedSizeIndex；按此重载传入父对象、模型或布局参数。带 parent 的 QObject/QWidget 遵循 Qt 父子生命周期。" data-en="Construct FixedSizeIndex with the parent, model or layout arguments in this overload. QObject/QWidget parent arguments follow Qt parent-child lifetime rules.">构造 FixedSizeIndex；按此重载传入父对象、模型或布局参数。带 parent 的 QObject/QWidget 遵循 Qt 父子生命周期。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#layout-kernel"><span data-zh="布局与尺寸索引扩展" data-en="Layout and size-index extensions">布局与尺寸索引扩展</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="FixedSizeIndex-FixedSizeIndex-1" data-search="FixedSizeIndex FixedSizeIndex">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/sizeindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L59</span>
+<pre>FixedSizeIndex(qsizetype count, int size);</pre>
+<p class="doc" data-zh="构造 FixedSizeIndex；按此重载传入父对象、模型或布局参数。带 parent 的 QObject/QWidget 遵循 Qt 父子生命周期。" data-en="Construct FixedSizeIndex with the parent, model or layout arguments in this overload. QObject/QWidget parent arguments follow Qt parent-child lifetime rules.">构造 FixedSizeIndex；按此重载传入父对象、模型或布局参数。带 parent 的 QObject/QWidget 遵循 Qt 父子生命周期。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#layout-kernel"><span data-zh="布局与尺寸索引扩展" data-en="Layout and size-index extensions">布局与尺寸索引扩展</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="FixedSizeIndex-setItemSize-2" data-search="FixedSizeIndex setItemSize">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/sizeindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L61</span>
+<pre>void setItemSize(int size);</pre>
+<p class="doc" data-zh="设置项目布局主轴尺寸。" data-en="Set the item main-axis size.">设置项目布局主轴尺寸。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="FixedSizeIndex-itemSize-3" data-search="FixedSizeIndex itemSize">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/sizeindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L62</span>
+<pre>    int itemSize() const;</pre>
+<p class="doc" data-zh="返回项目布局主轴尺寸。" data-en="Return the item main-axis size.">返回项目布局主轴尺寸。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="FixedSizeIndex-totalSize-4" data-search="FixedSizeIndex totalSize">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/sizeindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L64</span>
+<pre>qint64 totalSize() const override;</pre>
+<p class="doc" data-zh="返回布局或尺寸索引的内容总长度。" data-en="Return the total content extent of the layout or size index.">返回布局或尺寸索引的内容总长度。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="FixedSizeIndex-offsetOf-5" data-search="FixedSizeIndex offsetOf">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/sizeindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L65</span>
+<pre>qint64 offsetOf(qsizetype index) const override;</pre>
+<p class="doc" data-zh="返回指定项目之前的累计主轴偏移。" data-en="Return the accumulated main-axis offset before an item.">返回指定项目之前的累计主轴偏移。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="FixedSizeIndex-indexAt-6" data-search="FixedSizeIndex indexAt">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/sizeindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L66</span>
+<pre>qsizetype indexAt(qint64 offset) const override;</pre>
+<p class="doc" data-zh="返回包含主轴 offset 的项目序号；offset 达到或超过总长度返回 count()，空索引或非正 offset 返回 0。" data-en="Return the item containing offset along the main axis. Return count() at or past total size, or 0 for an empty index or a nonpositive offset.">返回包含主轴 offset 的项目序号；offset 达到或超过总长度返回 count()，空索引或非正 offset 返回 0。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="FixedSizeIndex-sizeOf-7" data-search="FixedSizeIndex sizeOf">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/sizeindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L67</span>
+<pre>int sizeOf(qsizetype index) const override;</pre>
+<p class="doc" data-zh="查询尺寸索引中指定项目的主轴尺寸。" data-en="Query an item&#x27;s main-axis size in the size index.">查询尺寸索引中指定项目的主轴尺寸。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="FixedSizeIndex-reset-8" data-search="FixedSizeIndex reset">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/sizeindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L69</span>
+<pre>void reset(qsizetype count, int estimatedSize) override;</pre>
+<p class="doc" data-zh="重建尺寸或布局索引的项目集合，使用给定数量与初始尺寸。" data-en="Reinitialize the item collection in the size or layout index using the supplied count and initial sizes.">重建尺寸或布局索引的项目集合，使用给定数量与初始尺寸。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="FixedSizeIndex-setSize-9" data-search="FixedSizeIndex setSize">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/sizeindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L70</span>
+<pre>void setSize(qsizetype index, int size) override;</pre>
+<p class="doc" data-zh="更新尺寸索引中指定项目的尺寸并维护后续偏移。" data-en="Update an item size in the size index and maintain subsequent offsets.">更新尺寸索引中指定项目的尺寸并维护后续偏移。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="FixedSizeIndex-insert-10" data-search="FixedSizeIndex insert">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/sizeindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L71</span>
+<pre>void insert(qsizetype index, qsizetype count, int estimate) override;</pre>
+<p class="doc" data-zh="在指定位置插入几何/尺寸记录并更新后续索引。" data-en="Insert geometry or size records at the specified position and update subsequent indexes.">在指定位置插入几何/尺寸记录并更新后续索引。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="FixedSizeIndex-remove-11" data-search="FixedSizeIndex remove">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/sizeindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L72</span>
+<pre>void remove(qsizetype index, qsizetype count) override;</pre>
+<p class="doc" data-zh="删除指定范围的几何/尺寸记录并更新后续索引。" data-en="Remove a range of geometry or size records and update subsequent indexes.">删除指定范围的几何/尺寸记录并更新后续索引。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="FixedSizeIndex-isUniform-12" data-search="FixedSizeIndex isUniform">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/sizeindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L74</span>
+<pre>    bool isUniform() const override;</pre>
+<p class="doc" data-zh="判断尺寸索引是否全部使用统一尺寸。" data-en="Check whether the size index uses one uniform size.">判断尺寸索引是否全部使用统一尺寸。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="FixedSizeIndex-uniformSize-13" data-search="FixedSizeIndex uniformSize">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/sizeindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L75</span>
+<pre>    int uniformSize() const override;</pre>
+<p class="doc" data-zh="返回统一尺寸索引的共同尺寸。" data-en="Return the common size in a uniform size index.">返回统一尺寸索引的共同尺寸。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+</section>
+<section>
+<h3 id="BlockSizeIndex">BlockSizeIndex</h3>
+<pre>class VIRTUALITEMVIEWS_EXPORT BlockSizeIndex : public SizeIndex</pre>
+<article tabindex="-1" id="BlockSizeIndex-kDefaultBlockCapacity-0" data-search="BlockSizeIndex kDefaultBlockCapacity">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/sizeindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L111</span>
+<pre>static constexpr qsizetype kDefaultBlockCapacity = 1024;</pre>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="BlockSizeIndex-BlockSizeIndex-1" data-search="BlockSizeIndex BlockSizeIndex">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/sizeindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L113</span>
+<pre>explicit BlockSizeIndex(qsizetype blockCapacity = kDefaultBlockCapacity);</pre>
+<p class="doc" data-zh="构造 BlockSizeIndex；按此重载传入父对象、模型或布局参数。带 parent 的 QObject/QWidget 遵循 Qt 父子生命周期。" data-en="Construct BlockSizeIndex with the parent, model or layout arguments in this overload. QObject/QWidget parent arguments follow Qt parent-child lifetime rules.">构造 BlockSizeIndex；按此重载传入父对象、模型或布局参数。带 parent 的 QObject/QWidget 遵循 Qt 父子生命周期。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#layout-kernel"><span data-zh="布局与尺寸索引扩展" data-en="Layout and size-index extensions">布局与尺寸索引扩展</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="BlockSizeIndex-BlockSizeIndex-2" data-search="BlockSizeIndex BlockSizeIndex">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/sizeindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L114</span>
+<pre>BlockSizeIndex(qsizetype count, int estimatedSize,
+                   qsizetype blockCapacity = kDefaultBlockCapacity);</pre>
+<p class="doc" data-zh="构造 BlockSizeIndex；按此重载传入父对象、模型或布局参数。带 parent 的 QObject/QWidget 遵循 Qt 父子生命周期。" data-en="Construct BlockSizeIndex with the parent, model or layout arguments in this overload. QObject/QWidget parent arguments follow Qt parent-child lifetime rules.">构造 BlockSizeIndex；按此重载传入父对象、模型或布局参数。带 parent 的 QObject/QWidget 遵循 Qt 父子生命周期。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#layout-kernel"><span data-zh="布局与尺寸索引扩展" data-en="Layout and size-index extensions">布局与尺寸索引扩展</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="BlockSizeIndex-totalSize-3" data-search="BlockSizeIndex totalSize">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/sizeindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L117</span>
+<pre>qint64 totalSize() const override;</pre>
+<p class="doc" data-zh="返回布局或尺寸索引的内容总长度。" data-en="Return the total content extent of the layout or size index.">返回布局或尺寸索引的内容总长度。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="BlockSizeIndex-offsetOf-4" data-search="BlockSizeIndex offsetOf">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/sizeindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L118</span>
+<pre>qint64 offsetOf(qsizetype index) const override;</pre>
+<p class="doc" data-zh="返回指定项目之前的累计主轴偏移。" data-en="Return the accumulated main-axis offset before an item.">返回指定项目之前的累计主轴偏移。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="BlockSizeIndex-indexAt-5" data-search="BlockSizeIndex indexAt">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/sizeindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L119</span>
+<pre>qsizetype indexAt(qint64 offset) const override;</pre>
+<p class="doc" data-zh="返回包含主轴 offset 的项目序号；offset 达到或超过总长度返回 count()，空索引或非正 offset 返回 0。" data-en="Return the item containing offset along the main axis. Return count() at or past total size, or 0 for an empty index or a nonpositive offset.">返回包含主轴 offset 的项目序号；offset 达到或超过总长度返回 count()，空索引或非正 offset 返回 0。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="BlockSizeIndex-sizeOf-6" data-search="BlockSizeIndex sizeOf">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/sizeindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L120</span>
+<pre>int sizeOf(qsizetype index) const override;</pre>
+<p class="doc" data-zh="查询尺寸索引中指定项目的主轴尺寸。" data-en="Query an item&#x27;s main-axis size in the size index.">查询尺寸索引中指定项目的主轴尺寸。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="BlockSizeIndex-reset-7" data-search="BlockSizeIndex reset">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/sizeindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L122</span>
+<pre>void reset(qsizetype count, int estimatedSize) override;</pre>
+<p class="doc" data-zh="重建尺寸或布局索引的项目集合，使用给定数量与初始尺寸。" data-en="Reinitialize the item collection in the size or layout index using the supplied count and initial sizes.">重建尺寸或布局索引的项目集合，使用给定数量与初始尺寸。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="BlockSizeIndex-setSize-8" data-search="BlockSizeIndex setSize">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/sizeindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L123</span>
+<pre>void setSize(qsizetype index, int size) override;</pre>
+<p class="doc" data-zh="更新尺寸索引中指定项目的尺寸并维护后续偏移。" data-en="Update an item size in the size index and maintain subsequent offsets.">更新尺寸索引中指定项目的尺寸并维护后续偏移。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="BlockSizeIndex-insert-9" data-search="BlockSizeIndex insert">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/sizeindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L124</span>
+<pre>void insert(qsizetype index, qsizetype count, int estimate) override;</pre>
+<p class="doc" data-zh="在指定位置插入几何/尺寸记录并更新后续索引。" data-en="Insert geometry or size records at the specified position and update subsequent indexes.">在指定位置插入几何/尺寸记录并更新后续索引。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="BlockSizeIndex-remove-10" data-search="BlockSizeIndex remove">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/sizeindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L125</span>
+<pre>void remove(qsizetype index, qsizetype count) override;</pre>
+<p class="doc" data-zh="删除指定范围的几何/尺寸记录并更新后续索引。" data-en="Remove a range of geometry or size records and update subsequent indexes.">删除指定范围的几何/尺寸记录并更新后续索引。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="BlockSizeIndex-isUniform-11" data-search="BlockSizeIndex isUniform">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/sizeindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L127</span>
+<pre>    bool isUniform() const override;</pre>
+<p class="doc" data-zh="判断尺寸索引是否全部使用统一尺寸。" data-en="Check whether the size index uses one uniform size.">判断尺寸索引是否全部使用统一尺寸。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="BlockSizeIndex-blockCapacity-12" data-search="BlockSizeIndex blockCapacity">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/sizeindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L129</span>
+<pre>    qsizetype blockCapacity() const;</pre>
+<p class="doc" data-zh="返回尺寸索引每块容量。" data-en="Return the size-index block capacity.">返回尺寸索引每块容量。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="BlockSizeIndex-blockCount-13" data-search="BlockSizeIndex blockCount">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/sizeindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L130</span>
+<pre>qsizetype blockCount() const;</pre>
+<p class="doc" data-zh="返回尺寸索引块数。" data-en="Return the size-index block count.">返回尺寸索引块数。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="BlockSizeIndex-maxBlockRowCount-14" data-search="BlockSizeIndex maxBlockRowCount">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/sizeindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L133</span>
+<pre>qsizetype maxBlockRowCount() const;</pre>
+<p class="doc" data-zh="返回当前最大块包含行数。" data-en="Return the largest current block row count.">返回当前最大块包含行数。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="BlockSizeIndex-estimatedSize-15" data-search="BlockSizeIndex estimatedSize">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/sizeindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L135</span>
+<pre>    int estimatedSize() const;</pre>
+<p class="doc" data-zh="返回布局估计尺寸，用于控件物化前或测量前的布局。保持回调轻量。" data-en="Return an estimated layout size used before materialization or measurement. Keep this callback inexpensive.">返回布局估计尺寸，用于控件物化前或测量前的布局。保持回调轻量。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="BlockSizeIndex-sizes-16" data-search="BlockSizeIndex sizes">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/sizeindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L137</span>
+<pre>QVector&lt;int&gt; sizes() const;</pre>
+<p class="doc" data-zh="返回已保存的项目尺寸集合。" data-en="Return the stored item sizes.">返回已保存的项目尺寸集合。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="BlockSizeIndex-explicitSizeCount-17" data-search="BlockSizeIndex explicitSizeCount">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/sizeindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L141</span>
+<pre>qsizetype explicitSizeCount() const;</pre>
+<p class="doc" data-zh="返回保存了显式尺寸的项目数。" data-en="Return the items with stored explicit sizes.">返回保存了显式尺寸的项目数。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+</section>
+<footer class="muted">
+<p><span data-zh="按能力查找配套设置与独立示例；通用接口请沿基类链接查阅，Qt 继承接口请参考 Qt 文档。" data-en="Find related settings and independent examples by capability. Follow base-class links for shared APIs and consult Qt documentation for inherited Qt APIs.">按能力查找配套设置与独立示例；通用接口请沿基类链接查阅，Qt 继承接口请参考 Qt 文档。</span></p>
+</footer>
+</main>
+<script src="../assets/reference.js">
+</script>
+</body>
+</html>

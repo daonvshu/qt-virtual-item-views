@@ -1,0 +1,1259 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ColumnGeometry / HeaderGeometry · VirtualItemViews</title>
+<link rel="stylesheet" href="../assets/reference.css">
+</head>
+<body>
+<header>
+<div class="header-top">
+<a href="../index.html">VirtualItemViews / API</a>
+<div id="language-switch" class="language-switch" role="group" aria-label="Language / 语言" hidden>
+<button type="button" data-language="zh" aria-pressed="true" lang="zh-CN">中文</button>
+<button type="button" data-language="en" aria-pressed="false" lang="en">English</button>
+</div>
+</div>
+<h1>ColumnGeometry / HeaderGeometry</h1>
+<p><span data-zh="公开辅助接口与扩展契约" data-en="Public helper interfaces and extension contracts">公开辅助接口与扩展契约</span></p>
+</header>
+<main>
+<nav>
+<a href="../index.html"><span data-zh="能力总览" data-en="Capabilities">能力总览</span></a>
+<a href="../../AGENT_GUIDE.md"><span data-zh="Agent 索引" data-en="Agent guide">Agent 索引</span></a>
+<a href="../../../examples/README.md"><span data-zh="独立示例" data-en="Examples">独立示例</span></a>
+<a href="../../../README.md"><span data-zh="项目首页" data-en="Project home">项目首页</span></a>
+</nav>
+<label for="filter"><span data-zh="搜索本页：能力、API 名称或关键词" data-en="Search this page: capability, API name or keyword">搜索本页：能力、API 名称或关键词</span></label>
+<input id="filter" type="search" placeholder="例如：Popup、setAutoHeight、冻结、branch">
+<p class="muted search-help"><span data-zh="无需网络或服务器。所有内容默认可见；搜索只筛选当前页。完整继承 API 请沿基类链接查阅。" data-en="No network or server required. All content is initially visible; search filters this page only. Follow base-class links for inherited APIs.">无需网络或服务器。所有内容默认可见；搜索只筛选当前页。完整继承 API 请沿基类链接查阅。</span></p>
+<p id="search-status" role="status" aria-live="polite">
+</p>
+<p>
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="公开头文件：include/virtualitemviews/headergeometry.h" data-en="Public header: include/virtualitemviews/headergeometry.h">公开头文件：include/virtualitemviews/headergeometry.h</span></a>
+</p>
+<p class="api-jump">
+<a href="#public-api"><span data-zh="公开函数列表" data-en="Public function index">公开函数列表</span></a>
+</p>
+<h2><span data-zh="能力与配套设置" data-en="Capabilities and related settings">能力与配套设置</span></h2>
+<article id="columns" data-search="setColumnWidth setColumnMinimumWidth setColumnMaximumWidth setColumnStretchFactor setStretchLastColumn setColumnResizeMode setColumnHidden moveColumn setColumnResizeEnabled virtualtableview virtualtreetableview headergeometry">
+<h3><span data-zh="列宽 / 比例 / FitViewport / 隐藏换序" data-en="Column widths / stretch factors / FitViewport / hide and reorder">列宽 / 比例 / FitViewport / 隐藏换序</span></h3>
+<p>
+<code>setColumnWidth · setColumnMinimumWidth · setColumnMaximumWidth · setColumnStretchFactor · setStretchLastColumn · setColumnResizeMode · setColumnHidden · moveColumn · setColumnResizeEnabled</code>
+</p>
+<p class="rules"><span data-zh="默认 Independent。比例分配的是扣除固定列和间距后的剩余宽度，factor=0 保持自身宽度；此模式下拖动任意列或 setColumnWidth 会清除全部比例和末列拉伸，故先设固定宽度再设 stretch factors。FitViewport 根据当前比例让列宽总和适配视口，拖动边缘在相应侧按比例补偿；受最小/最大限制。拖动改宽默认关闭；模型列号、视觉顺序和隐藏状态不要混用。" data-en="Independent is the default. Positive factors share the width left after fixed columns and gaps; factor 0 preserves its own width. In this mode dragging any column or calling setColumnWidth clears all factors and last-column stretch: set fixed widths before stretch factors. FitViewport fits columns using current proportions and compensates edge resizing proportionally on the relevant side, subject to size limits. Mouse resizing defaults off. Keep logical model columns, visual order and hidden state distinct.">默认 Independent。比例分配的是扣除固定列和间距后的剩余宽度，factor=0 保持自身宽度；此模式下拖动任意列或 setColumnWidth 会清除全部比例和末列拉伸，故先设固定宽度再设 stretch factors。FitViewport 根据当前比例让列宽总和适配视口，拖动边缘在相应侧按比例补偿；受最小/最大限制。拖动改宽默认关闭；模型列号、视觉顺序和隐藏状态不要混用。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../../src/layout/headergeometry.cpp">src/layout/headergeometry.cpp</a> · <a href="../../../src/widgets/virtualtableview.cpp">src/widgets/virtualtableview.cpp</a> · <a href="../../../src/widgets/virtualheaderview.cpp">src/widgets/virtualheaderview.cpp</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../../table-layout-guide.md">docs/table-layout-guide.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（3）" data-en="Independent source examples (3)">独立源码示例（3）</span></summary>
+<ul>
+<li>
+<a href="../../../examples/table_capabilities/07_columns/example.cpp">examples/table_capabilities/07_columns/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/table_capabilities/08_stretch_columns/example.cpp">examples/table_capabilities/08_stretch_columns/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/treetable_capabilities/13_stretch_columns/example.cpp">examples/treetable_capabilities/13_stretch_columns/example.cpp</a>
+</li>
+</ul>
+</details>
+</article>
+<article id="sort-persist" data-search="setSortingEnabled sortByColumn setSortIndicator saveHeaderState restoreHeaderState virtualtableview virtualtreetableview headergeometry">
+<h3><span data-zh="排序 / 过滤 / 布局保存恢复" data-en="Sorting / filtering / layout persistence">排序 / 过滤 / 布局保存恢复</span></h3>
+<p>
+<code>setSortingEnabled · sortByColumn · setSortIndicator · saveHeaderState · restoreHeaderState</code>
+</p>
+<p class="rules"><span data-zh="排序需要模型 sort 实现或 QSortFilterProxyModel；仅画 sort indicator 不等于数据已排序。saveHeaderState 保存列宽、顺序、隐藏、比例以及 pane/冻结配置；不保存业务数据或任意视图开关，ColumnResizeMode 是独立配置。restore 先验证再应用，检查 bool 返回值。树的展开状态与业务持久化需求单独处理，不要假定 header state 保存树展开。" data-en="Sorting requires model sort or QSortFilterProxyModel; a sort indicator alone does not reorder data. saveHeaderState stores widths, order, hidden state, stretch and pane/frozen configuration, not business data or arbitrary view settings. ColumnResizeMode is separate configuration. Restore validates before applying; check its bool result. Persist tree expansion separately; header state does not imply expansion persistence.">排序需要模型 sort 实现或 QSortFilterProxyModel；仅画 sort indicator 不等于数据已排序。saveHeaderState 保存列宽、顺序、隐藏、比例以及 pane/冻结配置；不保存业务数据或任意视图开关，ColumnResizeMode 是独立配置。restore 先验证再应用，检查 bool 返回值。树的展开状态与业务持久化需求单独处理，不要假定 header state 保存树展开。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../../src/widgets/virtualtableview.cpp">src/widgets/virtualtableview.cpp</a> · <a href="../../../src/layout/headergeometry.cpp">src/layout/headergeometry.cpp</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../../header-persistence.md">docs/header-persistence.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（4）" data-en="Independent source examples (4)">独立源码示例（4）</span></summary>
+<ul>
+<li>
+<a href="../../../examples/table_capabilities/20_header_persistence/example.cpp">examples/table_capabilities/20_header_persistence/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/table_capabilities/21_sorting/example.cpp">examples/table_capabilities/21_sorting/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/treetable_capabilities/25_header_persistence/example.cpp">examples/treetable_capabilities/25_header_persistence/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/treetable_capabilities/26_sorting_filtering/example.cpp">examples/treetable_capabilities/26_sorting_filtering/example.cpp</a>
+</li>
+</ul>
+</details>
+</article>
+<h2 id="public-api" tabindex="-1"><span data-zh="公开 API、类型与信号" data-en="Public API, types and signals">公开 API、类型与信号</span></h2>
+<section class="function-index" id="function-index" tabindex="-1">
+<h3><span data-zh="公开函数列表" data-en="Public function index">公开函数列表</span></h3>
+<p class="muted"><span data-zh="按声明类型分组；每个重载单独列出，点击签名跳转到说明。信号单独列出；类型和数据成员仍保留在下方。" data-en="Grouped by declaring type. Each overload has its own link to the details. Signals are listed separately; types and data members remain below.">按声明类型分组；每个重载单独列出，点击签名跳转到说明。信号单独列出；类型和数据成员仍保留在下方。</span></p>
+<h4>ColumnGeometry</h4>
+<ul>
+<li data-search="ColumnGeometry isValid">
+<a href="#ColumnGeometry-isValid-6">
+<code>bool isValid() const;</code>
+</a>
+</li>
+</ul>
+<h4>HeaderGeometry</h4>
+<ul>
+<li data-search="HeaderGeometry HeaderGeometry">
+<a href="#HeaderGeometry-HeaderGeometry-0">
+<code>explicit HeaderGeometry(Qt::Orientation orientation = Qt::Horizontal, QObject *parent = nullptr);</code>
+</a>
+</li>
+<li data-search="HeaderGeometry HeaderGeometry">
+<a href="#HeaderGeometry-HeaderGeometry-1">
+<code>~HeaderGeometry() override;</code>
+</a>
+</li>
+<li data-search="HeaderGeometry orientation">
+<a href="#HeaderGeometry-orientation-2">
+<code>Qt::Orientation orientation() const;</code>
+</a>
+</li>
+<li data-search="HeaderGeometry sectionCount">
+<a href="#HeaderGeometry-sectionCount-3">
+<code>int sectionCount() const;</code>
+</a>
+</li>
+<li data-search="HeaderGeometry storedSectionStateCount">
+<a href="#HeaderGeometry-storedSectionStateCount-4">
+<code>int storedSectionStateCount() const;</code>
+</a>
+</li>
+<li data-search="HeaderGeometry isUniform">
+<a href="#HeaderGeometry-isUniform-5">
+<code>bool isUniform() const;</code>
+</a>
+</li>
+<li data-search="HeaderGeometry setSectionCount">
+<a href="#HeaderGeometry-setSectionCount-6">
+<code>void setSectionCount(int count);</code>
+</a>
+</li>
+<li data-search="HeaderGeometry insertLogicalSections">
+<a href="#HeaderGeometry-insertLogicalSections-7">
+<code>void insertLogicalSections(int first, int count);</code>
+</a>
+</li>
+<li data-search="HeaderGeometry removeLogicalSections">
+<a href="#HeaderGeometry-removeLogicalSections-8">
+<code>void removeLogicalSections(int first, int count);</code>
+</a>
+</li>
+<li data-search="HeaderGeometry visibleSectionCount">
+<a href="#HeaderGeometry-visibleSectionCount-9">
+<code>int visibleSectionCount() const;</code>
+</a>
+</li>
+<li data-search="HeaderGeometry hiddenSectionCount">
+<a href="#HeaderGeometry-hiddenSectionCount-10">
+<code>int hiddenSectionCount() const;</code>
+</a>
+</li>
+<li data-search="HeaderGeometry isEmpty">
+<a href="#HeaderGeometry-isEmpty-11">
+<code>bool isEmpty() const;</code>
+</a>
+</li>
+<li data-search="HeaderGeometry sectionSize">
+<a href="#HeaderGeometry-sectionSize-12">
+<code>int sectionSize(int logicalIndex) const;</code>
+</a>
+</li>
+<li data-search="HeaderGeometry storedSectionSize">
+<a href="#HeaderGeometry-storedSectionSize-13">
+<code>int storedSectionSize(int logicalIndex) const;</code>
+</a>
+</li>
+<li data-search="HeaderGeometry resizeSection">
+<a href="#HeaderGeometry-resizeSection-14">
+<code>void resizeSection(int logicalIndex, int size);</code>
+</a>
+</li>
+<li data-search="HeaderGeometry resizeMode">
+<a href="#HeaderGeometry-resizeMode-16">
+<code>ResizeMode resizeMode() const;</code>
+</a>
+</li>
+<li data-search="HeaderGeometry setResizeMode">
+<a href="#HeaderGeometry-setResizeMode-17">
+<code>void setResizeMode(ResizeMode mode);</code>
+</a>
+</li>
+<li data-search="HeaderGeometry resizeSnapshot">
+<a href="#HeaderGeometry-resizeSnapshot-19">
+<code>ResizeSnapshot resizeSnapshot() const;</code>
+</a>
+</li>
+<li data-search="HeaderGeometry resizeSectionFromEdge">
+<a href="#HeaderGeometry-resizeSectionFromEdge-20">
+<code>void resizeSectionFromEdge(int logicalIndex, int size, Qt::Edge edge, const ResizeSnapshot &amp;snapshot);</code>
+</a>
+</li>
+<li data-search="HeaderGeometry isSectionSizeExplicit">
+<a href="#HeaderGeometry-isSectionSizeExplicit-21">
+<code>bool isSectionSizeExplicit(int logicalIndex) const;</code>
+</a>
+</li>
+<li data-search="HeaderGeometry clearExplicitSectionSize">
+<a href="#HeaderGeometry-clearExplicitSectionSize-22">
+<code>void clearExplicitSectionSize(int logicalIndex);</code>
+</a>
+</li>
+<li data-search="HeaderGeometry clearExplicitSectionSizes">
+<a href="#HeaderGeometry-clearExplicitSectionSizes-23">
+<code>void clearExplicitSectionSizes();</code>
+</a>
+</li>
+<li data-search="HeaderGeometry defaultSectionSize">
+<a href="#HeaderGeometry-defaultSectionSize-24">
+<code>int defaultSectionSize() const;</code>
+</a>
+</li>
+<li data-search="HeaderGeometry setDefaultSectionSize">
+<a href="#HeaderGeometry-setDefaultSectionSize-25">
+<code>void setDefaultSectionSize(int size);</code>
+</a>
+</li>
+<li data-search="HeaderGeometry sectionSpacing">
+<a href="#HeaderGeometry-sectionSpacing-26">
+<code>int sectionSpacing() const;</code>
+</a>
+</li>
+<li data-search="HeaderGeometry setSectionSpacing">
+<a href="#HeaderGeometry-setSectionSpacing-27">
+<code>void setSectionSpacing(int pixels);</code>
+</a>
+</li>
+<li data-search="HeaderGeometry setSectionSpacingOverrides">
+<a href="#HeaderGeometry-setSectionSpacingOverrides-28">
+<code>void setSectionSpacingOverrides(const QVector&lt;int&gt; &amp;spacings);</code>
+</a>
+</li>
+<li data-search="HeaderGeometry setSparseSectionSpacingOverrides">
+<a href="#HeaderGeometry-setSparseSectionSpacingOverrides-29">
+<code>void setSparseSectionSpacingOverrides(const QVector&lt;QPair&lt;int, int&gt;&gt; &amp;spacings);</code>
+</a>
+</li>
+<li data-search="HeaderGeometry sectionSpacingAfter">
+<a href="#HeaderGeometry-sectionSpacingAfter-30">
+<code>int sectionSpacingAfter(int logicalIndex) const;</code>
+</a>
+</li>
+<li data-search="HeaderGeometry setEdgeSpacing">
+<a href="#HeaderGeometry-setEdgeSpacing-31">
+<code>void setEdgeSpacing(int leading, int trailing);</code>
+</a>
+</li>
+<li data-search="HeaderGeometry leadingSpacing">
+<a href="#HeaderGeometry-leadingSpacing-32">
+<code>int leadingSpacing() const;</code>
+</a>
+</li>
+<li data-search="HeaderGeometry trailingSpacing">
+<a href="#HeaderGeometry-trailingSpacing-33">
+<code>int trailingSpacing() const;</code>
+</a>
+</li>
+<li data-search="HeaderGeometry minimumSectionSize">
+<a href="#HeaderGeometry-minimumSectionSize-34">
+<code>int minimumSectionSize() const;</code>
+</a>
+</li>
+<li data-search="HeaderGeometry setMinimumSectionSize">
+<a href="#HeaderGeometry-setMinimumSectionSize-35">
+<code>void setMinimumSectionSize(int size);</code>
+</a>
+</li>
+<li data-search="HeaderGeometry maximumSectionSize">
+<a href="#HeaderGeometry-maximumSectionSize-36">
+<code>int maximumSectionSize() const;</code>
+</a>
+</li>
+<li data-search="HeaderGeometry setMaximumSectionSize">
+<a href="#HeaderGeometry-setMaximumSectionSize-37">
+<code>void setMaximumSectionSize(int size);</code>
+</a>
+</li>
+<li data-search="HeaderGeometry sectionPosition">
+<a href="#HeaderGeometry-sectionPosition-38">
+<code>qint64 sectionPosition(int logicalIndex) const;</code>
+</a>
+</li>
+<li data-search="HeaderGeometry sectionViewportPosition">
+<a href="#HeaderGeometry-sectionViewportPosition-39">
+<code>int sectionViewportPosition(int logicalIndex) const;</code>
+</a>
+</li>
+<li data-search="HeaderGeometry sectionAtOffset">
+<a href="#HeaderGeometry-sectionAtOffset-40">
+<code>int sectionAtOffset(qint64 contentOffset) const;</code>
+</a>
+</li>
+<li data-search="HeaderGeometry visualSectionAtOffset">
+<a href="#HeaderGeometry-visualSectionAtOffset-41">
+<code>int visualSectionAtOffset(qint64 contentOffset) const;</code>
+</a>
+</li>
+<li data-search="HeaderGeometry totalExtent">
+<a href="#HeaderGeometry-totalExtent-42">
+<code>qint64 totalExtent() const;</code>
+</a>
+</li>
+<li data-search="HeaderGeometry logicalIndex">
+<a href="#HeaderGeometry-logicalIndex-43">
+<code>int logicalIndex(int visualIndex) const;</code>
+</a>
+</li>
+<li data-search="HeaderGeometry visualIndex">
+<a href="#HeaderGeometry-visualIndex-44">
+<code>int visualIndex(int logicalIndex) const;</code>
+</a>
+</li>
+<li data-search="HeaderGeometry moveSection">
+<a href="#HeaderGeometry-moveSection-45">
+<code>void moveSection(int fromVisualIndex, int toVisualIndex);</code>
+</a>
+</li>
+<li data-search="HeaderGeometry moveLogicalSections">
+<a href="#HeaderGeometry-moveLogicalSections-46">
+<code>void moveLogicalSections(int start, int count, int destination);</code>
+</a>
+</li>
+<li data-search="HeaderGeometry moveLogicalSectionSizes">
+<a href="#HeaderGeometry-moveLogicalSectionSizes-47">
+<code>void moveLogicalSectionSizes(int start, int count, int destination);</code>
+</a>
+</li>
+<li data-search="HeaderGeometry isSectionHidden">
+<a href="#HeaderGeometry-isSectionHidden-48">
+<code>bool isSectionHidden(int logicalIndex) const;</code>
+</a>
+</li>
+<li data-search="HeaderGeometry setSectionHidden">
+<a href="#HeaderGeometry-setSectionHidden-49">
+<code>void setSectionHidden(int logicalIndex, bool hidden);</code>
+</a>
+</li>
+<li data-search="HeaderGeometry setAllSectionsHidden">
+<a href="#HeaderGeometry-setAllSectionsHidden-50">
+<code>void setAllSectionsHidden(bool hidden);</code>
+</a>
+</li>
+<li data-search="HeaderGeometry viewportOffset">
+<a href="#HeaderGeometry-viewportOffset-51">
+<code>qint64 viewportOffset() const;</code>
+</a>
+</li>
+<li data-search="HeaderGeometry setViewportOffset">
+<a href="#HeaderGeometry-setViewportOffset-52">
+<code>void setViewportOffset(qint64 offset);</code>
+</a>
+</li>
+<li data-search="HeaderGeometry maximumViewportOffset">
+<a href="#HeaderGeometry-maximumViewportOffset-53">
+<code>qint64 maximumViewportOffset(int viewportExtent) const;</code>
+</a>
+</li>
+<li data-search="HeaderGeometry columnGeometry">
+<a href="#HeaderGeometry-columnGeometry-54">
+<code>ColumnGeometry columnGeometry(int logicalIndex) const;</code>
+</a>
+</li>
+<li data-search="HeaderGeometry visibleVisualRange">
+<a href="#HeaderGeometry-visibleVisualRange-55">
+<code>VisibleRange visibleVisualRange(int viewportExtent) const;</code>
+</a>
+</li>
+<li data-search="HeaderGeometry visibleVisualRangeFor">
+<a href="#HeaderGeometry-visibleVisualRangeFor-56">
+<code>VisibleRange visibleVisualRangeFor(qint64 windowStart, int viewportExtent) const;</code>
+</a>
+</li>
+<li data-search="HeaderGeometry visibleSectionsInVisualOrder">
+<a href="#HeaderGeometry-visibleSectionsInVisualOrder-57">
+<code>QVector&lt;int&gt; visibleSectionsInVisualOrder() const;</code>
+</a>
+</li>
+<li data-search="HeaderGeometry orderRevision">
+<a href="#HeaderGeometry-orderRevision-58">
+<code>quint32 orderRevision() const;</code>
+</a>
+</li>
+<li data-search="HeaderGeometry sortIndicatorSection">
+<a href="#HeaderGeometry-sortIndicatorSection-59">
+<code>int sortIndicatorSection() const;</code>
+</a>
+</li>
+<li data-search="HeaderGeometry sortIndicatorOrder">
+<a href="#HeaderGeometry-sortIndicatorOrder-60">
+<code>Qt::SortOrder sortIndicatorOrder() const;</code>
+</a>
+</li>
+<li data-search="HeaderGeometry setSortIndicator">
+<a href="#HeaderGeometry-setSortIndicator-61">
+<code>void setSortIndicator(int logicalIndex, Qt::SortOrder order);</code>
+</a>
+</li>
+<li data-search="HeaderGeometry stretchLastSection">
+<a href="#HeaderGeometry-stretchLastSection-62">
+<code>bool stretchLastSection() const;</code>
+</a>
+</li>
+<li data-search="HeaderGeometry setStretchLastSection">
+<a href="#HeaderGeometry-setStretchLastSection-63">
+<code>void setStretchLastSection(bool stretch);</code>
+</a>
+</li>
+<li data-search="HeaderGeometry stretchExtent">
+<a href="#HeaderGeometry-stretchExtent-64">
+<code>qint64 stretchExtent() const;</code>
+</a>
+</li>
+<li data-search="HeaderGeometry setStretchExtent">
+<a href="#HeaderGeometry-setStretchExtent-65">
+<code>void setStretchExtent(qint64 extent);</code>
+</a>
+</li>
+<li data-search="HeaderGeometry sectionStretchFactor">
+<a href="#HeaderGeometry-sectionStretchFactor-66">
+<code>qreal sectionStretchFactor(int logicalIndex) const;</code>
+</a>
+</li>
+<li data-search="HeaderGeometry setSectionStretchFactor">
+<a href="#HeaderGeometry-setSectionStretchFactor-67">
+<code>void setSectionStretchFactor(int logicalIndex, qreal factor);</code>
+</a>
+</li>
+<li data-search="HeaderGeometry hasStretchSections">
+<a href="#HeaderGeometry-hasStretchSections-68">
+<code>bool hasStretchSections() const;</code>
+</a>
+</li>
+<li data-search="HeaderGeometry saveState">
+<a href="#HeaderGeometry-saveState-71">
+<code>QByteArray saveState() const;</code>
+</a>
+</li>
+<li data-search="HeaderGeometry restoreState">
+<a href="#HeaderGeometry-restoreState-72">
+<code>bool restoreState(const QByteArray &amp;state);</code>
+</a>
+</li>
+</ul>
+<h3><span data-zh="信号列表" data-en="Signals">信号列表</span></h3>
+<h4>HeaderGeometry</h4>
+<ul>
+<li data-search="HeaderGeometry sectionResized">
+<a href="#HeaderGeometry-sectionResized-73">
+<code>void sectionResized(int logicalIndex, int oldSize, int newSize);</code>
+</a>
+</li>
+<li data-search="HeaderGeometry sectionMoved">
+<a href="#HeaderGeometry-sectionMoved-74">
+<code>void sectionMoved(int logicalIndex, int oldVisualIndex, int newVisualIndex);</code>
+</a>
+</li>
+<li data-search="HeaderGeometry sectionVisibilityChanged">
+<a href="#HeaderGeometry-sectionVisibilityChanged-75">
+<code>void sectionVisibilityChanged(int logicalIndex, bool visible);</code>
+</a>
+</li>
+<li data-search="HeaderGeometry sectionCountChanged">
+<a href="#HeaderGeometry-sectionCountChanged-76">
+<code>void sectionCountChanged(int count);</code>
+</a>
+</li>
+<li data-search="HeaderGeometry sortIndicatorChanged">
+<a href="#HeaderGeometry-sortIndicatorChanged-77">
+<code>void sortIndicatorChanged(int logicalIndex, Qt::SortOrder order);</code>
+</a>
+</li>
+<li data-search="HeaderGeometry stretchLastSectionChanged">
+<a href="#HeaderGeometry-stretchLastSectionChanged-78">
+<code>void stretchLastSectionChanged(bool stretch);</code>
+</a>
+</li>
+<li data-search="HeaderGeometry resizeModeChanged">
+<a href="#HeaderGeometry-resizeModeChanged-79">
+<code>void resizeModeChanged(viv::HeaderGeometry::ResizeMode mode);</code>
+</a>
+</li>
+<li data-search="HeaderGeometry sectionStretchFactorChanged">
+<a href="#HeaderGeometry-sectionStretchFactorChanged-80">
+<code>void sectionStretchFactorChanged(int logicalIndex, qreal factor);</code>
+</a>
+</li>
+<li data-search="HeaderGeometry offsetChanged">
+<a href="#HeaderGeometry-offsetChanged-81">
+<code>void offsetChanged(qint64 offset);</code>
+</a>
+</li>
+<li data-search="HeaderGeometry geometryChanged">
+<a href="#HeaderGeometry-geometryChanged-82">
+<code>void geometryChanged();</code>
+</a>
+</li>
+<li data-search="HeaderGeometry bulkGeometryChanged">
+<a href="#HeaderGeometry-bulkGeometryChanged-83">
+<code>void bulkGeometryChanged();</code>
+</a>
+</li>
+</ul>
+</section>
+<h2><span data-zh="函数说明" data-en="Function details">函数说明</span></h2>
+<p class="muted"><span data-zh="按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。" data-en="Read each function for its purpose and related settings. Overloads are listed separately; follow related capabilities to find examples.">按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。</span></p>
+<section>
+<h3 id="ColumnGeometry">ColumnGeometry</h3>
+<pre>struct ColumnGeometry</pre>
+<article tabindex="-1" id="ColumnGeometry-logicalIndex-0" data-search="ColumnGeometry logicalIndex">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L22</span>
+<pre>int logicalIndex = -1;</pre>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ColumnGeometry-visualIndex-1" data-search="ColumnGeometry visualIndex">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L23</span>
+<pre>int visualIndex = -1;</pre>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ColumnGeometry-contentX-2" data-search="ColumnGeometry contentX">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L25</span>
+<pre>qint64 contentX = 0;</pre>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ColumnGeometry-viewportX-3" data-search="ColumnGeometry viewportX">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L27</span>
+<pre>int viewportX = 0;</pre>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ColumnGeometry-width-4" data-search="ColumnGeometry width">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L29</span>
+<pre>int width = 0;</pre>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ColumnGeometry-hidden-5" data-search="ColumnGeometry hidden">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L30</span>
+<pre>bool hidden = false;</pre>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ColumnGeometry-isValid-6" data-search="ColumnGeometry isValid">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L32</span>
+<pre>    bool isValid() const;</pre>
+<p class="doc" data-zh="判断当前索引、范围或几何记录是否可用；使用几何或访问模型前先检查无效结果。" data-en="Check whether the index, range or geometry record is usable before accessing geometry or model data.">判断当前索引、范围或几何记录是否可用；使用几何或访问模型前先检查无效结果。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+</section>
+<section>
+<h3 id="HeaderGeometry">HeaderGeometry</h3>
+<pre>class VIRTUALITEMVIEWS_EXPORT HeaderGeometry : public QObject</pre>
+<article tabindex="-1" id="HeaderGeometry-HeaderGeometry-0" data-search="HeaderGeometry HeaderGeometry">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L44</span>
+<pre>explicit HeaderGeometry(Qt::Orientation orientation = Qt::Horizontal,
+                            QObject *parent = nullptr);</pre>
+<p class="doc" data-zh="构造 HeaderGeometry；按此重载传入父对象、模型或布局参数。带 parent 的 QObject/QWidget 遵循 Qt 父子生命周期。" data-en="Construct HeaderGeometry with the parent, model or layout arguments in this overload. QObject/QWidget parent arguments follow Qt parent-child lifetime rules.">构造 HeaderGeometry；按此重载传入父对象、模型或布局参数。带 parent 的 QObject/QWidget 遵循 Qt 父子生命周期。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderGeometry-HeaderGeometry-1" data-search="HeaderGeometry HeaderGeometry">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L46</span>
+<pre>~HeaderGeometry() override;</pre>
+<p class="doc" data-zh="销毁 HeaderGeometry 并释放其拥有的资源；不在析构回调中继续使用该对象。" data-en="Destroy HeaderGeometry and release its owned resources; do not keep using the object during destruction callbacks.">销毁 HeaderGeometry 并释放其拥有的资源；不在析构回调中继续使用该对象。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderGeometry-orientation-2" data-search="HeaderGeometry orientation">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L48</span>
+<pre>    Qt::Orientation orientation() const;</pre>
+<p class="doc" data-zh="返回主轴或表头方向。" data-en="Return the main-axis or header orientation.">返回主轴或表头方向。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderGeometry-sectionCount-3" data-search="HeaderGeometry sectionCount">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L56</span>
+<pre>    int sectionCount() const;</pre>
+<p class="doc" data-zh="返回表头 section 数量。" data-en="Return the header section count.">返回表头 section 数量。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderGeometry-storedSectionStateCount-4" data-search="HeaderGeometry storedSectionStateCount">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L59</span>
+<pre>    int storedSectionStateCount() const;</pre>
+<p class="doc" data-zh="返回显式保存状态的 section 数量。" data-en="Return the number of sections with explicitly stored state.">返回显式保存状态的 section 数量。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderGeometry-isUniform-5" data-search="HeaderGeometry isUniform">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L65</span>
+<pre>    bool isUniform() const;</pre>
+<p class="doc" data-zh="判断尺寸索引是否全部使用统一尺寸。" data-en="Check whether the size index uses one uniform size.">判断尺寸索引是否全部使用统一尺寸。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderGeometry-setSectionCount-6" data-search="HeaderGeometry setSectionCount">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L70</span>
+<pre>void setSectionCount(int count);</pre>
+<p class="doc" data-zh="设置表头 section 数量。" data-en="Set the header section count.">设置表头 section 数量。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderGeometry-insertLogicalSections-7" data-search="HeaderGeometry insertLogicalSections">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L76</span>
+<pre>void insertLogicalSections(int first, int count);</pre>
+<p class="doc" data-zh="在指定位置插入几何/尺寸记录并更新后续索引。" data-en="Insert geometry or size records at the specified position and update subsequent indexes.">在指定位置插入几何/尺寸记录并更新后续索引。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderGeometry-removeLogicalSections-8" data-search="HeaderGeometry removeLogicalSections">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L79</span>
+<pre>void removeLogicalSections(int first, int count);</pre>
+<p class="doc" data-zh="删除指定范围的几何/尺寸记录并更新后续索引。" data-en="Remove a range of geometry or size records and update subsequent indexes.">删除指定范围的几何/尺寸记录并更新后续索引。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderGeometry-visibleSectionCount-9" data-search="HeaderGeometry visibleSectionCount">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L80</span>
+<pre>int visibleSectionCount() const;</pre>
+<p class="doc" data-zh="返回可见或隐藏 section 数量。" data-en="Return the visible or hidden section count.">返回可见或隐藏 section 数量。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderGeometry-hiddenSectionCount-10" data-search="HeaderGeometry hiddenSectionCount">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L81</span>
+<pre>int hiddenSectionCount() const;</pre>
+<p class="doc" data-zh="返回可见或隐藏 section 数量。" data-en="Return the visible or hidden section count.">返回可见或隐藏 section 数量。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderGeometry-isEmpty-11" data-search="HeaderGeometry isEmpty">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L82</span>
+<pre>    bool isEmpty() const;</pre>
+<p class="doc" data-zh="判断当前集合、窗格或范围是否为空。" data-en="Check whether the collection, pane or range is empty.">判断当前集合、窗格或范围是否为空。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderGeometry-sectionSize-12" data-search="HeaderGeometry sectionSize">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L86</span>
+<pre>int sectionSize(int logicalIndex) const;</pre>
+<p class="doc" data-zh="返回指定 section 的有效尺寸。" data-en="Return the effective size of the specified section.">返回指定 section 的有效尺寸。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderGeometry-storedSectionSize-13" data-search="HeaderGeometry storedSectionSize">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L88</span>
+<pre>int storedSectionSize(int logicalIndex) const;</pre>
+<p class="doc" data-zh="返回指定 section 存储的尺寸值。" data-en="Return the stored size of the specified section.">返回指定 section 存储的尺寸值。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderGeometry-resizeSection-14" data-search="HeaderGeometry resizeSection">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L92</span>
+<pre>void resizeSection(int logicalIndex, int size);</pre>
+<p class="doc" data-zh="调整指定 section 尺寸并更新列几何。" data-en="Resize a specified section and update its geometry.">调整指定 section 尺寸并更新列几何。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderGeometry-ResizeMode-15" data-search="HeaderGeometry ResizeMode">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L95</span>
+<pre>enum class ResizeMode { Independent, FitExtent };</pre>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderGeometry-resizeMode-16" data-search="HeaderGeometry resizeMode">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L97</span>
+<pre>    ResizeMode resizeMode() const;</pre>
+<p class="doc" data-zh="返回section 尺寸调整模式。" data-en="Return the section resize mode.">返回section 尺寸调整模式。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderGeometry-setResizeMode-17" data-search="HeaderGeometry setResizeMode">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L100</span>
+<pre>void setResizeMode(ResizeMode mode);</pre>
+<p class="doc" data-zh="设置section 尺寸调整模式。" data-en="Set the section resize mode.">设置section 尺寸调整模式。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderGeometry-ResizeSnapshot-18" data-search="HeaderGeometry ResizeSnapshot">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L103</span>
+<pre>struct ResizeSnapshot {
+        QVector&lt;int&gt; sizes;
+        quint32 orderRevision = 0;
+        quint32 fitRevision = 0;
+        qint64 extent = 0;
+        int minimum = 0;
+        int maximum = 0;
+        QVector&lt;int&gt; spacings;
+    };</pre>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderGeometry-resizeSnapshot-19" data-search="HeaderGeometry resizeSnapshot">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L112</span>
+<pre>ResizeSnapshot resizeSnapshot() const;</pre>
+<p class="doc" data-zh="获取当前 section 宽度快照，作为一次连续拖动的基准。" data-en="Capture current section widths as the baseline for a continuous resize drag.">获取当前 section 宽度快照，作为一次连续拖动的基准。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderGeometry-resizeSectionFromEdge-20" data-search="HeaderGeometry resizeSectionFromEdge">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L116</span>
+<pre>void resizeSectionFromEdge(int logicalIndex, int size, Qt::Edge edge,
+                               const ResizeSnapshot &amp;snapshot);</pre>
+<p class="doc" data-zh="从指定边缘调整 section，按当前 resizeMode 分配其它列宽；适用于 FitViewport 联动缩放。" data-en="Resize a section from the specified edge, distributing other widths according to resizeMode, including FitViewport coupling.">从指定边缘调整 section，按当前 resizeMode 分配其它列宽；适用于 FitViewport 联动缩放。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderGeometry-isSectionSizeExplicit-21" data-search="HeaderGeometry isSectionSizeExplicit">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L119</span>
+<pre>bool isSectionSizeExplicit(int logicalIndex) const;</pre>
+<p class="doc" data-zh="判断行或 section 是否有显式尺寸覆盖；这类覆盖优先于自动测量或默认尺寸。" data-en="Check for an explicit row or section size override, which takes precedence over measurement or defaults.">判断行或 section 是否有显式尺寸覆盖；这类覆盖优先于自动测量或默认尺寸。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderGeometry-clearExplicitSectionSize-22" data-search="HeaderGeometry clearExplicitSectionSize">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L120</span>
+<pre>void clearExplicitSectionSize(int logicalIndex);</pre>
+<p class="doc" data-zh="清除指定或全部显式 section 尺寸，允许默认尺寸策略重新生效。" data-en="Clear one or all explicit section sizes so default sizing policies can apply again.">清除指定或全部显式 section 尺寸，允许默认尺寸策略重新生效。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderGeometry-clearExplicitSectionSizes-23" data-search="HeaderGeometry clearExplicitSectionSizes">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L125</span>
+<pre>void clearExplicitSectionSizes();</pre>
+<p class="doc" data-zh="清除指定或全部显式 section 尺寸，允许默认尺寸策略重新生效。" data-en="Clear one or all explicit section sizes so default sizing policies can apply again.">清除指定或全部显式 section 尺寸，允许默认尺寸策略重新生效。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderGeometry-defaultSectionSize-24" data-search="HeaderGeometry defaultSectionSize">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L127</span>
+<pre>    int defaultSectionSize() const;</pre>
+<p class="doc" data-zh="返回未覆盖 section 尺寸时的默认值。" data-en="Return the default size for sections without overrides.">返回未覆盖 section 尺寸时的默认值。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderGeometry-setDefaultSectionSize-25" data-search="HeaderGeometry setDefaultSectionSize">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L128</span>
+<pre>void setDefaultSectionSize(int size);</pre>
+<p class="doc" data-zh="设置未覆盖 section 尺寸时的默认值。" data-en="Set the default size for sections without overrides.">设置未覆盖 section 尺寸时的默认值。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderGeometry-sectionSpacing-26" data-search="HeaderGeometry sectionSpacing">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L130</span>
+<pre>    int sectionSpacing() const;</pre>
+<p class="doc" data-zh="返回相邻表头 section 间距。" data-en="Return the spacing between adjacent header sections.">返回相邻表头 section 间距。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderGeometry-setSectionSpacing-27" data-search="HeaderGeometry setSectionSpacing">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L131</span>
+<pre>void setSectionSpacing(int pixels);</pre>
+<p class="doc" data-zh="设置相邻表头 section 间距。" data-en="Set the spacing between adjacent header sections.">设置相邻表头 section 间距。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderGeometry-setSectionSpacingOverrides-28" data-search="HeaderGeometry setSectionSpacingOverrides">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L134</span>
+<pre>void setSectionSpacingOverrides(const QVector&lt;int&gt; &amp;spacings);</pre>
+<p class="doc" data-zh="覆盖指定 section 后的间距；稀疏版本适合仅少量 section 需要特殊间距。" data-en="Override spacing after sections; the sparse variant suits a small number of exceptional gaps.">覆盖指定 section 后的间距；稀疏版本适合仅少量 section 需要特殊间距。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderGeometry-setSparseSectionSpacingOverrides-29" data-search="HeaderGeometry setSparseSectionSpacingOverrides">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L137</span>
+<pre>void setSparseSectionSpacingOverrides(const QVector&lt;QPair&lt;int, int&gt;&gt; &amp;spacings);</pre>
+<p class="doc" data-zh="覆盖指定 section 后的间距；稀疏版本适合仅少量 section 需要特殊间距。" data-en="Override spacing after sections; the sparse variant suits a small number of exceptional gaps.">覆盖指定 section 后的间距；稀疏版本适合仅少量 section 需要特殊间距。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderGeometry-sectionSpacingAfter-30" data-search="HeaderGeometry sectionSpacingAfter">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L138</span>
+<pre>int sectionSpacingAfter(int logicalIndex) const;</pre>
+<p class="doc" data-zh="返回指定列或 section 后的有效间距。" data-en="Return the effective spacing after the specified column or section.">返回指定列或 section 后的有效间距。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderGeometry-setEdgeSpacing-31" data-search="HeaderGeometry setEdgeSpacing">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L141</span>
+<pre>void setEdgeSpacing(int leading, int trailing);</pre>
+<p class="doc" data-zh="设置布局首尾边距，常用于中心分割线模式的半间距。" data-en="Set leading and trailing layout spacing, typically half-gaps for centered grid lines.">设置布局首尾边距，常用于中心分割线模式的半间距。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderGeometry-leadingSpacing-32" data-search="HeaderGeometry leadingSpacing">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L142</span>
+<pre>int leadingSpacing() const;</pre>
+<p class="doc" data-zh="返回布局首端或末端间距。" data-en="Return the leading or trailing layout spacing.">返回布局首端或末端间距。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderGeometry-trailingSpacing-33" data-search="HeaderGeometry trailingSpacing">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L143</span>
+<pre>int trailingSpacing() const;</pre>
+<p class="doc" data-zh="返回布局首端或末端间距。" data-en="Return the leading or trailing layout spacing.">返回布局首端或末端间距。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderGeometry-minimumSectionSize-34" data-search="HeaderGeometry minimumSectionSize">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L144</span>
+<pre>    int minimumSectionSize() const;</pre>
+<p class="doc" data-zh="返回section 最小尺寸。" data-en="Return the minimum section size.">返回section 最小尺寸。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderGeometry-setMinimumSectionSize-35" data-search="HeaderGeometry setMinimumSectionSize">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L145</span>
+<pre>void setMinimumSectionSize(int size);</pre>
+<p class="doc" data-zh="设置section 最小尺寸。" data-en="Set the minimum section size.">设置section 最小尺寸。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderGeometry-maximumSectionSize-36" data-search="HeaderGeometry maximumSectionSize">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L146</span>
+<pre>    int maximumSectionSize() const;</pre>
+<p class="doc" data-zh="返回section 最大尺寸。" data-en="Return the maximum section size.">返回section 最大尺寸。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderGeometry-setMaximumSectionSize-37" data-search="HeaderGeometry setMaximumSectionSize">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L147</span>
+<pre>void setMaximumSectionSize(int size);</pre>
+<p class="doc" data-zh="设置section 最大尺寸。" data-en="Set the maximum section size.">设置section 最大尺寸。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderGeometry-sectionPosition-38" data-search="HeaderGeometry sectionPosition">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L151</span>
+<pre>qint64 sectionPosition(int logicalIndex) const;</pre>
+<p class="doc" data-zh="返回section 在内容坐标中的位置。" data-en="Return the section position in content coordinates.">返回section 在内容坐标中的位置。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderGeometry-sectionViewportPosition-39" data-search="HeaderGeometry sectionViewportPosition">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L153</span>
+<pre>int sectionViewportPosition(int logicalIndex) const;</pre>
+<p class="doc" data-zh="返回section 在视口中的位置；视觉查询可包含动画位置。" data-en="Return the section viewport position; visual queries may include animation.">返回section 在视口中的位置；视觉查询可包含动画位置。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderGeometry-sectionAtOffset-40" data-search="HeaderGeometry sectionAtOffset">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L155</span>
+<pre>int sectionAtOffset(qint64 contentOffset) const;</pre>
+<p class="doc" data-zh="按内容偏移查询逻辑或可视 section 索引；注意这两种序号在移动列后可能不同。" data-en="Resolve a content offset to a logical or visual section index; these can differ after section moves.">按内容偏移查询逻辑或可视 section 索引；注意这两种序号在移动列后可能不同。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderGeometry-visualSectionAtOffset-41" data-search="HeaderGeometry visualSectionAtOffset">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L157</span>
+<pre>int visualSectionAtOffset(qint64 contentOffset) const;</pre>
+<p class="doc" data-zh="按内容偏移查询逻辑或可视 section 索引；注意这两种序号在移动列后可能不同。" data-en="Resolve a content offset to a logical or visual section index; these can differ after section moves.">按内容偏移查询逻辑或可视 section 索引；注意这两种序号在移动列后可能不同。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderGeometry-totalExtent-42" data-search="HeaderGeometry totalExtent">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L159</span>
+<pre>qint64 totalExtent() const;</pre>
+<p class="doc" data-zh="返回布局或尺寸索引的内容总长度。" data-en="Return the total content extent of the layout or size index.">返回布局或尺寸索引的内容总长度。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderGeometry-logicalIndex-43" data-search="HeaderGeometry logicalIndex">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L162</span>
+<pre>int logicalIndex(int visualIndex) const;</pre>
+<p class="doc" data-zh="将可视顺序中的 section 位置转换为逻辑 section 索引。" data-en="Map a section position in visual order to its logical section index.">将可视顺序中的 section 位置转换为逻辑 section 索引。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderGeometry-visualIndex-44" data-search="HeaderGeometry visualIndex">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L163</span>
+<pre>int visualIndex(int logicalIndex) const;</pre>
+<p class="doc" data-zh="将逻辑 section 索引转换成可视顺序中的位置。" data-en="Map a logical section index to its position in visual order.">将逻辑 section 索引转换成可视顺序中的位置。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderGeometry-moveSection-45" data-search="HeaderGeometry moveSection">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L164</span>
+<pre>void moveSection(int fromVisualIndex, int toVisualIndex);</pre>
+<p class="doc" data-zh="移动列或 section 的可视位置；逻辑索引与可视索引不是同一个概念。" data-en="Move a column or section visually. Logical and visual indexes are distinct.">移动列或 section 的可视位置；逻辑索引与可视索引不是同一个概念。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderGeometry-moveLogicalSections-46" data-search="HeaderGeometry moveLogicalSections">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L167</span>
+<pre>void moveLogicalSections(int start, int count, int destination);</pre>
+<p class="doc" data-zh="响应模型逻辑位置移动并同步对应几何或尺寸记录。" data-en="Synchronize geometry or size records after a model logical-position move.">响应模型逻辑位置移动并同步对应几何或尺寸记录。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderGeometry-moveLogicalSectionSizes-47" data-search="HeaderGeometry moveLogicalSectionSizes">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L170</span>
+<pre>void moveLogicalSectionSizes(int start, int count, int destination);</pre>
+<p class="doc" data-zh="响应模型逻辑位置移动并同步对应几何或尺寸记录。" data-en="Synchronize geometry or size records after a model logical-position move.">响应模型逻辑位置移动并同步对应几何或尺寸记录。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderGeometry-isSectionHidden-48" data-search="HeaderGeometry isSectionHidden">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L171</span>
+<pre>bool isSectionHidden(int logicalIndex) const;</pre>
+<p class="doc" data-zh="返回指定 section 隐藏状态。" data-en="Return the hidden state of the specified section.">返回指定 section 隐藏状态。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderGeometry-setSectionHidden-49" data-search="HeaderGeometry setSectionHidden">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L172</span>
+<pre>void setSectionHidden(int logicalIndex, bool hidden);</pre>
+<p class="doc" data-zh="隐藏或显示指定逻辑 section/列，保持模型数据不变。" data-en="Hide or show a logical section/column without changing model data.">隐藏或显示指定逻辑 section/列，保持模型数据不变。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderGeometry-setAllSectionsHidden-50" data-search="HeaderGeometry setAllSectionsHidden">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L173</span>
+<pre>void setAllSectionsHidden(bool hidden);</pre>
+<p class="doc" data-zh="统一隐藏或显示所有 section。" data-en="Hide or show all sections together.">统一隐藏或显示所有 section。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderGeometry-viewportOffset-51" data-search="HeaderGeometry viewportOffset">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L176</span>
+<pre>    qint64 viewportOffset() const;</pre>
+<p class="doc" data-zh="返回表头视口滚动偏移量。" data-en="Return the header viewport scroll offset.">返回表头视口滚动偏移量。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderGeometry-setViewportOffset-52" data-search="HeaderGeometry setViewportOffset">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L177</span>
+<pre>void setViewportOffset(qint64 offset);</pre>
+<p class="doc" data-zh="设置表头视口滚动偏移量。" data-en="Set the header viewport scroll offset.">设置表头视口滚动偏移量。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderGeometry-maximumViewportOffset-53" data-search="HeaderGeometry maximumViewportOffset">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L178</span>
+<pre>qint64 maximumViewportOffset(int viewportExtent) const;</pre>
+<p class="doc" data-zh="返回有效滚动偏移上限。" data-en="Return the maximum valid scroll offset.">返回有效滚动偏移上限。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderGeometry-columnGeometry-54" data-search="HeaderGeometry columnGeometry">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L182</span>
+<pre>ColumnGeometry columnGeometry(int logicalIndex) const;</pre>
+<p class="doc" data-zh="返回指定逻辑列的尺寸、位置和可见性信息。" data-en="Return the size, position and visibility of the specified logical column.">返回指定逻辑列的尺寸、位置和可见性信息。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderGeometry-visibleVisualRange-55" data-search="HeaderGeometry visibleVisualRange">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L185</span>
+<pre>VisibleRange visibleVisualRange(int viewportExtent) const;</pre>
+<p class="doc" data-zh="计算当前或指定偏移/长度对应的可见 section 可视索引区间。" data-en="Compute the visible section visual-index range for the current or supplied offset and extent.">计算当前或指定偏移/长度对应的可见 section 可视索引区间。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderGeometry-visibleVisualRangeFor-56" data-search="HeaderGeometry visibleVisualRangeFor">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L191</span>
+<pre>VisibleRange visibleVisualRangeFor(qint64 windowStart, int viewportExtent) const;</pre>
+<p class="doc" data-zh="计算当前或指定偏移/长度对应的可见 section 可视索引区间。" data-en="Compute the visible section visual-index range for the current or supplied offset and extent.">计算当前或指定偏移/长度对应的可见 section 可视索引区间。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderGeometry-visibleSectionsInVisualOrder-57" data-search="HeaderGeometry visibleSectionsInVisualOrder">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L193</span>
+<pre>QVector&lt;int&gt; visibleSectionsInVisualOrder() const;</pre>
+<p class="doc" data-zh="返回按可视顺序排列的可见逻辑列或 section。" data-en="Return the visible logical columns or sections in visual order.">返回按可视顺序排列的可见逻辑列或 section。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderGeometry-orderRevision-58" data-search="HeaderGeometry orderRevision">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L198</span>
+<pre>    quint32 orderRevision() const;</pre>
+<p class="doc" data-zh="返回section 顺序修订号，供缓存失效判断。" data-en="Return the section order revision used for cache invalidation.">返回section 顺序修订号，供缓存失效判断。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderGeometry-sortIndicatorSection-59" data-search="HeaderGeometry sortIndicatorSection">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L201</span>
+<pre>    int sortIndicatorSection() const;</pre>
+<p class="doc" data-zh="返回显示排序指示器的逻辑 section。" data-en="Return the logical section showing the sort indicator.">返回显示排序指示器的逻辑 section。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderGeometry-sortIndicatorOrder-60" data-search="HeaderGeometry sortIndicatorOrder">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L202</span>
+<pre>    Qt::SortOrder sortIndicatorOrder() const;</pre>
+<p class="doc" data-zh="返回排序指示器方向。" data-en="Return the sort indicator order.">返回排序指示器方向。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderGeometry-setSortIndicator-61" data-search="HeaderGeometry setSortIndicator">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L203</span>
+<pre>void setSortIndicator(int logicalIndex, Qt::SortOrder order);</pre>
+<p class="doc" data-zh="设置排序标记对应列和方向；标记本身不等于模型已完成排序。" data-en="Set the sort indicator section and order; the indicator alone does not imply the model has been sorted.">设置排序标记对应列和方向；标记本身不等于模型已完成排序。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#sort-persist"><span data-zh="排序 / 过滤 / 布局保存恢复" data-en="Sorting / filtering / layout persistence">排序 / 过滤 / 布局保存恢复</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderGeometry-stretchLastSection-62" data-search="HeaderGeometry stretchLastSection">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L207</span>
+<pre>    bool stretchLastSection() const;</pre>
+<p class="doc" data-zh="返回末 section 填充剩余长度开关。" data-en="Return the whether the last section fills remaining extent.">返回末 section 填充剩余长度开关。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderGeometry-setStretchLastSection-63" data-search="HeaderGeometry setStretchLastSection">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L208</span>
+<pre>void setStretchLastSection(bool stretch);</pre>
+<p class="doc" data-zh="设置末 section 填充剩余长度开关。" data-en="Set the whether the last section fills remaining extent.">设置末 section 填充剩余长度开关。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderGeometry-stretchExtent-64" data-search="HeaderGeometry stretchExtent">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L219</span>
+<pre>    qint64 stretchExtent() const;</pre>
+<p class="doc" data-zh="返回比例计算可用长度。" data-en="Return the available stretch extent.">返回比例计算可用长度。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderGeometry-setStretchExtent-65" data-search="HeaderGeometry setStretchExtent">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L220</span>
+<pre>void setStretchExtent(qint64 extent);</pre>
+<p class="doc" data-zh="设置比例计算可用长度。" data-en="Set the available stretch extent.">设置比例计算可用长度。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderGeometry-sectionStretchFactor-66" data-search="HeaderGeometry sectionStretchFactor">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L232</span>
+<pre>qreal sectionStretchFactor(int logicalIndex) const;</pre>
+<p class="doc" data-zh="返回指定 section 比例权重。" data-en="Return the stretch weight of the specified section.">返回指定 section 比例权重。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderGeometry-setSectionStretchFactor-67" data-search="HeaderGeometry setSectionStretchFactor">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L233</span>
+<pre>void setSectionStretchFactor(int logicalIndex, qreal factor);</pre>
+<p class="doc" data-zh="设置指定 section 比例权重。" data-en="Set the stretch weight of the specified section.">设置指定 section 比例权重。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderGeometry-hasStretchSections-68" data-search="HeaderGeometry hasStretchSections">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L236</span>
+<pre>bool hasStretchSections() const;</pre>
+<p class="doc" data-zh="判断是否存在比例拉伸 section。" data-en="Check whether proportional stretch sections exist.">判断是否存在比例拉伸 section。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderGeometry-kStateMagic-69" data-search="HeaderGeometry kStateMagic">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L239</span>
+<pre>static constexpr quint32 kStateMagic = 0x56495648; // &#x27;VIVH&#x27;</pre>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderGeometry-kStateVersion-70" data-search="HeaderGeometry kStateVersion">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L241</span>
+<pre>static constexpr quint32 kStateVersion = 3;</pre>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderGeometry-saveState-71" data-search="HeaderGeometry saveState">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L242</span>
+<pre>QByteArray saveState() const;</pre>
+<p class="doc" data-zh="序列化当前表头布局状态用于持久化；恢复时使用配套 restore 接口。" data-en="Serialize current header layout state for persistence; restore it with the matching restore method.">序列化当前表头布局状态用于持久化；恢复时使用配套 restore 接口。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderGeometry-restoreState-72" data-search="HeaderGeometry restoreState">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L246</span>
+<pre>bool restoreState(const QByteArray &amp;state);</pre>
+<p class="doc" data-zh="恢复序列化表头布局；返回值表明数据是否被接受，调用方应处理不兼容或损坏状态。" data-en="Restore serialized header layout; the return value indicates acceptance. Handle incompatible or damaged state in the caller.">恢复序列化表头布局；返回值表明数据是否被接受，调用方应处理不兼容或损坏状态。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderGeometry-sectionResized-73" data-search="HeaderGeometry sectionResized">
+<span class="badge">signals</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L249</span>
+<pre>void sectionResized(int logicalIndex, int oldSize, int newSize);</pre>
+<p class="doc" data-zh="section 尺寸改变时发出，参数描述对应索引及尺寸变化。" data-en="Emitted when a section is resized, with its index and size-change arguments.">section 尺寸改变时发出，参数描述对应索引及尺寸变化。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderGeometry-sectionMoved-74" data-search="HeaderGeometry sectionMoved">
+<span class="badge">signals</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L250</span>
+<pre>void sectionMoved(int logicalIndex, int oldVisualIndex, int newVisualIndex);</pre>
+<p class="doc" data-zh="section 可视位置改变时发出。" data-en="Emitted when a section changes visual position.">section 可视位置改变时发出。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderGeometry-sectionVisibilityChanged-75" data-search="HeaderGeometry sectionVisibilityChanged">
+<span class="badge">signals</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L251</span>
+<pre>void sectionVisibilityChanged(int logicalIndex, bool visible);</pre>
+<p class="doc" data-zh="section 隐藏或显示状态改变时发出。" data-en="Emitted when section visibility changes.">section 隐藏或显示状态改变时发出。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderGeometry-sectionCountChanged-76" data-search="HeaderGeometry sectionCountChanged">
+<span class="badge">signals</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L252</span>
+<pre>void sectionCountChanged(int count);</pre>
+<p class="doc" data-zh="section 总数改变时发出。" data-en="Emitted when the section count changes.">section 总数改变时发出。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderGeometry-sortIndicatorChanged-77" data-search="HeaderGeometry sortIndicatorChanged">
+<span class="badge">signals</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L253</span>
+<pre>void sortIndicatorChanged(int logicalIndex, Qt::SortOrder order);</pre>
+<p class="doc" data-zh="排序标记列或方向改变时发出。" data-en="Emitted when the sort indicator section or order changes.">排序标记列或方向改变时发出。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderGeometry-stretchLastSectionChanged-78" data-search="HeaderGeometry stretchLastSectionChanged">
+<span class="badge">signals</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L254</span>
+<pre>void stretchLastSectionChanged(bool stretch);</pre>
+<p class="doc" data-zh="末 section 拉伸配置改变时发出。" data-en="Emitted when last-section stretching changes.">末 section 拉伸配置改变时发出。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderGeometry-resizeModeChanged-79" data-search="HeaderGeometry resizeModeChanged">
+<span class="badge">signals</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L255</span>
+<pre>void resizeModeChanged(viv::HeaderGeometry::ResizeMode mode);</pre>
+<p class="doc" data-zh="尺寸调整模式改变时发出。" data-en="Emitted when the resize mode changes.">尺寸调整模式改变时发出。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderGeometry-sectionStretchFactorChanged-80" data-search="HeaderGeometry sectionStretchFactorChanged">
+<span class="badge">signals</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L258</span>
+<pre>void sectionStretchFactorChanged(int logicalIndex, qreal factor);</pre>
+<p class="doc" data-zh="section 比例权重改变时发出。" data-en="Emitted when a section stretch factor changes.">section 比例权重改变时发出。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderGeometry-offsetChanged-81" data-search="HeaderGeometry offsetChanged">
+<span class="badge">signals</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L261</span>
+<pre>void offsetChanged(qint64 offset);</pre>
+<p class="doc" data-zh="水平或表头滚动偏移变化时发出。" data-en="Emitted when the horizontal or header scroll offset changes.">水平或表头滚动偏移变化时发出。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderGeometry-geometryChanged-82" data-search="HeaderGeometry geometryChanged">
+<span class="badge">signals</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L263</span>
+<pre>void geometryChanged();</pre>
+<p class="doc" data-zh="几何变化通知；批量信号用于一次处理多项变化，避免逐项重复布局。" data-en="Geometry change notification; bulk signals allow handling multiple changes without repeated per-item relayout.">几何变化通知；批量信号用于一次处理多项变化，避免逐项重复布局。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderGeometry-bulkGeometryChanged-83" data-search="HeaderGeometry bulkGeometryChanged">
+<span class="badge">signals</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L270</span>
+<pre>void bulkGeometryChanged();</pre>
+<p class="doc" data-zh="几何变化通知；批量信号用于一次处理多项变化，避免逐项重复布局。" data-en="Geometry change notification; bulk signals allow handling multiple changes without repeated per-item relayout.">几何变化通知；批量信号用于一次处理多项变化，避免逐项重复布局。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+</section>
+<footer class="muted">
+<p><span data-zh="按能力查找配套设置与独立示例；通用接口请沿基类链接查阅，Qt 继承接口请参考 Qt 文档。" data-en="Find related settings and independent examples by capability. Follow base-class links for shared APIs and consult Qt documentation for inherited Qt APIs.">按能力查找配套设置与独立示例；通用接口请沿基类链接查阅，Qt 继承接口请参考 Qt 文档。</span></p>
+</footer>
+</main>
+<script src="../assets/reference.js">
+</script>
+</body>
+</html>

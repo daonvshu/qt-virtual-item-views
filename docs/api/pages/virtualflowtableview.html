@@ -1,0 +1,972 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>VirtualFlowTableView · VirtualItemViews</title>
+<link rel="stylesheet" href="../assets/reference.css">
+</head>
+<body>
+<header>
+<div class="header-top">
+<a href="../index.html">VirtualItemViews / API</a>
+<div id="language-switch" class="language-switch" role="group" aria-label="Language / 语言" hidden>
+<button type="button" data-language="zh" aria-pressed="true" lang="zh-CN">中文</button>
+<button type="button" data-language="en" aria-pressed="false" lang="en">English</button>
+</div>
+</div>
+<h1>VirtualFlowTableView</h1>
+<p><span data-zh="等宽响应式网格" data-en="Equal-width responsive grid">等宽响应式网格</span></p>
+</header>
+<main>
+<nav>
+<a href="../index.html"><span data-zh="能力总览" data-en="Capabilities">能力总览</span></a>
+<a href="../../AGENT_GUIDE.md"><span data-zh="Agent 索引" data-en="Agent guide">Agent 索引</span></a>
+<a href="../../../examples/README.md"><span data-zh="独立示例" data-en="Examples">独立示例</span></a>
+<a href="../../../README.md"><span data-zh="项目首页" data-en="Project home">项目首页</span></a>
+</nav>
+<label for="filter"><span data-zh="搜索本页：能力、API 名称或关键词" data-en="Search this page: capability, API name or keyword">搜索本页：能力、API 名称或关键词</span></label>
+<input id="filter" type="search" placeholder="例如：Popup、setAutoHeight、冻结、branch">
+<p class="muted search-help"><span data-zh="无需网络或服务器。所有内容默认可见；搜索只筛选当前页。完整继承 API 请沿基类链接查阅。" data-en="No network or server required. All content is initially visible; search filters this page only. Follow base-class links for inherited APIs.">无需网络或服务器。所有内容默认可见；搜索只筛选当前页。完整继承 API 请沿基类链接查阅。</span></p>
+<p id="search-status" role="status" aria-live="polite">
+</p>
+<p>
+<a href="../../../include/virtualitemviews/virtualflowtableview.h"><span data-zh="公开头文件：include/virtualitemviews/virtualflowtableview.h" data-en="Public header: include/virtualitemviews/virtualflowtableview.h">公开头文件：include/virtualitemviews/virtualflowtableview.h</span></a>
+</p>
+<p><span data-zh="模型行是项目；显示列由视口宽度决定。统一格高或宽高比，大量等尺寸卡片优先选择此视图。" data-en="Model rows identify items; viewport width determines display columns. Fixed or aspect-ratio heights. Prefer this view for large uniform grids.">模型行是项目；显示列由视口宽度决定。统一格高或宽高比，大量等尺寸卡片优先选择此视图。</span></p>
+<p><span data-zh="直接基类：" data-en="Direct base: ">直接基类：</span><a href="virtualitemview.html">VirtualItemView</a>。</p>
+<p class="rules"><span data-zh="本页列出本类型声明的接口。模型、选择、编辑、拖放、背景、自动高度和诊断还需查 " data-en="This page lists declarations owned by this type. For models, selection, editing, drag/drop, backgrounds, auto height and diagnostics also see ">本页列出本类型声明的接口。模型、选择、编辑、拖放、背景、自动高度和诊断还需查 </span><a href="virtualitemview.html">VirtualItemView</a><span data-zh="。“可继承”不代表所有布局都支持：请先看下方能力限制。" data-en=". Inheritance does not imply support in every layout: read the capability limits below.">。“可继承”不代表所有布局都支持：请先看下方能力限制。</span></p>
+<p class="api-jump">
+<a href="#public-api"><span data-zh="公开函数列表" data-en="Public function index">公开函数列表</span></a>
+</p>
+<h2><span data-zh="能力与配套设置" data-en="Capabilities and related settings">能力与配套设置</span></h2>
+<article id="model" data-search="setModel model setRootIndex rootIndex virtualitemview virtuallistview virtualtableview virtualtreeview virtualtreetableview virtualflowtableview virtualmasonryview virtualwrapview">
+<h3><span data-zh="模型 / 根节点 / 代理模型 / 更新通知" data-en="Models / roots / proxies / update notifications">模型 / 根节点 / 代理模型 / 更新通知</span></h3>
+<p>
+<code>setModel · model · setRootIndex · rootIndex</code>
+</p>
+<p class="rules"><span data-zh="使用 QAbstractItemModel 与正常的 dataChanged、begin/endInsertRows、removeRows、moveRows、layoutChanged/reset 通知驱动更新；视图不持有业务数据。简单模型直接填充 QStandardItemModel。代理模型索引属于代理，不可把源模型索引直接传入视图；setRootIndex 显示其子项，Table 没有该入口。切换模型后重新核对 root 和 selectionModel。" data-en="Use QAbstractItemModel and standard dataChanged, begin/endInsertRows, removal, moveRows, layoutChanged and reset notifications. The view does not store business data. Populate QStandardItemModel directly for simple data. Proxy indexes belong to the proxy: do not pass source indexes to its view. setRootIndex displays children of that index; plain Table has no such entry point. Recheck root and selectionModel after replacing the model.">使用 QAbstractItemModel 与正常的 dataChanged、begin/endInsertRows、removeRows、moveRows、layoutChanged/reset 通知驱动更新；视图不持有业务数据。简单模型直接填充 QStandardItemModel。代理模型索引属于代理，不可把源模型索引直接传入视图；setRootIndex 显示其子项，Table 没有该入口。切换模型后重新核对 root 和 selectionModel。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../../src/core/virtualitemview.cpp">src/core/virtualitemview.cpp</a> · <a href="../../../src/widgets/virtuallistview.cpp">src/widgets/virtuallistview.cpp</a> · <a href="../../../src/widgets/virtualtreeview.cpp">src/widgets/virtualtreeview.cpp</a> · <a href="../../../src/widgets/virtualtreetableview.cpp">src/widgets/virtualtreetableview.cpp</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../../models.md">docs/models.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（10）" data-en="Independent source examples (10)">独立源码示例（10）</span></summary>
+<ul>
+<li>
+<a href="../../../examples/flow_capabilities/06_model_root/example.cpp">examples/flow_capabilities/06_model_root/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/list_capabilities/05_model_updates/example.cpp">examples/list_capabilities/05_model_updates/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/masonry_capabilities/09_model_root/example.cpp">examples/masonry_capabilities/09_model_root/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/table_capabilities/05_model_updates/example.cpp">examples/table_capabilities/05_model_updates/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/tree_capabilities/05_model_updates/example.cpp">examples/tree_capabilities/05_model_updates/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/treetable_capabilities/06_model_updates/example.cpp">examples/treetable_capabilities/06_model_updates/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/wrap_capabilities/05_model_root/example.cpp">examples/wrap_capabilities/05_model_root/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/tree_capabilities/08_root_index/example.cpp">examples/tree_capabilities/08_root_index/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/treetable_capabilities/09_root_index/example.cpp">examples/treetable_capabilities/09_root_index/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/tree_capabilities/21_sorting_filtering/example.cpp">examples/tree_capabilities/21_sorting_filtering/example.cpp</a>
+</li>
+</ul>
+</details>
+</article>
+<article id="states" data-search="visualState setVisualStateBackgroundVisible setHoverBackgroundColor setSelectedBackgroundColor setVisualStateAnimationDuration setVisualStateAnimationEasingCurve virtualitemview virtuallistview virtualtableview virtualtreeview virtualtreetableview virtualflowtableview virtualmasonryview virtualwrapview">
+<h3><span data-zh="hover / selected 默认绘制和动画" data-en="Built-in hover / selection painting and animation">hover / selected 默认绘制和动画</span></h3>
+<p>
+<code>visualState · setVisualStateBackgroundVisible · setHoverBackgroundColor · setSelectedBackgroundColor · setVisualStateAnimationDuration · setVisualStateAnimationEasingCurve</code>
+</p>
+<p class="rules"><span data-zh="内置状态背景默认开启，动画默认 180ms OutCubic；业务控件保持透明并在 visualStateChanged 中更新按钮/复选框的显示即可。除非完全自定义外观，不要自己维护 hoveredIndex、动画或重画默认背景。原生拖动期间框架暂停普通 hover，结束后重新计算；不改变业务勾选数据。Flow/Masonry/Wrap 的状态圆角入口是 setStateBackgroundCornerRadius，List/Tree/Table 是 setVisualStateCornerRadius。" data-en="State backgrounds default on, with 180ms OutCubic animation. Keep business widgets transparent and update buttons/checkbox visibility in visualStateChanged. Custom hover tracking, animation and default-background painting are unnecessary unless replacing the appearance entirely. Native drag suspends ordinary hover and recalculates it afterward without changing business checkbox data. Flow/Masonry/Wrap use setStateBackgroundCornerRadius; List/Tree/Table use setVisualStateCornerRadius.">内置状态背景默认开启，动画默认 180ms OutCubic；业务控件保持透明并在 visualStateChanged 中更新按钮/复选框的显示即可。除非完全自定义外观，不要自己维护 hoveredIndex、动画或重画默认背景。原生拖动期间框架暂停普通 hover，结束后重新计算；不改变业务勾选数据。Flow/Masonry/Wrap 的状态圆角入口是 setStateBackgroundCornerRadius，List/Tree/Table 是 setVisualStateCornerRadius。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../../src/core/virtualitemview.cpp">src/core/virtualitemview.cpp</a> · <a href="../../../src/widgets/virtualtableview.cpp">src/widgets/virtualtableview.cpp</a> · <a href="../../../src/widgets/virtuallistview.cpp">src/widgets/virtuallistview.cpp</a> · <a href="../../../src/widgets/virtualtreeview.cpp">src/widgets/virtualtreeview.cpp</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../../interaction.md">docs/interaction.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（11）" data-en="Independent source examples (11)">独立源码示例（11）</span></summary>
+<ul>
+<li>
+<a href="../../../examples/flow_capabilities/04_visual_states/example.cpp">examples/flow_capabilities/04_visual_states/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/list_capabilities/08_visual_states/example.cpp">examples/list_capabilities/08_visual_states/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/masonry_capabilities/06_visual_states/example.cpp">examples/masonry_capabilities/06_visual_states/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/table_capabilities/10_visual_states/example.cpp">examples/table_capabilities/10_visual_states/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/tree_capabilities/13_visual_states/example.cpp">examples/tree_capabilities/13_visual_states/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/treetable_capabilities/15_visual_states/example.cpp">examples/treetable_capabilities/15_visual_states/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/wrap_capabilities/03_visual_states/example.cpp">examples/wrap_capabilities/03_visual_states/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/list_capabilities/09_state_content/example.cpp">examples/list_capabilities/09_state_content/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/table_capabilities/11_state_content/example.cpp">examples/table_capabilities/11_state_content/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/tree_capabilities/14_state_content/example.cpp">examples/tree_capabilities/14_state_content/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/treetable_capabilities/16_state_content/example.cpp">examples/treetable_capabilities/16_state_content/example.cpp</a>
+</li>
+</ul>
+</details>
+</article>
+<article id="spacing" data-search="setRowSpacing setColumnSpacing setGridLinePlacement setSpacingBackgroundColor setVerticalSpacingLineThroughRowSpacing setHorizontalSpacingLineThroughColumnSpacing virtualitemview virtualtableview virtualflowtableview virtualmasonryview">
+<h3><span data-zh="间距 / 中心分割线 / 双侧分割线 / 半间距" data-en="Spacing / center lines / edge lines / half-gaps">间距 / 中心分割线 / 双侧分割线 / 半间距</span></h3>
+<p>
+<code>setRowSpacing · setColumnSpacing · setGridLinePlacement · setSpacingBackgroundColor · setVerticalSpacingLineThroughRowSpacing · setHorizontalSpacingLineThroughColumnSpacing</code>
+</p>
+<p class="rules"><span data-zh="默认 SpacingCenter，在间距中心画线，并在支持的网格布局外围补半间距；SpacingEdges 在两侧画线。间距 0 都回退到单一共享边界。Center 始终穿过交叉间距，不能关闭；Edges 才允许配置穿过与否。内容 margins 与项目 spacing 不是同一层。冻结区域交界将间距分成两半，由冻结分割线标识边界，不应业务重复补线。Wrap 的水平间距叫 setItemSpacing，没有表格网格线 API。" data-en="SpacingCenter is the default: lines lie at gap centers, with outer half-gaps in supported grid layouts. SpacingEdges draws both gap edges. Zero spacing uses one shared boundary in either mode. Center always bridges crossing gaps; only Edges allows breaks. Content margins and item spacing are separate. Frozen boundaries split the gap into halves and use the pane separator; do not draw a duplicate boundary. Wrap calls horizontal spacing setItemSpacing and has no table grid-line API.">默认 SpacingCenter，在间距中心画线，并在支持的网格布局外围补半间距；SpacingEdges 在两侧画线。间距 0 都回退到单一共享边界。Center 始终穿过交叉间距，不能关闭；Edges 才允许配置穿过与否。内容 margins 与项目 spacing 不是同一层。冻结区域交界将间距分成两半，由冻结分割线标识边界，不应业务重复补线。Wrap 的水平间距叫 setItemSpacing，没有表格网格线 API。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../../src/core/virtualitemview.cpp">src/core/virtualitemview.cpp</a> · <a href="../../../src/widgets/virtualtableview.cpp">src/widgets/virtualtableview.cpp</a> · <a href="../../../src/layout/flowtablelayout.cpp">src/layout/flowtablelayout.cpp</a> · <a href="../../../src/layout/masonrylayout.cpp">src/layout/masonrylayout.cpp</a> · <a href="../../../src/core/pixelalignedlines_p.h">src/core/pixelalignedlines_p.h</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../../table-layout-guide.md">docs/table-layout-guide.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（4）" data-en="Independent source examples (4)">独立源码示例（4）</span></summary>
+<ul>
+<li>
+<a href="../../../examples/table_capabilities/09_spacing/example.cpp">examples/table_capabilities/09_spacing/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/treetable_capabilities/14_spacing/example.cpp">examples/treetable_capabilities/14_spacing/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/flow_capabilities/03_spacing_grid/example.cpp">examples/flow_capabilities/03_spacing_grid/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/masonry_capabilities/03_spacing_grid/example.cpp">examples/masonry_capabilities/03_spacing_grid/example.cpp</a>
+</li>
+</ul>
+</details>
+</article>
+<article id="grid" data-search="setRowGridLinesVisible setRowGridLineColor setRowGridLineWidth setHorizontalGridLinesVisible setVerticalGridLinesVisible setTrailingRowGridLineAutoHideEnabled setItemPaneSeparatorStyle setPaneSeparatorStyle virtualitemview virtuallistview virtualtreeview virtualtableview virtualflowtableview virtualmasonryview">
+<h3><span data-zh="分割线样式 / 最后一行 / 冻结分隔线" data-en="Grid styling / terminal row / frozen separators">分割线样式 / 最后一行 / 冻结分隔线</span></h3>
+<p>
+<code>setRowGridLinesVisible · setRowGridLineColor · setRowGridLineWidth · setHorizontalGridLinesVisible · setVerticalGridLinesVisible · setTrailingRowGridLineAutoHideEnabled · setItemPaneSeparatorStyle · setPaneSeparatorStyle</code>
+</p>
+<p class="rules"><span data-zh="List/Tree 用 RowGridLine 接口；Table/Flow/Masonry 用 Horizontal/VerticalGridLine 接口。末行自动隐藏默认 true：自动高度或实际竖向溢出时按末行边界规则处理，内容底边距存在时仍有例外；false 请求保留可见末行线，不增加高度。强制显示但 range=0 的滚动条不等于可滚动。普通分割线与冻结线分别配置，PaneSeparatorStyle 支持颜色、粗细、线型；查看具体 API 单位，线宽不可一律再乘 DPR。" data-en="List/Tree use RowGridLine APIs; Table/Flow/Masonry use Horizontal/VerticalGridLine APIs. Terminal-row auto-hide defaults true and follows auto-height/actual vertical overflow boundary rules, with content-bottom-margin exceptions. False preserves a visible terminal line without adding height. A forced scroll bar with range 0 does not mean overflow. Ordinary grid lines and frozen separators have separate settings. PaneSeparatorStyle controls color, width and pen style. Check API units rather than multiplying every width by DPR.">List/Tree 用 RowGridLine 接口；Table/Flow/Masonry 用 Horizontal/VerticalGridLine 接口。末行自动隐藏默认 true：自动高度或实际竖向溢出时按末行边界规则处理，内容底边距存在时仍有例外；false 请求保留可见末行线，不增加高度。强制显示但 range=0 的滚动条不等于可滚动。普通分割线与冻结线分别配置，PaneSeparatorStyle 支持颜色、粗细、线型；查看具体 API 单位，线宽不可一律再乘 DPR。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../../src/core/virtualitemview.cpp">src/core/virtualitemview.cpp</a> · <a href="../../../src/widgets/virtualtableview.cpp">src/widgets/virtualtableview.cpp</a> · <a href="../../../src/widgets/virtuallistview.cpp">src/widgets/virtuallistview.cpp</a> · <a href="../../../src/widgets/virtualtreeview.cpp">src/widgets/virtualtreeview.cpp</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../../auto-height.md">docs/auto-height.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（8）" data-en="Independent source examples (8)">独立源码示例（8）</span></summary>
+<ul>
+<li>
+<a href="../../../examples/table_capabilities/16_frozen_areas/example.cpp">examples/table_capabilities/16_frozen_areas/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/flow_capabilities/11_auto_height/example.cpp">examples/flow_capabilities/11_auto_height/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/list_capabilities/21_auto_height/example.cpp">examples/list_capabilities/21_auto_height/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/masonry_capabilities/14_auto_height/example.cpp">examples/masonry_capabilities/14_auto_height/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/table_capabilities/31_auto_height/example.cpp">examples/table_capabilities/31_auto_height/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/tree_capabilities/27_auto_height/example.cpp">examples/tree_capabilities/27_auto_height/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/treetable_capabilities/36_auto_height/example.cpp">examples/treetable_capabilities/36_auto_height/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/wrap_capabilities/08_auto_height/example.cpp">examples/wrap_capabilities/08_auto_height/example.cpp</a>
+</li>
+</ul>
+</details>
+</article>
+<article id="drag" data-search="setDragEnabled setAcceptDrops setDragStartMode canStartDrag startDrag DragOptions setDragDropActions setDefaultDropAction setMoveRemovesSourceRows virtualitemview types virtuallistview virtualtableview virtualtreeview virtualtreetableview virtualwrapview virtualflowtableview virtualmasonryview">
+<h3><span data-zh="原生拖放 / 手柄起拖 / 预览 / Move" data-en="Native drag/drop / handles / previews / Move">原生拖放 / 手柄起拖 / 预览 / Move</span></h3>
+<p>
+<code>setDragEnabled · setAcceptDrops · setDragStartMode · canStartDrag · startDrag · DragOptions · setDragDropActions · setDefaultDropAction · setMoveRemovesSourceRows</code>
+</p>
+<p class="rules"><span data-zh="setDragEnabled 开启拖出，QWidget::setAcceptDrops 开启接收；模型需 flags、mimeData、mimeTypes、canDropMimeData/dropMimeData 与支持的 actions。Automatic 按阈值启动；Manual 由手柄调用 startDrag(index[, options])，不需框架注册按钮。默认预览按 SelectRows/SelectItems，DragOptions 可改来源/区域/热点，默认热点在鼠标处。Move 是否删除源行必须与模型协议一致：模型已移动不得再删；默认不删除。框架负责拖动 pin、hover 暂停和结束恢复。" data-en="setDragEnabled enables dragging out; QWidget::setAcceptDrops enables receiving. The model supplies flags, mimeData, mimeTypes, canDropMimeData/dropMimeData and supported actions. Automatic starts after the gesture threshold. Manual handles call startDrag(index[, options]); no button registration is needed. Default previews follow SelectRows/SelectItems; DragOptions controls source, region and press position, anchored at the pointer by default. Source deletion after Move must match the model protocol: never delete again after the model already moved data. Deletion defaults off. The framework owns temporary drag pins and hover suspension/restoration.">setDragEnabled 开启拖出，QWidget::setAcceptDrops 开启接收；模型需 flags、mimeData、mimeTypes、canDropMimeData/dropMimeData 与支持的 actions。Automatic 按阈值启动；Manual 由手柄调用 startDrag(index[, options])，不需框架注册按钮。默认预览按 SelectRows/SelectItems，DragOptions 可改来源/区域/热点，默认热点在鼠标处。Move 是否删除源行必须与模型协议一致：模型已移动不得再删；默认不删除。框架负责拖动 pin、hover 暂停和结束恢复。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../../src/core/virtualitemview.cpp">src/core/virtualitemview.cpp</a> · <a href="../../../src/core/dragpreview_p.h">src/core/dragpreview_p.h</a> · <a href="../../../src/core/dragmoveselection_p.h">src/core/dragmoveselection_p.h</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../../interaction.md">docs/interaction.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（4）" data-en="Independent source examples (4)">独立源码示例（4）</span></summary>
+<ul>
+<li>
+<a href="../../../examples/list_capabilities/15_drag_drop/example.cpp">examples/list_capabilities/15_drag_drop/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/table_capabilities/24_drag_indicator/example.cpp">examples/table_capabilities/24_drag_indicator/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/wrap_capabilities/07_drag_drop/example.cpp">examples/wrap_capabilities/07_drag_drop/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/masonry_capabilities/11_drag_drop/example.cpp">examples/masonry_capabilities/11_drag_drop/example.cpp</a>
+</li>
+</ul>
+</details>
+</article>
+<article id="flow" data-search="setCellWidthRange setCellHeightMode setFixedCellHeight setCellAspectRatio columnCount displayRowCount displayRowForIndex displayColumnForIndex virtualflowtableview">
+<h3><span data-zh="Flow 等宽换列 / 固定高度 / 比例" data-en="Flow equal-width columns / fixed and ratio heights">Flow 等宽换列 / 固定高度 / 比例</span></h3>
+<p>
+<code>setCellWidthRange · setCellHeightMode · setFixedCellHeight · setCellAspectRatio · columnCount · displayRowCount · displayRowForIndex · displayColumnForIndex</code>
+</p>
+<p class="rules"><span data-zh="显示列数随可用宽度计算，列均分铺满；不是多列模型的表格，不具备表头/冻结列 API。模型每行代表一个项目，换行不改索引身份。宽高比为 width/height；内核 setItemHeightMode 与自动 sizeHint 测量不支持，使用本视图 CellHeightMode。支持共享 auto height、状态、选择、拖放、分割线。" data-en="Available width determines display columns, which fill the width evenly. This is not a multi-column data table and has no headers or frozen-column API. Each model row identifies one item; wrapping preserves that identity. Aspect ratio is width/height. Kernel setItemHeightMode and automatic sizeHint measurement are unsupported; use CellHeightMode. Shared auto height, states, selection, drag/drop and grid lines remain available.">显示列数随可用宽度计算，列均分铺满；不是多列模型的表格，不具备表头/冻结列 API。模型每行代表一个项目，换行不改索引身份。宽高比为 width/height；内核 setItemHeightMode 与自动 sizeHint 测量不支持，使用本视图 CellHeightMode。支持共享 auto height、状态、选择、拖放、分割线。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../../src/widgets/virtualflowtableview.cpp">src/widgets/virtualflowtableview.cpp</a> · <a href="../../../src/layout/flowtablelayout.cpp">src/layout/flowtablelayout.cpp</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../../flow-table.md">docs/flow-table.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（2）" data-en="Independent source examples (2)">独立源码示例（2）</span></summary>
+<ul>
+<li>
+<a href="../../../examples/flow_capabilities/02_cell_sizes/example.cpp">examples/flow_capabilities/02_cell_sizes/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/flow_capabilities/09_images/example.cpp">examples/flow_capabilities/09_images/example.cpp</a>
+</li>
+</ul>
+</details>
+</article>
+<details>
+<summary><span data-zh="此视图全部能力章节（11）" data-en="All capability chapters for this view (11)">此视图全部能力章节（11）</span></summary>
+<ul>
+<li>
+<a href="../../../examples/flow_capabilities/01_basic/example.cpp"><span data-zh="01 基础接入" data-en="01 / Basic">01 基础接入</span></a> · <a href="../../../examples/flow_capabilities/01_basic/README.md"><span data-zh="说明" data-en="Guide">说明</span></a>
+</li>
+<li>
+<a href="../../../examples/flow_capabilities/02_cell_sizes/example.cpp"><span data-zh="02 尺寸与自动换列" data-en="02 / Cell sizes">02 尺寸与自动换列</span></a> · <a href="../../../examples/flow_capabilities/02_cell_sizes/README.md"><span data-zh="说明" data-en="Guide">说明</span></a>
+</li>
+<li>
+<a href="../../../examples/flow_capabilities/03_spacing_grid/example.cpp"><span data-zh="03 间距、边距与分割线" data-en="03 / Spacing grid">03 间距、边距与分割线</span></a> · <a href="../../../examples/flow_capabilities/03_spacing_grid/README.md"><span data-zh="说明" data-en="Guide">说明</span></a>
+</li>
+<li>
+<a href="../../../examples/flow_capabilities/04_visual_states/example.cpp"><span data-zh="04 状态背景与动画" data-en="04 / Visual states">04 状态背景与动画</span></a> · <a href="../../../examples/flow_capabilities/04_visual_states/README.md"><span data-zh="说明" data-en="Guide">说明</span></a>
+</li>
+<li>
+<a href="../../../examples/flow_capabilities/05_selection_events/example.cpp"><span data-zh="05 选择与项目事件" data-en="05 / Selection events">05 选择与项目事件</span></a> · <a href="../../../examples/flow_capabilities/05_selection_events/README.md"><span data-zh="说明" data-en="Guide">说明</span></a>
+</li>
+<li>
+<a href="../../../examples/flow_capabilities/06_model_root/example.cpp"><span data-zh="06 模型更新与显示根" data-en="06 / Model root">06 模型更新与显示根</span></a> · <a href="../../../examples/flow_capabilities/06_model_root/README.md"><span data-zh="说明" data-en="Guide">说明</span></a>
+</li>
+<li>
+<a href="../../../examples/flow_capabilities/07_scrolling/example.cpp"><span data-zh="07 滚动、定位与物化" data-en="07 / Scrolling">07 滚动、定位与物化</span></a> · <a href="../../../examples/flow_capabilities/07_scrolling/README.md"><span data-zh="说明" data-en="Guide">说明</span></a>
+</li>
+<li>
+<a href="../../../examples/flow_capabilities/08_drag_drop/example.cpp"><span data-zh="08 项目拖放" data-en="08 / Drag drop">08 项目拖放</span></a> · <a href="../../../examples/flow_capabilities/08_drag_drop/README.md"><span data-zh="说明" data-en="Guide">说明</span></a>
+</li>
+<li>
+<a href="../../../examples/flow_capabilities/09_images/example.cpp"><span data-zh="09 异步图片卡片" data-en="09 / Images">09 异步图片卡片</span></a> · <a href="../../../examples/flow_capabilities/09_images/README.md"><span data-zh="说明" data-en="Guide">说明</span></a>
+</li>
+<li>
+<a href="../../../examples/flow_capabilities/10_colors/example.cpp"><span data-zh="10 颜色与样式表" data-en="10 / Colors">10 颜色与样式表</span></a> · <a href="../../../examples/flow_capabilities/10_colors/README.md"><span data-zh="说明" data-en="Guide">说明</span></a>
+</li>
+<li>
+<a href="../../../examples/flow_capabilities/11_auto_height/example.cpp"><span data-zh="11 自适应高度" data-en="11 / Auto height">11 自适应高度</span></a> · <a href="../../../examples/flow_capabilities/11_auto_height/README.md"><span data-zh="说明" data-en="Guide">说明</span></a>
+</li>
+</ul>
+</details>
+<h2 id="public-api" tabindex="-1"><span data-zh="公开 API、类型与信号" data-en="Public API, types and signals">公开 API、类型与信号</span></h2>
+<section class="function-index" id="function-index" tabindex="-1">
+<h3><span data-zh="公开函数列表" data-en="Public function index">公开函数列表</span></h3>
+<p class="muted"><span data-zh="按声明类型分组；每个重载单独列出，点击签名跳转到说明。信号单独列出；类型和数据成员仍保留在下方。" data-en="Grouped by declaring type. Each overload has its own link to the details. Signals are listed separately; types and data members remain below.">按声明类型分组；每个重载单独列出，点击签名跳转到说明。信号单独列出；类型和数据成员仍保留在下方。</span></p>
+<h4>VirtualFlowTableView</h4>
+<ul>
+<li data-search="VirtualFlowTableView VirtualFlowTableView">
+<a href="#VirtualFlowTableView-VirtualFlowTableView-1">
+<code>explicit VirtualFlowTableView(QWidget *parent = nullptr);</code>
+</a>
+</li>
+<li data-search="VirtualFlowTableView setModel">
+<a href="#VirtualFlowTableView-setModel-2">
+<code>void setModel(QAbstractItemModel *model) override;</code>
+</a>
+</li>
+<li data-search="VirtualFlowTableView setRootIndex">
+<a href="#VirtualFlowTableView-setRootIndex-3">
+<code>void setRootIndex(const QModelIndex &amp;index);</code>
+</a>
+</li>
+<li data-search="VirtualFlowTableView rootIndex">
+<a href="#VirtualFlowTableView-rootIndex-4">
+<code>QModelIndex rootIndex() const;</code>
+</a>
+</li>
+<li data-search="VirtualFlowTableView setCellWidthRange">
+<a href="#VirtualFlowTableView-setCellWidthRange-5">
+<code>void setCellWidthRange(int minimum, int maximum);</code>
+</a>
+</li>
+<li data-search="VirtualFlowTableView minimumCellWidth">
+<a href="#VirtualFlowTableView-minimumCellWidth-6">
+<code>int minimumCellWidth() const;</code>
+</a>
+</li>
+<li data-search="VirtualFlowTableView maximumCellWidth">
+<a href="#VirtualFlowTableView-maximumCellWidth-7">
+<code>int maximumCellWidth() const;</code>
+</a>
+</li>
+<li data-search="VirtualFlowTableView setCellHeightMode">
+<a href="#VirtualFlowTableView-setCellHeightMode-8">
+<code>void setCellHeightMode(CellHeightMode mode);</code>
+</a>
+</li>
+<li data-search="VirtualFlowTableView cellHeightMode">
+<a href="#VirtualFlowTableView-cellHeightMode-9">
+<code>CellHeightMode cellHeightMode() const;</code>
+</a>
+</li>
+<li data-search="VirtualFlowTableView setFixedCellHeight">
+<a href="#VirtualFlowTableView-setFixedCellHeight-10">
+<code>void setFixedCellHeight(int height);</code>
+</a>
+</li>
+<li data-search="VirtualFlowTableView fixedCellHeight">
+<a href="#VirtualFlowTableView-fixedCellHeight-11">
+<code>int fixedCellHeight() const;</code>
+</a>
+</li>
+<li data-search="VirtualFlowTableView setCellAspectRatio">
+<a href="#VirtualFlowTableView-setCellAspectRatio-12">
+<code>void setCellAspectRatio(qreal ratio);</code>
+</a>
+</li>
+<li data-search="VirtualFlowTableView cellAspectRatio">
+<a href="#VirtualFlowTableView-cellAspectRatio-13">
+<code>qreal cellAspectRatio() const;</code>
+</a>
+</li>
+<li data-search="VirtualFlowTableView setColumnSpacing">
+<a href="#VirtualFlowTableView-setColumnSpacing-14">
+<code>void setColumnSpacing(int pixels);</code>
+</a>
+</li>
+<li data-search="VirtualFlowTableView columnSpacing">
+<a href="#VirtualFlowTableView-columnSpacing-15">
+<code>int columnSpacing() const;</code>
+</a>
+</li>
+<li data-search="VirtualFlowTableView setRowSpacing">
+<a href="#VirtualFlowTableView-setRowSpacing-16">
+<code>void setRowSpacing(int pixels) override;</code>
+</a>
+</li>
+<li data-search="VirtualFlowTableView setGridLinePlacement">
+<a href="#VirtualFlowTableView-setGridLinePlacement-17">
+<code>void setGridLinePlacement(GridLinePlacement placement) override;</code>
+</a>
+</li>
+<li data-search="VirtualFlowTableView setContentMargins">
+<a href="#VirtualFlowTableView-setContentMargins-18">
+<code>void setContentMargins(const QMargins &amp;margins);</code>
+</a>
+</li>
+<li data-search="VirtualFlowTableView contentMargins">
+<a href="#VirtualFlowTableView-contentMargins-19">
+<code>QMargins contentMargins() const;</code>
+</a>
+</li>
+<li data-search="VirtualFlowTableView setSpacingBackgroundColor">
+<a href="#VirtualFlowTableView-setSpacingBackgroundColor-20">
+<code>void setSpacingBackgroundColor(const QColor &amp;color) override;</code>
+</a>
+</li>
+<li data-search="VirtualFlowTableView setVisualStateBackgroundVisible">
+<a href="#VirtualFlowTableView-setVisualStateBackgroundVisible-21">
+<code>void setVisualStateBackgroundVisible(bool visible);</code>
+</a>
+</li>
+<li data-search="VirtualFlowTableView visualStateBackgroundVisible">
+<a href="#VirtualFlowTableView-visualStateBackgroundVisible-22">
+<code>bool visualStateBackgroundVisible() const;</code>
+</a>
+</li>
+<li data-search="VirtualFlowTableView setStateBackgroundCornerRadius">
+<a href="#VirtualFlowTableView-setStateBackgroundCornerRadius-23">
+<code>void setStateBackgroundCornerRadius(int pixels);</code>
+</a>
+</li>
+<li data-search="VirtualFlowTableView stateBackgroundCornerRadius">
+<a href="#VirtualFlowTableView-stateBackgroundCornerRadius-24">
+<code>int stateBackgroundCornerRadius() const;</code>
+</a>
+</li>
+<li data-search="VirtualFlowTableView setVerticalGridLinesVisible">
+<a href="#VirtualFlowTableView-setVerticalGridLinesVisible-25">
+<code>void setVerticalGridLinesVisible(bool visible);</code>
+</a>
+</li>
+<li data-search="VirtualFlowTableView verticalGridLinesVisible">
+<a href="#VirtualFlowTableView-verticalGridLinesVisible-26">
+<code>bool verticalGridLinesVisible() const;</code>
+</a>
+</li>
+<li data-search="VirtualFlowTableView setHorizontalGridLinesVisible">
+<a href="#VirtualFlowTableView-setHorizontalGridLinesVisible-27">
+<code>void setHorizontalGridLinesVisible(bool visible);</code>
+</a>
+</li>
+<li data-search="VirtualFlowTableView horizontalGridLinesVisible">
+<a href="#VirtualFlowTableView-horizontalGridLinesVisible-28">
+<code>bool horizontalGridLinesVisible() const;</code>
+</a>
+</li>
+<li data-search="VirtualFlowTableView setVerticalGridLineWidth">
+<a href="#VirtualFlowTableView-setVerticalGridLineWidth-29">
+<code>void setVerticalGridLineWidth(int pixels);</code>
+</a>
+</li>
+<li data-search="VirtualFlowTableView verticalGridLineWidth">
+<a href="#VirtualFlowTableView-verticalGridLineWidth-30">
+<code>int verticalGridLineWidth() const;</code>
+</a>
+</li>
+<li data-search="VirtualFlowTableView setHorizontalGridLineWidth">
+<a href="#VirtualFlowTableView-setHorizontalGridLineWidth-31">
+<code>void setHorizontalGridLineWidth(int pixels);</code>
+</a>
+</li>
+<li data-search="VirtualFlowTableView horizontalGridLineWidth">
+<a href="#VirtualFlowTableView-horizontalGridLineWidth-32">
+<code>int horizontalGridLineWidth() const;</code>
+</a>
+</li>
+<li data-search="VirtualFlowTableView setVerticalGridLineColor">
+<a href="#VirtualFlowTableView-setVerticalGridLineColor-33">
+<code>void setVerticalGridLineColor(const QColor &amp;color);</code>
+</a>
+</li>
+<li data-search="VirtualFlowTableView verticalGridLineColor">
+<a href="#VirtualFlowTableView-verticalGridLineColor-34">
+<code>QColor verticalGridLineColor() const;</code>
+</a>
+</li>
+<li data-search="VirtualFlowTableView setHorizontalGridLineColor">
+<a href="#VirtualFlowTableView-setHorizontalGridLineColor-35">
+<code>void setHorizontalGridLineColor(const QColor &amp;color);</code>
+</a>
+</li>
+<li data-search="VirtualFlowTableView horizontalGridLineColor">
+<a href="#VirtualFlowTableView-horizontalGridLineColor-36">
+<code>QColor horizontalGridLineColor() const;</code>
+</a>
+</li>
+<li data-search="VirtualFlowTableView setVerticalSpacingLineThroughRowSpacing">
+<a href="#VirtualFlowTableView-setVerticalSpacingLineThroughRowSpacing-37">
+<code>void setVerticalSpacingLineThroughRowSpacing(bool enabled);</code>
+</a>
+</li>
+<li data-search="VirtualFlowTableView verticalSpacingLineThroughRowSpacing">
+<a href="#VirtualFlowTableView-verticalSpacingLineThroughRowSpacing-38">
+<code>bool verticalSpacingLineThroughRowSpacing() const;</code>
+</a>
+</li>
+<li data-search="VirtualFlowTableView setHorizontalSpacingLineThroughColumnSpacing">
+<a href="#VirtualFlowTableView-setHorizontalSpacingLineThroughColumnSpacing-39">
+<code>void setHorizontalSpacingLineThroughColumnSpacing(bool enabled);</code>
+</a>
+</li>
+<li data-search="VirtualFlowTableView horizontalSpacingLineThroughColumnSpacing">
+<a href="#VirtualFlowTableView-horizontalSpacingLineThroughColumnSpacing-40">
+<code>bool horizontalSpacingLineThroughColumnSpacing() const;</code>
+</a>
+</li>
+<li data-search="VirtualFlowTableView columnCount">
+<a href="#VirtualFlowTableView-columnCount-41">
+<code>int columnCount() const;</code>
+</a>
+</li>
+<li data-search="VirtualFlowTableView displayRowCount">
+<a href="#VirtualFlowTableView-displayRowCount-42">
+<code>qsizetype displayRowCount() const;</code>
+</a>
+</li>
+<li data-search="VirtualFlowTableView columnWidth">
+<a href="#VirtualFlowTableView-columnWidth-43">
+<code>int columnWidth(int column) const;</code>
+</a>
+</li>
+<li data-search="VirtualFlowTableView columnViewportX">
+<a href="#VirtualFlowTableView-columnViewportX-44">
+<code>int columnViewportX(int column) const;</code>
+</a>
+</li>
+<li data-search="VirtualFlowTableView displayRowForIndex">
+<a href="#VirtualFlowTableView-displayRowForIndex-45">
+<code>qsizetype displayRowForIndex(const QModelIndex &amp;index) const;</code>
+</a>
+</li>
+<li data-search="VirtualFlowTableView displayColumnForIndex">
+<a href="#VirtualFlowTableView-displayColumnForIndex-46">
+<code>int displayColumnForIndex(const QModelIndex &amp;index) const;</code>
+</a>
+</li>
+</ul>
+<h3><span data-zh="信号列表" data-en="Signals">信号列表</span></h3>
+<h4>VirtualFlowTableView</h4>
+<ul>
+<li data-search="VirtualFlowTableView flowLayoutChanged">
+<a href="#VirtualFlowTableView-flowLayoutChanged-47">
+<code>void flowLayoutChanged();</code>
+</a>
+</li>
+</ul>
+</section>
+<h2><span data-zh="函数说明" data-en="Function details">函数说明</span></h2>
+<p class="muted"><span data-zh="按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。" data-en="Read each function for its purpose and related settings. Overloads are listed separately; follow related capabilities to find examples.">按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。</span></p>
+<section>
+<h3 id="VirtualFlowTableView">VirtualFlowTableView</h3>
+<pre>class VIRTUALITEMVIEWS_EXPORT VirtualFlowTableView : public VirtualItemView</pre>
+<article tabindex="-1" id="VirtualFlowTableView-CellHeightMode-0" data-search="VirtualFlowTableView CellHeightMode">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualflowtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L22</span>
+<pre>enum class CellHeightMode { Fixed, AspectRatio };</pre>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualFlowTableView-VirtualFlowTableView-1" data-search="VirtualFlowTableView VirtualFlowTableView">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualflowtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L25</span>
+<pre>explicit VirtualFlowTableView(QWidget *parent = nullptr);</pre>
+<p class="doc" data-zh="构造 VirtualFlowTableView；按此重载传入父对象、模型或布局参数。带 parent 的 QObject/QWidget 遵循 Qt 父子生命周期。" data-en="Construct VirtualFlowTableView with the parent, model or layout arguments in this overload. QObject/QWidget parent arguments follow Qt parent-child lifetime rules.">构造 VirtualFlowTableView；按此重载传入父对象、模型或布局参数。带 parent 的 QObject/QWidget 遵循 Qt 父子生命周期。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualFlowTableView-setModel-2" data-search="VirtualFlowTableView setModel">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualflowtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L26</span>
+<pre>void setModel(QAbstractItemModel *model) override;</pre>
+<p class="doc" data-zh="连接新的数据模型并更新布局、选择与物化状态；模型生命周期需覆盖视图使用期间。不要用重复 setModel 代替数据变更通知。" data-en="Connect a new data model and update layout, selection and materialization. Keep the model alive while in use; do not replace change notifications with repeated setModel calls.">连接新的数据模型并更新布局、选择与物化状态；模型生命周期需覆盖视图使用期间。不要用重复 setModel 代替数据变更通知。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#model"><span data-zh="模型 / 根节点 / 代理模型 / 更新通知" data-en="Models / roots / proxies / update notifications">模型 / 根节点 / 代理模型 / 更新通知</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualFlowTableView-setRootIndex-3" data-search="VirtualFlowTableView setRootIndex">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualflowtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L28</span>
+<pre>void setRootIndex(const QModelIndex &amp;index);</pre>
+<p class="doc" data-zh="设置展示子项所属模型根索引。" data-en="Set the model root index whose children are displayed.">设置展示子项所属模型根索引。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#model"><span data-zh="模型 / 根节点 / 代理模型 / 更新通知" data-en="Models / roots / proxies / update notifications">模型 / 根节点 / 代理模型 / 更新通知</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualFlowTableView-rootIndex-4" data-search="VirtualFlowTableView rootIndex">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualflowtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L29</span>
+<pre>    QModelIndex rootIndex() const;</pre>
+<p class="doc" data-zh="返回展示子项所属模型根索引。" data-en="Return the model root index whose children are displayed.">返回展示子项所属模型根索引。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#model"><span data-zh="模型 / 根节点 / 代理模型 / 更新通知" data-en="Models / roots / proxies / update notifications">模型 / 根节点 / 代理模型 / 更新通知</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualFlowTableView-setCellWidthRange-5" data-search="VirtualFlowTableView setCellWidthRange">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualflowtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L31</span>
+<pre>void setCellWidthRange(int minimum, int maximum);</pre>
+<p class="doc" data-zh="设置单元格或项目的宽度上下限，影响换行和自动列数计算。" data-en="Set cell or item width bounds used by wrapping and automatic column-count calculations.">设置单元格或项目的宽度上下限，影响换行和自动列数计算。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#flow"><span data-zh="Flow 等宽换列 / 固定高度 / 比例" data-en="Flow equal-width columns / fixed and ratio heights">Flow 等宽换列 / 固定高度 / 比例</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualFlowTableView-minimumCellWidth-6" data-search="VirtualFlowTableView minimumCellWidth">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualflowtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L32</span>
+<pre>int minimumCellWidth() const;</pre>
+<p class="doc" data-zh="返回单元格或项目宽度下限或上限。" data-en="Return the minimum or maximum cell or item width.">返回单元格或项目宽度下限或上限。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualFlowTableView-maximumCellWidth-7" data-search="VirtualFlowTableView maximumCellWidth">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualflowtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L33</span>
+<pre>int maximumCellWidth() const;</pre>
+<p class="doc" data-zh="返回单元格或项目宽度下限或上限。" data-en="Return the minimum or maximum cell or item width.">返回单元格或项目宽度下限或上限。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualFlowTableView-setCellHeightMode-8" data-search="VirtualFlowTableView setCellHeightMode">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualflowtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L34</span>
+<pre>void setCellHeightMode(CellHeightMode mode);</pre>
+<p class="doc" data-zh="设置流式表格单元格高度模式。" data-en="Set the flow-table cell height mode.">设置流式表格单元格高度模式。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#flow"><span data-zh="Flow 等宽换列 / 固定高度 / 比例" data-en="Flow equal-width columns / fixed and ratio heights">Flow 等宽换列 / 固定高度 / 比例</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualFlowTableView-cellHeightMode-9" data-search="VirtualFlowTableView cellHeightMode">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualflowtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L35</span>
+<pre>CellHeightMode cellHeightMode() const;</pre>
+<p class="doc" data-zh="返回流式表格单元格高度模式。" data-en="Return the flow-table cell height mode.">返回流式表格单元格高度模式。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#flow"><span data-zh="Flow 等宽换列 / 固定高度 / 比例" data-en="Flow equal-width columns / fixed and ratio heights">Flow 等宽换列 / 固定高度 / 比例</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualFlowTableView-setFixedCellHeight-10" data-search="VirtualFlowTableView setFixedCellHeight">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualflowtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L36</span>
+<pre>void setFixedCellHeight(int height);</pre>
+<p class="doc" data-zh="设置固定模式的单元格高度。" data-en="Set the cell height in fixed mode.">设置固定模式的单元格高度。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#flow"><span data-zh="Flow 等宽换列 / 固定高度 / 比例" data-en="Flow equal-width columns / fixed and ratio heights">Flow 等宽换列 / 固定高度 / 比例</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualFlowTableView-fixedCellHeight-11" data-search="VirtualFlowTableView fixedCellHeight">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualflowtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L37</span>
+<pre>int fixedCellHeight() const;</pre>
+<p class="doc" data-zh="返回固定模式的单元格高度。" data-en="Return the cell height in fixed mode.">返回固定模式的单元格高度。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#flow"><span data-zh="Flow 等宽换列 / 固定高度 / 比例" data-en="Flow equal-width columns / fixed and ratio heights">Flow 等宽换列 / 固定高度 / 比例</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualFlowTableView-setCellAspectRatio-12" data-search="VirtualFlowTableView setCellAspectRatio">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualflowtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L39</span>
+<pre>void setCellAspectRatio(qreal ratio);</pre>
+<p class="doc" data-zh="设置单元格宽高比（宽 / 高）。" data-en="Set the cell aspect ratio (width / height).">设置单元格宽高比（宽 / 高）。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#flow"><span data-zh="Flow 等宽换列 / 固定高度 / 比例" data-en="Flow equal-width columns / fixed and ratio heights">Flow 等宽换列 / 固定高度 / 比例</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualFlowTableView-cellAspectRatio-13" data-search="VirtualFlowTableView cellAspectRatio">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualflowtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L40</span>
+<pre>qreal cellAspectRatio() const;</pre>
+<p class="doc" data-zh="返回单元格宽高比（宽 / 高）。" data-en="Return the cell aspect ratio (width / height).">返回单元格宽高比（宽 / 高）。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#flow"><span data-zh="Flow 等宽换列 / 固定高度 / 比例" data-en="Flow equal-width columns / fixed and ratio heights">Flow 等宽换列 / 固定高度 / 比例</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualFlowTableView-setColumnSpacing-14" data-search="VirtualFlowTableView setColumnSpacing">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualflowtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L41</span>
+<pre>void setColumnSpacing(int pixels);</pre>
+<p class="doc" data-zh="设置内容列间距。" data-en="Set the spacing between content columns.">设置内容列间距。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#spacing"><span data-zh="间距 / 中心分割线 / 双侧分割线 / 半间距" data-en="Spacing / center lines / edge lines / half-gaps">间距 / 中心分割线 / 双侧分割线 / 半间距</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualFlowTableView-columnSpacing-15" data-search="VirtualFlowTableView columnSpacing">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualflowtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L42</span>
+<pre>int columnSpacing() const;</pre>
+<p class="doc" data-zh="返回内容列间距。" data-en="Return the spacing between content columns.">返回内容列间距。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#spacing"><span data-zh="间距 / 中心分割线 / 双侧分割线 / 半间距" data-en="Spacing / center lines / edge lines / half-gaps">间距 / 中心分割线 / 双侧分割线 / 半间距</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualFlowTableView-setRowSpacing-16" data-search="VirtualFlowTableView setRowSpacing">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualflowtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L43</span>
+<pre>void setRowSpacing(int pixels) override;</pre>
+<p class="doc" data-zh="设置行间距。" data-en="Set the spacing between rows.">设置行间距。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#spacing"><span data-zh="间距 / 中心分割线 / 双侧分割线 / 半间距" data-en="Spacing / center lines / edge lines / half-gaps">间距 / 中心分割线 / 双侧分割线 / 半间距</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualFlowTableView-setGridLinePlacement-17" data-search="VirtualFlowTableView setGridLinePlacement">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualflowtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L46</span>
+<pre>void setGridLinePlacement(GridLinePlacement placement) override;</pre>
+<p class="doc" data-zh="设置间距中心或两侧分割线模式。" data-en="Set the grid line placement at spacing centers or edges.">设置间距中心或两侧分割线模式。</p>
+<p class="doc" data-zh="默认 SpacingCenter：在间距中心绘制，交叉线始终穿过间距，且外侧补半间距；零间距时不重复画线。SpacingEdges 在间距两侧绘制，只有这个模式允许控制是否穿过交叉间距。是否穿过表头使用单独开关。" data-en="SpacingCenter is the default: lines run through gap centers, cross gaps unconditionally, and use outer half-gaps; zero spacing does not duplicate lines. SpacingEdges draws both gap edges and alone allows disabling crossings through perpendicular gaps. Header crossings have independent switches.">默认 SpacingCenter：在间距中心绘制，交叉线始终穿过间距，且外侧补半间距；零间距时不重复画线。SpacingEdges 在间距两侧绘制，只有这个模式允许控制是否穿过交叉间距。是否穿过表头使用单独开关。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#spacing"><span data-zh="间距 / 中心分割线 / 双侧分割线 / 半间距" data-en="Spacing / center lines / edge lines / half-gaps">间距 / 中心分割线 / 双侧分割线 / 半间距</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualFlowTableView-setContentMargins-18" data-search="VirtualFlowTableView setContentMargins">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualflowtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L47</span>
+<pre>void setContentMargins(const QMargins &amp;margins);</pre>
+<p class="doc" data-zh="设置内容四周外边距。" data-en="Set the margins around the content.">设置内容四周外边距。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualFlowTableView-contentMargins-19" data-search="VirtualFlowTableView contentMargins">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualflowtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L48</span>
+<pre>QMargins contentMargins() const;</pre>
+<p class="doc" data-zh="返回内容四周外边距。" data-en="Return the margins around the content.">返回内容四周外边距。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualFlowTableView-setSpacingBackgroundColor-20" data-search="VirtualFlowTableView setSpacingBackgroundColor">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualflowtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L51</span>
+<pre>void setSpacingBackgroundColor(const QColor &amp;color) override;</pre>
+<p class="doc" data-zh="设置内容或表头间距背景颜色。" data-en="Set the content or header gap background color.">设置内容或表头间距背景颜色。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#spacing"><span data-zh="间距 / 中心分割线 / 双侧分割线 / 半间距" data-en="Spacing / center lines / edge lines / half-gaps">间距 / 中心分割线 / 双侧分割线 / 半间距</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualFlowTableView-setVisualStateBackgroundVisible-21" data-search="VirtualFlowTableView setVisualStateBackgroundVisible">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualflowtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L53</span>
+<pre>void setVisualStateBackgroundVisible(bool visible);</pre>
+<p class="doc" data-zh="设置hover 或选中背景绘制开关。" data-en="Set the hover or selection background painting setting.">设置hover 或选中背景绘制开关。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#states"><span data-zh="hover / selected 默认绘制和动画" data-en="Built-in hover / selection painting and animation">hover / selected 默认绘制和动画</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualFlowTableView-visualStateBackgroundVisible-22" data-search="VirtualFlowTableView visualStateBackgroundVisible">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualflowtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L54</span>
+<pre>    bool visualStateBackgroundVisible() const;</pre>
+<p class="doc" data-zh="返回hover 或选中背景绘制开关。" data-en="Return the hover or selection background painting setting.">返回hover 或选中背景绘制开关。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#states"><span data-zh="hover / selected 默认绘制和动画" data-en="Built-in hover / selection painting and animation">hover / selected 默认绘制和动画</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualFlowTableView-setStateBackgroundCornerRadius-23" data-search="VirtualFlowTableView setStateBackgroundCornerRadius">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualflowtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L56</span>
+<pre>void setStateBackgroundCornerRadius(int pixels);</pre>
+<p class="doc" data-zh="设置状态背景圆角半径。" data-en="Set the state background corner radius.">设置状态背景圆角半径。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualFlowTableView-stateBackgroundCornerRadius-24" data-search="VirtualFlowTableView stateBackgroundCornerRadius">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualflowtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L57</span>
+<pre>    int stateBackgroundCornerRadius() const;</pre>
+<p class="doc" data-zh="返回状态背景圆角半径。" data-en="Return the state background corner radius.">返回状态背景圆角半径。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualFlowTableView-setVerticalGridLinesVisible-25" data-search="VirtualFlowTableView setVerticalGridLinesVisible">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualflowtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L59</span>
+<pre>void setVerticalGridLinesVisible(bool visible);</pre>
+<p class="doc" data-zh="设置纵向分割线可见性。" data-en="Set the vertical grid line visibility.">设置纵向分割线可见性。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#grid"><span data-zh="分割线样式 / 最后一行 / 冻结分隔线" data-en="Grid styling / terminal row / frozen separators">分割线样式 / 最后一行 / 冻结分隔线</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualFlowTableView-verticalGridLinesVisible-26" data-search="VirtualFlowTableView verticalGridLinesVisible">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualflowtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L60</span>
+<pre>    bool verticalGridLinesVisible() const;</pre>
+<p class="doc" data-zh="返回纵向分割线可见性。" data-en="Return the vertical grid line visibility.">返回纵向分割线可见性。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#grid"><span data-zh="分割线样式 / 最后一行 / 冻结分隔线" data-en="Grid styling / terminal row / frozen separators">分割线样式 / 最后一行 / 冻结分隔线</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualFlowTableView-setHorizontalGridLinesVisible-27" data-search="VirtualFlowTableView setHorizontalGridLinesVisible">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualflowtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L61</span>
+<pre>void setHorizontalGridLinesVisible(bool visible);</pre>
+<p class="doc" data-zh="设置横向分割线可见性。" data-en="Set the horizontal grid line visibility.">设置横向分割线可见性。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#grid"><span data-zh="分割线样式 / 最后一行 / 冻结分隔线" data-en="Grid styling / terminal row / frozen separators">分割线样式 / 最后一行 / 冻结分隔线</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualFlowTableView-horizontalGridLinesVisible-28" data-search="VirtualFlowTableView horizontalGridLinesVisible">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualflowtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L62</span>
+<pre>    bool horizontalGridLinesVisible() const;</pre>
+<p class="doc" data-zh="返回横向分割线可见性。" data-en="Return the horizontal grid line visibility.">返回横向分割线可见性。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#grid"><span data-zh="分割线样式 / 最后一行 / 冻结分隔线" data-en="Grid styling / terminal row / frozen separators">分割线样式 / 最后一行 / 冻结分隔线</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualFlowTableView-setVerticalGridLineWidth-29" data-search="VirtualFlowTableView setVerticalGridLineWidth">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualflowtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L64</span>
+<pre>void setVerticalGridLineWidth(int pixels);</pre>
+<p class="doc" data-zh="设置纵向分割线宽度。" data-en="Set the vertical grid line width.">设置纵向分割线宽度。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualFlowTableView-verticalGridLineWidth-30" data-search="VirtualFlowTableView verticalGridLineWidth">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualflowtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L65</span>
+<pre>    int verticalGridLineWidth() const;</pre>
+<p class="doc" data-zh="返回纵向分割线宽度。" data-en="Return the vertical grid line width.">返回纵向分割线宽度。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualFlowTableView-setHorizontalGridLineWidth-31" data-search="VirtualFlowTableView setHorizontalGridLineWidth">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualflowtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L66</span>
+<pre>void setHorizontalGridLineWidth(int pixels);</pre>
+<p class="doc" data-zh="设置横向分割线宽度。" data-en="Set the horizontal grid line width.">设置横向分割线宽度。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualFlowTableView-horizontalGridLineWidth-32" data-search="VirtualFlowTableView horizontalGridLineWidth">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualflowtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L67</span>
+<pre>    int horizontalGridLineWidth() const;</pre>
+<p class="doc" data-zh="返回横向分割线宽度。" data-en="Return the horizontal grid line width.">返回横向分割线宽度。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualFlowTableView-setVerticalGridLineColor-33" data-search="VirtualFlowTableView setVerticalGridLineColor">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualflowtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L68</span>
+<pre>void setVerticalGridLineColor(const QColor &amp;color);</pre>
+<p class="doc" data-zh="设置纵向分割线颜色。" data-en="Set the vertical grid line color.">设置纵向分割线颜色。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualFlowTableView-verticalGridLineColor-34" data-search="VirtualFlowTableView verticalGridLineColor">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualflowtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L69</span>
+<pre>    QColor verticalGridLineColor() const;</pre>
+<p class="doc" data-zh="返回纵向分割线颜色。" data-en="Return the vertical grid line color.">返回纵向分割线颜色。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualFlowTableView-setHorizontalGridLineColor-35" data-search="VirtualFlowTableView setHorizontalGridLineColor">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualflowtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L70</span>
+<pre>void setHorizontalGridLineColor(const QColor &amp;color);</pre>
+<p class="doc" data-zh="设置横向分割线颜色。" data-en="Set the horizontal grid line color.">设置横向分割线颜色。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualFlowTableView-horizontalGridLineColor-36" data-search="VirtualFlowTableView horizontalGridLineColor">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualflowtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L71</span>
+<pre>    QColor horizontalGridLineColor() const;</pre>
+<p class="doc" data-zh="返回横向分割线颜色。" data-en="Return the horizontal grid line color.">返回横向分割线颜色。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualFlowTableView-setVerticalSpacingLineThroughRowSpacing-37" data-search="VirtualFlowTableView setVerticalSpacingLineThroughRowSpacing">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualflowtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L74</span>
+<pre>void setVerticalSpacingLineThroughRowSpacing(bool enabled);</pre>
+<p class="doc" data-zh="设置两侧模式下纵向线穿过行间距开关。" data-en="Set the whether vertical lines cross row gaps in edge mode.">设置两侧模式下纵向线穿过行间距开关。</p>
+<p class="doc" data-zh="默认 SpacingCenter：在间距中心绘制，交叉线始终穿过间距，且外侧补半间距；零间距时不重复画线。SpacingEdges 在间距两侧绘制，只有这个模式允许控制是否穿过交叉间距。是否穿过表头使用单独开关。" data-en="SpacingCenter is the default: lines run through gap centers, cross gaps unconditionally, and use outer half-gaps; zero spacing does not duplicate lines. SpacingEdges draws both gap edges and alone allows disabling crossings through perpendicular gaps. Header crossings have independent switches.">默认 SpacingCenter：在间距中心绘制，交叉线始终穿过间距，且外侧补半间距；零间距时不重复画线。SpacingEdges 在间距两侧绘制，只有这个模式允许控制是否穿过交叉间距。是否穿过表头使用单独开关。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#spacing"><span data-zh="间距 / 中心分割线 / 双侧分割线 / 半间距" data-en="Spacing / center lines / edge lines / half-gaps">间距 / 中心分割线 / 双侧分割线 / 半间距</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualFlowTableView-verticalSpacingLineThroughRowSpacing-38" data-search="VirtualFlowTableView verticalSpacingLineThroughRowSpacing">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualflowtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L75</span>
+<pre>    bool verticalSpacingLineThroughRowSpacing() const;</pre>
+<p class="doc" data-zh="返回两侧模式下纵向线穿过行间距开关。" data-en="Return the whether vertical lines cross row gaps in edge mode.">返回两侧模式下纵向线穿过行间距开关。</p>
+<p class="doc" data-zh="默认 SpacingCenter：在间距中心绘制，交叉线始终穿过间距，且外侧补半间距；零间距时不重复画线。SpacingEdges 在间距两侧绘制，只有这个模式允许控制是否穿过交叉间距。是否穿过表头使用单独开关。" data-en="SpacingCenter is the default: lines run through gap centers, cross gaps unconditionally, and use outer half-gaps; zero spacing does not duplicate lines. SpacingEdges draws both gap edges and alone allows disabling crossings through perpendicular gaps. Header crossings have independent switches.">默认 SpacingCenter：在间距中心绘制，交叉线始终穿过间距，且外侧补半间距；零间距时不重复画线。SpacingEdges 在间距两侧绘制，只有这个模式允许控制是否穿过交叉间距。是否穿过表头使用单独开关。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#spacing"><span data-zh="间距 / 中心分割线 / 双侧分割线 / 半间距" data-en="Spacing / center lines / edge lines / half-gaps">间距 / 中心分割线 / 双侧分割线 / 半间距</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualFlowTableView-setHorizontalSpacingLineThroughColumnSpacing-39" data-search="VirtualFlowTableView setHorizontalSpacingLineThroughColumnSpacing">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualflowtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L77</span>
+<pre>void setHorizontalSpacingLineThroughColumnSpacing(bool enabled);</pre>
+<p class="doc" data-zh="设置两侧模式下横向线穿过列间距开关。" data-en="Set the whether horizontal lines cross column gaps in edge mode.">设置两侧模式下横向线穿过列间距开关。</p>
+<p class="doc" data-zh="默认 SpacingCenter：在间距中心绘制，交叉线始终穿过间距，且外侧补半间距；零间距时不重复画线。SpacingEdges 在间距两侧绘制，只有这个模式允许控制是否穿过交叉间距。是否穿过表头使用单独开关。" data-en="SpacingCenter is the default: lines run through gap centers, cross gaps unconditionally, and use outer half-gaps; zero spacing does not duplicate lines. SpacingEdges draws both gap edges and alone allows disabling crossings through perpendicular gaps. Header crossings have independent switches.">默认 SpacingCenter：在间距中心绘制，交叉线始终穿过间距，且外侧补半间距；零间距时不重复画线。SpacingEdges 在间距两侧绘制，只有这个模式允许控制是否穿过交叉间距。是否穿过表头使用单独开关。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#spacing"><span data-zh="间距 / 中心分割线 / 双侧分割线 / 半间距" data-en="Spacing / center lines / edge lines / half-gaps">间距 / 中心分割线 / 双侧分割线 / 半间距</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualFlowTableView-horizontalSpacingLineThroughColumnSpacing-40" data-search="VirtualFlowTableView horizontalSpacingLineThroughColumnSpacing">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualflowtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L78</span>
+<pre>    bool horizontalSpacingLineThroughColumnSpacing() const;</pre>
+<p class="doc" data-zh="返回两侧模式下横向线穿过列间距开关。" data-en="Return the whether horizontal lines cross column gaps in edge mode.">返回两侧模式下横向线穿过列间距开关。</p>
+<p class="doc" data-zh="默认 SpacingCenter：在间距中心绘制，交叉线始终穿过间距，且外侧补半间距；零间距时不重复画线。SpacingEdges 在间距两侧绘制，只有这个模式允许控制是否穿过交叉间距。是否穿过表头使用单独开关。" data-en="SpacingCenter is the default: lines run through gap centers, cross gaps unconditionally, and use outer half-gaps; zero spacing does not duplicate lines. SpacingEdges draws both gap edges and alone allows disabling crossings through perpendicular gaps. Header crossings have independent switches.">默认 SpacingCenter：在间距中心绘制，交叉线始终穿过间距，且外侧补半间距；零间距时不重复画线。SpacingEdges 在间距两侧绘制，只有这个模式允许控制是否穿过交叉间距。是否穿过表头使用单独开关。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#spacing"><span data-zh="间距 / 中心分割线 / 双侧分割线 / 半间距" data-en="Spacing / center lines / edge lines / half-gaps">间距 / 中心分割线 / 双侧分割线 / 半间距</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualFlowTableView-columnCount-41" data-search="VirtualFlowTableView columnCount">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualflowtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L81</span>
+<pre>int columnCount() const;</pre>
+<p class="doc" data-zh="返回逻辑列数。" data-en="Return the logical column count.">返回逻辑列数。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#flow"><span data-zh="Flow 等宽换列 / 固定高度 / 比例" data-en="Flow equal-width columns / fixed and ratio heights">Flow 等宽换列 / 固定高度 / 比例</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualFlowTableView-displayRowCount-42" data-search="VirtualFlowTableView displayRowCount">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualflowtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L82</span>
+<pre>qsizetype displayRowCount() const;</pre>
+<p class="doc" data-zh="返回布局实际排出的显示行数。" data-en="Return the number of display rows produced by the layout.">返回布局实际排出的显示行数。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#flow"><span data-zh="Flow 等宽换列 / 固定高度 / 比例" data-en="Flow equal-width columns / fixed and ratio heights">Flow 等宽换列 / 固定高度 / 比例</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualFlowTableView-columnWidth-43" data-search="VirtualFlowTableView columnWidth">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualflowtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L83</span>
+<pre>int columnWidth(int column) const;</pre>
+<p class="doc" data-zh="返回指定逻辑列宽度。" data-en="Return the width of the specified logical column.">返回指定逻辑列宽度。</p>
+<p class="doc" data-zh="普通比例拉伸在手动拖动或显式设置列宽后整体取消。FitViewport 是独立模式，让列总宽适配视口，并按拖动边缘在另一侧列中分摊宽度；不要混同于普通 stretch 权重。" data-en="Ordinary proportional stretching is cleared by manual resizing or explicit column widths. FitViewport is a separate mode that fits total column width to the viewport and distributes a resize across columns on the corresponding side; it is distinct from ordinary stretch weights.">普通比例拉伸在手动拖动或显式设置列宽后整体取消。FitViewport 是独立模式，让列总宽适配视口，并按拖动边缘在另一侧列中分摊宽度；不要混同于普通 stretch 权重。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualFlowTableView-columnViewportX-44" data-search="VirtualFlowTableView columnViewportX">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualflowtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L84</span>
+<pre>int columnViewportX(int column) const;</pre>
+<p class="doc" data-zh="返回指定逻辑列在视口中的横坐标（考虑窗格滚动）。" data-en="Return the viewport x coordinate of the logical column, including pane scrolling.">返回指定逻辑列在视口中的横坐标（考虑窗格滚动）。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualFlowTableView-displayRowForIndex-45" data-search="VirtualFlowTableView displayRowForIndex">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualflowtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L85</span>
+<pre>qsizetype displayRowForIndex(const QModelIndex &amp;index) const;</pre>
+<p class="doc" data-zh="返回项目在流式排版中的显示行号或列号，与原始模型行号不同。" data-en="Return the item&#x27;s display row or column in the flow layout, distinct from its original model row.">返回项目在流式排版中的显示行号或列号，与原始模型行号不同。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#flow"><span data-zh="Flow 等宽换列 / 固定高度 / 比例" data-en="Flow equal-width columns / fixed and ratio heights">Flow 等宽换列 / 固定高度 / 比例</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualFlowTableView-displayColumnForIndex-46" data-search="VirtualFlowTableView displayColumnForIndex">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualflowtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L86</span>
+<pre>int displayColumnForIndex(const QModelIndex &amp;index) const;</pre>
+<p class="doc" data-zh="返回项目在流式排版中的显示行号或列号，与原始模型行号不同。" data-en="Return the item&#x27;s display row or column in the flow layout, distinct from its original model row.">返回项目在流式排版中的显示行号或列号，与原始模型行号不同。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#flow"><span data-zh="Flow 等宽换列 / 固定高度 / 比例" data-en="Flow equal-width columns / fixed and ratio heights">Flow 等宽换列 / 固定高度 / 比例</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualFlowTableView-flowLayoutChanged-47" data-search="VirtualFlowTableView flowLayoutChanged">
+<span class="badge">signals</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualflowtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L90</span>
+<pre>void flowLayoutChanged();</pre>
+<p class="doc" data-zh="对应布局重新计算后发出，通知业务更新依赖排版的内容。" data-en="Emitted when the corresponding layout changes so clients can update layout-dependent content.">对应布局重新计算后发出，通知业务更新依赖排版的内容。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+</section>
+<footer class="muted">
+<p><span data-zh="按能力查找配套设置与独立示例；通用接口请沿基类链接查阅，Qt 继承接口请参考 Qt 文档。" data-en="Find related settings and independent examples by capability. Follow base-class links for shared APIs and consult Qt documentation for inherited Qt APIs.">按能力查找配套设置与独立示例；通用接口请沿基类链接查阅，Qt 继承接口请参考 Qt 文档。</span></p>
+</footer>
+</main>
+<script src="../assets/reference.js">
+</script>
+</body>
+</html>

@@ -1,0 +1,434 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>WrapLayout · VirtualItemViews</title>
+<link rel="stylesheet" href="../assets/reference.css">
+</head>
+<body>
+<header>
+<div class="header-top">
+<a href="../index.html">VirtualItemViews / API</a>
+<div id="language-switch" class="language-switch" role="group" aria-label="Language / 语言" hidden>
+<button type="button" data-language="zh" aria-pressed="true" lang="zh-CN">中文</button>
+<button type="button" data-language="en" aria-pressed="false" lang="en">English</button>
+</div>
+</div>
+<h1>WrapLayout</h1>
+<p><span data-zh="可直接使用的换行布局" data-en="Standalone wrapping layout">可直接使用的换行布局</span></p>
+</header>
+<main>
+<nav>
+<a href="../index.html"><span data-zh="能力总览" data-en="Capabilities">能力总览</span></a>
+<a href="../../AGENT_GUIDE.md"><span data-zh="Agent 索引" data-en="Agent guide">Agent 索引</span></a>
+<a href="../../../examples/README.md"><span data-zh="独立示例" data-en="Examples">独立示例</span></a>
+<a href="../../../README.md"><span data-zh="项目首页" data-en="Project home">项目首页</span></a>
+</nav>
+<label for="filter"><span data-zh="搜索本页：能力、API 名称或关键词" data-en="Search this page: capability, API name or keyword">搜索本页：能力、API 名称或关键词</span></label>
+<input id="filter" type="search" placeholder="例如：Popup、setAutoHeight、冻结、branch">
+<p class="muted search-help"><span data-zh="无需网络或服务器。所有内容默认可见；搜索只筛选当前页。完整继承 API 请沿基类链接查阅。" data-en="No network or server required. All content is initially visible; search filters this page only. Follow base-class links for inherited APIs.">无需网络或服务器。所有内容默认可见；搜索只筛选当前页。完整继承 API 请沿基类链接查阅。</span></p>
+<p id="search-status" role="status" aria-live="polite">
+</p>
+<p>
+<a href="../../../include/virtualitemviews/wraplayout.h"><span data-zh="公开头文件：include/virtualitemviews/wraplayout.h" data-en="Public header: include/virtualitemviews/wraplayout.h">公开头文件：include/virtualitemviews/wraplayout.h</span></a>
+</p>
+<p><span data-zh="实现 heightForWidth、统一高度和行对齐；自身没有滚动条，限高滚动使用 WrapWidget。" data-en="Provides heightForWidth, uniform height and line alignment. No scroll bars; use WrapWidget for bounded scrolling.">实现 heightForWidth、统一高度和行对齐；自身没有滚动条，限高滚动使用 WrapWidget。</span></p>
+<p><span data-zh="直接基类：QLayout。" data-en="Direct base: QLayout. ">直接基类：QLayout。</span></p>
+<p class="api-jump">
+<a href="#public-api"><span data-zh="公开函数列表" data-en="Public function index">公开函数列表</span></a>
+</p>
+<h2><span data-zh="能力与配套设置" data-en="Capabilities and related settings">能力与配套设置</span></h2>
+<article id="wrap" data-search="setFixedItemHeight setItemWidthRange setItemWidth setItemWidths clearItemWidth invalidateItemWidths setItemSpacing setRowSpacing setLineAlignment virtualwrapview wraplayout wrapwidget">
+<h3><span data-zh="Wrap 不等宽标签 / 自然尺寸 / 行对齐" data-en="Variable-width tags / natural sizes / line alignment">Wrap 不等宽标签 / 自然尺寸 / 行对齐</span></h3>
+<p>
+<code>setFixedItemHeight · setItemWidthRange · setItemWidth · setItemWidths · clearItemWidth · invalidateItemWidths · setItemSpacing · setRowSpacing · setLineAlignment</code>
+</p>
+<p class="rules"><span data-zh="VirtualWrapView 宽度优先级：显式覆盖→SizeHintRole→adapter estimate→100px，再按范围/行宽裁剪；批量 setItemWidths 避免逐项重排。水平 itemSpacing 与垂直 rowSpacing 可分别设置，统一 item height；SelectRows 仍选择模型项，不会选整条显示行。WrapLayout 按真实子控件 sizeHint/约束排布，隐藏控件通常不占位；WrapWidget 接管控件所有权，takeWidget 交回调用者，clear 删除。" data-en="VirtualWrapView width priority: explicit override, SizeHintRole, adapter estimate, then 100px, clamped to width limits and available line width. Batch setItemWidths avoids per-item reflow. Horizontal itemSpacing and vertical rowSpacing are independent; item height is uniform. SelectRows selects model items, not a packed display row. WrapLayout uses real widget size hints/constraints; hidden widgets normally consume no space. WrapWidget owns inserted widgets; takeWidget transfers them back, and clear deletes them.">VirtualWrapView 宽度优先级：显式覆盖→SizeHintRole→adapter estimate→100px，再按范围/行宽裁剪；批量 setItemWidths 避免逐项重排。水平 itemSpacing 与垂直 rowSpacing 可分别设置，统一 item height；SelectRows 仍选择模型项，不会选整条显示行。WrapLayout 按真实子控件 sizeHint/约束排布，隐藏控件通常不占位；WrapWidget 接管控件所有权，takeWidget 交回调用者，clear 删除。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../../src/widgets/virtualwrapview.cpp">src/widgets/virtualwrapview.cpp</a> · <a href="../../../src/layout/wrapitemlayout.cpp">src/layout/wrapitemlayout.cpp</a> · <a href="../../../src/layout/wraplayout.cpp">src/layout/wraplayout.cpp</a> · <a href="../../../src/widgets/wrapwidget.cpp">src/widgets/wrapwidget.cpp</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../../wrap.md">docs/wrap.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（3）" data-en="Independent source examples (3)">独立源码示例（3）</span></summary>
+<ul>
+<li>
+<a href="../../../examples/wrap_capabilities/02_geometry/example.cpp">examples/wrap_capabilities/02_geometry/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/wrap_capabilities/09_wrap_layout/example.cpp">examples/wrap_capabilities/09_wrap_layout/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/wrap_capabilities/10_wrap_widget/example.cpp">examples/wrap_capabilities/10_wrap_widget/example.cpp</a>
+</li>
+</ul>
+</details>
+</article>
+<details>
+<summary><span data-zh="此视图全部能力章节（10）" data-en="All capability chapters for this view (10)">此视图全部能力章节（10）</span></summary>
+<ul>
+<li>
+<a href="../../../examples/wrap_capabilities/01_basic/example.cpp"><span data-zh="01_basic / 基础接入" data-en="01 / Basic">01_basic / 基础接入</span></a> · <a href="../../../examples/wrap_capabilities/README.md"><span data-zh="说明" data-en="Guide">说明</span></a>
+</li>
+<li>
+<a href="../../../examples/wrap_capabilities/02_geometry/example.cpp"><span data-zh="02_geometry / 宽度、间距与对齐" data-en="02 / Geometry">02_geometry / 宽度、间距与对齐</span></a> · <a href="../../../examples/wrap_capabilities/README.md"><span data-zh="说明" data-en="Guide">说明</span></a>
+</li>
+<li>
+<a href="../../../examples/wrap_capabilities/03_visual_states/example.cpp"><span data-zh="03_visual_states / 状态、颜色与圆角" data-en="03 / Visual states">03_visual_states / 状态、颜色与圆角</span></a> · <a href="../../../examples/wrap_capabilities/README.md"><span data-zh="说明" data-en="Guide">说明</span></a>
+</li>
+<li>
+<a href="../../../examples/wrap_capabilities/04_binding_events/example.cpp"><span data-zh="04_binding_events / 结构体、多类型与事件" data-en="04 / Binding events">04_binding_events / 结构体、多类型与事件</span></a> · <a href="../../../examples/wrap_capabilities/README.md"><span data-zh="说明" data-en="Guide">说明</span></a>
+</li>
+<li>
+<a href="../../../examples/wrap_capabilities/05_model_root/example.cpp"><span data-zh="05_model_root / 模型、代理与显示根" data-en="05 / Model root">05_model_root / 模型、代理与显示根</span></a> · <a href="../../../examples/wrap_capabilities/README.md"><span data-zh="说明" data-en="Guide">说明</span></a>
+</li>
+<li>
+<a href="../../../examples/wrap_capabilities/06_scrolling/example.cpp"><span data-zh="06_scrolling / 滚动、物化与诊断" data-en="06 / Scrolling">06_scrolling / 滚动、物化与诊断</span></a> · <a href="../../../examples/wrap_capabilities/README.md"><span data-zh="说明" data-en="Guide">说明</span></a>
+</li>
+<li>
+<a href="../../../examples/wrap_capabilities/07_drag_drop/example.cpp"><span data-zh="07_drag_drop / 自动与手动拖放" data-en="07 / Drag drop">07_drag_drop / 自动与手动拖放</span></a> · <a href="../../../examples/wrap_capabilities/README.md"><span data-zh="说明" data-en="Guide">说明</span></a>
+</li>
+<li>
+<a href="../../../examples/wrap_capabilities/08_auto_height/example.cpp"><span data-zh="08 自适应高度" data-en="08 / Auto height">08 自适应高度</span></a> · <a href="../../../examples/wrap_capabilities/08_auto_height/README.md"><span data-zh="说明" data-en="Guide">说明</span></a>
+</li>
+<li>
+<a href="../../../examples/wrap_capabilities/09_wrap_layout/example.cpp"><span data-zh="09_wrap_layout / 直接使用 WrapLayout" data-en="09 / Wrap layout">09_wrap_layout / 直接使用 WrapLayout</span></a> · <a href="../../../examples/wrap_capabilities/README.md"><span data-zh="说明" data-en="Guide">说明</span></a>
+</li>
+<li>
+<a href="../../../examples/wrap_capabilities/10_wrap_widget/example.cpp"><span data-zh="10_wrap_widget / 真实控件自适应高度" data-en="10 / Wrap widget">10_wrap_widget / 真实控件自适应高度</span></a> · <a href="../../../examples/wrap_capabilities/README.md"><span data-zh="说明" data-en="Guide">说明</span></a>
+</li>
+</ul>
+</details>
+<h2 id="public-api" tabindex="-1"><span data-zh="公开 API、类型与信号" data-en="Public API, types and signals">公开 API、类型与信号</span></h2>
+<section class="function-index" id="function-index" tabindex="-1">
+<h3><span data-zh="公开函数列表" data-en="Public function index">公开函数列表</span></h3>
+<p class="muted"><span data-zh="按声明类型分组；每个重载单独列出，点击签名跳转到说明。信号单独列出；类型和数据成员仍保留在下方。" data-en="Grouped by declaring type. Each overload has its own link to the details. Signals are listed separately; types and data members remain below.">按声明类型分组；每个重载单独列出，点击签名跳转到说明。信号单独列出；类型和数据成员仍保留在下方。</span></p>
+<h4>WrapLayout</h4>
+<ul>
+<li data-search="WrapLayout WrapLayout">
+<a href="#WrapLayout-WrapLayout-0">
+<code>explicit WrapLayout(QWidget *parent = nullptr);</code>
+</a>
+</li>
+<li data-search="WrapLayout WrapLayout">
+<a href="#WrapLayout-WrapLayout-1">
+<code>~WrapLayout() override;</code>
+</a>
+</li>
+<li data-search="WrapLayout addItem">
+<a href="#WrapLayout-addItem-2">
+<code>void addItem(QLayoutItem *item) override;</code>
+</a>
+</li>
+<li data-search="WrapLayout insertWidget">
+<a href="#WrapLayout-insertWidget-3">
+<code>void insertWidget(int index, QWidget *widget);</code>
+</a>
+</li>
+<li data-search="WrapLayout count">
+<a href="#WrapLayout-count-4">
+<code>int count() const override;</code>
+</a>
+</li>
+<li data-search="WrapLayout itemAt">
+<a href="#WrapLayout-itemAt-5">
+<code>QLayoutItem *itemAt(int index) const override;</code>
+</a>
+</li>
+<li data-search="WrapLayout takeAt">
+<a href="#WrapLayout-takeAt-6">
+<code>QLayoutItem *takeAt(int index) override;</code>
+</a>
+</li>
+<li data-search="WrapLayout sizeHint">
+<a href="#WrapLayout-sizeHint-7">
+<code>QSize sizeHint() const override;</code>
+</a>
+</li>
+<li data-search="WrapLayout minimumSize">
+<a href="#WrapLayout-minimumSize-8">
+<code>QSize minimumSize() const override;</code>
+</a>
+</li>
+<li data-search="WrapLayout expandingDirections">
+<a href="#WrapLayout-expandingDirections-9">
+<code>Qt::Orientations expandingDirections() const override;</code>
+</a>
+</li>
+<li data-search="WrapLayout hasHeightForWidth">
+<a href="#WrapLayout-hasHeightForWidth-10">
+<code>bool hasHeightForWidth() const override;</code>
+</a>
+</li>
+<li data-search="WrapLayout heightForWidth">
+<a href="#WrapLayout-heightForWidth-11">
+<code>int heightForWidth(int width) const override;</code>
+</a>
+</li>
+<li data-search="WrapLayout setGeometry">
+<a href="#WrapLayout-setGeometry-12">
+<code>void setGeometry(const QRect &amp;rect) override;</code>
+</a>
+</li>
+<li data-search="WrapLayout invalidate">
+<a href="#WrapLayout-invalidate-13">
+<code>void invalidate() override;</code>
+</a>
+</li>
+<li data-search="WrapLayout setFixedItemHeight">
+<a href="#WrapLayout-setFixedItemHeight-14">
+<code>void setFixedItemHeight(int height);</code>
+</a>
+</li>
+<li data-search="WrapLayout fixedItemHeight">
+<a href="#WrapLayout-fixedItemHeight-15">
+<code>int fixedItemHeight() const;</code>
+</a>
+</li>
+<li data-search="WrapLayout setItemSpacing">
+<a href="#WrapLayout-setItemSpacing-16">
+<code>void setItemSpacing(int pixels);</code>
+</a>
+</li>
+<li data-search="WrapLayout itemSpacing">
+<a href="#WrapLayout-itemSpacing-17">
+<code>int itemSpacing() const;</code>
+</a>
+</li>
+<li data-search="WrapLayout setRowSpacing">
+<a href="#WrapLayout-setRowSpacing-18">
+<code>void setRowSpacing(int pixels);</code>
+</a>
+</li>
+<li data-search="WrapLayout rowSpacing">
+<a href="#WrapLayout-rowSpacing-19">
+<code>int rowSpacing() const;</code>
+</a>
+</li>
+<li data-search="WrapLayout setLineAlignment">
+<a href="#WrapLayout-setLineAlignment-20">
+<code>void setLineAlignment(Qt::Alignment alignment);</code>
+</a>
+</li>
+<li data-search="WrapLayout lineAlignment">
+<a href="#WrapLayout-lineAlignment-21">
+<code>Qt::Alignment lineAlignment() const;</code>
+</a>
+</li>
+</ul>
+<h3><span data-zh="信号列表" data-en="Signals">信号列表</span></h3>
+<h4>WrapLayout</h4>
+<ul>
+<li data-search="WrapLayout layoutChanged">
+<a href="#WrapLayout-layoutChanged-22">
+<code>void layoutChanged();</code>
+</a>
+</li>
+</ul>
+</section>
+<h2><span data-zh="函数说明" data-en="Function details">函数说明</span></h2>
+<p class="muted"><span data-zh="按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。" data-en="Read each function for its purpose and related settings. Overloads are listed separately; follow related capabilities to find examples.">按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。</span></p>
+<section>
+<h3 id="WrapLayout">WrapLayout</h3>
+<pre>class VIRTUALITEMVIEWS_EXPORT WrapLayout : public QLayout</pre>
+<article tabindex="-1" id="WrapLayout-WrapLayout-0" data-search="WrapLayout WrapLayout">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/wraplayout.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L17</span>
+<pre>explicit WrapLayout(QWidget *parent = nullptr);</pre>
+<p class="doc" data-zh="构造 WrapLayout；按此重载传入父对象、模型或布局参数。带 parent 的 QObject/QWidget 遵循 Qt 父子生命周期。" data-en="Construct WrapLayout with the parent, model or layout arguments in this overload. QObject/QWidget parent arguments follow Qt parent-child lifetime rules.">构造 WrapLayout；按此重载传入父对象、模型或布局参数。带 parent 的 QObject/QWidget 遵循 Qt 父子生命周期。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="WrapLayout-WrapLayout-1" data-search="WrapLayout WrapLayout">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/wraplayout.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L18</span>
+<pre>~WrapLayout() override;</pre>
+<p class="doc" data-zh="销毁 WrapLayout 并释放其拥有的资源；不在析构回调中继续使用该对象。" data-en="Destroy WrapLayout and release its owned resources; do not keep using the object during destruction callbacks.">销毁 WrapLayout 并释放其拥有的资源；不在析构回调中继续使用该对象。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="WrapLayout-addItem-2" data-search="WrapLayout addItem">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/wraplayout.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L19</span>
+<pre>void addItem(QLayoutItem *item) override;</pre>
+<p class="doc" data-zh="将布局项加入换行布局，由布局管理其几何位置。" data-en="Add a layout item to the wrapping layout, which manages its geometry.">将布局项加入换行布局，由布局管理其几何位置。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="WrapLayout-insertWidget-3" data-search="WrapLayout insertWidget">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/wraplayout.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L21</span>
+<pre>void insertWidget(int index, QWidget *widget);</pre>
+<p class="doc" data-zh="把控件加入指定位置；WrapLayout/WrapWidget 使用真实控件，不进行虚拟化回收。" data-en="Add a widget at the requested position. WrapLayout/WrapWidget manage real widgets without virtualized recycling.">把控件加入指定位置；WrapLayout/WrapWidget 使用真实控件，不进行虚拟化回收。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="WrapLayout-count-4" data-search="WrapLayout count">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/wraplayout.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L22</span>
+<pre>int count() const override;</pre>
+<p class="doc" data-zh="返回布局、索引或范围中的项目数量。" data-en="Return the item count in the layout, index or range.">返回布局、索引或范围中的项目数量。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="WrapLayout-itemAt-5" data-search="WrapLayout itemAt">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/wraplayout.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L23</span>
+<pre>QLayoutItem *itemAt(int index) const override;</pre>
+<p class="doc" data-zh="返回指定位置的布局项；不存在时返回空。" data-en="Return the layout item at the given position, or null when absent.">返回指定位置的布局项；不存在时返回空。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="WrapLayout-takeAt-6" data-search="WrapLayout takeAt">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/wraplayout.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L25</span>
+<pre>QLayoutItem *takeAt(int index) override;</pre>
+<p class="doc" data-zh="移除并返回指定位置的布局项，调用方负责布局项后续生命周期。" data-en="Remove and return the layout item at the given position; the caller manages its subsequent lifetime.">移除并返回指定位置的布局项，调用方负责布局项后续生命周期。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="WrapLayout-sizeHint-7" data-search="WrapLayout sizeHint">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/wraplayout.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L26</span>
+<pre>QSize sizeHint() const override;</pre>
+<p class="doc" data-zh="返回布局或控件的建议尺寸或最小建议尺寸，供父布局协商；auto height 启用时由内容固定高度。" data-en="Return preferred or minimum size hints for parent layout negotiation; auto height fixes the actual height from content when enabled.">返回布局或控件的建议尺寸或最小建议尺寸，供父布局协商；auto height 启用时由内容固定高度。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="WrapLayout-minimumSize-8" data-search="WrapLayout minimumSize">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/wraplayout.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L27</span>
+<pre>QSize minimumSize() const override;</pre>
+<p class="doc" data-zh="返回布局或控件的建议尺寸或最小建议尺寸，供父布局协商；auto height 启用时由内容固定高度。" data-en="Return preferred or minimum size hints for parent layout negotiation; auto height fixes the actual height from content when enabled.">返回布局或控件的建议尺寸或最小建议尺寸，供父布局协商；auto height 启用时由内容固定高度。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="WrapLayout-expandingDirections-9" data-search="WrapLayout expandingDirections">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/wraplayout.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L28</span>
+<pre>Qt::Orientations expandingDirections() const override;</pre>
+<p class="doc" data-zh="返回布局可以扩展的方向，供 Qt 布局系统协商空间。" data-en="Return the directions in which the layout can expand for Qt layout negotiation.">返回布局可以扩展的方向，供 Qt 布局系统协商空间。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="WrapLayout-hasHeightForWidth-10" data-search="WrapLayout hasHeightForWidth">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/wraplayout.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L29</span>
+<pre>    bool hasHeightForWidth() const override;</pre>
+<p class="doc" data-zh="说明布局是否根据宽度计算高度，供 Qt 调用 heightForWidth。" data-en="Report whether height depends on width so Qt can use heightForWidth.">说明布局是否根据宽度计算高度，供 Qt 调用 heightForWidth。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="WrapLayout-heightForWidth-11" data-search="WrapLayout heightForWidth">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/wraplayout.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L30</span>
+<pre>int heightForWidth(int width) const override;</pre>
+<p class="doc" data-zh="按给定宽度计算换行后的所需高度，包含布局自身间距和边距。" data-en="Compute the required wrapped height for a width, including the layout&#x27;s spacing and margins.">按给定宽度计算换行后的所需高度，包含布局自身间距和边距。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="WrapLayout-setGeometry-12" data-search="WrapLayout setGeometry">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/wraplayout.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L31</span>
+<pre>void setGeometry(const QRect &amp;rect) override;</pre>
+<p class="doc" data-zh="设置布局几何对象或矩形。" data-en="Set the layout geometry object or rectangle.">设置布局几何对象或矩形。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="WrapLayout-invalidate-13" data-search="WrapLayout invalidate">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/wraplayout.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L32</span>
+<pre>void invalidate() override;</pre>
+<p class="doc" data-zh="使指定布局或尺寸缓存失效；下次布局重新测量或计算。仅在内容尺寸确实变化时调用。" data-en="Invalidate the indicated layout or size cache for subsequent measurement or calculation. Use only when content dimensions actually change.">使指定布局或尺寸缓存失效；下次布局重新测量或计算。仅在内容尺寸确实变化时调用。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="WrapLayout-setFixedItemHeight-14" data-search="WrapLayout setFixedItemHeight">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/wraplayout.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L33</span>
+<pre>void setFixedItemHeight(int height);</pre>
+<p class="doc" data-zh="设置项目统一固定高度。" data-en="Set the uniform fixed item height.">设置项目统一固定高度。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#wrap"><span data-zh="Wrap 不等宽标签 / 自然尺寸 / 行对齐" data-en="Variable-width tags / natural sizes / line alignment">Wrap 不等宽标签 / 自然尺寸 / 行对齐</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="WrapLayout-fixedItemHeight-15" data-search="WrapLayout fixedItemHeight">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/wraplayout.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L34</span>
+<pre>    int fixedItemHeight() const;</pre>
+<p class="doc" data-zh="返回项目统一固定高度。" data-en="Return the uniform fixed item height.">返回项目统一固定高度。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#wrap"><span data-zh="Wrap 不等宽标签 / 自然尺寸 / 行对齐" data-en="Variable-width tags / natural sizes / line alignment">Wrap 不等宽标签 / 自然尺寸 / 行对齐</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="WrapLayout-setItemSpacing-16" data-search="WrapLayout setItemSpacing">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/wraplayout.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L35</span>
+<pre>void setItemSpacing(int pixels);</pre>
+<p class="doc" data-zh="设置项目间距。" data-en="Set the spacing between items.">设置项目间距。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#wrap"><span data-zh="Wrap 不等宽标签 / 自然尺寸 / 行对齐" data-en="Variable-width tags / natural sizes / line alignment">Wrap 不等宽标签 / 自然尺寸 / 行对齐</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="WrapLayout-itemSpacing-17" data-search="WrapLayout itemSpacing">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/wraplayout.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L36</span>
+<pre>    int itemSpacing() const;</pre>
+<p class="doc" data-zh="返回项目间距。" data-en="Return the spacing between items.">返回项目间距。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#wrap"><span data-zh="Wrap 不等宽标签 / 自然尺寸 / 行对齐" data-en="Variable-width tags / natural sizes / line alignment">Wrap 不等宽标签 / 自然尺寸 / 行对齐</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="WrapLayout-setRowSpacing-18" data-search="WrapLayout setRowSpacing">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/wraplayout.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L37</span>
+<pre>void setRowSpacing(int pixels);</pre>
+<p class="doc" data-zh="设置行间距。" data-en="Set the spacing between rows.">设置行间距。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#wrap"><span data-zh="Wrap 不等宽标签 / 自然尺寸 / 行对齐" data-en="Variable-width tags / natural sizes / line alignment">Wrap 不等宽标签 / 自然尺寸 / 行对齐</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="WrapLayout-rowSpacing-19" data-search="WrapLayout rowSpacing">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/wraplayout.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L38</span>
+<pre>    int rowSpacing() const;</pre>
+<p class="doc" data-zh="返回行间距。" data-en="Return the spacing between rows.">返回行间距。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#wrap"><span data-zh="Wrap 不等宽标签 / 自然尺寸 / 行对齐" data-en="Variable-width tags / natural sizes / line alignment">Wrap 不等宽标签 / 自然尺寸 / 行对齐</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="WrapLayout-setLineAlignment-20" data-search="WrapLayout setLineAlignment">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/wraplayout.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L40</span>
+<pre>void setLineAlignment(Qt::Alignment alignment);</pre>
+<p class="doc" data-zh="设置行内项目对齐方式。" data-en="Set the item alignment within a line.">设置行内项目对齐方式。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#wrap"><span data-zh="Wrap 不等宽标签 / 自然尺寸 / 行对齐" data-en="Variable-width tags / natural sizes / line alignment">Wrap 不等宽标签 / 自然尺寸 / 行对齐</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="WrapLayout-lineAlignment-21" data-search="WrapLayout lineAlignment">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/wraplayout.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L41</span>
+<pre>    Qt::Alignment lineAlignment() const;</pre>
+<p class="doc" data-zh="返回行内项目对齐方式。" data-en="Return the item alignment within a line.">返回行内项目对齐方式。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#wrap"><span data-zh="Wrap 不等宽标签 / 自然尺寸 / 行对齐" data-en="Variable-width tags / natural sizes / line alignment">Wrap 不等宽标签 / 自然尺寸 / 行对齐</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="WrapLayout-layoutChanged-22" data-search="WrapLayout layoutChanged">
+<span class="badge">signals</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/wraplayout.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L45</span>
+<pre>void layoutChanged();</pre>
+<p class="doc" data-zh="对应布局重新计算后发出，通知业务更新依赖排版的内容。" data-en="Emitted when the corresponding layout changes so clients can update layout-dependent content.">对应布局重新计算后发出，通知业务更新依赖排版的内容。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+</section>
+<footer class="muted">
+<p><span data-zh="按能力查找配套设置与独立示例；通用接口请沿基类链接查阅，Qt 继承接口请参考 Qt 文档。" data-en="Find related settings and independent examples by capability. Follow base-class links for shared APIs and consult Qt documentation for inherited Qt APIs.">按能力查找配套设置与独立示例；通用接口请沿基类链接查阅，Qt 继承接口请参考 Qt 文档。</span></p>
+</footer>
+</main>
+<script src="../assets/reference.js">
+</script>
+</body>
+</html>

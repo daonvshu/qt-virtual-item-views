@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ReorderableTableModel · VirtualItemViews</title>
+<link rel="stylesheet" href="../assets/reference.css">
+</head>
+<body>
+<header>
+<div class="header-top">
+<a href="../index.html">VirtualItemViews / API</a>
+<div id="language-switch" class="language-switch" role="group" aria-label="Language / 语言" hidden>
+<button type="button" data-language="zh" aria-pressed="true" lang="zh-CN">中文</button>
+<button type="button" data-language="en" aria-pressed="false" lang="en">English</button>
+</div>
+</div>
+<h1>ReorderableTableModel</h1>
+<p><span data-zh="公开辅助接口与扩展契约" data-en="Public helper interfaces and extension contracts">公开辅助接口与扩展契约</span></p>
+</header>
+<main>
+<nav>
+<a href="../index.html"><span data-zh="能力总览" data-en="Capabilities">能力总览</span></a>
+<a href="../../AGENT_GUIDE.md"><span data-zh="Agent 索引" data-en="Agent guide">Agent 索引</span></a>
+<a href="../../../examples/README.md"><span data-zh="独立示例" data-en="Examples">独立示例</span></a>
+<a href="../../../README.md"><span data-zh="项目首页" data-en="Project home">项目首页</span></a>
+</nav>
+<label for="filter"><span data-zh="搜索本页：能力、API 名称或关键词" data-en="Search this page: capability, API name or keyword">搜索本页：能力、API 名称或关键词</span></label>
+<input id="filter" type="search" placeholder="例如：Popup、setAutoHeight、冻结、branch">
+<p class="muted search-help"><span data-zh="无需网络或服务器。所有内容默认可见；搜索只筛选当前页。完整继承 API 请沿基类链接查阅。" data-en="No network or server required. All content is initially visible; search filters this page only. Follow base-class links for inherited APIs.">无需网络或服务器。所有内容默认可见；搜索只筛选当前页。完整继承 API 请沿基类链接查阅。</span></p>
+<p id="search-status" role="status" aria-live="polite">
+</p>
+<p>
+<a href="../../../include/virtualitemviews/reorderabletablemodel.h"><span data-zh="公开头文件：include/virtualitemviews/reorderabletablemodel.h" data-en="Public header: include/virtualitemviews/reorderabletablemodel.h">公开头文件：include/virtualitemviews/reorderabletablemodel.h</span></a>
+</p>
+<p class="api-jump">
+<a href="#public-api"><span data-zh="公开函数列表" data-en="Public function index">公开函数列表</span></a>
+</p>
+<h2><span data-zh="能力与配套设置" data-en="Capabilities and related settings">能力与配套设置</span></h2>
+<h2 id="public-api" tabindex="-1"><span data-zh="公开 API、类型与信号" data-en="Public API, types and signals">公开 API、类型与信号</span></h2>
+<section class="function-index" id="function-index" tabindex="-1">
+<h3><span data-zh="公开函数列表" data-en="Public function index">公开函数列表</span></h3>
+<p class="muted"><span data-zh="按声明类型分组；每个重载单独列出，点击签名跳转到说明。信号单独列出；类型和数据成员仍保留在下方。" data-en="Grouped by declaring type. Each overload has its own link to the details. Signals are listed separately; types and data members remain below.">按声明类型分组；每个重载单独列出，点击签名跳转到说明。信号单独列出；类型和数据成员仍保留在下方。</span></p>
+<h4>ReorderableTableModel</h4>
+<ul>
+<li data-search="ReorderableTableModel ReorderableTableModel">
+<a href="#ReorderableTableModel-ReorderableTableModel-0">
+<code>explicit ReorderableTableModel(QObject *parent = nullptr);</code>
+</a>
+</li>
+<li data-search="ReorderableTableModel ReorderableTableModel">
+<a href="#ReorderableTableModel-ReorderableTableModel-1">
+<code>ReorderableTableModel(int rows, int columns, QObject *parent = nullptr);</code>
+</a>
+</li>
+<li data-search="ReorderableTableModel ReorderableTableModel">
+<a href="#ReorderableTableModel-ReorderableTableModel-2">
+<code>~ReorderableTableModel() override;</code>
+</a>
+</li>
+<li data-search="ReorderableTableModel rowCount QModelIndex">
+<a href="#ReorderableTableModel-rowCount-3">
+<code>int rowCount(const QModelIndex &amp;parent = QModelIndex()) const override;</code>
+</a>
+</li>
+<li data-search="ReorderableTableModel columnCount QModelIndex">
+<a href="#ReorderableTableModel-columnCount-4">
+<code>int columnCount(const QModelIndex &amp;parent = QModelIndex()) const override;</code>
+</a>
+</li>
+<li data-search="ReorderableTableModel setColumnCount">
+<a href="#ReorderableTableModel-setColumnCount-5">
+<code>void setColumnCount(int columns);</code>
+</a>
+</li>
+<li data-search="ReorderableTableModel data">
+<a href="#ReorderableTableModel-data-6">
+<code>QVariant data(const QModelIndex &amp;index, int role = Qt::DisplayRole) const override;</code>
+</a>
+</li>
+<li data-search="ReorderableTableModel headerData">
+<a href="#ReorderableTableModel-headerData-7">
+<code>QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;</code>
+</a>
+</li>
+<li data-search="ReorderableTableModel setRowCount">
+<a href="#ReorderableTableModel-setRowCount-8">
+<code>void setRowCount(int rows);</code>
+</a>
+</li>
+<li data-search="ReorderableTableModel insertRows QModelIndex">
+<a href="#ReorderableTableModel-insertRows-9">
+<code>bool insertRows(int row, int count, const QModelIndex &amp;parent = QModelIndex()) override;</code>
+</a>
+</li>
+<li data-search="ReorderableTableModel removeRows QModelIndex">
+<a href="#ReorderableTableModel-removeRows-10">
+<code>bool removeRows(int row, int count, const QModelIndex &amp;parent = QModelIndex()) override;</code>
+</a>
+</li>
+<li data-search="ReorderableTableModel sourceRow">
+<a href="#ReorderableTableModel-sourceRow-11">
+<code>int sourceRow(int viewRow) const;</code>
+</a>
+</li>
+<li data-search="ReorderableTableModel viewRow">
+<a href="#ReorderableTableModel-viewRow-12">
+<code>int viewRow(int sourceRow) const;</code>
+</a>
+</li>
+<li data-search="ReorderableTableModel resetRowOrder">
+<a href="#ReorderableTableModel-resetRowOrder-13">
+<code>void resetRowOrder();</code>
+</a>
+</li>
+<li data-search="ReorderableTableModel isIdentityOrder">
+<a href="#ReorderableTableModel-isIdentityOrder-14">
+<code>bool isIdentityOrder() const;</code>
+</a>
+</li>
+<li data-search="ReorderableTableModel moveRows">
+<a href="#ReorderableTableModel-moveRows-15">
+<code>bool moveRows(const QModelIndex &amp;sourceParent, int sourceRow, int count, const QModelIndex &amp;destinationParent, int destinationChild) override;</code>
+</a>
+</li>
+</ul>
+<h3><span data-zh="信号列表" data-en="Signals">信号列表</span></h3>
+<h4>ReorderableTableModel</h4>
+<ul>
+<li data-search="ReorderableTableModel rowOrderChanged">
+<a href="#ReorderableTableModel-rowOrderChanged-16">
+<code>void rowOrderChanged();</code>
+</a>
+</li>
+</ul>
+</section>
+<h2><span data-zh="函数说明" data-en="Function details">函数说明</span></h2>
+<p class="muted"><span data-zh="按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。" data-en="Read each function for its purpose and related settings. Overloads are listed separately; follow related capabilities to find examples.">按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。</span></p>
+<section>
+<h3 id="ReorderableTableModel">ReorderableTableModel</h3>
+<pre>class VIRTUALITEMVIEWS_EXPORT ReorderableTableModel : public QAbstractTableModel</pre>
+<article tabindex="-1" id="ReorderableTableModel-ReorderableTableModel-0" data-search="ReorderableTableModel ReorderableTableModel">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/reorderabletablemodel.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L50</span>
+<pre>explicit ReorderableTableModel(QObject *parent = nullptr);</pre>
+<p class="doc" data-zh="构造 ReorderableTableModel；按此重载传入父对象、模型或布局参数。带 parent 的 QObject/QWidget 遵循 Qt 父子生命周期。" data-en="Construct ReorderableTableModel with the parent, model or layout arguments in this overload. QObject/QWidget parent arguments follow Qt parent-child lifetime rules.">构造 ReorderableTableModel；按此重载传入父对象、模型或布局参数。带 parent 的 QObject/QWidget 遵循 Qt 父子生命周期。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ReorderableTableModel-ReorderableTableModel-1" data-search="ReorderableTableModel ReorderableTableModel">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/reorderabletablemodel.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L51</span>
+<pre>ReorderableTableModel(int rows, int columns, QObject *parent = nullptr);</pre>
+<p class="doc" data-zh="构造 ReorderableTableModel；按此重载传入父对象、模型或布局参数。带 parent 的 QObject/QWidget 遵循 Qt 父子生命周期。" data-en="Construct ReorderableTableModel with the parent, model or layout arguments in this overload. QObject/QWidget parent arguments follow Qt parent-child lifetime rules.">构造 ReorderableTableModel；按此重载传入父对象、模型或布局参数。带 parent 的 QObject/QWidget 遵循 Qt 父子生命周期。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ReorderableTableModel-ReorderableTableModel-2" data-search="ReorderableTableModel ReorderableTableModel">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/reorderabletablemodel.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L52</span>
+<pre>~ReorderableTableModel() override;</pre>
+<p class="doc" data-zh="销毁 ReorderableTableModel 并释放其拥有的资源；不在析构回调中继续使用该对象。" data-en="Destroy ReorderableTableModel and release its owned resources; do not keep using the object during destruction callbacks.">销毁 ReorderableTableModel 并释放其拥有的资源；不在析构回调中继续使用该对象。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ReorderableTableModel-rowCount-3" data-search="ReorderableTableModel rowCount QModelIndex">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/reorderabletablemodel.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L56</span>
+<pre>int rowCount(const QModelIndex &amp;parent = QModelIndex()) const override;</pre>
+<p class="doc" data-zh="返回行数。" data-en="Return the row count.">返回行数。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ReorderableTableModel-columnCount-4" data-search="ReorderableTableModel columnCount QModelIndex">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/reorderabletablemodel.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L59</span>
+<pre>int columnCount(const QModelIndex &amp;parent = QModelIndex()) const override;</pre>
+<p class="doc" data-zh="返回逻辑列数。" data-en="Return the logical column count.">返回逻辑列数。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ReorderableTableModel-setColumnCount-5" data-search="ReorderableTableModel setColumnCount">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/reorderabletablemodel.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L60</span>
+<pre>void setColumnCount(int columns);</pre>
+<p class="doc" data-zh="设置逻辑列数。" data-en="Set the logical column count.">设置逻辑列数。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ReorderableTableModel-data-6" data-search="ReorderableTableModel data">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/reorderabletablemodel.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L66</span>
+<pre>QVariant data(const QModelIndex &amp;index, int role = Qt::DisplayRole) const override;</pre>
+<p class="doc" data-zh="按模型索引或表头 section 和 role 提供数据，供视图或表头读取。" data-en="Provide data for a model index or header section and role to the view or header.">按模型索引或表头 section 和 role 提供数据，供视图或表头读取。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ReorderableTableModel-headerData-7" data-search="ReorderableTableModel headerData">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/reorderabletablemodel.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L70</span>
+<pre>QVariant headerData(int section, Qt::Orientation orientation,
+                        int role = Qt::DisplayRole) const override;</pre>
+<p class="doc" data-zh="按模型索引或表头 section 和 role 提供数据，供视图或表头读取。" data-en="Provide data for a model index or header section and role to the view or header.">按模型索引或表头 section 和 role 提供数据，供视图或表头读取。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ReorderableTableModel-setRowCount-8" data-search="ReorderableTableModel setRowCount">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/reorderabletablemodel.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L75</span>
+<pre>void setRowCount(int rows);</pre>
+<p class="doc" data-zh="设置行数。" data-en="Set the row count.">设置行数。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ReorderableTableModel-insertRows-9" data-search="ReorderableTableModel insertRows QModelIndex">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/reorderabletablemodel.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L78</span>
+<pre>bool insertRows(int row, int count, const QModelIndex &amp;parent = QModelIndex()) override;</pre>
+<p class="doc" data-zh="通过模型标准行插入或删除流程修改行集合并发送对应模型通知。" data-en="Insert or remove rows through the standard model operation and its model notifications.">通过模型标准行插入或删除流程修改行集合并发送对应模型通知。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ReorderableTableModel-removeRows-10" data-search="ReorderableTableModel removeRows QModelIndex">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/reorderabletablemodel.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L79</span>
+<pre>bool removeRows(int row, int count, const QModelIndex &amp;parent = QModelIndex()) override;</pre>
+<p class="doc" data-zh="通过模型标准行插入或删除流程修改行集合并发送对应模型通知。" data-en="Insert or remove rows through the standard model operation and its model notifications.">通过模型标准行插入或删除流程修改行集合并发送对应模型通知。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ReorderableTableModel-sourceRow-11" data-search="ReorderableTableModel sourceRow">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/reorderabletablemodel.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L84</span>
+<pre>int sourceRow(int viewRow) const;</pre>
+<p class="doc" data-zh="在重排行序的代理行与源行之间转换。" data-en="Convert between reordered view rows and source rows.">在重排行序的代理行与源行之间转换。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ReorderableTableModel-viewRow-12" data-search="ReorderableTableModel viewRow">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/reorderabletablemodel.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L87</span>
+<pre>int viewRow(int sourceRow) const;</pre>
+<p class="doc" data-zh="在重排行序的代理行与源行之间转换。" data-en="Convert between reordered view rows and source rows.">在重排行序的代理行与源行之间转换。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ReorderableTableModel-resetRowOrder-13" data-search="ReorderableTableModel resetRowOrder">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/reorderabletablemodel.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L90</span>
+<pre>void resetRowOrder();</pre>
+<p class="doc" data-zh="将代理行顺序恢复为源模型顺序。" data-en="Restore proxy rows to source-model order.">将代理行顺序恢复为源模型顺序。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ReorderableTableModel-isIdentityOrder-14" data-search="ReorderableTableModel isIdentityOrder">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/reorderabletablemodel.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L92</span>
+<pre>bool isIdentityOrder() const;</pre>
+<p class="doc" data-zh="判断代理行顺序是否与源模型原始顺序一致。" data-en="Check whether proxy row order matches original source order.">判断代理行顺序是否与源模型原始顺序一致。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ReorderableTableModel-moveRows-15" data-search="ReorderableTableModel moveRows">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/reorderabletablemodel.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L100</span>
+<pre>bool moveRows(const QModelIndex &amp;sourceParent, int sourceRow, int count,
+                  const QModelIndex &amp;destinationParent, int destinationChild) override;</pre>
+<p class="doc" data-zh="移动模型行并保留对应数据或代理行映射；以返回值判断是否成功。" data-en="Move model rows while retaining data or proxy row mappings; use the return value to determine success.">移动模型行并保留对应数据或代理行映射；以返回值判断是否成功。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ReorderableTableModel-rowOrderChanged-16" data-search="ReorderableTableModel rowOrderChanged">
+<span class="badge">signals</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/reorderabletablemodel.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L106</span>
+<pre>void rowOrderChanged();</pre>
+<p class="doc" data-zh="代理模型的行排列顺序改变时发出。" data-en="Emitted when proxy row order changes.">代理模型的行排列顺序改变时发出。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+</section>
+<footer class="muted">
+<p><span data-zh="按能力查找配套设置与独立示例；通用接口请沿基类链接查阅，Qt 继承接口请参考 Qt 文档。" data-en="Find related settings and independent examples by capability. Follow base-class links for shared APIs and consult Qt documentation for inherited Qt APIs.">按能力查找配套设置与独立示例；通用接口请沿基类链接查阅，Qt 继承接口请参考 Qt 文档。</span></p>
+</footer>
+</main>
+<script src="../assets/reference.js">
+</script>
+</body>
+</html>

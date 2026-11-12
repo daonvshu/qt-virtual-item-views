@@ -2,6 +2,15 @@
 
 面向 Qt Widgets 的虚拟化列表、表格与树视图。数据使用 `QAbstractItemModel`，行或单元格由业务提供真正的 `QWidget`。视图只创建可见区、预加载区和显式保留的控件，滚动时复用。
 
+## 文档与示例
+
+- **首次接入**：从[快速开始](docs/getting-started.md)了解模型、adapter、构建与链接。
+- **查找接口**：打开[离线 API 文档](docs/api/index.html)，按视图查看功能、默认行为和组合设置。右上角可切换中文 / English，公开函数目录可直接跳转到各重载说明；支持中英文关键词搜索，无需启动服务。
+- **参考代码**：从[示例导航](examples/README.md)选择视图与功能，每个章节包含可独立复制的接入代码。
+- **agent指引**：agent辅助编码看[Agent 能力索引](docs/AGENT_GUIDE.md)，按业务需求快速定位已有 API 和最小示例。接口签名可从 [public-api.json](docs/api/data/public-api.json) 按类型查询。
+
+文档阅读方式见 [API 文档导航](docs/api/guide/README.md)。
+
 ## 功能与用法
 
 | 功能 | 能做什么 | 文档 |

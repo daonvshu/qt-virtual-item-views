@@ -1,0 +1,491 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GridLinePlacement / OptionalPoint / DragOptions / ItemBindingContext / PaneSeparatorStyle / VisibleRange / viv namespace · VirtualItemViews</title>
+<link rel="stylesheet" href="../assets/reference.css">
+</head>
+<body>
+<header>
+<div class="header-top">
+<a href="../index.html">VirtualItemViews / API</a>
+<div id="language-switch" class="language-switch" role="group" aria-label="Language / 语言" hidden>
+<button type="button" data-language="zh" aria-pressed="true" lang="zh-CN">中文</button>
+<button type="button" data-language="en" aria-pressed="false" lang="en">English</button>
+</div>
+</div>
+<h1>GridLinePlacement / OptionalPoint / DragOptions / ItemBindingContext / PaneSeparatorStyle / VisibleRange / viv namespace</h1>
+<p><span data-zh="公开辅助接口与扩展契约" data-en="Public helper interfaces and extension contracts">公开辅助接口与扩展契约</span></p>
+</header>
+<main>
+<nav>
+<a href="../index.html"><span data-zh="能力总览" data-en="Capabilities">能力总览</span></a>
+<a href="../../AGENT_GUIDE.md"><span data-zh="Agent 索引" data-en="Agent guide">Agent 索引</span></a>
+<a href="../../../examples/README.md"><span data-zh="独立示例" data-en="Examples">独立示例</span></a>
+<a href="../../../README.md"><span data-zh="项目首页" data-en="Project home">项目首页</span></a>
+</nav>
+<label for="filter"><span data-zh="搜索本页：能力、API 名称或关键词" data-en="Search this page: capability, API name or keyword">搜索本页：能力、API 名称或关键词</span></label>
+<input id="filter" type="search" placeholder="例如：Popup、setAutoHeight、冻结、branch">
+<p class="muted search-help"><span data-zh="无需网络或服务器。所有内容默认可见；搜索只筛选当前页。完整继承 API 请沿基类链接查阅。" data-en="No network or server required. All content is initially visible; search filters this page only. Follow base-class links for inherited APIs.">无需网络或服务器。所有内容默认可见；搜索只筛选当前页。完整继承 API 请沿基类链接查阅。</span></p>
+<p id="search-status" role="status" aria-live="polite">
+</p>
+<p>
+<a href="../../../include/virtualitemviews/types.h"><span data-zh="公开头文件：include/virtualitemviews/types.h" data-en="Public header: include/virtualitemviews/types.h">公开头文件：include/virtualitemviews/types.h</span></a>
+</p>
+<p class="api-jump">
+<a href="#public-api"><span data-zh="公开函数列表" data-en="Public function index">公开函数列表</span></a>
+</p>
+<h2><span data-zh="能力与配套设置" data-en="Capabilities and related settings">能力与配套设置</span></h2>
+<article id="binding" data-search="setItemDataRole ItemBindingContext indentationWidth branchWidth virtualitemview types widgetadapter tablewidgetadapter itemeditoradapter">
+<h3><span data-zh="整行业务 payload / 深度 / 列 / branch 上下文" data-en="Row payload / depth / column / branch context">整行业务 payload / 深度 / 列 / branch 上下文</span></h3>
+<p>
+<code>setItemDataRole · ItemBindingContext · indentationWidth · branchWidth</code>
+</p>
+<p class="rules"><span data-zh="ItemBindingContext 提供 index、rowData、logicalColumn、depth；cell 的整行业务数据从列 0 读取。负的 itemDataRole 禁用 payload 读取。树的 indentationWidth 是祖先缩进，branchWidth 是当前节点 branch 格占位，不是图标宽度，均为未裁剪的逻辑像素；TreeTable 仅逻辑列 0 有这两个宽度。" data-en="ItemBindingContext provides index, rowData, logicalColumn and depth. Cells read the row payload from column 0. A negative itemDataRole disables payload reads. For trees, indentationWidth is ancestor indentation and branchWidth is the current branch-cell reservation, not icon width. Both are unclipped logical pixels. TreeTable supplies these widths only for logical column 0.">ItemBindingContext 提供 index、rowData、logicalColumn、depth；cell 的整行业务数据从列 0 读取。负的 itemDataRole 禁用 payload 读取。树的 indentationWidth 是祖先缩进，branchWidth 是当前节点 branch 格占位，不是图标宽度，均为未裁剪的逻辑像素；TreeTable 仅逻辑列 0 有这两个宽度。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../../src/core/virtualitemview.cpp">src/core/virtualitemview.cpp</a> · <a href="../../../src/widgets/virtualtreeview.cpp">src/widgets/virtualtreeview.cpp</a> · <a href="../../../src/widgets/virtualtreetableview.cpp">src/widgets/virtualtreetableview.cpp</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../../interaction.md">docs/interaction.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（4）" data-en="Independent source examples (4)">独立源码示例（4）</span></summary>
+<ul>
+<li>
+<a href="../../../examples/list_capabilities/04_binding_context/example.cpp">examples/list_capabilities/04_binding_context/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/table_capabilities/04_binding_context/example.cpp">examples/table_capabilities/04_binding_context/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/tree_capabilities/04_binding_context/example.cpp">examples/tree_capabilities/04_binding_context/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/treetable_capabilities/05_binding_context/example.cpp">examples/treetable_capabilities/05_binding_context/example.cpp</a>
+</li>
+</ul>
+</details>
+</article>
+<article id="drag" data-search="setDragEnabled setAcceptDrops setDragStartMode canStartDrag startDrag DragOptions setDragDropActions setDefaultDropAction setMoveRemovesSourceRows virtualitemview types virtuallistview virtualtableview virtualtreeview virtualtreetableview virtualwrapview virtualflowtableview virtualmasonryview">
+<h3><span data-zh="原生拖放 / 手柄起拖 / 预览 / Move" data-en="Native drag/drop / handles / previews / Move">原生拖放 / 手柄起拖 / 预览 / Move</span></h3>
+<p>
+<code>setDragEnabled · setAcceptDrops · setDragStartMode · canStartDrag · startDrag · DragOptions · setDragDropActions · setDefaultDropAction · setMoveRemovesSourceRows</code>
+</p>
+<p class="rules"><span data-zh="setDragEnabled 开启拖出，QWidget::setAcceptDrops 开启接收；模型需 flags、mimeData、mimeTypes、canDropMimeData/dropMimeData 与支持的 actions。Automatic 按阈值启动；Manual 由手柄调用 startDrag(index[, options])，不需框架注册按钮。默认预览按 SelectRows/SelectItems，DragOptions 可改来源/区域/热点，默认热点在鼠标处。Move 是否删除源行必须与模型协议一致：模型已移动不得再删；默认不删除。框架负责拖动 pin、hover 暂停和结束恢复。" data-en="setDragEnabled enables dragging out; QWidget::setAcceptDrops enables receiving. The model supplies flags, mimeData, mimeTypes, canDropMimeData/dropMimeData and supported actions. Automatic starts after the gesture threshold. Manual handles call startDrag(index[, options]); no button registration is needed. Default previews follow SelectRows/SelectItems; DragOptions controls source, region and press position, anchored at the pointer by default. Source deletion after Move must match the model protocol: never delete again after the model already moved data. Deletion defaults off. The framework owns temporary drag pins and hover suspension/restoration.">setDragEnabled 开启拖出，QWidget::setAcceptDrops 开启接收；模型需 flags、mimeData、mimeTypes、canDropMimeData/dropMimeData 与支持的 actions。Automatic 按阈值启动；Manual 由手柄调用 startDrag(index[, options])，不需框架注册按钮。默认预览按 SelectRows/SelectItems，DragOptions 可改来源/区域/热点，默认热点在鼠标处。Move 是否删除源行必须与模型协议一致：模型已移动不得再删；默认不删除。框架负责拖动 pin、hover 暂停和结束恢复。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../../src/core/virtualitemview.cpp">src/core/virtualitemview.cpp</a> · <a href="../../../src/core/dragpreview_p.h">src/core/dragpreview_p.h</a> · <a href="../../../src/core/dragmoveselection_p.h">src/core/dragmoveselection_p.h</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../../interaction.md">docs/interaction.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（4）" data-en="Independent source examples (4)">独立源码示例（4）</span></summary>
+<ul>
+<li>
+<a href="../../../examples/list_capabilities/15_drag_drop/example.cpp">examples/list_capabilities/15_drag_drop/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/table_capabilities/24_drag_indicator/example.cpp">examples/table_capabilities/24_drag_indicator/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/wrap_capabilities/07_drag_drop/example.cpp">examples/wrap_capabilities/07_drag_drop/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/masonry_capabilities/11_drag_drop/example.cpp">examples/masonry_capabilities/11_drag_drop/example.cpp</a>
+</li>
+</ul>
+</details>
+</article>
+<article id="popup" data-search="editRequest EditRequestContext cancelEditRequest closeEditor indentationWidth branchWidth itemeditoradapter virtualitemview types">
+<h3><span data-zh="Popup 编辑 / 坐标 / 统一取消 / 编辑覆盖范围" data-en="Popup editing / coordinates / cancellation / editor coverage">Popup 编辑 / 坐标 / 统一取消 / 编辑覆盖范围</span></h3>
+<p>
+<code>editRequest · EditRequestContext · cancelEditRequest · closeEditor · indentationWidth · branchWidth</code>
+</p>
+<p class="rules"><span data-zh="editRequest 返回 true 表示自行处理 Popup，false 回退 createEditor。context 含 binding、view、viewport、三个坐标系的完整 rect 和 finish 回调。正常确认/关闭后调用 request.finish，仅结束对应会话，不提交模型；业务自行写数据。框架在滚动、目标失效、模型/adapter 变化、隐藏等取消条件下调用 cancelEditRequest，业务在此关闭 Popup；外部 closeEditor 同样转发。Popup 时 editingIndex 有效、editorWidget=null、commitEditor=false。跨事件保留 QPointer/QPersistentModelIndex。树编辑可用 indentationWidth+branchWidth 裁掉装饰占位并 clamp 到 rect.width。" data-en="editRequest true handles a Popup; false falls back to createEditor. Context includes binding, view, viewport, full rectangles in three coordinate systems and finish. Call request.finish after normal confirmation/dismissal; it ends only that session and does not write model data. Business code submits data. The framework calls cancelEditRequest on scrolling, invalid targets, model/adapter changes, hiding and other cancellation conditions; close the Popup there. External closeEditor also forwards cancellation. A Popup has editingIndex but editorWidget=null and commitEditor=false. Retain QPointer/QPersistentModelIndex across events. Tree editors can inset by indentationWidth+branchWidth, clamped to rect.width.">editRequest 返回 true 表示自行处理 Popup，false 回退 createEditor。context 含 binding、view、viewport、三个坐标系的完整 rect 和 finish 回调。正常确认/关闭后调用 request.finish，仅结束对应会话，不提交模型；业务自行写数据。框架在滚动、目标失效、模型/adapter 变化、隐藏等取消条件下调用 cancelEditRequest，业务在此关闭 Popup；外部 closeEditor 同样转发。Popup 时 editingIndex 有效、editorWidget=null、commitEditor=false。跨事件保留 QPointer/QPersistentModelIndex。树编辑可用 indentationWidth+branchWidth 裁掉装饰占位并 clamp 到 rect.width。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../../src/core/virtualitemviewediting.cpp">src/core/virtualitemviewediting.cpp</a> · <a href="../../../src/widgets/virtualtreeview.cpp">src/widgets/virtualtreeview.cpp</a> · <a href="../../../src/widgets/virtualtreetableview.cpp">src/widgets/virtualtreetableview.cpp</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../../interaction.md">docs/interaction.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（4）" data-en="Independent source examples (4)">独立源码示例（4）</span></summary>
+<ul>
+<li>
+<a href="../../../examples/list_capabilities/23_editors/example.cpp">examples/list_capabilities/23_editors/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/table_capabilities/33_editors/example.cpp">examples/table_capabilities/33_editors/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/tree_capabilities/29_editors/example.cpp">examples/tree_capabilities/29_editors/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/treetable_capabilities/38_editors/example.cpp">examples/treetable_capabilities/38_editors/example.cpp</a>
+</li>
+</ul>
+</details>
+</article>
+<h2 id="public-api" tabindex="-1"><span data-zh="公开 API、类型与信号" data-en="Public API, types and signals">公开 API、类型与信号</span></h2>
+<section class="function-index" id="function-index" tabindex="-1">
+<h3><span data-zh="公开函数列表" data-en="Public function index">公开函数列表</span></h3>
+<p class="muted"><span data-zh="按声明类型分组；每个重载单独列出，点击签名跳转到说明。信号单独列出；类型和数据成员仍保留在下方。" data-en="Grouped by declaring type. Each overload has its own link to the details. Signals are listed separately; types and data members remain below.">按声明类型分组；每个重载单独列出，点击签名跳转到说明。信号单独列出；类型和数据成员仍保留在下方。</span></p>
+<h4>OptionalPoint</h4>
+<ul>
+<li data-search="OptionalPoint OptionalPoint">
+<a href="#OptionalPoint-OptionalPoint-0">
+<code>OptionalPoint() = default;</code>
+</a>
+</li>
+<li data-search="OptionalPoint OptionalPoint">
+<a href="#OptionalPoint-OptionalPoint-1">
+<code>OptionalPoint(const QPoint &amp;point);</code>
+</a>
+</li>
+<li data-search="OptionalPoint operator">
+<a href="#OptionalPoint-operator-2">
+<code>OptionalPoint &amp;operator=(const QPoint &amp;point);</code>
+</a>
+</li>
+<li data-search="OptionalPoint has_value">
+<a href="#OptionalPoint-has_value-3">
+<code>bool has_value() const;</code>
+</a>
+</li>
+<li data-search="OptionalPoint value_or">
+<a href="#OptionalPoint-value_or-4">
+<code>QPoint value_or(const QPoint &amp;fallback) const;</code>
+</a>
+</li>
+<li data-search="OptionalPoint reset">
+<a href="#OptionalPoint-reset-5">
+<code>void reset();</code>
+</a>
+</li>
+</ul>
+<h4>PaneSeparatorStyle</h4>
+<ul>
+<li data-search="PaneSeparatorStyle isVisible">
+<a href="#PaneSeparatorStyle-isVisible-3">
+<code>bool isVisible() const;</code>
+</a>
+</li>
+<li data-search="PaneSeparatorStyle effectiveColor">
+<a href="#PaneSeparatorStyle-effectiveColor-4">
+<code>QColor effectiveColor(const QColor &amp;styleSeparatorColor) const;</code>
+</a>
+</li>
+<li data-search="PaneSeparatorStyle operator">
+<a href="#PaneSeparatorStyle-operator-5">
+<code>friend bool operator==(const PaneSeparatorStyle &amp;lhs, const PaneSeparatorStyle &amp;rhs);</code>
+</a>
+</li>
+<li data-search="PaneSeparatorStyle ">
+<a href="#PaneSeparatorStyle-entry-6">
+<code>friend bool operator!=(const PaneSeparatorStyle &amp;lhs, const PaneSeparatorStyle &amp;rhs);</code>
+</a>
+</li>
+</ul>
+<h4>VisibleRange</h4>
+<ul>
+<li data-search="VisibleRange isValid">
+<a href="#VisibleRange-isValid-2">
+<code>bool isValid() const;</code>
+</a>
+</li>
+<li data-search="VisibleRange contains">
+<a href="#VisibleRange-contains-3">
+<code>bool contains(qsizetype item) const;</code>
+</a>
+</li>
+<li data-search="VisibleRange count">
+<a href="#VisibleRange-count-4">
+<code>qsizetype count() const;</code>
+</a>
+</li>
+<li data-search="VisibleRange expanded">
+<a href="#VisibleRange-expanded-5">
+<code>static VisibleRange expanded(qsizetype coreFirst, qsizetype coreLast, qsizetype before, qsizetype after, qsizetype upperBound);</code>
+</a>
+</li>
+</ul>
+</section>
+<h2><span data-zh="函数说明" data-en="Function details">函数说明</span></h2>
+<p class="muted"><span data-zh="按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。" data-en="Read each function for its purpose and related settings. Overloads are listed separately; follow related capabilities to find examples.">按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。</span></p>
+<section>
+<h3 id="GridLinePlacement">GridLinePlacement</h3>
+<pre>enum class GridLinePlacement</pre>
+<article tabindex="-1" id="GridLinePlacement-GridLinePlacement-0" data-search="GridLinePlacement GridLinePlacement">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/types.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L16</span>
+<pre>enum class GridLinePlacement { SpacingCenter, SpacingEdges };</pre>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+</section>
+<section>
+<h3 id="OptionalPoint">OptionalPoint</h3>
+<pre>class OptionalPoint</pre>
+<article tabindex="-1" id="OptionalPoint-OptionalPoint-0" data-search="OptionalPoint OptionalPoint">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/types.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L23</span>
+<pre>OptionalPoint() = default;</pre>
+<p class="doc" data-zh="构造没有值的可选坐标，value_or() 将返回调用方的备用坐标。" data-en="Construct an empty optional point; value_or() returns the caller-provided fallback.">构造没有值的可选坐标，value_or() 将返回调用方的备用坐标。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="OptionalPoint-OptionalPoint-1" data-search="OptionalPoint OptionalPoint">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/types.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L25</span>
+<pre>    OptionalPoint(const QPoint &amp;point);</pre>
+<p class="doc" data-zh="保存传入坐标并标记为有值；原点和负坐标同样有效。" data-en="Store the supplied point and mark it present; origin and negative coordinates are valid.">保存传入坐标并标记为有值；原点和负坐标同样有效。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="OptionalPoint-operator-2" data-search="OptionalPoint operator">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/types.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L28</span>
+<pre>    OptionalPoint &amp;operator=(const QPoint &amp;point);</pre>
+<p class="doc" data-zh="保存给定 QPoint 并将可选值标记为有效。" data-en="Store the supplied QPoint and mark the optional as engaged.">保存给定 QPoint 并将可选值标记为有效。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="OptionalPoint-has_value-3" data-search="OptionalPoint has_value">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/types.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L35</span>
+<pre>    bool has_value() const;</pre>
+<p class="doc" data-zh="判断兼容可选值是否包含有效值。" data-en="Check whether the compatibility optional contains a value.">判断兼容可选值是否包含有效值。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="OptionalPoint-value_or-4" data-search="OptionalPoint value_or">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/types.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L37</span>
+<pre>    QPoint value_or(const QPoint &amp;fallback) const;</pre>
+<p class="doc" data-zh="有值时返回保存值，无值时返回给定默认值。" data-en="Return the stored value when present, otherwise the supplied default.">有值时返回保存值，无值时返回给定默认值。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="OptionalPoint-reset-5" data-search="OptionalPoint reset">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/types.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L39</span>
+<pre>    void reset();</pre>
+<p class="doc" data-zh="重建尺寸或布局索引的项目集合，使用给定数量与初始尺寸。" data-en="Reinitialize the item collection in the size or layout index using the supplied count and initial sizes.">重建尺寸或布局索引的项目集合，使用给定数量与初始尺寸。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+</section>
+<section>
+<h3 id="DragOptions">DragOptions</h3>
+<pre>struct DragOptions</pre>
+<article tabindex="-1" id="DragOptions-previewWidget-0" data-search="DragOptions previewWidget">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/types.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L50</span>
+<pre>QWidget *previewWidget = nullptr;</pre>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="DragOptions-previewRect-1" data-search="DragOptions previewRect">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/types.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L54</span>
+<pre>QRect previewRect;</pre>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="DragOptions-usePressPosition-2" data-search="DragOptions usePressPosition">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/types.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L56</span>
+<pre>bool usePressPosition = true;</pre>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="DragOptions-globalPressPosition-3" data-search="DragOptions globalPressPosition">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/types.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L59</span>
+<pre>OptionalPoint globalPressPosition;</pre>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+</section>
+<section>
+<h3 id="ItemBindingContext">ItemBindingContext</h3>
+<pre>struct ItemBindingContext</pre>
+<article tabindex="-1" id="ItemBindingContext-index-0" data-search="ItemBindingContext index">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/types.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L69</span>
+<pre>QModelIndex index;</pre>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ItemBindingContext-rowData-1" data-search="ItemBindingContext rowData">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/types.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L70</span>
+<pre>QVariant rowData;</pre>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ItemBindingContext-logicalColumn-2" data-search="ItemBindingContext logicalColumn">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/types.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L72</span>
+<pre>int logicalColumn = -1;</pre>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ItemBindingContext-depth-3" data-search="ItemBindingContext depth">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/types.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L74</span>
+<pre>int depth = -1;</pre>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ItemBindingContext-indentationWidth-4" data-search="ItemBindingContext indentationWidth">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/types.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L78</span>
+<pre>int indentationWidth = 0;</pre>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ItemBindingContext-branchWidth-5" data-search="ItemBindingContext branchWidth">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/types.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L81</span>
+<pre>int branchWidth = 0;</pre>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+</section>
+<section>
+<h3 id="PaneSeparatorStyle">PaneSeparatorStyle</h3>
+<pre>struct PaneSeparatorStyle</pre>
+<article tabindex="-1" id="PaneSeparatorStyle-width-0" data-search="PaneSeparatorStyle width">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/types.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L104</span>
+<pre>int width = 1;</pre>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="PaneSeparatorStyle-color-1" data-search="PaneSeparatorStyle color">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/types.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L108</span>
+<pre>QColor color;</pre>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="PaneSeparatorStyle-lineStyle-2" data-search="PaneSeparatorStyle lineStyle">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/types.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L110</span>
+<pre>Qt::PenStyle lineStyle = Qt::SolidLine;</pre>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="PaneSeparatorStyle-isVisible-3" data-search="PaneSeparatorStyle isVisible">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/types.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L112</span>
+<pre>    bool isVisible() const;</pre>
+<p class="doc" data-zh="判断节点在当前展开层级中是否可见，不等于已物化到屏幕内。" data-en="Check visibility under the current expansion hierarchy; this does not imply on-screen materialization.">判断节点在当前展开层级中是否可见，不等于已物化到屏幕内。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="PaneSeparatorStyle-effectiveColor-4" data-search="PaneSeparatorStyle effectiveColor">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/types.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L114</span>
+<pre>    QColor effectiveColor(const QColor &amp;styleSeparatorColor) const;</pre>
+<p class="doc" data-zh="返回样式解析后的有效颜色。" data-en="Return the effective resolved style color.">返回样式解析后的有效颜色。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="PaneSeparatorStyle-operator-5" data-search="PaneSeparatorStyle operator">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/types.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L119</span>
+<pre>    friend bool operator==(const PaneSeparatorStyle &amp;lhs, const PaneSeparatorStyle &amp;rhs);</pre>
+<p class="doc" data-zh="比较两个记录的值是否相等；不比较对象地址。" data-en="Compare the values of two records, rather than their object addresses.">比较两个记录的值是否相等；不比较对象地址。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="PaneSeparatorStyle-entry-6" data-search="PaneSeparatorStyle ">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/types.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L123</span>
+<pre>    friend bool operator!=(const PaneSeparatorStyle &amp;lhs, const PaneSeparatorStyle &amp;rhs);</pre>
+<p class="doc" data-zh="比较两个记录的值是否相等；不比较对象地址。" data-en="Compare the values of two records, rather than their object addresses.">比较两个记录的值是否相等；不比较对象地址。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+</section>
+<section>
+<h3 id="VisibleRange">VisibleRange</h3>
+<pre>struct VisibleRange</pre>
+<article tabindex="-1" id="VisibleRange-first-0" data-search="VisibleRange first">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/types.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L132</span>
+<pre>qsizetype first = -1;</pre>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VisibleRange-last-1" data-search="VisibleRange last">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/types.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L133</span>
+<pre>qsizetype last = -1;</pre>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VisibleRange-isValid-2" data-search="VisibleRange isValid">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/types.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L135</span>
+<pre>    bool isValid() const;</pre>
+<p class="doc" data-zh="判断当前索引、范围或几何记录是否可用；使用几何或访问模型前先检查无效结果。" data-en="Check whether the index, range or geometry record is usable before accessing geometry or model data.">判断当前索引、范围或几何记录是否可用；使用几何或访问模型前先检查无效结果。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VisibleRange-contains-3" data-search="VisibleRange contains">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/types.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L136</span>
+<pre>    bool contains(qsizetype item) const;</pre>
+<p class="doc" data-zh="判断指定索引、行或位置是否在当前范围内。" data-en="Check whether an index, row or position is contained in this range.">判断指定索引、行或位置是否在当前范围内。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VisibleRange-count-4" data-search="VisibleRange count">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/types.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L137</span>
+<pre>    qsizetype count() const;</pre>
+<p class="doc" data-zh="返回布局、索引或范围中的项目数量。" data-en="Return the item count in the layout, index or range.">返回布局、索引或范围中的项目数量。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VisibleRange-expanded-5" data-search="VisibleRange expanded">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/types.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L140</span>
+<pre>static VisibleRange expanded(qsizetype coreFirst, qsizetype coreLast, qsizetype before,
+                                 qsizetype after, qsizetype upperBound);</pre>
+<p class="doc" data-zh="在核心可见区间前后加入 before/after 预加载范围，并限制到 upperBound；返回扩展后的区间。" data-en="Expand a core visible range by before/after overscan, clamp it to upperBound and return the expanded range.">在核心可见区间前后加入 before/after 预加载范围，并限制到 upperBound；返回扩展后的区间。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+</section>
+<section>
+<h3 id="viv-namespace">viv namespace</h3>
+<pre>namespace viv</pre>
+<article tabindex="-1" id="viv-namespace-kDefaultItemDataRole-0" data-search="viv namespace kDefaultItemDataRole">
+<span class="badge">namespace</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/types.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L85</span>
+<pre>constexpr int kDefaultItemDataRole = Qt::UserRole + 0x200;</pre>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="viv-namespace-WidgetType-1" data-search="viv namespace WidgetType">
+<span class="badge">namespace</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/types.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L92</span>
+<pre>using WidgetType = int;</pre>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="viv-namespace-kDefaultWidgetType-2" data-search="viv namespace kDefaultWidgetType">
+<span class="badge">namespace</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/types.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L95</span>
+<pre>constexpr WidgetType kDefaultWidgetType = 0;</pre>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+</section>
+<footer class="muted">
+<p><span data-zh="按能力查找配套设置与独立示例；通用接口请沿基类链接查阅，Qt 继承接口请参考 Qt 文档。" data-en="Find related settings and independent examples by capability. Follow base-class links for shared APIs and consult Qt documentation for inherited Qt APIs.">按能力查找配套设置与独立示例；通用接口请沿基类链接查阅，Qt 继承接口请参考 Qt 文档。</span></p>
+</footer>
+</main>
+<script src="../assets/reference.js">
+</script>
+</body>
+</html>

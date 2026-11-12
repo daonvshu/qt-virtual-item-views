@@ -1,0 +1,389 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LayoutPolicy · VirtualItemViews</title>
+<link rel="stylesheet" href="../assets/reference.css">
+</head>
+<body>
+<header>
+<div class="header-top">
+<a href="../index.html">VirtualItemViews / API</a>
+<div id="language-switch" class="language-switch" role="group" aria-label="Language / 语言" hidden>
+<button type="button" data-language="zh" aria-pressed="true" lang="zh-CN">中文</button>
+<button type="button" data-language="en" aria-pressed="false" lang="en">English</button>
+</div>
+</div>
+<h1>LayoutPolicy</h1>
+<p><span data-zh="公开辅助接口与扩展契约" data-en="Public helper interfaces and extension contracts">公开辅助接口与扩展契约</span></p>
+</header>
+<main>
+<nav>
+<a href="../index.html"><span data-zh="能力总览" data-en="Capabilities">能力总览</span></a>
+<a href="../../AGENT_GUIDE.md"><span data-zh="Agent 索引" data-en="Agent guide">Agent 索引</span></a>
+<a href="../../../examples/README.md"><span data-zh="独立示例" data-en="Examples">独立示例</span></a>
+<a href="../../../README.md"><span data-zh="项目首页" data-en="Project home">项目首页</span></a>
+</nav>
+<label for="filter"><span data-zh="搜索本页：能力、API 名称或关键词" data-en="Search this page: capability, API name or keyword">搜索本页：能力、API 名称或关键词</span></label>
+<input id="filter" type="search" placeholder="例如：Popup、setAutoHeight、冻结、branch">
+<p class="muted search-help"><span data-zh="无需网络或服务器。所有内容默认可见；搜索只筛选当前页。完整继承 API 请沿基类链接查阅。" data-en="No network or server required. All content is initially visible; search filters this page only. Follow base-class links for inherited APIs.">无需网络或服务器。所有内容默认可见；搜索只筛选当前页。完整继承 API 请沿基类链接查阅。</span></p>
+<p id="search-status" role="status" aria-live="polite">
+</p>
+<p>
+<a href="../../../include/virtualitemviews/layoutpolicy.h"><span data-zh="公开头文件：include/virtualitemviews/layoutpolicy.h" data-en="Public header: include/virtualitemviews/layoutpolicy.h">公开头文件：include/virtualitemviews/layoutpolicy.h</span></a>
+</p>
+<p class="api-jump">
+<a href="#public-api"><span data-zh="公开函数列表" data-en="Public function index">公开函数列表</span></a>
+</p>
+<h2><span data-zh="能力与配套设置" data-en="Capabilities and related settings">能力与配套设置</span></h2>
+<article id="layout-kernel" data-search="LayoutPolicy ListLayout SizeIndex FixedSizeIndex BlockSizeIndex ScrollMapper TreeVisibilityIndex layoutpolicy listlayout sizeindex scrollmapper treevisibilityindex virtualitemview">
+<h3><span data-zh="布局与尺寸索引扩展" data-en="Layout and size-index extensions">布局与尺寸索引扩展</span></h3>
+<p>
+<code>LayoutPolicy · ListLayout · SizeIndex · FixedSizeIndex · BlockSizeIndex · ScrollMapper · TreeVisibilityIndex</code>
+</p>
+<p class="rules"><span data-zh="这些公开基础类型服务于布局扩展和定位查询。正常业务接入通过具体视图和模型通知；不要同时手工操作 sizeIndex/resetItems 和模型结构来维护两份状态。ListLayout 持有 SizeIndex，内部行布局区分固定/动态尺寸；TreeVisibilityIndex 管理展开后的映射。此层没有“任意改内部布局后自动保持所有业务状态”的契约，扩展时逐项阅读源码。" data-en="These public primitives support layout extensions and geometry queries. Normal integrations use concrete views and model notifications. Do not manually mutate sizeIndex/resetItems alongside model structure to maintain duplicate state. ListLayout owns a SizeIndex for fixed/variable sizing; TreeVisibilityIndex manages the expanded mapping. Arbitrary internal layout changes do not promise to preserve all business state automatically; inspect the implementation when extending this layer.">这些公开基础类型服务于布局扩展和定位查询。正常业务接入通过具体视图和模型通知；不要同时手工操作 sizeIndex/resetItems 和模型结构来维护两份状态。ListLayout 持有 SizeIndex，内部行布局区分固定/动态尺寸；TreeVisibilityIndex 管理展开后的映射。此层没有“任意改内部布局后自动保持所有业务状态”的契约，扩展时逐项阅读源码。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../../src/layout/listlayout.cpp">src/layout/listlayout.cpp</a> · <a href="../../../src/index/sizeindex.cpp">src/index/sizeindex.cpp</a> · <a href="../../../src/index/treevisibilityindex.cpp">src/index/treevisibilityindex.cpp</a> · <a href="../../../src/core/scrollmapper.cpp">src/core/scrollmapper.cpp</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../../models.md">docs/models.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（0）" data-en="Independent source examples (0)">独立源码示例（0）</span></summary>
+<ul>
+</ul>
+</details>
+</article>
+<h2 id="public-api" tabindex="-1"><span data-zh="公开 API、类型与信号" data-en="Public API, types and signals">公开 API、类型与信号</span></h2>
+<section class="function-index" id="function-index" tabindex="-1">
+<h3><span data-zh="公开函数列表" data-en="Public function index">公开函数列表</span></h3>
+<p class="muted"><span data-zh="按声明类型分组；每个重载单独列出，点击签名跳转到说明。信号单独列出；类型和数据成员仍保留在下方。" data-en="Grouped by declaring type. Each overload has its own link to the details. Signals are listed separately; types and data members remain below.">按声明类型分组；每个重载单独列出，点击签名跳转到说明。信号单独列出；类型和数据成员仍保留在下方。</span></p>
+<h4>LayoutPolicy</h4>
+<ul>
+<li data-search="LayoutPolicy LayoutPolicy">
+<a href="#LayoutPolicy-LayoutPolicy-0">
+<code>virtual ~LayoutPolicy() = default;</code>
+</a>
+</li>
+<li data-search="LayoutPolicy orientation">
+<a href="#LayoutPolicy-orientation-1">
+<code>virtual Qt::Orientation orientation() const = 0;</code>
+</a>
+</li>
+<li data-search="LayoutPolicy itemCount">
+<a href="#LayoutPolicy-itemCount-2">
+<code>virtual qsizetype itemCount() const = 0;</code>
+</a>
+</li>
+<li data-search="LayoutPolicy itemSize">
+<a href="#LayoutPolicy-itemSize-3">
+<code>virtual int itemSize(qsizetype item) const = 0;</code>
+</a>
+</li>
+<li data-search="LayoutPolicy offsetOf">
+<a href="#LayoutPolicy-offsetOf-4">
+<code>virtual qint64 offsetOf(qsizetype item) const = 0;</code>
+</a>
+</li>
+<li data-search="LayoutPolicy indexAtOffset">
+<a href="#LayoutPolicy-indexAtOffset-5">
+<code>virtual qsizetype indexAtOffset(qint64 offset) const = 0;</code>
+</a>
+</li>
+<li data-search="LayoutPolicy lastIndexAtOffset">
+<a href="#LayoutPolicy-lastIndexAtOffset-6">
+<code>virtual qsizetype lastIndexAtOffset(qint64 offset) const;</code>
+</a>
+</li>
+<li data-search="LayoutPolicy contentExtent">
+<a href="#LayoutPolicy-contentExtent-7">
+<code>virtual qint64 contentExtent() const = 0;</code>
+</a>
+</li>
+<li data-search="LayoutPolicy crossExtent">
+<a href="#LayoutPolicy-crossExtent-8">
+<code>virtual int crossExtent() const = 0;</code>
+</a>
+</li>
+<li data-search="LayoutPolicy setCrossExtent">
+<a href="#LayoutPolicy-setCrossExtent-9">
+<code>virtual void setCrossExtent(int extent) = 0;</code>
+</a>
+</li>
+<li data-search="LayoutPolicy itemRect">
+<a href="#LayoutPolicy-itemRect-10">
+<code>virtual QRect itemRect(qsizetype item, qint64 scrollOffset) const = 0;</code>
+</a>
+</li>
+<li data-search="LayoutPolicy itemAtPoint">
+<a href="#LayoutPolicy-itemAtPoint-11">
+<code>virtual qsizetype itemAtPoint(const QPoint &amp;viewportPos, qint64 scrollOffset) const = 0;</code>
+</a>
+</li>
+<li data-search="LayoutPolicy isVariableSized">
+<a href="#LayoutPolicy-isVariableSized-12">
+<code>virtual bool isVariableSized() const = 0;</code>
+</a>
+</li>
+<li data-search="LayoutPolicy needsInitialMeasurement">
+<a href="#LayoutPolicy-needsInitialMeasurement-13">
+<code>virtual bool needsInitialMeasurement() const;</code>
+</a>
+</li>
+<li data-search="LayoutPolicy filterVisibleRanges">
+<a href="#LayoutPolicy-filterVisibleRanges-14">
+<code>virtual void filterVisibleRanges(QVector&lt;VisibleRange&gt; &amp;) const;</code>
+</a>
+</li>
+<li data-search="LayoutPolicy hasTransientGeometry">
+<a href="#LayoutPolicy-hasTransientGeometry-15">
+<code>virtual bool hasTransientGeometry() const;</code>
+</a>
+</li>
+<li data-search="LayoutPolicy itemOpacity">
+<a href="#LayoutPolicy-itemOpacity-16">
+<code>virtual qreal itemOpacity(qsizetype) const;</code>
+</a>
+</li>
+<li data-search="LayoutPolicy sizeIndex">
+<a href="#LayoutPolicy-sizeIndex-17">
+<code>virtual SizeIndex *sizeIndex() const;</code>
+</a>
+</li>
+<li data-search="LayoutPolicy setSizeIndex">
+<a href="#LayoutPolicy-setSizeIndex-18">
+<code>virtual void setSizeIndex(SizeIndex *index, bool takeOwnership = true);</code>
+</a>
+</li>
+<li data-search="LayoutPolicy resetItems">
+<a href="#LayoutPolicy-resetItems-19">
+<code>virtual void resetItems(qsizetype count, int estimate) = 0;</code>
+</a>
+</li>
+<li data-search="LayoutPolicy insertItems">
+<a href="#LayoutPolicy-insertItems-20">
+<code>virtual void insertItems(qsizetype index, qsizetype count, int estimate) = 0;</code>
+</a>
+</li>
+<li data-search="LayoutPolicy removeItems">
+<a href="#LayoutPolicy-removeItems-21">
+<code>virtual void removeItems(qsizetype index, qsizetype count) = 0;</code>
+</a>
+</li>
+<li data-search="LayoutPolicy moveItems">
+<a href="#LayoutPolicy-moveItems-22">
+<code>virtual void moveItems(qsizetype from, qsizetype count, qsizetype to) = 0;</code>
+</a>
+</li>
+<li data-search="LayoutPolicy setItemSize">
+<a href="#LayoutPolicy-setItemSize-23">
+<code>virtual void setItemSize(qsizetype item, int size) = 0;</code>
+</a>
+</li>
+</ul>
+</section>
+<h2><span data-zh="函数说明" data-en="Function details">函数说明</span></h2>
+<p class="muted"><span data-zh="按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。" data-en="Read each function for its purpose and related settings. Overloads are listed separately; follow related capabilities to find examples.">按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。</span></p>
+<section>
+<h3 id="LayoutPolicy">LayoutPolicy</h3>
+<pre>class VIRTUALITEMVIEWS_EXPORT LayoutPolicy</pre>
+<article tabindex="-1" id="LayoutPolicy-LayoutPolicy-0" data-search="LayoutPolicy LayoutPolicy">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/layoutpolicy.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L24</span>
+<pre>virtual ~LayoutPolicy() = default;</pre>
+<p class="doc" data-zh="销毁 LayoutPolicy 并释放其拥有的资源；不在析构回调中继续使用该对象。" data-en="Destroy LayoutPolicy and release its owned resources; do not keep using the object during destruction callbacks.">销毁 LayoutPolicy 并释放其拥有的资源；不在析构回调中继续使用该对象。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="LayoutPolicy-orientation-1" data-search="LayoutPolicy orientation">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/layoutpolicy.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L26</span>
+<pre>virtual Qt::Orientation orientation() const = 0;</pre>
+<p class="doc" data-zh="返回主轴或表头方向。" data-en="Return the main-axis or header orientation.">返回主轴或表头方向。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="LayoutPolicy-itemCount-2" data-search="LayoutPolicy itemCount">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/layoutpolicy.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L28</span>
+<pre>virtual qsizetype itemCount() const = 0;</pre>
+<p class="doc" data-zh="返回布局、索引或范围中的项目数量。" data-en="Return the item count in the layout, index or range.">返回布局、索引或范围中的项目数量。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="LayoutPolicy-itemSize-3" data-search="LayoutPolicy itemSize">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/layoutpolicy.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L31</span>
+<pre>virtual int itemSize(qsizetype item) const = 0;</pre>
+<p class="doc" data-zh="返回项目布局主轴尺寸。" data-en="Return the item main-axis size.">返回项目布局主轴尺寸。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="LayoutPolicy-offsetOf-4" data-search="LayoutPolicy offsetOf">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/layoutpolicy.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L34</span>
+<pre>virtual qint64 offsetOf(qsizetype item) const = 0;</pre>
+<p class="doc" data-zh="返回指定项目之前的累计主轴偏移。" data-en="Return the accumulated main-axis offset before an item.">返回指定项目之前的累计主轴偏移。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="LayoutPolicy-indexAtOffset-5" data-search="LayoutPolicy indexAtOffset">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/layoutpolicy.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L37</span>
+<pre>virtual qsizetype indexAtOffset(qint64 offset) const = 0;</pre>
+<p class="doc" data-zh="将主轴偏移转换为项目序号；边界及间距命中按照此布局策略解释。" data-en="Map a main-axis offset to an item position; boundaries and gaps follow the layout policy&#x27;s hit-testing rules.">将主轴偏移转换为项目序号；边界及间距命中按照此布局策略解释。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="LayoutPolicy-lastIndexAtOffset-6" data-search="LayoutPolicy lastIndexAtOffset">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/layoutpolicy.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L39</span>
+<pre>    virtual qsizetype lastIndexAtOffset(qint64 offset) const;</pre>
+<p class="doc" data-zh="将主轴偏移转换为项目序号；边界及间距命中按照此布局策略解释。" data-en="Map a main-axis offset to an item position; boundaries and gaps follow the layout policy&#x27;s hit-testing rules.">将主轴偏移转换为项目序号；边界及间距命中按照此布局策略解释。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="LayoutPolicy-contentExtent-7" data-search="LayoutPolicy contentExtent">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/layoutpolicy.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L42</span>
+<pre>virtual qint64 contentExtent() const = 0;</pre>
+<p class="doc" data-zh="返回布局或尺寸索引的内容总长度。" data-en="Return the total content extent of the layout or size index.">返回布局或尺寸索引的内容总长度。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="LayoutPolicy-crossExtent-8" data-search="LayoutPolicy crossExtent">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/layoutpolicy.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L45</span>
+<pre>virtual int crossExtent() const = 0;</pre>
+<p class="doc" data-zh="返回布局交叉轴长度。" data-en="Return the layout cross-axis extent.">返回布局交叉轴长度。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="LayoutPolicy-setCrossExtent-9" data-search="LayoutPolicy setCrossExtent">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/layoutpolicy.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L46</span>
+<pre>virtual void setCrossExtent(int extent) = 0;</pre>
+<p class="doc" data-zh="设置布局交叉轴长度。" data-en="Set the layout cross-axis extent.">设置布局交叉轴长度。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="LayoutPolicy-itemRect-10" data-search="LayoutPolicy itemRect">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/layoutpolicy.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L49</span>
+<pre>virtual QRect itemRect(qsizetype item, qint64 scrollOffset) const = 0;</pre>
+<p class="doc" data-zh="查询对应项目、单元格、窗格或合并区域的矩形。视图结果为视口坐标；布局策略结果为布局坐标；屏外矩形可超出可见区域。" data-en="Query the item, cell, pane or span rectangle. View results use viewport coordinates; layout policies use layout coordinates. Offscreen rectangles may extend beyond the visible area.">查询对应项目、单元格、窗格或合并区域的矩形。视图结果为视口坐标；布局策略结果为布局坐标；屏外矩形可超出可见区域。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="LayoutPolicy-itemAtPoint-11" data-search="LayoutPolicy itemAtPoint">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/layoutpolicy.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L52</span>
+<pre>virtual qsizetype itemAtPoint(const QPoint &amp;viewportPos, qint64 scrollOffset) const = 0;</pre>
+<p class="doc" data-zh="命中给定坐标对应的项目；视图接口使用视口坐标，布局策略使用布局坐标。空白区域返回无效结果。" data-en="Hit-test an item at a position. Views use viewport coordinates; layout policies use layout coordinates. Blank space returns an invalid result.">命中给定坐标对应的项目；视图接口使用视口坐标，布局策略使用布局坐标。空白区域返回无效结果。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="LayoutPolicy-isVariableSized-12" data-search="LayoutPolicy isVariableSized">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/layoutpolicy.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L55</span>
+<pre>virtual bool isVariableSized() const = 0;</pre>
+<p class="doc" data-zh="判断布局是否支持各项独立尺寸。" data-en="Check whether the layout uses independently sized items.">判断布局是否支持各项独立尺寸。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="LayoutPolicy-needsInitialMeasurement-13" data-search="LayoutPolicy needsInitialMeasurement">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/layoutpolicy.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L57</span>
+<pre>    virtual bool needsInitialMeasurement() const;</pre>
+<p class="doc" data-zh="判断统一尺寸等布局是否还需要首次控件测量。" data-en="Check whether the layout still requires an initial widget measurement.">判断统一尺寸等布局是否还需要首次控件测量。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="LayoutPolicy-filterVisibleRanges-14" data-search="LayoutPolicy filterVisibleRanges">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/layoutpolicy.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L59</span>
+<pre>    virtual void filterVisibleRanges(QVector&lt;VisibleRange&gt; &amp;) const;</pre>
+<p class="doc" data-zh="按布局特殊几何过滤或拆分可见项目范围，供内核物化使用。" data-en="Filter or split visible item ranges according to special layout geometry for kernel materialization.">按布局特殊几何过滤或拆分可见项目范围，供内核物化使用。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="LayoutPolicy-hasTransientGeometry-15" data-search="LayoutPolicy hasTransientGeometry">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/layoutpolicy.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L61</span>
+<pre>    virtual bool hasTransientGeometry() const;</pre>
+<p class="doc" data-zh="判断布局是否正暴露动画期间的临时几何。" data-en="Check whether the layout exposes transient animation geometry.">判断布局是否正暴露动画期间的临时几何。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="LayoutPolicy-itemOpacity-16" data-search="LayoutPolicy itemOpacity">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/layoutpolicy.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L63</span>
+<pre>    virtual qreal itemOpacity(qsizetype) const;</pre>
+<p class="doc" data-zh="返回指定项目当前动画透明度。" data-en="Return the current animation opacity of the specified item.">返回指定项目当前动画透明度。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="LayoutPolicy-sizeIndex-17" data-search="LayoutPolicy sizeIndex">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/layoutpolicy.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L66</span>
+<pre>    virtual SizeIndex *sizeIndex() const;</pre>
+<p class="doc" data-zh="返回项目尺寸及前缀偏移索引。" data-en="Return the index of item sizes and prefix offsets.">返回项目尺寸及前缀偏移索引。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="LayoutPolicy-setSizeIndex-18" data-search="LayoutPolicy setSizeIndex">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/layoutpolicy.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L72</span>
+<pre>virtual void setSizeIndex(SizeIndex *index, bool takeOwnership = true);</pre>
+<p class="doc" data-zh="设置项目尺寸及前缀偏移索引。" data-en="Set the index of item sizes and prefix offsets.">设置项目尺寸及前缀偏移索引。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="LayoutPolicy-resetItems-19" data-search="LayoutPolicy resetItems">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/layoutpolicy.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L75</span>
+<pre>virtual void resetItems(qsizetype count, int estimate) = 0;</pre>
+<p class="doc" data-zh="重建尺寸或布局索引的项目集合，使用给定数量与初始尺寸。" data-en="Reinitialize the item collection in the size or layout index using the supplied count and initial sizes.">重建尺寸或布局索引的项目集合，使用给定数量与初始尺寸。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="LayoutPolicy-insertItems-20" data-search="LayoutPolicy insertItems">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/layoutpolicy.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L76</span>
+<pre>virtual void insertItems(qsizetype index, qsizetype count, int estimate) = 0;</pre>
+<p class="doc" data-zh="在指定位置插入几何/尺寸记录并更新后续索引。" data-en="Insert geometry or size records at the specified position and update subsequent indexes.">在指定位置插入几何/尺寸记录并更新后续索引。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="LayoutPolicy-removeItems-21" data-search="LayoutPolicy removeItems">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/layoutpolicy.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L77</span>
+<pre>virtual void removeItems(qsizetype index, qsizetype count) = 0;</pre>
+<p class="doc" data-zh="删除指定范围的几何/尺寸记录并更新后续索引。" data-en="Remove a range of geometry or size records and update subsequent indexes.">删除指定范围的几何/尺寸记录并更新后续索引。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="LayoutPolicy-moveItems-22" data-search="LayoutPolicy moveItems">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/layoutpolicy.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L78</span>
+<pre>virtual void moveItems(qsizetype from, qsizetype count, qsizetype to) = 0;</pre>
+<p class="doc" data-zh="在布局索引中移动一段项目并维护尺寸与偏移。" data-en="Move a range of items in the layout index while maintaining sizes and offsets.">在布局索引中移动一段项目并维护尺寸与偏移。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="LayoutPolicy-setItemSize-23" data-search="LayoutPolicy setItemSize">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/layoutpolicy.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L79</span>
+<pre>virtual void setItemSize(qsizetype item, int size) = 0;</pre>
+<p class="doc" data-zh="设置项目布局主轴尺寸。" data-en="Set the item main-axis size.">设置项目布局主轴尺寸。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+</section>
+<footer class="muted">
+<p><span data-zh="按能力查找配套设置与独立示例；通用接口请沿基类链接查阅，Qt 继承接口请参考 Qt 文档。" data-en="Find related settings and independent examples by capability. Follow base-class links for shared APIs and consult Qt documentation for inherited Qt APIs.">按能力查找配套设置与独立示例；通用接口请沿基类链接查阅，Qt 继承接口请参考 Qt 文档。</span></p>
+</footer>
+</main>
+<script src="../assets/reference.js">
+</script>
+</body>
+</html>

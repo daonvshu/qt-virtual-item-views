@@ -1,0 +1,879 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PaneScroll / TablePaneSpec / TablePane / TablePaneLayout · VirtualItemViews</title>
+<link rel="stylesheet" href="../assets/reference.css">
+</head>
+<body>
+<header>
+<div class="header-top">
+<a href="../index.html">VirtualItemViews / API</a>
+<div id="language-switch" class="language-switch" role="group" aria-label="Language / 语言" hidden>
+<button type="button" data-language="zh" aria-pressed="true" lang="zh-CN">中文</button>
+<button type="button" data-language="en" aria-pressed="false" lang="en">English</button>
+</div>
+</div>
+<h1>PaneScroll / TablePaneSpec / TablePane / TablePaneLayout</h1>
+<p><span data-zh="公开辅助接口与扩展契约" data-en="Public helper interfaces and extension contracts">公开辅助接口与扩展契约</span></p>
+</header>
+<main>
+<nav>
+<a href="../index.html"><span data-zh="能力总览" data-en="Capabilities">能力总览</span></a>
+<a href="../../AGENT_GUIDE.md"><span data-zh="Agent 索引" data-en="Agent guide">Agent 索引</span></a>
+<a href="../../../examples/README.md"><span data-zh="独立示例" data-en="Examples">独立示例</span></a>
+<a href="../../../README.md"><span data-zh="项目首页" data-en="Project home">项目首页</span></a>
+</nav>
+<label for="filter"><span data-zh="搜索本页：能力、API 名称或关键词" data-en="Search this page: capability, API name or keyword">搜索本页：能力、API 名称或关键词</span></label>
+<input id="filter" type="search" placeholder="例如：Popup、setAutoHeight、冻结、branch">
+<p class="muted search-help"><span data-zh="无需网络或服务器。所有内容默认可见；搜索只筛选当前页。完整继承 API 请沿基类链接查阅。" data-en="No network or server required. All content is initially visible; search filters this page only. Follow base-class links for inherited APIs.">无需网络或服务器。所有内容默认可见；搜索只筛选当前页。完整继承 API 请沿基类链接查阅。</span></p>
+<p id="search-status" role="status" aria-live="polite">
+</p>
+<p>
+<a href="../../../include/virtualitemviews/tablepane.h"><span data-zh="公开头文件：include/virtualitemviews/tablepane.h" data-en="Public header: include/virtualitemviews/tablepane.h">公开头文件：include/virtualitemviews/tablepane.h</span></a>
+</p>
+<p class="api-jump">
+<a href="#public-api"><span data-zh="公开函数列表" data-en="Public function index">公开函数列表</span></a>
+</p>
+<h2><span data-zh="能力与配套设置" data-en="Capabilities and related settings">能力与配套设置</span></h2>
+<article id="frozen" data-search="setFrozenRows setFrozenBottomRows setFrozenColumns setFrozenRightColumns setPanes setHorizontalOffset primaryScrollGroup virtualitemview virtualtableview virtualtreetableview tablepane itempane">
+<h3><span data-zh="冻结行列 / 多 pane / 多滚动组" data-en="Frozen rows and columns / multiple panes / scroll groups">冻结行列 / 多 pane / 多滚动组</span></h3>
+<p>
+<code>setFrozenRows · setFrozenBottomRows · setFrozenColumns · setFrozenRightColumns · setPanes · setHorizontalOffset · primaryScrollGroup</code>
+</p>
+<p class="rules"><span data-zh="List/Table 支持上下冻结行；Tree/TreeTable 不支持冻结行，TreeTable 保留冻结列。Flow/Masonry/Wrap 不支持行 pane。表格冻结列共用 HeaderGeometry，不复制宽度/顺序；左右集合冲突时左侧优先。高级 setPanes 指定列集合和滚动组，同组共享 offset，首个可滚动 pane 的组是主组；非主组用带 group 参数的接口。不要为冻结区再创建一个独立表格同步数据。" data-en="List/Table support top and bottom frozen rows. Tree/TreeTable do not; TreeTable retains frozen columns. Flow/Masonry/Wrap do not support row panes. Frozen table columns share HeaderGeometry rather than copies of widths/order; left wins if a column belongs to both frozen sets. setPanes specifies column sets and scroll groups. A group shares one offset; the first scrolling pane determines the primary group. Use group overloads for other offsets. Avoid separate synchronized tables to imitate frozen panes.">List/Table 支持上下冻结行；Tree/TreeTable 不支持冻结行，TreeTable 保留冻结列。Flow/Masonry/Wrap 不支持行 pane。表格冻结列共用 HeaderGeometry，不复制宽度/顺序；左右集合冲突时左侧优先。高级 setPanes 指定列集合和滚动组，同组共享 offset，首个可滚动 pane 的组是主组；非主组用带 group 参数的接口。不要为冻结区再创建一个独立表格同步数据。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../../src/layout/tablepane.cpp">src/layout/tablepane.cpp</a> · <a href="../../../src/core/virtualitemview.cpp">src/core/virtualitemview.cpp</a> · <a href="../../../src/widgets/virtualtableview.cpp">src/widgets/virtualtableview.cpp</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../../table-layout-guide.md">docs/table-layout-guide.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（5）" data-en="Independent source examples (5)">独立源码示例（5）</span></summary>
+<ul>
+<li>
+<a href="../../../examples/list_capabilities/14_frozen_rows/example.cpp">examples/list_capabilities/14_frozen_rows/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/table_capabilities/16_frozen_areas/example.cpp">examples/table_capabilities/16_frozen_areas/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/table_capabilities/17_panes/example.cpp">examples/table_capabilities/17_panes/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/treetable_capabilities/21_frozen_columns/example.cpp">examples/treetable_capabilities/21_frozen_columns/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/treetable_capabilities/22_panes/example.cpp">examples/treetable_capabilities/22_panes/example.cpp</a>
+</li>
+</ul>
+</details>
+</article>
+<h2 id="public-api" tabindex="-1"><span data-zh="公开 API、类型与信号" data-en="Public API, types and signals">公开 API、类型与信号</span></h2>
+<section class="function-index" id="function-index" tabindex="-1">
+<h3><span data-zh="公开函数列表" data-en="Public function index">公开函数列表</span></h3>
+<p class="muted"><span data-zh="按声明类型分组；每个重载单独列出，点击签名跳转到说明。信号单独列出；类型和数据成员仍保留在下方。" data-en="Grouped by declaring type. Each overload has its own link to the details. Signals are listed separately; types and data members remain below.">按声明类型分组；每个重载单独列出，点击签名跳转到说明。信号单独列出；类型和数据成员仍保留在下方。</span></p>
+<h4>TablePaneSpec</h4>
+<ul>
+<li data-search="TablePaneSpec isFrozen">
+<a href="#TablePaneSpec-isFrozen-3">
+<code>bool isFrozen() const;</code>
+</a>
+</li>
+<li data-search="TablePaneSpec operator">
+<a href="#TablePaneSpec-operator-4">
+<code>friend bool operator==(const TablePaneSpec &amp;lhs, const TablePaneSpec &amp;rhs);</code>
+</a>
+</li>
+<li data-search="TablePaneSpec ">
+<a href="#TablePaneSpec-entry-5">
+<code>friend bool operator!=(const TablePaneSpec &amp;lhs, const TablePaneSpec &amp;rhs);</code>
+</a>
+</li>
+</ul>
+<h4>TablePane</h4>
+<ul>
+<li data-search="TablePane isEmpty">
+<a href="#TablePane-isEmpty-5">
+<code>bool isEmpty() const;</code>
+</a>
+</li>
+<li data-search="TablePane isFrozen">
+<a href="#TablePane-isFrozen-6">
+<code>bool isFrozen() const;</code>
+</a>
+</li>
+<li data-search="TablePane width">
+<a href="#TablePane-width-7">
+<code>int width() const;</code>
+</a>
+</li>
+<li data-search="TablePane operator">
+<a href="#TablePane-operator-8">
+<code>friend bool operator==(const TablePane &amp;lhs, const TablePane &amp;rhs);</code>
+</a>
+</li>
+<li data-search="TablePane ">
+<a href="#TablePane-entry-9">
+<code>friend bool operator!=(const TablePane &amp;lhs, const TablePane &amp;rhs);</code>
+</a>
+</li>
+</ul>
+<h4>TablePaneLayout</h4>
+<ul>
+<li data-search="TablePaneLayout setGeometry">
+<a href="#TablePaneLayout-setGeometry-0">
+<code>void setGeometry(const HeaderGeometry *geometry);</code>
+</a>
+</li>
+<li data-search="TablePaneLayout geometry">
+<a href="#TablePaneLayout-geometry-1">
+<code>const HeaderGeometry *geometry() const;</code>
+</a>
+</li>
+<li data-search="TablePaneLayout setSplitBoundarySpacing">
+<a href="#TablePaneLayout-setSplitBoundarySpacing-2">
+<code>void setSplitBoundarySpacing(bool split);</code>
+</a>
+</li>
+<li data-search="TablePaneLayout setFrozenColumns">
+<a href="#TablePaneLayout-setFrozenColumns-3">
+<code>void setFrozenColumns(const QVector&lt;int&gt; &amp;logicalColumns);</code>
+</a>
+</li>
+<li data-search="TablePaneLayout setFrozenRightColumns">
+<a href="#TablePaneLayout-setFrozenRightColumns-4">
+<code>void setFrozenRightColumns(const QVector&lt;int&gt; &amp;logicalColumns);</code>
+</a>
+</li>
+<li data-search="TablePaneLayout frozenColumns">
+<a href="#TablePaneLayout-frozenColumns-5">
+<code>const QVector&lt;int&gt; &amp;frozenColumns() const;</code>
+</a>
+</li>
+<li data-search="TablePaneLayout frozenRightColumns">
+<a href="#TablePaneLayout-frozenRightColumns-6">
+<code>const QVector&lt;int&gt; &amp;frozenRightColumns() const;</code>
+</a>
+</li>
+<li data-search="TablePaneLayout hasFrozenColumns">
+<a href="#TablePaneLayout-hasFrozenColumns-7">
+<code>bool hasFrozenColumns() const;</code>
+</a>
+</li>
+<li data-search="TablePaneLayout setPaneSpecs">
+<a href="#TablePaneLayout-setPaneSpecs-8">
+<code>void setPaneSpecs(const QVector&lt;TablePaneSpec&gt; &amp;specs);</code>
+</a>
+</li>
+<li data-search="TablePaneLayout paneSpecs">
+<a href="#TablePaneLayout-paneSpecs-9">
+<code>const QVector&lt;TablePaneSpec&gt; &amp;paneSpecs() const;</code>
+</a>
+</li>
+<li data-search="TablePaneLayout usesExplicitPanes">
+<a href="#TablePaneLayout-usesExplicitPanes-10">
+<code>bool usesExplicitPanes() const;</code>
+</a>
+</li>
+<li data-search="TablePaneLayout insertLogicalColumns">
+<a href="#TablePaneLayout-insertLogicalColumns-11">
+<code>void insertLogicalColumns(int first, int count);</code>
+</a>
+</li>
+<li data-search="TablePaneLayout removeLogicalColumns">
+<a href="#TablePaneLayout-removeLogicalColumns-12">
+<code>void removeLogicalColumns(int first, int count);</code>
+</a>
+</li>
+<li data-search="TablePaneLayout moveLogicalColumns">
+<a href="#TablePaneLayout-moveLogicalColumns-13">
+<code>void moveLogicalColumns(int start, int count, int destination);</code>
+</a>
+</li>
+<li data-search="TablePaneLayout update">
+<a href="#TablePaneLayout-update-14">
+<code>bool update(int viewportWidth, int viewportHeight);</code>
+</a>
+</li>
+<li data-search="TablePaneLayout refreshScrollWindows">
+<a href="#TablePaneLayout-refreshScrollWindows-15">
+<code>bool refreshScrollWindows();</code>
+</a>
+</li>
+<li data-search="TablePaneLayout columnVisitsInLastUpdate">
+<a href="#TablePaneLayout-columnVisitsInLastUpdate-16">
+<code>qsizetype columnVisitsInLastUpdate() const;</code>
+</a>
+</li>
+<li data-search="TablePaneLayout viewportWidth">
+<a href="#TablePaneLayout-viewportWidth-17">
+<code>int viewportWidth() const;</code>
+</a>
+</li>
+<li data-search="TablePaneLayout panes">
+<a href="#TablePaneLayout-panes-18">
+<code>const QVector&lt;TablePane&gt; &amp;panes() const;</code>
+</a>
+</li>
+<li data-search="TablePaneLayout pane">
+<a href="#TablePaneLayout-pane-19">
+<code>TablePane pane(TablePane::Type type) const;</code>
+</a>
+</li>
+<li data-search="TablePaneLayout paneRect">
+<a href="#TablePaneLayout-paneRect-20">
+<code>QRect paneRect(TablePane::Type type) const;</code>
+</a>
+</li>
+<li data-search="TablePaneLayout columnViewportX">
+<a href="#TablePaneLayout-columnViewportX-21">
+<code>int columnViewportX(int logicalIndex) const;</code>
+</a>
+</li>
+<li data-search="TablePaneLayout columnSpacingAfter">
+<a href="#TablePaneLayout-columnSpacingAfter-22">
+<code>int columnSpacingAfter(int logicalIndex) const;</code>
+</a>
+</li>
+<li data-search="TablePaneLayout leadingSpacingForPane">
+<a href="#TablePaneLayout-leadingSpacingForPane-23">
+<code>int leadingSpacingForPane(int paneIndex) const;</code>
+</a>
+</li>
+<li data-search="TablePaneLayout trailingSpacingForPane">
+<a href="#TablePaneLayout-trailingSpacingForPane-24">
+<code>int trailingSpacingForPane(int paneIndex) const;</code>
+</a>
+</li>
+<li data-search="TablePaneLayout paneOfColumn">
+<a href="#TablePaneLayout-paneOfColumn-25">
+<code>TablePane::Type paneOfColumn(int logicalIndex) const;</code>
+</a>
+</li>
+<li data-search="TablePaneLayout paneIndexOfColumn">
+<a href="#TablePaneLayout-paneIndexOfColumn-26">
+<code>int paneIndexOfColumn(int logicalIndex) const;</code>
+</a>
+</li>
+<li data-search="TablePaneLayout paneAt">
+<a href="#TablePaneLayout-paneAt-27">
+<code>TablePane paneAt(int paneIndex) const;</code>
+</a>
+</li>
+<li data-search="TablePaneLayout isFrozenColumn">
+<a href="#TablePaneLayout-isFrozenColumn-28">
+<code>bool isFrozenColumn(int logicalIndex) const;</code>
+</a>
+</li>
+<li data-search="TablePaneLayout scrollGroupOfColumn">
+<a href="#TablePaneLayout-scrollGroupOfColumn-29">
+<code>int scrollGroupOfColumn(int logicalIndex) const;</code>
+</a>
+</li>
+<li data-search="TablePaneLayout primaryPaneIndex">
+<a href="#TablePaneLayout-primaryPaneIndex-30">
+<code>int primaryPaneIndex() const;</code>
+</a>
+</li>
+<li data-search="TablePaneLayout primaryScrollGroup">
+<a href="#TablePaneLayout-primaryScrollGroup-31">
+<code>int primaryScrollGroup() const;</code>
+</a>
+</li>
+<li data-search="TablePaneLayout scrollGroups">
+<a href="#TablePaneLayout-scrollGroups-32">
+<code>QVector&lt;int&gt; scrollGroups() const;</code>
+</a>
+</li>
+<li data-search="TablePaneLayout groupExtent">
+<a href="#TablePaneLayout-groupExtent-33">
+<code>qint64 groupExtent(int scrollGroup) const;</code>
+</a>
+</li>
+<li data-search="TablePaneLayout groupWidth">
+<a href="#TablePaneLayout-groupWidth-34">
+<code>int groupWidth(int scrollGroup) const;</code>
+</a>
+</li>
+<li data-search="TablePaneLayout groupOffset">
+<a href="#TablePaneLayout-groupOffset-35">
+<code>qint64 groupOffset(int scrollGroup) const;</code>
+</a>
+</li>
+<li data-search="TablePaneLayout setGroupOffset">
+<a href="#TablePaneLayout-setGroupOffset-36">
+<code>void setGroupOffset(int scrollGroup, qint64 offset);</code>
+</a>
+</li>
+<li data-search="TablePaneLayout maximumGroupOffset">
+<a href="#TablePaneLayout-maximumGroupOffset-37">
+<code>qint64 maximumGroupOffset(int scrollGroup) const;</code>
+</a>
+</li>
+<li data-search="TablePaneLayout frozenLeftWidth">
+<a href="#TablePaneLayout-frozenLeftWidth-38">
+<code>int frozenLeftWidth() const;</code>
+</a>
+</li>
+<li data-search="TablePaneLayout frozenRightWidth">
+<a href="#TablePaneLayout-frozenRightWidth-39">
+<code>int frozenRightWidth() const;</code>
+</a>
+</li>
+<li data-search="TablePaneLayout scrollableExtent">
+<a href="#TablePaneLayout-scrollableExtent-40">
+<code>qint64 scrollableExtent() const;</code>
+</a>
+</li>
+<li data-search="TablePaneLayout scrollableWidth">
+<a href="#TablePaneLayout-scrollableWidth-41">
+<code>int scrollableWidth() const;</code>
+</a>
+</li>
+<li data-search="TablePaneLayout maximumOffset">
+<a href="#TablePaneLayout-maximumOffset-42">
+<code>qint64 maximumOffset() const;</code>
+</a>
+</li>
+<li data-search="TablePaneLayout visibleScrollableRange">
+<a href="#TablePaneLayout-visibleScrollableRange-43">
+<code>VisibleRange visibleScrollableRange() const;</code>
+</a>
+</li>
+<li data-search="TablePaneLayout columnsForLayout">
+<a href="#TablePaneLayout-columnsForLayout-44">
+<code>QVector&lt;int&gt; columnsForLayout(int overscan) const;</code>
+</a>
+</li>
+</ul>
+</section>
+<h2><span data-zh="函数说明" data-en="Function details">函数说明</span></h2>
+<p class="muted"><span data-zh="按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。" data-en="Read each function for its purpose and related settings. Overloads are listed separately; follow related capabilities to find examples.">按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。</span></p>
+<section>
+<h3 id="PaneScroll">PaneScroll</h3>
+<pre>enum class PaneScroll</pre>
+<article tabindex="-1" id="PaneScroll-PaneScroll-0" data-search="PaneScroll PaneScroll">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablepane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L19</span>
+<pre>enum class PaneScroll
+{
+    /// Never moves horizontally (a frozen pane).
+    Frozen,
+    /// Follows the horizontal offset of its scroll group.
+    Scrollable,
+};</pre>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+</section>
+<section>
+<h3 id="TablePaneSpec">TablePaneSpec</h3>
+<pre>struct TablePaneSpec</pre>
+<article tabindex="-1" id="TablePaneSpec-logicalColumns-0" data-search="TablePaneSpec logicalColumns">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablepane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L34</span>
+<pre>QVector&lt;int&gt; logicalColumns;</pre>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TablePaneSpec-scroll-1" data-search="TablePaneSpec scroll">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablepane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L35</span>
+<pre>PaneScroll scroll = PaneScroll::Scrollable;</pre>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TablePaneSpec-scrollGroup-2" data-search="TablePaneSpec scrollGroup">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablepane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L38</span>
+<pre>int scrollGroup = 0;</pre>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TablePaneSpec-isFrozen-3" data-search="TablePaneSpec isFrozen">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablepane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L40</span>
+<pre>    bool isFrozen() const;</pre>
+<p class="doc" data-zh="判断当前窗格或指定行列是否固定在冻结区域。" data-en="Check whether the pane or specified row/column belongs to a frozen region.">判断当前窗格或指定行列是否固定在冻结区域。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TablePaneSpec-operator-4" data-search="TablePaneSpec operator">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablepane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L42</span>
+<pre>    friend bool operator==(const TablePaneSpec &amp;lhs, const TablePaneSpec &amp;rhs);</pre>
+<p class="doc" data-zh="比较两个记录的值是否相等；不比较对象地址。" data-en="Compare the values of two records, rather than their object addresses.">比较两个记录的值是否相等；不比较对象地址。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TablePaneSpec-entry-5" data-search="TablePaneSpec ">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablepane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L47</span>
+<pre>    friend bool operator!=(const TablePaneSpec &amp;lhs, const TablePaneSpec &amp;rhs);</pre>
+<p class="doc" data-zh="比较两个记录的值是否相等；不比较对象地址。" data-en="Compare the values of two records, rather than their object addresses.">比较两个记录的值是否相等；不比较对象地址。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+</section>
+<section>
+<h3 id="TablePane">TablePane</h3>
+<pre>struct TablePane</pre>
+<article tabindex="-1" id="TablePane-Type-0" data-search="TablePane Type">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablepane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L56</span>
+<pre>enum class Type
+    {
+        FrozenLeft,
+        Scrollable,
+        FrozenRight,
+    };</pre>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TablePane-type-1" data-search="TablePane type">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablepane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L63</span>
+<pre>Type type = Type::Scrollable;</pre>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TablePane-scrollGroup-2" data-search="TablePane scrollGroup">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablepane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L65</span>
+<pre>int scrollGroup = -1;</pre>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TablePane-viewportRect-3" data-search="TablePane viewportRect">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablepane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L68</span>
+<pre>QRect viewportRect;</pre>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TablePane-logicalColumns-4" data-search="TablePane logicalColumns">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablepane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L70</span>
+<pre>QVector&lt;int&gt; logicalColumns;</pre>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TablePane-isEmpty-5" data-search="TablePane isEmpty">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablepane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L72</span>
+<pre>    bool isEmpty() const;</pre>
+<p class="doc" data-zh="判断当前集合、窗格或范围是否为空。" data-en="Check whether the collection, pane or range is empty.">判断当前集合、窗格或范围是否为空。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TablePane-isFrozen-6" data-search="TablePane isFrozen">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablepane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L73</span>
+<pre>    bool isFrozen() const;</pre>
+<p class="doc" data-zh="判断当前窗格或指定行列是否固定在冻结区域。" data-en="Check whether the pane or specified row/column belongs to a frozen region.">判断当前窗格或指定行列是否固定在冻结区域。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TablePane-width-7" data-search="TablePane width">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablepane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L74</span>
+<pre>    int width() const;</pre>
+<p class="doc" data-zh="返回窗格宽度。" data-en="Return the pane width.">返回窗格宽度。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TablePane-operator-8" data-search="TablePane operator">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablepane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L76</span>
+<pre>    friend bool operator==(const TablePane &amp;lhs, const TablePane &amp;rhs);</pre>
+<p class="doc" data-zh="比较两个记录的值是否相等；不比较对象地址。" data-en="Compare the values of two records, rather than their object addresses.">比较两个记录的值是否相等；不比较对象地址。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TablePane-entry-9" data-search="TablePane ">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablepane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L81</span>
+<pre>    friend bool operator!=(const TablePane &amp;lhs, const TablePane &amp;rhs);</pre>
+<p class="doc" data-zh="比较两个记录的值是否相等；不比较对象地址。" data-en="Compare the values of two records, rather than their object addresses.">比较两个记录的值是否相等；不比较对象地址。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+</section>
+<section>
+<h3 id="TablePaneLayout">TablePaneLayout</h3>
+<pre>class VIRTUALITEMVIEWS_EXPORT TablePaneLayout</pre>
+<article tabindex="-1" id="TablePaneLayout-setGeometry-0" data-search="TablePaneLayout setGeometry">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablepane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L97</span>
+<pre>    void setGeometry(const HeaderGeometry *geometry);</pre>
+<p class="doc" data-zh="设置布局几何对象或矩形。" data-en="Set the layout geometry object or rectangle.">设置布局几何对象或矩形。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TablePaneLayout-geometry-1" data-search="TablePaneLayout geometry">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablepane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L98</span>
+<pre>    const HeaderGeometry *geometry() const;</pre>
+<p class="doc" data-zh="返回布局几何对象或矩形。" data-en="Return the layout geometry object or rectangle.">返回布局几何对象或矩形。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TablePaneLayout-setSplitBoundarySpacing-2" data-search="TablePaneLayout setSplitBoundarySpacing">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablepane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L101</span>
+<pre>    void setSplitBoundarySpacing(bool split);</pre>
+<p class="doc" data-zh="配置窗格边界两侧的间距分配，避免冻结边界重复计算完整间距。" data-en="Configure spacing on both sides of pane boundaries to avoid counting a full gap twice.">配置窗格边界两侧的间距分配，避免冻结边界重复计算完整间距。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TablePaneLayout-setFrozenColumns-3" data-search="TablePaneLayout setFrozenColumns">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablepane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L105</span>
+<pre>void setFrozenColumns(const QVector&lt;int&gt; &amp;logicalColumns);</pre>
+<p class="doc" data-zh="设置左侧冻结列数。" data-en="Set the number of left frozen columns.">设置左侧冻结列数。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#frozen"><span data-zh="冻结行列 / 多 pane / 多滚动组" data-en="Frozen rows and columns / multiple panes / scroll groups">冻结行列 / 多 pane / 多滚动组</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TablePaneLayout-setFrozenRightColumns-4" data-search="TablePaneLayout setFrozenRightColumns">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablepane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L106</span>
+<pre>void setFrozenRightColumns(const QVector&lt;int&gt; &amp;logicalColumns);</pre>
+<p class="doc" data-zh="设置右侧冻结列数。" data-en="Set the number of right frozen columns.">设置右侧冻结列数。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#frozen"><span data-zh="冻结行列 / 多 pane / 多滚动组" data-en="Frozen rows and columns / multiple panes / scroll groups">冻结行列 / 多 pane / 多滚动组</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TablePaneLayout-frozenColumns-5" data-search="TablePaneLayout frozenColumns">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablepane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L107</span>
+<pre>    const QVector&lt;int&gt; &amp;frozenColumns() const;</pre>
+<p class="doc" data-zh="返回左侧冻结列数。" data-en="Return the number of left frozen columns.">返回左侧冻结列数。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#frozen"><span data-zh="冻结行列 / 多 pane / 多滚动组" data-en="Frozen rows and columns / multiple panes / scroll groups">冻结行列 / 多 pane / 多滚动组</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TablePaneLayout-frozenRightColumns-6" data-search="TablePaneLayout frozenRightColumns">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablepane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L108</span>
+<pre>    const QVector&lt;int&gt; &amp;frozenRightColumns() const;</pre>
+<p class="doc" data-zh="返回右侧冻结列数。" data-en="Return the number of right frozen columns.">返回右侧冻结列数。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#frozen"><span data-zh="冻结行列 / 多 pane / 多滚动组" data-en="Frozen rows and columns / multiple panes / scroll groups">冻结行列 / 多 pane / 多滚动组</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TablePaneLayout-hasFrozenColumns-7" data-search="TablePaneLayout hasFrozenColumns">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablepane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L109</span>
+<pre>    bool hasFrozenColumns() const;</pre>
+<p class="doc" data-zh="判断布局是否配置了冻结列。" data-en="Check whether frozen columns are configured.">判断布局是否配置了冻结列。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TablePaneLayout-setPaneSpecs-8" data-search="TablePaneLayout setPaneSpecs">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablepane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L124</span>
+<pre>void setPaneSpecs(const QVector&lt;TablePaneSpec&gt; &amp;specs);</pre>
+<p class="doc" data-zh="设置显式列窗格配置。" data-en="Set the explicit column pane configuration.">设置显式列窗格配置。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TablePaneLayout-paneSpecs-9" data-search="TablePaneLayout paneSpecs">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablepane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L125</span>
+<pre>    const QVector&lt;TablePaneSpec&gt; &amp;paneSpecs() const;</pre>
+<p class="doc" data-zh="返回显式列窗格配置。" data-en="Return the explicit column pane configuration.">返回显式列窗格配置。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TablePaneLayout-usesExplicitPanes-10" data-search="TablePaneLayout usesExplicitPanes">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablepane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L126</span>
+<pre>    bool usesExplicitPanes() const;</pre>
+<p class="doc" data-zh="判断当前布局是否使用显式窗格配置。" data-en="Check whether the current layout uses explicit pane specifications.">判断当前布局是否使用显式窗格配置。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TablePaneLayout-insertLogicalColumns-11" data-search="TablePaneLayout insertLogicalColumns">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablepane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L131</span>
+<pre>void insertLogicalColumns(int first, int count);</pre>
+<p class="doc" data-zh="在指定位置插入几何/尺寸记录并更新后续索引。" data-en="Insert geometry or size records at the specified position and update subsequent indexes.">在指定位置插入几何/尺寸记录并更新后续索引。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TablePaneLayout-removeLogicalColumns-12" data-search="TablePaneLayout removeLogicalColumns">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablepane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L132</span>
+<pre>void removeLogicalColumns(int first, int count);</pre>
+<p class="doc" data-zh="删除指定范围的几何/尺寸记录并更新后续索引。" data-en="Remove a range of geometry or size records and update subsequent indexes.">删除指定范围的几何/尺寸记录并更新后续索引。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TablePaneLayout-moveLogicalColumns-13" data-search="TablePaneLayout moveLogicalColumns">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablepane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L134</span>
+<pre>void moveLogicalColumns(int start, int count, int destination);</pre>
+<p class="doc" data-zh="响应模型逻辑位置移动并同步对应几何或尺寸记录。" data-en="Synchronize geometry or size records after a model logical-position move.">响应模型逻辑位置移动并同步对应几何或尺寸记录。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TablePaneLayout-update-14" data-search="TablePaneLayout update">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablepane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L143</span>
+<pre>bool update(int viewportWidth, int viewportHeight);</pre>
+<p class="doc" data-zh="按当前视口尺寸重新计算窗格几何和有效滚动范围。" data-en="Recompute pane geometry and valid scroll ranges for the current viewport size.">按当前视口尺寸重新计算窗格几何和有效滚动范围。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TablePaneLayout-refreshScrollWindows-15" data-search="TablePaneLayout refreshScrollWindows">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablepane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L148</span>
+<pre>bool refreshScrollWindows();</pre>
+<p class="doc" data-zh="仅刷新窗格滚动可见窗口，尽量复用已计算的列分配。" data-en="Refresh pane scroll windows while reusing calculated column allocation where possible.">仅刷新窗格滚动可见窗口，尽量复用已计算的列分配。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TablePaneLayout-columnVisitsInLastUpdate-16" data-search="TablePaneLayout columnVisitsInLastUpdate">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablepane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L151</span>
+<pre>    qsizetype columnVisitsInLastUpdate() const;</pre>
+<p class="doc" data-zh="返回最近布局更新访问列数。" data-en="Return the columns visited in the latest layout update.">返回最近布局更新访问列数。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TablePaneLayout-viewportWidth-17" data-search="TablePaneLayout viewportWidth">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablepane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L153</span>
+<pre>    int viewportWidth() const;</pre>
+<p class="doc" data-zh="返回视口宽度。" data-en="Return the viewport width.">返回视口宽度。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TablePaneLayout-panes-18" data-search="TablePaneLayout panes">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablepane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L155</span>
+<pre>    const QVector&lt;TablePane&gt; &amp;panes() const;</pre>
+<p class="doc" data-zh="返回窗格集合。" data-en="Return the pane collection.">返回窗格集合。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#frozen"><span data-zh="冻结行列 / 多 pane / 多滚动组" data-en="Frozen rows and columns / multiple panes / scroll groups">冻结行列 / 多 pane / 多滚动组</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TablePaneLayout-pane-19" data-search="TablePaneLayout pane">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablepane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L158</span>
+<pre>TablePane pane(TablePane::Type type) const;</pre>
+<p class="doc" data-zh="查询指定列或位置所属窗格的记录、索引或类型；隐藏列或未知列可能没有窗格。" data-en="Resolve a column or position to a pane record, index or type; hidden or unknown columns may have no pane.">查询指定列或位置所属窗格的记录、索引或类型；隐藏列或未知列可能没有窗格。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TablePaneLayout-paneRect-20" data-search="TablePaneLayout paneRect">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablepane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L159</span>
+<pre>    QRect paneRect(TablePane::Type type) const;</pre>
+<p class="doc" data-zh="查询对应项目、单元格、窗格或合并区域的矩形。视图结果为视口坐标；布局策略结果为布局坐标；屏外矩形可超出可见区域。" data-en="Query the item, cell, pane or span rectangle. View results use viewport coordinates; layout policies use layout coordinates. Offscreen rectangles may extend beyond the visible area.">查询对应项目、单元格、窗格或合并区域的矩形。视图结果为视口坐标；布局策略结果为布局坐标；屏外矩形可超出可见区域。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TablePaneLayout-columnViewportX-21" data-search="TablePaneLayout columnViewportX">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablepane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L163</span>
+<pre>int columnViewportX(int logicalIndex) const;</pre>
+<p class="doc" data-zh="返回指定逻辑列在视口中的横坐标（考虑窗格滚动）。" data-en="Return the viewport x coordinate of the logical column, including pane scrolling.">返回指定逻辑列在视口中的横坐标（考虑窗格滚动）。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TablePaneLayout-columnSpacingAfter-22" data-search="TablePaneLayout columnSpacingAfter">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablepane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L165</span>
+<pre>    int columnSpacingAfter(int logicalIndex) const;</pre>
+<p class="doc" data-zh="返回指定列或 section 后的有效间距。" data-en="Return the effective spacing after the specified column or section.">返回指定列或 section 后的有效间距。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TablePaneLayout-leadingSpacingForPane-23" data-search="TablePaneLayout leadingSpacingForPane">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablepane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L167</span>
+<pre>int leadingSpacingForPane(int paneIndex) const;</pre>
+<p class="doc" data-zh="返回指定窗格首端或末端间距。" data-en="Return the leading or trailing spacing of the specified pane.">返回指定窗格首端或末端间距。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TablePaneLayout-trailingSpacingForPane-24" data-search="TablePaneLayout trailingSpacingForPane">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablepane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L168</span>
+<pre>int trailingSpacingForPane(int paneIndex) const;</pre>
+<p class="doc" data-zh="返回指定窗格首端或末端间距。" data-en="Return the leading or trailing spacing of the specified pane.">返回指定窗格首端或末端间距。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TablePaneLayout-paneOfColumn-25" data-search="TablePaneLayout paneOfColumn">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablepane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L170</span>
+<pre>TablePane::Type paneOfColumn(int logicalIndex) const;</pre>
+<p class="doc" data-zh="查询指定列或位置所属窗格的记录、索引或类型；隐藏列或未知列可能没有窗格。" data-en="Resolve a column or position to a pane record, index or type; hidden or unknown columns may have no pane.">查询指定列或位置所属窗格的记录、索引或类型；隐藏列或未知列可能没有窗格。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TablePaneLayout-paneIndexOfColumn-26" data-search="TablePaneLayout paneIndexOfColumn">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablepane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L172</span>
+<pre>int paneIndexOfColumn(int logicalIndex) const;</pre>
+<p class="doc" data-zh="查询指定列或位置所属窗格的记录、索引或类型；隐藏列或未知列可能没有窗格。" data-en="Resolve a column or position to a pane record, index or type; hidden or unknown columns may have no pane.">查询指定列或位置所属窗格的记录、索引或类型；隐藏列或未知列可能没有窗格。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TablePaneLayout-paneAt-27" data-search="TablePaneLayout paneAt">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablepane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L174</span>
+<pre>TablePane paneAt(int paneIndex) const;</pre>
+<p class="doc" data-zh="查询指定列或位置所属窗格的记录、索引或类型；隐藏列或未知列可能没有窗格。" data-en="Resolve a column or position to a pane record, index or type; hidden or unknown columns may have no pane.">查询指定列或位置所属窗格的记录、索引或类型；隐藏列或未知列可能没有窗格。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TablePaneLayout-isFrozenColumn-28" data-search="TablePaneLayout isFrozenColumn">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablepane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L175</span>
+<pre>    bool isFrozenColumn(int logicalIndex) const;</pre>
+<p class="doc" data-zh="判断当前窗格或指定行列是否固定在冻结区域。" data-en="Check whether the pane or specified row/column belongs to a frozen region.">判断当前窗格或指定行列是否固定在冻结区域。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TablePaneLayout-scrollGroupOfColumn-29" data-search="TablePaneLayout scrollGroupOfColumn">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablepane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L179</span>
+<pre>int scrollGroupOfColumn(int logicalIndex) const;</pre>
+<p class="doc" data-zh="返回指定逻辑列所属滚动组，用于独立窗格横向滚动。" data-en="Return the scroll group of a logical column for independent pane scrolling.">返回指定逻辑列所属滚动组，用于独立窗格横向滚动。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TablePaneLayout-primaryPaneIndex-30" data-search="TablePaneLayout primaryPaneIndex">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablepane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L183</span>
+<pre>int primaryPaneIndex() const;</pre>
+<p class="doc" data-zh="返回主滚动窗格索引。" data-en="Return the primary scrolling pane index.">返回主滚动窗格索引。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TablePaneLayout-primaryScrollGroup-31" data-search="TablePaneLayout primaryScrollGroup">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablepane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L188</span>
+<pre>    int primaryScrollGroup() const;</pre>
+<p class="doc" data-zh="返回主滚动组标识。" data-en="Return the primary scroll group identifier.">返回主滚动组标识。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#frozen"><span data-zh="冻结行列 / 多 pane / 多滚动组" data-en="Frozen rows and columns / multiple panes / scroll groups">冻结行列 / 多 pane / 多滚动组</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TablePaneLayout-scrollGroups-32" data-search="TablePaneLayout scrollGroups">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablepane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L191</span>
+<pre>QVector&lt;int&gt; scrollGroups() const;</pre>
+<p class="doc" data-zh="返回所有滚动组标识。" data-en="Return the scroll group identifiers.">返回所有滚动组标识。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TablePaneLayout-groupExtent-33" data-search="TablePaneLayout groupExtent">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablepane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L193</span>
+<pre>    qint64 groupExtent(int scrollGroup) const;</pre>
+<p class="doc" data-zh="返回指定滚动组内容总宽。" data-en="Return the total content width of the specified scroll group.">返回指定滚动组内容总宽。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TablePaneLayout-groupWidth-34" data-search="TablePaneLayout groupWidth">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablepane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L195</span>
+<pre>    int groupWidth(int scrollGroup) const;</pre>
+<p class="doc" data-zh="返回指定滚动组可见窗口宽度。" data-en="Return the visible window width of the specified scroll group.">返回指定滚动组可见窗口宽度。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TablePaneLayout-groupOffset-35" data-search="TablePaneLayout groupOffset">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablepane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L199</span>
+<pre>qint64 groupOffset(int scrollGroup) const;</pre>
+<p class="doc" data-zh="返回指定滚动组偏移量。" data-en="Return the offset of the specified scroll group.">返回指定滚动组偏移量。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TablePaneLayout-setGroupOffset-36" data-search="TablePaneLayout setGroupOffset">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablepane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L203</span>
+<pre>void setGroupOffset(int scrollGroup, qint64 offset);</pre>
+<p class="doc" data-zh="设置指定滚动组偏移量。" data-en="Set the offset of the specified scroll group.">设置指定滚动组偏移量。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TablePaneLayout-maximumGroupOffset-37" data-search="TablePaneLayout maximumGroupOffset">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablepane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L204</span>
+<pre>    qint64 maximumGroupOffset(int scrollGroup) const;</pre>
+<p class="doc" data-zh="返回指定滚动组的最大偏移。" data-en="Return the maximum offset for the specified scroll group.">返回指定滚动组的最大偏移。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TablePaneLayout-frozenLeftWidth-38" data-search="TablePaneLayout frozenLeftWidth">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablepane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L210</span>
+<pre>    int frozenLeftWidth() const;</pre>
+<p class="doc" data-zh="返回左侧冻结窗格占用宽度。" data-en="Return the width occupied by left frozen panes.">返回左侧冻结窗格占用宽度。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TablePaneLayout-frozenRightWidth-39" data-search="TablePaneLayout frozenRightWidth">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablepane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L211</span>
+<pre>    int frozenRightWidth() const;</pre>
+<p class="doc" data-zh="返回右侧冻结窗格占用宽度。" data-en="Return the width occupied by right frozen panes.">返回右侧冻结窗格占用宽度。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TablePaneLayout-scrollableExtent-40" data-search="TablePaneLayout scrollableExtent">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablepane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L215</span>
+<pre>    qint64 scrollableExtent() const;</pre>
+<p class="doc" data-zh="返回可滚动区域内容长度。" data-en="Return the content extent of the scrolling region.">返回可滚动区域内容长度。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TablePaneLayout-scrollableWidth-41" data-search="TablePaneLayout scrollableWidth">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablepane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L217</span>
+<pre>    int scrollableWidth() const;</pre>
+<p class="doc" data-zh="返回可滚动区域窗口宽度。" data-en="Return the window width of the scrolling region.">返回可滚动区域窗口宽度。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TablePaneLayout-maximumOffset-42" data-search="TablePaneLayout maximumOffset">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablepane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L219</span>
+<pre>    qint64 maximumOffset() const;</pre>
+<p class="doc" data-zh="返回有效滚动偏移上限。" data-en="Return the maximum valid scroll offset.">返回有效滚动偏移上限。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TablePaneLayout-visibleScrollableRange-43" data-search="TablePaneLayout visibleScrollableRange">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablepane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L225</span>
+<pre>    VisibleRange visibleScrollableRange() const;</pre>
+<p class="doc" data-zh="返回当前布局可见列、行或滚动窗口范围。" data-en="Return the current visible column, row or scrolling window range.">返回当前布局可见列、行或滚动窗口范围。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TablePaneLayout-columnsForLayout-44" data-search="TablePaneLayout columnsForLayout">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablepane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L228</span>
+<pre>QVector&lt;int&gt; columnsForLayout(int overscan) const;</pre>
+<p class="doc" data-zh="返回需要布局的列集合，包含窗格窗口和预物化范围。" data-en="Return the columns requiring layout, including pane windows and overscan.">返回需要布局的列集合，包含窗格窗口和预物化范围。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+</section>
+<footer class="muted">
+<p><span data-zh="按能力查找配套设置与独立示例；通用接口请沿基类链接查阅，Qt 继承接口请参考 Qt 文档。" data-en="Find related settings and independent examples by capability. Follow base-class links for shared APIs and consult Qt documentation for inherited Qt APIs.">按能力查找配套设置与独立示例；通用接口请沿基类链接查阅，Qt 继承接口请参考 Qt 文档。</span></p>
+</footer>
+</main>
+<script src="../assets/reference.js">
+</script>
+</body>
+</html>

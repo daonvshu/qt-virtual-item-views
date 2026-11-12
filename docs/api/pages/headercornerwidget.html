@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HeaderCornerWidget · VirtualItemViews</title>
+<link rel="stylesheet" href="../assets/reference.css">
+</head>
+<body>
+<header>
+<div class="header-top">
+<a href="../index.html">VirtualItemViews / API</a>
+<div id="language-switch" class="language-switch" role="group" aria-label="Language / 语言" hidden>
+<button type="button" data-language="zh" aria-pressed="true" lang="zh-CN">中文</button>
+<button type="button" data-language="en" aria-pressed="false" lang="en">English</button>
+</div>
+</div>
+<h1>HeaderCornerWidget</h1>
+<p><span data-zh="公开辅助接口与扩展契约" data-en="Public helper interfaces and extension contracts">公开辅助接口与扩展契约</span></p>
+</header>
+<main>
+<nav>
+<a href="../index.html"><span data-zh="能力总览" data-en="Capabilities">能力总览</span></a>
+<a href="../../AGENT_GUIDE.md"><span data-zh="Agent 索引" data-en="Agent guide">Agent 索引</span></a>
+<a href="../../../examples/README.md"><span data-zh="独立示例" data-en="Examples">独立示例</span></a>
+<a href="../../../README.md"><span data-zh="项目首页" data-en="Project home">项目首页</span></a>
+</nav>
+<label for="filter"><span data-zh="搜索本页：能力、API 名称或关键词" data-en="Search this page: capability, API name or keyword">搜索本页：能力、API 名称或关键词</span></label>
+<input id="filter" type="search" placeholder="例如：Popup、setAutoHeight、冻结、branch">
+<p class="muted search-help"><span data-zh="无需网络或服务器。所有内容默认可见；搜索只筛选当前页。完整继承 API 请沿基类链接查阅。" data-en="No network or server required. All content is initially visible; search filters this page only. Follow base-class links for inherited APIs.">无需网络或服务器。所有内容默认可见；搜索只筛选当前页。完整继承 API 请沿基类链接查阅。</span></p>
+<p id="search-status" role="status" aria-live="polite">
+</p>
+<p>
+<a href="../../../include/virtualitemviews/headercornerwidget.h"><span data-zh="公开头文件：include/virtualitemviews/headercornerwidget.h" data-en="Public header: include/virtualitemviews/headercornerwidget.h">公开头文件：include/virtualitemviews/headercornerwidget.h</span></a>
+</p>
+<p class="api-jump">
+<a href="#public-api"><span data-zh="公开函数列表" data-en="Public function index">公开函数列表</span></a>
+</p>
+<h2><span data-zh="能力与配套设置" data-en="Capabilities and related settings">能力与配套设置</span></h2>
+<article id="headers" data-search="horizontalHeader verticalHeader setAdapter setBackgroundColor setSectionBackgroundColor setForegroundColor setFont setTextAlignment setContentPadding setHeaderCornerWidget virtualtableview virtualtreetableview virtualheaderview headerview headerwidgetadapter headersection styledheadersection labelheaderview headercornerwidget">
+<h3><span data-zh="默认表头 / 样式 / section / corner" data-en="Default headers / styles / sections / corner">默认表头 / 样式 / section / corner</span></h3>
+<p>
+<code>horizontalHeader · verticalHeader · setAdapter · setBackgroundColor · setSectionBackgroundColor · setForegroundColor · setFont · setTextAlignment · setContentPadding · setHeaderCornerWidget</code>
+</p>
+<p class="rules"><span data-zh="默认 VirtualHeaderView，样式优先通过 HeaderViewInterface 配置。容器 backgroundColor 改整条底色，sectionBackgroundColor 只改 section，spacingBackgroundColor 改间距；无效 QColor 恢复继承，透明色是显式透明。模型 headerData 的 ForegroundRole/FontRole/TextAlignmentRole 可覆盖默认文字样式。HeaderSection 管结构，StyledHeaderSection 管外观，LabelHeaderSection 管文字；复杂内容换 HeaderWidgetAdapter，无需替换整个表头。默认 corner 跟水平表头，替换 corner 的 QWidget 由 view 接管。" data-en="VirtualHeaderView is the default. Configure appearance through HeaderViewInterface. backgroundColor covers the strip; sectionBackgroundColor covers sections only; spacingBackgroundColor covers gaps. Invalid QColor restores inheritance; transparent is an explicit color. Model headerData ForegroundRole/FontRole/TextAlignmentRole can override text defaults. HeaderSection manages structure, StyledHeaderSection appearance, LabelHeaderSection text. Replace HeaderWidgetAdapter for complex content instead of the entire header. The default corner follows the horizontal header; the view owns a replacement corner widget.">默认 VirtualHeaderView，样式优先通过 HeaderViewInterface 配置。容器 backgroundColor 改整条底色，sectionBackgroundColor 只改 section，spacingBackgroundColor 改间距；无效 QColor 恢复继承，透明色是显式透明。模型 headerData 的 ForegroundRole/FontRole/TextAlignmentRole 可覆盖默认文字样式。HeaderSection 管结构，StyledHeaderSection 管外观，LabelHeaderSection 管文字；复杂内容换 HeaderWidgetAdapter，无需替换整个表头。默认 corner 跟水平表头，替换 corner 的 QWidget 由 view 接管。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../../src/widgets/virtualheaderview.cpp">src/widgets/virtualheaderview.cpp</a> · <a href="../../../src/widgets/headersection.cpp">src/widgets/headersection.cpp</a> · <a href="../../../src/widgets/styledheadersection.cpp">src/widgets/styledheadersection.cpp</a> · <a href="../../../src/widgets/labelheaderview.cpp">src/widgets/labelheaderview.cpp</a> · <a href="../../../src/widgets/headercornerwidget.cpp">src/widgets/headercornerwidget.cpp</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../../headers.md">docs/headers.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（3）" data-en="Independent source examples (3)">独立源码示例（3）</span></summary>
+<ul>
+<li>
+<a href="../../../examples/table_capabilities/19_custom_header/example.cpp">examples/table_capabilities/19_custom_header/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/treetable_capabilities/24_custom_header/example.cpp">examples/treetable_capabilities/24_custom_header/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/table_capabilities/32_colors/example.cpp">examples/table_capabilities/32_colors/example.cpp</a>
+</li>
+</ul>
+</details>
+</article>
+<h2 id="public-api" tabindex="-1"><span data-zh="公开 API、类型与信号" data-en="Public API, types and signals">公开 API、类型与信号</span></h2>
+<section class="function-index" id="function-index" tabindex="-1">
+<h3><span data-zh="公开函数列表" data-en="Public function index">公开函数列表</span></h3>
+<p class="muted"><span data-zh="按声明类型分组；每个重载单独列出，点击签名跳转到说明。信号单独列出；类型和数据成员仍保留在下方。" data-en="Grouped by declaring type. Each overload has its own link to the details. Signals are listed separately; types and data members remain below.">按声明类型分组；每个重载单独列出，点击签名跳转到说明。信号单独列出；类型和数据成员仍保留在下方。</span></p>
+<h4>HeaderCornerWidget</h4>
+<ul>
+<li data-search="HeaderCornerWidget HeaderCornerWidget">
+<a href="#HeaderCornerWidget-HeaderCornerWidget-0">
+<code>explicit HeaderCornerWidget(QWidget *parent = nullptr);</code>
+</a>
+</li>
+</ul>
+</section>
+<h2><span data-zh="函数说明" data-en="Function details">函数说明</span></h2>
+<p class="muted"><span data-zh="按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。" data-en="Read each function for its purpose and related settings. Overloads are listed separately; follow related capabilities to find examples.">按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。</span></p>
+<section>
+<h3 id="HeaderCornerWidget">HeaderCornerWidget</h3>
+<pre>class VIRTUALITEMVIEWS_EXPORT HeaderCornerWidget : public StyledHeaderSection</pre>
+<article tabindex="-1" id="HeaderCornerWidget-HeaderCornerWidget-0" data-search="HeaderCornerWidget HeaderCornerWidget">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headercornerwidget.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L15</span>
+<pre>explicit HeaderCornerWidget(QWidget *parent = nullptr);</pre>
+<p class="doc" data-zh="构造 HeaderCornerWidget；按此重载传入父对象、模型或布局参数。带 parent 的 QObject/QWidget 遵循 Qt 父子生命周期。" data-en="Construct HeaderCornerWidget with the parent, model or layout arguments in this overload. QObject/QWidget parent arguments follow Qt parent-child lifetime rules.">构造 HeaderCornerWidget；按此重载传入父对象、模型或布局参数。带 parent 的 QObject/QWidget 遵循 Qt 父子生命周期。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+</section>
+<footer class="muted">
+<p><span data-zh="按能力查找配套设置与独立示例；通用接口请沿基类链接查阅，Qt 继承接口请参考 Qt 文档。" data-en="Find related settings and independent examples by capability. Follow base-class links for shared APIs and consult Qt documentation for inherited Qt APIs.">按能力查找配套设置与独立示例；通用接口请沿基类链接查阅，Qt 继承接口请参考 Qt 文档。</span></p>
+</footer>
+</main>
+<script src="../assets/reference.js">
+</script>
+</body>
+</html>

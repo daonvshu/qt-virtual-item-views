@@ -1,0 +1,1412 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>公开 API 与能力导航 · VirtualItemViews</title>
+<link rel="stylesheet" href="assets/reference.css">
+</head>
+<body>
+<header>
+<div class="header-top">
+<a href="index.html">VirtualItemViews / API</a>
+<div id="language-switch" class="language-switch" role="group" aria-label="Language / 语言" hidden>
+<button type="button" data-language="zh" aria-pressed="true" lang="zh-CN">中文</button>
+<button type="button" data-language="en" aria-pressed="false" lang="en">English</button>
+</div>
+</div>
+<h1><span data-zh="公开 API 与能力导航" data-en="Public API and capability reference">公开 API 与能力导航</span></h1>
+<p><span data-zh="离线可搜索 · 视图选型 · 配套设置 · 公开声明 · 独立示例" data-en="Offline search · View selection · Related settings · Public declarations · Independent examples">离线可搜索 · 视图选型 · 配套设置 · 公开声明 · 独立示例</span></p>
+</header>
+<main>
+<nav>
+<a href="index.html"><span data-zh="能力总览" data-en="Capabilities">能力总览</span></a>
+<a href="../AGENT_GUIDE.md"><span data-zh="Agent 索引" data-en="Agent guide">Agent 索引</span></a>
+<a href="../../examples/README.md"><span data-zh="独立示例" data-en="Examples">独立示例</span></a>
+<a href="../../README.md"><span data-zh="项目首页" data-en="Project home">项目首页</span></a>
+</nav>
+<label for="filter"><span data-zh="搜索本页：能力、API 名称或关键词" data-en="Search this page: capability, API name or keyword">搜索本页：能力、API 名称或关键词</span></label>
+<input id="filter" type="search" placeholder="例如：Popup、setAutoHeight、冻结、branch">
+<p class="muted search-help"><span data-zh="无需网络或服务器。所有内容默认可见；搜索只筛选当前页。完整继承 API 请沿基类链接查阅。" data-en="No network or server required. All content is initially visible; search filters this page only. Follow base-class links for inherited APIs.">无需网络或服务器。所有内容默认可见；搜索只筛选当前页。完整继承 API 请沿基类链接查阅。</span></p>
+<p id="search-status" role="status" aria-live="polite">
+</p>
+<h2><span data-zh="先选布局，再组合框架能力" data-en="Choose a layout, then combine built-in capabilities">先选布局，再组合框架能力</span></h2>
+<p><span data-zh="业务开始自绘、维护事件过滤器或缓存池之前，先按下方需求查找已有入口。每个视图页同时给出能力约束、配套设置、完整公开声明和可复制的独立章节。" data-en="Before adding custom painting, event filters or widget pools, find the existing entry point below. Each view page includes constraints, related settings, public declarations and independent examples.">业务开始自绘、维护事件过滤器或缓存池之前，先按下方需求查找已有入口。每个视图页同时给出能力约束、配套设置、完整公开声明和可复制的独立章节。</span></p>
+<div class="grid">
+<section class="card" data-search="VirtualItemView 共享内核（抽象基类） QAbstractScrollArea  模型、选择、滚动、复用、状态动画、编辑、拖放、背景边框和自动高度的共同入口。先查这里，再查具体视图。">
+<h3>
+<a href="pages/virtualitemview.html">VirtualItemView</a>
+</h3>
+<strong><span data-zh="共享内核（抽象基类）" data-en="Shared kernel (abstract base)">共享内核（抽象基类）</span></strong>
+<p><span data-zh="模型、选择、滚动、复用、状态动画、编辑、拖放、背景边框和自动高度的共同入口。先查这里，再查具体视图。" data-en="Common model, selection, scrolling, recycling, state animation, editing, drag/drop, background, frame and auto-height APIs. Check this base before the concrete view.">模型、选择、滚动、复用、状态动画、编辑、拖放、背景边框和自动高度的共同入口。先查这里，再查具体视图。</span></p>
+</section>
+<section class="card" data-search="VirtualListView 纵向列表 VirtualItemView list 每个模型项一个 QWidget；支持可变行高、状态范围、冻结行和拖动让位。">
+<h3>
+<a href="pages/virtuallistview.html">VirtualListView</a>
+</h3>
+<strong><span data-zh="纵向列表" data-en="Vertical list">纵向列表</span></strong>
+<p><span data-zh="每个模型项一个 QWidget；支持可变行高、状态范围、冻结行和拖动让位。" data-en="One QWidget per model item; variable row heights, state extents, frozen rows and animated drag reordering.">每个模型项一个 QWidget；支持可变行高、状态范围、冻结行和拖动让位。</span></p>
+</section>
+<section class="card" data-search="VirtualTableView 多列表格 VirtualItemView table 列宽、表头、冻结区域、合并和排序；可选择一行一个控件或一个单元格一个控件。">
+<h3>
+<a href="pages/virtualtableview.html">VirtualTableView</a>
+</h3>
+<strong><span data-zh="多列表格" data-en="Multi-column table">多列表格</span></strong>
+<p><span data-zh="列宽、表头、冻结区域、合并和排序；可选择一行一个控件或一个单元格一个控件。" data-en="Column sizing, headers, frozen panes, spans and sorting; materialize one widget per row or one per cell.">列宽、表头、冻结区域、合并和排序；可选择一行一个控件或一个单元格一个控件。</span></p>
+</section>
+<section class="card" data-search="VirtualTreeView 单列树 VirtualItemView tree 真实节点展开动画、缩进、branch、层级拖放；不支持冻结行。">
+<h3>
+<a href="pages/virtualtreeview.html">VirtualTreeView</a>
+</h3>
+<strong><span data-zh="单列树" data-en="Single-column tree">单列树</span></strong>
+<p><span data-zh="真实节点展开动画、缩进、branch、层级拖放；不支持冻结行。" data-en="Live expansion animation, indentation, branch indicators and hierarchical drops. Frozen rows are not supported.">真实节点展开动画、缩进、branch、层级拖放；不支持冻结行。</span></p>
+</section>
+<section class="card" data-search="VirtualTreeTableView 多列树表 VirtualTableView treetable 组合表格列布局与树节点展开；支持冻结列，不支持冻结行。展开后的视图行号不是 QModelIndex::row()。">
+<h3>
+<a href="pages/virtualtreetableview.html">VirtualTreeTableView</a>
+</h3>
+<strong><span data-zh="多列树表" data-en="Multi-column tree table">多列树表</span></strong>
+<p><span data-zh="组合表格列布局与树节点展开；支持冻结列，不支持冻结行。展开后的视图行号不是 QModelIndex::row()。" data-en="Table column layout combined with tree expansion. Supports frozen columns, not frozen rows. Flattened view rows differ from QModelIndex::row().">组合表格列布局与树节点展开；支持冻结列，不支持冻结行。展开后的视图行号不是 QModelIndex::row()。</span></p>
+</section>
+<section class="card" data-search="VirtualFlowTableView 等宽响应式网格 VirtualItemView flow 模型行是项目；显示列由视口宽度决定。统一格高或宽高比，大量等尺寸卡片优先选择此视图。">
+<h3>
+<a href="pages/virtualflowtableview.html">VirtualFlowTableView</a>
+</h3>
+<strong><span data-zh="等宽响应式网格" data-en="Equal-width responsive grid">等宽响应式网格</span></strong>
+<p><span data-zh="模型行是项目；显示列由视口宽度决定。统一格高或宽高比，大量等尺寸卡片优先选择此视图。" data-en="Model rows identify items; viewport width determines display columns. Fixed or aspect-ratio heights. Prefer this view for large uniform grids.">模型行是项目；显示列由视口宽度决定。统一格高或宽高比，大量等尺寸卡片优先选择此视图。</span></p>
+</section>
+<section class="card" data-search="VirtualMasonryView 独立高度瀑布流 VirtualItemView masonry 按最短列排布，项目高度独立；适用于图片卡片。固定高度或统一比例且项目很多时优先考虑 Flow。">
+<h3>
+<a href="pages/virtualmasonryview.html">VirtualMasonryView</a>
+</h3>
+<strong><span data-zh="独立高度瀑布流" data-en="Independent-height masonry">独立高度瀑布流</span></strong>
+<p><span data-zh="按最短列排布，项目高度独立；适用于图片卡片。固定高度或统一比例且项目很多时优先考虑 Flow。" data-en="Shortest-column placement with independent item heights, suitable for image cards. Prefer Flow for large fixed-height or uniform-ratio grids.">按最短列排布，项目高度独立；适用于图片卡片。固定高度或统一比例且项目很多时优先考虑 Flow。</span></p>
+</section>
+<section class="card" data-search="VirtualWrapView 不等宽换行 VirtualItemView wrap 项目宽度独立、统一高度、按模型顺序换行；虚拟化显示，初始布局与宽度变化重排为 O(N)。">
+<h3>
+<a href="pages/virtualwrapview.html">VirtualWrapView</a>
+</h3>
+<strong><span data-zh="不等宽换行" data-en="Variable-width wrapping">不等宽换行</span></strong>
+<p><span data-zh="项目宽度独立、统一高度、按模型顺序换行；虚拟化显示，初始布局与宽度变化重排为 O(N)。" data-en="Independent item widths, uniform height, wrapping in model order. Virtualized display; initial layout and width reflow cost O(N).">项目宽度独立、统一高度、按模型顺序换行；虚拟化显示，初始布局与宽度变化重排为 O(N)。</span></p>
+</section>
+<section class="card" data-search="WrapWidget 少量真实控件的换行容器 QScrollArea wrap 直接 addWidget，不需要模型或 adapter，不复用。默认自动高度开启，配合最大高度内部滚动。">
+<h3>
+<a href="pages/wrapwidget.html">WrapWidget</a>
+</h3>
+<strong><span data-zh="少量真实控件的换行容器" data-en="Wrapping host for a few real widgets">少量真实控件的换行容器</span></strong>
+<p><span data-zh="直接 addWidget，不需要模型或 adapter，不复用。默认自动高度开启，配合最大高度内部滚动。" data-en="Use addWidget without a model or adapter. No recycling. Auto height is enabled by default; a maximum height enables internal scrolling.">直接 addWidget，不需要模型或 adapter，不复用。默认自动高度开启，配合最大高度内部滚动。</span></p>
+</section>
+<section class="card" data-search="WrapLayout 可直接使用的换行布局 QLayout wrap 实现 heightForWidth、统一高度和行对齐；自身没有滚动条，限高滚动使用 WrapWidget。">
+<h3>
+<a href="pages/wraplayout.html">WrapLayout</a>
+</h3>
+<strong><span data-zh="可直接使用的换行布局" data-en="Standalone wrapping layout">可直接使用的换行布局</span></strong>
+<p><span data-zh="实现 heightForWidth、统一高度和行对齐；自身没有滚动条，限高滚动使用 WrapWidget。" data-en="Provides heightForWidth, uniform height and line alignment. No scroll bars; use WrapWidget for bounded scrolling.">实现 heightForWidth、统一高度和行对齐；自身没有滚动条，限高滚动使用 WrapWidget。</span></p>
+</section>
+<section class="card" data-search="VirtualHeaderView 可复用 section 控件的表头 QWidget + HeaderViewInterface  表格默认表头。常规样式经 horizontalHeader()/verticalHeader() 配置，自定义内容换 HeaderWidgetAdapter。">
+<h3>
+<a href="pages/virtualheaderview.html">VirtualHeaderView</a>
+</h3>
+<strong><span data-zh="可复用 section 控件的表头" data-en="Header with reusable section widgets">可复用 section 控件的表头</span></strong>
+<p><span data-zh="表格默认表头。常规样式经 horizontalHeader()/verticalHeader() 配置，自定义内容换 HeaderWidgetAdapter。" data-en="The default table header. Configure standard appearance through horizontalHeader()/verticalHeader(); replace HeaderWidgetAdapter for custom content.">表格默认表头。常规样式经 horizontalHeader()/verticalHeader() 配置，自定义内容换 HeaderWidgetAdapter。</span></p>
+</section>
+</div>
+<h2><span data-zh="常见组合与能力边界" data-en="Common combinations and capability limits">常见组合与能力边界</span></h2>
+<div class="table-scroll">
+<table>
+<thead>
+<tr>
+<th><span data-zh="需求" data-en="Requirement">需求</span></th>
+<th><span data-zh="组合 / 边界" data-en="Combination / limits">组合 / 边界</span></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><span data-zh="默认交互" data-en="Default interaction">默认交互</span></td>
+<td><span data-zh="ExtendedSelection + SelectRows；内置 hover/selected 开启；180ms OutCubic。改物化模式不会改选择范围。" data-en="ExtendedSelection + SelectRows; built-in hover/selection enabled; 180ms OutCubic. Materialization mode does not change selection scope.">ExtendedSelection + SelectRows；内置 hover/selected 开启；180ms OutCubic。改物化模式不会改选择范围。</span></td>
+</tr>
+<tr>
+<td><span data-zh="输入或 Popup" data-en="Inputs or Popups">输入或 Popup</span></td>
+<td><span data-zh="优先 ItemEditorAdapter + edit()。不要默认增加 stack layout、全局焦点监听、每行常驻 editor。" data-en="Prefer ItemEditorAdapter + edit(). Avoid unnecessary stacks, global focus filters and permanent per-row editors.">优先 ItemEditorAdapter + edit()。不要默认增加 stack layout、全局焦点监听、每行常驻 editor。</span></td>
+</tr>
+<tr>
+<td><span data-zh="整表高度" data-en="Whole-view height">整表高度</span></td>
+<td><span data-zh="autoHeight 独立于 item height。用 setAutoHeightMaximumHeight 限高，0 表示完整内容，父布局不足由业务处理。" data-en="autoHeight is separate from item height. Limit it with setAutoHeightMaximumHeight; 0 fits all content. The application handles insufficient parent space.">autoHeight 独立于 item height。用 setAutoHeightMaximumHeight 限高，0 表示完整内容，父布局不足由业务处理。</span></td>
+</tr>
+<tr>
+<td><span data-zh="冻结" data-en="Frozen areas">冻结</span></td>
+<td><span data-zh="List/Table 可冻结行；Table/TreeTable 可冻结列；Tree/TreeTable 无冻结行。Flow/Masonry/Wrap 不提供行 pane。" data-en="List/Table support frozen rows; Table/TreeTable support frozen columns. Tree/TreeTable have no frozen rows. Flow/Masonry/Wrap have no row panes.">List/Table 可冻结行；Table/TreeTable 可冻结列；Tree/TreeTable 无冻结行。Flow/Masonry/Wrap 不提供行 pane。</span></td>
+</tr>
+<tr>
+<td><span data-zh="尺寸" data-en="Sizing">尺寸</span></td>
+<td><span data-zh="List/Tree/Table 用内核或表格行高；Flow/Masonry/Wrap 用专用尺寸 API，不能照抄 Variable+autoMeasure。" data-en="List/Tree/Table use kernel or table row heights. Flow/Masonry/Wrap use dedicated sizing APIs, not Variable+autoMeasure.">List/Tree/Table 用内核或表格行高；Flow/Masonry/Wrap 用专用尺寸 API，不能照抄 Variable+autoMeasure。</span></td>
+</tr>
+<tr>
+<td><span data-zh="样式" data-en="Appearance">样式</span></td>
+<td><span data-zh="外框、项底色、hover/select、间距、表头容器、section、corner 各有独立职责；透明业务控件才能露出框架底层状态。" data-en="Frame, item fill, hover/selection, gaps, header containers, sections and corner have separate roles. Transparent business widgets expose the framework state layers.">外框、项底色、hover/select、间距、表头容器、section、corner 各有独立职责；透明业务控件才能露出框架底层状态。</span></td>
+</tr>
+<tr>
+<td><span data-zh="少量标签 / 大量项目" data-en="A few tags / large item sets">少量标签 / 大量项目</span></td>
+<td><span data-zh="少量真实控件用 WrapWidget/WrapLayout；模型复用用 VirtualWrapView；等宽网格用 Flow；不同高度最短列用 Masonry。" data-en="Use WrapWidget/WrapLayout for a few real widgets, VirtualWrapView for recycled model items, Flow for equal-width grids and Masonry for independent heights.">少量真实控件用 WrapWidget/WrapLayout；模型复用用 VirtualWrapView；等宽网格用 Flow；不同高度最短列用 Masonry。</span></td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2><span data-zh="按功能查 API 与实现" data-en="Find APIs and implementation by capability">按功能查 API 与实现</span></h2>
+<article id="model" data-search="setModel model setRootIndex rootIndex virtualitemview virtuallistview virtualtableview virtualtreeview virtualtreetableview virtualflowtableview virtualmasonryview virtualwrapview">
+<h3><span data-zh="模型 / 根节点 / 代理模型 / 更新通知" data-en="Models / roots / proxies / update notifications">模型 / 根节点 / 代理模型 / 更新通知</span></h3>
+<p>
+<code>setModel · model · setRootIndex · rootIndex</code>
+</p>
+<p class="rules"><span data-zh="使用 QAbstractItemModel 与正常的 dataChanged、begin/endInsertRows、removeRows、moveRows、layoutChanged/reset 通知驱动更新；视图不持有业务数据。简单模型直接填充 QStandardItemModel。代理模型索引属于代理，不可把源模型索引直接传入视图；setRootIndex 显示其子项，Table 没有该入口。切换模型后重新核对 root 和 selectionModel。" data-en="Use QAbstractItemModel and standard dataChanged, begin/endInsertRows, removal, moveRows, layoutChanged and reset notifications. The view does not store business data. Populate QStandardItemModel directly for simple data. Proxy indexes belong to the proxy: do not pass source indexes to its view. setRootIndex displays children of that index; plain Table has no such entry point. Recheck root and selectionModel after replacing the model.">使用 QAbstractItemModel 与正常的 dataChanged、begin/endInsertRows、removeRows、moveRows、layoutChanged/reset 通知驱动更新；视图不持有业务数据。简单模型直接填充 QStandardItemModel。代理模型索引属于代理，不可把源模型索引直接传入视图；setRootIndex 显示其子项，Table 没有该入口。切换模型后重新核对 root 和 selectionModel。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../src/core/virtualitemview.cpp">src/core/virtualitemview.cpp</a> · <a href="../../src/widgets/virtuallistview.cpp">src/widgets/virtuallistview.cpp</a> · <a href="../../src/widgets/virtualtreeview.cpp">src/widgets/virtualtreeview.cpp</a> · <a href="../../src/widgets/virtualtreetableview.cpp">src/widgets/virtualtreetableview.cpp</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../models.md">docs/models.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（10）" data-en="Independent source examples (10)">独立源码示例（10）</span></summary>
+<ul>
+<li>
+<a href="../../examples/flow_capabilities/06_model_root/example.cpp">examples/flow_capabilities/06_model_root/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/list_capabilities/05_model_updates/example.cpp">examples/list_capabilities/05_model_updates/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/masonry_capabilities/09_model_root/example.cpp">examples/masonry_capabilities/09_model_root/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/table_capabilities/05_model_updates/example.cpp">examples/table_capabilities/05_model_updates/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/tree_capabilities/05_model_updates/example.cpp">examples/tree_capabilities/05_model_updates/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/treetable_capabilities/06_model_updates/example.cpp">examples/treetable_capabilities/06_model_updates/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/wrap_capabilities/05_model_root/example.cpp">examples/wrap_capabilities/05_model_root/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/tree_capabilities/08_root_index/example.cpp">examples/tree_capabilities/08_root_index/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/treetable_capabilities/09_root_index/example.cpp">examples/treetable_capabilities/09_root_index/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/tree_capabilities/21_sorting_filtering/example.cpp">examples/tree_capabilities/21_sorting_filtering/example.cpp</a>
+</li>
+</ul>
+</details>
+</article>
+<article id="adapter" data-search="setAdapter setTableAdapter setCellAdapter widgetType createWidget bindWidget unbindWidget estimatedSize visualStateChanged virtualitemview widgetadapter tablewidgetadapter widgetrecycler">
+<h3><span data-zh="控件复用 / 多控件类型 / 异步清理" data-en="Widget recycling / widget types / async cleanup">控件复用 / 多控件类型 / 异步清理</span></h3>
+<p>
+<code>setAdapter · setTableAdapter · setCellAdapter · widgetType · createWidget · bindWidget · unbindWidget · estimatedSize · visualStateChanged</code>
+</p>
+<p class="rules"><span data-zh="先实现 adapter，框架负责创建、复用和回收。createWidget 中连接一次信号；bindWidget 必须完整覆盖旧显示状态，事件中使用当前绑定索引。unbindWidget 停止旧索引的定时器、订阅、动画和异步图片请求；异步回调核对持久索引或任务代次。按 widgetType 分池，不要按滚动自行销毁重建整表。takeOwnership 默认 false，要保证 adapter 生命周期覆盖视图使用期间。" data-en="Implement an adapter; the framework creates, reuses and recycles widgets. Connect signals once in createWidget. bindWidget must replace all old display state; event handlers must use the current binding. unbindWidget stops timers, subscriptions, animations and image requests tied to the old index. Guard async callbacks with persistent identity or a request generation. Pools are classified by widgetType. Do not rebuild the table on scroll. takeOwnership defaults to false; keep the adapter alive while the view uses it.">先实现 adapter，框架负责创建、复用和回收。createWidget 中连接一次信号；bindWidget 必须完整覆盖旧显示状态，事件中使用当前绑定索引。unbindWidget 停止旧索引的定时器、订阅、动画和异步图片请求；异步回调核对持久索引或任务代次。按 widgetType 分池，不要按滚动自行销毁重建整表。takeOwnership 默认 false，要保证 adapter 生命周期覆盖视图使用期间。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../src/recycler/widgetrecycler.cpp">src/recycler/widgetrecycler.cpp</a> · <a href="../../src/core/virtualitemview.cpp">src/core/virtualitemview.cpp</a> · <a href="../../src/widgets/virtualtableview.cpp">src/widgets/virtualtableview.cpp</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../getting-started.md">docs/getting-started.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（5）" data-en="Independent source examples (5)">独立源码示例（5）</span></summary>
+<ul>
+<li>
+<a href="../../examples/list_capabilities/03_widget_types/example.cpp">examples/list_capabilities/03_widget_types/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/table_capabilities/03_widget_types/example.cpp">examples/table_capabilities/03_widget_types/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/tree_capabilities/03_widget_types/example.cpp">examples/tree_capabilities/03_widget_types/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/treetable_capabilities/04_widget_types/example.cpp">examples/treetable_capabilities/04_widget_types/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/list_capabilities/02_row_widgets/example.cpp">examples/list_capabilities/02_row_widgets/example.cpp</a>
+</li>
+</ul>
+</details>
+</article>
+<article id="binding" data-search="setItemDataRole ItemBindingContext indentationWidth branchWidth virtualitemview types widgetadapter tablewidgetadapter itemeditoradapter">
+<h3><span data-zh="整行业务 payload / 深度 / 列 / branch 上下文" data-en="Row payload / depth / column / branch context">整行业务 payload / 深度 / 列 / branch 上下文</span></h3>
+<p>
+<code>setItemDataRole · ItemBindingContext · indentationWidth · branchWidth</code>
+</p>
+<p class="rules"><span data-zh="ItemBindingContext 提供 index、rowData、logicalColumn、depth；cell 的整行业务数据从列 0 读取。负的 itemDataRole 禁用 payload 读取。树的 indentationWidth 是祖先缩进，branchWidth 是当前节点 branch 格占位，不是图标宽度，均为未裁剪的逻辑像素；TreeTable 仅逻辑列 0 有这两个宽度。" data-en="ItemBindingContext provides index, rowData, logicalColumn and depth. Cells read the row payload from column 0. A negative itemDataRole disables payload reads. For trees, indentationWidth is ancestor indentation and branchWidth is the current branch-cell reservation, not icon width. Both are unclipped logical pixels. TreeTable supplies these widths only for logical column 0.">ItemBindingContext 提供 index、rowData、logicalColumn、depth；cell 的整行业务数据从列 0 读取。负的 itemDataRole 禁用 payload 读取。树的 indentationWidth 是祖先缩进，branchWidth 是当前节点 branch 格占位，不是图标宽度，均为未裁剪的逻辑像素；TreeTable 仅逻辑列 0 有这两个宽度。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../src/core/virtualitemview.cpp">src/core/virtualitemview.cpp</a> · <a href="../../src/widgets/virtualtreeview.cpp">src/widgets/virtualtreeview.cpp</a> · <a href="../../src/widgets/virtualtreetableview.cpp">src/widgets/virtualtreetableview.cpp</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../interaction.md">docs/interaction.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（4）" data-en="Independent source examples (4)">独立源码示例（4）</span></summary>
+<ul>
+<li>
+<a href="../../examples/list_capabilities/04_binding_context/example.cpp">examples/list_capabilities/04_binding_context/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/table_capabilities/04_binding_context/example.cpp">examples/table_capabilities/04_binding_context/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/tree_capabilities/04_binding_context/example.cpp">examples/tree_capabilities/04_binding_context/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/treetable_capabilities/05_binding_context/example.cpp">examples/treetable_capabilities/05_binding_context/example.cpp</a>
+</li>
+</ul>
+</details>
+</article>
+<article id="materialization" data-search="setMaterializationMode setTableAdapter setCellAdapter layoutRowWidget estimatedSize cellWidget materializedCellCount virtualtableview virtualtreetableview tablewidgetadapter">
+<h3><span data-zh="RowWidgets / CellWidgets / 物化成本" data-en="RowWidgets / CellWidgets / materialization cost">RowWidgets / CellWidgets / 物化成本</span></h3>
+<p>
+<code>setMaterializationMode · setTableAdapter · setCellAdapter · layoutRowWidget · estimatedSize · cellWidget · materializedCellCount</code>
+</p>
+<p class="rules"><span data-zh="RowWidgets 配 TableWidgetAdapter，通过 layoutRowWidget/TableRowLayoutContext 布置行内列控件；使用 ColumnHost 子控件时框架自动定位，可省略布局回调。CellWidgets 配 CellWidgetAdapter，由框架定位每个 cell。行模式不能只传普通 WidgetAdapter。物化模式与 SelectRows/SelectItems 是独立维度，整行高亮不要求整行物化。CellWidgets 的 QWidget 数随可见行数×可见列数增长；先衡量控件数量和 adapter 工作量再考虑定制布局。" data-en="RowWidgets uses TableWidgetAdapter with layoutRowWidget/TableRowLayoutContext. ColumnHost children are positioned automatically, so that hook can be omitted. CellWidgets uses CellWidgetAdapter and framework cell geometry. A plain WidgetAdapter is insufficient for table rows. Materialization and SelectRows/SelectItems are independent; row highlighting does not require row widgets. Cell widget counts grow with visible rows times visible columns. Measure widget counts and adapter work before replacing layout behavior.">RowWidgets 配 TableWidgetAdapter，通过 layoutRowWidget/TableRowLayoutContext 布置行内列控件；使用 ColumnHost 子控件时框架自动定位，可省略布局回调。CellWidgets 配 CellWidgetAdapter，由框架定位每个 cell。行模式不能只传普通 WidgetAdapter。物化模式与 SelectRows/SelectItems 是独立维度，整行高亮不要求整行物化。CellWidgets 的 QWidget 数随可见行数×可见列数增长；先衡量控件数量和 adapter 工作量再考虑定制布局。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../src/widgets/virtualtableview.cpp">src/widgets/virtualtableview.cpp</a> · <a href="../../src/widgets/columnhost.cpp">src/widgets/columnhost.cpp</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../table.md">docs/table.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（4）" data-en="Independent source examples (4)">独立源码示例（4）</span></summary>
+<ul>
+<li>
+<a href="../../examples/table_capabilities/01_row_widgets/example.cpp">examples/table_capabilities/01_row_widgets/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/table_capabilities/02_cell_widgets/example.cpp">examples/table_capabilities/02_cell_widgets/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/treetable_capabilities/02_row_widgets/example.cpp">examples/treetable_capabilities/02_row_widgets/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/treetable_capabilities/03_cell_widgets/example.cpp">examples/treetable_capabilities/03_cell_widgets/example.cpp</a>
+</li>
+</ul>
+</details>
+</article>
+<article id="height" data-search="setItemHeightMode setUniformItemHeight setEstimatedItemHeight setAutoMeasureItemHeight setRowSizePolicy setRowHeight clearRowHeight virtualitemview virtuallistview virtualtreeview virtualtableview virtualtreetableview">
+<h3><span data-zh="动态行高 / 测量 / 显式覆盖" data-en="Dynamic row heights / measurement / explicit overrides">动态行高 / 测量 / 显式覆盖</span></h3>
+<p>
+<code>setItemHeightMode · setUniformItemHeight · setEstimatedItemHeight · setAutoMeasureItemHeight · setRowSizePolicy · setRowHeight · clearRowHeight</code>
+</p>
+<p class="rules"><span data-zh="Uniform 统一高度；Uniform 高度为 0 且开启测量时按首个物化项适配。Variable 使用估值并在物化后测量，不能为了 auto height 预创建全部项目。Table 的显式 setRowHeight 默认优先于测量，拖动行高也会形成显式值；恢复动态行为用 clearRowHeight。列宽变化会影响换行高度，选择合适 RowSizePolicy。Flow/Masonry/Wrap 使用各自专用尺寸 API，不可套用内核行高配置。" data-en="Uniform shares one height; height 0 with measurement enabled fits the first materialized item. Variable starts from estimates and measures materialized widgets. Do not create all items to compute auto height. Table setRowHeight overrides measurement by default; dragging a row edge also creates an explicit value. Use clearRowHeight to restore dynamic sizing. Column widths affect wrapping; choose the appropriate RowSizePolicy. Flow/Masonry/Wrap use dedicated size APIs, not kernel row-height settings.">Uniform 统一高度；Uniform 高度为 0 且开启测量时按首个物化项适配。Variable 使用估值并在物化后测量，不能为了 auto height 预创建全部项目。Table 的显式 setRowHeight 默认优先于测量，拖动行高也会形成显式值；恢复动态行为用 clearRowHeight。列宽变化会影响换行高度，选择合适 RowSizePolicy。Flow/Masonry/Wrap 使用各自专用尺寸 API，不可套用内核行高配置。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../src/core/virtualitemview.cpp">src/core/virtualitemview.cpp</a> · <a href="../../src/widgets/virtualtableview.cpp">src/widgets/virtualtableview.cpp</a> · <a href="../../src/index/sizeindex.cpp">src/index/sizeindex.cpp</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../auto-height.md">docs/auto-height.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（4）" data-en="Independent source examples (4)">独立源码示例（4）</span></summary>
+<ul>
+<li>
+<a href="../../examples/list_capabilities/06_item_heights/example.cpp">examples/list_capabilities/06_item_heights/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/tree_capabilities/06_item_heights/example.cpp">examples/tree_capabilities/06_item_heights/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/table_capabilities/06_row_heights/example.cpp">examples/table_capabilities/06_row_heights/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/treetable_capabilities/07_row_heights/example.cpp">examples/treetable_capabilities/07_row_heights/example.cpp</a>
+</li>
+</ul>
+</details>
+</article>
+<article id="auto-height" data-search="setAutoHeightEnabled setAutoHeightMaximumHeight virtualitemview wrapwidget">
+<h3><span data-zh="自适应高度 / 嵌套滚动 / 最大高度" data-en="Auto height / nested scrolling / height limits">自适应高度 / 嵌套滚动 / 最大高度</span></h3>
+<p>
+<code>setAutoHeightEnabled · setAutoHeightMaximumHeight</code>
+</p>
+<p class="rules"><span data-zh="虚拟视图默认关闭，WrapWidget 默认开启。开启后内部 setFixedHeight，垂直 QSizePolicy::Fixed；上限 0 表示不限，不受父布局可用高度压缩。父容器放不下由业务安排外层滚动。开启时用 setAutoHeightMaximumHeight，不与 QWidget 的 setFixedHeight/setMaximumHeight 混用；关闭恢复原约束。高度包括内容、间距、适用半间距、表头和实际占位边框/横向滚动条；分割线不额外占高。没有内部滚动范围时滚轮交给外层，表头也同样处理。" data-en="Disabled by default on virtual views, enabled on WrapWidget. Uses setFixedHeight and vertical QSizePolicy::Fixed. Maximum 0 is unlimited; the parent layout does not compress the computed height. The application must arrange outer scrolling if space is insufficient. Use setAutoHeightMaximumHeight while enabled, not QWidget setFixedHeight/setMaximumHeight. Disabling restores prior constraints. Height includes content, gaps, applicable half-gaps, headers, occupied frame edges and horizontal scroll bars; grid lines add no height. With no internal scroll range, wheel input propagates outward, including over headers.">虚拟视图默认关闭，WrapWidget 默认开启。开启后内部 setFixedHeight，垂直 QSizePolicy::Fixed；上限 0 表示不限，不受父布局可用高度压缩。父容器放不下由业务安排外层滚动。开启时用 setAutoHeightMaximumHeight，不与 QWidget 的 setFixedHeight/setMaximumHeight 混用；关闭恢复原约束。高度包括内容、间距、适用半间距、表头和实际占位边框/横向滚动条；分割线不额外占高。没有内部滚动范围时滚轮交给外层，表头也同样处理。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../src/core/virtualitemview.cpp">src/core/virtualitemview.cpp</a> · <a href="../../src/widgets/wrapwidget.cpp">src/widgets/wrapwidget.cpp</a> · <a href="../../src/core/wheeleventforwarding_p.h">src/core/wheeleventforwarding_p.h</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../auto-height.md">docs/auto-height.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（8）" data-en="Independent source examples (8)">独立源码示例（8）</span></summary>
+<ul>
+<li>
+<a href="../../examples/flow_capabilities/11_auto_height/example.cpp">examples/flow_capabilities/11_auto_height/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/list_capabilities/21_auto_height/example.cpp">examples/list_capabilities/21_auto_height/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/masonry_capabilities/14_auto_height/example.cpp">examples/masonry_capabilities/14_auto_height/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/table_capabilities/31_auto_height/example.cpp">examples/table_capabilities/31_auto_height/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/tree_capabilities/27_auto_height/example.cpp">examples/tree_capabilities/27_auto_height/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/treetable_capabilities/36_auto_height/example.cpp">examples/treetable_capabilities/36_auto_height/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/wrap_capabilities/08_auto_height/example.cpp">examples/wrap_capabilities/08_auto_height/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/wrap_capabilities/10_wrap_widget/example.cpp">examples/wrap_capabilities/10_wrap_widget/example.cpp</a>
+</li>
+</ul>
+</details>
+</article>
+<article id="selection" data-search="setSelectionMode setSelectionBehavior setSelectionModel setCurrentIndex currentIndex selectionModel setHorizontalHeaderSelectionEnabled setVerticalHeaderSelectionEnabled virtualitemview virtualtableview virtualtreetableview">
+<h3><span data-zh="选择 / 多选 / 当前项 / 表头选择" data-en="Selection / multiple selection / current item / header selection">选择 / 多选 / 当前项 / 表头选择</span></h3>
+<p>
+<code>setSelectionMode · setSelectionBehavior · setSelectionModel · setCurrentIndex · currentIndex · selectionModel · setHorizontalHeaderSelectionEnabled · setVerticalHeaderSelectionEnabled</code>
+</p>
+<p class="rules"><span data-zh="默认 ExtendedSelection + SelectRows。SelectionMode 控制用户选择手势，程序批量选择通过 QItemSelectionModel::select(QItemSelection, flags)，不要循环 setCurrentIndex 代替范围选择。ExtendedSelection 使用 Ctrl/Shift。SelectRows 的 hover/selected 整行，SelectItems 按 cell，和物化模式无关。当前项不等于所有选中项；屏外选择保留在 selectionModel，widgetForIndex 可为空。默认行表头点击选行开启、列表头点击选列关闭；列选择不会把所有行号当作整行已选中。" data-en="Defaults: ExtendedSelection + SelectRows. SelectionMode controls user gestures. Select programmatic ranges with QItemSelectionModel::select(QItemSelection, flags), not repeated setCurrentIndex. ExtendedSelection uses Ctrl/Shift. SelectRows highlights a row; SelectItems highlights a cell, independently of materialization. The current item is not the whole selection. Offscreen selection remains in selectionModel even when widgetForIndex is null. Row-header selection defaults on; column-header selection defaults off. Selecting a column does not mark every row header as a fully selected row.">默认 ExtendedSelection + SelectRows。SelectionMode 控制用户选择手势，程序批量选择通过 QItemSelectionModel::select(QItemSelection, flags)，不要循环 setCurrentIndex 代替范围选择。ExtendedSelection 使用 Ctrl/Shift。SelectRows 的 hover/selected 整行，SelectItems 按 cell，和物化模式无关。当前项不等于所有选中项；屏外选择保留在 selectionModel，widgetForIndex 可为空。默认行表头点击选行开启、列表头点击选列关闭；列选择不会把所有行号当作整行已选中。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../src/core/virtualitemview.cpp">src/core/virtualitemview.cpp</a> · <a href="../../src/core/rowselection_p.h">src/core/rowselection_p.h</a> · <a href="../../src/core/columnselectioncache_p.h">src/core/columnselectioncache_p.h</a> · <a href="../../src/widgets/virtualtableview.cpp">src/widgets/virtualtableview.cpp</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../interaction.md">docs/interaction.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（3）" data-en="Independent source examples (3)">独立源码示例（3）</span></summary>
+<ul>
+<li>
+<a href="../../examples/list_capabilities/10_selection/example.cpp">examples/list_capabilities/10_selection/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/table_capabilities/12_selection/example.cpp">examples/table_capabilities/12_selection/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/treetable_capabilities/17_selection/example.cpp">examples/treetable_capabilities/17_selection/example.cpp</a>
+</li>
+</ul>
+</details>
+</article>
+<article id="states" data-search="visualState setVisualStateBackgroundVisible setHoverBackgroundColor setSelectedBackgroundColor setVisualStateAnimationDuration setVisualStateAnimationEasingCurve virtualitemview virtuallistview virtualtableview virtualtreeview virtualtreetableview virtualflowtableview virtualmasonryview virtualwrapview">
+<h3><span data-zh="hover / selected 默认绘制和动画" data-en="Built-in hover / selection painting and animation">hover / selected 默认绘制和动画</span></h3>
+<p>
+<code>visualState · setVisualStateBackgroundVisible · setHoverBackgroundColor · setSelectedBackgroundColor · setVisualStateAnimationDuration · setVisualStateAnimationEasingCurve</code>
+</p>
+<p class="rules"><span data-zh="内置状态背景默认开启，动画默认 180ms OutCubic；业务控件保持透明并在 visualStateChanged 中更新按钮/复选框的显示即可。除非完全自定义外观，不要自己维护 hoveredIndex、动画或重画默认背景。原生拖动期间框架暂停普通 hover，结束后重新计算；不改变业务勾选数据。Flow/Masonry/Wrap 的状态圆角入口是 setStateBackgroundCornerRadius，List/Tree/Table 是 setVisualStateCornerRadius。" data-en="State backgrounds default on, with 180ms OutCubic animation. Keep business widgets transparent and update buttons/checkbox visibility in visualStateChanged. Custom hover tracking, animation and default-background painting are unnecessary unless replacing the appearance entirely. Native drag suspends ordinary hover and recalculates it afterward without changing business checkbox data. Flow/Masonry/Wrap use setStateBackgroundCornerRadius; List/Tree/Table use setVisualStateCornerRadius.">内置状态背景默认开启，动画默认 180ms OutCubic；业务控件保持透明并在 visualStateChanged 中更新按钮/复选框的显示即可。除非完全自定义外观，不要自己维护 hoveredIndex、动画或重画默认背景。原生拖动期间框架暂停普通 hover，结束后重新计算；不改变业务勾选数据。Flow/Masonry/Wrap 的状态圆角入口是 setStateBackgroundCornerRadius，List/Tree/Table 是 setVisualStateCornerRadius。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../src/core/virtualitemview.cpp">src/core/virtualitemview.cpp</a> · <a href="../../src/widgets/virtualtableview.cpp">src/widgets/virtualtableview.cpp</a> · <a href="../../src/widgets/virtuallistview.cpp">src/widgets/virtuallistview.cpp</a> · <a href="../../src/widgets/virtualtreeview.cpp">src/widgets/virtualtreeview.cpp</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../interaction.md">docs/interaction.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（11）" data-en="Independent source examples (11)">独立源码示例（11）</span></summary>
+<ul>
+<li>
+<a href="../../examples/flow_capabilities/04_visual_states/example.cpp">examples/flow_capabilities/04_visual_states/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/list_capabilities/08_visual_states/example.cpp">examples/list_capabilities/08_visual_states/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/masonry_capabilities/06_visual_states/example.cpp">examples/masonry_capabilities/06_visual_states/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/table_capabilities/10_visual_states/example.cpp">examples/table_capabilities/10_visual_states/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/tree_capabilities/13_visual_states/example.cpp">examples/tree_capabilities/13_visual_states/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/treetable_capabilities/15_visual_states/example.cpp">examples/treetable_capabilities/15_visual_states/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/wrap_capabilities/03_visual_states/example.cpp">examples/wrap_capabilities/03_visual_states/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/list_capabilities/09_state_content/example.cpp">examples/list_capabilities/09_state_content/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/table_capabilities/11_state_content/example.cpp">examples/table_capabilities/11_state_content/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/tree_capabilities/14_state_content/example.cpp">examples/tree_capabilities/14_state_content/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/treetable_capabilities/16_state_content/example.cpp">examples/treetable_capabilities/16_state_content/example.cpp</a>
+</li>
+</ul>
+</details>
+</article>
+<article id="state-extent" data-search="setVisualStateBackgroundExtent setVisualStateBackgroundMargins setVisualStateBackgroundHeight setRowGridLineExtent virtuallistview virtualtreeview virtualtreetableview">
+<h3><span data-zh="状态范围 / 命中范围 / 固定高度 / padding" data-en="State extent / hit region / fixed height / padding">状态范围 / 命中范围 / 固定高度 / padding</span></h3>
+<p>
+<code>setVisualStateBackgroundExtent · setVisualStateBackgroundMargins · setVisualStateBackgroundHeight · setRowGridLineExtent</code>
+</p>
+<p class="rules"><span data-zh="List: FullWidth/WidgetOnly。Tree: NodeOnly/NodeAndIcon/FullWidth/WidgetOnly/WidgetAndIcon；含 Icon 模式只有实际显示 branch 图标时才扩展。Margins 和 Height 只改变状态绘制及鼠标命中，不改变布局、键盘和程序选择；branch 展开点击单独处理。TreeTable 固定按表格行区域绘制，不提供 Tree 的这些 extent 设置，不能复制 Tree 的节点裁剪策略到树表。" data-en="List: FullWidth/WidgetOnly. Tree: NodeOnly/NodeAndIcon/FullWidth/WidgetOnly/WidgetAndIcon; Icon variants extend only when a branch indicator is actually shown. Margins and Height affect state painting and mouse hits, not layout, keyboard or programmatic selection. Branch toggling is separate. TreeTable paints across its table-row area and does not expose Tree extent settings; do not copy node clipping behavior into TreeTable.">List: FullWidth/WidgetOnly。Tree: NodeOnly/NodeAndIcon/FullWidth/WidgetOnly/WidgetAndIcon；含 Icon 模式只有实际显示 branch 图标时才扩展。Margins 和 Height 只改变状态绘制及鼠标命中，不改变布局、键盘和程序选择；branch 展开点击单独处理。TreeTable 固定按表格行区域绘制，不提供 Tree 的这些 extent 设置，不能复制 Tree 的节点裁剪策略到树表。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../src/widgets/virtuallistview.cpp">src/widgets/virtuallistview.cpp</a> · <a href="../../src/widgets/virtualtreeview.cpp">src/widgets/virtualtreeview.cpp</a> · <a href="../../src/widgets/virtualtreetableview.cpp">src/widgets/virtualtreetableview.cpp</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../tree.md">docs/tree.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（2）" data-en="Independent source examples (2)">独立源码示例（2）</span></summary>
+<ul>
+<li>
+<a href="../../examples/tree_capabilities/13_visual_states/example.cpp">examples/tree_capabilities/13_visual_states/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/list_capabilities/08_visual_states/example.cpp">examples/list_capabilities/08_visual_states/example.cpp</a>
+</li>
+</ul>
+</details>
+</article>
+<article id="background" data-search="setBackgroundVisible setBackgroundColor backgroundBrush setItemBackgroundColor setSectionBackgroundColor setSpacingBackgroundColor virtualitemview headerview virtualheaderview">
+<h3><span data-zh="背景 / 项底色 / 透明 / QSS" data-en="Background / item fill / transparency / QSS">背景 / 项底色 / 透明 / QSS</span></h3>
+<p>
+<code>setBackgroundVisible · setBackgroundColor · backgroundBrush · setItemBackgroundColor · setSectionBackgroundColor · setSpacingBackgroundColor</code>
+</p>
+<p class="rules"><span data-zh="整体默认 QPalette::Base，项底色默认透明。View 底色→viewport QSS 背景→项与状态层；setBackgroundVisible(false) 关闭主体两层，不控制表头和显式间距色。QSS 使用 vivItemView/vivViewport/vivHorizontalHeader/vivVerticalHeader/vivHeaderSection/vivHeaderCorner 对象名，不使用 QHeaderView::section。QSS 背景由 Qt 画刷驱动，不解析 stylesheet 字符串。框架边框/圆角使用专用接口；不要假定自绘部件支持所有 QSS border/image 属性。" data-en="The view defaults to QPalette::Base; item fill is transparent. Layers are view base, viewport QSS, then item/state backgrounds. setBackgroundVisible(false) disables both body-base layers, not headers or explicit gap colors. QSS targets vivItemView/vivViewport/vivHorizontalHeader/vivVerticalHeader/vivHeaderSection/vivHeaderCorner, not QHeaderView::section. Backgrounds use Qt brushes without parsing stylesheet text. Use dedicated frame/radius APIs; custom-painted components do not support every QSS border/image property.">整体默认 QPalette::Base，项底色默认透明。View 底色→viewport QSS 背景→项与状态层；setBackgroundVisible(false) 关闭主体两层，不控制表头和显式间距色。QSS 使用 vivItemView/vivViewport/vivHorizontalHeader/vivVerticalHeader/vivHeaderSection/vivHeaderCorner 对象名，不使用 QHeaderView::section。QSS 背景由 Qt 画刷驱动，不解析 stylesheet 字符串。框架边框/圆角使用专用接口；不要假定自绘部件支持所有 QSS border/image 属性。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../src/core/virtualitemviewframe.cpp">src/core/virtualitemviewframe.cpp</a> · <a href="../../src/core/stylesheetbackground_p.h">src/core/stylesheetbackground_p.h</a> · <a href="../../src/core/viewbackground_p.h">src/core/viewbackground_p.h</a> · <a href="../../src/widgets/styledheadersection.cpp">src/widgets/styledheadersection.cpp</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../stylesheets.md">docs/stylesheets.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（6）" data-en="Independent source examples (6)">独立源码示例（6）</span></summary>
+<ul>
+<li>
+<a href="../../examples/flow_capabilities/10_colors/example.cpp">examples/flow_capabilities/10_colors/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/list_capabilities/22_colors/example.cpp">examples/list_capabilities/22_colors/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/masonry_capabilities/13_borders_colors/example.cpp">examples/masonry_capabilities/13_borders_colors/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/table_capabilities/32_colors/example.cpp">examples/table_capabilities/32_colors/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/tree_capabilities/28_colors/example.cpp">examples/tree_capabilities/28_colors/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/treetable_capabilities/37_colors/example.cpp">examples/treetable_capabilities/37_colors/example.cpp</a>
+</li>
+</ul>
+</details>
+</article>
+<article id="frame" data-search="setFrameCornerRadius setFrameBorderWidth setFrameBorderColor setFrameBorderEdges setFrameBorderVisible virtualitemview">
+<h3><span data-zh="外边框 / 四边开关 / 抗锯齿圆角" data-en="Outer frame / per-edge visibility / antialiased corners">外边框 / 四边开关 / 抗锯齿圆角</span></h3>
+<p>
+<code>setFrameCornerRadius · setFrameBorderWidth · setFrameBorderColor · setFrameBorderEdges · setFrameBorderVisible</code>
+</p>
+<p class="rules"><span data-zh="框架提供外边框与内容圆角合成，不必对子控件 setMask 或截图遮罩。隐藏的边不预留占位；外框圆角和 hover 圆角是两种不同配置。末行/末列分割线会与边框相邻，先检查自动隐藏与实际滚动范围，不要重复绘制外框补线。" data-en="The framework composites the outer frame and rounded content; no child setMask or screenshot mask is needed. Hidden edges reserve no space. Frame radius and hover radius are separate. Terminal grid lines may meet the frame: inspect auto-hide and actual scroll ranges before adding another border.">框架提供外边框与内容圆角合成，不必对子控件 setMask 或截图遮罩。隐藏的边不预留占位；外框圆角和 hover 圆角是两种不同配置。末行/末列分割线会与边框相邻，先检查自动隐藏与实际滚动范围，不要重复绘制外框补线。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../src/core/virtualitemviewframe.cpp">src/core/virtualitemviewframe.cpp</a> · <a href="../../src/core/pixelalignedlines_p.h">src/core/pixelalignedlines_p.h</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../stylesheets.md">docs/stylesheets.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（5）" data-en="Independent source examples (5)">独立源码示例（5）</span></summary>
+<ul>
+<li>
+<a href="../../examples/list_capabilities/20_borders/example.cpp">examples/list_capabilities/20_borders/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/table_capabilities/30_borders/example.cpp">examples/table_capabilities/30_borders/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/tree_capabilities/26_borders/example.cpp">examples/tree_capabilities/26_borders/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/treetable_capabilities/35_borders/example.cpp">examples/treetable_capabilities/35_borders/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/masonry_capabilities/13_borders_colors/example.cpp">examples/masonry_capabilities/13_borders_colors/example.cpp</a>
+</li>
+</ul>
+</details>
+</article>
+<article id="spacing" data-search="setRowSpacing setColumnSpacing setGridLinePlacement setSpacingBackgroundColor setVerticalSpacingLineThroughRowSpacing setHorizontalSpacingLineThroughColumnSpacing virtualitemview virtualtableview virtualflowtableview virtualmasonryview">
+<h3><span data-zh="间距 / 中心分割线 / 双侧分割线 / 半间距" data-en="Spacing / center lines / edge lines / half-gaps">间距 / 中心分割线 / 双侧分割线 / 半间距</span></h3>
+<p>
+<code>setRowSpacing · setColumnSpacing · setGridLinePlacement · setSpacingBackgroundColor · setVerticalSpacingLineThroughRowSpacing · setHorizontalSpacingLineThroughColumnSpacing</code>
+</p>
+<p class="rules"><span data-zh="默认 SpacingCenter，在间距中心画线，并在支持的网格布局外围补半间距；SpacingEdges 在两侧画线。间距 0 都回退到单一共享边界。Center 始终穿过交叉间距，不能关闭；Edges 才允许配置穿过与否。内容 margins 与项目 spacing 不是同一层。冻结区域交界将间距分成两半，由冻结分割线标识边界，不应业务重复补线。Wrap 的水平间距叫 setItemSpacing，没有表格网格线 API。" data-en="SpacingCenter is the default: lines lie at gap centers, with outer half-gaps in supported grid layouts. SpacingEdges draws both gap edges. Zero spacing uses one shared boundary in either mode. Center always bridges crossing gaps; only Edges allows breaks. Content margins and item spacing are separate. Frozen boundaries split the gap into halves and use the pane separator; do not draw a duplicate boundary. Wrap calls horizontal spacing setItemSpacing and has no table grid-line API.">默认 SpacingCenter，在间距中心画线，并在支持的网格布局外围补半间距；SpacingEdges 在两侧画线。间距 0 都回退到单一共享边界。Center 始终穿过交叉间距，不能关闭；Edges 才允许配置穿过与否。内容 margins 与项目 spacing 不是同一层。冻结区域交界将间距分成两半，由冻结分割线标识边界，不应业务重复补线。Wrap 的水平间距叫 setItemSpacing，没有表格网格线 API。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../src/core/virtualitemview.cpp">src/core/virtualitemview.cpp</a> · <a href="../../src/widgets/virtualtableview.cpp">src/widgets/virtualtableview.cpp</a> · <a href="../../src/layout/flowtablelayout.cpp">src/layout/flowtablelayout.cpp</a> · <a href="../../src/layout/masonrylayout.cpp">src/layout/masonrylayout.cpp</a> · <a href="../../src/core/pixelalignedlines_p.h">src/core/pixelalignedlines_p.h</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../table-layout-guide.md">docs/table-layout-guide.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（4）" data-en="Independent source examples (4)">独立源码示例（4）</span></summary>
+<ul>
+<li>
+<a href="../../examples/table_capabilities/09_spacing/example.cpp">examples/table_capabilities/09_spacing/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/treetable_capabilities/14_spacing/example.cpp">examples/treetable_capabilities/14_spacing/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/flow_capabilities/03_spacing_grid/example.cpp">examples/flow_capabilities/03_spacing_grid/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/masonry_capabilities/03_spacing_grid/example.cpp">examples/masonry_capabilities/03_spacing_grid/example.cpp</a>
+</li>
+</ul>
+</details>
+</article>
+<article id="header-gap" data-search="setHeaderContentSpacingEnabled setVerticalGridLinesThroughHeader setHorizontalGridLinesThroughHeader setHeaderSpacingBackgroundColor setVisualStateThroughColumnSpacing setVisualStateThroughRowSpacing virtualtableview virtualtreetableview">
+<h3><span data-zh="表头与内容间距 / 穿过表头 / 状态穿过间距" data-en="Header-content spacing / header lines / state gap coverage">表头与内容间距 / 穿过表头 / 状态穿过间距</span></h3>
+<p>
+<code>setHeaderContentSpacingEnabled · setVerticalGridLinesThroughHeader · setHorizontalGridLinesThroughHeader · setHeaderSpacingBackgroundColor · setVisualStateThroughColumnSpacing · setVisualStateThroughRowSpacing</code>
+</p>
+<p class="rules"><span data-zh="header-content 开关默认 false，Horizontal 对应水平表头下方 rowSpacing，Vertical 对应垂直表头右侧 columnSpacing。开关不创建非零 spacing；启用使用全间距，未启用时 Center 保留原外侧半间距、Edges 为 0。穿过表头的行/列分割线默认开启，和穿过交叉间距是不同开关。整行状态跨列间距默认开启；跨上下半间距默认开启且只在 Center 生效，SelectItems 仍按 cell。" data-en="Header-content spacing defaults off. Horizontal uses rowSpacing below the horizontal header; Vertical uses columnSpacing after the vertical header. The switch does not create nonzero spacing. Enabled means a full gap; disabled retains the outer half-gap in Center and zero in Edges. Grid lines through headers default on and are independent of crossing-gap settings. Whole-row state coverage across column gaps defaults on. Adjacent half-row-gap coverage also defaults on, only in Center; SelectItems stays cell-local.">header-content 开关默认 false，Horizontal 对应水平表头下方 rowSpacing，Vertical 对应垂直表头右侧 columnSpacing。开关不创建非零 spacing；启用使用全间距，未启用时 Center 保留原外侧半间距、Edges 为 0。穿过表头的行/列分割线默认开启，和穿过交叉间距是不同开关。整行状态跨列间距默认开启；跨上下半间距默认开启且只在 Center 生效，SelectItems 仍按 cell。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../src/widgets/virtualtableview.cpp">src/widgets/virtualtableview.cpp</a> · <a href="../../src/widgets/virtualheaderview.cpp">src/widgets/virtualheaderview.cpp</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../headers.md">docs/headers.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（2）" data-en="Independent source examples (2)">独立源码示例（2）</span></summary>
+<ul>
+<li>
+<a href="../../examples/table_capabilities/09_spacing/example.cpp">examples/table_capabilities/09_spacing/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/treetable_capabilities/14_spacing/example.cpp">examples/treetable_capabilities/14_spacing/example.cpp</a>
+</li>
+</ul>
+</details>
+</article>
+<article id="grid" data-search="setRowGridLinesVisible setRowGridLineColor setRowGridLineWidth setHorizontalGridLinesVisible setVerticalGridLinesVisible setTrailingRowGridLineAutoHideEnabled setItemPaneSeparatorStyle setPaneSeparatorStyle virtualitemview virtuallistview virtualtreeview virtualtableview virtualflowtableview virtualmasonryview">
+<h3><span data-zh="分割线样式 / 最后一行 / 冻结分隔线" data-en="Grid styling / terminal row / frozen separators">分割线样式 / 最后一行 / 冻结分隔线</span></h3>
+<p>
+<code>setRowGridLinesVisible · setRowGridLineColor · setRowGridLineWidth · setHorizontalGridLinesVisible · setVerticalGridLinesVisible · setTrailingRowGridLineAutoHideEnabled · setItemPaneSeparatorStyle · setPaneSeparatorStyle</code>
+</p>
+<p class="rules"><span data-zh="List/Tree 用 RowGridLine 接口；Table/Flow/Masonry 用 Horizontal/VerticalGridLine 接口。末行自动隐藏默认 true：自动高度或实际竖向溢出时按末行边界规则处理，内容底边距存在时仍有例外；false 请求保留可见末行线，不增加高度。强制显示但 range=0 的滚动条不等于可滚动。普通分割线与冻结线分别配置，PaneSeparatorStyle 支持颜色、粗细、线型；查看具体 API 单位，线宽不可一律再乘 DPR。" data-en="List/Tree use RowGridLine APIs; Table/Flow/Masonry use Horizontal/VerticalGridLine APIs. Terminal-row auto-hide defaults true and follows auto-height/actual vertical overflow boundary rules, with content-bottom-margin exceptions. False preserves a visible terminal line without adding height. A forced scroll bar with range 0 does not mean overflow. Ordinary grid lines and frozen separators have separate settings. PaneSeparatorStyle controls color, width and pen style. Check API units rather than multiplying every width by DPR.">List/Tree 用 RowGridLine 接口；Table/Flow/Masonry 用 Horizontal/VerticalGridLine 接口。末行自动隐藏默认 true：自动高度或实际竖向溢出时按末行边界规则处理，内容底边距存在时仍有例外；false 请求保留可见末行线，不增加高度。强制显示但 range=0 的滚动条不等于可滚动。普通分割线与冻结线分别配置，PaneSeparatorStyle 支持颜色、粗细、线型；查看具体 API 单位，线宽不可一律再乘 DPR。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../src/core/virtualitemview.cpp">src/core/virtualitemview.cpp</a> · <a href="../../src/widgets/virtualtableview.cpp">src/widgets/virtualtableview.cpp</a> · <a href="../../src/widgets/virtuallistview.cpp">src/widgets/virtuallistview.cpp</a> · <a href="../../src/widgets/virtualtreeview.cpp">src/widgets/virtualtreeview.cpp</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../auto-height.md">docs/auto-height.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（8）" data-en="Independent source examples (8)">独立源码示例（8）</span></summary>
+<ul>
+<li>
+<a href="../../examples/table_capabilities/16_frozen_areas/example.cpp">examples/table_capabilities/16_frozen_areas/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/flow_capabilities/11_auto_height/example.cpp">examples/flow_capabilities/11_auto_height/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/list_capabilities/21_auto_height/example.cpp">examples/list_capabilities/21_auto_height/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/masonry_capabilities/14_auto_height/example.cpp">examples/masonry_capabilities/14_auto_height/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/table_capabilities/31_auto_height/example.cpp">examples/table_capabilities/31_auto_height/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/tree_capabilities/27_auto_height/example.cpp">examples/tree_capabilities/27_auto_height/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/treetable_capabilities/36_auto_height/example.cpp">examples/treetable_capabilities/36_auto_height/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/wrap_capabilities/08_auto_height/example.cpp">examples/wrap_capabilities/08_auto_height/example.cpp</a>
+</li>
+</ul>
+</details>
+</article>
+<article id="gap-widget" data-search="setRowSpacingFactory setColumnSpacingFactory setHeaderColumnSpacingFactory virtualitemview virtualtableview">
+<h3><span data-zh="间距内自定义控件" data-en="Custom widgets inside gaps">间距内自定义控件</span></h3>
+<p>
+<code>setRowSpacingFactory · setColumnSpacingFactory · setHeaderColumnSpacingFactory</code>
+</p>
+<p class="rules"><span data-zh="工厂与 binder 为可见间距创建/刷新可复用控件；行间距按行、列间距按列管理，不是每个交叉空格一个 QWidget。普通颜色用 setSpacingBackgroundColor 更轻。Flow/Masonry/Wrap 不支持内核行间距控件；不要因继承了 setter 就假定可用。" data-en="Factories and binders create and refresh reusable widgets for visible gaps. Row gaps are managed per row, column gaps per column, not one QWidget per intersection. Plain setSpacingBackgroundColor is cheaper. Flow/Masonry/Wrap do not support kernel row-spacing widgets despite inheriting the setter.">工厂与 binder 为可见间距创建/刷新可复用控件；行间距按行、列间距按列管理，不是每个交叉空格一个 QWidget。普通颜色用 setSpacingBackgroundColor 更轻。Flow/Masonry/Wrap 不支持内核行间距控件；不要因继承了 setter 就假定可用。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../src/core/virtualitemview.cpp">src/core/virtualitemview.cpp</a> · <a href="../../src/widgets/virtualtableview.cpp">src/widgets/virtualtableview.cpp</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../table-layout-guide.md">docs/table-layout-guide.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（2）" data-en="Independent source examples (2)">独立源码示例（2）</span></summary>
+<ul>
+<li>
+<a href="../../examples/table_capabilities/09_spacing/example.cpp">examples/table_capabilities/09_spacing/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/list_capabilities/07_row_spacing/example.cpp">examples/list_capabilities/07_row_spacing/example.cpp</a>
+</li>
+</ul>
+</details>
+</article>
+<article id="columns" data-search="setColumnWidth setColumnMinimumWidth setColumnMaximumWidth setColumnStretchFactor setStretchLastColumn setColumnResizeMode setColumnHidden moveColumn setColumnResizeEnabled virtualtableview virtualtreetableview headergeometry">
+<h3><span data-zh="列宽 / 比例 / FitViewport / 隐藏换序" data-en="Column widths / stretch factors / FitViewport / hide and reorder">列宽 / 比例 / FitViewport / 隐藏换序</span></h3>
+<p>
+<code>setColumnWidth · setColumnMinimumWidth · setColumnMaximumWidth · setColumnStretchFactor · setStretchLastColumn · setColumnResizeMode · setColumnHidden · moveColumn · setColumnResizeEnabled</code>
+</p>
+<p class="rules"><span data-zh="默认 Independent。比例分配的是扣除固定列和间距后的剩余宽度，factor=0 保持自身宽度；此模式下拖动任意列或 setColumnWidth 会清除全部比例和末列拉伸，故先设固定宽度再设 stretch factors。FitViewport 根据当前比例让列宽总和适配视口，拖动边缘在相应侧按比例补偿；受最小/最大限制。拖动改宽默认关闭；模型列号、视觉顺序和隐藏状态不要混用。" data-en="Independent is the default. Positive factors share the width left after fixed columns and gaps; factor 0 preserves its own width. In this mode dragging any column or calling setColumnWidth clears all factors and last-column stretch: set fixed widths before stretch factors. FitViewport fits columns using current proportions and compensates edge resizing proportionally on the relevant side, subject to size limits. Mouse resizing defaults off. Keep logical model columns, visual order and hidden state distinct.">默认 Independent。比例分配的是扣除固定列和间距后的剩余宽度，factor=0 保持自身宽度；此模式下拖动任意列或 setColumnWidth 会清除全部比例和末列拉伸，故先设固定宽度再设 stretch factors。FitViewport 根据当前比例让列宽总和适配视口，拖动边缘在相应侧按比例补偿；受最小/最大限制。拖动改宽默认关闭；模型列号、视觉顺序和隐藏状态不要混用。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../src/layout/headergeometry.cpp">src/layout/headergeometry.cpp</a> · <a href="../../src/widgets/virtualtableview.cpp">src/widgets/virtualtableview.cpp</a> · <a href="../../src/widgets/virtualheaderview.cpp">src/widgets/virtualheaderview.cpp</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../table-layout-guide.md">docs/table-layout-guide.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（3）" data-en="Independent source examples (3)">独立源码示例（3）</span></summary>
+<ul>
+<li>
+<a href="../../examples/table_capabilities/07_columns/example.cpp">examples/table_capabilities/07_columns/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/table_capabilities/08_stretch_columns/example.cpp">examples/table_capabilities/08_stretch_columns/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/treetable_capabilities/13_stretch_columns/example.cpp">examples/treetable_capabilities/13_stretch_columns/example.cpp</a>
+</li>
+</ul>
+</details>
+</article>
+<article id="headers" data-search="horizontalHeader verticalHeader setAdapter setBackgroundColor setSectionBackgroundColor setForegroundColor setFont setTextAlignment setContentPadding setHeaderCornerWidget virtualtableview virtualtreetableview virtualheaderview headerview headerwidgetadapter headersection styledheadersection labelheaderview headercornerwidget">
+<h3><span data-zh="默认表头 / 样式 / section / corner" data-en="Default headers / styles / sections / corner">默认表头 / 样式 / section / corner</span></h3>
+<p>
+<code>horizontalHeader · verticalHeader · setAdapter · setBackgroundColor · setSectionBackgroundColor · setForegroundColor · setFont · setTextAlignment · setContentPadding · setHeaderCornerWidget</code>
+</p>
+<p class="rules"><span data-zh="默认 VirtualHeaderView，样式优先通过 HeaderViewInterface 配置。容器 backgroundColor 改整条底色，sectionBackgroundColor 只改 section，spacingBackgroundColor 改间距；无效 QColor 恢复继承，透明色是显式透明。模型 headerData 的 ForegroundRole/FontRole/TextAlignmentRole 可覆盖默认文字样式。HeaderSection 管结构，StyledHeaderSection 管外观，LabelHeaderSection 管文字；复杂内容换 HeaderWidgetAdapter，无需替换整个表头。默认 corner 跟水平表头，替换 corner 的 QWidget 由 view 接管。" data-en="VirtualHeaderView is the default. Configure appearance through HeaderViewInterface. backgroundColor covers the strip; sectionBackgroundColor covers sections only; spacingBackgroundColor covers gaps. Invalid QColor restores inheritance; transparent is an explicit color. Model headerData ForegroundRole/FontRole/TextAlignmentRole can override text defaults. HeaderSection manages structure, StyledHeaderSection appearance, LabelHeaderSection text. Replace HeaderWidgetAdapter for complex content instead of the entire header. The default corner follows the horizontal header; the view owns a replacement corner widget.">默认 VirtualHeaderView，样式优先通过 HeaderViewInterface 配置。容器 backgroundColor 改整条底色，sectionBackgroundColor 只改 section，spacingBackgroundColor 改间距；无效 QColor 恢复继承，透明色是显式透明。模型 headerData 的 ForegroundRole/FontRole/TextAlignmentRole 可覆盖默认文字样式。HeaderSection 管结构，StyledHeaderSection 管外观，LabelHeaderSection 管文字；复杂内容换 HeaderWidgetAdapter，无需替换整个表头。默认 corner 跟水平表头，替换 corner 的 QWidget 由 view 接管。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../src/widgets/virtualheaderview.cpp">src/widgets/virtualheaderview.cpp</a> · <a href="../../src/widgets/headersection.cpp">src/widgets/headersection.cpp</a> · <a href="../../src/widgets/styledheadersection.cpp">src/widgets/styledheadersection.cpp</a> · <a href="../../src/widgets/labelheaderview.cpp">src/widgets/labelheaderview.cpp</a> · <a href="../../src/widgets/headercornerwidget.cpp">src/widgets/headercornerwidget.cpp</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../headers.md">docs/headers.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（3）" data-en="Independent source examples (3)">独立源码示例（3）</span></summary>
+<ul>
+<li>
+<a href="../../examples/table_capabilities/19_custom_header/example.cpp">examples/table_capabilities/19_custom_header/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/treetable_capabilities/24_custom_header/example.cpp">examples/treetable_capabilities/24_custom_header/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/table_capabilities/32_colors/example.cpp">examples/table_capabilities/32_colors/example.cpp</a>
+</li>
+</ul>
+</details>
+</article>
+<article id="header-state" data-search="setHeaderVisualStateBackgroundVisible headerVisualState setVisualStateCornerRadiusIncludesHeaders virtualtableview virtualtreetableview virtualheaderview headerview">
+<h3><span data-zh="表头同步 hover / selected / 圆角" data-en="Header hover / selection synchronization / corners">表头同步 hover / selected / 圆角</span></h3>
+<p>
+<code>setHeaderVisualStateBackgroundVisible · headerVisualState · setVisualStateCornerRadiusIncludesHeaders</code>
+</p>
+<p class="rules"><span data-zh="表头状态背景可以按轴独立开关，和点击选行/选列是不同配置。默认跟内容动画进度同步。状态圆角默认扩展到表头：SelectRows 行号仅左圆角、内容仅右圆角；SelectItems 行号和单元格各自四角，列头四角。自定义 section 应使用框架状态进度，不能只看 selected 布尔值立即换背景。" data-en="Header state backgrounds can be enabled per axis, independently of header-click selection. Built-in animation progress stays synchronized with content. State corners include headers by default: SelectRows rounds left row-header corners and right body corners; SelectItems rounds row headers and cells independently; column headers have four rounded corners. Custom sections should use animation progress instead of switching colors immediately from a selected boolean.">表头状态背景可以按轴独立开关，和点击选行/选列是不同配置。默认跟内容动画进度同步。状态圆角默认扩展到表头：SelectRows 行号仅左圆角、内容仅右圆角；SelectItems 行号和单元格各自四角，列头四角。自定义 section 应使用框架状态进度，不能只看 selected 布尔值立即换背景。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../src/widgets/virtualtableview.cpp">src/widgets/virtualtableview.cpp</a> · <a href="../../src/widgets/virtualheaderview.cpp">src/widgets/virtualheaderview.cpp</a> · <a href="../../src/widgets/styledheadersection.cpp">src/widgets/styledheadersection.cpp</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../headers.md">docs/headers.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（2）" data-en="Independent source examples (2)">独立源码示例（2）</span></summary>
+<ul>
+<li>
+<a href="../../examples/table_capabilities/12_selection/example.cpp">examples/table_capabilities/12_selection/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/table_capabilities/19_custom_header/example.cpp">examples/table_capabilities/19_custom_header/example.cpp</a>
+</li>
+</ul>
+</details>
+</article>
+<article id="header-reorder" data-search="setColumnDragEnabled setVerticalHeaderDragEnabled setVerticalHeaderResizeEnabled setHeaderAnimationEnabled setHeaderAnimationDuration setColumnFollowsHeaderVisual setRowFollowsHeaderVisual rowMoveRequested virtualtableview virtualtreetableview virtualheaderview">
+<h3><span data-zh="表头拖动换序 / 行号拖动 / 动画" data-en="Header reordering / row-number dragging / animation">表头拖动换序 / 行号拖动 / 动画</span></h3>
+<p>
+<code>setColumnDragEnabled · setVerticalHeaderDragEnabled · setVerticalHeaderResizeEnabled · setHeaderAnimationEnabled · setHeaderAnimationDuration · setColumnFollowsHeaderVisual · setRowFollowsHeaderVisual · rowMoveRequested</code>
+</p>
+<p class="rules"><span data-zh="列换序改变 HeaderGeometry 的视觉顺序；行号换序需要模型 moveRows。行高/列宽拖动默认关闭，按需显式开启。表头换序动画与内容原生拖放让位是两套配置。verticalHeaderDrag 在无模型时可创建 ReorderableTableModel；业务已有模型时必须实现对应移动能力。树表只允许符合层级约束的移动。" data-en="Column reorder changes HeaderGeometry visual order; row-header reorder requires model moveRows. Row-height/column-width dragging defaults off. Header reorder animation and native body drag feedback are separate configurations. Enabling verticalHeaderDrag without a model can create ReorderableTableModel; an existing business model must implement moves. TreeTable moves must respect hierarchy.">列换序改变 HeaderGeometry 的视觉顺序；行号换序需要模型 moveRows。行高/列宽拖动默认关闭，按需显式开启。表头换序动画与内容原生拖放让位是两套配置。verticalHeaderDrag 在无模型时可创建 ReorderableTableModel；业务已有模型时必须实现对应移动能力。树表只允许符合层级约束的移动。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../src/widgets/virtualheaderview.cpp">src/widgets/virtualheaderview.cpp</a> · <a href="../../src/widgets/virtualtableview.cpp">src/widgets/virtualtableview.cpp</a> · <a href="../../src/core/reorderabletablemodel.cpp">src/core/reorderabletablemodel.cpp</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../headers.md">docs/headers.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（2）" data-en="Independent source examples (2)">独立源码示例（2）</span></summary>
+<ul>
+<li>
+<a href="../../examples/table_capabilities/22_row_reordering/example.cpp">examples/table_capabilities/22_row_reordering/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/treetable_capabilities/27_row_reordering/example.cpp">examples/treetable_capabilities/27_row_reordering/example.cpp</a>
+</li>
+</ul>
+</details>
+</article>
+<article id="frozen" data-search="setFrozenRows setFrozenBottomRows setFrozenColumns setFrozenRightColumns setPanes setHorizontalOffset primaryScrollGroup virtualitemview virtualtableview virtualtreetableview tablepane itempane">
+<h3><span data-zh="冻结行列 / 多 pane / 多滚动组" data-en="Frozen rows and columns / multiple panes / scroll groups">冻结行列 / 多 pane / 多滚动组</span></h3>
+<p>
+<code>setFrozenRows · setFrozenBottomRows · setFrozenColumns · setFrozenRightColumns · setPanes · setHorizontalOffset · primaryScrollGroup</code>
+</p>
+<p class="rules"><span data-zh="List/Table 支持上下冻结行；Tree/TreeTable 不支持冻结行，TreeTable 保留冻结列。Flow/Masonry/Wrap 不支持行 pane。表格冻结列共用 HeaderGeometry，不复制宽度/顺序；左右集合冲突时左侧优先。高级 setPanes 指定列集合和滚动组，同组共享 offset，首个可滚动 pane 的组是主组；非主组用带 group 参数的接口。不要为冻结区再创建一个独立表格同步数据。" data-en="List/Table support top and bottom frozen rows. Tree/TreeTable do not; TreeTable retains frozen columns. Flow/Masonry/Wrap do not support row panes. Frozen table columns share HeaderGeometry rather than copies of widths/order; left wins if a column belongs to both frozen sets. setPanes specifies column sets and scroll groups. A group shares one offset; the first scrolling pane determines the primary group. Use group overloads for other offsets. Avoid separate synchronized tables to imitate frozen panes.">List/Table 支持上下冻结行；Tree/TreeTable 不支持冻结行，TreeTable 保留冻结列。Flow/Masonry/Wrap 不支持行 pane。表格冻结列共用 HeaderGeometry，不复制宽度/顺序；左右集合冲突时左侧优先。高级 setPanes 指定列集合和滚动组，同组共享 offset，首个可滚动 pane 的组是主组；非主组用带 group 参数的接口。不要为冻结区再创建一个独立表格同步数据。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../src/layout/tablepane.cpp">src/layout/tablepane.cpp</a> · <a href="../../src/core/virtualitemview.cpp">src/core/virtualitemview.cpp</a> · <a href="../../src/widgets/virtualtableview.cpp">src/widgets/virtualtableview.cpp</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../table-layout-guide.md">docs/table-layout-guide.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（5）" data-en="Independent source examples (5)">独立源码示例（5）</span></summary>
+<ul>
+<li>
+<a href="../../examples/list_capabilities/14_frozen_rows/example.cpp">examples/list_capabilities/14_frozen_rows/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/table_capabilities/16_frozen_areas/example.cpp">examples/table_capabilities/16_frozen_areas/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/table_capabilities/17_panes/example.cpp">examples/table_capabilities/17_panes/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/treetable_capabilities/21_frozen_columns/example.cpp">examples/treetable_capabilities/21_frozen_columns/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/treetable_capabilities/22_panes/example.cpp">examples/treetable_capabilities/22_panes/example.cpp</a>
+</li>
+</ul>
+</details>
+</article>
+<article id="spans" data-search="setSpanProvider setSpan removeSpan clearSpans anchorIndex isSpanCovered spanRect cellRect virtualtableview virtualtreetableview tablespan tablewidgetadapter">
+<h3><span data-zh="合并单元格" data-en="Merged cells">合并单元格</span></h3>
+<p>
+<code>setSpanProvider · setSpan · removeSpan · clearSpans · anchorIndex · isSpanCovered · spanRect · cellRect</code>
+</p>
+<p class="rules"><span data-zh="内置 TableSpanMap 或自定义 TableSpanProvider 提供跨度；查询/绘制/命中使用 anchorIndex 与 cellRect。跨度裁剪到模型和 anchor 所在 pane，不跨 pane。被覆盖 cell 的 cellRect 为空。RowWidgets 通过 TableRowLayoutContext 的 spans 布局业务控件；表格拖动让位在 span provider 存在等不支持条件下退回指示器。" data-en="Use TableSpanMap or a TableSpanProvider. Resolve geometry and hits with anchorIndex and cellRect. Spans are clipped to the model and anchor pane; they never cross panes. Covered cells have an empty cellRect. RowWidgets lays out children using TableRowLayoutContext spans. Body drag feedback falls back to indicators when a span provider or other unsupported conditions prevent animation.">内置 TableSpanMap 或自定义 TableSpanProvider 提供跨度；查询/绘制/命中使用 anchorIndex 与 cellRect。跨度裁剪到模型和 anchor 所在 pane，不跨 pane。被覆盖 cell 的 cellRect 为空。RowWidgets 通过 TableRowLayoutContext 的 spans 布局业务控件；表格拖动让位在 span provider 存在等不支持条件下退回指示器。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../src/layout/tablespan.cpp">src/layout/tablespan.cpp</a> · <a href="../../src/widgets/virtualtableview.cpp">src/widgets/virtualtableview.cpp</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../table-layout-guide.md">docs/table-layout-guide.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（2）" data-en="Independent source examples (2)">独立源码示例（2）</span></summary>
+<ul>
+<li>
+<a href="../../examples/table_capabilities/23_spans/example.cpp">examples/table_capabilities/23_spans/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/treetable_capabilities/28_spans/example.cpp">examples/treetable_capabilities/28_spans/example.cpp</a>
+</li>
+</ul>
+</details>
+</article>
+<article id="sort-persist" data-search="setSortingEnabled sortByColumn setSortIndicator saveHeaderState restoreHeaderState virtualtableview virtualtreetableview headergeometry">
+<h3><span data-zh="排序 / 过滤 / 布局保存恢复" data-en="Sorting / filtering / layout persistence">排序 / 过滤 / 布局保存恢复</span></h3>
+<p>
+<code>setSortingEnabled · sortByColumn · setSortIndicator · saveHeaderState · restoreHeaderState</code>
+</p>
+<p class="rules"><span data-zh="排序需要模型 sort 实现或 QSortFilterProxyModel；仅画 sort indicator 不等于数据已排序。saveHeaderState 保存列宽、顺序、隐藏、比例以及 pane/冻结配置；不保存业务数据或任意视图开关，ColumnResizeMode 是独立配置。restore 先验证再应用，检查 bool 返回值。树的展开状态与业务持久化需求单独处理，不要假定 header state 保存树展开。" data-en="Sorting requires model sort or QSortFilterProxyModel; a sort indicator alone does not reorder data. saveHeaderState stores widths, order, hidden state, stretch and pane/frozen configuration, not business data or arbitrary view settings. ColumnResizeMode is separate configuration. Restore validates before applying; check its bool result. Persist tree expansion separately; header state does not imply expansion persistence.">排序需要模型 sort 实现或 QSortFilterProxyModel；仅画 sort indicator 不等于数据已排序。saveHeaderState 保存列宽、顺序、隐藏、比例以及 pane/冻结配置；不保存业务数据或任意视图开关，ColumnResizeMode 是独立配置。restore 先验证再应用，检查 bool 返回值。树的展开状态与业务持久化需求单独处理，不要假定 header state 保存树展开。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../src/widgets/virtualtableview.cpp">src/widgets/virtualtableview.cpp</a> · <a href="../../src/layout/headergeometry.cpp">src/layout/headergeometry.cpp</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../header-persistence.md">docs/header-persistence.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（4）" data-en="Independent source examples (4)">独立源码示例（4）</span></summary>
+<ul>
+<li>
+<a href="../../examples/table_capabilities/20_header_persistence/example.cpp">examples/table_capabilities/20_header_persistence/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/table_capabilities/21_sorting/example.cpp">examples/table_capabilities/21_sorting/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/treetable_capabilities/25_header_persistence/example.cpp">examples/treetable_capabilities/25_header_persistence/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/treetable_capabilities/26_sorting_filtering/example.cpp">examples/treetable_capabilities/26_sorting_filtering/example.cpp</a>
+</li>
+</ul>
+</details>
+</article>
+<article id="tree-expansion" data-search="expand collapse setExpanded toggleExpanded expandRecursively collapseAll setExpansionAnimationEnabled setExpansionAnimationDuration setExpansionFadeEnabled visibleRowCount virtualtreeview virtualtreetableview treevisibilityindex">
+<h3><span data-zh="树展开 / 收起 / 渐变 / 懒加载" data-en="Tree expansion / collapse / fade / lazy loading">树展开 / 收起 / 渐变 / 懒加载</span></h3>
+<p>
+<code>expand · collapse · setExpanded · toggleExpanded · expandRecursively · collapseAll · setExpansionAnimationEnabled · setExpansionAnimationDuration · setExpansionFadeEnabled · visibleRowCount</code>
+</p>
+<p class="rules"><span data-zh="框架使用真实布局动画并可渐变，fade 默认开启；无需截图遮罩。collapseAll 是批量收起入口，不承诺逐节点动画。visibleRowCount 是展开后的扁平序列，模型 row 仍相对父节点。懒加载由模型 canFetchMore/fetchMore 配合展开；使用标准结构通知，不手工重建可见节点 QWidget。切换根、模型变化由框架维护可见映射。" data-en="Live layout transitions support fading, enabled by default; no screenshot mask is needed. collapseAll is a bulk operation and does not promise individual node animation. visibleRowCount is the flattened expanded sequence; model row remains relative to its parent. Lazy models implement canFetchMore/fetchMore with normal structure notifications. Do not recreate visible node widgets manually; the framework maintains the visible mapping on root/model changes.">框架使用真实布局动画并可渐变，fade 默认开启；无需截图遮罩。collapseAll 是批量收起入口，不承诺逐节点动画。visibleRowCount 是展开后的扁平序列，模型 row 仍相对父节点。懒加载由模型 canFetchMore/fetchMore 配合展开；使用标准结构通知，不手工重建可见节点 QWidget。切换根、模型变化由框架维护可见映射。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../src/index/treevisibilityindex.cpp">src/index/treevisibilityindex.cpp</a> · <a href="../../src/widgets/treeexpansiontransition_p.h">src/widgets/treeexpansiontransition_p.h</a> · <a href="../../src/widgets/virtualtreeview.cpp">src/widgets/virtualtreeview.cpp</a> · <a href="../../src/widgets/virtualtreetableview.cpp">src/widgets/virtualtreetableview.cpp</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../tree.md">docs/tree.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（4）" data-en="Independent source examples (4)">独立源码示例（4）</span></summary>
+<ul>
+<li>
+<a href="../../examples/tree_capabilities/07_expansion/example.cpp">examples/tree_capabilities/07_expansion/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/tree_capabilities/22_lazy_loading/example.cpp">examples/tree_capabilities/22_lazy_loading/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/treetable_capabilities/08_expansion/example.cpp">examples/treetable_capabilities/08_expansion/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/treetable_capabilities/31_lazy_loading/example.cpp">examples/treetable_capabilities/31_lazy_loading/example.cpp</a>
+</li>
+</ul>
+</details>
+</article>
+<article id="branch" data-search="setIndentation setBranchAreaVisible setBranchIndicatorsVisible setExpandedBranchIcon setCollapsedBranchIcon setBranchIconSize setBranchIconColor setBranchIndicatorAlignment setBranchIndicatorPadding setBranchIndicatorRenderer virtualtreeview virtualtreetableview branchindicator">
+<h3><span data-zh="branch 图标 / 旋转 / 缩进 / 自绘分支" data-en="Branch icons / rotation / indentation / custom rendering">branch 图标 / 旋转 / 缩进 / 自绘分支</span></h3>
+<p>
+<code>setIndentation · setBranchAreaVisible · setBranchIndicatorsVisible · setExpandedBranchIcon · setCollapsedBranchIcon · setBranchIconSize · setBranchIconColor · setBranchIndicatorAlignment · setBranchIndicatorPadding · setBranchIndicatorRenderer</code>
+</p>
+<p class="rules"><span data-zh="默认圆角等边三角形 10 逻辑像素。只设置展开/收起其中一个图标时随展开动画旋转 90°；两个都设置时直接切换，自定义 renderer 自行处理。隐藏 branchArea 去掉自身 branch 格但保留祖先缩进；仅隐藏 indicators 保留占位。Tree 的 setIndentLeafItems(false) 可省略全叶子兄弟组占位，TreeTable 没有该开关。常规大小/颜色/对齐/padding 用便捷接口，只有完整自绘分支/连接线才实现 BranchIndicatorRenderer。" data-en="The default is a rounded equilateral triangle, 10 logical pixels. Setting only one expanded/collapsed icon rotates it 90 degrees with expansion; setting both switches immediately. Custom renderers manage their own states. Hiding branchArea removes the current branch cell but preserves ancestor indentation; hiding indicators alone retains space. Tree setIndentLeafItems(false) omits branch cells for all-leaf sibling groups; TreeTable has no such switch. Use convenience size/color/alignment/padding APIs; implement BranchIndicatorRenderer only for custom branch/connector drawing.">默认圆角等边三角形 10 逻辑像素。只设置展开/收起其中一个图标时随展开动画旋转 90°；两个都设置时直接切换，自定义 renderer 自行处理。隐藏 branchArea 去掉自身 branch 格但保留祖先缩进；仅隐藏 indicators 保留占位。Tree 的 setIndentLeafItems(false) 可省略全叶子兄弟组占位，TreeTable 没有该开关。常规大小/颜色/对齐/padding 用便捷接口，只有完整自绘分支/连接线才实现 BranchIndicatorRenderer。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../src/widgets/branchindicator.cpp">src/widgets/branchindicator.cpp</a> · <a href="../../src/widgets/virtualtreeview.cpp">src/widgets/virtualtreeview.cpp</a> · <a href="../../src/widgets/virtualtreetableview.cpp">src/widgets/virtualtreetableview.cpp</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../tree.md">docs/tree.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（4）" data-en="Independent source examples (4)">独立源码示例（4）</span></summary>
+<ul>
+<li>
+<a href="../../examples/tree_capabilities/09_indentation/example.cpp">examples/tree_capabilities/09_indentation/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/tree_capabilities/10_branch_icons/example.cpp">examples/tree_capabilities/10_branch_icons/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/tree_capabilities/11_branch_renderer/example.cpp">examples/tree_capabilities/11_branch_renderer/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/treetable_capabilities/10_indentation/example.cpp">examples/treetable_capabilities/10_indentation/example.cpp</a>
+</li>
+</ul>
+</details>
+</article>
+<article id="node-spacing" data-search="NodeRowSpacingRole NodeRowSpacingBelowRole NodeRowSpacingAboveRole setRowSpacing virtualtreeview virtualtreetableview">
+<h3><span data-zh="节点独立上下间距" data-en="Per-node upper and lower spacing">节点独立上下间距</span></h3>
+<p>
+<code>NodeRowSpacingRole · NodeRowSpacingBelowRole · NodeRowSpacingAboveRole · setRowSpacing</code>
+</p>
+<p class="rules"><span data-zh="模型列 0 的 BelowRole 覆盖节点下方间距，缺失/负值回退 rowSpacing；AboveRole 增加节点上方间距，缺失/负值为 0。相邻节点的 below+above 可能叠加，末个可见节点没有尾部普通 gap，首节点没有普通 above gap；不要把两份 role 当作同一间距。" data-en="BelowRole on model column 0 overrides the gap below a node; missing/negative values use rowSpacing. AboveRole adds space above a node; missing/negative means zero. Adjacent below+above values can accumulate. The last visible node has no ordinary trailing gap and the first has no ordinary leading above gap. The two roles are not aliases for one gap.">模型列 0 的 BelowRole 覆盖节点下方间距，缺失/负值回退 rowSpacing；AboveRole 增加节点上方间距，缺失/负值为 0。相邻节点的 below+above 可能叠加，末个可见节点没有尾部普通 gap，首节点没有普通 above gap；不要把两份 role 当作同一间距。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../src/widgets/virtualtreeview.cpp">src/widgets/virtualtreeview.cpp</a> · <a href="../../src/widgets/virtualtreetableview.cpp">src/widgets/virtualtreetableview.cpp</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../tree.md">docs/tree.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（2）" data-en="Independent source examples (2)">独立源码示例（2）</span></summary>
+<ul>
+<li>
+<a href="../../examples/tree_capabilities/12_row_spacing/example.cpp">examples/tree_capabilities/12_row_spacing/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/treetable_capabilities/14_spacing/example.cpp">examples/treetable_capabilities/14_spacing/example.cpp</a>
+</li>
+</ul>
+</details>
+</article>
+<article id="drag" data-search="setDragEnabled setAcceptDrops setDragStartMode canStartDrag startDrag DragOptions setDragDropActions setDefaultDropAction setMoveRemovesSourceRows virtualitemview types virtuallistview virtualtableview virtualtreeview virtualtreetableview virtualwrapview virtualflowtableview virtualmasonryview">
+<h3><span data-zh="原生拖放 / 手柄起拖 / 预览 / Move" data-en="Native drag/drop / handles / previews / Move">原生拖放 / 手柄起拖 / 预览 / Move</span></h3>
+<p>
+<code>setDragEnabled · setAcceptDrops · setDragStartMode · canStartDrag · startDrag · DragOptions · setDragDropActions · setDefaultDropAction · setMoveRemovesSourceRows</code>
+</p>
+<p class="rules"><span data-zh="setDragEnabled 开启拖出，QWidget::setAcceptDrops 开启接收；模型需 flags、mimeData、mimeTypes、canDropMimeData/dropMimeData 与支持的 actions。Automatic 按阈值启动；Manual 由手柄调用 startDrag(index[, options])，不需框架注册按钮。默认预览按 SelectRows/SelectItems，DragOptions 可改来源/区域/热点，默认热点在鼠标处。Move 是否删除源行必须与模型协议一致：模型已移动不得再删；默认不删除。框架负责拖动 pin、hover 暂停和结束恢复。" data-en="setDragEnabled enables dragging out; QWidget::setAcceptDrops enables receiving. The model supplies flags, mimeData, mimeTypes, canDropMimeData/dropMimeData and supported actions. Automatic starts after the gesture threshold. Manual handles call startDrag(index[, options]); no button registration is needed. Default previews follow SelectRows/SelectItems; DragOptions controls source, region and press position, anchored at the pointer by default. Source deletion after Move must match the model protocol: never delete again after the model already moved data. Deletion defaults off. The framework owns temporary drag pins and hover suspension/restoration.">setDragEnabled 开启拖出，QWidget::setAcceptDrops 开启接收；模型需 flags、mimeData、mimeTypes、canDropMimeData/dropMimeData 与支持的 actions。Automatic 按阈值启动；Manual 由手柄调用 startDrag(index[, options])，不需框架注册按钮。默认预览按 SelectRows/SelectItems，DragOptions 可改来源/区域/热点，默认热点在鼠标处。Move 是否删除源行必须与模型协议一致：模型已移动不得再删；默认不删除。框架负责拖动 pin、hover 暂停和结束恢复。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../src/core/virtualitemview.cpp">src/core/virtualitemview.cpp</a> · <a href="../../src/core/dragpreview_p.h">src/core/dragpreview_p.h</a> · <a href="../../src/core/dragmoveselection_p.h">src/core/dragmoveselection_p.h</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../interaction.md">docs/interaction.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（4）" data-en="Independent source examples (4)">独立源码示例（4）</span></summary>
+<ul>
+<li>
+<a href="../../examples/list_capabilities/15_drag_drop/example.cpp">examples/list_capabilities/15_drag_drop/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/table_capabilities/24_drag_indicator/example.cpp">examples/table_capabilities/24_drag_indicator/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/wrap_capabilities/07_drag_drop/example.cpp">examples/wrap_capabilities/07_drag_drop/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/masonry_capabilities/11_drag_drop/example.cpp">examples/masonry_capabilities/11_drag_drop/example.cpp</a>
+</li>
+</ul>
+</details>
+</article>
+<article id="drag-feedback" data-search="setDropIndicatorShown setDropIndicatorColor setDropIndicatorWidth setDropIndicatorPenStyle setDragFeedbackMode setDragReorderAnimationDuration setDragReorderAnimationEasingCurve virtualitemview virtuallistview virtualtableview virtualtreeview virtualtreetableview">
+<h3><span data-zh="拖动指示器 / 让位动画 / 树末级歧义" data-en="Drop indicators / animated displacement / tree-level ambiguity">拖动指示器 / 让位动画 / 树末级歧义</span></h3>
+<p>
+<code>setDropIndicatorShown · setDropIndicatorColor · setDropIndicatorWidth · setDropIndicatorPenStyle · setDragFeedbackMode · setDragReorderAnimationDuration · setDragReorderAnimationEasingCurve</code>
+</p>
+<p class="rules"><span data-zh="支持的列表/树/表格默认 RowMoveAnimation；不满足内部单项 Move 等条件时自动退回指示器。动画只预览，成功 drop 后模型才改顺序。树单节点拖动先收起源节点，仅留单行占位；父同级/子同级末尾目标由缩进和允许目标描边区分，模型拒绝的目标不会为了画框而变成可投放。Flow/Masonry/Wrap 无专用行让位模式，不要套用 list 的枚举。" data-en="Supported List/Tree/Table views default to RowMoveAnimation. Unsupported drops, including those outside internal single-item Move conditions, fall back to indicators. Animation previews only; the accepted model drop commits order. Tree single-node dragging collapses its source first and reserves one row. Indentation and permitted-target outlines distinguish parent-sibling versus child-sibling terminal drops. Painting an outline never overrides model rejection. Flow/Masonry/Wrap have no row-displacement mode.">支持的列表/树/表格默认 RowMoveAnimation；不满足内部单项 Move 等条件时自动退回指示器。动画只预览，成功 drop 后模型才改顺序。树单节点拖动先收起源节点，仅留单行占位；父同级/子同级末尾目标由缩进和允许目标描边区分，模型拒绝的目标不会为了画框而变成可投放。Flow/Masonry/Wrap 无专用行让位模式，不要套用 list 的枚举。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../src/core/rowdragpreview_p.h">src/core/rowdragpreview_p.h</a> · <a href="../../src/widgets/treedragtransition_p.h">src/widgets/treedragtransition_p.h</a> · <a href="../../src/widgets/treedragplaceholder_p.h">src/widgets/treedragplaceholder_p.h</a> · <a href="../../src/widgets/virtualtableview.cpp">src/widgets/virtualtableview.cpp</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../interaction.md">docs/interaction.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（4）" data-en="Independent source examples (4)">独立源码示例（4）</span></summary>
+<ul>
+<li>
+<a href="../../examples/list_capabilities/16_drag_animation/example.cpp">examples/list_capabilities/16_drag_animation/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/tree_capabilities/20_drag_animation/example.cpp">examples/tree_capabilities/20_drag_animation/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/table_capabilities/25_drag_animation/example.cpp">examples/table_capabilities/25_drag_animation/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/treetable_capabilities/30_drag_animation/example.cpp">examples/treetable_capabilities/30_drag_animation/example.cpp</a>
+</li>
+</ul>
+</details>
+</article>
+<article id="cell-drop" data-search="setDropTargetMode DropTargetMode virtualtableview">
+<h3><span data-zh="cell 空白格放下 / 同时行间插入" data-en="Drop onto empty cells and insert between rows">cell 空白格放下 / 同时行间插入</span></h3>
+<p>
+<code>setDropTargetMode · DropTargetMode</code>
+</p>
+<p class="rules"><span data-zh="SelectItems 下选择 OnCell 或 BetweenRowsOrOnCell；组合模式 cell 上下四分之一做行间插入，中部投到 cell。OnCell 调模型时 parent=cell、row=column=-1，由模型决定填充/替换/拒绝。SelectRows 始终行间插入，TreeTable 保留层级节点投放规则，不能靠此模式把树节点当普通二维空格。" data-en="For SelectItems choose OnCell or BetweenRowsOrOnCell. Combined mode inserts in the top/bottom quarter and targets the cell in the middle. OnCell passes parent=cell and row=column=-1 to the model, which decides fill, replace or reject. SelectRows always inserts between rows. TreeTable retains hierarchical node drops rather than ordinary two-dimensional cell targets.">SelectItems 下选择 OnCell 或 BetweenRowsOrOnCell；组合模式 cell 上下四分之一做行间插入，中部投到 cell。OnCell 调模型时 parent=cell、row=column=-1，由模型决定填充/替换/拒绝。SelectRows 始终行间插入，TreeTable 保留层级节点投放规则，不能靠此模式把树节点当普通二维空格。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../src/widgets/virtualtableview.cpp">src/widgets/virtualtableview.cpp</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../interaction.md">docs/interaction.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（1）" data-en="Independent source examples (1)">独立源码示例（1）</span></summary>
+<ul>
+<li>
+<a href="../../examples/table_capabilities/26_cell_drop/example.cpp">examples/table_capabilities/26_cell_drop/example.cpp</a>
+</li>
+</ul>
+</details>
+</article>
+<article id="editor" data-search="setEditTriggers editTriggers edit createEditor setEditorData updateEditorGeometry commitEditorData destroyEditor commitEditor closeEditor editingIndex editorWidget virtualitemview itemeditoradapter widgetadapter tablewidgetadapter">
+<h3><span data-zh="覆盖编辑器 / 单双击 / F2 / 按钮 / 自定义 role" data-en="Overlay editors / click triggers / F2 / buttons / custom roles">覆盖编辑器 / 单双击 / F2 / 按钮 / 自定义 role</span></h3>
+<p>
+<code>setEditTriggers · editTriggers · edit · createEditor · setEditorData · updateEditorGeometry · commitEditorData · destroyEditor · commitEditor · closeEditor · editingIndex · editorWidget</code>
+</p>
+<p class="rules"><span data-zh="所有入口要求 ItemIsEnabled + ItemIsEditable。默认 DoubleClicked|EditKeyPressed(F2)，adapter 可按 index 重载触发方式；按钮/外部直接 edit(index)。默认 editor 为 null，业务实现 createEditor；默认数据经 Qt USER property↔EditRole，可重载提交到 UserRole。默认几何覆盖整格/项；无需 stack layout。框架处理焦点、Enter/Esc/Tab、校验和销毁；提交返回 false 保持编辑。编辑器不进入显示控件复用池，不应滚动即丢草稿。" data-en="Every entry requires ItemIsEnabled and ItemIsEditable. Defaults are DoubleClicked|EditKeyPressed (F2); adapters can override triggers per index. Buttons and external actions call edit(index). createEditor defaults to null and must be implemented. Default data exchange uses the Qt USER property and EditRole; override submission for UserRole. Default geometry covers the item/cell without a stack layout. The framework handles focus, Enter/Esc/Tab, validation and destruction. Failed submission keeps editing. Editors are not pooled display widgets; scrolling should not discard drafts.">所有入口要求 ItemIsEnabled + ItemIsEditable。默认 DoubleClicked|EditKeyPressed(F2)，adapter 可按 index 重载触发方式；按钮/外部直接 edit(index)。默认 editor 为 null，业务实现 createEditor；默认数据经 Qt USER property↔EditRole，可重载提交到 UserRole。默认几何覆盖整格/项；无需 stack layout。框架处理焦点、Enter/Esc/Tab、校验和销毁；提交返回 false 保持编辑。编辑器不进入显示控件复用池，不应滚动即丢草稿。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../src/core/virtualitemviewediting.cpp">src/core/virtualitemviewediting.cpp</a> · <a href="../../src/core/itemeditoradapter.cpp">src/core/itemeditoradapter.cpp</a> · <a href="../../src/widgets/virtualtableview.cpp">src/widgets/virtualtableview.cpp</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../interaction.md">docs/interaction.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（4）" data-en="Independent source examples (4)">独立源码示例（4）</span></summary>
+<ul>
+<li>
+<a href="../../examples/list_capabilities/23_editors/example.cpp">examples/list_capabilities/23_editors/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/table_capabilities/33_editors/example.cpp">examples/table_capabilities/33_editors/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/tree_capabilities/29_editors/example.cpp">examples/tree_capabilities/29_editors/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/treetable_capabilities/38_editors/example.cpp">examples/treetable_capabilities/38_editors/example.cpp</a>
+</li>
+</ul>
+</details>
+</article>
+<article id="popup" data-search="editRequest EditRequestContext cancelEditRequest closeEditor indentationWidth branchWidth itemeditoradapter virtualitemview types">
+<h3><span data-zh="Popup 编辑 / 坐标 / 统一取消 / 编辑覆盖范围" data-en="Popup editing / coordinates / cancellation / editor coverage">Popup 编辑 / 坐标 / 统一取消 / 编辑覆盖范围</span></h3>
+<p>
+<code>editRequest · EditRequestContext · cancelEditRequest · closeEditor · indentationWidth · branchWidth</code>
+</p>
+<p class="rules"><span data-zh="editRequest 返回 true 表示自行处理 Popup，false 回退 createEditor。context 含 binding、view、viewport、三个坐标系的完整 rect 和 finish 回调。正常确认/关闭后调用 request.finish，仅结束对应会话，不提交模型；业务自行写数据。框架在滚动、目标失效、模型/adapter 变化、隐藏等取消条件下调用 cancelEditRequest，业务在此关闭 Popup；外部 closeEditor 同样转发。Popup 时 editingIndex 有效、editorWidget=null、commitEditor=false。跨事件保留 QPointer/QPersistentModelIndex。树编辑可用 indentationWidth+branchWidth 裁掉装饰占位并 clamp 到 rect.width。" data-en="editRequest true handles a Popup; false falls back to createEditor. Context includes binding, view, viewport, full rectangles in three coordinate systems and finish. Call request.finish after normal confirmation/dismissal; it ends only that session and does not write model data. Business code submits data. The framework calls cancelEditRequest on scrolling, invalid targets, model/adapter changes, hiding and other cancellation conditions; close the Popup there. External closeEditor also forwards cancellation. A Popup has editingIndex but editorWidget=null and commitEditor=false. Retain QPointer/QPersistentModelIndex across events. Tree editors can inset by indentationWidth+branchWidth, clamped to rect.width.">editRequest 返回 true 表示自行处理 Popup，false 回退 createEditor。context 含 binding、view、viewport、三个坐标系的完整 rect 和 finish 回调。正常确认/关闭后调用 request.finish，仅结束对应会话，不提交模型；业务自行写数据。框架在滚动、目标失效、模型/adapter 变化、隐藏等取消条件下调用 cancelEditRequest，业务在此关闭 Popup；外部 closeEditor 同样转发。Popup 时 editingIndex 有效、editorWidget=null、commitEditor=false。跨事件保留 QPointer/QPersistentModelIndex。树编辑可用 indentationWidth+branchWidth 裁掉装饰占位并 clamp 到 rect.width。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../src/core/virtualitemviewediting.cpp">src/core/virtualitemviewediting.cpp</a> · <a href="../../src/widgets/virtualtreeview.cpp">src/widgets/virtualtreeview.cpp</a> · <a href="../../src/widgets/virtualtreetableview.cpp">src/widgets/virtualtreetableview.cpp</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../interaction.md">docs/interaction.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（4）" data-en="Independent source examples (4)">独立源码示例（4）</span></summary>
+<ul>
+<li>
+<a href="../../examples/list_capabilities/23_editors/example.cpp">examples/list_capabilities/23_editors/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/table_capabilities/33_editors/example.cpp">examples/table_capabilities/33_editors/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/tree_capabilities/29_editors/example.cpp">examples/tree_capabilities/29_editors/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/treetable_capabilities/38_editors/example.cpp">examples/treetable_capabilities/38_editors/example.cpp</a>
+</li>
+</ul>
+</details>
+</article>
+<article id="scroll" data-search="scrollTo setVerticalOffset scrollByPixels setWheelScrollMode setWheelScrollPixels setWheelScrollItems indexAt visualRect widgetForIndex indexForWidget setHorizontalOffset virtualitemview virtualtableview scrollmapper">
+<h3><span data-zh="滚动 / 定位 / 几何 / 命中 / 平滑滚动" data-en="Scrolling / positioning / geometry / hits / smooth scrolling">滚动 / 定位 / 几何 / 命中 / 平滑滚动</span></h3>
+<p>
+<code>scrollTo · setVerticalOffset · scrollByPixels · setWheelScrollMode · setWheelScrollPixels · setWheelScrollItems · indexAt · visualRect · widgetForIndex · indexForWidget · setHorizontalOffset</code>
+</p>
+<p class="rules"><span data-zh="indexAt 输入 viewport 坐标，visualRect/cellRect 可在屏外仍有效；widgetForIndex/cellWidget 仅查询物化控件，空指针不表示模型项或选择丢失。长期保存项目用 QPersistentModelIndex。64 位 offset 通过 ScrollMapper 映射到滚动条；不要自己用 scrollbar int 作为巨大模型的逻辑偏移。无内部范围的滚轮交外层。smoothscroll 是可选依赖，仅检测到该库时编译/显示对应章节，不是核心内置 timer 动画接口。" data-en="indexAt accepts viewport coordinates; visualRect/cellRect can remain valid offscreen. widgetForIndex/cellWidget query materialized widgets only: null does not mean data or selection disappeared. Preserve item identity with QPersistentModelIndex. ScrollMapper maps 64-bit logical offsets onto scroll bars; do not treat scrollbar int values as large-model logical offsets. Wheel input propagates when no internal range exists. smoothscroll is an optional dependency; its chapters are compiled/shown only when detected, not a core timer-animation API.">indexAt 输入 viewport 坐标，visualRect/cellRect 可在屏外仍有效；widgetForIndex/cellWidget 仅查询物化控件，空指针不表示模型项或选择丢失。长期保存项目用 QPersistentModelIndex。64 位 offset 通过 ScrollMapper 映射到滚动条；不要自己用 scrollbar int 作为巨大模型的逻辑偏移。无内部范围的滚轮交外层。smoothscroll 是可选依赖，仅检测到该库时编译/显示对应章节，不是核心内置 timer 动画接口。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../src/core/scrollmapper.cpp">src/core/scrollmapper.cpp</a> · <a href="../../src/core/virtualitemview.cpp">src/core/virtualitemview.cpp</a> · <a href="../../src/core/wheeleventforwarding_p.h">src/core/wheeleventforwarding_p.h</a> · <a href="../../src/widgets/virtualheaderview.cpp">src/widgets/virtualheaderview.cpp</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../interaction.md">docs/interaction.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（12）" data-en="Independent source examples (12)">独立源码示例（12）</span></summary>
+<ul>
+<li>
+<a href="../../examples/flow_capabilities/07_scrolling/example.cpp">examples/flow_capabilities/07_scrolling/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/list_capabilities/12_scrolling/example.cpp">examples/list_capabilities/12_scrolling/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/list_capabilities/19_smooth_scrolling/example.cpp">examples/list_capabilities/19_smooth_scrolling/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/masonry_capabilities/10_scrolling/example.cpp">examples/masonry_capabilities/10_scrolling/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/table_capabilities/14_scrolling/example.cpp">examples/table_capabilities/14_scrolling/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/table_capabilities/29_smooth_scrolling/example.cpp">examples/table_capabilities/29_smooth_scrolling/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/tree_capabilities/17_scrolling/example.cpp">examples/tree_capabilities/17_scrolling/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/tree_capabilities/25_smooth_scrolling/example.cpp">examples/tree_capabilities/25_smooth_scrolling/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/treetable_capabilities/19_scrolling/example.cpp">examples/treetable_capabilities/19_scrolling/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/treetable_capabilities/34_smooth_scrolling/example.cpp">examples/treetable_capabilities/34_smooth_scrolling/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/wrap_capabilities/06_scrolling/example.cpp">examples/wrap_capabilities/06_scrolling/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/list_capabilities/11_item_events/example.cpp">examples/list_capabilities/11_item_events/example.cpp</a>
+</li>
+</ul>
+</details>
+</article>
+<article id="pin" data-search="setOverscan setColumnOverscan setItemPinned pinWidget unpinWidget setMaxPinnedItems stats materializedItemCount createdWidgetCount pooledWidgetCount virtualitemview widgetrecycler virtualtableview">
+<h3><span data-zh="屏外保留 / 预加载 / 焦点 / 诊断" data-en="Offscreen retention / overscan / focus / diagnostics">屏外保留 / 预加载 / 焦点 / 诊断</span></h3>
+<p>
+<code>setOverscan · setColumnOverscan · setItemPinned · pinWidget · unpinWidget · setMaxPinnedItems · stats · materializedItemCount · createdWidgetCount · pooledWidgetCount</code>
+</p>
+<p class="rules"><span data-zh="overscan 增大意味着更多真实控件，CellWidgets 还乘以列数；先测再调。显式 pin 会保留屏外控件直到解除；拖动临时 pin 与业务 pin 独立，maxPinnedItems 是警告阈值而非自动回收上限。焦点/输入法等活动可能需要保留，不能为了降低统计数强删。状态和选择以模型为真源，不以物化控件数量为真源。" data-en="More overscan creates more real widgets; CellWidgets also multiplies by columns. Measure before increasing it. Explicit pins retain offscreen widgets until released, independently of temporary drag pins. maxPinnedItems warns rather than automatically evicting. Focus/IME activity may require retention; do not delete widgets merely to lower counters. Models and selection models, not materialized widgets, are the source of state.">overscan 增大意味着更多真实控件，CellWidgets 还乘以列数；先测再调。显式 pin 会保留屏外控件直到解除；拖动临时 pin 与业务 pin 独立，maxPinnedItems 是警告阈值而非自动回收上限。焦点/输入法等活动可能需要保留，不能为了降低统计数强删。状态和选择以模型为真源，不以物化控件数量为真源。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../src/core/virtualitemview.cpp">src/core/virtualitemview.cpp</a> · <a href="../../src/recycler/widgetrecycler.cpp">src/recycler/widgetrecycler.cpp</a> · <a href="../../src/widgets/virtualtableview.cpp">src/widgets/virtualtableview.cpp</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../accessibility-guide.md">docs/accessibility-guide.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（8）" data-en="Independent source examples (8)">独立源码示例（8）</span></summary>
+<ul>
+<li>
+<a href="../../examples/list_capabilities/13_virtualization/example.cpp">examples/list_capabilities/13_virtualization/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/table_capabilities/15_virtualization/example.cpp">examples/table_capabilities/15_virtualization/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/tree_capabilities/18_virtualization/example.cpp">examples/tree_capabilities/18_virtualization/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/treetable_capabilities/20_virtualization/example.cpp">examples/treetable_capabilities/20_virtualization/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/list_capabilities/17_pinning/example.cpp">examples/list_capabilities/17_pinning/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/table_capabilities/27_pinning/example.cpp">examples/table_capabilities/27_pinning/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/tree_capabilities/23_pinning/example.cpp">examples/tree_capabilities/23_pinning/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/treetable_capabilities/32_pinning/example.cpp">examples/treetable_capabilities/32_pinning/example.cpp</a>
+</li>
+</ul>
+</details>
+</article>
+<article id="performance" data-search="setPerformanceLoggingEnabled setLifecycleLoggingEnabled lifecycleLog clearLifecycleLog stats virtualitemview">
+<h3><span data-zh="性能日志 / 卡顿 / 统计而非逐帧打印" data-en="Performance logs / stalls / aggregated timing">性能日志 / 卡顿 / 统计而非逐帧打印</span></h3>
+<p>
+<code>setPerformanceLoggingEnabled · setLifecycleLoggingEnabled · lifecycleLog · clearLifecycleLog · stats</code>
+</p>
+<p class="rules"><span data-zh="性能探测默认关闭；启用开关并通过 Qt 日志类别筛选 viv.performance.refresh、viv.performance.paint，详细阶段表用 viv.performance.details。按视图/类别每秒汇总，计入同步 adapter 回调；禁用开关或过滤类别时跳过对应计时。阶段可能包含子阶段，不能把嵌套耗时相加当总时间。先区分布局/物化/回收/业务 callback/paint，再优化；生命周期日志是另一开关，最多保留 400 条，不要在 bind 内每项输出日志。" data-en="Timing defaults off. Enable it and select Qt categories viv.performance.refresh and viv.performance.paint; viv.performance.details prints full stage tables. Synchronous adapter callbacks are included. Work is aggregated per view/category once per second; a disabled switch or filtered category skips its timers. Stages can contain sub-stages: do not sum overlapping timings. Separate layout, materialization, recycling, callbacks and paint before optimizing. Lifecycle logging is separate and bounded to 400 entries; avoid per-item logging in bind.">性能探测默认关闭；启用开关并通过 Qt 日志类别筛选 viv.performance.refresh、viv.performance.paint，详细阶段表用 viv.performance.details。按视图/类别每秒汇总，计入同步 adapter 回调；禁用开关或过滤类别时跳过对应计时。阶段可能包含子阶段，不能把嵌套耗时相加当总时间。先区分布局/物化/回收/业务 callback/paint，再优化；生命周期日志是另一开关，最多保留 400 条，不要在 bind 内每项输出日志。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../src/core/performanceprobe.cpp">src/core/performanceprobe.cpp</a> · <a href="../../src/core/performanceprobe_p.h">src/core/performanceprobe_p.h</a> · <a href="../../src/core/virtualitemview.cpp">src/core/virtualitemview.cpp</a> · <a href="../../src/widgets/virtualtableview.cpp">src/widgets/virtualtableview.cpp</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../accessibility-guide.md">docs/accessibility-guide.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（4）" data-en="Independent source examples (4)">独立源码示例（4）</span></summary>
+<ul>
+<li>
+<a href="../../examples/list_capabilities/18_diagnostics/example.cpp">examples/list_capabilities/18_diagnostics/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/table_capabilities/28_diagnostics/example.cpp">examples/table_capabilities/28_diagnostics/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/tree_capabilities/24_diagnostics/example.cpp">examples/tree_capabilities/24_diagnostics/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/treetable_capabilities/33_diagnostics/example.cpp">examples/treetable_capabilities/33_diagnostics/example.cpp</a>
+</li>
+</ul>
+</details>
+</article>
+<article id="flow" data-search="setCellWidthRange setCellHeightMode setFixedCellHeight setCellAspectRatio columnCount displayRowCount displayRowForIndex displayColumnForIndex virtualflowtableview">
+<h3><span data-zh="Flow 等宽换列 / 固定高度 / 比例" data-en="Flow equal-width columns / fixed and ratio heights">Flow 等宽换列 / 固定高度 / 比例</span></h3>
+<p>
+<code>setCellWidthRange · setCellHeightMode · setFixedCellHeight · setCellAspectRatio · columnCount · displayRowCount · displayRowForIndex · displayColumnForIndex</code>
+</p>
+<p class="rules"><span data-zh="显示列数随可用宽度计算，列均分铺满；不是多列模型的表格，不具备表头/冻结列 API。模型每行代表一个项目，换行不改索引身份。宽高比为 width/height；内核 setItemHeightMode 与自动 sizeHint 测量不支持，使用本视图 CellHeightMode。支持共享 auto height、状态、选择、拖放、分割线。" data-en="Available width determines display columns, which fill the width evenly. This is not a multi-column data table and has no headers or frozen-column API. Each model row identifies one item; wrapping preserves that identity. Aspect ratio is width/height. Kernel setItemHeightMode and automatic sizeHint measurement are unsupported; use CellHeightMode. Shared auto height, states, selection, drag/drop and grid lines remain available.">显示列数随可用宽度计算，列均分铺满；不是多列模型的表格，不具备表头/冻结列 API。模型每行代表一个项目，换行不改索引身份。宽高比为 width/height；内核 setItemHeightMode 与自动 sizeHint 测量不支持，使用本视图 CellHeightMode。支持共享 auto height、状态、选择、拖放、分割线。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../src/widgets/virtualflowtableview.cpp">src/widgets/virtualflowtableview.cpp</a> · <a href="../../src/layout/flowtablelayout.cpp">src/layout/flowtablelayout.cpp</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../flow-table.md">docs/flow-table.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（2）" data-en="Independent source examples (2)">独立源码示例（2）</span></summary>
+<ul>
+<li>
+<a href="../../examples/flow_capabilities/02_cell_sizes/example.cpp">examples/flow_capabilities/02_cell_sizes/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/flow_capabilities/09_images/example.cpp">examples/flow_capabilities/09_images/example.cpp</a>
+</li>
+</ul>
+</details>
+</article>
+<article id="masonry" data-search="setColumnCount setCellWidthRange setItemHeightMode setFixedItemHeight setItemAspectRatio setItemEstimatedSize setItemEstimatedSizes setItemHeight invalidateItemSize setItemHeightAnimationEnabled virtualmasonryview">
+<h3><span data-zh="Masonry 最短列 / 图片估值 / 高度更新" data-en="Masonry shortest-column layout / image estimates / height changes">Masonry 最短列 / 图片估值 / 高度更新</span></h3>
+<p>
+<code>setColumnCount · setCellWidthRange · setItemHeightMode · setFixedItemHeight · setItemAspectRatio · setItemEstimatedSize · setItemEstimatedSizes · setItemHeight · invalidateItemSize · setItemHeightAnimationEnabled</code>
+</p>
+<p class="rules"><span data-zh="本视图 ItemHeightMode 是 Fixed/AspectRatio/AdapterEstimate，与基类枚举不同；禁止套用内核自动测高。图片加载前给估值，结果到达后用 setItemHeight 或 invalidateItemSize 更新；批量估值用 setItemEstimatedSizes 减少重排。高度动画默认关闭。空间中的前后邻居不一定是模型相邻行，拖放仍服从模型目标与 flags，不是任意视觉位置都能接受。" data-en="Its ItemHeightMode is Fixed/AspectRatio/AdapterEstimate, distinct from the base enum. Kernel automatic measurement is unsupported. Estimate before image loading, then update with setItemHeight or invalidateItemSize. Batch setItemEstimatedSizes avoids repeated rebuilds. Height animation defaults off. Spatial neighbors need not be adjacent model rows; drag/drop still follows model targets and flags, so not every visual position accepts a drop.">本视图 ItemHeightMode 是 Fixed/AspectRatio/AdapterEstimate，与基类枚举不同；禁止套用内核自动测高。图片加载前给估值，结果到达后用 setItemHeight 或 invalidateItemSize 更新；批量估值用 setItemEstimatedSizes 减少重排。高度动画默认关闭。空间中的前后邻居不一定是模型相邻行，拖放仍服从模型目标与 flags，不是任意视觉位置都能接受。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../src/widgets/virtualmasonryview.cpp">src/widgets/virtualmasonryview.cpp</a> · <a href="../../src/layout/masonrylayout.cpp">src/layout/masonrylayout.cpp</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../masonry.md">docs/masonry.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（3）" data-en="Independent source examples (3)">独立源码示例（3）</span></summary>
+<ul>
+<li>
+<a href="../../examples/masonry_capabilities/04_height_modes/example.cpp">examples/masonry_capabilities/04_height_modes/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/masonry_capabilities/05_height_updates/example.cpp">examples/masonry_capabilities/05_height_updates/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/masonry_capabilities/12_images/example.cpp">examples/masonry_capabilities/12_images/example.cpp</a>
+</li>
+</ul>
+</details>
+</article>
+<article id="wrap" data-search="setFixedItemHeight setItemWidthRange setItemWidth setItemWidths clearItemWidth invalidateItemWidths setItemSpacing setRowSpacing setLineAlignment virtualwrapview wraplayout wrapwidget">
+<h3><span data-zh="Wrap 不等宽标签 / 自然尺寸 / 行对齐" data-en="Variable-width tags / natural sizes / line alignment">Wrap 不等宽标签 / 自然尺寸 / 行对齐</span></h3>
+<p>
+<code>setFixedItemHeight · setItemWidthRange · setItemWidth · setItemWidths · clearItemWidth · invalidateItemWidths · setItemSpacing · setRowSpacing · setLineAlignment</code>
+</p>
+<p class="rules"><span data-zh="VirtualWrapView 宽度优先级：显式覆盖→SizeHintRole→adapter estimate→100px，再按范围/行宽裁剪；批量 setItemWidths 避免逐项重排。水平 itemSpacing 与垂直 rowSpacing 可分别设置，统一 item height；SelectRows 仍选择模型项，不会选整条显示行。WrapLayout 按真实子控件 sizeHint/约束排布，隐藏控件通常不占位；WrapWidget 接管控件所有权，takeWidget 交回调用者，clear 删除。" data-en="VirtualWrapView width priority: explicit override, SizeHintRole, adapter estimate, then 100px, clamped to width limits and available line width. Batch setItemWidths avoids per-item reflow. Horizontal itemSpacing and vertical rowSpacing are independent; item height is uniform. SelectRows selects model items, not a packed display row. WrapLayout uses real widget size hints/constraints; hidden widgets normally consume no space. WrapWidget owns inserted widgets; takeWidget transfers them back, and clear deletes them.">VirtualWrapView 宽度优先级：显式覆盖→SizeHintRole→adapter estimate→100px，再按范围/行宽裁剪；批量 setItemWidths 避免逐项重排。水平 itemSpacing 与垂直 rowSpacing 可分别设置，统一 item height；SelectRows 仍选择模型项，不会选整条显示行。WrapLayout 按真实子控件 sizeHint/约束排布，隐藏控件通常不占位；WrapWidget 接管控件所有权，takeWidget 交回调用者，clear 删除。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../src/widgets/virtualwrapview.cpp">src/widgets/virtualwrapview.cpp</a> · <a href="../../src/layout/wrapitemlayout.cpp">src/layout/wrapitemlayout.cpp</a> · <a href="../../src/layout/wraplayout.cpp">src/layout/wraplayout.cpp</a> · <a href="../../src/widgets/wrapwidget.cpp">src/widgets/wrapwidget.cpp</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../wrap.md">docs/wrap.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（3）" data-en="Independent source examples (3)">独立源码示例（3）</span></summary>
+<ul>
+<li>
+<a href="../../examples/wrap_capabilities/02_geometry/example.cpp">examples/wrap_capabilities/02_geometry/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/wrap_capabilities/09_wrap_layout/example.cpp">examples/wrap_capabilities/09_wrap_layout/example.cpp</a>
+</li>
+<li>
+<a href="../../examples/wrap_capabilities/10_wrap_widget/example.cpp">examples/wrap_capabilities/10_wrap_widget/example.cpp</a>
+</li>
+</ul>
+</details>
+</article>
+<article id="accessibility" data-search="installAccessibilityFactory removeAccessibilityFactory accessibility virtualitemview">
+<h3><span data-zh="无障碍 / 虚拟索引映射" data-en="Accessibility / virtual item mapping">无障碍 / 虚拟索引映射</span></h3>
+<p>
+<code>installAccessibilityFactory · removeAccessibilityFactory</code>
+</p>
+<p class="rules"><span data-zh="QApplication 创建后调用 installAccessibilityFactory 安装虚拟项目的无障碍桥接；业务控件仍需正确 accessibleName、角色和可操作语义。先阅读 accessibility.h 与专门指南，不要为每个逻辑项目常驻一个隐藏 QWidget 来暴露语义。" data-en="Call installAccessibilityFactory after creating QApplication. Business widgets still need appropriate accessibleName, roles and actions. Read accessibility.h and the dedicated guide; do not keep one hidden QWidget per logical item just to expose semantics.">QApplication 创建后调用 installAccessibilityFactory 安装虚拟项目的无障碍桥接；业务控件仍需正确 accessibleName、角色和可操作语义。先阅读 accessibility.h 与专门指南，不要为每个逻辑项目常驻一个隐藏 QWidget 来暴露语义。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../src/widgets/accessibility.cpp">src/widgets/accessibility.cpp</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../accessibility-guide.md">docs/accessibility-guide.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（0）" data-en="Independent source examples (0)">独立源码示例（0）</span></summary>
+<ul>
+</ul>
+</details>
+</article>
+<article id="styled-table" data-search="StyledTableView StyledTableRowWidget StyledTableCellHost visualStateBackgroundPath paintVisualStateBackground setBackgroundCoversGridLines styledtableview virtualtableview">
+<h3><span data-zh="扩展自绘状态形状 / StyledTableView" data-en="Custom state shapes / StyledTableView">扩展自绘状态形状 / StyledTableView</span></h3>
+<p>
+<code>StyledTableView · StyledTableRowWidget · StyledTableCellHost · visualStateBackgroundPath · paintVisualStateBackground · setBackgroundCoversGridLines</code>
+</p>
+<p class="rules"><span data-zh="普通 hover/selection、颜色和圆角直接用 VirtualTableView 的函数即可。只有自定义背景形状/绘制才考虑 StyledTableView 和配套 row/cell host；默认状态圆角为 6 逻辑像素。不要为了常规背景重复引入一套业务状态动画。" data-en="Use VirtualTableView functions for ordinary hover/selection colors and corners. Use StyledTableView and matching row/cell hosts only for custom shapes/painting. Its default state radius is 6 logical pixels. Standard backgrounds do not need another business animation system.">普通 hover/selection、颜色和圆角直接用 VirtualTableView 的函数即可。只有自定义背景形状/绘制才考虑 StyledTableView 和配套 row/cell host；默认状态圆角为 6 逻辑像素。不要为了常规背景重复引入一套业务状态动画。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../src/widgets/styledtableview.cpp">src/widgets/styledtableview.cpp</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../table.md">docs/table.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（0）" data-en="Independent source examples (0)">独立源码示例（0）</span></summary>
+<ul>
+</ul>
+</details>
+</article>
+<article id="layout-kernel" data-search="LayoutPolicy ListLayout SizeIndex FixedSizeIndex BlockSizeIndex ScrollMapper TreeVisibilityIndex layoutpolicy listlayout sizeindex scrollmapper treevisibilityindex virtualitemview">
+<h3><span data-zh="布局与尺寸索引扩展" data-en="Layout and size-index extensions">布局与尺寸索引扩展</span></h3>
+<p>
+<code>LayoutPolicy · ListLayout · SizeIndex · FixedSizeIndex · BlockSizeIndex · ScrollMapper · TreeVisibilityIndex</code>
+</p>
+<p class="rules"><span data-zh="这些公开基础类型服务于布局扩展和定位查询。正常业务接入通过具体视图和模型通知；不要同时手工操作 sizeIndex/resetItems 和模型结构来维护两份状态。ListLayout 持有 SizeIndex，内部行布局区分固定/动态尺寸；TreeVisibilityIndex 管理展开后的映射。此层没有“任意改内部布局后自动保持所有业务状态”的契约，扩展时逐项阅读源码。" data-en="These public primitives support layout extensions and geometry queries. Normal integrations use concrete views and model notifications. Do not manually mutate sizeIndex/resetItems alongside model structure to maintain duplicate state. ListLayout owns a SizeIndex for fixed/variable sizing; TreeVisibilityIndex manages the expanded mapping. Arbitrary internal layout changes do not promise to preserve all business state automatically; inspect the implementation when extending this layer.">这些公开基础类型服务于布局扩展和定位查询。正常业务接入通过具体视图和模型通知；不要同时手工操作 sizeIndex/resetItems 和模型结构来维护两份状态。ListLayout 持有 SizeIndex，内部行布局区分固定/动态尺寸；TreeVisibilityIndex 管理展开后的映射。此层没有“任意改内部布局后自动保持所有业务状态”的契约，扩展时逐项阅读源码。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../src/layout/listlayout.cpp">src/layout/listlayout.cpp</a> · <a href="../../src/index/sizeindex.cpp">src/index/sizeindex.cpp</a> · <a href="../../src/index/treevisibilityindex.cpp">src/index/treevisibilityindex.cpp</a> · <a href="../../src/core/scrollmapper.cpp">src/core/scrollmapper.cpp</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../models.md">docs/models.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（0）" data-en="Independent source examples (0)">独立源码示例（0）</span></summary>
+<ul>
+</ul>
+</details>
+</article>
+<h2><span data-zh="全部公开头文件" data-en="All public headers">全部公开头文件</span></h2>
+<div class="grid">
+<div class="card" data-search="AccessibleVirtualItem / AccessibleVirtualItemView / viv namespace AccessibleVirtualItem AccessibleVirtualItem AccessibleVirtualItem isValid object window rect role text setText state parent child childCount indexOfChild childAt focusChild interface_cast actionNames doAction keyBindingsForAction isSelected columnHeaderCells rowHeaderCells columnIndex rowIndex columnExtent rowExtent table index column rowModelIndex AccessibleVirtualItemView AccessibleVirtualItemView isValid object window rect role text setText state parent child childCount indexOfChild childAt focusChild interface_cast actionNames doAction keyBindingsForAction caption summary cellAt selectedCellCount selectedCells columnDescription rowDescription selectedColumnCount selectedRowCount columnCount rowCount selectedColumns selectedRows isColumnSelected isRowSelected selectRow selectColumn unselectRow unselectColumn modelChange view itemFor visibleIndexes visiblePosition applySelection createAccessibleItemViewInterface installAccessibilityFactory removeAccessibilityFactory">
+<a href="pages/accessibility.html">accessibility.h</a>
+<p class="muted">AccessibleVirtualItem / AccessibleVirtualItemView / viv namespace</p>
+</div>
+<div class="card" data-search="BranchIndicatorState / BranchIndicatorRenderer / viv namespace hasChildren hasSiblings adjoinsItem isExpanded cellDepth itemDepth isOpen isClosed isLeaf BranchIndicatorRenderer branchIcon branchIndicatorTargetRect branchIndicatorTargetRectF paintBranch paintBuiltinBranch paintBuiltinBranch paintBuiltinBranch paintBuiltinBranch paintBuiltinBranch kBranchIndicatorSize kBranchIndicatorMargin">
+<a href="pages/branchindicator.html">branchindicator.h</a>
+<p class="muted">BranchIndicatorState / BranchIndicatorRenderer / viv namespace</p>
+</div>
+<div class="card" data-search="global ">
+<a href="pages/global.html">global.h</a>
+<p class="muted">global</p>
+</div>
+<div class="card" data-search="HeaderCornerWidget HeaderCornerWidget">
+<a href="pages/headercornerwidget.html">headercornerwidget.h</a>
+<p class="muted">HeaderCornerWidget</p>
+</div>
+<div class="card" data-search="ColumnGeometry / HeaderGeometry logicalIndex visualIndex contentX viewportX width hidden isValid HeaderGeometry HeaderGeometry orientation sectionCount storedSectionStateCount isUniform setSectionCount insertLogicalSections removeLogicalSections visibleSectionCount hiddenSectionCount isEmpty sectionSize storedSectionSize resizeSection ResizeMode resizeMode setResizeMode ResizeSnapshot resizeSnapshot resizeSectionFromEdge isSectionSizeExplicit clearExplicitSectionSize clearExplicitSectionSizes defaultSectionSize setDefaultSectionSize sectionSpacing setSectionSpacing setSectionSpacingOverrides setSparseSectionSpacingOverrides sectionSpacingAfter setEdgeSpacing leadingSpacing trailingSpacing minimumSectionSize setMinimumSectionSize maximumSectionSize setMaximumSectionSize sectionPosition sectionViewportPosition sectionAtOffset visualSectionAtOffset totalExtent logicalIndex visualIndex moveSection moveLogicalSections moveLogicalSectionSizes isSectionHidden setSectionHidden setAllSectionsHidden viewportOffset setViewportOffset maximumViewportOffset columnGeometry visibleVisualRange visibleVisualRangeFor visibleSectionsInVisualOrder orderRevision sortIndicatorSection sortIndicatorOrder setSortIndicator stretchLastSection setStretchLastSection stretchExtent setStretchExtent sectionStretchFactor setSectionStretchFactor hasStretchSections kStateMagic kStateVersion saveState restoreState sectionResized sectionMoved sectionVisibilityChanged sectionCountChanged sortIndicatorChanged stretchLastSectionChanged resizeModeChanged sectionStretchFactorChanged offsetChanged geometryChanged bulkGeometryChanged">
+<a href="pages/headergeometry.html">headergeometry.h</a>
+<p class="muted">ColumnGeometry / HeaderGeometry</p>
+</div>
+<div class="card" data-search="HeaderSection / HeaderSectionAdapter HeaderSection logicalIndex setLogicalIndex headerView tableView orientation visualState createSection bindSection unbindSection">
+<a href="pages/headersection.html">headersection.h</a>
+<p class="muted">HeaderSection / HeaderSectionAdapter</p>
+</div>
+<div class="card" data-search="HeaderViewInterface / viv namespace HeaderViewInterface setGeometryModel geometryModel headerWidget headerWidget orientation setAdapter adapter setBackgroundVisible backgroundVisible setBackgroundColor backgroundColor setSectionBackgroundColor sectionBackgroundColor setSpacingBackgroundColor spacingBackgroundColor setForegroundColor foregroundColor setTextAlignment textAlignment setContentPadding contentPadding setFont font setLabelModel setSortInteractionEnabled setViewportOrigin setPaneFilter clearPaneFilter kFollowGeometryOffset setPaneOffset setSectionAnimationEnabled setSectionAnimationDuration setSectionMoveAnimated sectionVisualX hasVisualSectionGeometry setVisualGeometryCallback void refreshSectionLabels headerSectionSeparatorColor">
+<a href="pages/headerview.html">headerview.h</a>
+<p class="muted">HeaderViewInterface / viv namespace</p>
+</div>
+<div class="card" data-search="HeaderWidgetAdapter HeaderWidgetAdapter sectionType createSection setLabelModel setGeometryModel bindSection unbindSection">
+<a href="pages/headerwidgetadapter.html">headerwidgetadapter.h</a>
+<p class="muted">HeaderWidgetAdapter</p>
+</div>
+<div class="card" data-search="EditRequestContext / EditTrigger / ItemEditorAdapter / viv namespace binding view viewport viewportRect viewRect globalRect void EditTrigger ItemEditorAdapter editTriggers editRequest cancelEditRequest createEditor setEditorData updateEditorGeometry commitEditorData destroyEditor Q_DECLARE_FLAGS Q_DECLARE_OPERATORS_FOR_FLAGS">
+<a href="pages/itemeditoradapter.html">itemeditoradapter.h</a>
+<p class="muted">EditRequestContext / EditTrigger / ItemEditorAdapter / viv namespace</p>
+</div>
+<div class="card" data-search="ItemPane Type type viewportRect firstRow lastRow isEmpty rowCount containsRow isFrozen operator">
+<a href="pages/itempane.html">itempane.h</a>
+<p class="muted">ItemPane</p>
+</div>
+<div class="card" data-search="LabelHeaderSection / LabelHeaderAdapter LabelHeaderSection text sortOrder setText setSortOrder setTextAlignment setForegroundBrush createSection setLabelModel setGeometryModel bindSection unbindSection">
+<a href="pages/labelheaderview.html">labelheaderview.h</a>
+<p class="muted">LabelHeaderSection / LabelHeaderAdapter</p>
+</div>
+<div class="card" data-search="LayoutPolicy LayoutPolicy orientation itemCount itemSize offsetOf indexAtOffset lastIndexAtOffset contentExtent crossExtent setCrossExtent itemRect itemAtPoint isVariableSized needsInitialMeasurement filterVisibleRanges hasTransientGeometry itemOpacity sizeIndex setSizeIndex resetItems insertItems removeItems moveItems setItemSize">
+<a href="pages/layoutpolicy.html">layoutpolicy.h</a>
+<p class="muted">LayoutPolicy</p>
+</div>
+<div class="card" data-search="ListLayout ListLayout ListLayout ListLayout orientation setOrientation sizeIndex setSizeIndex itemCount itemSize offsetOf indexAtOffset contentExtent filterVisibleRanges hasTransientGeometry itemOpacity crossExtent setCrossExtent itemRect itemAtPoint isVariableSized resetItems insertItems removeItems moveItems setItemSize setItemSpacing itemSpacing setSpacingAfter spacingAfter setEdgeSpacing leadingSpacing trailingSpacing estimate setEstimate viewportMargins setViewportMargins">
+<a href="pages/listlayout.html">listlayout.h</a>
+<p class="muted">ListLayout</p>
+</div>
+<div class="card" data-search="MaterializedItem index widget type geometry pinned isValid">
+<a href="pages/materializeditem.html">materializeditem.h</a>
+<p class="muted">MaterializedItem</p>
+</div>
+<div class="card" data-search="ReorderableTableModel ReorderableTableModel ReorderableTableModel ReorderableTableModel rowCount QModelIndex columnCount QModelIndex setColumnCount data headerData setRowCount insertRows QModelIndex removeRows QModelIndex sourceRow viewRow resetRowOrder isIdentityOrder moveRows rowOrderChanged">
+<a href="pages/reorderabletablemodel.html">reorderabletablemodel.h</a>
+<p class="muted">ReorderableTableModel</p>
+</div>
+<div class="card" data-search="ScrollMapper kMaxScrollRange setExtents contentExtent viewportExtent maximumOffset scrollRange isScaled toScrollBarValue toLogicalOffset setAnchor resetAnchor anchorOffset anchorValue">
+<a href="pages/scrollmapper.html">scrollmapper.h</a>
+<p class="muted">ScrollMapper</p>
+</div>
+<div class="card" data-search="SizeIndex / FixedSizeIndex / BlockSizeIndex SizeIndex count totalSize offsetOf indexAt sizeOf reset setSize insert remove isUniform uniformSize FixedSizeIndex FixedSizeIndex setItemSize itemSize totalSize offsetOf indexAt sizeOf reset setSize insert remove isUniform uniformSize kDefaultBlockCapacity BlockSizeIndex BlockSizeIndex totalSize offsetOf indexAt sizeOf reset setSize insert remove isUniform blockCapacity blockCount maxBlockRowCount estimatedSize sizes explicitSizeCount">
+<a href="pages/sizeindex.html">sizeindex.h</a>
+<p class="muted">SizeIndex / FixedSizeIndex / BlockSizeIndex</p>
+</div>
+<div class="card" data-search="StyledHeaderSection StyledHeaderSection">
+<a href="pages/styledheadersection.html">styledheadersection.h</a>
+<p class="muted">StyledHeaderSection</p>
+</div>
+<div class="card" data-search="StyledTableCellHost / StyledTableRowWidget / StyledTableView StyledTableCellHost bindIndex clearIndex StyledTableRowWidget bindRow unbindRow refreshVisualState refreshVisualStates StyledTableView setVisualStateCornerRadius visualStateCornerRadius setBackgroundCoversGridLines backgroundCoversGridLines refreshRoundedEdges hasLeftRowEdge hasRightRowEdge visualStateBackgroundPath paintVisualStateBackground">
+<a href="pages/styledtableview.html">styledtableview.h</a>
+<p class="muted">StyledTableCellHost / StyledTableRowWidget / StyledTableView</p>
+</div>
+<div class="card" data-search="PaneScroll / TablePaneSpec / TablePane / TablePaneLayout PaneScroll logicalColumns scroll scrollGroup isFrozen operator Type type scrollGroup viewportRect logicalColumns isEmpty isFrozen width operator setGeometry geometry setSplitBoundarySpacing setFrozenColumns setFrozenRightColumns frozenColumns frozenRightColumns hasFrozenColumns setPaneSpecs paneSpecs usesExplicitPanes insertLogicalColumns removeLogicalColumns moveLogicalColumns update refreshScrollWindows columnVisitsInLastUpdate viewportWidth panes pane paneRect columnViewportX columnSpacingAfter leadingSpacingForPane trailingSpacingForPane paneOfColumn paneIndexOfColumn paneAt isFrozenColumn scrollGroupOfColumn primaryPaneIndex primaryScrollGroup scrollGroups groupExtent groupWidth groupOffset setGroupOffset maximumGroupOffset frozenLeftWidth frozenRightWidth scrollableExtent scrollableWidth maximumOffset visibleScrollableRange columnsForLayout">
+<a href="pages/tablepane.html">tablepane.h</a>
+<p class="muted">PaneScroll / TablePaneSpec / TablePane / TablePaneLayout</p>
+</div>
+<div class="card" data-search="TableSpan / TableSpanProvider / TableSpanMap rowSpan columnSpan isMerged operator TableSpanProvider spanAt maximumSpan anchorOf modelStructureChanged setSpan removeSpan clearSpans isEmpty count spanAt modelStructureChanged maximumSpan">
+<a href="pages/tablespan.html">tablespan.h</a>
+<p class="muted">TableSpan / TableSpanProvider / TableSpanMap</p>
+</div>
+<div class="card" data-search="TableSpanContext / TableRowLayoutContext / ColumnHost / TableWidgetAdapter / CellWidgetAdapter isEmpty spanOf isCovered rect TableRowLayoutContext columnCount isEmpty column columnX viewportRect horizontalOffset visibleColumns columnsToLayout pane isColumnFrozen paneRect frozenLeftWidth frozenRightWidth scrollablePaneHost paneHost paneHostForColumn paneIndex paneAt paneRectAt spans ColumnHost logicalColumn setLogicalColumn layoutRowWidget CellWidgetAdapter cellWidgetType createCellWidget bindCellWidget bindCellWidget visualStateChanged visualStateChanged unbindCellWidget unbindCellWidget">
+<a href="pages/tablewidgetadapter.html">tablewidgetadapter.h</a>
+<p class="muted">TableSpanContext / TableRowLayoutContext / ColumnHost / TableWidgetAdapter / CellWidgetAdapter</p>
+</div>
+<div class="card" data-search="TreeVisibilityIndex TreeVisibilityIndex setModel model rootIndex setRootIndex rebuild handleModelChanged handleModelReset visibleRowCount visibleRowForIndex indexAtVisibleRow isVisible depth expand collapse expandRecursively setExpanded toggleExpanded isExpanded collapseAll expandedCount modelQueryCount resetModelQueryCount">
+<a href="pages/treevisibilityindex.html">treevisibilityindex.h</a>
+<p class="muted">TreeVisibilityIndex</p>
+</div>
+<div class="card" data-search="GridLinePlacement / OptionalPoint / DragOptions / ItemBindingContext / PaneSeparatorStyle / VisibleRange / viv namespace GridLinePlacement OptionalPoint OptionalPoint operator has_value value_or reset previewWidget previewRect usePressPosition globalPressPosition index rowData logicalColumn depth indentationWidth branchWidth width color lineStyle isVisible effectiveColor operator first last isValid contains count expanded kDefaultItemDataRole WidgetType kDefaultWidgetType">
+<a href="pages/types.html">types.h</a>
+<p class="muted">GridLinePlacement / OptionalPoint / DragOptions / ItemBindingContext / PaneSeparatorStyle / VisibleRange / viv namespace</p>
+</div>
+<div class="card" data-search="VirtualFlowTableView CellHeightMode VirtualFlowTableView setModel setRootIndex rootIndex setCellWidthRange minimumCellWidth maximumCellWidth setCellHeightMode cellHeightMode setFixedCellHeight fixedCellHeight setCellAspectRatio cellAspectRatio setColumnSpacing columnSpacing setRowSpacing setGridLinePlacement setContentMargins contentMargins setSpacingBackgroundColor setVisualStateBackgroundVisible visualStateBackgroundVisible setStateBackgroundCornerRadius stateBackgroundCornerRadius setVerticalGridLinesVisible verticalGridLinesVisible setHorizontalGridLinesVisible horizontalGridLinesVisible setVerticalGridLineWidth verticalGridLineWidth setHorizontalGridLineWidth horizontalGridLineWidth setVerticalGridLineColor verticalGridLineColor setHorizontalGridLineColor horizontalGridLineColor setVerticalSpacingLineThroughRowSpacing verticalSpacingLineThroughRowSpacing setHorizontalSpacingLineThroughColumnSpacing horizontalSpacingLineThroughColumnSpacing columnCount displayRowCount columnWidth columnViewportX displayRowForIndex displayColumnForIndex flowLayoutChanged">
+<a href="pages/virtualflowtableview.html">virtualflowtableview.h</a>
+<p class="muted">VirtualFlowTableView</p>
+</div>
+<div class="card" data-search="VirtualHeaderView VirtualHeaderView VirtualHeaderView setGeometryModel geometryModel headerWidget headerWidget orientation setLabelModel labelModel setSortInteractionEnabled isSortInteractionEnabled setPaneFilter clearPaneFilter hasPaneFilter setPaneOffset setSectionAnimationEnabled sectionAnimationEnabled setSectionAnimationDuration sectionAnimationDuration setSectionMoveAnimated setSectionStretchFactor sectionStretchFactor setSectionDragEnabled isSectionDragEnabled setSectionResizeEnabled isSectionResizeEnabled setSectionSelectionEnabled isSectionSelectionEnabled setSectionOrderExternal hasExternalSectionOrder setViewportOrigin setPaneTerminalColumn setBackgroundVisible backgroundVisible setBackgroundColor backgroundColor setSectionBackgroundColor sectionBackgroundColor setForegroundColor foregroundColor setTextAlignment textAlignment setContentPadding contentPadding setFont font setSpacingBackgroundColor spacingBackgroundColor setSectionSeparatorsVisible sectionSeparatorsVisible setGridLinePlacement gridLinePlacement sectionSpacingAfter setCrossAxisSeparatorVisible crossAxisSeparatorVisible setSectionSeparatorColor sectionSeparatorColor setCrossAxisSeparatorColor crossAxisSeparatorColor setSectionSeparatorWidth sectionSeparatorWidth setCrossAxisSeparatorWidth crossAxisSeparatorWidth sectionVisualX hasVisualSectionGeometry setVisualGeometryCallback void refreshSectionLabels setAdapter adapter recycler materializedSections sectionWidget materializedSectionCount pooledSectionCount paneCacheRebuildCount materializationVisits setSectionOverscan sectionOverscan appearanceChanged sectionClicked sectionHoverChanged adapterAboutToChange adapterChanged sectionMoveRequested">
+<a href="pages/virtualheaderview.html">virtualheaderview.h</a>
+<p class="muted">VirtualHeaderView</p>
+</div>
+<div class="card" data-search="VirtualViewStats / ScrollAnchor / VirtualItemView logicalItems materializedItems pooledWidgets pinnedWidgets createCount bindCount recycleCount index offsetInsideItem isValid ScrollHint VirtualItemView VirtualItemView setBackgroundVisible backgroundVisible setBackgroundColor backgroundColor backgroundBrush setItemBackgroundColor itemBackgroundColor setFrameCornerRadius frameCornerRadius setFrameBorderWidth frameBorderWidth setFrameBorderColor frameBorderColor setFrameBorderEdges frameBorderEdges setFrameBorderVisible frameBorderVisible setAutoHeightEnabled autoHeightEnabled setAutoHeightMaximumHeight autoHeightMaximumHeight sizeHint minimumSizeHint setModel model setSelectionModel selectionModel VisualState visualState hoveredIndex setHoverBackgroundColor hoverBackgroundColor setSelectedBackgroundColor selectedBackgroundColor setVisualStateAnimationDuration visualStateAnimationDuration setVisualStateAnimationEasingCurve visualStateAnimationEasingCurve currentIndex setCurrentIndex activateIndex SelectionMode SelectionBehavior setSelectionMode selectionMode setSelectionBehavior selectionBehavior isValid DropIndicatorStyle setDragEnabled isDragEnabled DragStartMode setDragStartMode dragStartMode canStartDrag startDrag QModelIndex startDrag setDropIndicatorShown isDropIndicatorShown setDropIndicatorColor dropIndicatorColor setDropIndicatorWidth dropIndicatorWidth setDropIndicatorPenStyle dropIndicatorPenStyle setDefaultDropAction defaultDropAction setMoveRemovesSourceRows moveRemovesSourceRows setDragDropActions dragDropActions dropTargetAt dropIndicatorRect dropIndicatorStyle setAdapter adapter recycler setEditTriggers editTriggers edit commitEditor closeEditor editingIndex editorWidget setItemDataRole itemDataRole setOverscan overscanBefore overscanAfter RowSpacingFactory void setRowSpacing rowSpacing setGridLinePlacement gridLinePlacement setTrailingRowGridLineAutoHideEnabled trailingRowGridLineAutoHideEnabled setSpacingBackgroundColor spacingBackgroundColor setRowSpacingFactory scrollTo setItemPinned isItemPinned pinWidget unpinWidget setMaxPinnedItems maxPinnedItems stats setPerformanceLoggingEnabled isPerformanceLoggingEnabled kLifecycleLogCapacity setLifecycleLoggingEnabled isLifecycleLoggingEnabled lifecycleLog clearLifecycleLog indexAt visualRect usesItemWidgets verticalOffset contentExtent maximumVerticalOffset scrollMapper scrollMapper WheelScrollMode setWheelScrollMode wheelScrollMode setWheelScrollPixels wheelScrollPixels setWheelScrollItems wheelScrollItems setVerticalOffset scrollByPixels ItemHeightMode setItemHeightMode itemHeightMode setUniformItemHeight uniformItemHeight setEstimatedItemHeight estimatedItemHeight setAutoMeasureItemHeight autoMeasureItemHeight visibleItemRange setFrozenRows frozenRows setFrozenBottomRows frozenBottomRows isRowFrozen itemPanes itemPaneRect visibleItemRanges setItemPaneSeparatorStyle itemPaneSeparatorStyle itemPaneSeparatorLeftExtension itemPaneSeparatorColor itemPaneSeparatorRects scrollingPaneHost materializedItemCount pinnedItemCount widgetForIndex indexForWidget materializedItems pooledWidgetCount createdWidgetCount destroyedWidgetCount isRelayoutPending flushPendingRelayout clicked doubleClicked activated itemDropped selectionModelChanged virtualizationUpdated">
+<a href="pages/virtualitemview.html">virtualitemview.h</a>
+<p class="muted">VirtualViewStats / ScrollAnchor / VirtualItemView</p>
+</div>
+<div class="card" data-search="VirtualListView ItemHeightMode VirtualListView VirtualListView setModel setRootIndex rootIndex listLayout DragFeedbackMode setDragFeedbackMode dragFeedbackMode setDragReorderAnimationDuration dragReorderAnimationDuration setDragReorderAnimationEasingCurve dragReorderAnimationEasingCurve setRowGridLinesVisible rowGridLinesVisible setRowGridLineWidth rowGridLineWidth setRowGridLineColor rowGridLineColor setVisualStateBackgroundVisible visualStateBackgroundVisible setVisualStateCornerRadius visualStateCornerRadius VisualStateBackgroundExtent setVisualStateBackgroundExtent visualStateBackgroundExtent setVisualStateBackgroundMargins setVisualStateBackgroundMargins visualStateBackgroundMargins setVisualStateBackgroundHeight visualStateBackgroundHeight indexAt itemPaneSeparatorColor">
+<a href="pages/virtuallistview.html">virtuallistview.h</a>
+<p class="muted">VirtualListView</p>
+</div>
+<div class="card" data-search="VirtualMasonryView ItemHeightMode VirtualMasonryView setModel setAdapter setRootIndex rootIndex setCellWidthRange minimumCellWidth maximumCellWidth setColumnCount columnCount setColumnSpacing columnSpacing setRowSpacing rowSpacing setGridLinePlacement setContentMargins contentMargins setSpacingBackgroundColor setItemHeightMode itemHeightMode setFixedItemHeight fixedItemHeight setItemAspectRatio itemAspectRatio setItemEstimatedSize setItemEstimatedSizes setItemHeight invalidateItemSize setItemHeightAnimationEnabled itemHeightAnimationEnabled setItemHeightAnimationDuration itemHeightAnimationDuration itemColumn visualRect indexAt setVisualStateBackgroundVisible visualStateBackgroundVisible setStateBackgroundCornerRadius stateBackgroundCornerRadius setVerticalGridLinesVisible verticalGridLinesVisible setHorizontalGridLinesVisible horizontalGridLinesVisible setVerticalGridLineWidth verticalGridLineWidth setHorizontalGridLineWidth horizontalGridLineWidth setVerticalGridLineColor verticalGridLineColor setHorizontalGridLineColor horizontalGridLineColor setVerticalSpacingLineThroughRowSpacing verticalSpacingLineThroughRowSpacing setHorizontalSpacingLineThroughColumnSpacing horizontalSpacingLineThroughColumnSpacing masonryLayoutChanged">
+<a href="pages/virtualmasonryview.html">virtualmasonryview.h</a>
+<p class="muted">VirtualMasonryView</p>
+</div>
+<div class="card" data-search="VirtualTableView ItemHeightMode SelectionBehavior SelectionMode WheelScrollMode RowSizePolicy MaterializationMode DropTargetMode setDropTargetMode dropTargetMode DragFeedbackMode setDragFeedbackMode dragFeedbackMode setDragReorderAnimationDuration dragReorderAnimationDuration setDragReorderAnimationEasingCurve dragReorderAnimationEasingCurve VirtualTableView VirtualTableView setModel horizontalHeaderGeometry verticalHeaderGeometry setHorizontalHeader horizontalHeader setVerticalHeader verticalHeader setHeaderCornerWidget headerCornerWidget setHorizontalHeaderVisible isHorizontalHeaderVisible setVerticalHeaderVisible isVerticalHeaderVisible isVerticalHeaderShown setHeaderHeight headerHeight setVerticalHeaderWidth verticalHeaderWidth setHeaderBackgroundVisible headerBackgroundVisible setHeaderBackgroundColor headerBackgroundColor setHorizontalHeaderSelectionEnabled isHorizontalHeaderSelectionEnabled setVerticalHeaderSelectionEnabled isVerticalHeaderSelectionEnabled setHeaderVisualStateBackgroundVisible headerVisualStateBackgroundVisible headerVisualState setColumnDragEnabled isColumnDragEnabled setVerticalHeaderDragEnabled isVerticalHeaderDragEnabled setColumnResizeEnabled isColumnResizeEnabled setVerticalHeaderResizeEnabled isVerticalHeaderResizeEnabled columnCount columnGeometry columnWidth ColumnSpacingFactory void setColumnSpacing columnSpacing setHeaderContentSpacingEnabled headerContentSpacingEnabled setSpacingBackgroundColor setVisualStateThroughColumnSpacing visualStateThroughColumnSpacing setVisualStateThroughRowSpacing visualStateThroughRowSpacing setHeaderSpacingBackgroundColor headerSpacingBackgroundColor setColumnSpacingFactory setHeaderColumnSpacingFactory setGridLinePlacement setVerticalSpacingLineThroughRowSpacing verticalSpacingLineThroughRowSpacing setHorizontalSpacingLineThroughColumnSpacing horizontalSpacingLineThroughColumnSpacing setVerticalGridLinesThroughHeader verticalGridLinesThroughHeader setHorizontalGridLinesThroughHeader horizontalGridLinesThroughHeader setVerticalGridLinesVisible verticalGridLinesVisible setHorizontalGridLinesVisible horizontalGridLinesVisible setVerticalGridLineColor verticalGridLineColor setHorizontalGridLineColor horizontalGridLineColor setVerticalGridLineWidth verticalGridLineWidth setHorizontalGridLineWidth horizontalGridLineWidth columnAtViewportX visibleColumns visibleRows visibleColumnLogicalIndexes setColumnOverscan columnOverscan setColumnWidth ColumnResizeMode setColumnResizeMode columnResizeMode setColumnHidden isColumnHidden MoveAnimation moveColumn setDefaultColumnWidth defaultColumnWidth setColumnMinimumWidth setColumnMaximumWidth setColumnStretchFactor columnStretchFactor setStretchLastColumn stretchLastColumn horizontalOffset setHorizontalOffset scrollByHorizontalPixels maximumHorizontalOffset horizontalContentExtent setHorizontalWheelPixels horizontalWheelPixels setFrozenColumns setFrozenRightColumns clearFrozenColumns frozenColumns frozenRightColumns isColumnFrozen panes paneTypeForColumn itemPaneSeparatorLeftExtension itemPaneSeparatorColor setPanes paneSpecs paneIndexOfColumn scrollGroups primaryScrollGroup horizontalOffset setHorizontalOffset maximumHorizontalOffset paneSeparatorRects setPaneSeparatorStyle paneSeparatorStyle sectionSeparatorColor drawPaneSeparator horizontalLayoutColumnVisits setHeaderAnimationEnabled headerAnimationEnabled setHeaderAnimationDuration headerAnimationDuration setColumnFollowsHeaderVisual columnFollowsHeaderVisual setRowFollowsHeaderVisual rowFollowsHeaderVisual setRowSizePolicy rowSizePolicy rowHeight setRowHeight clearRowHeight hasExplicitRowHeight setSpanProvider spanProvider setSpan removeSpan clearSpans spanAt anchorIndex isSpanCovered spanRect cellRect setSortingEnabled isSortingEnabled sortByColumn setSortIndicator saveHeaderState restoreHeaderState setAdapter setTableAdapter tableAdapter setMaterializationMode materializationMode usesItemWidgets stats setCellAdapter cellAdapter materializedCellCount cellWidget setVisualStateBackgroundVisible visualStateBackgroundVisible setVisualStateCornerRadius visualStateCornerRadius setVisualStateCornerRadiusIncludesHeaders visualStateCornerRadiusIncludesHeaders visualState indexForWidget cellIndexForWidget materializedCellIndexes sortIndicatorRequested rowMoveRequested horizontalOffsetChanged columnGeometryChanged rowHeightChanged">
+<a href="pages/virtualtableview.html">virtualtableview.h</a>
+<p class="muted">VirtualTableView</p>
+</div>
+<div class="card" data-search="VirtualTreeTableView VirtualTreeTableView VirtualTreeTableView setModel setRootIndex rootIndex expand collapse expandRecursively collapseAll setExpansionAnimationEnabled expansionAnimationEnabled setExpansionAnimationDuration expansionAnimationDuration setExpansionFadeEnabled expansionFadeEnabled setExpanded toggleExpanded isExpanded hasChildren visibleRowCount visibilityIndex itemDepth setIndentation indentation setBranchAreaVisible branchAreaVisible NodeRowSpacingRole NodeRowSpacingBelowRole NodeRowSpacingAboveRole setRowGridLinesVisible rowGridLinesVisible setRowGridLineWidth rowGridLineWidth setRowGridLineColor rowGridLineColor setVisualStateBackgroundVisible visualStateBackgroundVisible setBranchIndicatorsVisible branchIndicatorsVisible setExpandedBranchIcon expandedBranchIcon setCollapsedBranchIcon collapsedBranchIcon setBranchIconSize branchIconSize setBranchIconColor branchIconColor setBranchIndicatorAlignment branchIndicatorAlignment setBranchIndicatorPadding setBranchIndicatorPadding branchIndicatorPadding setBranchIndicatorRenderer branchIndicatorRenderer branchState columnCount expanded collapsed visibleRowsChanged">
+<a href="pages/virtualtreetableview.html">virtualtreetableview.h</a>
+<p class="muted">VirtualTreeTableView</p>
+</div>
+<div class="card" data-search="VirtualTreeView VirtualTreeView VirtualTreeView setModel setRootIndex rootIndex expand collapse expandRecursively setExpanded toggleExpanded isExpanded hasChildren collapseAll setExpansionAnimationEnabled expansionAnimationEnabled setExpansionAnimationDuration expansionAnimationDuration setExpansionFadeEnabled expansionFadeEnabled DragFeedbackMode setDragFeedbackMode dragFeedbackMode setDragReorderAnimationDuration dragReorderAnimationDuration setDragReorderAnimationEasingCurve dragReorderAnimationEasingCurve setIndentation indentation setBranchAreaVisible branchAreaVisible setIndentLeafItems indentLeafItems NodeRowSpacingRole NodeRowSpacingBelowRole NodeRowSpacingAboveRole setRowGridLinesVisible rowGridLinesVisible setRowGridLineWidth rowGridLineWidth setRowGridLineColor rowGridLineColor RowGridLineExtent setRowGridLineExtent rowGridLineExtent setVisualStateBackgroundVisible visualStateBackgroundVisible setVisualStateCornerRadius visualStateCornerRadius setVisualStateBackgroundMargins setVisualStateBackgroundMargins visualStateBackgroundMargins setVisualStateBackgroundHeight visualStateBackgroundHeight VisualStateBackgroundExtent setVisualStateBackgroundExtent visualStateBackgroundExtent itemPaneSeparatorColor setBranchIndicatorsVisible branchIndicatorsVisible setExpandedBranchIcon expandedBranchIcon setCollapsedBranchIcon collapsedBranchIcon setBranchIconSize branchIconSize setBranchIconColor branchIconColor setBranchIndicatorAlignment branchIndicatorAlignment setBranchIndicatorPadding setBranchIndicatorPadding branchIndicatorPadding setBranchIndicatorRenderer branchIndicatorRenderer branchState visibilityIndex visibleRowCount indexAt itemDepth applyRowSpacingOverrides expanded collapsed">
+<a href="pages/virtualtreeview.html">virtualtreeview.h</a>
+<p class="muted">VirtualTreeView</p>
+</div>
+<div class="card" data-search="VirtualWrapView VirtualWrapView setModel setAdapter setRootIndex rootIndex setFixedItemHeight fixedItemHeight setItemWidthRange minimumItemWidth maximumItemWidth setItemWidth setItemWidths clearItemWidth clearItemWidths invalidateItemWidths setItemSpacing itemSpacing setRowSpacing setContentMargins contentMargins setLineAlignment lineAlignment displayRowCount displayRowForIndex setVisualStateBackgroundVisible visualStateBackgroundVisible setStateBackgroundCornerRadius stateBackgroundCornerRadius wrapLayoutChanged">
+<a href="pages/virtualwrapview.html">virtualwrapview.h</a>
+<p class="muted">VirtualWrapView</p>
+</div>
+<div class="card" data-search="WidgetAdapter WidgetAdapter widgetType createWidget bindWidget bindWidget visualStateChanged visualStateChanged unbindWidget unbindWidget estimatedSize">
+<a href="pages/widgetadapter.html">widgetadapter.h</a>
+<p class="muted">WidgetAdapter</p>
+</div>
+<div class="card" data-search="WidgetRecycler Factory kDefaultMaxPoolSize WidgetRecycler WidgetRecycler WidgetRecycler operator setParentWidget parentWidget setFactory acquire recycle discard setMaxPoolSize maxPoolSize pooledCount pooledCount activeCount createdCount destroyedCount pendingDestructionCount acquireCount reuseCount aliveCount isPooled trim clear">
+<a href="pages/widgetrecycler.html">widgetrecycler.h</a>
+<p class="muted">WidgetRecycler</p>
+</div>
+<div class="card" data-search="WrapLayout WrapLayout WrapLayout addItem insertWidget count itemAt takeAt sizeHint minimumSize expandingDirections hasHeightForWidth heightForWidth setGeometry invalidate setFixedItemHeight fixedItemHeight setItemSpacing itemSpacing setRowSpacing rowSpacing setLineAlignment lineAlignment layoutChanged">
+<a href="pages/wraplayout.html">wraplayout.h</a>
+<p class="muted">WrapLayout</p>
+</div>
+<div class="card" data-search="WrapWidget WrapWidget WrapWidget wrapLayout addWidget insertWidget takeWidget clear setAutoHeightEnabled autoHeightEnabled setAutoHeightMaximumHeight autoHeightMaximumHeight sizeHint minimumSizeHint">
+<a href="pages/wrapwidget.html">wrapwidget.h</a>
+<p class="muted">WrapWidget</p>
+</div>
+</div>
+<footer class="muted">
+<p><span data-zh="按能力查找配套设置与独立示例；通用接口请沿基类链接查阅，Qt 继承接口请参考 Qt 文档。" data-en="Find related settings and independent examples by capability. Follow base-class links for shared APIs and consult Qt documentation for inherited Qt APIs.">按能力查找配套设置与独立示例；通用接口请沿基类链接查阅，Qt 继承接口请参考 Qt 文档。</span></p>
+</footer>
+</main>
+<script src="assets/reference.js">
+</script>
+</body>
+</html>

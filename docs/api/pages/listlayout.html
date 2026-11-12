@@ -1,0 +1,547 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ListLayout · VirtualItemViews</title>
+<link rel="stylesheet" href="../assets/reference.css">
+</head>
+<body>
+<header>
+<div class="header-top">
+<a href="../index.html">VirtualItemViews / API</a>
+<div id="language-switch" class="language-switch" role="group" aria-label="Language / 语言" hidden>
+<button type="button" data-language="zh" aria-pressed="true" lang="zh-CN">中文</button>
+<button type="button" data-language="en" aria-pressed="false" lang="en">English</button>
+</div>
+</div>
+<h1>ListLayout</h1>
+<p><span data-zh="公开辅助接口与扩展契约" data-en="Public helper interfaces and extension contracts">公开辅助接口与扩展契约</span></p>
+</header>
+<main>
+<nav>
+<a href="../index.html"><span data-zh="能力总览" data-en="Capabilities">能力总览</span></a>
+<a href="../../AGENT_GUIDE.md"><span data-zh="Agent 索引" data-en="Agent guide">Agent 索引</span></a>
+<a href="../../../examples/README.md"><span data-zh="独立示例" data-en="Examples">独立示例</span></a>
+<a href="../../../README.md"><span data-zh="项目首页" data-en="Project home">项目首页</span></a>
+</nav>
+<label for="filter"><span data-zh="搜索本页：能力、API 名称或关键词" data-en="Search this page: capability, API name or keyword">搜索本页：能力、API 名称或关键词</span></label>
+<input id="filter" type="search" placeholder="例如：Popup、setAutoHeight、冻结、branch">
+<p class="muted search-help"><span data-zh="无需网络或服务器。所有内容默认可见；搜索只筛选当前页。完整继承 API 请沿基类链接查阅。" data-en="No network or server required. All content is initially visible; search filters this page only. Follow base-class links for inherited APIs.">无需网络或服务器。所有内容默认可见；搜索只筛选当前页。完整继承 API 请沿基类链接查阅。</span></p>
+<p id="search-status" role="status" aria-live="polite">
+</p>
+<p>
+<a href="../../../include/virtualitemviews/listlayout.h"><span data-zh="公开头文件：include/virtualitemviews/listlayout.h" data-en="Public header: include/virtualitemviews/listlayout.h">公开头文件：include/virtualitemviews/listlayout.h</span></a>
+</p>
+<p class="api-jump">
+<a href="#public-api"><span data-zh="公开函数列表" data-en="Public function index">公开函数列表</span></a>
+</p>
+<h2><span data-zh="能力与配套设置" data-en="Capabilities and related settings">能力与配套设置</span></h2>
+<article id="layout-kernel" data-search="LayoutPolicy ListLayout SizeIndex FixedSizeIndex BlockSizeIndex ScrollMapper TreeVisibilityIndex layoutpolicy listlayout sizeindex scrollmapper treevisibilityindex virtualitemview">
+<h3><span data-zh="布局与尺寸索引扩展" data-en="Layout and size-index extensions">布局与尺寸索引扩展</span></h3>
+<p>
+<code>LayoutPolicy · ListLayout · SizeIndex · FixedSizeIndex · BlockSizeIndex · ScrollMapper · TreeVisibilityIndex</code>
+</p>
+<p class="rules"><span data-zh="这些公开基础类型服务于布局扩展和定位查询。正常业务接入通过具体视图和模型通知；不要同时手工操作 sizeIndex/resetItems 和模型结构来维护两份状态。ListLayout 持有 SizeIndex，内部行布局区分固定/动态尺寸；TreeVisibilityIndex 管理展开后的映射。此层没有“任意改内部布局后自动保持所有业务状态”的契约，扩展时逐项阅读源码。" data-en="These public primitives support layout extensions and geometry queries. Normal integrations use concrete views and model notifications. Do not manually mutate sizeIndex/resetItems alongside model structure to maintain duplicate state. ListLayout owns a SizeIndex for fixed/variable sizing; TreeVisibilityIndex manages the expanded mapping. Arbitrary internal layout changes do not promise to preserve all business state automatically; inspect the implementation when extending this layer.">这些公开基础类型服务于布局扩展和定位查询。正常业务接入通过具体视图和模型通知；不要同时手工操作 sizeIndex/resetItems 和模型结构来维护两份状态。ListLayout 持有 SizeIndex，内部行布局区分固定/动态尺寸；TreeVisibilityIndex 管理展开后的映射。此层没有“任意改内部布局后自动保持所有业务状态”的契约，扩展时逐项阅读源码。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../../src/layout/listlayout.cpp">src/layout/listlayout.cpp</a> · <a href="../../../src/index/sizeindex.cpp">src/index/sizeindex.cpp</a> · <a href="../../../src/index/treevisibilityindex.cpp">src/index/treevisibilityindex.cpp</a> · <a href="../../../src/core/scrollmapper.cpp">src/core/scrollmapper.cpp</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../../models.md">docs/models.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（0）" data-en="Independent source examples (0)">独立源码示例（0）</span></summary>
+<ul>
+</ul>
+</details>
+</article>
+<h2 id="public-api" tabindex="-1"><span data-zh="公开 API、类型与信号" data-en="Public API, types and signals">公开 API、类型与信号</span></h2>
+<section class="function-index" id="function-index" tabindex="-1">
+<h3><span data-zh="公开函数列表" data-en="Public function index">公开函数列表</span></h3>
+<p class="muted"><span data-zh="按声明类型分组；每个重载单独列出，点击签名跳转到说明。信号单独列出；类型和数据成员仍保留在下方。" data-en="Grouped by declaring type. Each overload has its own link to the details. Signals are listed separately; types and data members remain below.">按声明类型分组；每个重载单独列出，点击签名跳转到说明。信号单独列出；类型和数据成员仍保留在下方。</span></p>
+<h4>ListLayout</h4>
+<ul>
+<li data-search="ListLayout ListLayout">
+<a href="#ListLayout-ListLayout-0">
+<code>explicit ListLayout(Qt::Orientation orientation = Qt::Vertical);</code>
+</a>
+</li>
+<li data-search="ListLayout ListLayout">
+<a href="#ListLayout-ListLayout-1">
+<code>ListLayout(SizeIndex *sizeIndex, Qt::Orientation orientation = Qt::Vertical);</code>
+</a>
+</li>
+<li data-search="ListLayout ListLayout">
+<a href="#ListLayout-ListLayout-2">
+<code>~ListLayout() override;</code>
+</a>
+</li>
+<li data-search="ListLayout orientation">
+<a href="#ListLayout-orientation-3">
+<code>Qt::Orientation orientation() const override;</code>
+</a>
+</li>
+<li data-search="ListLayout setOrientation">
+<a href="#ListLayout-setOrientation-4">
+<code>void setOrientation(Qt::Orientation orientation);</code>
+</a>
+</li>
+<li data-search="ListLayout sizeIndex">
+<a href="#ListLayout-sizeIndex-5">
+<code>SizeIndex *sizeIndex() const override;</code>
+</a>
+</li>
+<li data-search="ListLayout setSizeIndex">
+<a href="#ListLayout-setSizeIndex-6">
+<code>void setSizeIndex(SizeIndex *sizeIndex, bool takeOwnership = true) override;</code>
+</a>
+</li>
+<li data-search="ListLayout itemCount">
+<a href="#ListLayout-itemCount-7">
+<code>qsizetype itemCount() const override;</code>
+</a>
+</li>
+<li data-search="ListLayout itemSize">
+<a href="#ListLayout-itemSize-8">
+<code>int itemSize(qsizetype item) const override;</code>
+</a>
+</li>
+<li data-search="ListLayout offsetOf">
+<a href="#ListLayout-offsetOf-9">
+<code>qint64 offsetOf(qsizetype item) const override;</code>
+</a>
+</li>
+<li data-search="ListLayout indexAtOffset">
+<a href="#ListLayout-indexAtOffset-10">
+<code>qsizetype indexAtOffset(qint64 offset) const override;</code>
+</a>
+</li>
+<li data-search="ListLayout contentExtent">
+<a href="#ListLayout-contentExtent-11">
+<code>qint64 contentExtent() const override;</code>
+</a>
+</li>
+<li data-search="ListLayout filterVisibleRanges">
+<a href="#ListLayout-filterVisibleRanges-12">
+<code>void filterVisibleRanges(QVector&lt;VisibleRange&gt; &amp;ranges) const override;</code>
+</a>
+</li>
+<li data-search="ListLayout hasTransientGeometry">
+<a href="#ListLayout-hasTransientGeometry-13">
+<code>bool hasTransientGeometry() const override;</code>
+</a>
+</li>
+<li data-search="ListLayout itemOpacity">
+<a href="#ListLayout-itemOpacity-14">
+<code>qreal itemOpacity(qsizetype item) const override;</code>
+</a>
+</li>
+<li data-search="ListLayout crossExtent">
+<a href="#ListLayout-crossExtent-15">
+<code>int crossExtent() const override;</code>
+</a>
+</li>
+<li data-search="ListLayout setCrossExtent">
+<a href="#ListLayout-setCrossExtent-16">
+<code>void setCrossExtent(int extent) override;</code>
+</a>
+</li>
+<li data-search="ListLayout itemRect">
+<a href="#ListLayout-itemRect-17">
+<code>QRect itemRect(qsizetype item, qint64 scrollOffset) const override;</code>
+</a>
+</li>
+<li data-search="ListLayout itemAtPoint">
+<a href="#ListLayout-itemAtPoint-18">
+<code>qsizetype itemAtPoint(const QPoint &amp;viewportPos, qint64 scrollOffset) const override;</code>
+</a>
+</li>
+<li data-search="ListLayout isVariableSized">
+<a href="#ListLayout-isVariableSized-19">
+<code>bool isVariableSized() const override;</code>
+</a>
+</li>
+<li data-search="ListLayout resetItems">
+<a href="#ListLayout-resetItems-20">
+<code>void resetItems(qsizetype count, int estimate) override;</code>
+</a>
+</li>
+<li data-search="ListLayout insertItems">
+<a href="#ListLayout-insertItems-21">
+<code>void insertItems(qsizetype index, qsizetype count, int estimate) override;</code>
+</a>
+</li>
+<li data-search="ListLayout removeItems">
+<a href="#ListLayout-removeItems-22">
+<code>void removeItems(qsizetype index, qsizetype count) override;</code>
+</a>
+</li>
+<li data-search="ListLayout moveItems">
+<a href="#ListLayout-moveItems-23">
+<code>void moveItems(qsizetype from, qsizetype count, qsizetype to) override;</code>
+</a>
+</li>
+<li data-search="ListLayout setItemSize">
+<a href="#ListLayout-setItemSize-24">
+<code>void setItemSize(qsizetype item, int size) override;</code>
+</a>
+</li>
+<li data-search="ListLayout setItemSpacing">
+<a href="#ListLayout-setItemSpacing-25">
+<code>void setItemSpacing(int pixels);</code>
+</a>
+</li>
+<li data-search="ListLayout itemSpacing">
+<a href="#ListLayout-itemSpacing-26">
+<code>int itemSpacing() const;</code>
+</a>
+</li>
+<li data-search="ListLayout setSpacingAfter">
+<a href="#ListLayout-setSpacingAfter-27">
+<code>void setSpacingAfter(qsizetype item, int pixels);</code>
+</a>
+</li>
+<li data-search="ListLayout spacingAfter">
+<a href="#ListLayout-spacingAfter-28">
+<code>int spacingAfter(qsizetype item) const;</code>
+</a>
+</li>
+<li data-search="ListLayout setEdgeSpacing">
+<a href="#ListLayout-setEdgeSpacing-29">
+<code>void setEdgeSpacing(int leading, int trailing);</code>
+</a>
+</li>
+<li data-search="ListLayout leadingSpacing">
+<a href="#ListLayout-leadingSpacing-30">
+<code>int leadingSpacing() const;</code>
+</a>
+</li>
+<li data-search="ListLayout trailingSpacing">
+<a href="#ListLayout-trailingSpacing-31">
+<code>int trailingSpacing() const;</code>
+</a>
+</li>
+<li data-search="ListLayout estimate">
+<a href="#ListLayout-estimate-32">
+<code>int estimate() const;</code>
+</a>
+</li>
+<li data-search="ListLayout setEstimate">
+<a href="#ListLayout-setEstimate-33">
+<code>void setEstimate(int estimate);</code>
+</a>
+</li>
+<li data-search="ListLayout viewportMargins">
+<a href="#ListLayout-viewportMargins-34">
+<code>QMargins viewportMargins() const;</code>
+</a>
+</li>
+<li data-search="ListLayout setViewportMargins">
+<a href="#ListLayout-setViewportMargins-35">
+<code>void setViewportMargins(const QMargins &amp;margins);</code>
+</a>
+</li>
+</ul>
+</section>
+<h2><span data-zh="函数说明" data-en="Function details">函数说明</span></h2>
+<p class="muted"><span data-zh="按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。" data-en="Read each function for its purpose and related settings. Overloads are listed separately; follow related capabilities to find examples.">按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。</span></p>
+<section>
+<h3 id="ListLayout">ListLayout</h3>
+<pre>class VIRTUALITEMVIEWS_EXPORT ListLayout : public LayoutPolicy</pre>
+<article tabindex="-1" id="ListLayout-ListLayout-0" data-search="ListLayout ListLayout">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/listlayout.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L19</span>
+<pre>explicit ListLayout(Qt::Orientation orientation = Qt::Vertical);</pre>
+<p class="doc" data-zh="构造 ListLayout；按此重载传入父对象、模型或布局参数。带 parent 的 QObject/QWidget 遵循 Qt 父子生命周期。" data-en="Construct ListLayout with the parent, model or layout arguments in this overload. QObject/QWidget parent arguments follow Qt parent-child lifetime rules.">构造 ListLayout；按此重载传入父对象、模型或布局参数。带 parent 的 QObject/QWidget 遵循 Qt 父子生命周期。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#layout-kernel"><span data-zh="布局与尺寸索引扩展" data-en="Layout and size-index extensions">布局与尺寸索引扩展</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ListLayout-ListLayout-1" data-search="ListLayout ListLayout">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/listlayout.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L20</span>
+<pre>ListLayout(SizeIndex *sizeIndex, Qt::Orientation orientation = Qt::Vertical);</pre>
+<p class="doc" data-zh="构造 ListLayout；按此重载传入父对象、模型或布局参数。带 parent 的 QObject/QWidget 遵循 Qt 父子生命周期。" data-en="Construct ListLayout with the parent, model or layout arguments in this overload. QObject/QWidget parent arguments follow Qt parent-child lifetime rules.">构造 ListLayout；按此重载传入父对象、模型或布局参数。带 parent 的 QObject/QWidget 遵循 Qt 父子生命周期。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#layout-kernel"><span data-zh="布局与尺寸索引扩展" data-en="Layout and size-index extensions">布局与尺寸索引扩展</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ListLayout-ListLayout-2" data-search="ListLayout ListLayout">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/listlayout.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L21</span>
+<pre>~ListLayout() override;</pre>
+<p class="doc" data-zh="销毁 ListLayout 并释放其拥有的资源；不在析构回调中继续使用该对象。" data-en="Destroy ListLayout and release its owned resources; do not keep using the object during destruction callbacks.">销毁 ListLayout 并释放其拥有的资源；不在析构回调中继续使用该对象。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ListLayout-orientation-3" data-search="ListLayout orientation">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/listlayout.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L23</span>
+<pre>    Qt::Orientation orientation() const override;</pre>
+<p class="doc" data-zh="返回主轴或表头方向。" data-en="Return the main-axis or header orientation.">返回主轴或表头方向。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ListLayout-setOrientation-4" data-search="ListLayout setOrientation">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/listlayout.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L24</span>
+<pre>void setOrientation(Qt::Orientation orientation);</pre>
+<p class="doc" data-zh="设置主轴或表头方向。" data-en="Set the main-axis or header orientation.">设置主轴或表头方向。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ListLayout-sizeIndex-5" data-search="ListLayout sizeIndex">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/listlayout.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L26</span>
+<pre>    SizeIndex *sizeIndex() const override;</pre>
+<p class="doc" data-zh="返回项目尺寸及前缀偏移索引。" data-en="Return the index of item sizes and prefix offsets.">返回项目尺寸及前缀偏移索引。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ListLayout-setSizeIndex-6" data-search="ListLayout setSizeIndex">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/listlayout.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L28</span>
+<pre>void setSizeIndex(SizeIndex *sizeIndex, bool takeOwnership = true) override;</pre>
+<p class="doc" data-zh="设置项目尺寸及前缀偏移索引。" data-en="Set the index of item sizes and prefix offsets.">设置项目尺寸及前缀偏移索引。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ListLayout-itemCount-7" data-search="ListLayout itemCount">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/listlayout.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L30</span>
+<pre>qsizetype itemCount() const override;</pre>
+<p class="doc" data-zh="返回布局、索引或范围中的项目数量。" data-en="Return the item count in the layout, index or range.">返回布局、索引或范围中的项目数量。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ListLayout-itemSize-8" data-search="ListLayout itemSize">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/listlayout.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L31</span>
+<pre>int itemSize(qsizetype item) const override;</pre>
+<p class="doc" data-zh="返回项目布局主轴尺寸。" data-en="Return the item main-axis size.">返回项目布局主轴尺寸。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ListLayout-offsetOf-9" data-search="ListLayout offsetOf">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/listlayout.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L32</span>
+<pre>qint64 offsetOf(qsizetype item) const override;</pre>
+<p class="doc" data-zh="返回指定项目之前的累计主轴偏移。" data-en="Return the accumulated main-axis offset before an item.">返回指定项目之前的累计主轴偏移。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ListLayout-indexAtOffset-10" data-search="ListLayout indexAtOffset">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/listlayout.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L33</span>
+<pre>qsizetype indexAtOffset(qint64 offset) const override;</pre>
+<p class="doc" data-zh="将主轴偏移转换为项目序号；边界及间距命中按照此布局策略解释。" data-en="Map a main-axis offset to an item position; boundaries and gaps follow the layout policy&#x27;s hit-testing rules.">将主轴偏移转换为项目序号；边界及间距命中按照此布局策略解释。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ListLayout-contentExtent-11" data-search="ListLayout contentExtent">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/listlayout.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L34</span>
+<pre>qint64 contentExtent() const override;</pre>
+<p class="doc" data-zh="返回布局或尺寸索引的内容总长度。" data-en="Return the total content extent of the layout or size index.">返回布局或尺寸索引的内容总长度。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ListLayout-filterVisibleRanges-12" data-search="ListLayout filterVisibleRanges">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/listlayout.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L35</span>
+<pre>void filterVisibleRanges(QVector&lt;VisibleRange&gt; &amp;ranges) const override;</pre>
+<p class="doc" data-zh="按布局特殊几何过滤或拆分可见项目范围，供内核物化使用。" data-en="Filter or split visible item ranges according to special layout geometry for kernel materialization.">按布局特殊几何过滤或拆分可见项目范围，供内核物化使用。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ListLayout-hasTransientGeometry-13" data-search="ListLayout hasTransientGeometry">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/listlayout.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L36</span>
+<pre>    bool hasTransientGeometry() const override;</pre>
+<p class="doc" data-zh="判断布局是否正暴露动画期间的临时几何。" data-en="Check whether the layout exposes transient animation geometry.">判断布局是否正暴露动画期间的临时几何。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ListLayout-itemOpacity-14" data-search="ListLayout itemOpacity">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/listlayout.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L37</span>
+<pre>    qreal itemOpacity(qsizetype item) const override;</pre>
+<p class="doc" data-zh="返回指定项目当前动画透明度。" data-en="Return the current animation opacity of the specified item.">返回指定项目当前动画透明度。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ListLayout-crossExtent-15" data-search="ListLayout crossExtent">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/listlayout.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L43</span>
+<pre>    int crossExtent() const override;</pre>
+<p class="doc" data-zh="返回布局交叉轴长度。" data-en="Return the layout cross-axis extent.">返回布局交叉轴长度。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ListLayout-setCrossExtent-16" data-search="ListLayout setCrossExtent">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/listlayout.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L44</span>
+<pre>void setCrossExtent(int extent) override;</pre>
+<p class="doc" data-zh="设置布局交叉轴长度。" data-en="Set the layout cross-axis extent.">设置布局交叉轴长度。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ListLayout-itemRect-17" data-search="ListLayout itemRect">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/listlayout.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L46</span>
+<pre>QRect itemRect(qsizetype item, qint64 scrollOffset) const override;</pre>
+<p class="doc" data-zh="查询对应项目、单元格、窗格或合并区域的矩形。视图结果为视口坐标；布局策略结果为布局坐标；屏外矩形可超出可见区域。" data-en="Query the item, cell, pane or span rectangle. View results use viewport coordinates; layout policies use layout coordinates. Offscreen rectangles may extend beyond the visible area.">查询对应项目、单元格、窗格或合并区域的矩形。视图结果为视口坐标；布局策略结果为布局坐标；屏外矩形可超出可见区域。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ListLayout-itemAtPoint-18" data-search="ListLayout itemAtPoint">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/listlayout.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L47</span>
+<pre>qsizetype itemAtPoint(const QPoint &amp;viewportPos, qint64 scrollOffset) const override;</pre>
+<p class="doc" data-zh="命中给定坐标对应的项目；视图接口使用视口坐标，布局策略使用布局坐标。空白区域返回无效结果。" data-en="Hit-test an item at a position. Views use viewport coordinates; layout policies use layout coordinates. Blank space returns an invalid result.">命中给定坐标对应的项目；视图接口使用视口坐标，布局策略使用布局坐标。空白区域返回无效结果。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ListLayout-isVariableSized-19" data-search="ListLayout isVariableSized">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/listlayout.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L49</span>
+<pre>bool isVariableSized() const override;</pre>
+<p class="doc" data-zh="判断布局是否支持各项独立尺寸。" data-en="Check whether the layout uses independently sized items.">判断布局是否支持各项独立尺寸。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ListLayout-resetItems-20" data-search="ListLayout resetItems">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/listlayout.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L51</span>
+<pre>void resetItems(qsizetype count, int estimate) override;</pre>
+<p class="doc" data-zh="重建尺寸或布局索引的项目集合，使用给定数量与初始尺寸。" data-en="Reinitialize the item collection in the size or layout index using the supplied count and initial sizes.">重建尺寸或布局索引的项目集合，使用给定数量与初始尺寸。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ListLayout-insertItems-21" data-search="ListLayout insertItems">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/listlayout.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L52</span>
+<pre>void insertItems(qsizetype index, qsizetype count, int estimate) override;</pre>
+<p class="doc" data-zh="在指定位置插入几何/尺寸记录并更新后续索引。" data-en="Insert geometry or size records at the specified position and update subsequent indexes.">在指定位置插入几何/尺寸记录并更新后续索引。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ListLayout-removeItems-22" data-search="ListLayout removeItems">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/listlayout.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L53</span>
+<pre>void removeItems(qsizetype index, qsizetype count) override;</pre>
+<p class="doc" data-zh="删除指定范围的几何/尺寸记录并更新后续索引。" data-en="Remove a range of geometry or size records and update subsequent indexes.">删除指定范围的几何/尺寸记录并更新后续索引。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ListLayout-moveItems-23" data-search="ListLayout moveItems">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/listlayout.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L54</span>
+<pre>void moveItems(qsizetype from, qsizetype count, qsizetype to) override;</pre>
+<p class="doc" data-zh="在布局索引中移动一段项目并维护尺寸与偏移。" data-en="Move a range of items in the layout index while maintaining sizes and offsets.">在布局索引中移动一段项目并维护尺寸与偏移。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ListLayout-setItemSize-24" data-search="ListLayout setItemSize">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/listlayout.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L55</span>
+<pre>void setItemSize(qsizetype item, int size) override;</pre>
+<p class="doc" data-zh="设置项目布局主轴尺寸。" data-en="Set the item main-axis size.">设置项目布局主轴尺寸。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ListLayout-setItemSpacing-25" data-search="ListLayout setItemSpacing">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/listlayout.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L58</span>
+<pre>void setItemSpacing(int pixels);</pre>
+<p class="doc" data-zh="设置项目间距。" data-en="Set the spacing between items.">设置项目间距。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ListLayout-itemSpacing-26" data-search="ListLayout itemSpacing">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/listlayout.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L59</span>
+<pre>    int itemSpacing() const;</pre>
+<p class="doc" data-zh="返回项目间距。" data-en="Return the spacing between items.">返回项目间距。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ListLayout-setSpacingAfter-27" data-search="ListLayout setSpacingAfter">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/listlayout.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L60</span>
+<pre>void setSpacingAfter(qsizetype item, int pixels);</pre>
+<p class="doc" data-zh="设置指定项目后间距。" data-en="Set the spacing after the specified item.">设置指定项目后间距。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ListLayout-spacingAfter-28" data-search="ListLayout spacingAfter">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/listlayout.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L61</span>
+<pre>int spacingAfter(qsizetype item) const;</pre>
+<p class="doc" data-zh="返回指定项目后间距。" data-en="Return the spacing after the specified item.">返回指定项目后间距。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ListLayout-setEdgeSpacing-29" data-search="ListLayout setEdgeSpacing">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/listlayout.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L64</span>
+<pre>void setEdgeSpacing(int leading, int trailing);</pre>
+<p class="doc" data-zh="设置布局首尾边距，常用于中心分割线模式的半间距。" data-en="Set leading and trailing layout spacing, typically half-gaps for centered grid lines.">设置布局首尾边距，常用于中心分割线模式的半间距。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ListLayout-leadingSpacing-30" data-search="ListLayout leadingSpacing">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/listlayout.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L65</span>
+<pre>    int leadingSpacing() const;</pre>
+<p class="doc" data-zh="返回布局首端或末端间距。" data-en="Return the leading or trailing layout spacing.">返回布局首端或末端间距。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ListLayout-trailingSpacing-31" data-search="ListLayout trailingSpacing">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/listlayout.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L66</span>
+<pre>    int trailingSpacing() const;</pre>
+<p class="doc" data-zh="返回布局首端或末端间距。" data-en="Return the leading or trailing layout spacing.">返回布局首端或末端间距。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ListLayout-estimate-32" data-search="ListLayout estimate">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/listlayout.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L69</span>
+<pre>    int estimate() const;</pre>
+<p class="doc" data-zh="返回未测量项目估计高度。" data-en="Return the estimated height of unmeasured items.">返回未测量项目估计高度。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ListLayout-setEstimate-33" data-search="ListLayout setEstimate">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/listlayout.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L70</span>
+<pre>void setEstimate(int estimate);</pre>
+<p class="doc" data-zh="设置未测量项目估计高度。" data-en="Set the estimated height of unmeasured items.">设置未测量项目估计高度。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ListLayout-viewportMargins-34" data-search="ListLayout viewportMargins">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/listlayout.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L73</span>
+<pre>    QMargins viewportMargins() const;</pre>
+<p class="doc" data-zh="返回布局视口四周边距。" data-en="Return the layout viewport margins.">返回布局视口四周边距。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ListLayout-setViewportMargins-35" data-search="ListLayout setViewportMargins">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/listlayout.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L74</span>
+<pre>void setViewportMargins(const QMargins &amp;margins);</pre>
+<p class="doc" data-zh="设置布局视口四周边距。" data-en="Set the layout viewport margins.">设置布局视口四周边距。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+</section>
+<footer class="muted">
+<p><span data-zh="按能力查找配套设置与独立示例；通用接口请沿基类链接查阅，Qt 继承接口请参考 Qt 文档。" data-en="Find related settings and independent examples by capability. Follow base-class links for shared APIs and consult Qt documentation for inherited Qt APIs.">按能力查找配套设置与独立示例；通用接口请沿基类链接查阅，Qt 继承接口请参考 Qt 文档。</span></p>
+</footer>
+</main>
+<script src="../assets/reference.js">
+</script>
+</body>
+</html>

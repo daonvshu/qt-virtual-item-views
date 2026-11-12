@@ -12,8 +12,9 @@ class FlowTableLayout;
 /// Use the cell height API below. Inherited size-index height setters are
 /// unsupported. Automatic item-widget sizeHint measurement is disabled and cannot
 /// be enabled; attempts to use either unsupported configuration report a warning.
-/// setAutoHeightEnabled() fits the whole view to its responsive grid, bounded by
-/// setMaximumHeight() and the parent layout's available height.
+/// setAutoHeightEnabled() fixes the whole view to its responsive grid height.
+/// setAutoHeightMaximumHeight() optionally caps it; zero means no height limit.
+/// The parent layout does not shrink the computed height.
 class VIRTUALITEMVIEWS_EXPORT VirtualFlowTableView : public VirtualItemView
 {
     Q_OBJECT

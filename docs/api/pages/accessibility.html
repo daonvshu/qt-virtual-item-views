@@ -1,0 +1,1140 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AccessibleVirtualItem / AccessibleVirtualItemView / viv namespace · VirtualItemViews</title>
+<link rel="stylesheet" href="../assets/reference.css">
+</head>
+<body>
+<header>
+<div class="header-top">
+<a href="../index.html">VirtualItemViews / API</a>
+<div id="language-switch" class="language-switch" role="group" aria-label="Language / 语言" hidden>
+<button type="button" data-language="zh" aria-pressed="true" lang="zh-CN">中文</button>
+<button type="button" data-language="en" aria-pressed="false" lang="en">English</button>
+</div>
+</div>
+<h1>AccessibleVirtualItem / AccessibleVirtualItemView / viv namespace</h1>
+<p><span data-zh="公开辅助接口与扩展契约" data-en="Public helper interfaces and extension contracts">公开辅助接口与扩展契约</span></p>
+</header>
+<main>
+<nav>
+<a href="../index.html"><span data-zh="能力总览" data-en="Capabilities">能力总览</span></a>
+<a href="../../AGENT_GUIDE.md"><span data-zh="Agent 索引" data-en="Agent guide">Agent 索引</span></a>
+<a href="../../../examples/README.md"><span data-zh="独立示例" data-en="Examples">独立示例</span></a>
+<a href="../../../README.md"><span data-zh="项目首页" data-en="Project home">项目首页</span></a>
+</nav>
+<label for="filter"><span data-zh="搜索本页：能力、API 名称或关键词" data-en="Search this page: capability, API name or keyword">搜索本页：能力、API 名称或关键词</span></label>
+<input id="filter" type="search" placeholder="例如：Popup、setAutoHeight、冻结、branch">
+<p class="muted search-help"><span data-zh="无需网络或服务器。所有内容默认可见；搜索只筛选当前页。完整继承 API 请沿基类链接查阅。" data-en="No network or server required. All content is initially visible; search filters this page only. Follow base-class links for inherited APIs.">无需网络或服务器。所有内容默认可见；搜索只筛选当前页。完整继承 API 请沿基类链接查阅。</span></p>
+<p id="search-status" role="status" aria-live="polite">
+</p>
+<p>
+<a href="../../../include/virtualitemviews/accessibility.h"><span data-zh="公开头文件：include/virtualitemviews/accessibility.h" data-en="Public header: include/virtualitemviews/accessibility.h">公开头文件：include/virtualitemviews/accessibility.h</span></a>
+</p>
+<p class="api-jump">
+<a href="#public-api"><span data-zh="公开函数列表" data-en="Public function index">公开函数列表</span></a>
+</p>
+<h2><span data-zh="能力与配套设置" data-en="Capabilities and related settings">能力与配套设置</span></h2>
+<article id="accessibility" data-search="installAccessibilityFactory removeAccessibilityFactory accessibility virtualitemview">
+<h3><span data-zh="无障碍 / 虚拟索引映射" data-en="Accessibility / virtual item mapping">无障碍 / 虚拟索引映射</span></h3>
+<p>
+<code>installAccessibilityFactory · removeAccessibilityFactory</code>
+</p>
+<p class="rules"><span data-zh="QApplication 创建后调用 installAccessibilityFactory 安装虚拟项目的无障碍桥接；业务控件仍需正确 accessibleName、角色和可操作语义。先阅读 accessibility.h 与专门指南，不要为每个逻辑项目常驻一个隐藏 QWidget 来暴露语义。" data-en="Call installAccessibilityFactory after creating QApplication. Business widgets still need appropriate accessibleName, roles and actions. Read accessibility.h and the dedicated guide; do not keep one hidden QWidget per logical item just to expose semantics.">QApplication 创建后调用 installAccessibilityFactory 安装虚拟项目的无障碍桥接；业务控件仍需正确 accessibleName、角色和可操作语义。先阅读 accessibility.h 与专门指南，不要为每个逻辑项目常驻一个隐藏 QWidget 来暴露语义。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../../src/widgets/accessibility.cpp">src/widgets/accessibility.cpp</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../../accessibility-guide.md">docs/accessibility-guide.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（0）" data-en="Independent source examples (0)">独立源码示例（0）</span></summary>
+<ul>
+</ul>
+</details>
+</article>
+<h2 id="public-api" tabindex="-1"><span data-zh="公开 API、类型与信号" data-en="Public API, types and signals">公开 API、类型与信号</span></h2>
+<section class="function-index" id="function-index" tabindex="-1">
+<h3><span data-zh="公开函数列表" data-en="Public function index">公开函数列表</span></h3>
+<p class="muted"><span data-zh="按声明类型分组；每个重载单独列出，点击签名跳转到说明。信号单独列出；类型和数据成员仍保留在下方。" data-en="Grouped by declaring type. Each overload has its own link to the details. Signals are listed separately; types and data members remain below.">按声明类型分组；每个重载单独列出，点击签名跳转到说明。信号单独列出；类型和数据成员仍保留在下方。</span></p>
+<h4>AccessibleVirtualItem</h4>
+<ul>
+<li data-search="AccessibleVirtualItem AccessibleVirtualItem">
+<a href="#AccessibleVirtualItem-AccessibleVirtualItem-0">
+<code>AccessibleVirtualItem(VirtualItemView *view, const QModelIndex &amp;index, AccessibleVirtualItemView *viewNode);</code>
+</a>
+</li>
+<li data-search="AccessibleVirtualItem AccessibleVirtualItem">
+<a href="#AccessibleVirtualItem-AccessibleVirtualItem-1">
+<code>AccessibleVirtualItem(VirtualItemView *view, const QModelIndex &amp;cellIndex, int column, AccessibleVirtualItem *rowNode, AccessibleVirtualItemView *viewNode);</code>
+</a>
+</li>
+<li data-search="AccessibleVirtualItem AccessibleVirtualItem">
+<a href="#AccessibleVirtualItem-AccessibleVirtualItem-2">
+<code>~AccessibleVirtualItem() override;</code>
+</a>
+</li>
+<li data-search="AccessibleVirtualItem isValid">
+<a href="#AccessibleVirtualItem-isValid-3">
+<code>bool isValid() const override;</code>
+</a>
+</li>
+<li data-search="AccessibleVirtualItem object">
+<a href="#AccessibleVirtualItem-object-4">
+<code>QObject *object() const override;</code>
+</a>
+</li>
+<li data-search="AccessibleVirtualItem window">
+<a href="#AccessibleVirtualItem-window-5">
+<code>QWindow *window() const override;</code>
+</a>
+</li>
+<li data-search="AccessibleVirtualItem rect">
+<a href="#AccessibleVirtualItem-rect-6">
+<code>QRect rect() const override;</code>
+</a>
+</li>
+<li data-search="AccessibleVirtualItem role">
+<a href="#AccessibleVirtualItem-role-7">
+<code>QAccessible::Role role() const override;</code>
+</a>
+</li>
+<li data-search="AccessibleVirtualItem text">
+<a href="#AccessibleVirtualItem-text-8">
+<code>QString text(QAccessible::Text t) const override;</code>
+</a>
+</li>
+<li data-search="AccessibleVirtualItem setText">
+<a href="#AccessibleVirtualItem-setText-9">
+<code>void setText(QAccessible::Text t, const QString &amp;text) override;</code>
+</a>
+</li>
+<li data-search="AccessibleVirtualItem state">
+<a href="#AccessibleVirtualItem-state-10">
+<code>QAccessible::State state() const override;</code>
+</a>
+</li>
+<li data-search="AccessibleVirtualItem parent">
+<a href="#AccessibleVirtualItem-parent-11">
+<code>QAccessibleInterface *parent() const override;</code>
+</a>
+</li>
+<li data-search="AccessibleVirtualItem child">
+<a href="#AccessibleVirtualItem-child-12">
+<code>QAccessibleInterface *child(int index) const override;</code>
+</a>
+</li>
+<li data-search="AccessibleVirtualItem childCount">
+<a href="#AccessibleVirtualItem-childCount-13">
+<code>int childCount() const override;</code>
+</a>
+</li>
+<li data-search="AccessibleVirtualItem indexOfChild">
+<a href="#AccessibleVirtualItem-indexOfChild-14">
+<code>int indexOfChild(const QAccessibleInterface *child) const override;</code>
+</a>
+</li>
+<li data-search="AccessibleVirtualItem childAt">
+<a href="#AccessibleVirtualItem-childAt-15">
+<code>QAccessibleInterface *childAt(int x, int y) const override;</code>
+</a>
+</li>
+<li data-search="AccessibleVirtualItem focusChild">
+<a href="#AccessibleVirtualItem-focusChild-16">
+<code>QAccessibleInterface *focusChild() const override;</code>
+</a>
+</li>
+<li data-search="AccessibleVirtualItem interface_cast">
+<a href="#AccessibleVirtualItem-interface_cast-17">
+<code>void *interface_cast(QAccessible::InterfaceType type) override;</code>
+</a>
+</li>
+<li data-search="AccessibleVirtualItem actionNames">
+<a href="#AccessibleVirtualItem-actionNames-18">
+<code>QStringList actionNames() const override;</code>
+</a>
+</li>
+<li data-search="AccessibleVirtualItem doAction">
+<a href="#AccessibleVirtualItem-doAction-19">
+<code>void doAction(const QString &amp;actionName) override;</code>
+</a>
+</li>
+<li data-search="AccessibleVirtualItem keyBindingsForAction">
+<a href="#AccessibleVirtualItem-keyBindingsForAction-20">
+<code>QStringList keyBindingsForAction(const QString &amp;actionName) const override;</code>
+</a>
+</li>
+<li data-search="AccessibleVirtualItem isSelected">
+<a href="#AccessibleVirtualItem-isSelected-21">
+<code>bool isSelected() const override;</code>
+</a>
+</li>
+<li data-search="AccessibleVirtualItem columnHeaderCells">
+<a href="#AccessibleVirtualItem-columnHeaderCells-22">
+<code>QList&lt;QAccessibleInterface *&gt; columnHeaderCells() const override;</code>
+</a>
+</li>
+<li data-search="AccessibleVirtualItem rowHeaderCells">
+<a href="#AccessibleVirtualItem-rowHeaderCells-23">
+<code>QList&lt;QAccessibleInterface *&gt; rowHeaderCells() const override;</code>
+</a>
+</li>
+<li data-search="AccessibleVirtualItem columnIndex">
+<a href="#AccessibleVirtualItem-columnIndex-24">
+<code>int columnIndex() const override;</code>
+</a>
+</li>
+<li data-search="AccessibleVirtualItem rowIndex">
+<a href="#AccessibleVirtualItem-rowIndex-25">
+<code>int rowIndex() const override;</code>
+</a>
+</li>
+<li data-search="AccessibleVirtualItem columnExtent">
+<a href="#AccessibleVirtualItem-columnExtent-26">
+<code>int columnExtent() const override;</code>
+</a>
+</li>
+<li data-search="AccessibleVirtualItem rowExtent">
+<a href="#AccessibleVirtualItem-rowExtent-27">
+<code>int rowExtent() const override;</code>
+</a>
+</li>
+<li data-search="AccessibleVirtualItem table">
+<a href="#AccessibleVirtualItem-table-28">
+<code>QAccessibleInterface *table() const override;</code>
+</a>
+</li>
+<li data-search="AccessibleVirtualItem index">
+<a href="#AccessibleVirtualItem-index-29">
+<code>QModelIndex index() const;</code>
+</a>
+</li>
+<li data-search="AccessibleVirtualItem column">
+<a href="#AccessibleVirtualItem-column-30">
+<code>int column() const;</code>
+</a>
+</li>
+<li data-search="AccessibleVirtualItem rowModelIndex">
+<a href="#AccessibleVirtualItem-rowModelIndex-31">
+<code>QModelIndex rowModelIndex() const;</code>
+</a>
+</li>
+</ul>
+<h4>AccessibleVirtualItemView</h4>
+<ul>
+<li data-search="AccessibleVirtualItemView AccessibleVirtualItemView">
+<a href="#AccessibleVirtualItemView-AccessibleVirtualItemView-0">
+<code>explicit AccessibleVirtualItemView(VirtualItemView *view);</code>
+</a>
+</li>
+<li data-search="AccessibleVirtualItemView AccessibleVirtualItemView">
+<a href="#AccessibleVirtualItemView-AccessibleVirtualItemView-1">
+<code>~AccessibleVirtualItemView() override;</code>
+</a>
+</li>
+<li data-search="AccessibleVirtualItemView isValid">
+<a href="#AccessibleVirtualItemView-isValid-2">
+<code>bool isValid() const override;</code>
+</a>
+</li>
+<li data-search="AccessibleVirtualItemView object">
+<a href="#AccessibleVirtualItemView-object-3">
+<code>QObject *object() const override;</code>
+</a>
+</li>
+<li data-search="AccessibleVirtualItemView window">
+<a href="#AccessibleVirtualItemView-window-4">
+<code>QWindow *window() const override;</code>
+</a>
+</li>
+<li data-search="AccessibleVirtualItemView rect">
+<a href="#AccessibleVirtualItemView-rect-5">
+<code>QRect rect() const override;</code>
+</a>
+</li>
+<li data-search="AccessibleVirtualItemView role">
+<a href="#AccessibleVirtualItemView-role-6">
+<code>QAccessible::Role role() const override;</code>
+</a>
+</li>
+<li data-search="AccessibleVirtualItemView text">
+<a href="#AccessibleVirtualItemView-text-7">
+<code>QString text(QAccessible::Text t) const override;</code>
+</a>
+</li>
+<li data-search="AccessibleVirtualItemView setText">
+<a href="#AccessibleVirtualItemView-setText-8">
+<code>void setText(QAccessible::Text t, const QString &amp;text) override;</code>
+</a>
+</li>
+<li data-search="AccessibleVirtualItemView state">
+<a href="#AccessibleVirtualItemView-state-9">
+<code>QAccessible::State state() const override;</code>
+</a>
+</li>
+<li data-search="AccessibleVirtualItemView parent">
+<a href="#AccessibleVirtualItemView-parent-10">
+<code>QAccessibleInterface *parent() const override;</code>
+</a>
+</li>
+<li data-search="AccessibleVirtualItemView child">
+<a href="#AccessibleVirtualItemView-child-11">
+<code>QAccessibleInterface *child(int index) const override;</code>
+</a>
+</li>
+<li data-search="AccessibleVirtualItemView childCount">
+<a href="#AccessibleVirtualItemView-childCount-12">
+<code>int childCount() const override;</code>
+</a>
+</li>
+<li data-search="AccessibleVirtualItemView indexOfChild">
+<a href="#AccessibleVirtualItemView-indexOfChild-13">
+<code>int indexOfChild(const QAccessibleInterface *child) const override;</code>
+</a>
+</li>
+<li data-search="AccessibleVirtualItemView childAt">
+<a href="#AccessibleVirtualItemView-childAt-14">
+<code>QAccessibleInterface *childAt(int x, int y) const override;</code>
+</a>
+</li>
+<li data-search="AccessibleVirtualItemView focusChild">
+<a href="#AccessibleVirtualItemView-focusChild-15">
+<code>QAccessibleInterface *focusChild() const override;</code>
+</a>
+</li>
+<li data-search="AccessibleVirtualItemView interface_cast">
+<a href="#AccessibleVirtualItemView-interface_cast-16">
+<code>void *interface_cast(QAccessible::InterfaceType type) override;</code>
+</a>
+</li>
+<li data-search="AccessibleVirtualItemView actionNames">
+<a href="#AccessibleVirtualItemView-actionNames-17">
+<code>QStringList actionNames() const override;</code>
+</a>
+</li>
+<li data-search="AccessibleVirtualItemView doAction">
+<a href="#AccessibleVirtualItemView-doAction-18">
+<code>void doAction(const QString &amp;actionName) override;</code>
+</a>
+</li>
+<li data-search="AccessibleVirtualItemView keyBindingsForAction">
+<a href="#AccessibleVirtualItemView-keyBindingsForAction-19">
+<code>QStringList keyBindingsForAction(const QString &amp;actionName) const override;</code>
+</a>
+</li>
+<li data-search="AccessibleVirtualItemView caption">
+<a href="#AccessibleVirtualItemView-caption-20">
+<code>QAccessibleInterface *caption() const override;</code>
+</a>
+</li>
+<li data-search="AccessibleVirtualItemView summary">
+<a href="#AccessibleVirtualItemView-summary-21">
+<code>QAccessibleInterface *summary() const override;</code>
+</a>
+</li>
+<li data-search="AccessibleVirtualItemView cellAt">
+<a href="#AccessibleVirtualItemView-cellAt-22">
+<code>QAccessibleInterface *cellAt(int row, int column) const override;</code>
+</a>
+</li>
+<li data-search="AccessibleVirtualItemView selectedCellCount">
+<a href="#AccessibleVirtualItemView-selectedCellCount-23">
+<code>int selectedCellCount() const override;</code>
+</a>
+</li>
+<li data-search="AccessibleVirtualItemView selectedCells">
+<a href="#AccessibleVirtualItemView-selectedCells-24">
+<code>QList&lt;QAccessibleInterface *&gt; selectedCells() const override;</code>
+</a>
+</li>
+<li data-search="AccessibleVirtualItemView columnDescription">
+<a href="#AccessibleVirtualItemView-columnDescription-25">
+<code>QString columnDescription(int column) const override;</code>
+</a>
+</li>
+<li data-search="AccessibleVirtualItemView rowDescription">
+<a href="#AccessibleVirtualItemView-rowDescription-26">
+<code>QString rowDescription(int row) const override;</code>
+</a>
+</li>
+<li data-search="AccessibleVirtualItemView selectedColumnCount">
+<a href="#AccessibleVirtualItemView-selectedColumnCount-27">
+<code>int selectedColumnCount() const override;</code>
+</a>
+</li>
+<li data-search="AccessibleVirtualItemView selectedRowCount">
+<a href="#AccessibleVirtualItemView-selectedRowCount-28">
+<code>int selectedRowCount() const override;</code>
+</a>
+</li>
+<li data-search="AccessibleVirtualItemView columnCount">
+<a href="#AccessibleVirtualItemView-columnCount-29">
+<code>int columnCount() const override;</code>
+</a>
+</li>
+<li data-search="AccessibleVirtualItemView rowCount">
+<a href="#AccessibleVirtualItemView-rowCount-30">
+<code>int rowCount() const override;</code>
+</a>
+</li>
+<li data-search="AccessibleVirtualItemView selectedColumns">
+<a href="#AccessibleVirtualItemView-selectedColumns-31">
+<code>QList&lt;int&gt; selectedColumns() const override;</code>
+</a>
+</li>
+<li data-search="AccessibleVirtualItemView selectedRows">
+<a href="#AccessibleVirtualItemView-selectedRows-32">
+<code>QList&lt;int&gt; selectedRows() const override;</code>
+</a>
+</li>
+<li data-search="AccessibleVirtualItemView isColumnSelected">
+<a href="#AccessibleVirtualItemView-isColumnSelected-33">
+<code>bool isColumnSelected(int column) const override;</code>
+</a>
+</li>
+<li data-search="AccessibleVirtualItemView isRowSelected">
+<a href="#AccessibleVirtualItemView-isRowSelected-34">
+<code>bool isRowSelected(int row) const override;</code>
+</a>
+</li>
+<li data-search="AccessibleVirtualItemView selectRow">
+<a href="#AccessibleVirtualItemView-selectRow-35">
+<code>bool selectRow(int row) override;</code>
+</a>
+</li>
+<li data-search="AccessibleVirtualItemView selectColumn">
+<a href="#AccessibleVirtualItemView-selectColumn-36">
+<code>bool selectColumn(int column) override;</code>
+</a>
+</li>
+<li data-search="AccessibleVirtualItemView unselectRow">
+<a href="#AccessibleVirtualItemView-unselectRow-37">
+<code>bool unselectRow(int row) override;</code>
+</a>
+</li>
+<li data-search="AccessibleVirtualItemView unselectColumn">
+<a href="#AccessibleVirtualItemView-unselectColumn-38">
+<code>bool unselectColumn(int column) override;</code>
+</a>
+</li>
+<li data-search="AccessibleVirtualItemView modelChange">
+<a href="#AccessibleVirtualItemView-modelChange-39">
+<code>void modelChange(QAccessibleTableModelChangeEvent *event) override;</code>
+</a>
+</li>
+<li data-search="AccessibleVirtualItemView view">
+<a href="#AccessibleVirtualItemView-view-40">
+<code>VirtualItemView *view() const;</code>
+</a>
+</li>
+<li data-search="AccessibleVirtualItemView itemFor">
+<a href="#AccessibleVirtualItemView-itemFor-41">
+<code>AccessibleVirtualItem *itemFor(const QModelIndex &amp;index, int column = -1);</code>
+</a>
+</li>
+<li data-search="AccessibleVirtualItemView visibleIndexes">
+<a href="#AccessibleVirtualItemView-visibleIndexes-42">
+<code>QList&lt;QModelIndex&gt; visibleIndexes() const;</code>
+</a>
+</li>
+<li data-search="AccessibleVirtualItemView visiblePosition">
+<a href="#AccessibleVirtualItemView-visiblePosition-43">
+<code>int visiblePosition(const QModelIndex &amp;index) const;</code>
+</a>
+</li>
+<li data-search="AccessibleVirtualItemView applySelection">
+<a href="#AccessibleVirtualItemView-applySelection-44">
+<code>bool applySelection(int row, int column, bool selected);</code>
+</a>
+</li>
+</ul>
+<h4>viv namespace</h4>
+<ul>
+<li data-search="viv namespace createAccessibleItemViewInterface">
+<a href="#viv-namespace-createAccessibleItemViewInterface-0">
+<code>VIRTUALITEMVIEWS_EXPORT QAccessibleInterface *createAccessibleItemViewInterface(const QString &amp;className, QObject *object);</code>
+</a>
+</li>
+<li data-search="viv namespace installAccessibilityFactory">
+<a href="#viv-namespace-installAccessibilityFactory-1">
+<code>VIRTUALITEMVIEWS_EXPORT void installAccessibilityFactory();</code>
+</a>
+</li>
+<li data-search="viv namespace removeAccessibilityFactory">
+<a href="#viv-namespace-removeAccessibilityFactory-2">
+<code>VIRTUALITEMVIEWS_EXPORT void removeAccessibilityFactory();</code>
+</a>
+</li>
+</ul>
+</section>
+<h2><span data-zh="函数说明" data-en="Function details">函数说明</span></h2>
+<p class="muted"><span data-zh="按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。" data-en="Read each function for its purpose and related settings. Overloads are listed separately; follow related capabilities to find examples.">按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。</span></p>
+<section>
+<h3 id="AccessibleVirtualItem">AccessibleVirtualItem</h3>
+<pre>class VIRTUALITEMVIEWS_EXPORT AccessibleVirtualItem : public QAccessibleInterface,
+                                                     public QAccessibleActionInterface,
+                                                     public QAccessibleTableCellInterface</pre>
+<article tabindex="-1" id="AccessibleVirtualItem-AccessibleVirtualItem-0" data-search="AccessibleVirtualItem AccessibleVirtualItem">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/accessibility.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L47</span>
+<pre>AccessibleVirtualItem(VirtualItemView *view, const QModelIndex &amp;index,
+                          AccessibleVirtualItemView *viewNode);</pre>
+<p class="doc" data-zh="构造 AccessibleVirtualItem；按此重载传入父对象、模型或布局参数。带 parent 的 QObject/QWidget 遵循 Qt 父子生命周期。" data-en="Construct AccessibleVirtualItem with the parent, model or layout arguments in this overload. QObject/QWidget parent arguments follow Qt parent-child lifetime rules.">构造 AccessibleVirtualItem；按此重载传入父对象、模型或布局参数。带 parent 的 QObject/QWidget 遵循 Qt 父子生命周期。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="AccessibleVirtualItem-AccessibleVirtualItem-1" data-search="AccessibleVirtualItem AccessibleVirtualItem">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/accessibility.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L50</span>
+<pre>AccessibleVirtualItem(VirtualItemView *view, const QModelIndex &amp;cellIndex, int column,
+                          AccessibleVirtualItem *rowNode, AccessibleVirtualItemView *viewNode);</pre>
+<p class="doc" data-zh="构造 AccessibleVirtualItem；按此重载传入父对象、模型或布局参数。带 parent 的 QObject/QWidget 遵循 Qt 父子生命周期。" data-en="Construct AccessibleVirtualItem with the parent, model or layout arguments in this overload. QObject/QWidget parent arguments follow Qt parent-child lifetime rules.">构造 AccessibleVirtualItem；按此重载传入父对象、模型或布局参数。带 parent 的 QObject/QWidget 遵循 Qt 父子生命周期。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="AccessibleVirtualItem-AccessibleVirtualItem-2" data-search="AccessibleVirtualItem AccessibleVirtualItem">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/accessibility.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L53</span>
+<pre>~AccessibleVirtualItem() override;</pre>
+<p class="doc" data-zh="销毁 AccessibleVirtualItem 并释放其拥有的资源；不在析构回调中继续使用该对象。" data-en="Destroy AccessibleVirtualItem and release its owned resources; do not keep using the object during destruction callbacks.">销毁 AccessibleVirtualItem 并释放其拥有的资源；不在析构回调中继续使用该对象。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="AccessibleVirtualItem-isValid-3" data-search="AccessibleVirtualItem isValid">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/accessibility.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L56</span>
+<pre>bool isValid() const override;</pre>
+<p class="doc" data-zh="判断当前索引、范围或几何记录是否可用；使用几何或访问模型前先检查无效结果。" data-en="Check whether the index, range or geometry record is usable before accessing geometry or model data.">判断当前索引、范围或几何记录是否可用；使用几何或访问模型前先检查无效结果。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="AccessibleVirtualItem-object-4" data-search="AccessibleVirtualItem object">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/accessibility.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L57</span>
+<pre>QObject *object() const override;</pre>
+<p class="doc" data-zh="返回无障碍接口关联的 QObject。" data-en="Return the QObject associated with the accessible interface.">返回无障碍接口关联的 QObject。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="AccessibleVirtualItem-window-5" data-search="AccessibleVirtualItem window">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/accessibility.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L58</span>
+<pre>QWindow *window() const override;</pre>
+<p class="doc" data-zh="返回无障碍对象所属窗口。" data-en="Return the window containing the accessible object.">返回无障碍对象所属窗口。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="AccessibleVirtualItem-rect-6" data-search="AccessibleVirtualItem rect">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/accessibility.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L59</span>
+<pre>QRect rect() const override;</pre>
+<p class="doc" data-zh="返回无障碍对象的屏幕矩形。" data-en="Return the screen rectangle of the accessible object.">返回无障碍对象的屏幕矩形。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="AccessibleVirtualItem-role-7" data-search="AccessibleVirtualItem role">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/accessibility.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L60</span>
+<pre>QAccessible::Role role() const override;</pre>
+<p class="doc" data-zh="返回无障碍对象角色。" data-en="Return the accessible object role.">返回无障碍对象角色。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="AccessibleVirtualItem-text-8" data-search="AccessibleVirtualItem text">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/accessibility.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L61</span>
+<pre>QString text(QAccessible::Text t) const override;</pre>
+<p class="doc" data-zh="读取或设置指定无障碍文本类型的文字，遵循 Qt 无障碍接口约定。" data-en="Read or set text of the specified accessible text kind according to the Qt accessibility contract.">读取或设置指定无障碍文本类型的文字，遵循 Qt 无障碍接口约定。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="AccessibleVirtualItem-setText-9" data-search="AccessibleVirtualItem setText">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/accessibility.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L62</span>
+<pre>void setText(QAccessible::Text t, const QString &amp;text) override;</pre>
+<p class="doc" data-zh="读取或设置指定无障碍文本类型的文字，遵循 Qt 无障碍接口约定。" data-en="Read or set text of the specified accessible text kind according to the Qt accessibility contract.">读取或设置指定无障碍文本类型的文字，遵循 Qt 无障碍接口约定。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="AccessibleVirtualItem-state-10" data-search="AccessibleVirtualItem state">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/accessibility.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L63</span>
+<pre>QAccessible::State state() const override;</pre>
+<p class="doc" data-zh="返回无障碍对象状态。" data-en="Return the accessible object state.">返回无障碍对象状态。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="AccessibleVirtualItem-parent-11" data-search="AccessibleVirtualItem parent">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/accessibility.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L64</span>
+<pre>QAccessibleInterface *parent() const override;</pre>
+<p class="doc" data-zh="返回无障碍父接口。" data-en="Return the accessible parent interface.">返回无障碍父接口。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="AccessibleVirtualItem-child-12" data-search="AccessibleVirtualItem child">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/accessibility.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L65</span>
+<pre>QAccessibleInterface *child(int index) const override;</pre>
+<p class="doc" data-zh="按子序号、位置或行列查找无障碍接口；不存在时返回空。" data-en="Find an accessible interface by child position, coordinates or row/column; return null when absent.">按子序号、位置或行列查找无障碍接口；不存在时返回空。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="AccessibleVirtualItem-childCount-13" data-search="AccessibleVirtualItem childCount">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/accessibility.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L66</span>
+<pre>int childCount() const override;</pre>
+<p class="doc" data-zh="返回无障碍子对象数量。" data-en="Return the accessible child count.">返回无障碍子对象数量。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="AccessibleVirtualItem-indexOfChild-14" data-search="AccessibleVirtualItem indexOfChild">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/accessibility.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L67</span>
+<pre>int indexOfChild(const QAccessibleInterface *child) const override;</pre>
+<p class="doc" data-zh="查询无障碍子接口或模型索引在可见集合中的位置。" data-en="Find the position of an accessible child or model index in the visible collection.">查询无障碍子接口或模型索引在可见集合中的位置。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="AccessibleVirtualItem-childAt-15" data-search="AccessibleVirtualItem childAt">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/accessibility.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L68</span>
+<pre>QAccessibleInterface *childAt(int x, int y) const override;</pre>
+<p class="doc" data-zh="按子序号、位置或行列查找无障碍接口；不存在时返回空。" data-en="Find an accessible interface by child position, coordinates or row/column; return null when absent.">按子序号、位置或行列查找无障碍接口；不存在时返回空。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="AccessibleVirtualItem-focusChild-16" data-search="AccessibleVirtualItem focusChild">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/accessibility.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L69</span>
+<pre>QAccessibleInterface *focusChild() const override;</pre>
+<p class="doc" data-zh="返回当前获得焦点的无障碍子接口。" data-en="Return the focused accessible child interface.">返回当前获得焦点的无障碍子接口。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="AccessibleVirtualItem-interface_cast-17" data-search="AccessibleVirtualItem interface_cast">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/accessibility.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L70</span>
+<pre>void *interface_cast(QAccessible::InterfaceType type) override;</pre>
+<p class="doc" data-zh="提供 Qt 无障碍扩展接口，如表格、单元格或动作接口。" data-en="Expose Qt accessibility extensions such as table, cell or action interfaces.">提供 Qt 无障碍扩展接口，如表格、单元格或动作接口。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="AccessibleVirtualItem-actionNames-18" data-search="AccessibleVirtualItem actionNames">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/accessibility.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L73</span>
+<pre>QStringList actionNames() const override;</pre>
+<p class="doc" data-zh="返回支持的无障碍动作名集合。" data-en="Return the supported accessible action names.">返回支持的无障碍动作名集合。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="AccessibleVirtualItem-doAction-19" data-search="AccessibleVirtualItem doAction">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/accessibility.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L74</span>
+<pre>void doAction(const QString &amp;actionName) override;</pre>
+<p class="doc" data-zh="执行给定无障碍动作，例如激活或选择。" data-en="Execute an accessible action such as activation or selection.">执行给定无障碍动作，例如激活或选择。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="AccessibleVirtualItem-keyBindingsForAction-20" data-search="AccessibleVirtualItem keyBindingsForAction">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/accessibility.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L75</span>
+<pre>QStringList keyBindingsForAction(const QString &amp;actionName) const override;</pre>
+<p class="doc" data-zh="返回指定无障碍动作可使用的快捷键说明。" data-en="Return keyboard binding descriptions for an accessible action.">返回指定无障碍动作可使用的快捷键说明。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="AccessibleVirtualItem-isSelected-21" data-search="AccessibleVirtualItem isSelected">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/accessibility.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L81</span>
+<pre>bool isSelected() const override;</pre>
+<p class="doc" data-zh="查询当前项或指定整列/整行的选中状态。" data-en="Query selection of the item or specified whole column/row.">查询当前项或指定整列/整行的选中状态。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="AccessibleVirtualItem-columnHeaderCells-22" data-search="AccessibleVirtualItem columnHeaderCells">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/accessibility.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L85</span>
+<pre>QList&lt;QAccessibleInterface *&gt; columnHeaderCells() const override;</pre>
+<p class="doc" data-zh="返回与当前无障碍单元格关联的表头接口集合。" data-en="Return the header interfaces associated with the accessible cell.">返回与当前无障碍单元格关联的表头接口集合。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="AccessibleVirtualItem-rowHeaderCells-23" data-search="AccessibleVirtualItem rowHeaderCells">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/accessibility.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L86</span>
+<pre>QList&lt;QAccessibleInterface *&gt; rowHeaderCells() const override;</pre>
+<p class="doc" data-zh="返回与当前无障碍单元格关联的表头接口集合。" data-en="Return the header interfaces associated with the accessible cell.">返回与当前无障碍单元格关联的表头接口集合。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="AccessibleVirtualItem-columnIndex-24" data-search="AccessibleVirtualItem columnIndex">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/accessibility.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L87</span>
+<pre>int columnIndex() const override;</pre>
+<p class="doc" data-zh="返回单元格逻辑列号或行号。" data-en="Return the logical cell column or row index.">返回单元格逻辑列号或行号。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="AccessibleVirtualItem-rowIndex-25" data-search="AccessibleVirtualItem rowIndex">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/accessibility.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L88</span>
+<pre>int rowIndex() const override;</pre>
+<p class="doc" data-zh="返回单元格逻辑列号或行号。" data-en="Return the logical cell column or row index.">返回单元格逻辑列号或行号。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="AccessibleVirtualItem-columnExtent-26" data-search="AccessibleVirtualItem columnExtent">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/accessibility.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L89</span>
+<pre>int columnExtent() const override;</pre>
+<p class="doc" data-zh="返回无障碍单元格跨越的列数或行数。" data-en="Return the number of columns or rows spanned by an accessible cell.">返回无障碍单元格跨越的列数或行数。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="AccessibleVirtualItem-rowExtent-27" data-search="AccessibleVirtualItem rowExtent">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/accessibility.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L90</span>
+<pre>int rowExtent() const override;</pre>
+<p class="doc" data-zh="返回无障碍单元格跨越的列数或行数。" data-en="Return the number of columns or rows spanned by an accessible cell.">返回无障碍单元格跨越的列数或行数。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="AccessibleVirtualItem-table-28" data-search="AccessibleVirtualItem table">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/accessibility.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L91</span>
+<pre>QAccessibleInterface *table() const override;</pre>
+<p class="doc" data-zh="返回无障碍单元格所属表格接口。" data-en="Return the table interface containing the accessible cell.">返回无障碍单元格所属表格接口。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="AccessibleVirtualItem-index-29" data-search="AccessibleVirtualItem index">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/accessibility.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L94</span>
+<pre>    QModelIndex index() const;</pre>
+<p class="doc" data-zh="返回当前对象或其所在行的模型索引。" data-en="Return the model index of the object or its row.">返回当前对象或其所在行的模型索引。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="AccessibleVirtualItem-column-30" data-search="AccessibleVirtualItem column">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/accessibility.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L96</span>
+<pre>    int column() const;</pre>
+<p class="doc" data-zh="返回当前无障碍项列号或指定列的布局几何。" data-en="Return the accessible item column or layout geometry of the specified column.">返回当前无障碍项列号或指定列的布局几何。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="AccessibleVirtualItem-rowModelIndex-31" data-search="AccessibleVirtualItem rowModelIndex">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/accessibility.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L100</span>
+<pre>QModelIndex rowModelIndex() const;</pre>
+<p class="doc" data-zh="返回当前对象或其所在行的模型索引。" data-en="Return the model index of the object or its row.">返回当前对象或其所在行的模型索引。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+</section>
+<section>
+<h3 id="AccessibleVirtualItemView">AccessibleVirtualItemView</h3>
+<pre>class VIRTUALITEMVIEWS_EXPORT AccessibleVirtualItemView : public QAccessibleInterface,
+                                                         public QAccessibleActionInterface,
+                                                         public QAccessibleTableInterface</pre>
+<article tabindex="-1" id="AccessibleVirtualItemView-AccessibleVirtualItemView-0" data-search="AccessibleVirtualItemView AccessibleVirtualItemView">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/accessibility.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L133</span>
+<pre>explicit AccessibleVirtualItemView(VirtualItemView *view);</pre>
+<p class="doc" data-zh="构造 AccessibleVirtualItemView；按此重载传入父对象、模型或布局参数。带 parent 的 QObject/QWidget 遵循 Qt 父子生命周期。" data-en="Construct AccessibleVirtualItemView with the parent, model or layout arguments in this overload. QObject/QWidget parent arguments follow Qt parent-child lifetime rules.">构造 AccessibleVirtualItemView；按此重载传入父对象、模型或布局参数。带 parent 的 QObject/QWidget 遵循 Qt 父子生命周期。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="AccessibleVirtualItemView-AccessibleVirtualItemView-1" data-search="AccessibleVirtualItemView AccessibleVirtualItemView">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/accessibility.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L134</span>
+<pre>~AccessibleVirtualItemView() override;</pre>
+<p class="doc" data-zh="销毁 AccessibleVirtualItemView 并释放其拥有的资源；不在析构回调中继续使用该对象。" data-en="Destroy AccessibleVirtualItemView and release its owned resources; do not keep using the object during destruction callbacks.">销毁 AccessibleVirtualItemView 并释放其拥有的资源；不在析构回调中继续使用该对象。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="AccessibleVirtualItemView-isValid-2" data-search="AccessibleVirtualItemView isValid">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/accessibility.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L137</span>
+<pre>bool isValid() const override;</pre>
+<p class="doc" data-zh="判断当前索引、范围或几何记录是否可用；使用几何或访问模型前先检查无效结果。" data-en="Check whether the index, range or geometry record is usable before accessing geometry or model data.">判断当前索引、范围或几何记录是否可用；使用几何或访问模型前先检查无效结果。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="AccessibleVirtualItemView-object-3" data-search="AccessibleVirtualItemView object">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/accessibility.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L138</span>
+<pre>QObject *object() const override;</pre>
+<p class="doc" data-zh="返回无障碍接口关联的 QObject。" data-en="Return the QObject associated with the accessible interface.">返回无障碍接口关联的 QObject。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="AccessibleVirtualItemView-window-4" data-search="AccessibleVirtualItemView window">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/accessibility.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L139</span>
+<pre>QWindow *window() const override;</pre>
+<p class="doc" data-zh="返回无障碍对象所属窗口。" data-en="Return the window containing the accessible object.">返回无障碍对象所属窗口。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="AccessibleVirtualItemView-rect-5" data-search="AccessibleVirtualItemView rect">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/accessibility.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L140</span>
+<pre>QRect rect() const override;</pre>
+<p class="doc" data-zh="返回无障碍对象的屏幕矩形。" data-en="Return the screen rectangle of the accessible object.">返回无障碍对象的屏幕矩形。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="AccessibleVirtualItemView-role-6" data-search="AccessibleVirtualItemView role">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/accessibility.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L141</span>
+<pre>QAccessible::Role role() const override;</pre>
+<p class="doc" data-zh="返回无障碍对象角色。" data-en="Return the accessible object role.">返回无障碍对象角色。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="AccessibleVirtualItemView-text-7" data-search="AccessibleVirtualItemView text">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/accessibility.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L142</span>
+<pre>QString text(QAccessible::Text t) const override;</pre>
+<p class="doc" data-zh="读取或设置指定无障碍文本类型的文字，遵循 Qt 无障碍接口约定。" data-en="Read or set text of the specified accessible text kind according to the Qt accessibility contract.">读取或设置指定无障碍文本类型的文字，遵循 Qt 无障碍接口约定。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="AccessibleVirtualItemView-setText-8" data-search="AccessibleVirtualItemView setText">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/accessibility.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L143</span>
+<pre>void setText(QAccessible::Text t, const QString &amp;text) override;</pre>
+<p class="doc" data-zh="读取或设置指定无障碍文本类型的文字，遵循 Qt 无障碍接口约定。" data-en="Read or set text of the specified accessible text kind according to the Qt accessibility contract.">读取或设置指定无障碍文本类型的文字，遵循 Qt 无障碍接口约定。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="AccessibleVirtualItemView-state-9" data-search="AccessibleVirtualItemView state">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/accessibility.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L144</span>
+<pre>QAccessible::State state() const override;</pre>
+<p class="doc" data-zh="返回无障碍对象状态。" data-en="Return the accessible object state.">返回无障碍对象状态。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="AccessibleVirtualItemView-parent-10" data-search="AccessibleVirtualItemView parent">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/accessibility.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L145</span>
+<pre>QAccessibleInterface *parent() const override;</pre>
+<p class="doc" data-zh="返回无障碍父接口。" data-en="Return the accessible parent interface.">返回无障碍父接口。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="AccessibleVirtualItemView-child-11" data-search="AccessibleVirtualItemView child">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/accessibility.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L146</span>
+<pre>QAccessibleInterface *child(int index) const override;</pre>
+<p class="doc" data-zh="按子序号、位置或行列查找无障碍接口；不存在时返回空。" data-en="Find an accessible interface by child position, coordinates or row/column; return null when absent.">按子序号、位置或行列查找无障碍接口；不存在时返回空。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="AccessibleVirtualItemView-childCount-12" data-search="AccessibleVirtualItemView childCount">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/accessibility.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L147</span>
+<pre>int childCount() const override;</pre>
+<p class="doc" data-zh="返回无障碍子对象数量。" data-en="Return the accessible child count.">返回无障碍子对象数量。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="AccessibleVirtualItemView-indexOfChild-13" data-search="AccessibleVirtualItemView indexOfChild">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/accessibility.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L148</span>
+<pre>int indexOfChild(const QAccessibleInterface *child) const override;</pre>
+<p class="doc" data-zh="查询无障碍子接口或模型索引在可见集合中的位置。" data-en="Find the position of an accessible child or model index in the visible collection.">查询无障碍子接口或模型索引在可见集合中的位置。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="AccessibleVirtualItemView-childAt-14" data-search="AccessibleVirtualItemView childAt">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/accessibility.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L149</span>
+<pre>QAccessibleInterface *childAt(int x, int y) const override;</pre>
+<p class="doc" data-zh="按子序号、位置或行列查找无障碍接口；不存在时返回空。" data-en="Find an accessible interface by child position, coordinates or row/column; return null when absent.">按子序号、位置或行列查找无障碍接口；不存在时返回空。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="AccessibleVirtualItemView-focusChild-15" data-search="AccessibleVirtualItemView focusChild">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/accessibility.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L150</span>
+<pre>QAccessibleInterface *focusChild() const override;</pre>
+<p class="doc" data-zh="返回当前获得焦点的无障碍子接口。" data-en="Return the focused accessible child interface.">返回当前获得焦点的无障碍子接口。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="AccessibleVirtualItemView-interface_cast-16" data-search="AccessibleVirtualItemView interface_cast">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/accessibility.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L151</span>
+<pre>void *interface_cast(QAccessible::InterfaceType type) override;</pre>
+<p class="doc" data-zh="提供 Qt 无障碍扩展接口，如表格、单元格或动作接口。" data-en="Expose Qt accessibility extensions such as table, cell or action interfaces.">提供 Qt 无障碍扩展接口，如表格、单元格或动作接口。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="AccessibleVirtualItemView-actionNames-17" data-search="AccessibleVirtualItemView actionNames">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/accessibility.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L154</span>
+<pre>QStringList actionNames() const override;</pre>
+<p class="doc" data-zh="返回支持的无障碍动作名集合。" data-en="Return the supported accessible action names.">返回支持的无障碍动作名集合。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="AccessibleVirtualItemView-doAction-18" data-search="AccessibleVirtualItemView doAction">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/accessibility.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L155</span>
+<pre>void doAction(const QString &amp;actionName) override;</pre>
+<p class="doc" data-zh="执行给定无障碍动作，例如激活或选择。" data-en="Execute an accessible action such as activation or selection.">执行给定无障碍动作，例如激活或选择。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="AccessibleVirtualItemView-keyBindingsForAction-19" data-search="AccessibleVirtualItemView keyBindingsForAction">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/accessibility.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L156</span>
+<pre>QStringList keyBindingsForAction(const QString &amp;actionName) const override;</pre>
+<p class="doc" data-zh="返回指定无障碍动作可使用的快捷键说明。" data-en="Return keyboard binding descriptions for an accessible action.">返回指定无障碍动作可使用的快捷键说明。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="AccessibleVirtualItemView-caption-20" data-search="AccessibleVirtualItemView caption">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/accessibility.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L165</span>
+<pre>QAccessibleInterface *caption() const override;</pre>
+<p class="doc" data-zh="返回无障碍表格标题或摘要接口。" data-en="Return the accessible table caption or summary interface.">返回无障碍表格标题或摘要接口。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="AccessibleVirtualItemView-summary-21" data-search="AccessibleVirtualItemView summary">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/accessibility.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L166</span>
+<pre>QAccessibleInterface *summary() const override;</pre>
+<p class="doc" data-zh="返回无障碍表格标题或摘要接口。" data-en="Return the accessible table caption or summary interface.">返回无障碍表格标题或摘要接口。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="AccessibleVirtualItemView-cellAt-22" data-search="AccessibleVirtualItemView cellAt">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/accessibility.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L167</span>
+<pre>QAccessibleInterface *cellAt(int row, int column) const override;</pre>
+<p class="doc" data-zh="按子序号、位置或行列查找无障碍接口；不存在时返回空。" data-en="Find an accessible interface by child position, coordinates or row/column; return null when absent.">按子序号、位置或行列查找无障碍接口；不存在时返回空。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="AccessibleVirtualItemView-selectedCellCount-23" data-search="AccessibleVirtualItemView selectedCellCount">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/accessibility.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L168</span>
+<pre>int selectedCellCount() const override;</pre>
+<p class="doc" data-zh="返回无障碍查询得到的选中单元格、列或行数。" data-en="Return the accessible selected cell, column or row count.">返回无障碍查询得到的选中单元格、列或行数。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="AccessibleVirtualItemView-selectedCells-24" data-search="AccessibleVirtualItemView selectedCells">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/accessibility.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L172</span>
+<pre>QList&lt;QAccessibleInterface *&gt; selectedCells() const override;</pre>
+<p class="doc" data-zh="返回无障碍接口可见的选中单元格、列或行集合。" data-en="Return the selected cell, column or row collection exposed by accessibility.">返回无障碍接口可见的选中单元格、列或行集合。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="AccessibleVirtualItemView-columnDescription-25" data-search="AccessibleVirtualItemView columnDescription">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/accessibility.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L173</span>
+<pre>QString columnDescription(int column) const override;</pre>
+<p class="doc" data-zh="返回指定行或列的无障碍说明。" data-en="Return the accessible description for a row or column.">返回指定行或列的无障碍说明。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="AccessibleVirtualItemView-rowDescription-26" data-search="AccessibleVirtualItemView rowDescription">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/accessibility.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L174</span>
+<pre>QString rowDescription(int row) const override;</pre>
+<p class="doc" data-zh="返回指定行或列的无障碍说明。" data-en="Return the accessible description for a row or column.">返回指定行或列的无障碍说明。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="AccessibleVirtualItemView-selectedColumnCount-27" data-search="AccessibleVirtualItemView selectedColumnCount">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/accessibility.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L175</span>
+<pre>int selectedColumnCount() const override;</pre>
+<p class="doc" data-zh="返回无障碍查询得到的选中单元格、列或行数。" data-en="Return the accessible selected cell, column or row count.">返回无障碍查询得到的选中单元格、列或行数。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="AccessibleVirtualItemView-selectedRowCount-28" data-search="AccessibleVirtualItemView selectedRowCount">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/accessibility.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L176</span>
+<pre>int selectedRowCount() const override;</pre>
+<p class="doc" data-zh="返回无障碍查询得到的选中单元格、列或行数。" data-en="Return the accessible selected cell, column or row count.">返回无障碍查询得到的选中单元格、列或行数。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="AccessibleVirtualItemView-columnCount-29" data-search="AccessibleVirtualItemView columnCount">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/accessibility.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L177</span>
+<pre>int columnCount() const override;</pre>
+<p class="doc" data-zh="返回逻辑列数。" data-en="Return the logical column count.">返回逻辑列数。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="AccessibleVirtualItemView-rowCount-30" data-search="AccessibleVirtualItemView rowCount">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/accessibility.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L178</span>
+<pre>int rowCount() const override;</pre>
+<p class="doc" data-zh="返回行数。" data-en="Return the row count.">返回行数。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="AccessibleVirtualItemView-selectedColumns-31" data-search="AccessibleVirtualItemView selectedColumns">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/accessibility.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L179</span>
+<pre>QList&lt;int&gt; selectedColumns() const override;</pre>
+<p class="doc" data-zh="返回无障碍接口可见的选中单元格、列或行集合。" data-en="Return the selected cell, column or row collection exposed by accessibility.">返回无障碍接口可见的选中单元格、列或行集合。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="AccessibleVirtualItemView-selectedRows-32" data-search="AccessibleVirtualItemView selectedRows">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/accessibility.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L180</span>
+<pre>QList&lt;int&gt; selectedRows() const override;</pre>
+<p class="doc" data-zh="返回无障碍接口可见的选中单元格、列或行集合。" data-en="Return the selected cell, column or row collection exposed by accessibility.">返回无障碍接口可见的选中单元格、列或行集合。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="AccessibleVirtualItemView-isColumnSelected-33" data-search="AccessibleVirtualItemView isColumnSelected">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/accessibility.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L181</span>
+<pre>bool isColumnSelected(int column) const override;</pre>
+<p class="doc" data-zh="查询当前项或指定整列/整行的选中状态。" data-en="Query selection of the item or specified whole column/row.">查询当前项或指定整列/整行的选中状态。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="AccessibleVirtualItemView-isRowSelected-34" data-search="AccessibleVirtualItemView isRowSelected">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/accessibility.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L182</span>
+<pre>bool isRowSelected(int row) const override;</pre>
+<p class="doc" data-zh="查询当前项或指定整列/整行的选中状态。" data-en="Query selection of the item or specified whole column/row.">查询当前项或指定整列/整行的选中状态。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="AccessibleVirtualItemView-selectRow-35" data-search="AccessibleVirtualItemView selectRow">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/accessibility.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L183</span>
+<pre>bool selectRow(int row) override;</pre>
+<p class="doc" data-zh="通过无障碍表格接口选中或取消指定行列；遵守视图选择策略。" data-en="Select or unselect a row or column through the accessible table interface, respecting view selection policy.">通过无障碍表格接口选中或取消指定行列；遵守视图选择策略。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="AccessibleVirtualItemView-selectColumn-36" data-search="AccessibleVirtualItemView selectColumn">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/accessibility.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L184</span>
+<pre>bool selectColumn(int column) override;</pre>
+<p class="doc" data-zh="通过无障碍表格接口选中或取消指定行列；遵守视图选择策略。" data-en="Select or unselect a row or column through the accessible table interface, respecting view selection policy.">通过无障碍表格接口选中或取消指定行列；遵守视图选择策略。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="AccessibleVirtualItemView-unselectRow-37" data-search="AccessibleVirtualItemView unselectRow">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/accessibility.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L185</span>
+<pre>bool unselectRow(int row) override;</pre>
+<p class="doc" data-zh="通过无障碍表格接口选中或取消指定行列；遵守视图选择策略。" data-en="Select or unselect a row or column through the accessible table interface, respecting view selection policy.">通过无障碍表格接口选中或取消指定行列；遵守视图选择策略。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="AccessibleVirtualItemView-unselectColumn-38" data-search="AccessibleVirtualItemView unselectColumn">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/accessibility.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L186</span>
+<pre>bool unselectColumn(int column) override;</pre>
+<p class="doc" data-zh="通过无障碍表格接口选中或取消指定行列；遵守视图选择策略。" data-en="Select or unselect a row or column through the accessible table interface, respecting view selection policy.">通过无障碍表格接口选中或取消指定行列；遵守视图选择策略。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="AccessibleVirtualItemView-modelChange-39" data-search="AccessibleVirtualItemView modelChange">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/accessibility.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L187</span>
+<pre>void modelChange(QAccessibleTableModelChangeEvent *event) override;</pre>
+<p class="doc" data-zh="将模型变更通知转发到无障碍表格缓存。" data-en="Forward model changes to the accessible table cache.">将模型变更通知转发到无障碍表格缓存。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="AccessibleVirtualItemView-view-40" data-search="AccessibleVirtualItemView view">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/accessibility.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L189</span>
+<pre>    VirtualItemView *view() const;</pre>
+<p class="doc" data-zh="返回关联的视图、表格或表头对象。" data-en="Return the associated view, table or header object.">返回关联的视图、表格或表头对象。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="AccessibleVirtualItemView-itemFor-41" data-search="AccessibleVirtualItemView itemFor">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/accessibility.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L192</span>
+<pre>AccessibleVirtualItem *itemFor(const QModelIndex &amp;index, int column = -1);</pre>
+<p class="doc" data-zh="按子序号、位置或行列查找无障碍接口；不存在时返回空。" data-en="Find an accessible interface by child position, coordinates or row/column; return null when absent.">按子序号、位置或行列查找无障碍接口；不存在时返回空。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="AccessibleVirtualItemView-visibleIndexes-42" data-search="AccessibleVirtualItemView visibleIndexes">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/accessibility.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L194</span>
+<pre>QList&lt;QModelIndex&gt; visibleIndexes() const;</pre>
+<p class="doc" data-zh="返回无障碍接口使用的可见项目索引列表。" data-en="Return the visible item indexes used by the accessibility interface.">返回无障碍接口使用的可见项目索引列表。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="AccessibleVirtualItemView-visiblePosition-43" data-search="AccessibleVirtualItemView visiblePosition">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/accessibility.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L196</span>
+<pre>int visiblePosition(const QModelIndex &amp;index) const;</pre>
+<p class="doc" data-zh="查询无障碍子接口或模型索引在可见集合中的位置。" data-en="Find the position of an accessible child or model index in the visible collection.">查询无障碍子接口或模型索引在可见集合中的位置。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="AccessibleVirtualItemView-applySelection-44" data-search="AccessibleVirtualItemView applySelection">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/accessibility.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L200</span>
+<pre>bool applySelection(int row, int column, bool selected);</pre>
+<p class="doc" data-zh="通过无障碍接口对目标行列应用选择或取消选择。" data-en="Apply or clear row/column selection through the accessibility interface.">通过无障碍接口对目标行列应用选择或取消选择。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+</section>
+<section>
+<h3 id="viv-namespace">viv namespace</h3>
+<pre>namespace viv</pre>
+<article tabindex="-1" id="viv-namespace-createAccessibleItemViewInterface-0" data-search="viv namespace createAccessibleItemViewInterface">
+<span class="badge">namespace</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/accessibility.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L222</span>
+<pre>VIRTUALITEMVIEWS_EXPORT QAccessibleInterface *createAccessibleItemViewInterface(const QString &amp;className,
+                                                                               QObject *object);</pre>
+<p class="doc" data-zh="为支持的 VIV 对象创建无障碍接口；不支持的对象返回空。" data-en="Create an accessibility interface for a supported VIV object, returning null for unsupported objects.">为支持的 VIV 对象创建无障碍接口；不支持的对象返回空。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="viv-namespace-installAccessibilityFactory-1" data-search="viv namespace installAccessibilityFactory">
+<span class="badge">namespace</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/accessibility.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L228</span>
+<pre>VIRTUALITEMVIEWS_EXPORT void installAccessibilityFactory();</pre>
+<p class="doc" data-zh="注册或移除 VIV 无障碍接口工厂。" data-en="Register or remove the VIV accessibility factory.">注册或移除 VIV 无障碍接口工厂。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#accessibility"><span data-zh="无障碍 / 虚拟索引映射" data-en="Accessibility / virtual item mapping">无障碍 / 虚拟索引映射</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="viv-namespace-removeAccessibilityFactory-2" data-search="viv namespace removeAccessibilityFactory">
+<span class="badge">namespace</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/accessibility.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L229</span>
+<pre>VIRTUALITEMVIEWS_EXPORT void removeAccessibilityFactory();</pre>
+<p class="doc" data-zh="注册或移除 VIV 无障碍接口工厂。" data-en="Register or remove the VIV accessibility factory.">注册或移除 VIV 无障碍接口工厂。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#accessibility"><span data-zh="无障碍 / 虚拟索引映射" data-en="Accessibility / virtual item mapping">无障碍 / 虚拟索引映射</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+</section>
+<footer class="muted">
+<p><span data-zh="按能力查找配套设置与独立示例；通用接口请沿基类链接查阅，Qt 继承接口请参考 Qt 文档。" data-en="Find related settings and independent examples by capability. Follow base-class links for shared APIs and consult Qt documentation for inherited Qt APIs.">按能力查找配套设置与独立示例；通用接口请沿基类链接查阅，Qt 继承接口请参考 Qt 文档。</span></p>
+</footer>
+</main>
+<script src="../assets/reference.js">
+</script>
+</body>
+</html>

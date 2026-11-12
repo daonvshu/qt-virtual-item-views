@@ -1,0 +1,724 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TableSpanContext / TableRowLayoutContext / ColumnHost / TableWidgetAdapter / CellWidgetAdapter · VirtualItemViews</title>
+<link rel="stylesheet" href="../assets/reference.css">
+</head>
+<body>
+<header>
+<div class="header-top">
+<a href="../index.html">VirtualItemViews / API</a>
+<div id="language-switch" class="language-switch" role="group" aria-label="Language / 语言" hidden>
+<button type="button" data-language="zh" aria-pressed="true" lang="zh-CN">中文</button>
+<button type="button" data-language="en" aria-pressed="false" lang="en">English</button>
+</div>
+</div>
+<h1>TableSpanContext / TableRowLayoutContext / ColumnHost / TableWidgetAdapter / CellWidgetAdapter</h1>
+<p><span data-zh="公开辅助接口与扩展契约" data-en="Public helper interfaces and extension contracts">公开辅助接口与扩展契约</span></p>
+</header>
+<main>
+<nav>
+<a href="../index.html"><span data-zh="能力总览" data-en="Capabilities">能力总览</span></a>
+<a href="../../AGENT_GUIDE.md"><span data-zh="Agent 索引" data-en="Agent guide">Agent 索引</span></a>
+<a href="../../../examples/README.md"><span data-zh="独立示例" data-en="Examples">独立示例</span></a>
+<a href="../../../README.md"><span data-zh="项目首页" data-en="Project home">项目首页</span></a>
+</nav>
+<label for="filter"><span data-zh="搜索本页：能力、API 名称或关键词" data-en="Search this page: capability, API name or keyword">搜索本页：能力、API 名称或关键词</span></label>
+<input id="filter" type="search" placeholder="例如：Popup、setAutoHeight、冻结、branch">
+<p class="muted search-help"><span data-zh="无需网络或服务器。所有内容默认可见；搜索只筛选当前页。完整继承 API 请沿基类链接查阅。" data-en="No network or server required. All content is initially visible; search filters this page only. Follow base-class links for inherited APIs.">无需网络或服务器。所有内容默认可见；搜索只筛选当前页。完整继承 API 请沿基类链接查阅。</span></p>
+<p id="search-status" role="status" aria-live="polite">
+</p>
+<p>
+<a href="../../../include/virtualitemviews/tablewidgetadapter.h"><span data-zh="公开头文件：include/virtualitemviews/tablewidgetadapter.h" data-en="Public header: include/virtualitemviews/tablewidgetadapter.h">公开头文件：include/virtualitemviews/tablewidgetadapter.h</span></a>
+</p>
+<p class="api-jump">
+<a href="#public-api"><span data-zh="公开函数列表" data-en="Public function index">公开函数列表</span></a>
+</p>
+<h2><span data-zh="能力与配套设置" data-en="Capabilities and related settings">能力与配套设置</span></h2>
+<article id="adapter" data-search="setAdapter setTableAdapter setCellAdapter widgetType createWidget bindWidget unbindWidget estimatedSize visualStateChanged virtualitemview widgetadapter tablewidgetadapter widgetrecycler">
+<h3><span data-zh="控件复用 / 多控件类型 / 异步清理" data-en="Widget recycling / widget types / async cleanup">控件复用 / 多控件类型 / 异步清理</span></h3>
+<p>
+<code>setAdapter · setTableAdapter · setCellAdapter · widgetType · createWidget · bindWidget · unbindWidget · estimatedSize · visualStateChanged</code>
+</p>
+<p class="rules"><span data-zh="先实现 adapter，框架负责创建、复用和回收。createWidget 中连接一次信号；bindWidget 必须完整覆盖旧显示状态，事件中使用当前绑定索引。unbindWidget 停止旧索引的定时器、订阅、动画和异步图片请求；异步回调核对持久索引或任务代次。按 widgetType 分池，不要按滚动自行销毁重建整表。takeOwnership 默认 false，要保证 adapter 生命周期覆盖视图使用期间。" data-en="Implement an adapter; the framework creates, reuses and recycles widgets. Connect signals once in createWidget. bindWidget must replace all old display state; event handlers must use the current binding. unbindWidget stops timers, subscriptions, animations and image requests tied to the old index. Guard async callbacks with persistent identity or a request generation. Pools are classified by widgetType. Do not rebuild the table on scroll. takeOwnership defaults to false; keep the adapter alive while the view uses it.">先实现 adapter，框架负责创建、复用和回收。createWidget 中连接一次信号；bindWidget 必须完整覆盖旧显示状态，事件中使用当前绑定索引。unbindWidget 停止旧索引的定时器、订阅、动画和异步图片请求；异步回调核对持久索引或任务代次。按 widgetType 分池，不要按滚动自行销毁重建整表。takeOwnership 默认 false，要保证 adapter 生命周期覆盖视图使用期间。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../../src/recycler/widgetrecycler.cpp">src/recycler/widgetrecycler.cpp</a> · <a href="../../../src/core/virtualitemview.cpp">src/core/virtualitemview.cpp</a> · <a href="../../../src/widgets/virtualtableview.cpp">src/widgets/virtualtableview.cpp</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../../getting-started.md">docs/getting-started.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（5）" data-en="Independent source examples (5)">独立源码示例（5）</span></summary>
+<ul>
+<li>
+<a href="../../../examples/list_capabilities/03_widget_types/example.cpp">examples/list_capabilities/03_widget_types/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/table_capabilities/03_widget_types/example.cpp">examples/table_capabilities/03_widget_types/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/tree_capabilities/03_widget_types/example.cpp">examples/tree_capabilities/03_widget_types/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/treetable_capabilities/04_widget_types/example.cpp">examples/treetable_capabilities/04_widget_types/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/list_capabilities/02_row_widgets/example.cpp">examples/list_capabilities/02_row_widgets/example.cpp</a>
+</li>
+</ul>
+</details>
+</article>
+<article id="binding" data-search="setItemDataRole ItemBindingContext indentationWidth branchWidth virtualitemview types widgetadapter tablewidgetadapter itemeditoradapter">
+<h3><span data-zh="整行业务 payload / 深度 / 列 / branch 上下文" data-en="Row payload / depth / column / branch context">整行业务 payload / 深度 / 列 / branch 上下文</span></h3>
+<p>
+<code>setItemDataRole · ItemBindingContext · indentationWidth · branchWidth</code>
+</p>
+<p class="rules"><span data-zh="ItemBindingContext 提供 index、rowData、logicalColumn、depth；cell 的整行业务数据从列 0 读取。负的 itemDataRole 禁用 payload 读取。树的 indentationWidth 是祖先缩进，branchWidth 是当前节点 branch 格占位，不是图标宽度，均为未裁剪的逻辑像素；TreeTable 仅逻辑列 0 有这两个宽度。" data-en="ItemBindingContext provides index, rowData, logicalColumn and depth. Cells read the row payload from column 0. A negative itemDataRole disables payload reads. For trees, indentationWidth is ancestor indentation and branchWidth is the current branch-cell reservation, not icon width. Both are unclipped logical pixels. TreeTable supplies these widths only for logical column 0.">ItemBindingContext 提供 index、rowData、logicalColumn、depth；cell 的整行业务数据从列 0 读取。负的 itemDataRole 禁用 payload 读取。树的 indentationWidth 是祖先缩进，branchWidth 是当前节点 branch 格占位，不是图标宽度，均为未裁剪的逻辑像素；TreeTable 仅逻辑列 0 有这两个宽度。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../../src/core/virtualitemview.cpp">src/core/virtualitemview.cpp</a> · <a href="../../../src/widgets/virtualtreeview.cpp">src/widgets/virtualtreeview.cpp</a> · <a href="../../../src/widgets/virtualtreetableview.cpp">src/widgets/virtualtreetableview.cpp</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../../interaction.md">docs/interaction.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（4）" data-en="Independent source examples (4)">独立源码示例（4）</span></summary>
+<ul>
+<li>
+<a href="../../../examples/list_capabilities/04_binding_context/example.cpp">examples/list_capabilities/04_binding_context/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/table_capabilities/04_binding_context/example.cpp">examples/table_capabilities/04_binding_context/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/tree_capabilities/04_binding_context/example.cpp">examples/tree_capabilities/04_binding_context/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/treetable_capabilities/05_binding_context/example.cpp">examples/treetable_capabilities/05_binding_context/example.cpp</a>
+</li>
+</ul>
+</details>
+</article>
+<article id="materialization" data-search="setMaterializationMode setTableAdapter setCellAdapter layoutRowWidget estimatedSize cellWidget materializedCellCount virtualtableview virtualtreetableview tablewidgetadapter">
+<h3><span data-zh="RowWidgets / CellWidgets / 物化成本" data-en="RowWidgets / CellWidgets / materialization cost">RowWidgets / CellWidgets / 物化成本</span></h3>
+<p>
+<code>setMaterializationMode · setTableAdapter · setCellAdapter · layoutRowWidget · estimatedSize · cellWidget · materializedCellCount</code>
+</p>
+<p class="rules"><span data-zh="RowWidgets 配 TableWidgetAdapter，通过 layoutRowWidget/TableRowLayoutContext 布置行内列控件；使用 ColumnHost 子控件时框架自动定位，可省略布局回调。CellWidgets 配 CellWidgetAdapter，由框架定位每个 cell。行模式不能只传普通 WidgetAdapter。物化模式与 SelectRows/SelectItems 是独立维度，整行高亮不要求整行物化。CellWidgets 的 QWidget 数随可见行数×可见列数增长；先衡量控件数量和 adapter 工作量再考虑定制布局。" data-en="RowWidgets uses TableWidgetAdapter with layoutRowWidget/TableRowLayoutContext. ColumnHost children are positioned automatically, so that hook can be omitted. CellWidgets uses CellWidgetAdapter and framework cell geometry. A plain WidgetAdapter is insufficient for table rows. Materialization and SelectRows/SelectItems are independent; row highlighting does not require row widgets. Cell widget counts grow with visible rows times visible columns. Measure widget counts and adapter work before replacing layout behavior.">RowWidgets 配 TableWidgetAdapter，通过 layoutRowWidget/TableRowLayoutContext 布置行内列控件；使用 ColumnHost 子控件时框架自动定位，可省略布局回调。CellWidgets 配 CellWidgetAdapter，由框架定位每个 cell。行模式不能只传普通 WidgetAdapter。物化模式与 SelectRows/SelectItems 是独立维度，整行高亮不要求整行物化。CellWidgets 的 QWidget 数随可见行数×可见列数增长；先衡量控件数量和 adapter 工作量再考虑定制布局。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../../src/widgets/virtualtableview.cpp">src/widgets/virtualtableview.cpp</a> · <a href="../../../src/widgets/columnhost.cpp">src/widgets/columnhost.cpp</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../../table.md">docs/table.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（4）" data-en="Independent source examples (4)">独立源码示例（4）</span></summary>
+<ul>
+<li>
+<a href="../../../examples/table_capabilities/01_row_widgets/example.cpp">examples/table_capabilities/01_row_widgets/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/table_capabilities/02_cell_widgets/example.cpp">examples/table_capabilities/02_cell_widgets/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/treetable_capabilities/02_row_widgets/example.cpp">examples/treetable_capabilities/02_row_widgets/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/treetable_capabilities/03_cell_widgets/example.cpp">examples/treetable_capabilities/03_cell_widgets/example.cpp</a>
+</li>
+</ul>
+</details>
+</article>
+<article id="spans" data-search="setSpanProvider setSpan removeSpan clearSpans anchorIndex isSpanCovered spanRect cellRect virtualtableview virtualtreetableview tablespan tablewidgetadapter">
+<h3><span data-zh="合并单元格" data-en="Merged cells">合并单元格</span></h3>
+<p>
+<code>setSpanProvider · setSpan · removeSpan · clearSpans · anchorIndex · isSpanCovered · spanRect · cellRect</code>
+</p>
+<p class="rules"><span data-zh="内置 TableSpanMap 或自定义 TableSpanProvider 提供跨度；查询/绘制/命中使用 anchorIndex 与 cellRect。跨度裁剪到模型和 anchor 所在 pane，不跨 pane。被覆盖 cell 的 cellRect 为空。RowWidgets 通过 TableRowLayoutContext 的 spans 布局业务控件；表格拖动让位在 span provider 存在等不支持条件下退回指示器。" data-en="Use TableSpanMap or a TableSpanProvider. Resolve geometry and hits with anchorIndex and cellRect. Spans are clipped to the model and anchor pane; they never cross panes. Covered cells have an empty cellRect. RowWidgets lays out children using TableRowLayoutContext spans. Body drag feedback falls back to indicators when a span provider or other unsupported conditions prevent animation.">内置 TableSpanMap 或自定义 TableSpanProvider 提供跨度；查询/绘制/命中使用 anchorIndex 与 cellRect。跨度裁剪到模型和 anchor 所在 pane，不跨 pane。被覆盖 cell 的 cellRect 为空。RowWidgets 通过 TableRowLayoutContext 的 spans 布局业务控件；表格拖动让位在 span provider 存在等不支持条件下退回指示器。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../../src/layout/tablespan.cpp">src/layout/tablespan.cpp</a> · <a href="../../../src/widgets/virtualtableview.cpp">src/widgets/virtualtableview.cpp</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../../table-layout-guide.md">docs/table-layout-guide.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（2）" data-en="Independent source examples (2)">独立源码示例（2）</span></summary>
+<ul>
+<li>
+<a href="../../../examples/table_capabilities/23_spans/example.cpp">examples/table_capabilities/23_spans/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/treetable_capabilities/28_spans/example.cpp">examples/treetable_capabilities/28_spans/example.cpp</a>
+</li>
+</ul>
+</details>
+</article>
+<article id="editor" data-search="setEditTriggers editTriggers edit createEditor setEditorData updateEditorGeometry commitEditorData destroyEditor commitEditor closeEditor editingIndex editorWidget virtualitemview itemeditoradapter widgetadapter tablewidgetadapter">
+<h3><span data-zh="覆盖编辑器 / 单双击 / F2 / 按钮 / 自定义 role" data-en="Overlay editors / click triggers / F2 / buttons / custom roles">覆盖编辑器 / 单双击 / F2 / 按钮 / 自定义 role</span></h3>
+<p>
+<code>setEditTriggers · editTriggers · edit · createEditor · setEditorData · updateEditorGeometry · commitEditorData · destroyEditor · commitEditor · closeEditor · editingIndex · editorWidget</code>
+</p>
+<p class="rules"><span data-zh="所有入口要求 ItemIsEnabled + ItemIsEditable。默认 DoubleClicked|EditKeyPressed(F2)，adapter 可按 index 重载触发方式；按钮/外部直接 edit(index)。默认 editor 为 null，业务实现 createEditor；默认数据经 Qt USER property↔EditRole，可重载提交到 UserRole。默认几何覆盖整格/项；无需 stack layout。框架处理焦点、Enter/Esc/Tab、校验和销毁；提交返回 false 保持编辑。编辑器不进入显示控件复用池，不应滚动即丢草稿。" data-en="Every entry requires ItemIsEnabled and ItemIsEditable. Defaults are DoubleClicked|EditKeyPressed (F2); adapters can override triggers per index. Buttons and external actions call edit(index). createEditor defaults to null and must be implemented. Default data exchange uses the Qt USER property and EditRole; override submission for UserRole. Default geometry covers the item/cell without a stack layout. The framework handles focus, Enter/Esc/Tab, validation and destruction. Failed submission keeps editing. Editors are not pooled display widgets; scrolling should not discard drafts.">所有入口要求 ItemIsEnabled + ItemIsEditable。默认 DoubleClicked|EditKeyPressed(F2)，adapter 可按 index 重载触发方式；按钮/外部直接 edit(index)。默认 editor 为 null，业务实现 createEditor；默认数据经 Qt USER property↔EditRole，可重载提交到 UserRole。默认几何覆盖整格/项；无需 stack layout。框架处理焦点、Enter/Esc/Tab、校验和销毁；提交返回 false 保持编辑。编辑器不进入显示控件复用池，不应滚动即丢草稿。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../../src/core/virtualitemviewediting.cpp">src/core/virtualitemviewediting.cpp</a> · <a href="../../../src/core/itemeditoradapter.cpp">src/core/itemeditoradapter.cpp</a> · <a href="../../../src/widgets/virtualtableview.cpp">src/widgets/virtualtableview.cpp</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../../interaction.md">docs/interaction.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（4）" data-en="Independent source examples (4)">独立源码示例（4）</span></summary>
+<ul>
+<li>
+<a href="../../../examples/list_capabilities/23_editors/example.cpp">examples/list_capabilities/23_editors/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/table_capabilities/33_editors/example.cpp">examples/table_capabilities/33_editors/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/tree_capabilities/29_editors/example.cpp">examples/tree_capabilities/29_editors/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/treetable_capabilities/38_editors/example.cpp">examples/treetable_capabilities/38_editors/example.cpp</a>
+</li>
+</ul>
+</details>
+</article>
+<h2 id="public-api" tabindex="-1"><span data-zh="公开 API、类型与信号" data-en="Public API, types and signals">公开 API、类型与信号</span></h2>
+<section class="function-index" id="function-index" tabindex="-1">
+<h3><span data-zh="公开函数列表" data-en="Public function index">公开函数列表</span></h3>
+<p class="muted"><span data-zh="按声明类型分组；每个重载单独列出，点击签名跳转到说明。信号单独列出；类型和数据成员仍保留在下方。" data-en="Grouped by declaring type. Each overload has its own link to the details. Signals are listed separately; types and data members remain below.">按声明类型分组；每个重载单独列出，点击签名跳转到说明。信号单独列出；类型和数据成员仍保留在下方。</span></p>
+<h4>TableSpanContext</h4>
+<ul>
+<li data-search="TableSpanContext isEmpty">
+<a href="#TableSpanContext-isEmpty-0">
+<code>bool isEmpty() const;</code>
+</a>
+</li>
+<li data-search="TableSpanContext spanOf">
+<a href="#TableSpanContext-spanOf-1">
+<code>TableSpan spanOf(int logicalColumn) const;</code>
+</a>
+</li>
+<li data-search="TableSpanContext isCovered">
+<a href="#TableSpanContext-isCovered-2">
+<code>bool isCovered(int logicalColumn) const;</code>
+</a>
+</li>
+<li data-search="TableSpanContext rect">
+<a href="#TableSpanContext-rect-3">
+<code>QRect rect(int logicalColumn) const;</code>
+</a>
+</li>
+</ul>
+<h4>TableRowLayoutContext</h4>
+<ul>
+<li data-search="TableRowLayoutContext TableRowLayoutContext">
+<a href="#TableRowLayoutContext-TableRowLayoutContext-0">
+<code>TableRowLayoutContext() = default;</code>
+</a>
+</li>
+<li data-search="TableRowLayoutContext columnCount">
+<a href="#TableRowLayoutContext-columnCount-1">
+<code>int columnCount() const;</code>
+</a>
+</li>
+<li data-search="TableRowLayoutContext isEmpty">
+<a href="#TableRowLayoutContext-isEmpty-2">
+<code>bool isEmpty() const;</code>
+</a>
+</li>
+<li data-search="TableRowLayoutContext column">
+<a href="#TableRowLayoutContext-column-3">
+<code>ColumnGeometry column(int logicalIndex) const;</code>
+</a>
+</li>
+<li data-search="TableRowLayoutContext columnX">
+<a href="#TableRowLayoutContext-columnX-4">
+<code>int columnX(int logicalIndex) const;</code>
+</a>
+</li>
+<li data-search="TableRowLayoutContext viewportRect">
+<a href="#TableRowLayoutContext-viewportRect-5">
+<code>QRect viewportRect() const;</code>
+</a>
+</li>
+<li data-search="TableRowLayoutContext horizontalOffset">
+<a href="#TableRowLayoutContext-horizontalOffset-6">
+<code>qint64 horizontalOffset() const;</code>
+</a>
+</li>
+<li data-search="TableRowLayoutContext visibleColumns">
+<a href="#TableRowLayoutContext-visibleColumns-7">
+<code>VisibleRange visibleColumns() const;</code>
+</a>
+</li>
+<li data-search="TableRowLayoutContext columnsToLayout">
+<a href="#TableRowLayoutContext-columnsToLayout-8">
+<code>QVector&lt;int&gt; columnsToLayout() const;</code>
+</a>
+</li>
+<li data-search="TableRowLayoutContext pane">
+<a href="#TableRowLayoutContext-pane-9">
+<code>TablePane::Type pane(int logicalIndex) const;</code>
+</a>
+</li>
+<li data-search="TableRowLayoutContext isColumnFrozen">
+<a href="#TableRowLayoutContext-isColumnFrozen-10">
+<code>bool isColumnFrozen(int logicalIndex) const;</code>
+</a>
+</li>
+<li data-search="TableRowLayoutContext paneRect">
+<a href="#TableRowLayoutContext-paneRect-11">
+<code>QRect paneRect(TablePane::Type type) const;</code>
+</a>
+</li>
+<li data-search="TableRowLayoutContext frozenLeftWidth">
+<a href="#TableRowLayoutContext-frozenLeftWidth-12">
+<code>int frozenLeftWidth() const;</code>
+</a>
+</li>
+<li data-search="TableRowLayoutContext frozenRightWidth">
+<a href="#TableRowLayoutContext-frozenRightWidth-13">
+<code>int frozenRightWidth() const;</code>
+</a>
+</li>
+<li data-search="TableRowLayoutContext scrollablePaneHost">
+<a href="#TableRowLayoutContext-scrollablePaneHost-14">
+<code>QWidget *scrollablePaneHost() const;</code>
+</a>
+</li>
+<li data-search="TableRowLayoutContext paneHost">
+<a href="#TableRowLayoutContext-paneHost-15">
+<code>QWidget *paneHost(int paneIndex) const;</code>
+</a>
+</li>
+<li data-search="TableRowLayoutContext paneHostForColumn">
+<a href="#TableRowLayoutContext-paneHostForColumn-16">
+<code>QWidget *paneHostForColumn(int logicalIndex) const;</code>
+</a>
+</li>
+<li data-search="TableRowLayoutContext paneIndex">
+<a href="#TableRowLayoutContext-paneIndex-17">
+<code>int paneIndex(int logicalIndex) const;</code>
+</a>
+</li>
+<li data-search="TableRowLayoutContext paneAt">
+<a href="#TableRowLayoutContext-paneAt-18">
+<code>TablePane paneAt(int paneIndex) const;</code>
+</a>
+</li>
+<li data-search="TableRowLayoutContext paneRectAt">
+<a href="#TableRowLayoutContext-paneRectAt-19">
+<code>QRect paneRectAt(int paneIndex) const;</code>
+</a>
+</li>
+<li data-search="TableRowLayoutContext spans">
+<a href="#TableRowLayoutContext-spans-20">
+<code>const TableSpanContext &amp;spans() const;</code>
+</a>
+</li>
+</ul>
+<h4>ColumnHost</h4>
+<ul>
+<li data-search="ColumnHost ColumnHost">
+<a href="#ColumnHost-ColumnHost-0">
+<code>explicit ColumnHost(int logicalColumn, QWidget *parent = nullptr);</code>
+</a>
+</li>
+<li data-search="ColumnHost logicalColumn">
+<a href="#ColumnHost-logicalColumn-1">
+<code>int logicalColumn() const;</code>
+</a>
+</li>
+<li data-search="ColumnHost setLogicalColumn">
+<a href="#ColumnHost-setLogicalColumn-2">
+<code>void setLogicalColumn(int logicalColumn);</code>
+</a>
+</li>
+</ul>
+<h4>TableWidgetAdapter</h4>
+<ul>
+<li data-search="TableWidgetAdapter layoutRowWidget">
+<a href="#TableWidgetAdapter-layoutRowWidget-0">
+<code>virtual void layoutRowWidget(QWidget *widget, const QModelIndex &amp;rowIndex, const TableRowLayoutContext &amp;context);</code>
+</a>
+</li>
+</ul>
+<h4>CellWidgetAdapter</h4>
+<ul>
+<li data-search="CellWidgetAdapter CellWidgetAdapter">
+<a href="#CellWidgetAdapter-CellWidgetAdapter-0">
+<code>virtual ~CellWidgetAdapter() = default;</code>
+</a>
+</li>
+<li data-search="CellWidgetAdapter cellWidgetType">
+<a href="#CellWidgetAdapter-cellWidgetType-1">
+<code>virtual WidgetType cellWidgetType(const QModelIndex &amp;index) const;</code>
+</a>
+</li>
+<li data-search="CellWidgetAdapter createCellWidget">
+<a href="#CellWidgetAdapter-createCellWidget-2">
+<code>virtual QWidget *createCellWidget(WidgetType type, QWidget *parent) = 0;</code>
+</a>
+</li>
+<li data-search="CellWidgetAdapter bindCellWidget">
+<a href="#CellWidgetAdapter-bindCellWidget-3">
+<code>virtual void bindCellWidget(QWidget *widget, const QModelIndex &amp;index);</code>
+</a>
+</li>
+<li data-search="CellWidgetAdapter bindCellWidget">
+<a href="#CellWidgetAdapter-bindCellWidget-4">
+<code>virtual void bindCellWidget(QWidget *widget, const ItemBindingContext &amp;context);</code>
+</a>
+</li>
+<li data-search="CellWidgetAdapter visualStateChanged">
+<a href="#CellWidgetAdapter-visualStateChanged-5">
+<code>virtual void visualStateChanged(QWidget *widget, const QModelIndex &amp;index);</code>
+</a>
+</li>
+<li data-search="CellWidgetAdapter visualStateChanged">
+<a href="#CellWidgetAdapter-visualStateChanged-6">
+<code>virtual void visualStateChanged(QWidget *widget, const ItemBindingContext &amp;context);</code>
+</a>
+</li>
+<li data-search="CellWidgetAdapter unbindCellWidget">
+<a href="#CellWidgetAdapter-unbindCellWidget-7">
+<code>virtual void unbindCellWidget(QWidget *widget, const QModelIndex &amp;index);</code>
+</a>
+</li>
+<li data-search="CellWidgetAdapter unbindCellWidget">
+<a href="#CellWidgetAdapter-unbindCellWidget-8">
+<code>virtual void unbindCellWidget(QWidget *widget, const ItemBindingContext &amp;context);</code>
+</a>
+</li>
+</ul>
+</section>
+<h2><span data-zh="函数说明" data-en="Function details">函数说明</span></h2>
+<p class="muted"><span data-zh="按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。" data-en="Read each function for its purpose and related settings. Overloads are listed separately; follow related capabilities to find examples.">按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。</span></p>
+<section>
+<h3 id="TableSpanContext">TableSpanContext</h3>
+<pre>class TableSpanContext</pre>
+<article tabindex="-1" id="TableSpanContext-isEmpty-0" data-search="TableSpanContext isEmpty">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablewidgetadapter.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L24</span>
+<pre>    bool isEmpty() const;</pre>
+<p class="doc" data-zh="判断当前集合、窗格或范围是否为空。" data-en="Check whether the collection, pane or range is empty.">判断当前集合、窗格或范围是否为空。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TableSpanContext-spanOf-1" data-search="TableSpanContext spanOf">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablewidgetadapter.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L26</span>
+<pre>    TableSpan spanOf(int logicalColumn) const;</pre>
+<p class="doc" data-zh="查询指定位置所属合并范围或其锚点；被覆盖单元格通过锚点参与布局与编辑。" data-en="Query the merged span or anchor for a position; covered cells participate in layout and editing through the anchor.">查询指定位置所属合并范围或其锚点；被覆盖单元格通过锚点参与布局与编辑。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TableSpanContext-isCovered-2" data-search="TableSpanContext isCovered">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablewidgetadapter.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L29</span>
+<pre>    bool isCovered(int logicalColumn) const;</pre>
+<p class="doc" data-zh="判断 cell 是否被其它锚点覆盖，或当前范围是否发生合并。" data-en="Check whether a cell is covered by another anchor, or whether the range is merged.">判断 cell 是否被其它锚点覆盖，或当前范围是否发生合并。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TableSpanContext-rect-3" data-search="TableSpanContext rect">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablewidgetadapter.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L32</span>
+<pre>    QRect rect(int logicalColumn) const;</pre>
+<p class="doc" data-zh="返回无障碍对象的屏幕矩形。" data-en="Return the screen rectangle of the accessible object.">返回无障碍对象的屏幕矩形。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+</section>
+<section>
+<h3 id="TableRowLayoutContext">TableRowLayoutContext</h3>
+<pre>class TableRowLayoutContext</pre>
+<article tabindex="-1" id="TableRowLayoutContext-TableRowLayoutContext-0" data-search="TableRowLayoutContext TableRowLayoutContext">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablewidgetadapter.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L50</span>
+<pre>TableRowLayoutContext() = default;</pre>
+<p class="doc" data-zh="构造 TableRowLayoutContext；按此重载传入父对象、模型或布局参数。带 parent 的 QObject/QWidget 遵循 Qt 父子生命周期。" data-en="Construct TableRowLayoutContext with the parent, model or layout arguments in this overload. QObject/QWidget parent arguments follow Qt parent-child lifetime rules.">构造 TableRowLayoutContext；按此重载传入父对象、模型或布局参数。带 parent 的 QObject/QWidget 遵循 Qt 父子生命周期。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TableRowLayoutContext-columnCount-1" data-search="TableRowLayoutContext columnCount">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablewidgetadapter.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L53</span>
+<pre>    int columnCount() const;</pre>
+<p class="doc" data-zh="返回逻辑列数。" data-en="Return the logical column count.">返回逻辑列数。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TableRowLayoutContext-isEmpty-2" data-search="TableRowLayoutContext isEmpty">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablewidgetadapter.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L54</span>
+<pre>    bool isEmpty() const;</pre>
+<p class="doc" data-zh="判断当前集合、窗格或范围是否为空。" data-en="Check whether the collection, pane or range is empty.">判断当前集合、窗格或范围是否为空。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TableRowLayoutContext-column-3" data-search="TableRowLayoutContext column">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablewidgetadapter.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L57</span>
+<pre>ColumnGeometry column(int logicalIndex) const;</pre>
+<p class="doc" data-zh="返回当前无障碍项列号或指定列的布局几何。" data-en="Return the accessible item column or layout geometry of the specified column.">返回当前无障碍项列号或指定列的布局几何。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TableRowLayoutContext-columnX-4" data-search="TableRowLayoutContext columnX">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablewidgetadapter.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L59</span>
+<pre>int columnX(int logicalIndex) const;</pre>
+<p class="doc" data-zh="返回指定列在行布局中的横坐标。" data-en="Return the column x coordinate in the row layout.">返回指定列在行布局中的横坐标。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TableRowLayoutContext-viewportRect-5" data-search="TableRowLayoutContext viewportRect">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablewidgetadapter.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L62</span>
+<pre>    QRect viewportRect() const;</pre>
+<p class="doc" data-zh="返回视口矩形。" data-en="Return the viewport rectangle.">返回视口矩形。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TableRowLayoutContext-horizontalOffset-6" data-search="TableRowLayoutContext horizontalOffset">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablewidgetadapter.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L64</span>
+<pre>    qint64 horizontalOffset() const;</pre>
+<p class="doc" data-zh="返回水平滚动偏移量。" data-en="Return the horizontal scroll offset.">返回水平滚动偏移量。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TableRowLayoutContext-visibleColumns-7" data-search="TableRowLayoutContext visibleColumns">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablewidgetadapter.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L66</span>
+<pre>    VisibleRange visibleColumns() const;</pre>
+<p class="doc" data-zh="返回当前布局可见列、行或滚动窗口范围。" data-en="Return the current visible column, row or scrolling window range.">返回当前布局可见列、行或滚动窗口范围。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TableRowLayoutContext-columnsToLayout-8" data-search="TableRowLayoutContext columnsToLayout">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablewidgetadapter.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L75</span>
+<pre>QVector&lt;int&gt; columnsToLayout() const;</pre>
+<p class="doc" data-zh="返回需要布局的列集合，包含窗格窗口和预物化范围。" data-en="Return the columns requiring layout, including pane windows and overscan.">返回需要布局的列集合，包含窗格窗口和预物化范围。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TableRowLayoutContext-pane-9" data-search="TableRowLayoutContext pane">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablewidgetadapter.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L80</span>
+<pre>TablePane::Type pane(int logicalIndex) const;</pre>
+<p class="doc" data-zh="查询指定列或位置所属窗格的记录、索引或类型；隐藏列或未知列可能没有窗格。" data-en="Resolve a column or position to a pane record, index or type; hidden or unknown columns may have no pane.">查询指定列或位置所属窗格的记录、索引或类型；隐藏列或未知列可能没有窗格。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TableRowLayoutContext-isColumnFrozen-10" data-search="TableRowLayoutContext isColumnFrozen">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablewidgetadapter.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L81</span>
+<pre>bool isColumnFrozen(int logicalIndex) const;</pre>
+<p class="doc" data-zh="判断当前窗格或指定行列是否固定在冻结区域。" data-en="Check whether the pane or specified row/column belongs to a frozen region.">判断当前窗格或指定行列是否固定在冻结区域。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TableRowLayoutContext-paneRect-11" data-search="TableRowLayoutContext paneRect">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablewidgetadapter.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L84</span>
+<pre>QRect paneRect(TablePane::Type type) const;</pre>
+<p class="doc" data-zh="查询对应项目、单元格、窗格或合并区域的矩形。视图结果为视口坐标；布局策略结果为布局坐标；屏外矩形可超出可见区域。" data-en="Query the item, cell, pane or span rectangle. View results use viewport coordinates; layout policies use layout coordinates. Offscreen rectangles may extend beyond the visible area.">查询对应项目、单元格、窗格或合并区域的矩形。视图结果为视口坐标；布局策略结果为布局坐标；屏外矩形可超出可见区域。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TableRowLayoutContext-frozenLeftWidth-12" data-search="TableRowLayoutContext frozenLeftWidth">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablewidgetadapter.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L86</span>
+<pre>int frozenLeftWidth() const;</pre>
+<p class="doc" data-zh="返回左侧冻结窗格占用宽度。" data-en="Return the width occupied by left frozen panes.">返回左侧冻结窗格占用宽度。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TableRowLayoutContext-frozenRightWidth-13" data-search="TableRowLayoutContext frozenRightWidth">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablewidgetadapter.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L87</span>
+<pre>int frozenRightWidth() const;</pre>
+<p class="doc" data-zh="返回右侧冻结窗格占用宽度。" data-en="Return the width occupied by right frozen panes.">返回右侧冻结窗格占用宽度。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TableRowLayoutContext-scrollablePaneHost-14" data-search="TableRowLayoutContext scrollablePaneHost">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablewidgetadapter.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L97</span>
+<pre>    QWidget *scrollablePaneHost() const;</pre>
+<p class="doc" data-zh="返回主滚动窗格的裁剪宿主，无需裁剪时可能为空。" data-en="Return the clipping host of the primary scrolling pane; may be null when clipping is unnecessary.">返回主滚动窗格的裁剪宿主，无需裁剪时可能为空。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TableRowLayoutContext-paneHost-15" data-search="TableRowLayoutContext paneHost">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablewidgetadapter.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L100</span>
+<pre>    QWidget *paneHost(int paneIndex) const;</pre>
+<p class="doc" data-zh="返回指定窗格或列的裁剪宿主，冻结列或无需裁剪时可能为空。" data-en="Return the clipping host for a pane or column; may be null for frozen columns or when clipping is unnecessary.">返回指定窗格或列的裁剪宿主，冻结列或无需裁剪时可能为空。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TableRowLayoutContext-paneHostForColumn-16" data-search="TableRowLayoutContext paneHostForColumn">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablewidgetadapter.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L103</span>
+<pre>    QWidget *paneHostForColumn(int logicalIndex) const;</pre>
+<p class="doc" data-zh="返回指定窗格或列的裁剪宿主，冻结列或无需裁剪时可能为空。" data-en="Return the clipping host for a pane or column; may be null for frozen columns or when clipping is unnecessary.">返回指定窗格或列的裁剪宿主，冻结列或无需裁剪时可能为空。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TableRowLayoutContext-paneIndex-17" data-search="TableRowLayoutContext paneIndex">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablewidgetadapter.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L108</span>
+<pre>    int paneIndex(int logicalIndex) const;</pre>
+<p class="doc" data-zh="查询指定列或位置所属窗格的记录、索引或类型；隐藏列或未知列可能没有窗格。" data-en="Resolve a column or position to a pane record, index or type; hidden or unknown columns may have no pane.">查询指定列或位置所属窗格的记录、索引或类型；隐藏列或未知列可能没有窗格。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TableRowLayoutContext-paneAt-18" data-search="TableRowLayoutContext paneAt">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablewidgetadapter.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L113</span>
+<pre>    TablePane paneAt(int paneIndex) const;</pre>
+<p class="doc" data-zh="查询指定列或位置所属窗格的记录、索引或类型；隐藏列或未知列可能没有窗格。" data-en="Resolve a column or position to a pane record, index or type; hidden or unknown columns may have no pane.">查询指定列或位置所属窗格的记录、索引或类型；隐藏列或未知列可能没有窗格。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TableRowLayoutContext-paneRectAt-19" data-search="TableRowLayoutContext paneRectAt">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablewidgetadapter.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L119</span>
+<pre>    QRect paneRectAt(int paneIndex) const;</pre>
+<p class="doc" data-zh="查询对应项目、单元格、窗格或合并区域的矩形。视图结果为视口坐标；布局策略结果为布局坐标；屏外矩形可超出可见区域。" data-en="Query the item, cell, pane or span rectangle. View results use viewport coordinates; layout policies use layout coordinates. Offscreen rectangles may extend beyond the visible area.">查询对应项目、单元格、窗格或合并区域的矩形。视图结果为视口坐标；布局策略结果为布局坐标；屏外矩形可超出可见区域。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TableRowLayoutContext-spans-20" data-search="TableRowLayoutContext spans">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablewidgetadapter.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L123</span>
+<pre>    const TableSpanContext &amp;spans() const;</pre>
+<p class="doc" data-zh="返回当前显式或上下文提供的合并范围集合。" data-en="Return the current explicit or context-provided merged-cell spans.">返回当前显式或上下文提供的合并范围集合。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+</section>
+<section>
+<h3 id="ColumnHost">ColumnHost</h3>
+<pre>class VIRTUALITEMVIEWS_EXPORT ColumnHost : public QWidget</pre>
+<article tabindex="-1" id="ColumnHost-ColumnHost-0" data-search="ColumnHost ColumnHost">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablewidgetadapter.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L219</span>
+<pre>explicit ColumnHost(int logicalColumn, QWidget *parent = nullptr);</pre>
+<p class="doc" data-zh="构造 ColumnHost；按此重载传入父对象、模型或布局参数。带 parent 的 QObject/QWidget 遵循 Qt 父子生命周期。" data-en="Construct ColumnHost with the parent, model or layout arguments in this overload. QObject/QWidget parent arguments follow Qt parent-child lifetime rules.">构造 ColumnHost；按此重载传入父对象、模型或布局参数。带 parent 的 QObject/QWidget 遵循 Qt 父子生命周期。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ColumnHost-logicalColumn-1" data-search="ColumnHost logicalColumn">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablewidgetadapter.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L221</span>
+<pre>    int logicalColumn() const;</pre>
+<p class="doc" data-zh="返回宿主对应逻辑列号。" data-en="Return the logical column of the host.">返回宿主对应逻辑列号。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ColumnHost-setLogicalColumn-2" data-search="ColumnHost setLogicalColumn">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablewidgetadapter.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L222</span>
+<pre>void setLogicalColumn(int logicalColumn);</pre>
+<p class="doc" data-zh="设置宿主对应逻辑列号。" data-en="Set the logical column of the host.">设置宿主对应逻辑列号。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+</section>
+<section>
+<h3 id="TableWidgetAdapter">TableWidgetAdapter</h3>
+<pre>class VIRTUALITEMVIEWS_EXPORT TableWidgetAdapter : public WidgetAdapter</pre>
+<article tabindex="-1" id="TableWidgetAdapter-layoutRowWidget-0" data-search="TableWidgetAdapter layoutRowWidget">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablewidgetadapter.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L238</span>
+<pre>    virtual void layoutRowWidget(QWidget *widget, const QModelIndex &amp;rowIndex,
+                                 const TableRowLayoutContext &amp;context);</pre>
+<p class="doc" data-zh="根据 TableRowLayoutContext 布置行内列控件；需要遵守 pane 裁剪与列可视顺序。使用 ColumnHost 可让框架负责列定位。" data-en="Lay out row children using TableRowLayoutContext, respecting pane clipping and visual column order. ColumnHost lets the framework position columns.">根据 TableRowLayoutContext 布置行内列控件；需要遵守 pane 裁剪与列可视顺序。使用 ColumnHost 可让框架负责列定位。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#materialization"><span data-zh="RowWidgets / CellWidgets / 物化成本" data-en="RowWidgets / CellWidgets / materialization cost">RowWidgets / CellWidgets / 物化成本</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+</section>
+<section>
+<h3 id="CellWidgetAdapter">CellWidgetAdapter</h3>
+<pre>class VIRTUALITEMVIEWS_EXPORT CellWidgetAdapter : public ItemEditorAdapter</pre>
+<article tabindex="-1" id="CellWidgetAdapter-CellWidgetAdapter-0" data-search="CellWidgetAdapter CellWidgetAdapter">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablewidgetadapter.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L254</span>
+<pre>virtual ~CellWidgetAdapter() = default;</pre>
+<p class="doc" data-zh="销毁 CellWidgetAdapter 并释放其拥有的资源；不在析构回调中继续使用该对象。" data-en="Destroy CellWidgetAdapter and release its owned resources; do not keep using the object during destruction callbacks.">销毁 CellWidgetAdapter 并释放其拥有的资源；不在析构回调中继续使用该对象。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="CellWidgetAdapter-cellWidgetType-1" data-search="CellWidgetAdapter cellWidgetType">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablewidgetadapter.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L257</span>
+<pre>    virtual WidgetType cellWidgetType(const QModelIndex &amp;index) const;</pre>
+<p class="doc" data-zh="返回复用类型标识。只有结构兼容的控件才应使用同一个类型值。" data-en="Return the recycling type identifier. Only structurally compatible widgets should share a type.">返回复用类型标识。只有结构兼容的控件才应使用同一个类型值。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="CellWidgetAdapter-createCellWidget-2" data-search="CellWidgetAdapter createCellWidget">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablewidgetadapter.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L263</span>
+<pre>virtual QWidget *createCellWidget(WidgetType type, QWidget *parent) = 0;</pre>
+<p class="doc" data-zh="在给定 parent 下创建指定类型的控件。只构造界面；每次项目数据由 bind 回调填充。" data-en="Create a widget of the requested type under parent. Construct the UI here; populate item data in bind callbacks.">在给定 parent 下创建指定类型的控件。只构造界面；每次项目数据由 bind 回调填充。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="CellWidgetAdapter-bindCellWidget-3" data-search="CellWidgetAdapter bindCellWidget">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablewidgetadapter.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L268</span>
+<pre>    virtual void bindCellWidget(QWidget *widget, const QModelIndex &amp;index);</pre>
+<p class="doc" data-zh="将当前模型索引或绑定上下文的数据写入复用控件。每次绑定应覆盖旧内容，避免残留；不要重复连接同一信号。" data-en="Populate a reusable widget from the current index or binding context. Replace stale content on every bind and avoid duplicate signal connections.">将当前模型索引或绑定上下文的数据写入复用控件。每次绑定应覆盖旧内容，避免残留；不要重复连接同一信号。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="CellWidgetAdapter-bindCellWidget-4" data-search="CellWidgetAdapter bindCellWidget">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablewidgetadapter.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L276</span>
+<pre>    virtual void bindCellWidget(QWidget *widget, const ItemBindingContext &amp;context);</pre>
+<p class="doc" data-zh="将当前模型索引或绑定上下文的数据写入复用控件。每次绑定应覆盖旧内容，避免残留；不要重复连接同一信号。" data-en="Populate a reusable widget from the current index or binding context. Replace stale content on every bind and avoid duplicate signal connections.">将当前模型索引或绑定上下文的数据写入复用控件。每次绑定应覆盖旧内容，避免残留；不要重复连接同一信号。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="CellWidgetAdapter-visualStateChanged-5" data-search="CellWidgetAdapter visualStateChanged">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablewidgetadapter.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L282</span>
+<pre>    virtual void visualStateChanged(QWidget *widget, const QModelIndex &amp;index);</pre>
+<p class="doc" data-zh="接收框架计算后的 hover、选中和动画进度；据此更新按钮等子控件，通常无需重复绘制框架状态背景。" data-en="Receive framework-computed hover, selection and animation progress. Update child controls from this state; ordinarily do not duplicate framework background painting.">接收框架计算后的 hover、选中和动画进度；据此更新按钮等子控件，通常无需重复绘制框架状态背景。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#adapter"><span data-zh="控件复用 / 多控件类型 / 异步清理" data-en="Widget recycling / widget types / async cleanup">控件复用 / 多控件类型 / 异步清理</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="CellWidgetAdapter-visualStateChanged-6" data-search="CellWidgetAdapter visualStateChanged">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablewidgetadapter.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L289</span>
+<pre>    virtual void visualStateChanged(QWidget *widget, const ItemBindingContext &amp;context);</pre>
+<p class="doc" data-zh="接收框架计算后的 hover、选中和动画进度；据此更新按钮等子控件，通常无需重复绘制框架状态背景。" data-en="Receive framework-computed hover, selection and animation progress. Update child controls from this state; ordinarily do not duplicate framework background painting.">接收框架计算后的 hover、选中和动画进度；据此更新按钮等子控件，通常无需重复绘制框架状态背景。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#adapter"><span data-zh="控件复用 / 多控件类型 / 异步清理" data-en="Widget recycling / widget types / async cleanup">控件复用 / 多控件类型 / 异步清理</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="CellWidgetAdapter-unbindCellWidget-7" data-search="CellWidgetAdapter unbindCellWidget">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablewidgetadapter.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L295</span>
+<pre>    virtual void unbindCellWidget(QWidget *widget, const QModelIndex &amp;index);</pre>
+<p class="doc" data-zh="解除控件与旧项目的业务关联，取消旧请求并清理临时状态，供下次复用。" data-en="Detach the widget from its old item, cancel obsolete work and clear transient state before reuse.">解除控件与旧项目的业务关联，取消旧请求并清理临时状态，供下次复用。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="CellWidgetAdapter-unbindCellWidget-8" data-search="CellWidgetAdapter unbindCellWidget">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablewidgetadapter.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L302</span>
+<pre>    virtual void unbindCellWidget(QWidget *widget, const ItemBindingContext &amp;context);</pre>
+<p class="doc" data-zh="解除控件与旧项目的业务关联，取消旧请求并清理临时状态，供下次复用。" data-en="Detach the widget from its old item, cancel obsolete work and clear transient state before reuse.">解除控件与旧项目的业务关联，取消旧请求并清理临时状态，供下次复用。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+</section>
+<footer class="muted">
+<p><span data-zh="按能力查找配套设置与独立示例；通用接口请沿基类链接查阅，Qt 继承接口请参考 Qt 文档。" data-en="Find related settings and independent examples by capability. Follow base-class links for shared APIs and consult Qt documentation for inherited Qt APIs.">按能力查找配套设置与独立示例；通用接口请沿基类链接查阅，Qt 继承接口请参考 Qt 文档。</span></p>
+</footer>
+</main>
+<script src="../assets/reference.js">
+</script>
+</body>
+</html>

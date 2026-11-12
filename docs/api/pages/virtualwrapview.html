@@ -1,0 +1,646 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>VirtualWrapView · VirtualItemViews</title>
+<link rel="stylesheet" href="../assets/reference.css">
+</head>
+<body>
+<header>
+<div class="header-top">
+<a href="../index.html">VirtualItemViews / API</a>
+<div id="language-switch" class="language-switch" role="group" aria-label="Language / 语言" hidden>
+<button type="button" data-language="zh" aria-pressed="true" lang="zh-CN">中文</button>
+<button type="button" data-language="en" aria-pressed="false" lang="en">English</button>
+</div>
+</div>
+<h1>VirtualWrapView</h1>
+<p><span data-zh="不等宽换行" data-en="Variable-width wrapping">不等宽换行</span></p>
+</header>
+<main>
+<nav>
+<a href="../index.html"><span data-zh="能力总览" data-en="Capabilities">能力总览</span></a>
+<a href="../../AGENT_GUIDE.md"><span data-zh="Agent 索引" data-en="Agent guide">Agent 索引</span></a>
+<a href="../../../examples/README.md"><span data-zh="独立示例" data-en="Examples">独立示例</span></a>
+<a href="../../../README.md"><span data-zh="项目首页" data-en="Project home">项目首页</span></a>
+</nav>
+<label for="filter"><span data-zh="搜索本页：能力、API 名称或关键词" data-en="Search this page: capability, API name or keyword">搜索本页：能力、API 名称或关键词</span></label>
+<input id="filter" type="search" placeholder="例如：Popup、setAutoHeight、冻结、branch">
+<p class="muted search-help"><span data-zh="无需网络或服务器。所有内容默认可见；搜索只筛选当前页。完整继承 API 请沿基类链接查阅。" data-en="No network or server required. All content is initially visible; search filters this page only. Follow base-class links for inherited APIs.">无需网络或服务器。所有内容默认可见；搜索只筛选当前页。完整继承 API 请沿基类链接查阅。</span></p>
+<p id="search-status" role="status" aria-live="polite">
+</p>
+<p>
+<a href="../../../include/virtualitemviews/virtualwrapview.h"><span data-zh="公开头文件：include/virtualitemviews/virtualwrapview.h" data-en="Public header: include/virtualitemviews/virtualwrapview.h">公开头文件：include/virtualitemviews/virtualwrapview.h</span></a>
+</p>
+<p><span data-zh="项目宽度独立、统一高度、按模型顺序换行；虚拟化显示，初始布局与宽度变化重排为 O(N)。" data-en="Independent item widths, uniform height, wrapping in model order. Virtualized display; initial layout and width reflow cost O(N).">项目宽度独立、统一高度、按模型顺序换行；虚拟化显示，初始布局与宽度变化重排为 O(N)。</span></p>
+<p><span data-zh="直接基类：" data-en="Direct base: ">直接基类：</span><a href="virtualitemview.html">VirtualItemView</a>。</p>
+<p class="rules"><span data-zh="本页列出本类型声明的接口。模型、选择、编辑、拖放、背景、自动高度和诊断还需查 " data-en="This page lists declarations owned by this type. For models, selection, editing, drag/drop, backgrounds, auto height and diagnostics also see ">本页列出本类型声明的接口。模型、选择、编辑、拖放、背景、自动高度和诊断还需查 </span><a href="virtualitemview.html">VirtualItemView</a><span data-zh="。“可继承”不代表所有布局都支持：请先看下方能力限制。" data-en=". Inheritance does not imply support in every layout: read the capability limits below.">。“可继承”不代表所有布局都支持：请先看下方能力限制。</span></p>
+<p class="api-jump">
+<a href="#public-api"><span data-zh="公开函数列表" data-en="Public function index">公开函数列表</span></a>
+</p>
+<h2><span data-zh="能力与配套设置" data-en="Capabilities and related settings">能力与配套设置</span></h2>
+<article id="model" data-search="setModel model setRootIndex rootIndex virtualitemview virtuallistview virtualtableview virtualtreeview virtualtreetableview virtualflowtableview virtualmasonryview virtualwrapview">
+<h3><span data-zh="模型 / 根节点 / 代理模型 / 更新通知" data-en="Models / roots / proxies / update notifications">模型 / 根节点 / 代理模型 / 更新通知</span></h3>
+<p>
+<code>setModel · model · setRootIndex · rootIndex</code>
+</p>
+<p class="rules"><span data-zh="使用 QAbstractItemModel 与正常的 dataChanged、begin/endInsertRows、removeRows、moveRows、layoutChanged/reset 通知驱动更新；视图不持有业务数据。简单模型直接填充 QStandardItemModel。代理模型索引属于代理，不可把源模型索引直接传入视图；setRootIndex 显示其子项，Table 没有该入口。切换模型后重新核对 root 和 selectionModel。" data-en="Use QAbstractItemModel and standard dataChanged, begin/endInsertRows, removal, moveRows, layoutChanged and reset notifications. The view does not store business data. Populate QStandardItemModel directly for simple data. Proxy indexes belong to the proxy: do not pass source indexes to its view. setRootIndex displays children of that index; plain Table has no such entry point. Recheck root and selectionModel after replacing the model.">使用 QAbstractItemModel 与正常的 dataChanged、begin/endInsertRows、removeRows、moveRows、layoutChanged/reset 通知驱动更新；视图不持有业务数据。简单模型直接填充 QStandardItemModel。代理模型索引属于代理，不可把源模型索引直接传入视图；setRootIndex 显示其子项，Table 没有该入口。切换模型后重新核对 root 和 selectionModel。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../../src/core/virtualitemview.cpp">src/core/virtualitemview.cpp</a> · <a href="../../../src/widgets/virtuallistview.cpp">src/widgets/virtuallistview.cpp</a> · <a href="../../../src/widgets/virtualtreeview.cpp">src/widgets/virtualtreeview.cpp</a> · <a href="../../../src/widgets/virtualtreetableview.cpp">src/widgets/virtualtreetableview.cpp</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../../models.md">docs/models.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（10）" data-en="Independent source examples (10)">独立源码示例（10）</span></summary>
+<ul>
+<li>
+<a href="../../../examples/flow_capabilities/06_model_root/example.cpp">examples/flow_capabilities/06_model_root/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/list_capabilities/05_model_updates/example.cpp">examples/list_capabilities/05_model_updates/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/masonry_capabilities/09_model_root/example.cpp">examples/masonry_capabilities/09_model_root/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/table_capabilities/05_model_updates/example.cpp">examples/table_capabilities/05_model_updates/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/tree_capabilities/05_model_updates/example.cpp">examples/tree_capabilities/05_model_updates/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/treetable_capabilities/06_model_updates/example.cpp">examples/treetable_capabilities/06_model_updates/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/wrap_capabilities/05_model_root/example.cpp">examples/wrap_capabilities/05_model_root/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/tree_capabilities/08_root_index/example.cpp">examples/tree_capabilities/08_root_index/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/treetable_capabilities/09_root_index/example.cpp">examples/treetable_capabilities/09_root_index/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/tree_capabilities/21_sorting_filtering/example.cpp">examples/tree_capabilities/21_sorting_filtering/example.cpp</a>
+</li>
+</ul>
+</details>
+</article>
+<article id="states" data-search="visualState setVisualStateBackgroundVisible setHoverBackgroundColor setSelectedBackgroundColor setVisualStateAnimationDuration setVisualStateAnimationEasingCurve virtualitemview virtuallistview virtualtableview virtualtreeview virtualtreetableview virtualflowtableview virtualmasonryview virtualwrapview">
+<h3><span data-zh="hover / selected 默认绘制和动画" data-en="Built-in hover / selection painting and animation">hover / selected 默认绘制和动画</span></h3>
+<p>
+<code>visualState · setVisualStateBackgroundVisible · setHoverBackgroundColor · setSelectedBackgroundColor · setVisualStateAnimationDuration · setVisualStateAnimationEasingCurve</code>
+</p>
+<p class="rules"><span data-zh="内置状态背景默认开启，动画默认 180ms OutCubic；业务控件保持透明并在 visualStateChanged 中更新按钮/复选框的显示即可。除非完全自定义外观，不要自己维护 hoveredIndex、动画或重画默认背景。原生拖动期间框架暂停普通 hover，结束后重新计算；不改变业务勾选数据。Flow/Masonry/Wrap 的状态圆角入口是 setStateBackgroundCornerRadius，List/Tree/Table 是 setVisualStateCornerRadius。" data-en="State backgrounds default on, with 180ms OutCubic animation. Keep business widgets transparent and update buttons/checkbox visibility in visualStateChanged. Custom hover tracking, animation and default-background painting are unnecessary unless replacing the appearance entirely. Native drag suspends ordinary hover and recalculates it afterward without changing business checkbox data. Flow/Masonry/Wrap use setStateBackgroundCornerRadius; List/Tree/Table use setVisualStateCornerRadius.">内置状态背景默认开启，动画默认 180ms OutCubic；业务控件保持透明并在 visualStateChanged 中更新按钮/复选框的显示即可。除非完全自定义外观，不要自己维护 hoveredIndex、动画或重画默认背景。原生拖动期间框架暂停普通 hover，结束后重新计算；不改变业务勾选数据。Flow/Masonry/Wrap 的状态圆角入口是 setStateBackgroundCornerRadius，List/Tree/Table 是 setVisualStateCornerRadius。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../../src/core/virtualitemview.cpp">src/core/virtualitemview.cpp</a> · <a href="../../../src/widgets/virtualtableview.cpp">src/widgets/virtualtableview.cpp</a> · <a href="../../../src/widgets/virtuallistview.cpp">src/widgets/virtuallistview.cpp</a> · <a href="../../../src/widgets/virtualtreeview.cpp">src/widgets/virtualtreeview.cpp</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../../interaction.md">docs/interaction.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（11）" data-en="Independent source examples (11)">独立源码示例（11）</span></summary>
+<ul>
+<li>
+<a href="../../../examples/flow_capabilities/04_visual_states/example.cpp">examples/flow_capabilities/04_visual_states/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/list_capabilities/08_visual_states/example.cpp">examples/list_capabilities/08_visual_states/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/masonry_capabilities/06_visual_states/example.cpp">examples/masonry_capabilities/06_visual_states/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/table_capabilities/10_visual_states/example.cpp">examples/table_capabilities/10_visual_states/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/tree_capabilities/13_visual_states/example.cpp">examples/tree_capabilities/13_visual_states/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/treetable_capabilities/15_visual_states/example.cpp">examples/treetable_capabilities/15_visual_states/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/wrap_capabilities/03_visual_states/example.cpp">examples/wrap_capabilities/03_visual_states/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/list_capabilities/09_state_content/example.cpp">examples/list_capabilities/09_state_content/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/table_capabilities/11_state_content/example.cpp">examples/table_capabilities/11_state_content/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/tree_capabilities/14_state_content/example.cpp">examples/tree_capabilities/14_state_content/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/treetable_capabilities/16_state_content/example.cpp">examples/treetable_capabilities/16_state_content/example.cpp</a>
+</li>
+</ul>
+</details>
+</article>
+<article id="drag" data-search="setDragEnabled setAcceptDrops setDragStartMode canStartDrag startDrag DragOptions setDragDropActions setDefaultDropAction setMoveRemovesSourceRows virtualitemview types virtuallistview virtualtableview virtualtreeview virtualtreetableview virtualwrapview virtualflowtableview virtualmasonryview">
+<h3><span data-zh="原生拖放 / 手柄起拖 / 预览 / Move" data-en="Native drag/drop / handles / previews / Move">原生拖放 / 手柄起拖 / 预览 / Move</span></h3>
+<p>
+<code>setDragEnabled · setAcceptDrops · setDragStartMode · canStartDrag · startDrag · DragOptions · setDragDropActions · setDefaultDropAction · setMoveRemovesSourceRows</code>
+</p>
+<p class="rules"><span data-zh="setDragEnabled 开启拖出，QWidget::setAcceptDrops 开启接收；模型需 flags、mimeData、mimeTypes、canDropMimeData/dropMimeData 与支持的 actions。Automatic 按阈值启动；Manual 由手柄调用 startDrag(index[, options])，不需框架注册按钮。默认预览按 SelectRows/SelectItems，DragOptions 可改来源/区域/热点，默认热点在鼠标处。Move 是否删除源行必须与模型协议一致：模型已移动不得再删；默认不删除。框架负责拖动 pin、hover 暂停和结束恢复。" data-en="setDragEnabled enables dragging out; QWidget::setAcceptDrops enables receiving. The model supplies flags, mimeData, mimeTypes, canDropMimeData/dropMimeData and supported actions. Automatic starts after the gesture threshold. Manual handles call startDrag(index[, options]); no button registration is needed. Default previews follow SelectRows/SelectItems; DragOptions controls source, region and press position, anchored at the pointer by default. Source deletion after Move must match the model protocol: never delete again after the model already moved data. Deletion defaults off. The framework owns temporary drag pins and hover suspension/restoration.">setDragEnabled 开启拖出，QWidget::setAcceptDrops 开启接收；模型需 flags、mimeData、mimeTypes、canDropMimeData/dropMimeData 与支持的 actions。Automatic 按阈值启动；Manual 由手柄调用 startDrag(index[, options])，不需框架注册按钮。默认预览按 SelectRows/SelectItems，DragOptions 可改来源/区域/热点，默认热点在鼠标处。Move 是否删除源行必须与模型协议一致：模型已移动不得再删；默认不删除。框架负责拖动 pin、hover 暂停和结束恢复。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../../src/core/virtualitemview.cpp">src/core/virtualitemview.cpp</a> · <a href="../../../src/core/dragpreview_p.h">src/core/dragpreview_p.h</a> · <a href="../../../src/core/dragmoveselection_p.h">src/core/dragmoveselection_p.h</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../../interaction.md">docs/interaction.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（4）" data-en="Independent source examples (4)">独立源码示例（4）</span></summary>
+<ul>
+<li>
+<a href="../../../examples/list_capabilities/15_drag_drop/example.cpp">examples/list_capabilities/15_drag_drop/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/table_capabilities/24_drag_indicator/example.cpp">examples/table_capabilities/24_drag_indicator/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/wrap_capabilities/07_drag_drop/example.cpp">examples/wrap_capabilities/07_drag_drop/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/masonry_capabilities/11_drag_drop/example.cpp">examples/masonry_capabilities/11_drag_drop/example.cpp</a>
+</li>
+</ul>
+</details>
+</article>
+<article id="wrap" data-search="setFixedItemHeight setItemWidthRange setItemWidth setItemWidths clearItemWidth invalidateItemWidths setItemSpacing setRowSpacing setLineAlignment virtualwrapview wraplayout wrapwidget">
+<h3><span data-zh="Wrap 不等宽标签 / 自然尺寸 / 行对齐" data-en="Variable-width tags / natural sizes / line alignment">Wrap 不等宽标签 / 自然尺寸 / 行对齐</span></h3>
+<p>
+<code>setFixedItemHeight · setItemWidthRange · setItemWidth · setItemWidths · clearItemWidth · invalidateItemWidths · setItemSpacing · setRowSpacing · setLineAlignment</code>
+</p>
+<p class="rules"><span data-zh="VirtualWrapView 宽度优先级：显式覆盖→SizeHintRole→adapter estimate→100px，再按范围/行宽裁剪；批量 setItemWidths 避免逐项重排。水平 itemSpacing 与垂直 rowSpacing 可分别设置，统一 item height；SelectRows 仍选择模型项，不会选整条显示行。WrapLayout 按真实子控件 sizeHint/约束排布，隐藏控件通常不占位；WrapWidget 接管控件所有权，takeWidget 交回调用者，clear 删除。" data-en="VirtualWrapView width priority: explicit override, SizeHintRole, adapter estimate, then 100px, clamped to width limits and available line width. Batch setItemWidths avoids per-item reflow. Horizontal itemSpacing and vertical rowSpacing are independent; item height is uniform. SelectRows selects model items, not a packed display row. WrapLayout uses real widget size hints/constraints; hidden widgets normally consume no space. WrapWidget owns inserted widgets; takeWidget transfers them back, and clear deletes them.">VirtualWrapView 宽度优先级：显式覆盖→SizeHintRole→adapter estimate→100px，再按范围/行宽裁剪；批量 setItemWidths 避免逐项重排。水平 itemSpacing 与垂直 rowSpacing 可分别设置，统一 item height；SelectRows 仍选择模型项，不会选整条显示行。WrapLayout 按真实子控件 sizeHint/约束排布，隐藏控件通常不占位；WrapWidget 接管控件所有权，takeWidget 交回调用者，clear 删除。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../../src/widgets/virtualwrapview.cpp">src/widgets/virtualwrapview.cpp</a> · <a href="../../../src/layout/wrapitemlayout.cpp">src/layout/wrapitemlayout.cpp</a> · <a href="../../../src/layout/wraplayout.cpp">src/layout/wraplayout.cpp</a> · <a href="../../../src/widgets/wrapwidget.cpp">src/widgets/wrapwidget.cpp</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../../wrap.md">docs/wrap.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（3）" data-en="Independent source examples (3)">独立源码示例（3）</span></summary>
+<ul>
+<li>
+<a href="../../../examples/wrap_capabilities/02_geometry/example.cpp">examples/wrap_capabilities/02_geometry/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/wrap_capabilities/09_wrap_layout/example.cpp">examples/wrap_capabilities/09_wrap_layout/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/wrap_capabilities/10_wrap_widget/example.cpp">examples/wrap_capabilities/10_wrap_widget/example.cpp</a>
+</li>
+</ul>
+</details>
+</article>
+<details>
+<summary><span data-zh="此视图全部能力章节（10）" data-en="All capability chapters for this view (10)">此视图全部能力章节（10）</span></summary>
+<ul>
+<li>
+<a href="../../../examples/wrap_capabilities/01_basic/example.cpp"><span data-zh="01_basic / 基础接入" data-en="01 / Basic">01_basic / 基础接入</span></a> · <a href="../../../examples/wrap_capabilities/README.md"><span data-zh="说明" data-en="Guide">说明</span></a>
+</li>
+<li>
+<a href="../../../examples/wrap_capabilities/02_geometry/example.cpp"><span data-zh="02_geometry / 宽度、间距与对齐" data-en="02 / Geometry">02_geometry / 宽度、间距与对齐</span></a> · <a href="../../../examples/wrap_capabilities/README.md"><span data-zh="说明" data-en="Guide">说明</span></a>
+</li>
+<li>
+<a href="../../../examples/wrap_capabilities/03_visual_states/example.cpp"><span data-zh="03_visual_states / 状态、颜色与圆角" data-en="03 / Visual states">03_visual_states / 状态、颜色与圆角</span></a> · <a href="../../../examples/wrap_capabilities/README.md"><span data-zh="说明" data-en="Guide">说明</span></a>
+</li>
+<li>
+<a href="../../../examples/wrap_capabilities/04_binding_events/example.cpp"><span data-zh="04_binding_events / 结构体、多类型与事件" data-en="04 / Binding events">04_binding_events / 结构体、多类型与事件</span></a> · <a href="../../../examples/wrap_capabilities/README.md"><span data-zh="说明" data-en="Guide">说明</span></a>
+</li>
+<li>
+<a href="../../../examples/wrap_capabilities/05_model_root/example.cpp"><span data-zh="05_model_root / 模型、代理与显示根" data-en="05 / Model root">05_model_root / 模型、代理与显示根</span></a> · <a href="../../../examples/wrap_capabilities/README.md"><span data-zh="说明" data-en="Guide">说明</span></a>
+</li>
+<li>
+<a href="../../../examples/wrap_capabilities/06_scrolling/example.cpp"><span data-zh="06_scrolling / 滚动、物化与诊断" data-en="06 / Scrolling">06_scrolling / 滚动、物化与诊断</span></a> · <a href="../../../examples/wrap_capabilities/README.md"><span data-zh="说明" data-en="Guide">说明</span></a>
+</li>
+<li>
+<a href="../../../examples/wrap_capabilities/07_drag_drop/example.cpp"><span data-zh="07_drag_drop / 自动与手动拖放" data-en="07 / Drag drop">07_drag_drop / 自动与手动拖放</span></a> · <a href="../../../examples/wrap_capabilities/README.md"><span data-zh="说明" data-en="Guide">说明</span></a>
+</li>
+<li>
+<a href="../../../examples/wrap_capabilities/08_auto_height/example.cpp"><span data-zh="08 自适应高度" data-en="08 / Auto height">08 自适应高度</span></a> · <a href="../../../examples/wrap_capabilities/08_auto_height/README.md"><span data-zh="说明" data-en="Guide">说明</span></a>
+</li>
+<li>
+<a href="../../../examples/wrap_capabilities/09_wrap_layout/example.cpp"><span data-zh="09_wrap_layout / 直接使用 WrapLayout" data-en="09 / Wrap layout">09_wrap_layout / 直接使用 WrapLayout</span></a> · <a href="../../../examples/wrap_capabilities/README.md"><span data-zh="说明" data-en="Guide">说明</span></a>
+</li>
+<li>
+<a href="../../../examples/wrap_capabilities/10_wrap_widget/example.cpp"><span data-zh="10_wrap_widget / 真实控件自适应高度" data-en="10 / Wrap widget">10_wrap_widget / 真实控件自适应高度</span></a> · <a href="../../../examples/wrap_capabilities/README.md"><span data-zh="说明" data-en="Guide">说明</span></a>
+</li>
+</ul>
+</details>
+<h2 id="public-api" tabindex="-1"><span data-zh="公开 API、类型与信号" data-en="Public API, types and signals">公开 API、类型与信号</span></h2>
+<section class="function-index" id="function-index" tabindex="-1">
+<h3><span data-zh="公开函数列表" data-en="Public function index">公开函数列表</span></h3>
+<p class="muted"><span data-zh="按声明类型分组；每个重载单独列出，点击签名跳转到说明。信号单独列出；类型和数据成员仍保留在下方。" data-en="Grouped by declaring type. Each overload has its own link to the details. Signals are listed separately; types and data members remain below.">按声明类型分组；每个重载单独列出，点击签名跳转到说明。信号单独列出；类型和数据成员仍保留在下方。</span></p>
+<h4>VirtualWrapView</h4>
+<ul>
+<li data-search="VirtualWrapView VirtualWrapView">
+<a href="#VirtualWrapView-VirtualWrapView-0">
+<code>explicit VirtualWrapView(QWidget *parent = nullptr);</code>
+</a>
+</li>
+<li data-search="VirtualWrapView setModel">
+<a href="#VirtualWrapView-setModel-1">
+<code>void setModel(QAbstractItemModel *model) override;</code>
+</a>
+</li>
+<li data-search="VirtualWrapView setAdapter">
+<a href="#VirtualWrapView-setAdapter-2">
+<code>void setAdapter(WidgetAdapter *adapter, bool takeOwnership = false) override;</code>
+</a>
+</li>
+<li data-search="VirtualWrapView setRootIndex">
+<a href="#VirtualWrapView-setRootIndex-3">
+<code>void setRootIndex(const QModelIndex &amp;index);</code>
+</a>
+</li>
+<li data-search="VirtualWrapView rootIndex">
+<a href="#VirtualWrapView-rootIndex-4">
+<code>QModelIndex rootIndex() const;</code>
+</a>
+</li>
+<li data-search="VirtualWrapView setFixedItemHeight">
+<a href="#VirtualWrapView-setFixedItemHeight-5">
+<code>void setFixedItemHeight(int height);</code>
+</a>
+</li>
+<li data-search="VirtualWrapView fixedItemHeight">
+<a href="#VirtualWrapView-fixedItemHeight-6">
+<code>int fixedItemHeight() const;</code>
+</a>
+</li>
+<li data-search="VirtualWrapView setItemWidthRange">
+<a href="#VirtualWrapView-setItemWidthRange-7">
+<code>void setItemWidthRange(int minimum, int maximum);</code>
+</a>
+</li>
+<li data-search="VirtualWrapView minimumItemWidth">
+<a href="#VirtualWrapView-minimumItemWidth-8">
+<code>int minimumItemWidth() const;</code>
+</a>
+</li>
+<li data-search="VirtualWrapView maximumItemWidth">
+<a href="#VirtualWrapView-maximumItemWidth-9">
+<code>int maximumItemWidth() const;</code>
+</a>
+</li>
+<li data-search="VirtualWrapView setItemWidth">
+<a href="#VirtualWrapView-setItemWidth-10">
+<code>void setItemWidth(const QModelIndex &amp;index, int width);</code>
+</a>
+</li>
+<li data-search="VirtualWrapView setItemWidths">
+<a href="#VirtualWrapView-setItemWidths-11">
+<code>void setItemWidths(const QVector&lt;QPair&lt;QModelIndex, int&gt;&gt; &amp;widths);</code>
+</a>
+</li>
+<li data-search="VirtualWrapView clearItemWidth">
+<a href="#VirtualWrapView-clearItemWidth-12">
+<code>void clearItemWidth(const QModelIndex &amp;index);</code>
+</a>
+</li>
+<li data-search="VirtualWrapView clearItemWidths">
+<a href="#VirtualWrapView-clearItemWidths-13">
+<code>void clearItemWidths();</code>
+</a>
+</li>
+<li data-search="VirtualWrapView invalidateItemWidths">
+<a href="#VirtualWrapView-invalidateItemWidths-14">
+<code>void invalidateItemWidths();</code>
+</a>
+</li>
+<li data-search="VirtualWrapView setItemSpacing">
+<a href="#VirtualWrapView-setItemSpacing-15">
+<code>void setItemSpacing(int pixels);</code>
+</a>
+</li>
+<li data-search="VirtualWrapView itemSpacing">
+<a href="#VirtualWrapView-itemSpacing-16">
+<code>int itemSpacing() const;</code>
+</a>
+</li>
+<li data-search="VirtualWrapView setRowSpacing">
+<a href="#VirtualWrapView-setRowSpacing-17">
+<code>void setRowSpacing(int pixels) override;</code>
+</a>
+</li>
+<li data-search="VirtualWrapView setContentMargins">
+<a href="#VirtualWrapView-setContentMargins-18">
+<code>void setContentMargins(const QMargins &amp;margins);</code>
+</a>
+</li>
+<li data-search="VirtualWrapView contentMargins">
+<a href="#VirtualWrapView-contentMargins-19">
+<code>QMargins contentMargins() const;</code>
+</a>
+</li>
+<li data-search="VirtualWrapView setLineAlignment">
+<a href="#VirtualWrapView-setLineAlignment-20">
+<code>void setLineAlignment(Qt::Alignment alignment);</code>
+</a>
+</li>
+<li data-search="VirtualWrapView lineAlignment">
+<a href="#VirtualWrapView-lineAlignment-21">
+<code>Qt::Alignment lineAlignment() const;</code>
+</a>
+</li>
+<li data-search="VirtualWrapView displayRowCount">
+<a href="#VirtualWrapView-displayRowCount-22">
+<code>qsizetype displayRowCount() const;</code>
+</a>
+</li>
+<li data-search="VirtualWrapView displayRowForIndex">
+<a href="#VirtualWrapView-displayRowForIndex-23">
+<code>qsizetype displayRowForIndex(const QModelIndex &amp;index) const;</code>
+</a>
+</li>
+<li data-search="VirtualWrapView setVisualStateBackgroundVisible">
+<a href="#VirtualWrapView-setVisualStateBackgroundVisible-24">
+<code>void setVisualStateBackgroundVisible(bool visible);</code>
+</a>
+</li>
+<li data-search="VirtualWrapView visualStateBackgroundVisible">
+<a href="#VirtualWrapView-visualStateBackgroundVisible-25">
+<code>bool visualStateBackgroundVisible() const;</code>
+</a>
+</li>
+<li data-search="VirtualWrapView setStateBackgroundCornerRadius">
+<a href="#VirtualWrapView-setStateBackgroundCornerRadius-26">
+<code>void setStateBackgroundCornerRadius(int pixels);</code>
+</a>
+</li>
+<li data-search="VirtualWrapView stateBackgroundCornerRadius">
+<a href="#VirtualWrapView-stateBackgroundCornerRadius-27">
+<code>int stateBackgroundCornerRadius() const;</code>
+</a>
+</li>
+</ul>
+<h3><span data-zh="信号列表" data-en="Signals">信号列表</span></h3>
+<h4>VirtualWrapView</h4>
+<ul>
+<li data-search="VirtualWrapView wrapLayoutChanged">
+<a href="#VirtualWrapView-wrapLayoutChanged-28">
+<code>void wrapLayoutChanged();</code>
+</a>
+</li>
+</ul>
+</section>
+<h2><span data-zh="函数说明" data-en="Function details">函数说明</span></h2>
+<p class="muted"><span data-zh="按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。" data-en="Read each function for its purpose and related settings. Overloads are listed separately; follow related capabilities to find examples.">按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。</span></p>
+<section>
+<h3 id="VirtualWrapView">VirtualWrapView</h3>
+<pre>class VIRTUALITEMVIEWS_EXPORT VirtualWrapView : public VirtualItemView</pre>
+<article tabindex="-1" id="VirtualWrapView-VirtualWrapView-0" data-search="VirtualWrapView VirtualWrapView">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualwrapview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L18</span>
+<pre>explicit VirtualWrapView(QWidget *parent = nullptr);</pre>
+<p class="doc" data-zh="构造 VirtualWrapView；按此重载传入父对象、模型或布局参数。带 parent 的 QObject/QWidget 遵循 Qt 父子生命周期。" data-en="Construct VirtualWrapView with the parent, model or layout arguments in this overload. QObject/QWidget parent arguments follow Qt parent-child lifetime rules.">构造 VirtualWrapView；按此重载传入父对象、模型或布局参数。带 parent 的 QObject/QWidget 遵循 Qt 父子生命周期。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualWrapView-setModel-1" data-search="VirtualWrapView setModel">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualwrapview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L19</span>
+<pre>void setModel(QAbstractItemModel *model) override;</pre>
+<p class="doc" data-zh="连接新的数据模型并更新布局、选择与物化状态；模型生命周期需覆盖视图使用期间。不要用重复 setModel 代替数据变更通知。" data-en="Connect a new data model and update layout, selection and materialization. Keep the model alive while in use; do not replace change notifications with repeated setModel calls.">连接新的数据模型并更新布局、选择与物化状态；模型生命周期需覆盖视图使用期间。不要用重复 setModel 代替数据变更通知。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#model"><span data-zh="模型 / 根节点 / 代理模型 / 更新通知" data-en="Models / roots / proxies / update notifications">模型 / 根节点 / 代理模型 / 更新通知</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualWrapView-setAdapter-2" data-search="VirtualWrapView setAdapter">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualwrapview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L20</span>
+<pre>void setAdapter(WidgetAdapter *adapter, bool takeOwnership = false) override;</pre>
+<p class="doc" data-zh="设置项目控件适配器。" data-en="Set the item widget adapter.">设置项目控件适配器。</p>
+<p class="doc" data-zh="takeOwnership 默认为 false，未转移所有权时调用方须保证 adapter 存活。RowWidgets 使用 TableWidgetAdapter，CellWidgets 使用 CellWidgetAdapter。创建控件和绑定数据应分离；复用时清除旧业务关联。" data-en="takeOwnership defaults to false; the caller must keep a non-owned adapter alive. RowWidgets uses TableWidgetAdapter and CellWidgets uses CellWidgetAdapter. Separate widget creation from binding and clear obsolete business associations on reuse.">takeOwnership 默认为 false，未转移所有权时调用方须保证 adapter 存活。RowWidgets 使用 TableWidgetAdapter，CellWidgets 使用 CellWidgetAdapter。创建控件和绑定数据应分离；复用时清除旧业务关联。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualWrapView-setRootIndex-3" data-search="VirtualWrapView setRootIndex">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualwrapview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L22</span>
+<pre>void setRootIndex(const QModelIndex &amp;index);</pre>
+<p class="doc" data-zh="设置展示子项所属模型根索引。" data-en="Set the model root index whose children are displayed.">设置展示子项所属模型根索引。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#model"><span data-zh="模型 / 根节点 / 代理模型 / 更新通知" data-en="Models / roots / proxies / update notifications">模型 / 根节点 / 代理模型 / 更新通知</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualWrapView-rootIndex-4" data-search="VirtualWrapView rootIndex">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualwrapview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L23</span>
+<pre>    QModelIndex rootIndex() const;</pre>
+<p class="doc" data-zh="返回展示子项所属模型根索引。" data-en="Return the model root index whose children are displayed.">返回展示子项所属模型根索引。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#model"><span data-zh="模型 / 根节点 / 代理模型 / 更新通知" data-en="Models / roots / proxies / update notifications">模型 / 根节点 / 代理模型 / 更新通知</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualWrapView-setFixedItemHeight-5" data-search="VirtualWrapView setFixedItemHeight">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualwrapview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L24</span>
+<pre>void setFixedItemHeight(int height);</pre>
+<p class="doc" data-zh="设置项目统一固定高度。" data-en="Set the uniform fixed item height.">设置项目统一固定高度。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#wrap"><span data-zh="Wrap 不等宽标签 / 自然尺寸 / 行对齐" data-en="Variable-width tags / natural sizes / line alignment">Wrap 不等宽标签 / 自然尺寸 / 行对齐</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualWrapView-fixedItemHeight-6" data-search="VirtualWrapView fixedItemHeight">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualwrapview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L25</span>
+<pre>int fixedItemHeight() const;</pre>
+<p class="doc" data-zh="返回项目统一固定高度。" data-en="Return the uniform fixed item height.">返回项目统一固定高度。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#wrap"><span data-zh="Wrap 不等宽标签 / 自然尺寸 / 行对齐" data-en="Variable-width tags / natural sizes / line alignment">Wrap 不等宽标签 / 自然尺寸 / 行对齐</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualWrapView-setItemWidthRange-7" data-search="VirtualWrapView setItemWidthRange">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualwrapview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L27</span>
+<pre>void setItemWidthRange(int minimum, int maximum);</pre>
+<p class="doc" data-zh="设置单元格或项目的宽度上下限，影响换行和自动列数计算。" data-en="Set cell or item width bounds used by wrapping and automatic column-count calculations.">设置单元格或项目的宽度上下限，影响换行和自动列数计算。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#wrap"><span data-zh="Wrap 不等宽标签 / 自然尺寸 / 行对齐" data-en="Variable-width tags / natural sizes / line alignment">Wrap 不等宽标签 / 自然尺寸 / 行对齐</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualWrapView-minimumItemWidth-8" data-search="VirtualWrapView minimumItemWidth">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualwrapview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L28</span>
+<pre>int minimumItemWidth() const;</pre>
+<p class="doc" data-zh="返回单元格或项目宽度下限或上限。" data-en="Return the minimum or maximum cell or item width.">返回单元格或项目宽度下限或上限。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualWrapView-maximumItemWidth-9" data-search="VirtualWrapView maximumItemWidth">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualwrapview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L29</span>
+<pre>int maximumItemWidth() const;</pre>
+<p class="doc" data-zh="返回单元格或项目宽度下限或上限。" data-en="Return the minimum or maximum cell or item width.">返回单元格或项目宽度下限或上限。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualWrapView-setItemWidth-10" data-search="VirtualWrapView setItemWidth">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualwrapview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L31</span>
+<pre>void setItemWidth(const QModelIndex &amp;index, int width);</pre>
+<p class="doc" data-zh="设置指定项目或批量项目的宽度覆盖，触发换行布局重算。" data-en="Set individual or bulk item width overrides and recalculate wrapping.">设置指定项目或批量项目的宽度覆盖，触发换行布局重算。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#wrap"><span data-zh="Wrap 不等宽标签 / 自然尺寸 / 行对齐" data-en="Variable-width tags / natural sizes / line alignment">Wrap 不等宽标签 / 自然尺寸 / 行对齐</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualWrapView-setItemWidths-11" data-search="VirtualWrapView setItemWidths">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualwrapview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L33</span>
+<pre>void setItemWidths(const QVector&lt;QPair&lt;QModelIndex, int&gt;&gt; &amp;widths);</pre>
+<p class="doc" data-zh="设置指定项目或批量项目的宽度覆盖，触发换行布局重算。" data-en="Set individual or bulk item width overrides and recalculate wrapping.">设置指定项目或批量项目的宽度覆盖，触发换行布局重算。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#wrap"><span data-zh="Wrap 不等宽标签 / 自然尺寸 / 行对齐" data-en="Variable-width tags / natural sizes / line alignment">Wrap 不等宽标签 / 自然尺寸 / 行对齐</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualWrapView-clearItemWidth-12" data-search="VirtualWrapView clearItemWidth">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualwrapview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L34</span>
+<pre>void clearItemWidth(const QModelIndex &amp;index);</pre>
+<p class="doc" data-zh="清除指定或全部项目宽度覆盖，恢复估值或测量提供的宽度。" data-en="Clear one or all item width overrides, restoring estimated or measured widths.">清除指定或全部项目宽度覆盖，恢复估值或测量提供的宽度。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#wrap"><span data-zh="Wrap 不等宽标签 / 自然尺寸 / 行对齐" data-en="Variable-width tags / natural sizes / line alignment">Wrap 不等宽标签 / 自然尺寸 / 行对齐</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualWrapView-clearItemWidths-13" data-search="VirtualWrapView clearItemWidths">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualwrapview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L35</span>
+<pre>void clearItemWidths();</pre>
+<p class="doc" data-zh="清除指定或全部项目宽度覆盖，恢复估值或测量提供的宽度。" data-en="Clear one or all item width overrides, restoring estimated or measured widths.">清除指定或全部项目宽度覆盖，恢复估值或测量提供的宽度。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualWrapView-invalidateItemWidths-14" data-search="VirtualWrapView invalidateItemWidths">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualwrapview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L37</span>
+<pre>void invalidateItemWidths();</pre>
+<p class="doc" data-zh="使指定布局或尺寸缓存失效；下次布局重新测量或计算。仅在内容尺寸确实变化时调用。" data-en="Invalidate the indicated layout or size cache for subsequent measurement or calculation. Use only when content dimensions actually change.">使指定布局或尺寸缓存失效；下次布局重新测量或计算。仅在内容尺寸确实变化时调用。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#wrap"><span data-zh="Wrap 不等宽标签 / 自然尺寸 / 行对齐" data-en="Variable-width tags / natural sizes / line alignment">Wrap 不等宽标签 / 自然尺寸 / 行对齐</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualWrapView-setItemSpacing-15" data-search="VirtualWrapView setItemSpacing">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualwrapview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L38</span>
+<pre>void setItemSpacing(int pixels);</pre>
+<p class="doc" data-zh="设置项目间距。" data-en="Set the spacing between items.">设置项目间距。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#wrap"><span data-zh="Wrap 不等宽标签 / 自然尺寸 / 行对齐" data-en="Variable-width tags / natural sizes / line alignment">Wrap 不等宽标签 / 自然尺寸 / 行对齐</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualWrapView-itemSpacing-16" data-search="VirtualWrapView itemSpacing">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualwrapview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L39</span>
+<pre>int itemSpacing() const;</pre>
+<p class="doc" data-zh="返回项目间距。" data-en="Return the spacing between items.">返回项目间距。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#wrap"><span data-zh="Wrap 不等宽标签 / 自然尺寸 / 行对齐" data-en="Variable-width tags / natural sizes / line alignment">Wrap 不等宽标签 / 自然尺寸 / 行对齐</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualWrapView-setRowSpacing-17" data-search="VirtualWrapView setRowSpacing">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualwrapview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L40</span>
+<pre>void setRowSpacing(int pixels) override;</pre>
+<p class="doc" data-zh="设置行间距。" data-en="Set the spacing between rows.">设置行间距。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#wrap"><span data-zh="Wrap 不等宽标签 / 自然尺寸 / 行对齐" data-en="Variable-width tags / natural sizes / line alignment">Wrap 不等宽标签 / 自然尺寸 / 行对齐</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualWrapView-setContentMargins-18" data-search="VirtualWrapView setContentMargins">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualwrapview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L41</span>
+<pre>void setContentMargins(const QMargins &amp;margins);</pre>
+<p class="doc" data-zh="设置内容四周外边距。" data-en="Set the margins around the content.">设置内容四周外边距。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualWrapView-contentMargins-19" data-search="VirtualWrapView contentMargins">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualwrapview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L42</span>
+<pre>QMargins contentMargins() const;</pre>
+<p class="doc" data-zh="返回内容四周外边距。" data-en="Return the margins around the content.">返回内容四周外边距。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualWrapView-setLineAlignment-20" data-search="VirtualWrapView setLineAlignment">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualwrapview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L44</span>
+<pre>void setLineAlignment(Qt::Alignment alignment);</pre>
+<p class="doc" data-zh="设置行内项目对齐方式。" data-en="Set the item alignment within a line.">设置行内项目对齐方式。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#wrap"><span data-zh="Wrap 不等宽标签 / 自然尺寸 / 行对齐" data-en="Variable-width tags / natural sizes / line alignment">Wrap 不等宽标签 / 自然尺寸 / 行对齐</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualWrapView-lineAlignment-21" data-search="VirtualWrapView lineAlignment">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualwrapview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L45</span>
+<pre>Qt::Alignment lineAlignment() const;</pre>
+<p class="doc" data-zh="返回行内项目对齐方式。" data-en="Return the item alignment within a line.">返回行内项目对齐方式。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#wrap"><span data-zh="Wrap 不等宽标签 / 自然尺寸 / 行对齐" data-en="Variable-width tags / natural sizes / line alignment">Wrap 不等宽标签 / 自然尺寸 / 行对齐</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualWrapView-displayRowCount-22" data-search="VirtualWrapView displayRowCount">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualwrapview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L46</span>
+<pre>qsizetype displayRowCount() const;</pre>
+<p class="doc" data-zh="返回布局实际排出的显示行数。" data-en="Return the number of display rows produced by the layout.">返回布局实际排出的显示行数。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualWrapView-displayRowForIndex-23" data-search="VirtualWrapView displayRowForIndex">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualwrapview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L47</span>
+<pre>qsizetype displayRowForIndex(const QModelIndex &amp;index) const;</pre>
+<p class="doc" data-zh="返回项目在流式排版中的显示行号或列号，与原始模型行号不同。" data-en="Return the item&#x27;s display row or column in the flow layout, distinct from its original model row.">返回项目在流式排版中的显示行号或列号，与原始模型行号不同。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualWrapView-setVisualStateBackgroundVisible-24" data-search="VirtualWrapView setVisualStateBackgroundVisible">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualwrapview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L49</span>
+<pre>void setVisualStateBackgroundVisible(bool visible);</pre>
+<p class="doc" data-zh="设置hover 或选中背景绘制开关。" data-en="Set the hover or selection background painting setting.">设置hover 或选中背景绘制开关。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#states"><span data-zh="hover / selected 默认绘制和动画" data-en="Built-in hover / selection painting and animation">hover / selected 默认绘制和动画</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualWrapView-visualStateBackgroundVisible-25" data-search="VirtualWrapView visualStateBackgroundVisible">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualwrapview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L50</span>
+<pre>    bool visualStateBackgroundVisible() const;</pre>
+<p class="doc" data-zh="返回hover 或选中背景绘制开关。" data-en="Return the hover or selection background painting setting.">返回hover 或选中背景绘制开关。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#states"><span data-zh="hover / selected 默认绘制和动画" data-en="Built-in hover / selection painting and animation">hover / selected 默认绘制和动画</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualWrapView-setStateBackgroundCornerRadius-26" data-search="VirtualWrapView setStateBackgroundCornerRadius">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualwrapview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L51</span>
+<pre>void setStateBackgroundCornerRadius(int pixels);</pre>
+<p class="doc" data-zh="设置状态背景圆角半径。" data-en="Set the state background corner radius.">设置状态背景圆角半径。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualWrapView-stateBackgroundCornerRadius-27" data-search="VirtualWrapView stateBackgroundCornerRadius">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualwrapview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L52</span>
+<pre>    int stateBackgroundCornerRadius() const;</pre>
+<p class="doc" data-zh="返回状态背景圆角半径。" data-en="Return the state background corner radius.">返回状态背景圆角半径。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualWrapView-wrapLayoutChanged-28" data-search="VirtualWrapView wrapLayoutChanged">
+<span class="badge">signals</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualwrapview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L56</span>
+<pre>void wrapLayoutChanged();</pre>
+<p class="doc" data-zh="对应布局重新计算后发出，通知业务更新依赖排版的内容。" data-en="Emitted when the corresponding layout changes so clients can update layout-dependent content.">对应布局重新计算后发出，通知业务更新依赖排版的内容。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+</section>
+<footer class="muted">
+<p><span data-zh="按能力查找配套设置与独立示例；通用接口请沿基类链接查阅，Qt 继承接口请参考 Qt 文档。" data-en="Find related settings and independent examples by capability. Follow base-class links for shared APIs and consult Qt documentation for inherited Qt APIs.">按能力查找配套设置与独立示例；通用接口请沿基类链接查阅，Qt 继承接口请参考 Qt 文档。</span></p>
+</footer>
+</main>
+<script src="../assets/reference.js">
+</script>
+</body>
+</html>

@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HeaderSection / HeaderSectionAdapter · VirtualItemViews</title>
+<link rel="stylesheet" href="../assets/reference.css">
+</head>
+<body>
+<header>
+<div class="header-top">
+<a href="../index.html">VirtualItemViews / API</a>
+<div id="language-switch" class="language-switch" role="group" aria-label="Language / 语言" hidden>
+<button type="button" data-language="zh" aria-pressed="true" lang="zh-CN">中文</button>
+<button type="button" data-language="en" aria-pressed="false" lang="en">English</button>
+</div>
+</div>
+<h1>HeaderSection / HeaderSectionAdapter</h1>
+<p><span data-zh="公开辅助接口与扩展契约" data-en="Public helper interfaces and extension contracts">公开辅助接口与扩展契约</span></p>
+</header>
+<main>
+<nav>
+<a href="../index.html"><span data-zh="能力总览" data-en="Capabilities">能力总览</span></a>
+<a href="../../AGENT_GUIDE.md"><span data-zh="Agent 索引" data-en="Agent guide">Agent 索引</span></a>
+<a href="../../../examples/README.md"><span data-zh="独立示例" data-en="Examples">独立示例</span></a>
+<a href="../../../README.md"><span data-zh="项目首页" data-en="Project home">项目首页</span></a>
+</nav>
+<label for="filter"><span data-zh="搜索本页：能力、API 名称或关键词" data-en="Search this page: capability, API name or keyword">搜索本页：能力、API 名称或关键词</span></label>
+<input id="filter" type="search" placeholder="例如：Popup、setAutoHeight、冻结、branch">
+<p class="muted search-help"><span data-zh="无需网络或服务器。所有内容默认可见；搜索只筛选当前页。完整继承 API 请沿基类链接查阅。" data-en="No network or server required. All content is initially visible; search filters this page only. Follow base-class links for inherited APIs.">无需网络或服务器。所有内容默认可见；搜索只筛选当前页。完整继承 API 请沿基类链接查阅。</span></p>
+<p id="search-status" role="status" aria-live="polite">
+</p>
+<p>
+<a href="../../../include/virtualitemviews/headersection.h"><span data-zh="公开头文件：include/virtualitemviews/headersection.h" data-en="Public header: include/virtualitemviews/headersection.h">公开头文件：include/virtualitemviews/headersection.h</span></a>
+</p>
+<p class="api-jump">
+<a href="#public-api"><span data-zh="公开函数列表" data-en="Public function index">公开函数列表</span></a>
+</p>
+<h2><span data-zh="能力与配套设置" data-en="Capabilities and related settings">能力与配套设置</span></h2>
+<article id="headers" data-search="horizontalHeader verticalHeader setAdapter setBackgroundColor setSectionBackgroundColor setForegroundColor setFont setTextAlignment setContentPadding setHeaderCornerWidget virtualtableview virtualtreetableview virtualheaderview headerview headerwidgetadapter headersection styledheadersection labelheaderview headercornerwidget">
+<h3><span data-zh="默认表头 / 样式 / section / corner" data-en="Default headers / styles / sections / corner">默认表头 / 样式 / section / corner</span></h3>
+<p>
+<code>horizontalHeader · verticalHeader · setAdapter · setBackgroundColor · setSectionBackgroundColor · setForegroundColor · setFont · setTextAlignment · setContentPadding · setHeaderCornerWidget</code>
+</p>
+<p class="rules"><span data-zh="默认 VirtualHeaderView，样式优先通过 HeaderViewInterface 配置。容器 backgroundColor 改整条底色，sectionBackgroundColor 只改 section，spacingBackgroundColor 改间距；无效 QColor 恢复继承，透明色是显式透明。模型 headerData 的 ForegroundRole/FontRole/TextAlignmentRole 可覆盖默认文字样式。HeaderSection 管结构，StyledHeaderSection 管外观，LabelHeaderSection 管文字；复杂内容换 HeaderWidgetAdapter，无需替换整个表头。默认 corner 跟水平表头，替换 corner 的 QWidget 由 view 接管。" data-en="VirtualHeaderView is the default. Configure appearance through HeaderViewInterface. backgroundColor covers the strip; sectionBackgroundColor covers sections only; spacingBackgroundColor covers gaps. Invalid QColor restores inheritance; transparent is an explicit color. Model headerData ForegroundRole/FontRole/TextAlignmentRole can override text defaults. HeaderSection manages structure, StyledHeaderSection appearance, LabelHeaderSection text. Replace HeaderWidgetAdapter for complex content instead of the entire header. The default corner follows the horizontal header; the view owns a replacement corner widget.">默认 VirtualHeaderView，样式优先通过 HeaderViewInterface 配置。容器 backgroundColor 改整条底色，sectionBackgroundColor 只改 section，spacingBackgroundColor 改间距；无效 QColor 恢复继承，透明色是显式透明。模型 headerData 的 ForegroundRole/FontRole/TextAlignmentRole 可覆盖默认文字样式。HeaderSection 管结构，StyledHeaderSection 管外观，LabelHeaderSection 管文字；复杂内容换 HeaderWidgetAdapter，无需替换整个表头。默认 corner 跟水平表头，替换 corner 的 QWidget 由 view 接管。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../../src/widgets/virtualheaderview.cpp">src/widgets/virtualheaderview.cpp</a> · <a href="../../../src/widgets/headersection.cpp">src/widgets/headersection.cpp</a> · <a href="../../../src/widgets/styledheadersection.cpp">src/widgets/styledheadersection.cpp</a> · <a href="../../../src/widgets/labelheaderview.cpp">src/widgets/labelheaderview.cpp</a> · <a href="../../../src/widgets/headercornerwidget.cpp">src/widgets/headercornerwidget.cpp</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../../headers.md">docs/headers.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（3）" data-en="Independent source examples (3)">独立源码示例（3）</span></summary>
+<ul>
+<li>
+<a href="../../../examples/table_capabilities/19_custom_header/example.cpp">examples/table_capabilities/19_custom_header/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/treetable_capabilities/24_custom_header/example.cpp">examples/treetable_capabilities/24_custom_header/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/table_capabilities/32_colors/example.cpp">examples/table_capabilities/32_colors/example.cpp</a>
+</li>
+</ul>
+</details>
+</article>
+<h2 id="public-api" tabindex="-1"><span data-zh="公开 API、类型与信号" data-en="Public API, types and signals">公开 API、类型与信号</span></h2>
+<section class="function-index" id="function-index" tabindex="-1">
+<h3><span data-zh="公开函数列表" data-en="Public function index">公开函数列表</span></h3>
+<p class="muted"><span data-zh="按声明类型分组；每个重载单独列出，点击签名跳转到说明。信号单独列出；类型和数据成员仍保留在下方。" data-en="Grouped by declaring type. Each overload has its own link to the details. Signals are listed separately; types and data members remain below.">按声明类型分组；每个重载单独列出，点击签名跳转到说明。信号单独列出；类型和数据成员仍保留在下方。</span></p>
+<h4>HeaderSection</h4>
+<ul>
+<li data-search="HeaderSection HeaderSection">
+<a href="#HeaderSection-HeaderSection-0">
+<code>explicit HeaderSection(QWidget *parent = nullptr);</code>
+</a>
+</li>
+<li data-search="HeaderSection logicalIndex">
+<a href="#HeaderSection-logicalIndex-1">
+<code>int logicalIndex() const;</code>
+</a>
+</li>
+<li data-search="HeaderSection setLogicalIndex">
+<a href="#HeaderSection-setLogicalIndex-2">
+<code>void setLogicalIndex(int logicalIndex);</code>
+</a>
+</li>
+<li data-search="HeaderSection headerView">
+<a href="#HeaderSection-headerView-3">
+<code>const VirtualHeaderView *headerView() const;</code>
+</a>
+</li>
+<li data-search="HeaderSection tableView">
+<a href="#HeaderSection-tableView-4">
+<code>const VirtualTableView *tableView() const;</code>
+</a>
+</li>
+<li data-search="HeaderSection orientation">
+<a href="#HeaderSection-orientation-5">
+<code>Qt::Orientation orientation() const;</code>
+</a>
+</li>
+<li data-search="HeaderSection visualState">
+<a href="#HeaderSection-visualState-6">
+<code>VirtualItemView::VisualState visualState() const;</code>
+</a>
+</li>
+</ul>
+<h4>HeaderSectionAdapter</h4>
+<ul>
+<li data-search="HeaderSectionAdapter createSection">
+<a href="#HeaderSectionAdapter-createSection-0">
+<code>QWidget *createSection(WidgetType type, QWidget *parent) override;</code>
+</a>
+</li>
+<li data-search="HeaderSectionAdapter bindSection">
+<a href="#HeaderSectionAdapter-bindSection-1">
+<code>void bindSection(QWidget *widget, int logicalIndex) override;</code>
+</a>
+</li>
+<li data-search="HeaderSectionAdapter unbindSection">
+<a href="#HeaderSectionAdapter-unbindSection-2">
+<code>void unbindSection(QWidget *widget, int logicalIndex) override;</code>
+</a>
+</li>
+</ul>
+</section>
+<h2><span data-zh="函数说明" data-en="Function details">函数说明</span></h2>
+<p class="muted"><span data-zh="按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。" data-en="Read each function for its purpose and related settings. Overloads are listed separately; follow related capabilities to find examples.">按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。</span></p>
+<section>
+<h3 id="HeaderSection">HeaderSection</h3>
+<pre>class VIRTUALITEMVIEWS_EXPORT HeaderSection : public QWidget</pre>
+<article tabindex="-1" id="HeaderSection-HeaderSection-0" data-search="HeaderSection HeaderSection">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headersection.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L26</span>
+<pre>explicit HeaderSection(QWidget *parent = nullptr);</pre>
+<p class="doc" data-zh="构造 HeaderSection；按此重载传入父对象、模型或布局参数。带 parent 的 QObject/QWidget 遵循 Qt 父子生命周期。" data-en="Construct HeaderSection with the parent, model or layout arguments in this overload. QObject/QWidget parent arguments follow Qt parent-child lifetime rules.">构造 HeaderSection；按此重载传入父对象、模型或布局参数。带 parent 的 QObject/QWidget 遵循 Qt 父子生命周期。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderSection-logicalIndex-1" data-search="HeaderSection logicalIndex">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headersection.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L29</span>
+<pre>    int logicalIndex() const;</pre>
+<p class="doc" data-zh="返回section 逻辑索引。" data-en="Return the logical section index.">返回section 逻辑索引。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderSection-setLogicalIndex-2" data-search="HeaderSection setLogicalIndex">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headersection.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L31</span>
+<pre>void setLogicalIndex(int logicalIndex);</pre>
+<p class="doc" data-zh="设置section 逻辑索引。" data-en="Set the logical section index.">设置section 逻辑索引。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderSection-headerView-3" data-search="HeaderSection headerView">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headersection.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L33</span>
+<pre>const VirtualHeaderView *headerView() const;</pre>
+<p class="doc" data-zh="返回关联的视图、表格或表头对象。" data-en="Return the associated view, table or header object.">返回关联的视图、表格或表头对象。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderSection-tableView-4" data-search="HeaderSection tableView">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headersection.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L35</span>
+<pre>const VirtualTableView *tableView() const;</pre>
+<p class="doc" data-zh="返回关联的视图、表格或表头对象。" data-en="Return the associated view, table or header object.">返回关联的视图、表格或表头对象。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderSection-orientation-5" data-search="HeaderSection orientation">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headersection.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L37</span>
+<pre>Qt::Orientation orientation() const;</pre>
+<p class="doc" data-zh="返回主轴或表头方向。" data-en="Return the main-axis or header orientation.">返回主轴或表头方向。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderSection-visualState-6" data-search="HeaderSection visualState">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headersection.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L40</span>
+<pre>VirtualItemView::VisualState visualState() const;</pre>
+<p class="doc" data-zh="返回指定项目或 section 的当前视觉状态与动画进度。adapter 与背景绘制应使用同一份状态。" data-en="Return the current visual state and animation progress for an item or section. Adapters and background painting should use consistent state.">返回指定项目或 section 的当前视觉状态与动画进度。adapter 与背景绘制应使用同一份状态。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+</section>
+<section>
+<h3 id="HeaderSectionAdapter">HeaderSectionAdapter</h3>
+<pre>class VIRTUALITEMVIEWS_EXPORT HeaderSectionAdapter : public HeaderWidgetAdapter</pre>
+<article tabindex="-1" id="HeaderSectionAdapter-createSection-0" data-search="HeaderSectionAdapter createSection">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headersection.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L73</span>
+<pre>QWidget *createSection(WidgetType type, QWidget *parent) override;</pre>
+<p class="doc" data-zh="在 parent 下创建表头 section 控件，数据由 bindSection 填充。" data-en="Create a header section widget under parent; bindSection supplies its data.">在 parent 下创建表头 section 控件，数据由 bindSection 填充。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderSectionAdapter-bindSection-1" data-search="HeaderSectionAdapter bindSection">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headersection.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L75</span>
+<pre>void bindSection(QWidget *widget, int logicalIndex) override;</pre>
+<p class="doc" data-zh="将表头逻辑 section 的标签和状态绑定到控件。" data-en="Bind a logical header section&#x27;s label and state to its widget.">将表头逻辑 section 的标签和状态绑定到控件。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="HeaderSectionAdapter-unbindSection-2" data-search="HeaderSectionAdapter unbindSection">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/headersection.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L77</span>
+<pre>void unbindSection(QWidget *widget, int logicalIndex) override;</pre>
+<p class="doc" data-zh="解除表头 section 绑定并清理可复用控件的旧状态。" data-en="Unbind a header section and clear obsolete state on its reusable widget.">解除表头 section 绑定并清理可复用控件的旧状态。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+</section>
+<footer class="muted">
+<p><span data-zh="按能力查找配套设置与独立示例；通用接口请沿基类链接查阅，Qt 继承接口请参考 Qt 文档。" data-en="Find related settings and independent examples by capability. Follow base-class links for shared APIs and consult Qt documentation for inherited Qt APIs.">按能力查找配套设置与独立示例；通用接口请沿基类链接查阅，Qt 继承接口请参考 Qt 文档。</span></p>
+</footer>
+</main>
+<script src="../assets/reference.js">
+</script>
+</body>
+</html>

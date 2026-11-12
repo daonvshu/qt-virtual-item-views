@@ -1,0 +1,834 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>VirtualListView · VirtualItemViews</title>
+<link rel="stylesheet" href="../assets/reference.css">
+</head>
+<body>
+<header>
+<div class="header-top">
+<a href="../index.html">VirtualItemViews / API</a>
+<div id="language-switch" class="language-switch" role="group" aria-label="Language / 语言" hidden>
+<button type="button" data-language="zh" aria-pressed="true" lang="zh-CN">中文</button>
+<button type="button" data-language="en" aria-pressed="false" lang="en">English</button>
+</div>
+</div>
+<h1>VirtualListView</h1>
+<p><span data-zh="纵向列表" data-en="Vertical list">纵向列表</span></p>
+</header>
+<main>
+<nav>
+<a href="../index.html"><span data-zh="能力总览" data-en="Capabilities">能力总览</span></a>
+<a href="../../AGENT_GUIDE.md"><span data-zh="Agent 索引" data-en="Agent guide">Agent 索引</span></a>
+<a href="../../../examples/README.md"><span data-zh="独立示例" data-en="Examples">独立示例</span></a>
+<a href="../../../README.md"><span data-zh="项目首页" data-en="Project home">项目首页</span></a>
+</nav>
+<label for="filter"><span data-zh="搜索本页：能力、API 名称或关键词" data-en="Search this page: capability, API name or keyword">搜索本页：能力、API 名称或关键词</span></label>
+<input id="filter" type="search" placeholder="例如：Popup、setAutoHeight、冻结、branch">
+<p class="muted search-help"><span data-zh="无需网络或服务器。所有内容默认可见；搜索只筛选当前页。完整继承 API 请沿基类链接查阅。" data-en="No network or server required. All content is initially visible; search filters this page only. Follow base-class links for inherited APIs.">无需网络或服务器。所有内容默认可见；搜索只筛选当前页。完整继承 API 请沿基类链接查阅。</span></p>
+<p id="search-status" role="status" aria-live="polite">
+</p>
+<p>
+<a href="../../../include/virtualitemviews/virtuallistview.h"><span data-zh="公开头文件：include/virtualitemviews/virtuallistview.h" data-en="Public header: include/virtualitemviews/virtuallistview.h">公开头文件：include/virtualitemviews/virtuallistview.h</span></a>
+</p>
+<p><span data-zh="每个模型项一个 QWidget；支持可变行高、状态范围、冻结行和拖动让位。" data-en="One QWidget per model item; variable row heights, state extents, frozen rows and animated drag reordering.">每个模型项一个 QWidget；支持可变行高、状态范围、冻结行和拖动让位。</span></p>
+<p><span data-zh="直接基类：" data-en="Direct base: ">直接基类：</span><a href="virtualitemview.html">VirtualItemView</a>。</p>
+<p class="rules"><span data-zh="本页列出本类型声明的接口。模型、选择、编辑、拖放、背景、自动高度和诊断还需查 " data-en="This page lists declarations owned by this type. For models, selection, editing, drag/drop, backgrounds, auto height and diagnostics also see ">本页列出本类型声明的接口。模型、选择、编辑、拖放、背景、自动高度和诊断还需查 </span><a href="virtualitemview.html">VirtualItemView</a><span data-zh="。“可继承”不代表所有布局都支持：请先看下方能力限制。" data-en=". Inheritance does not imply support in every layout: read the capability limits below.">。“可继承”不代表所有布局都支持：请先看下方能力限制。</span></p>
+<p class="api-jump">
+<a href="#public-api"><span data-zh="公开函数列表" data-en="Public function index">公开函数列表</span></a>
+</p>
+<h2><span data-zh="能力与配套设置" data-en="Capabilities and related settings">能力与配套设置</span></h2>
+<article id="model" data-search="setModel model setRootIndex rootIndex virtualitemview virtuallistview virtualtableview virtualtreeview virtualtreetableview virtualflowtableview virtualmasonryview virtualwrapview">
+<h3><span data-zh="模型 / 根节点 / 代理模型 / 更新通知" data-en="Models / roots / proxies / update notifications">模型 / 根节点 / 代理模型 / 更新通知</span></h3>
+<p>
+<code>setModel · model · setRootIndex · rootIndex</code>
+</p>
+<p class="rules"><span data-zh="使用 QAbstractItemModel 与正常的 dataChanged、begin/endInsertRows、removeRows、moveRows、layoutChanged/reset 通知驱动更新；视图不持有业务数据。简单模型直接填充 QStandardItemModel。代理模型索引属于代理，不可把源模型索引直接传入视图；setRootIndex 显示其子项，Table 没有该入口。切换模型后重新核对 root 和 selectionModel。" data-en="Use QAbstractItemModel and standard dataChanged, begin/endInsertRows, removal, moveRows, layoutChanged and reset notifications. The view does not store business data. Populate QStandardItemModel directly for simple data. Proxy indexes belong to the proxy: do not pass source indexes to its view. setRootIndex displays children of that index; plain Table has no such entry point. Recheck root and selectionModel after replacing the model.">使用 QAbstractItemModel 与正常的 dataChanged、begin/endInsertRows、removeRows、moveRows、layoutChanged/reset 通知驱动更新；视图不持有业务数据。简单模型直接填充 QStandardItemModel。代理模型索引属于代理，不可把源模型索引直接传入视图；setRootIndex 显示其子项，Table 没有该入口。切换模型后重新核对 root 和 selectionModel。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../../src/core/virtualitemview.cpp">src/core/virtualitemview.cpp</a> · <a href="../../../src/widgets/virtuallistview.cpp">src/widgets/virtuallistview.cpp</a> · <a href="../../../src/widgets/virtualtreeview.cpp">src/widgets/virtualtreeview.cpp</a> · <a href="../../../src/widgets/virtualtreetableview.cpp">src/widgets/virtualtreetableview.cpp</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../../models.md">docs/models.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（10）" data-en="Independent source examples (10)">独立源码示例（10）</span></summary>
+<ul>
+<li>
+<a href="../../../examples/flow_capabilities/06_model_root/example.cpp">examples/flow_capabilities/06_model_root/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/list_capabilities/05_model_updates/example.cpp">examples/list_capabilities/05_model_updates/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/masonry_capabilities/09_model_root/example.cpp">examples/masonry_capabilities/09_model_root/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/table_capabilities/05_model_updates/example.cpp">examples/table_capabilities/05_model_updates/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/tree_capabilities/05_model_updates/example.cpp">examples/tree_capabilities/05_model_updates/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/treetable_capabilities/06_model_updates/example.cpp">examples/treetable_capabilities/06_model_updates/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/wrap_capabilities/05_model_root/example.cpp">examples/wrap_capabilities/05_model_root/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/tree_capabilities/08_root_index/example.cpp">examples/tree_capabilities/08_root_index/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/treetable_capabilities/09_root_index/example.cpp">examples/treetable_capabilities/09_root_index/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/tree_capabilities/21_sorting_filtering/example.cpp">examples/tree_capabilities/21_sorting_filtering/example.cpp</a>
+</li>
+</ul>
+</details>
+</article>
+<article id="height" data-search="setItemHeightMode setUniformItemHeight setEstimatedItemHeight setAutoMeasureItemHeight setRowSizePolicy setRowHeight clearRowHeight virtualitemview virtuallistview virtualtreeview virtualtableview virtualtreetableview">
+<h3><span data-zh="动态行高 / 测量 / 显式覆盖" data-en="Dynamic row heights / measurement / explicit overrides">动态行高 / 测量 / 显式覆盖</span></h3>
+<p>
+<code>setItemHeightMode · setUniformItemHeight · setEstimatedItemHeight · setAutoMeasureItemHeight · setRowSizePolicy · setRowHeight · clearRowHeight</code>
+</p>
+<p class="rules"><span data-zh="Uniform 统一高度；Uniform 高度为 0 且开启测量时按首个物化项适配。Variable 使用估值并在物化后测量，不能为了 auto height 预创建全部项目。Table 的显式 setRowHeight 默认优先于测量，拖动行高也会形成显式值；恢复动态行为用 clearRowHeight。列宽变化会影响换行高度，选择合适 RowSizePolicy。Flow/Masonry/Wrap 使用各自专用尺寸 API，不可套用内核行高配置。" data-en="Uniform shares one height; height 0 with measurement enabled fits the first materialized item. Variable starts from estimates and measures materialized widgets. Do not create all items to compute auto height. Table setRowHeight overrides measurement by default; dragging a row edge also creates an explicit value. Use clearRowHeight to restore dynamic sizing. Column widths affect wrapping; choose the appropriate RowSizePolicy. Flow/Masonry/Wrap use dedicated size APIs, not kernel row-height settings.">Uniform 统一高度；Uniform 高度为 0 且开启测量时按首个物化项适配。Variable 使用估值并在物化后测量，不能为了 auto height 预创建全部项目。Table 的显式 setRowHeight 默认优先于测量，拖动行高也会形成显式值；恢复动态行为用 clearRowHeight。列宽变化会影响换行高度，选择合适 RowSizePolicy。Flow/Masonry/Wrap 使用各自专用尺寸 API，不可套用内核行高配置。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../../src/core/virtualitemview.cpp">src/core/virtualitemview.cpp</a> · <a href="../../../src/widgets/virtualtableview.cpp">src/widgets/virtualtableview.cpp</a> · <a href="../../../src/index/sizeindex.cpp">src/index/sizeindex.cpp</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../../auto-height.md">docs/auto-height.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（4）" data-en="Independent source examples (4)">独立源码示例（4）</span></summary>
+<ul>
+<li>
+<a href="../../../examples/list_capabilities/06_item_heights/example.cpp">examples/list_capabilities/06_item_heights/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/tree_capabilities/06_item_heights/example.cpp">examples/tree_capabilities/06_item_heights/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/table_capabilities/06_row_heights/example.cpp">examples/table_capabilities/06_row_heights/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/treetable_capabilities/07_row_heights/example.cpp">examples/treetable_capabilities/07_row_heights/example.cpp</a>
+</li>
+</ul>
+</details>
+</article>
+<article id="states" data-search="visualState setVisualStateBackgroundVisible setHoverBackgroundColor setSelectedBackgroundColor setVisualStateAnimationDuration setVisualStateAnimationEasingCurve virtualitemview virtuallistview virtualtableview virtualtreeview virtualtreetableview virtualflowtableview virtualmasonryview virtualwrapview">
+<h3><span data-zh="hover / selected 默认绘制和动画" data-en="Built-in hover / selection painting and animation">hover / selected 默认绘制和动画</span></h3>
+<p>
+<code>visualState · setVisualStateBackgroundVisible · setHoverBackgroundColor · setSelectedBackgroundColor · setVisualStateAnimationDuration · setVisualStateAnimationEasingCurve</code>
+</p>
+<p class="rules"><span data-zh="内置状态背景默认开启，动画默认 180ms OutCubic；业务控件保持透明并在 visualStateChanged 中更新按钮/复选框的显示即可。除非完全自定义外观，不要自己维护 hoveredIndex、动画或重画默认背景。原生拖动期间框架暂停普通 hover，结束后重新计算；不改变业务勾选数据。Flow/Masonry/Wrap 的状态圆角入口是 setStateBackgroundCornerRadius，List/Tree/Table 是 setVisualStateCornerRadius。" data-en="State backgrounds default on, with 180ms OutCubic animation. Keep business widgets transparent and update buttons/checkbox visibility in visualStateChanged. Custom hover tracking, animation and default-background painting are unnecessary unless replacing the appearance entirely. Native drag suspends ordinary hover and recalculates it afterward without changing business checkbox data. Flow/Masonry/Wrap use setStateBackgroundCornerRadius; List/Tree/Table use setVisualStateCornerRadius.">内置状态背景默认开启，动画默认 180ms OutCubic；业务控件保持透明并在 visualStateChanged 中更新按钮/复选框的显示即可。除非完全自定义外观，不要自己维护 hoveredIndex、动画或重画默认背景。原生拖动期间框架暂停普通 hover，结束后重新计算；不改变业务勾选数据。Flow/Masonry/Wrap 的状态圆角入口是 setStateBackgroundCornerRadius，List/Tree/Table 是 setVisualStateCornerRadius。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../../src/core/virtualitemview.cpp">src/core/virtualitemview.cpp</a> · <a href="../../../src/widgets/virtualtableview.cpp">src/widgets/virtualtableview.cpp</a> · <a href="../../../src/widgets/virtuallistview.cpp">src/widgets/virtuallistview.cpp</a> · <a href="../../../src/widgets/virtualtreeview.cpp">src/widgets/virtualtreeview.cpp</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../../interaction.md">docs/interaction.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（11）" data-en="Independent source examples (11)">独立源码示例（11）</span></summary>
+<ul>
+<li>
+<a href="../../../examples/flow_capabilities/04_visual_states/example.cpp">examples/flow_capabilities/04_visual_states/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/list_capabilities/08_visual_states/example.cpp">examples/list_capabilities/08_visual_states/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/masonry_capabilities/06_visual_states/example.cpp">examples/masonry_capabilities/06_visual_states/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/table_capabilities/10_visual_states/example.cpp">examples/table_capabilities/10_visual_states/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/tree_capabilities/13_visual_states/example.cpp">examples/tree_capabilities/13_visual_states/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/treetable_capabilities/15_visual_states/example.cpp">examples/treetable_capabilities/15_visual_states/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/wrap_capabilities/03_visual_states/example.cpp">examples/wrap_capabilities/03_visual_states/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/list_capabilities/09_state_content/example.cpp">examples/list_capabilities/09_state_content/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/table_capabilities/11_state_content/example.cpp">examples/table_capabilities/11_state_content/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/tree_capabilities/14_state_content/example.cpp">examples/tree_capabilities/14_state_content/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/treetable_capabilities/16_state_content/example.cpp">examples/treetable_capabilities/16_state_content/example.cpp</a>
+</li>
+</ul>
+</details>
+</article>
+<article id="state-extent" data-search="setVisualStateBackgroundExtent setVisualStateBackgroundMargins setVisualStateBackgroundHeight setRowGridLineExtent virtuallistview virtualtreeview virtualtreetableview">
+<h3><span data-zh="状态范围 / 命中范围 / 固定高度 / padding" data-en="State extent / hit region / fixed height / padding">状态范围 / 命中范围 / 固定高度 / padding</span></h3>
+<p>
+<code>setVisualStateBackgroundExtent · setVisualStateBackgroundMargins · setVisualStateBackgroundHeight · setRowGridLineExtent</code>
+</p>
+<p class="rules"><span data-zh="List: FullWidth/WidgetOnly。Tree: NodeOnly/NodeAndIcon/FullWidth/WidgetOnly/WidgetAndIcon；含 Icon 模式只有实际显示 branch 图标时才扩展。Margins 和 Height 只改变状态绘制及鼠标命中，不改变布局、键盘和程序选择；branch 展开点击单独处理。TreeTable 固定按表格行区域绘制，不提供 Tree 的这些 extent 设置，不能复制 Tree 的节点裁剪策略到树表。" data-en="List: FullWidth/WidgetOnly. Tree: NodeOnly/NodeAndIcon/FullWidth/WidgetOnly/WidgetAndIcon; Icon variants extend only when a branch indicator is actually shown. Margins and Height affect state painting and mouse hits, not layout, keyboard or programmatic selection. Branch toggling is separate. TreeTable paints across its table-row area and does not expose Tree extent settings; do not copy node clipping behavior into TreeTable.">List: FullWidth/WidgetOnly。Tree: NodeOnly/NodeAndIcon/FullWidth/WidgetOnly/WidgetAndIcon；含 Icon 模式只有实际显示 branch 图标时才扩展。Margins 和 Height 只改变状态绘制及鼠标命中，不改变布局、键盘和程序选择；branch 展开点击单独处理。TreeTable 固定按表格行区域绘制，不提供 Tree 的这些 extent 设置，不能复制 Tree 的节点裁剪策略到树表。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../../src/widgets/virtuallistview.cpp">src/widgets/virtuallistview.cpp</a> · <a href="../../../src/widgets/virtualtreeview.cpp">src/widgets/virtualtreeview.cpp</a> · <a href="../../../src/widgets/virtualtreetableview.cpp">src/widgets/virtualtreetableview.cpp</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../../tree.md">docs/tree.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（2）" data-en="Independent source examples (2)">独立源码示例（2）</span></summary>
+<ul>
+<li>
+<a href="../../../examples/tree_capabilities/13_visual_states/example.cpp">examples/tree_capabilities/13_visual_states/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/list_capabilities/08_visual_states/example.cpp">examples/list_capabilities/08_visual_states/example.cpp</a>
+</li>
+</ul>
+</details>
+</article>
+<article id="grid" data-search="setRowGridLinesVisible setRowGridLineColor setRowGridLineWidth setHorizontalGridLinesVisible setVerticalGridLinesVisible setTrailingRowGridLineAutoHideEnabled setItemPaneSeparatorStyle setPaneSeparatorStyle virtualitemview virtuallistview virtualtreeview virtualtableview virtualflowtableview virtualmasonryview">
+<h3><span data-zh="分割线样式 / 最后一行 / 冻结分隔线" data-en="Grid styling / terminal row / frozen separators">分割线样式 / 最后一行 / 冻结分隔线</span></h3>
+<p>
+<code>setRowGridLinesVisible · setRowGridLineColor · setRowGridLineWidth · setHorizontalGridLinesVisible · setVerticalGridLinesVisible · setTrailingRowGridLineAutoHideEnabled · setItemPaneSeparatorStyle · setPaneSeparatorStyle</code>
+</p>
+<p class="rules"><span data-zh="List/Tree 用 RowGridLine 接口；Table/Flow/Masonry 用 Horizontal/VerticalGridLine 接口。末行自动隐藏默认 true：自动高度或实际竖向溢出时按末行边界规则处理，内容底边距存在时仍有例外；false 请求保留可见末行线，不增加高度。强制显示但 range=0 的滚动条不等于可滚动。普通分割线与冻结线分别配置，PaneSeparatorStyle 支持颜色、粗细、线型；查看具体 API 单位，线宽不可一律再乘 DPR。" data-en="List/Tree use RowGridLine APIs; Table/Flow/Masonry use Horizontal/VerticalGridLine APIs. Terminal-row auto-hide defaults true and follows auto-height/actual vertical overflow boundary rules, with content-bottom-margin exceptions. False preserves a visible terminal line without adding height. A forced scroll bar with range 0 does not mean overflow. Ordinary grid lines and frozen separators have separate settings. PaneSeparatorStyle controls color, width and pen style. Check API units rather than multiplying every width by DPR.">List/Tree 用 RowGridLine 接口；Table/Flow/Masonry 用 Horizontal/VerticalGridLine 接口。末行自动隐藏默认 true：自动高度或实际竖向溢出时按末行边界规则处理，内容底边距存在时仍有例外；false 请求保留可见末行线，不增加高度。强制显示但 range=0 的滚动条不等于可滚动。普通分割线与冻结线分别配置，PaneSeparatorStyle 支持颜色、粗细、线型；查看具体 API 单位，线宽不可一律再乘 DPR。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../../src/core/virtualitemview.cpp">src/core/virtualitemview.cpp</a> · <a href="../../../src/widgets/virtualtableview.cpp">src/widgets/virtualtableview.cpp</a> · <a href="../../../src/widgets/virtuallistview.cpp">src/widgets/virtuallistview.cpp</a> · <a href="../../../src/widgets/virtualtreeview.cpp">src/widgets/virtualtreeview.cpp</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../../auto-height.md">docs/auto-height.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（8）" data-en="Independent source examples (8)">独立源码示例（8）</span></summary>
+<ul>
+<li>
+<a href="../../../examples/table_capabilities/16_frozen_areas/example.cpp">examples/table_capabilities/16_frozen_areas/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/flow_capabilities/11_auto_height/example.cpp">examples/flow_capabilities/11_auto_height/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/list_capabilities/21_auto_height/example.cpp">examples/list_capabilities/21_auto_height/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/masonry_capabilities/14_auto_height/example.cpp">examples/masonry_capabilities/14_auto_height/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/table_capabilities/31_auto_height/example.cpp">examples/table_capabilities/31_auto_height/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/tree_capabilities/27_auto_height/example.cpp">examples/tree_capabilities/27_auto_height/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/treetable_capabilities/36_auto_height/example.cpp">examples/treetable_capabilities/36_auto_height/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/wrap_capabilities/08_auto_height/example.cpp">examples/wrap_capabilities/08_auto_height/example.cpp</a>
+</li>
+</ul>
+</details>
+</article>
+<article id="drag" data-search="setDragEnabled setAcceptDrops setDragStartMode canStartDrag startDrag DragOptions setDragDropActions setDefaultDropAction setMoveRemovesSourceRows virtualitemview types virtuallistview virtualtableview virtualtreeview virtualtreetableview virtualwrapview virtualflowtableview virtualmasonryview">
+<h3><span data-zh="原生拖放 / 手柄起拖 / 预览 / Move" data-en="Native drag/drop / handles / previews / Move">原生拖放 / 手柄起拖 / 预览 / Move</span></h3>
+<p>
+<code>setDragEnabled · setAcceptDrops · setDragStartMode · canStartDrag · startDrag · DragOptions · setDragDropActions · setDefaultDropAction · setMoveRemovesSourceRows</code>
+</p>
+<p class="rules"><span data-zh="setDragEnabled 开启拖出，QWidget::setAcceptDrops 开启接收；模型需 flags、mimeData、mimeTypes、canDropMimeData/dropMimeData 与支持的 actions。Automatic 按阈值启动；Manual 由手柄调用 startDrag(index[, options])，不需框架注册按钮。默认预览按 SelectRows/SelectItems，DragOptions 可改来源/区域/热点，默认热点在鼠标处。Move 是否删除源行必须与模型协议一致：模型已移动不得再删；默认不删除。框架负责拖动 pin、hover 暂停和结束恢复。" data-en="setDragEnabled enables dragging out; QWidget::setAcceptDrops enables receiving. The model supplies flags, mimeData, mimeTypes, canDropMimeData/dropMimeData and supported actions. Automatic starts after the gesture threshold. Manual handles call startDrag(index[, options]); no button registration is needed. Default previews follow SelectRows/SelectItems; DragOptions controls source, region and press position, anchored at the pointer by default. Source deletion after Move must match the model protocol: never delete again after the model already moved data. Deletion defaults off. The framework owns temporary drag pins and hover suspension/restoration.">setDragEnabled 开启拖出，QWidget::setAcceptDrops 开启接收；模型需 flags、mimeData、mimeTypes、canDropMimeData/dropMimeData 与支持的 actions。Automatic 按阈值启动；Manual 由手柄调用 startDrag(index[, options])，不需框架注册按钮。默认预览按 SelectRows/SelectItems，DragOptions 可改来源/区域/热点，默认热点在鼠标处。Move 是否删除源行必须与模型协议一致：模型已移动不得再删；默认不删除。框架负责拖动 pin、hover 暂停和结束恢复。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../../src/core/virtualitemview.cpp">src/core/virtualitemview.cpp</a> · <a href="../../../src/core/dragpreview_p.h">src/core/dragpreview_p.h</a> · <a href="../../../src/core/dragmoveselection_p.h">src/core/dragmoveselection_p.h</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../../interaction.md">docs/interaction.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（4）" data-en="Independent source examples (4)">独立源码示例（4）</span></summary>
+<ul>
+<li>
+<a href="../../../examples/list_capabilities/15_drag_drop/example.cpp">examples/list_capabilities/15_drag_drop/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/table_capabilities/24_drag_indicator/example.cpp">examples/table_capabilities/24_drag_indicator/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/wrap_capabilities/07_drag_drop/example.cpp">examples/wrap_capabilities/07_drag_drop/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/masonry_capabilities/11_drag_drop/example.cpp">examples/masonry_capabilities/11_drag_drop/example.cpp</a>
+</li>
+</ul>
+</details>
+</article>
+<article id="drag-feedback" data-search="setDropIndicatorShown setDropIndicatorColor setDropIndicatorWidth setDropIndicatorPenStyle setDragFeedbackMode setDragReorderAnimationDuration setDragReorderAnimationEasingCurve virtualitemview virtuallistview virtualtableview virtualtreeview virtualtreetableview">
+<h3><span data-zh="拖动指示器 / 让位动画 / 树末级歧义" data-en="Drop indicators / animated displacement / tree-level ambiguity">拖动指示器 / 让位动画 / 树末级歧义</span></h3>
+<p>
+<code>setDropIndicatorShown · setDropIndicatorColor · setDropIndicatorWidth · setDropIndicatorPenStyle · setDragFeedbackMode · setDragReorderAnimationDuration · setDragReorderAnimationEasingCurve</code>
+</p>
+<p class="rules"><span data-zh="支持的列表/树/表格默认 RowMoveAnimation；不满足内部单项 Move 等条件时自动退回指示器。动画只预览，成功 drop 后模型才改顺序。树单节点拖动先收起源节点，仅留单行占位；父同级/子同级末尾目标由缩进和允许目标描边区分，模型拒绝的目标不会为了画框而变成可投放。Flow/Masonry/Wrap 无专用行让位模式，不要套用 list 的枚举。" data-en="Supported List/Tree/Table views default to RowMoveAnimation. Unsupported drops, including those outside internal single-item Move conditions, fall back to indicators. Animation previews only; the accepted model drop commits order. Tree single-node dragging collapses its source first and reserves one row. Indentation and permitted-target outlines distinguish parent-sibling versus child-sibling terminal drops. Painting an outline never overrides model rejection. Flow/Masonry/Wrap have no row-displacement mode.">支持的列表/树/表格默认 RowMoveAnimation；不满足内部单项 Move 等条件时自动退回指示器。动画只预览，成功 drop 后模型才改顺序。树单节点拖动先收起源节点，仅留单行占位；父同级/子同级末尾目标由缩进和允许目标描边区分，模型拒绝的目标不会为了画框而变成可投放。Flow/Masonry/Wrap 无专用行让位模式，不要套用 list 的枚举。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../../src/core/rowdragpreview_p.h">src/core/rowdragpreview_p.h</a> · <a href="../../../src/widgets/treedragtransition_p.h">src/widgets/treedragtransition_p.h</a> · <a href="../../../src/widgets/treedragplaceholder_p.h">src/widgets/treedragplaceholder_p.h</a> · <a href="../../../src/widgets/virtualtableview.cpp">src/widgets/virtualtableview.cpp</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../../interaction.md">docs/interaction.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（4）" data-en="Independent source examples (4)">独立源码示例（4）</span></summary>
+<ul>
+<li>
+<a href="../../../examples/list_capabilities/16_drag_animation/example.cpp">examples/list_capabilities/16_drag_animation/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/tree_capabilities/20_drag_animation/example.cpp">examples/tree_capabilities/20_drag_animation/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/table_capabilities/25_drag_animation/example.cpp">examples/table_capabilities/25_drag_animation/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/treetable_capabilities/30_drag_animation/example.cpp">examples/treetable_capabilities/30_drag_animation/example.cpp</a>
+</li>
+</ul>
+</details>
+</article>
+<details>
+<summary><span data-zh="此视图全部能力章节（23）" data-en="All capability chapters for this view (23)">此视图全部能力章节（23）</span></summary>
+<ul>
+<li>
+<a href="../../../examples/list_capabilities/01_basic/example.cpp"><span data-zh="01 基础列表" data-en="01 / Basic">01 基础列表</span></a> · <a href="../../../examples/list_capabilities/01_basic/README.md"><span data-zh="说明" data-en="Guide">说明</span></a>
+</li>
+<li>
+<a href="../../../examples/list_capabilities/02_row_widgets/example.cpp"><span data-zh="02 自定义行控件" data-en="02 / Row widgets">02 自定义行控件</span></a> · <a href="../../../examples/list_capabilities/02_row_widgets/README.md"><span data-zh="说明" data-en="Guide">说明</span></a>
+</li>
+<li>
+<a href="../../../examples/list_capabilities/03_widget_types/example.cpp"><span data-zh="03 多种行类型" data-en="03 / Widget types">03 多种行类型</span></a> · <a href="../../../examples/list_capabilities/03_widget_types/README.md"><span data-zh="说明" data-en="Guide">说明</span></a>
+</li>
+<li>
+<a href="../../../examples/list_capabilities/04_binding_context/example.cpp"><span data-zh="04 整行数据绑定" data-en="04 / Binding context">04 整行数据绑定</span></a> · <a href="../../../examples/list_capabilities/04_binding_context/README.md"><span data-zh="说明" data-en="Guide">说明</span></a>
+</li>
+<li>
+<a href="../../../examples/list_capabilities/05_model_updates/example.cpp"><span data-zh="05 数据更新" data-en="05 / Model updates">05 数据更新</span></a> · <a href="../../../examples/list_capabilities/05_model_updates/README.md"><span data-zh="说明" data-en="Guide">说明</span></a>
+</li>
+<li>
+<a href="../../../examples/list_capabilities/06_item_heights/example.cpp"><span data-zh="06 行高" data-en="06 / Item heights">06 行高</span></a> · <a href="../../../examples/list_capabilities/06_item_heights/README.md"><span data-zh="说明" data-en="Guide">说明</span></a>
+</li>
+<li>
+<a href="../../../examples/list_capabilities/07_row_spacing/example.cpp"><span data-zh="07 行间距和分割线" data-en="07 / Row spacing">07 行间距和分割线</span></a> · <a href="../../../examples/list_capabilities/07_row_spacing/README.md"><span data-zh="说明" data-en="Guide">说明</span></a>
+</li>
+<li>
+<a href="../../../examples/list_capabilities/08_visual_states/example.cpp"><span data-zh="08 Hover 和选中状态" data-en="08 / Visual states">08 Hover 和选中状态</span></a> · <a href="../../../examples/list_capabilities/08_visual_states/README.md"><span data-zh="说明" data-en="Guide">说明</span></a>
+</li>
+<li>
+<a href="../../../examples/list_capabilities/09_state_content/example.cpp"><span data-zh="09 状态关联内容" data-en="09 / State content">09 状态关联内容</span></a> · <a href="../../../examples/list_capabilities/09_state_content/README.md"><span data-zh="说明" data-en="Guide">说明</span></a>
+</li>
+<li>
+<a href="../../../examples/list_capabilities/10_selection/example.cpp"><span data-zh="10 选择与当前项" data-en="10 / Selection">10 选择与当前项</span></a> · <a href="../../../examples/list_capabilities/10_selection/README.md"><span data-zh="说明" data-en="Guide">说明</span></a>
+</li>
+<li>
+<a href="../../../examples/list_capabilities/11_item_events/example.cpp"><span data-zh="11 行事件与控件事件" data-en="11 / Item events">11 行事件与控件事件</span></a> · <a href="../../../examples/list_capabilities/11_item_events/README.md"><span data-zh="说明" data-en="Guide">说明</span></a>
+</li>
+<li>
+<a href="../../../examples/list_capabilities/12_scrolling/example.cpp"><span data-zh="12 滚动与定位" data-en="12 / Scrolling">12 滚动与定位</span></a> · <a href="../../../examples/list_capabilities/12_scrolling/README.md"><span data-zh="说明" data-en="Guide">说明</span></a>
+</li>
+<li>
+<a href="../../../examples/list_capabilities/13_virtualization/example.cpp"><span data-zh="13 虚拟化与复用" data-en="13 / Virtualization">13 虚拟化与复用</span></a> · <a href="../../../examples/list_capabilities/13_virtualization/README.md"><span data-zh="说明" data-en="Guide">说明</span></a>
+</li>
+<li>
+<a href="../../../examples/list_capabilities/14_frozen_rows/example.cpp"><span data-zh="14 冻结行" data-en="14 / Frozen rows">14 冻结行</span></a> · <a href="../../../examples/list_capabilities/14_frozen_rows/README.md"><span data-zh="说明" data-en="Guide">说明</span></a>
+</li>
+<li>
+<a href="../../../examples/list_capabilities/15_drag_drop/example.cpp"><span data-zh="15 指示器拖动" data-en="15 / Drag drop">15 指示器拖动</span></a> · <a href="../../../examples/list_capabilities/15_drag_drop/README.md"><span data-zh="说明" data-en="Guide">说明</span></a>
+</li>
+<li>
+<a href="../../../examples/list_capabilities/16_drag_animation/example.cpp"><span data-zh="16 行移动动画拖动" data-en="16 / Drag animation">16 行移动动画拖动</span></a> · <a href="../../../examples/list_capabilities/16_drag_animation/README.md"><span data-zh="说明" data-en="Guide">说明</span></a>
+</li>
+<li>
+<a href="../../../examples/list_capabilities/17_pinning/example.cpp"><span data-zh="17 屏外保留" data-en="17 / Pinning">17 屏外保留</span></a> · <a href="../../../examples/list_capabilities/17_pinning/README.md"><span data-zh="说明" data-en="Guide">说明</span></a>
+</li>
+<li>
+<a href="../../../examples/list_capabilities/18_diagnostics/example.cpp"><span data-zh="18 运行诊断" data-en="18 / Diagnostics">18 运行诊断</span></a> · <a href="../../../examples/list_capabilities/18_diagnostics/README.md"><span data-zh="说明" data-en="Guide">说明</span></a>
+</li>
+<li>
+<a href="../../../examples/list_capabilities/19_smooth_scrolling/example.cpp"><span data-zh="19 平滑滚动（可选）" data-en="19 / Smooth scrolling">19 平滑滚动（可选）</span></a> · <a href="../../../examples/list_capabilities/19_smooth_scrolling/README.md"><span data-zh="说明" data-en="Guide">说明</span></a>
+</li>
+<li>
+<a href="../../../examples/list_capabilities/20_borders/example.cpp"><span data-zh="20 外边框与圆角" data-en="20 / Borders">20 外边框与圆角</span></a> · <a href="../../../examples/list_capabilities/20_borders/README.md"><span data-zh="说明" data-en="Guide">说明</span></a>
+</li>
+<li>
+<a href="../../../examples/list_capabilities/21_auto_height/example.cpp"><span data-zh="21 自适应高度" data-en="21 / Auto height">21 自适应高度</span></a> · <a href="../../../examples/list_capabilities/21_auto_height/README.md"><span data-zh="说明" data-en="Guide">说明</span></a>
+</li>
+<li>
+<a href="../../../examples/list_capabilities/22_colors/example.cpp"><span data-zh="22 颜色与样式表" data-en="22 / Colors">22 颜色与样式表</span></a> · <a href="../../../examples/list_capabilities/22_colors/README.md"><span data-zh="说明" data-en="Guide">说明</span></a>
+</li>
+<li>
+<a href="../../../examples/list_capabilities/23_editors/example.cpp"><span data-zh="23 覆盖编辑器与 Popup" data-en="23 / Editors">23 覆盖编辑器与 Popup</span></a> · <a href="../../../examples/list_capabilities/23_editors/README.md"><span data-zh="说明" data-en="Guide">说明</span></a>
+</li>
+</ul>
+</details>
+<h2 id="public-api" tabindex="-1"><span data-zh="公开 API、类型与信号" data-en="Public API, types and signals">公开 API、类型与信号</span></h2>
+<section class="function-index" id="function-index" tabindex="-1">
+<h3><span data-zh="公开函数列表" data-en="Public function index">公开函数列表</span></h3>
+<p class="muted"><span data-zh="按声明类型分组；每个重载单独列出，点击签名跳转到说明。信号单独列出；类型和数据成员仍保留在下方。" data-en="Grouped by declaring type. Each overload has its own link to the details. Signals are listed separately; types and data members remain below.">按声明类型分组；每个重载单独列出，点击签名跳转到说明。信号单独列出；类型和数据成员仍保留在下方。</span></p>
+<h4>VirtualListView</h4>
+<ul>
+<li data-search="VirtualListView VirtualListView">
+<a href="#VirtualListView-VirtualListView-1">
+<code>explicit VirtualListView(QWidget *parent = nullptr);</code>
+</a>
+</li>
+<li data-search="VirtualListView VirtualListView">
+<a href="#VirtualListView-VirtualListView-2">
+<code>~VirtualListView() override;</code>
+</a>
+</li>
+<li data-search="VirtualListView setModel">
+<a href="#VirtualListView-setModel-3">
+<code>void setModel(QAbstractItemModel *model) override;</code>
+</a>
+</li>
+<li data-search="VirtualListView setRootIndex">
+<a href="#VirtualListView-setRootIndex-4">
+<code>void setRootIndex(const QModelIndex &amp;index);</code>
+</a>
+</li>
+<li data-search="VirtualListView rootIndex">
+<a href="#VirtualListView-rootIndex-5">
+<code>QModelIndex rootIndex() const;</code>
+</a>
+</li>
+<li data-search="VirtualListView listLayout">
+<a href="#VirtualListView-listLayout-6">
+<code>ListLayout *listLayout() const;</code>
+</a>
+</li>
+<li data-search="VirtualListView setDragFeedbackMode">
+<a href="#VirtualListView-setDragFeedbackMode-8">
+<code>void setDragFeedbackMode(DragFeedbackMode mode);</code>
+</a>
+</li>
+<li data-search="VirtualListView dragFeedbackMode">
+<a href="#VirtualListView-dragFeedbackMode-9">
+<code>DragFeedbackMode dragFeedbackMode() const;</code>
+</a>
+</li>
+<li data-search="VirtualListView setDragReorderAnimationDuration">
+<a href="#VirtualListView-setDragReorderAnimationDuration-10">
+<code>void setDragReorderAnimationDuration(int milliseconds);</code>
+</a>
+</li>
+<li data-search="VirtualListView dragReorderAnimationDuration">
+<a href="#VirtualListView-dragReorderAnimationDuration-11">
+<code>int dragReorderAnimationDuration() const;</code>
+</a>
+</li>
+<li data-search="VirtualListView setDragReorderAnimationEasingCurve">
+<a href="#VirtualListView-setDragReorderAnimationEasingCurve-12">
+<code>void setDragReorderAnimationEasingCurve(const QEasingCurve &amp;curve);</code>
+</a>
+</li>
+<li data-search="VirtualListView dragReorderAnimationEasingCurve">
+<a href="#VirtualListView-dragReorderAnimationEasingCurve-13">
+<code>QEasingCurve dragReorderAnimationEasingCurve() const;</code>
+</a>
+</li>
+<li data-search="VirtualListView setRowGridLinesVisible">
+<a href="#VirtualListView-setRowGridLinesVisible-14">
+<code>void setRowGridLinesVisible(bool visible);</code>
+</a>
+</li>
+<li data-search="VirtualListView rowGridLinesVisible">
+<a href="#VirtualListView-rowGridLinesVisible-15">
+<code>bool rowGridLinesVisible() const;</code>
+</a>
+</li>
+<li data-search="VirtualListView setRowGridLineWidth">
+<a href="#VirtualListView-setRowGridLineWidth-16">
+<code>void setRowGridLineWidth(int pixels);</code>
+</a>
+</li>
+<li data-search="VirtualListView rowGridLineWidth">
+<a href="#VirtualListView-rowGridLineWidth-17">
+<code>int rowGridLineWidth() const;</code>
+</a>
+</li>
+<li data-search="VirtualListView setRowGridLineColor">
+<a href="#VirtualListView-setRowGridLineColor-18">
+<code>void setRowGridLineColor(const QColor &amp;color);</code>
+</a>
+</li>
+<li data-search="VirtualListView rowGridLineColor">
+<a href="#VirtualListView-rowGridLineColor-19">
+<code>QColor rowGridLineColor() const;</code>
+</a>
+</li>
+<li data-search="VirtualListView setVisualStateBackgroundVisible">
+<a href="#VirtualListView-setVisualStateBackgroundVisible-20">
+<code>void setVisualStateBackgroundVisible(bool visible);</code>
+</a>
+</li>
+<li data-search="VirtualListView visualStateBackgroundVisible">
+<a href="#VirtualListView-visualStateBackgroundVisible-21">
+<code>bool visualStateBackgroundVisible() const;</code>
+</a>
+</li>
+<li data-search="VirtualListView setVisualStateCornerRadius">
+<a href="#VirtualListView-setVisualStateCornerRadius-22">
+<code>void setVisualStateCornerRadius(int radius);</code>
+</a>
+</li>
+<li data-search="VirtualListView visualStateCornerRadius">
+<a href="#VirtualListView-visualStateCornerRadius-23">
+<code>int visualStateCornerRadius() const;</code>
+</a>
+</li>
+<li data-search="VirtualListView setVisualStateBackgroundExtent">
+<a href="#VirtualListView-setVisualStateBackgroundExtent-25">
+<code>void setVisualStateBackgroundExtent(VisualStateBackgroundExtent extent);</code>
+</a>
+</li>
+<li data-search="VirtualListView visualStateBackgroundExtent">
+<a href="#VirtualListView-visualStateBackgroundExtent-26">
+<code>VisualStateBackgroundExtent visualStateBackgroundExtent() const;</code>
+</a>
+</li>
+<li data-search="VirtualListView setVisualStateBackgroundMargins">
+<a href="#VirtualListView-setVisualStateBackgroundMargins-27">
+<code>void setVisualStateBackgroundMargins(const QMargins &amp;margins);</code>
+</a>
+</li>
+<li data-search="VirtualListView setVisualStateBackgroundMargins">
+<a href="#VirtualListView-setVisualStateBackgroundMargins-28">
+<code>void setVisualStateBackgroundMargins(int left, int top, int right, int bottom);</code>
+</a>
+</li>
+<li data-search="VirtualListView visualStateBackgroundMargins">
+<a href="#VirtualListView-visualStateBackgroundMargins-29">
+<code>QMargins visualStateBackgroundMargins() const;</code>
+</a>
+</li>
+<li data-search="VirtualListView setVisualStateBackgroundHeight">
+<a href="#VirtualListView-setVisualStateBackgroundHeight-30">
+<code>void setVisualStateBackgroundHeight(int height);</code>
+</a>
+</li>
+<li data-search="VirtualListView visualStateBackgroundHeight">
+<a href="#VirtualListView-visualStateBackgroundHeight-31">
+<code>int visualStateBackgroundHeight() const;</code>
+</a>
+</li>
+<li data-search="VirtualListView indexAt">
+<a href="#VirtualListView-indexAt-32">
+<code>QModelIndex indexAt(const QPoint &amp;viewportPos) const override;</code>
+</a>
+</li>
+<li data-search="VirtualListView itemPaneSeparatorColor">
+<a href="#VirtualListView-itemPaneSeparatorColor-33">
+<code>QColor itemPaneSeparatorColor() const override;</code>
+</a>
+</li>
+</ul>
+</section>
+<h2><span data-zh="函数说明" data-en="Function details">函数说明</span></h2>
+<p class="muted"><span data-zh="按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。" data-en="Read each function for its purpose and related settings. Overloads are listed separately; follow related capabilities to find examples.">按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。</span></p>
+<section>
+<h3 id="VirtualListView">VirtualListView</h3>
+<pre>class VIRTUALITEMVIEWS_EXPORT VirtualListView : public VirtualItemView</pre>
+<article tabindex="-1" id="VirtualListView-ItemHeightMode-0" data-search="VirtualListView ItemHeightMode">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtuallistview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L33</span>
+<pre>using ItemHeightMode = VirtualItemView::ItemHeightMode;</pre>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualListView-VirtualListView-1" data-search="VirtualListView VirtualListView">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtuallistview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L35</span>
+<pre>explicit VirtualListView(QWidget *parent = nullptr);</pre>
+<p class="doc" data-zh="构造 VirtualListView；按此重载传入父对象、模型或布局参数。带 parent 的 QObject/QWidget 遵循 Qt 父子生命周期。" data-en="Construct VirtualListView with the parent, model or layout arguments in this overload. QObject/QWidget parent arguments follow Qt parent-child lifetime rules.">构造 VirtualListView；按此重载传入父对象、模型或布局参数。带 parent 的 QObject/QWidget 遵循 Qt 父子生命周期。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualListView-VirtualListView-2" data-search="VirtualListView VirtualListView">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtuallistview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L36</span>
+<pre>~VirtualListView() override;</pre>
+<p class="doc" data-zh="销毁 VirtualListView 并释放其拥有的资源；不在析构回调中继续使用该对象。" data-en="Destroy VirtualListView and release its owned resources; do not keep using the object during destruction callbacks.">销毁 VirtualListView 并释放其拥有的资源；不在析构回调中继续使用该对象。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualListView-setModel-3" data-search="VirtualListView setModel">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtuallistview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L39</span>
+<pre>void setModel(QAbstractItemModel *model) override;</pre>
+<p class="doc" data-zh="连接新的数据模型并更新布局、选择与物化状态；模型生命周期需覆盖视图使用期间。不要用重复 setModel 代替数据变更通知。" data-en="Connect a new data model and update layout, selection and materialization. Keep the model alive while in use; do not replace change notifications with repeated setModel calls.">连接新的数据模型并更新布局、选择与物化状态；模型生命周期需覆盖视图使用期间。不要用重复 setModel 代替数据变更通知。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#model"><span data-zh="模型 / 根节点 / 代理模型 / 更新通知" data-en="Models / roots / proxies / update notifications">模型 / 根节点 / 代理模型 / 更新通知</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualListView-setRootIndex-4" data-search="VirtualListView setRootIndex">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtuallistview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L46</span>
+<pre>void setRootIndex(const QModelIndex &amp;index);</pre>
+<p class="doc" data-zh="设置展示子项所属模型根索引。" data-en="Set the model root index whose children are displayed.">设置展示子项所属模型根索引。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#model"><span data-zh="模型 / 根节点 / 代理模型 / 更新通知" data-en="Models / roots / proxies / update notifications">模型 / 根节点 / 代理模型 / 更新通知</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualListView-rootIndex-5" data-search="VirtualListView rootIndex">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtuallistview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L47</span>
+<pre>    QModelIndex rootIndex() const;</pre>
+<p class="doc" data-zh="返回展示子项所属模型根索引。" data-en="Return the model root index whose children are displayed.">返回展示子项所属模型根索引。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#model"><span data-zh="模型 / 根节点 / 代理模型 / 更新通知" data-en="Models / roots / proxies / update notifications">模型 / 根节点 / 代理模型 / 更新通知</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualListView-listLayout-6" data-search="VirtualListView listLayout">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtuallistview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L49</span>
+<pre>    ListLayout *listLayout() const;</pre>
+<p class="doc" data-zh="返回列表使用的布局策略对象。" data-en="Return the layout policy used by the list.">返回列表使用的布局策略对象。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualListView-DragFeedbackMode-7" data-search="VirtualListView DragFeedbackMode">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtuallistview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L52</span>
+<pre>enum class DragFeedbackMode { Indicator, RowMoveAnimation };</pre>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualListView-setDragFeedbackMode-8" data-search="VirtualListView setDragFeedbackMode">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtuallistview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L56</span>
+<pre>void setDragFeedbackMode(DragFeedbackMode mode);</pre>
+<p class="doc" data-zh="设置指示器或让位动画反馈模式。" data-en="Set the indicator or reorder-animation feedback mode.">设置指示器或让位动画反馈模式。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#drag-feedback"><span data-zh="拖动指示器 / 让位动画 / 树末级歧义" data-en="Drop indicators / animated displacement / tree-level ambiguity">拖动指示器 / 让位动画 / 树末级歧义</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualListView-dragFeedbackMode-9" data-search="VirtualListView dragFeedbackMode">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtuallistview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L57</span>
+<pre>    DragFeedbackMode dragFeedbackMode() const;</pre>
+<p class="doc" data-zh="返回指示器或让位动画反馈模式。" data-en="Return the indicator or reorder-animation feedback mode.">返回指示器或让位动画反馈模式。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#drag-feedback"><span data-zh="拖动指示器 / 让位动画 / 树末级歧义" data-en="Drop indicators / animated displacement / tree-level ambiguity">拖动指示器 / 让位动画 / 树末级歧义</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualListView-setDragReorderAnimationDuration-10" data-search="VirtualListView setDragReorderAnimationDuration">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtuallistview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L59</span>
+<pre>void setDragReorderAnimationDuration(int milliseconds);</pre>
+<p class="doc" data-zh="设置拖动让位动画时长（毫秒）。" data-en="Set the drag reorder duration in milliseconds.">设置拖动让位动画时长（毫秒）。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#drag-feedback"><span data-zh="拖动指示器 / 让位动画 / 树末级歧义" data-en="Drop indicators / animated displacement / tree-level ambiguity">拖动指示器 / 让位动画 / 树末级歧义</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualListView-dragReorderAnimationDuration-11" data-search="VirtualListView dragReorderAnimationDuration">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtuallistview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L60</span>
+<pre>    int dragReorderAnimationDuration() const;</pre>
+<p class="doc" data-zh="返回拖动让位动画时长（毫秒）。" data-en="Return the drag reorder duration in milliseconds.">返回拖动让位动画时长（毫秒）。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#drag-feedback"><span data-zh="拖动指示器 / 让位动画 / 树末级歧义" data-en="Drop indicators / animated displacement / tree-level ambiguity">拖动指示器 / 让位动画 / 树末级歧义</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualListView-setDragReorderAnimationEasingCurve-12" data-search="VirtualListView setDragReorderAnimationEasingCurve">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtuallistview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L62</span>
+<pre>void setDragReorderAnimationEasingCurve(const QEasingCurve &amp;curve);</pre>
+<p class="doc" data-zh="设置拖动让位缓动曲线。" data-en="Set the drag reorder easing curve.">设置拖动让位缓动曲线。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#drag-feedback"><span data-zh="拖动指示器 / 让位动画 / 树末级歧义" data-en="Drop indicators / animated displacement / tree-level ambiguity">拖动指示器 / 让位动画 / 树末级歧义</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualListView-dragReorderAnimationEasingCurve-13" data-search="VirtualListView dragReorderAnimationEasingCurve">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtuallistview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L63</span>
+<pre>    QEasingCurve dragReorderAnimationEasingCurve() const;</pre>
+<p class="doc" data-zh="返回拖动让位缓动曲线。" data-en="Return the drag reorder easing curve.">返回拖动让位缓动曲线。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#drag-feedback"><span data-zh="拖动指示器 / 让位动画 / 树末级歧义" data-en="Drop indicators / animated displacement / tree-level ambiguity">拖动指示器 / 让位动画 / 树末级歧义</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualListView-setRowGridLinesVisible-14" data-search="VirtualListView setRowGridLinesVisible">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtuallistview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L66</span>
+<pre>void setRowGridLinesVisible(bool visible);</pre>
+<p class="doc" data-zh="设置行分割线可见性。" data-en="Set the row grid line visibility.">设置行分割线可见性。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#grid"><span data-zh="分割线样式 / 最后一行 / 冻结分隔线" data-en="Grid styling / terminal row / frozen separators">分割线样式 / 最后一行 / 冻结分隔线</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualListView-rowGridLinesVisible-15" data-search="VirtualListView rowGridLinesVisible">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtuallistview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L67</span>
+<pre>    bool rowGridLinesVisible() const;</pre>
+<p class="doc" data-zh="返回行分割线可见性。" data-en="Return the row grid line visibility.">返回行分割线可见性。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#grid"><span data-zh="分割线样式 / 最后一行 / 冻结分隔线" data-en="Grid styling / terminal row / frozen separators">分割线样式 / 最后一行 / 冻结分隔线</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualListView-setRowGridLineWidth-16" data-search="VirtualListView setRowGridLineWidth">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtuallistview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L69</span>
+<pre>void setRowGridLineWidth(int pixels);</pre>
+<p class="doc" data-zh="设置行分割线宽度。" data-en="Set the row grid line width.">设置行分割线宽度。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#grid"><span data-zh="分割线样式 / 最后一行 / 冻结分隔线" data-en="Grid styling / terminal row / frozen separators">分割线样式 / 最后一行 / 冻结分隔线</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualListView-rowGridLineWidth-17" data-search="VirtualListView rowGridLineWidth">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtuallistview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L70</span>
+<pre>    int rowGridLineWidth() const;</pre>
+<p class="doc" data-zh="返回行分割线宽度。" data-en="Return the row grid line width.">返回行分割线宽度。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#grid"><span data-zh="分割线样式 / 最后一行 / 冻结分隔线" data-en="Grid styling / terminal row / frozen separators">分割线样式 / 最后一行 / 冻结分隔线</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualListView-setRowGridLineColor-18" data-search="VirtualListView setRowGridLineColor">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtuallistview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L72</span>
+<pre>void setRowGridLineColor(const QColor &amp;color);</pre>
+<p class="doc" data-zh="设置行分割线颜色。" data-en="Set the row grid line color.">设置行分割线颜色。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#grid"><span data-zh="分割线样式 / 最后一行 / 冻结分隔线" data-en="Grid styling / terminal row / frozen separators">分割线样式 / 最后一行 / 冻结分隔线</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualListView-rowGridLineColor-19" data-search="VirtualListView rowGridLineColor">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtuallistview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L73</span>
+<pre>    QColor rowGridLineColor() const;</pre>
+<p class="doc" data-zh="返回行分割线颜色。" data-en="Return the row grid line color.">返回行分割线颜色。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#grid"><span data-zh="分割线样式 / 最后一行 / 冻结分隔线" data-en="Grid styling / terminal row / frozen separators">分割线样式 / 最后一行 / 冻结分隔线</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualListView-setVisualStateBackgroundVisible-20" data-search="VirtualListView setVisualStateBackgroundVisible">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtuallistview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L75</span>
+<pre>void setVisualStateBackgroundVisible(bool visible);</pre>
+<p class="doc" data-zh="设置hover 或选中背景绘制开关。" data-en="Set the hover or selection background painting setting.">设置hover 或选中背景绘制开关。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#states"><span data-zh="hover / selected 默认绘制和动画" data-en="Built-in hover / selection painting and animation">hover / selected 默认绘制和动画</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualListView-visualStateBackgroundVisible-21" data-search="VirtualListView visualStateBackgroundVisible">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtuallistview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L76</span>
+<pre>    bool visualStateBackgroundVisible() const;</pre>
+<p class="doc" data-zh="返回hover 或选中背景绘制开关。" data-en="Return the hover or selection background painting setting.">返回hover 或选中背景绘制开关。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#states"><span data-zh="hover / selected 默认绘制和动画" data-en="Built-in hover / selection painting and animation">hover / selected 默认绘制和动画</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualListView-setVisualStateCornerRadius-22" data-search="VirtualListView setVisualStateCornerRadius">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtuallistview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L78</span>
+<pre>void setVisualStateCornerRadius(int radius);</pre>
+<p class="doc" data-zh="设置状态背景圆角半径。" data-en="Set the state background corner radius.">设置状态背景圆角半径。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualListView-visualStateCornerRadius-23" data-search="VirtualListView visualStateCornerRadius">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtuallistview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L79</span>
+<pre>    int visualStateCornerRadius() const;</pre>
+<p class="doc" data-zh="返回状态背景圆角半径。" data-en="Return the state background corner radius.">返回状态背景圆角半径。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualListView-VisualStateBackgroundExtent-24" data-search="VirtualListView VisualStateBackgroundExtent">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtuallistview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L83</span>
+<pre>enum class VisualStateBackgroundExtent { FullWidth, WidgetOnly };</pre>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualListView-setVisualStateBackgroundExtent-25" data-search="VirtualListView setVisualStateBackgroundExtent">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtuallistview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L85</span>
+<pre>void setVisualStateBackgroundExtent(VisualStateBackgroundExtent extent);</pre>
+<p class="doc" data-zh="设置树或列表状态背景水平范围。" data-en="Set the horizontal tree or list state background extent.">设置树或列表状态背景水平范围。</p>
+<p class="doc" data-zh="范围与边距影响状态背景和命中区域，不改变模型选择数据。固定高度在剩余区域内居中并限制到可用高度。WidgetOnly 按控件实际宽度；含 Icon 的模式在无图标或图标隐藏时退回不含 Icon 的范围。TreeTable 使用固定整行策略。" data-en="Extent and insets affect backgrounds and hit regions without rewriting model selection data. A fixed height is centered and clamped to available height. WidgetOnly follows actual widget width; icon-inclusive modes omit icon space when no icon is shown. TreeTable uses its fixed whole-row policy.">范围与边距影响状态背景和命中区域，不改变模型选择数据。固定高度在剩余区域内居中并限制到可用高度。WidgetOnly 按控件实际宽度；含 Icon 的模式在无图标或图标隐藏时退回不含 Icon 的范围。TreeTable 使用固定整行策略。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#state-extent"><span data-zh="状态范围 / 命中范围 / 固定高度 / padding" data-en="State extent / hit region / fixed height / padding">状态范围 / 命中范围 / 固定高度 / padding</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualListView-visualStateBackgroundExtent-26" data-search="VirtualListView visualStateBackgroundExtent">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtuallistview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L86</span>
+<pre>    VisualStateBackgroundExtent visualStateBackgroundExtent() const;</pre>
+<p class="doc" data-zh="返回树或列表状态背景水平范围。" data-en="Return the horizontal tree or list state background extent.">返回树或列表状态背景水平范围。</p>
+<p class="doc" data-zh="范围与边距影响状态背景和命中区域，不改变模型选择数据。固定高度在剩余区域内居中并限制到可用高度。WidgetOnly 按控件实际宽度；含 Icon 的模式在无图标或图标隐藏时退回不含 Icon 的范围。TreeTable 使用固定整行策略。" data-en="Extent and insets affect backgrounds and hit regions without rewriting model selection data. A fixed height is centered and clamped to available height. WidgetOnly follows actual widget width; icon-inclusive modes omit icon space when no icon is shown. TreeTable uses its fixed whole-row policy.">范围与边距影响状态背景和命中区域，不改变模型选择数据。固定高度在剩余区域内居中并限制到可用高度。WidgetOnly 按控件实际宽度；含 Icon 的模式在无图标或图标隐藏时退回不含 Icon 的范围。TreeTable 使用固定整行策略。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#state-extent"><span data-zh="状态范围 / 命中范围 / 固定高度 / padding" data-en="State extent / hit region / fixed height / padding">状态范围 / 命中范围 / 固定高度 / padding</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualListView-setVisualStateBackgroundMargins-27" data-search="VirtualListView setVisualStateBackgroundMargins">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtuallistview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L92</span>
+<pre>void setVisualStateBackgroundMargins(const QMargins &amp;margins);</pre>
+<p class="doc" data-zh="设置状态背景内缩边距。" data-en="Set the state background insets.">设置状态背景内缩边距。</p>
+<p class="doc" data-zh="范围与边距影响状态背景和命中区域，不改变模型选择数据。固定高度在剩余区域内居中并限制到可用高度。WidgetOnly 按控件实际宽度；含 Icon 的模式在无图标或图标隐藏时退回不含 Icon 的范围。TreeTable 使用固定整行策略。" data-en="Extent and insets affect backgrounds and hit regions without rewriting model selection data. A fixed height is centered and clamped to available height. WidgetOnly follows actual widget width; icon-inclusive modes omit icon space when no icon is shown. TreeTable uses its fixed whole-row policy.">范围与边距影响状态背景和命中区域，不改变模型选择数据。固定高度在剩余区域内居中并限制到可用高度。WidgetOnly 按控件实际宽度；含 Icon 的模式在无图标或图标隐藏时退回不含 Icon 的范围。TreeTable 使用固定整行策略。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#state-extent"><span data-zh="状态范围 / 命中范围 / 固定高度 / padding" data-en="State extent / hit region / fixed height / padding">状态范围 / 命中范围 / 固定高度 / padding</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualListView-setVisualStateBackgroundMargins-28" data-search="VirtualListView setVisualStateBackgroundMargins">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtuallistview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L93</span>
+<pre>    void setVisualStateBackgroundMargins(int left, int top, int right, int bottom);</pre>
+<p class="doc" data-zh="设置状态背景内缩边距。" data-en="Set the state background insets.">设置状态背景内缩边距。</p>
+<p class="doc" data-zh="范围与边距影响状态背景和命中区域，不改变模型选择数据。固定高度在剩余区域内居中并限制到可用高度。WidgetOnly 按控件实际宽度；含 Icon 的模式在无图标或图标隐藏时退回不含 Icon 的范围。TreeTable 使用固定整行策略。" data-en="Extent and insets affect backgrounds and hit regions without rewriting model selection data. A fixed height is centered and clamped to available height. WidgetOnly follows actual widget width; icon-inclusive modes omit icon space when no icon is shown. TreeTable uses its fixed whole-row policy.">范围与边距影响状态背景和命中区域，不改变模型选择数据。固定高度在剩余区域内居中并限制到可用高度。WidgetOnly 按控件实际宽度；含 Icon 的模式在无图标或图标隐藏时退回不含 Icon 的范围。TreeTable 使用固定整行策略。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#state-extent"><span data-zh="状态范围 / 命中范围 / 固定高度 / padding" data-en="State extent / hit region / fixed height / padding">状态范围 / 命中范围 / 固定高度 / padding</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualListView-visualStateBackgroundMargins-29" data-search="VirtualListView visualStateBackgroundMargins">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtuallistview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L97</span>
+<pre>    QMargins visualStateBackgroundMargins() const;</pre>
+<p class="doc" data-zh="返回状态背景内缩边距。" data-en="Return the state background insets.">返回状态背景内缩边距。</p>
+<p class="doc" data-zh="范围与边距影响状态背景和命中区域，不改变模型选择数据。固定高度在剩余区域内居中并限制到可用高度。WidgetOnly 按控件实际宽度；含 Icon 的模式在无图标或图标隐藏时退回不含 Icon 的范围。TreeTable 使用固定整行策略。" data-en="Extent and insets affect backgrounds and hit regions without rewriting model selection data. A fixed height is centered and clamped to available height. WidgetOnly follows actual widget width; icon-inclusive modes omit icon space when no icon is shown. TreeTable uses its fixed whole-row policy.">范围与边距影响状态背景和命中区域，不改变模型选择数据。固定高度在剩余区域内居中并限制到可用高度。WidgetOnly 按控件实际宽度；含 Icon 的模式在无图标或图标隐藏时退回不含 Icon 的范围。TreeTable 使用固定整行策略。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#state-extent"><span data-zh="状态范围 / 命中范围 / 固定高度 / padding" data-en="State extent / hit region / fixed height / padding">状态范围 / 命中范围 / 固定高度 / padding</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualListView-setVisualStateBackgroundHeight-30" data-search="VirtualListView setVisualStateBackgroundHeight">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtuallistview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L100</span>
+<pre>void setVisualStateBackgroundHeight(int height);</pre>
+<p class="doc" data-zh="设置状态背景固定高度；0 使用可用高度。" data-en="Set the fixed state background height; 0 uses available height.">设置状态背景固定高度；0 使用可用高度。</p>
+<p class="doc" data-zh="范围与边距影响状态背景和命中区域，不改变模型选择数据。固定高度在剩余区域内居中并限制到可用高度。WidgetOnly 按控件实际宽度；含 Icon 的模式在无图标或图标隐藏时退回不含 Icon 的范围。TreeTable 使用固定整行策略。" data-en="Extent and insets affect backgrounds and hit regions without rewriting model selection data. A fixed height is centered and clamped to available height. WidgetOnly follows actual widget width; icon-inclusive modes omit icon space when no icon is shown. TreeTable uses its fixed whole-row policy.">范围与边距影响状态背景和命中区域，不改变模型选择数据。固定高度在剩余区域内居中并限制到可用高度。WidgetOnly 按控件实际宽度；含 Icon 的模式在无图标或图标隐藏时退回不含 Icon 的范围。TreeTable 使用固定整行策略。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#state-extent"><span data-zh="状态范围 / 命中范围 / 固定高度 / padding" data-en="State extent / hit region / fixed height / padding">状态范围 / 命中范围 / 固定高度 / padding</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualListView-visualStateBackgroundHeight-31" data-search="VirtualListView visualStateBackgroundHeight">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtuallistview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L101</span>
+<pre>    int visualStateBackgroundHeight() const;</pre>
+<p class="doc" data-zh="返回状态背景固定高度；0 使用可用高度。" data-en="Return the fixed state background height; 0 uses available height.">返回状态背景固定高度；0 使用可用高度。</p>
+<p class="doc" data-zh="范围与边距影响状态背景和命中区域，不改变模型选择数据。固定高度在剩余区域内居中并限制到可用高度。WidgetOnly 按控件实际宽度；含 Icon 的模式在无图标或图标隐藏时退回不含 Icon 的范围。TreeTable 使用固定整行策略。" data-en="Extent and insets affect backgrounds and hit regions without rewriting model selection data. A fixed height is centered and clamped to available height. WidgetOnly follows actual widget width; icon-inclusive modes omit icon space when no icon is shown. TreeTable uses its fixed whole-row policy.">范围与边距影响状态背景和命中区域，不改变模型选择数据。固定高度在剩余区域内居中并限制到可用高度。WidgetOnly 按控件实际宽度；含 Icon 的模式在无图标或图标隐藏时退回不含 Icon 的范围。TreeTable 使用固定整行策略。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#state-extent"><span data-zh="状态范围 / 命中范围 / 固定高度 / padding" data-en="State extent / hit region / fixed height / padding">状态范围 / 命中范围 / 固定高度 / padding</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualListView-indexAt-32" data-search="VirtualListView indexAt">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtuallistview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L103</span>
+<pre>QModelIndex indexAt(const QPoint &amp;viewportPos) const override;</pre>
+<p class="doc" data-zh="命中给定坐标对应的项目；视图接口使用视口坐标，布局策略使用布局坐标。空白区域返回无效结果。" data-en="Hit-test an item at a position. Views use viewport coordinates; layout policies use layout coordinates. Blank space returns an invalid result.">命中给定坐标对应的项目；视图接口使用视口坐标，布局策略使用布局坐标。空白区域返回无效结果。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualListView-itemPaneSeparatorColor-33" data-search="VirtualListView itemPaneSeparatorColor">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtuallistview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L104</span>
+<pre>QColor itemPaneSeparatorColor() const override;</pre>
+<p class="doc" data-zh="返回行窗格分隔线颜色。" data-en="Return the row pane separator color.">返回行窗格分隔线颜色。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+</section>
+<footer class="muted">
+<p><span data-zh="按能力查找配套设置与独立示例；通用接口请沿基类链接查阅，Qt 继承接口请参考 Qt 文档。" data-en="Find related settings and independent examples by capability. Follow base-class links for shared APIs and consult Qt documentation for inherited Qt APIs.">按能力查找配套设置与独立示例；通用接口请沿基类链接查阅，Qt 继承接口请参考 Qt 文档。</span></p>
+</footer>
+</main>
+<script src="../assets/reference.js">
+</script>
+</body>
+</html>

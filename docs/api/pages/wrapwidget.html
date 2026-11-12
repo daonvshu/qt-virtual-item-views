@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>WrapWidget · VirtualItemViews</title>
+<link rel="stylesheet" href="../assets/reference.css">
+</head>
+<body>
+<header>
+<div class="header-top">
+<a href="../index.html">VirtualItemViews / API</a>
+<div id="language-switch" class="language-switch" role="group" aria-label="Language / 语言" hidden>
+<button type="button" data-language="zh" aria-pressed="true" lang="zh-CN">中文</button>
+<button type="button" data-language="en" aria-pressed="false" lang="en">English</button>
+</div>
+</div>
+<h1>WrapWidget</h1>
+<p><span data-zh="少量真实控件的换行容器" data-en="Wrapping host for a few real widgets">少量真实控件的换行容器</span></p>
+</header>
+<main>
+<nav>
+<a href="../index.html"><span data-zh="能力总览" data-en="Capabilities">能力总览</span></a>
+<a href="../../AGENT_GUIDE.md"><span data-zh="Agent 索引" data-en="Agent guide">Agent 索引</span></a>
+<a href="../../../examples/README.md"><span data-zh="独立示例" data-en="Examples">独立示例</span></a>
+<a href="../../../README.md"><span data-zh="项目首页" data-en="Project home">项目首页</span></a>
+</nav>
+<label for="filter"><span data-zh="搜索本页：能力、API 名称或关键词" data-en="Search this page: capability, API name or keyword">搜索本页：能力、API 名称或关键词</span></label>
+<input id="filter" type="search" placeholder="例如：Popup、setAutoHeight、冻结、branch">
+<p class="muted search-help"><span data-zh="无需网络或服务器。所有内容默认可见；搜索只筛选当前页。完整继承 API 请沿基类链接查阅。" data-en="No network or server required. All content is initially visible; search filters this page only. Follow base-class links for inherited APIs.">无需网络或服务器。所有内容默认可见；搜索只筛选当前页。完整继承 API 请沿基类链接查阅。</span></p>
+<p id="search-status" role="status" aria-live="polite">
+</p>
+<p>
+<a href="../../../include/virtualitemviews/wrapwidget.h"><span data-zh="公开头文件：include/virtualitemviews/wrapwidget.h" data-en="Public header: include/virtualitemviews/wrapwidget.h">公开头文件：include/virtualitemviews/wrapwidget.h</span></a>
+</p>
+<p><span data-zh="直接 addWidget，不需要模型或 adapter，不复用。默认自动高度开启，配合最大高度内部滚动。" data-en="Use addWidget without a model or adapter. No recycling. Auto height is enabled by default; a maximum height enables internal scrolling.">直接 addWidget，不需要模型或 adapter，不复用。默认自动高度开启，配合最大高度内部滚动。</span></p>
+<p><span data-zh="直接基类：QScrollArea。" data-en="Direct base: QScrollArea. ">直接基类：QScrollArea。</span></p>
+<p class="api-jump">
+<a href="#public-api"><span data-zh="公开函数列表" data-en="Public function index">公开函数列表</span></a>
+</p>
+<h2><span data-zh="能力与配套设置" data-en="Capabilities and related settings">能力与配套设置</span></h2>
+<article id="auto-height" data-search="setAutoHeightEnabled setAutoHeightMaximumHeight virtualitemview wrapwidget">
+<h3><span data-zh="自适应高度 / 嵌套滚动 / 最大高度" data-en="Auto height / nested scrolling / height limits">自适应高度 / 嵌套滚动 / 最大高度</span></h3>
+<p>
+<code>setAutoHeightEnabled · setAutoHeightMaximumHeight</code>
+</p>
+<p class="rules"><span data-zh="虚拟视图默认关闭，WrapWidget 默认开启。开启后内部 setFixedHeight，垂直 QSizePolicy::Fixed；上限 0 表示不限，不受父布局可用高度压缩。父容器放不下由业务安排外层滚动。开启时用 setAutoHeightMaximumHeight，不与 QWidget 的 setFixedHeight/setMaximumHeight 混用；关闭恢复原约束。高度包括内容、间距、适用半间距、表头和实际占位边框/横向滚动条；分割线不额外占高。没有内部滚动范围时滚轮交给外层，表头也同样处理。" data-en="Disabled by default on virtual views, enabled on WrapWidget. Uses setFixedHeight and vertical QSizePolicy::Fixed. Maximum 0 is unlimited; the parent layout does not compress the computed height. The application must arrange outer scrolling if space is insufficient. Use setAutoHeightMaximumHeight while enabled, not QWidget setFixedHeight/setMaximumHeight. Disabling restores prior constraints. Height includes content, gaps, applicable half-gaps, headers, occupied frame edges and horizontal scroll bars; grid lines add no height. With no internal scroll range, wheel input propagates outward, including over headers.">虚拟视图默认关闭，WrapWidget 默认开启。开启后内部 setFixedHeight，垂直 QSizePolicy::Fixed；上限 0 表示不限，不受父布局可用高度压缩。父容器放不下由业务安排外层滚动。开启时用 setAutoHeightMaximumHeight，不与 QWidget 的 setFixedHeight/setMaximumHeight 混用；关闭恢复原约束。高度包括内容、间距、适用半间距、表头和实际占位边框/横向滚动条；分割线不额外占高。没有内部滚动范围时滚轮交给外层，表头也同样处理。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../../src/core/virtualitemview.cpp">src/core/virtualitemview.cpp</a> · <a href="../../../src/widgets/wrapwidget.cpp">src/widgets/wrapwidget.cpp</a> · <a href="../../../src/core/wheeleventforwarding_p.h">src/core/wheeleventforwarding_p.h</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../../auto-height.md">docs/auto-height.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（8）" data-en="Independent source examples (8)">独立源码示例（8）</span></summary>
+<ul>
+<li>
+<a href="../../../examples/flow_capabilities/11_auto_height/example.cpp">examples/flow_capabilities/11_auto_height/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/list_capabilities/21_auto_height/example.cpp">examples/list_capabilities/21_auto_height/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/masonry_capabilities/14_auto_height/example.cpp">examples/masonry_capabilities/14_auto_height/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/table_capabilities/31_auto_height/example.cpp">examples/table_capabilities/31_auto_height/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/tree_capabilities/27_auto_height/example.cpp">examples/tree_capabilities/27_auto_height/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/treetable_capabilities/36_auto_height/example.cpp">examples/treetable_capabilities/36_auto_height/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/wrap_capabilities/08_auto_height/example.cpp">examples/wrap_capabilities/08_auto_height/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/wrap_capabilities/10_wrap_widget/example.cpp">examples/wrap_capabilities/10_wrap_widget/example.cpp</a>
+</li>
+</ul>
+</details>
+</article>
+<article id="wrap" data-search="setFixedItemHeight setItemWidthRange setItemWidth setItemWidths clearItemWidth invalidateItemWidths setItemSpacing setRowSpacing setLineAlignment virtualwrapview wraplayout wrapwidget">
+<h3><span data-zh="Wrap 不等宽标签 / 自然尺寸 / 行对齐" data-en="Variable-width tags / natural sizes / line alignment">Wrap 不等宽标签 / 自然尺寸 / 行对齐</span></h3>
+<p>
+<code>setFixedItemHeight · setItemWidthRange · setItemWidth · setItemWidths · clearItemWidth · invalidateItemWidths · setItemSpacing · setRowSpacing · setLineAlignment</code>
+</p>
+<p class="rules"><span data-zh="VirtualWrapView 宽度优先级：显式覆盖→SizeHintRole→adapter estimate→100px，再按范围/行宽裁剪；批量 setItemWidths 避免逐项重排。水平 itemSpacing 与垂直 rowSpacing 可分别设置，统一 item height；SelectRows 仍选择模型项，不会选整条显示行。WrapLayout 按真实子控件 sizeHint/约束排布，隐藏控件通常不占位；WrapWidget 接管控件所有权，takeWidget 交回调用者，clear 删除。" data-en="VirtualWrapView width priority: explicit override, SizeHintRole, adapter estimate, then 100px, clamped to width limits and available line width. Batch setItemWidths avoids per-item reflow. Horizontal itemSpacing and vertical rowSpacing are independent; item height is uniform. SelectRows selects model items, not a packed display row. WrapLayout uses real widget size hints/constraints; hidden widgets normally consume no space. WrapWidget owns inserted widgets; takeWidget transfers them back, and clear deletes them.">VirtualWrapView 宽度优先级：显式覆盖→SizeHintRole→adapter estimate→100px，再按范围/行宽裁剪；批量 setItemWidths 避免逐项重排。水平 itemSpacing 与垂直 rowSpacing 可分别设置，统一 item height；SelectRows 仍选择模型项，不会选整条显示行。WrapLayout 按真实子控件 sizeHint/约束排布，隐藏控件通常不占位；WrapWidget 接管控件所有权，takeWidget 交回调用者，clear 删除。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../../src/widgets/virtualwrapview.cpp">src/widgets/virtualwrapview.cpp</a> · <a href="../../../src/layout/wrapitemlayout.cpp">src/layout/wrapitemlayout.cpp</a> · <a href="../../../src/layout/wraplayout.cpp">src/layout/wraplayout.cpp</a> · <a href="../../../src/widgets/wrapwidget.cpp">src/widgets/wrapwidget.cpp</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../../wrap.md">docs/wrap.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（3）" data-en="Independent source examples (3)">独立源码示例（3）</span></summary>
+<ul>
+<li>
+<a href="../../../examples/wrap_capabilities/02_geometry/example.cpp">examples/wrap_capabilities/02_geometry/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/wrap_capabilities/09_wrap_layout/example.cpp">examples/wrap_capabilities/09_wrap_layout/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/wrap_capabilities/10_wrap_widget/example.cpp">examples/wrap_capabilities/10_wrap_widget/example.cpp</a>
+</li>
+</ul>
+</details>
+</article>
+<details>
+<summary><span data-zh="此视图全部能力章节（10）" data-en="All capability chapters for this view (10)">此视图全部能力章节（10）</span></summary>
+<ul>
+<li>
+<a href="../../../examples/wrap_capabilities/01_basic/example.cpp"><span data-zh="01_basic / 基础接入" data-en="01 / Basic">01_basic / 基础接入</span></a> · <a href="../../../examples/wrap_capabilities/README.md"><span data-zh="说明" data-en="Guide">说明</span></a>
+</li>
+<li>
+<a href="../../../examples/wrap_capabilities/02_geometry/example.cpp"><span data-zh="02_geometry / 宽度、间距与对齐" data-en="02 / Geometry">02_geometry / 宽度、间距与对齐</span></a> · <a href="../../../examples/wrap_capabilities/README.md"><span data-zh="说明" data-en="Guide">说明</span></a>
+</li>
+<li>
+<a href="../../../examples/wrap_capabilities/03_visual_states/example.cpp"><span data-zh="03_visual_states / 状态、颜色与圆角" data-en="03 / Visual states">03_visual_states / 状态、颜色与圆角</span></a> · <a href="../../../examples/wrap_capabilities/README.md"><span data-zh="说明" data-en="Guide">说明</span></a>
+</li>
+<li>
+<a href="../../../examples/wrap_capabilities/04_binding_events/example.cpp"><span data-zh="04_binding_events / 结构体、多类型与事件" data-en="04 / Binding events">04_binding_events / 结构体、多类型与事件</span></a> · <a href="../../../examples/wrap_capabilities/README.md"><span data-zh="说明" data-en="Guide">说明</span></a>
+</li>
+<li>
+<a href="../../../examples/wrap_capabilities/05_model_root/example.cpp"><span data-zh="05_model_root / 模型、代理与显示根" data-en="05 / Model root">05_model_root / 模型、代理与显示根</span></a> · <a href="../../../examples/wrap_capabilities/README.md"><span data-zh="说明" data-en="Guide">说明</span></a>
+</li>
+<li>
+<a href="../../../examples/wrap_capabilities/06_scrolling/example.cpp"><span data-zh="06_scrolling / 滚动、物化与诊断" data-en="06 / Scrolling">06_scrolling / 滚动、物化与诊断</span></a> · <a href="../../../examples/wrap_capabilities/README.md"><span data-zh="说明" data-en="Guide">说明</span></a>
+</li>
+<li>
+<a href="../../../examples/wrap_capabilities/07_drag_drop/example.cpp"><span data-zh="07_drag_drop / 自动与手动拖放" data-en="07 / Drag drop">07_drag_drop / 自动与手动拖放</span></a> · <a href="../../../examples/wrap_capabilities/README.md"><span data-zh="说明" data-en="Guide">说明</span></a>
+</li>
+<li>
+<a href="../../../examples/wrap_capabilities/08_auto_height/example.cpp"><span data-zh="08 自适应高度" data-en="08 / Auto height">08 自适应高度</span></a> · <a href="../../../examples/wrap_capabilities/08_auto_height/README.md"><span data-zh="说明" data-en="Guide">说明</span></a>
+</li>
+<li>
+<a href="../../../examples/wrap_capabilities/09_wrap_layout/example.cpp"><span data-zh="09_wrap_layout / 直接使用 WrapLayout" data-en="09 / Wrap layout">09_wrap_layout / 直接使用 WrapLayout</span></a> · <a href="../../../examples/wrap_capabilities/README.md"><span data-zh="说明" data-en="Guide">说明</span></a>
+</li>
+<li>
+<a href="../../../examples/wrap_capabilities/10_wrap_widget/example.cpp"><span data-zh="10_wrap_widget / 真实控件自适应高度" data-en="10 / Wrap widget">10_wrap_widget / 真实控件自适应高度</span></a> · <a href="../../../examples/wrap_capabilities/README.md"><span data-zh="说明" data-en="Guide">说明</span></a>
+</li>
+</ul>
+</details>
+<h2 id="public-api" tabindex="-1"><span data-zh="公开 API、类型与信号" data-en="Public API, types and signals">公开 API、类型与信号</span></h2>
+<section class="function-index" id="function-index" tabindex="-1">
+<h3><span data-zh="公开函数列表" data-en="Public function index">公开函数列表</span></h3>
+<p class="muted"><span data-zh="按声明类型分组；每个重载单独列出，点击签名跳转到说明。信号单独列出；类型和数据成员仍保留在下方。" data-en="Grouped by declaring type. Each overload has its own link to the details. Signals are listed separately; types and data members remain below.">按声明类型分组；每个重载单独列出，点击签名跳转到说明。信号单独列出；类型和数据成员仍保留在下方。</span></p>
+<h4>WrapWidget</h4>
+<ul>
+<li data-search="WrapWidget WrapWidget">
+<a href="#WrapWidget-WrapWidget-0">
+<code>explicit WrapWidget(QWidget *parent = nullptr);</code>
+</a>
+</li>
+<li data-search="WrapWidget WrapWidget">
+<a href="#WrapWidget-WrapWidget-1">
+<code>~WrapWidget() override;</code>
+</a>
+</li>
+<li data-search="WrapWidget wrapLayout">
+<a href="#WrapWidget-wrapLayout-2">
+<code>WrapLayout *wrapLayout() const;</code>
+</a>
+</li>
+<li data-search="WrapWidget addWidget">
+<a href="#WrapWidget-addWidget-3">
+<code>void addWidget(QWidget *widget);</code>
+</a>
+</li>
+<li data-search="WrapWidget insertWidget">
+<a href="#WrapWidget-insertWidget-4">
+<code>void insertWidget(int index, QWidget *widget);</code>
+</a>
+</li>
+<li data-search="WrapWidget takeWidget">
+<a href="#WrapWidget-takeWidget-5">
+<code>QWidget *takeWidget(int index);</code>
+</a>
+</li>
+<li data-search="WrapWidget clear">
+<a href="#WrapWidget-clear-6">
+<code>void clear();</code>
+</a>
+</li>
+<li data-search="WrapWidget setAutoHeightEnabled">
+<a href="#WrapWidget-setAutoHeightEnabled-7">
+<code>void setAutoHeightEnabled(bool enabled);</code>
+</a>
+</li>
+<li data-search="WrapWidget autoHeightEnabled">
+<a href="#WrapWidget-autoHeightEnabled-8">
+<code>bool autoHeightEnabled() const;</code>
+</a>
+</li>
+<li data-search="WrapWidget setAutoHeightMaximumHeight">
+<a href="#WrapWidget-setAutoHeightMaximumHeight-9">
+<code>void setAutoHeightMaximumHeight(int height);</code>
+</a>
+</li>
+<li data-search="WrapWidget autoHeightMaximumHeight">
+<a href="#WrapWidget-autoHeightMaximumHeight-10">
+<code>int autoHeightMaximumHeight() const;</code>
+</a>
+</li>
+<li data-search="WrapWidget sizeHint">
+<a href="#WrapWidget-sizeHint-11">
+<code>QSize sizeHint() const override;</code>
+</a>
+</li>
+<li data-search="WrapWidget minimumSizeHint">
+<a href="#WrapWidget-minimumSizeHint-12">
+<code>QSize minimumSizeHint() const override;</code>
+</a>
+</li>
+</ul>
+</section>
+<h2><span data-zh="函数说明" data-en="Function details">函数说明</span></h2>
+<p class="muted"><span data-zh="按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。" data-en="Read each function for its purpose and related settings. Overloads are listed separately; follow related capabilities to find examples.">按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。</span></p>
+<section>
+<h3 id="WrapWidget">WrapWidget</h3>
+<pre>class VIRTUALITEMVIEWS_EXPORT WrapWidget : public QScrollArea</pre>
+<article tabindex="-1" id="WrapWidget-WrapWidget-0" data-search="WrapWidget WrapWidget">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/wrapwidget.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L18</span>
+<pre>explicit WrapWidget(QWidget *parent = nullptr);</pre>
+<p class="doc" data-zh="构造 WrapWidget；按此重载传入父对象、模型或布局参数。带 parent 的 QObject/QWidget 遵循 Qt 父子生命周期。" data-en="Construct WrapWidget with the parent, model or layout arguments in this overload. QObject/QWidget parent arguments follow Qt parent-child lifetime rules.">构造 WrapWidget；按此重载传入父对象、模型或布局参数。带 parent 的 QObject/QWidget 遵循 Qt 父子生命周期。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="WrapWidget-WrapWidget-1" data-search="WrapWidget WrapWidget">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/wrapwidget.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L19</span>
+<pre>~WrapWidget() override;</pre>
+<p class="doc" data-zh="销毁 WrapWidget 并释放其拥有的资源；不在析构回调中继续使用该对象。" data-en="Destroy WrapWidget and release its owned resources; do not keep using the object during destruction callbacks.">销毁 WrapWidget 并释放其拥有的资源；不在析构回调中继续使用该对象。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="WrapWidget-wrapLayout-2" data-search="WrapWidget wrapLayout">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/wrapwidget.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L20</span>
+<pre>    WrapLayout *wrapLayout() const;</pre>
+<p class="doc" data-zh="返回真实控件换行布局对象。" data-en="Return the wrapping layout for real widgets.">返回真实控件换行布局对象。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="WrapWidget-addWidget-3" data-search="WrapWidget addWidget">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/wrapwidget.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L22</span>
+<pre>void addWidget(QWidget *widget);</pre>
+<p class="doc" data-zh="把控件加入指定位置；WrapLayout/WrapWidget 使用真实控件，不进行虚拟化回收。" data-en="Add a widget at the requested position. WrapLayout/WrapWidget manage real widgets without virtualized recycling.">把控件加入指定位置；WrapLayout/WrapWidget 使用真实控件，不进行虚拟化回收。</p>
+<p class="doc" data-zh="控件所有权转移给内部内容宿主。takeWidget 会隐藏并解除父子关系，把所有权交还调用方；clear 会直接删除全部子控件。" data-en="Widget ownership transfers to the internal content host. takeWidget hides and detaches a widget, returning ownership to the caller; clear deletes all contained widgets.">控件所有权转移给内部内容宿主。takeWidget 会隐藏并解除父子关系，把所有权交还调用方；clear 会直接删除全部子控件。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="WrapWidget-insertWidget-4" data-search="WrapWidget insertWidget">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/wrapwidget.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L23</span>
+<pre>void insertWidget(int index, QWidget *widget);</pre>
+<p class="doc" data-zh="把控件加入指定位置；WrapLayout/WrapWidget 使用真实控件，不进行虚拟化回收。" data-en="Add a widget at the requested position. WrapLayout/WrapWidget manage real widgets without virtualized recycling.">把控件加入指定位置；WrapLayout/WrapWidget 使用真实控件，不进行虚拟化回收。</p>
+<p class="doc" data-zh="控件所有权转移给内部内容宿主。takeWidget 会隐藏并解除父子关系，把所有权交还调用方；clear 会直接删除全部子控件。" data-en="Widget ownership transfers to the internal content host. takeWidget hides and detaches a widget, returning ownership to the caller; clear deletes all contained widgets.">控件所有权转移给内部内容宿主。takeWidget 会隐藏并解除父子关系，把所有权交还调用方；clear 会直接删除全部子控件。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="WrapWidget-takeWidget-5" data-search="WrapWidget takeWidget">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/wrapwidget.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L25</span>
+<pre>QWidget *takeWidget(int index);</pre>
+<p class="doc" data-zh="移出指定控件并返回它，调用方负责后续处理。" data-en="Remove and return the specified widget for the caller to manage.">移出指定控件并返回它，调用方负责后续处理。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="WrapWidget-clear-6" data-search="WrapWidget clear">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/wrapwidget.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L27</span>
+<pre>void clear();</pre>
+<p class="doc" data-zh="删除 WrapWidget 中全部控件及布局项。" data-en="Delete every widget and layout item contained in WrapWidget.">删除 WrapWidget 中全部控件及布局项。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="WrapWidget-setAutoHeightEnabled-7" data-search="WrapWidget setAutoHeightEnabled">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/wrapwidget.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L30</span>
+<pre>void setAutoHeightEnabled(bool enabled);</pre>
+<p class="doc" data-zh="设置按内容固定视图高度的开关。" data-en="Set the content-based fixed view height setting.">设置按内容固定视图高度的开关。</p>
+<p class="doc" data-zh="虚拟视图默认关闭，WrapWidget 默认开启。启用后按内容设置固定高度，父布局不再把它压缩；上限为 0 时不限高。高度包含边距、间距、表头和实际边框等占位。使用 setAutoHeightMaximumHeight 控制上限，不要同时用 QWidget 高度约束干预；关闭后恢复原约束。内部无滚动范围时，滚轮交给外层。" data-en="Disabled by default on virtual views and enabled on WrapWidget. When enabled, content sets a fixed height that the parent layout cannot compress; a maximum of 0 is unlimited. The height includes margins, gaps, headers and occupied frame space. Use setAutoHeightMaximumHeight rather than competing QWidget height constraints; disabling restores prior constraints. Wheel input propagates outward when there is no internal scroll range.">虚拟视图默认关闭，WrapWidget 默认开启。启用后按内容设置固定高度，父布局不再把它压缩；上限为 0 时不限高。高度包含边距、间距、表头和实际边框等占位。使用 setAutoHeightMaximumHeight 控制上限，不要同时用 QWidget 高度约束干预；关闭后恢复原约束。内部无滚动范围时，滚轮交给外层。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#auto-height"><span data-zh="自适应高度 / 嵌套滚动 / 最大高度" data-en="Auto height / nested scrolling / height limits">自适应高度 / 嵌套滚动 / 最大高度</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="WrapWidget-autoHeightEnabled-8" data-search="WrapWidget autoHeightEnabled">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/wrapwidget.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L31</span>
+<pre>    bool autoHeightEnabled() const;</pre>
+<p class="doc" data-zh="返回按内容固定视图高度的开关。" data-en="Return the content-based fixed view height setting.">返回按内容固定视图高度的开关。</p>
+<p class="doc" data-zh="虚拟视图默认关闭，WrapWidget 默认开启。启用后按内容设置固定高度，父布局不再把它压缩；上限为 0 时不限高。高度包含边距、间距、表头和实际边框等占位。使用 setAutoHeightMaximumHeight 控制上限，不要同时用 QWidget 高度约束干预；关闭后恢复原约束。内部无滚动范围时，滚轮交给外层。" data-en="Disabled by default on virtual views and enabled on WrapWidget. When enabled, content sets a fixed height that the parent layout cannot compress; a maximum of 0 is unlimited. The height includes margins, gaps, headers and occupied frame space. Use setAutoHeightMaximumHeight rather than competing QWidget height constraints; disabling restores prior constraints. Wheel input propagates outward when there is no internal scroll range.">虚拟视图默认关闭，WrapWidget 默认开启。启用后按内容设置固定高度，父布局不再把它压缩；上限为 0 时不限高。高度包含边距、间距、表头和实际边框等占位。使用 setAutoHeightMaximumHeight 控制上限，不要同时用 QWidget 高度约束干预；关闭后恢复原约束。内部无滚动范围时，滚轮交给外层。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#auto-height"><span data-zh="自适应高度 / 嵌套滚动 / 最大高度" data-en="Auto height / nested scrolling / height limits">自适应高度 / 嵌套滚动 / 最大高度</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="WrapWidget-setAutoHeightMaximumHeight-9" data-search="WrapWidget setAutoHeightMaximumHeight">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/wrapwidget.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L35</span>
+<pre>void setAutoHeightMaximumHeight(int height);</pre>
+<p class="doc" data-zh="设置自适应高度独立上限；0 表示不限。" data-en="Set the independent auto-height limit; 0 means unlimited.">设置自适应高度独立上限；0 表示不限。</p>
+<p class="doc" data-zh="虚拟视图默认关闭，WrapWidget 默认开启。启用后按内容设置固定高度，父布局不再把它压缩；上限为 0 时不限高。高度包含边距、间距、表头和实际边框等占位。使用 setAutoHeightMaximumHeight 控制上限，不要同时用 QWidget 高度约束干预；关闭后恢复原约束。内部无滚动范围时，滚轮交给外层。" data-en="Disabled by default on virtual views and enabled on WrapWidget. When enabled, content sets a fixed height that the parent layout cannot compress; a maximum of 0 is unlimited. The height includes margins, gaps, headers and occupied frame space. Use setAutoHeightMaximumHeight rather than competing QWidget height constraints; disabling restores prior constraints. Wheel input propagates outward when there is no internal scroll range.">虚拟视图默认关闭，WrapWidget 默认开启。启用后按内容设置固定高度，父布局不再把它压缩；上限为 0 时不限高。高度包含边距、间距、表头和实际边框等占位。使用 setAutoHeightMaximumHeight 控制上限，不要同时用 QWidget 高度约束干预；关闭后恢复原约束。内部无滚动范围时，滚轮交给外层。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#auto-height"><span data-zh="自适应高度 / 嵌套滚动 / 最大高度" data-en="Auto height / nested scrolling / height limits">自适应高度 / 嵌套滚动 / 最大高度</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="WrapWidget-autoHeightMaximumHeight-10" data-search="WrapWidget autoHeightMaximumHeight">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/wrapwidget.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L36</span>
+<pre>    int autoHeightMaximumHeight() const;</pre>
+<p class="doc" data-zh="返回自适应高度独立上限；0 表示不限。" data-en="Return the independent auto-height limit; 0 means unlimited.">返回自适应高度独立上限；0 表示不限。</p>
+<p class="doc" data-zh="虚拟视图默认关闭，WrapWidget 默认开启。启用后按内容设置固定高度，父布局不再把它压缩；上限为 0 时不限高。高度包含边距、间距、表头和实际边框等占位。使用 setAutoHeightMaximumHeight 控制上限，不要同时用 QWidget 高度约束干预；关闭后恢复原约束。内部无滚动范围时，滚轮交给外层。" data-en="Disabled by default on virtual views and enabled on WrapWidget. When enabled, content sets a fixed height that the parent layout cannot compress; a maximum of 0 is unlimited. The height includes margins, gaps, headers and occupied frame space. Use setAutoHeightMaximumHeight rather than competing QWidget height constraints; disabling restores prior constraints. Wheel input propagates outward when there is no internal scroll range.">虚拟视图默认关闭，WrapWidget 默认开启。启用后按内容设置固定高度，父布局不再把它压缩；上限为 0 时不限高。高度包含边距、间距、表头和实际边框等占位。使用 setAutoHeightMaximumHeight 控制上限，不要同时用 QWidget 高度约束干预；关闭后恢复原约束。内部无滚动范围时，滚轮交给外层。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#auto-height"><span data-zh="自适应高度 / 嵌套滚动 / 最大高度" data-en="Auto height / nested scrolling / height limits">自适应高度 / 嵌套滚动 / 最大高度</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="WrapWidget-sizeHint-11" data-search="WrapWidget sizeHint">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/wrapwidget.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L37</span>
+<pre>QSize sizeHint() const override;</pre>
+<p class="doc" data-zh="返回布局或控件的建议尺寸或最小建议尺寸，供父布局协商；auto height 启用时由内容固定高度。" data-en="Return preferred or minimum size hints for parent layout negotiation; auto height fixes the actual height from content when enabled.">返回布局或控件的建议尺寸或最小建议尺寸，供父布局协商；auto height 启用时由内容固定高度。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="WrapWidget-minimumSizeHint-12" data-search="WrapWidget minimumSizeHint">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/wrapwidget.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L38</span>
+<pre>QSize minimumSizeHint() const override;</pre>
+<p class="doc" data-zh="返回布局或控件的建议尺寸或最小建议尺寸，供父布局协商；auto height 启用时由内容固定高度。" data-en="Return preferred or minimum size hints for parent layout negotiation; auto height fixes the actual height from content when enabled.">返回布局或控件的建议尺寸或最小建议尺寸，供父布局协商；auto height 启用时由内容固定高度。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+</section>
+<footer class="muted">
+<p><span data-zh="按能力查找配套设置与独立示例；通用接口请沿基类链接查阅，Qt 继承接口请参考 Qt 文档。" data-en="Find related settings and independent examples by capability. Follow base-class links for shared APIs and consult Qt documentation for inherited Qt APIs.">按能力查找配套设置与独立示例；通用接口请沿基类链接查阅，Qt 继承接口请参考 Qt 文档。</span></p>
+</footer>
+</main>
+<script src="../assets/reference.js">
+</script>
+</body>
+</html>

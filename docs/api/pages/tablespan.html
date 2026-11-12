@@ -1,0 +1,322 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TableSpan / TableSpanProvider / TableSpanMap · VirtualItemViews</title>
+<link rel="stylesheet" href="../assets/reference.css">
+</head>
+<body>
+<header>
+<div class="header-top">
+<a href="../index.html">VirtualItemViews / API</a>
+<div id="language-switch" class="language-switch" role="group" aria-label="Language / 语言" hidden>
+<button type="button" data-language="zh" aria-pressed="true" lang="zh-CN">中文</button>
+<button type="button" data-language="en" aria-pressed="false" lang="en">English</button>
+</div>
+</div>
+<h1>TableSpan / TableSpanProvider / TableSpanMap</h1>
+<p><span data-zh="公开辅助接口与扩展契约" data-en="Public helper interfaces and extension contracts">公开辅助接口与扩展契约</span></p>
+</header>
+<main>
+<nav>
+<a href="../index.html"><span data-zh="能力总览" data-en="Capabilities">能力总览</span></a>
+<a href="../../AGENT_GUIDE.md"><span data-zh="Agent 索引" data-en="Agent guide">Agent 索引</span></a>
+<a href="../../../examples/README.md"><span data-zh="独立示例" data-en="Examples">独立示例</span></a>
+<a href="../../../README.md"><span data-zh="项目首页" data-en="Project home">项目首页</span></a>
+</nav>
+<label for="filter"><span data-zh="搜索本页：能力、API 名称或关键词" data-en="Search this page: capability, API name or keyword">搜索本页：能力、API 名称或关键词</span></label>
+<input id="filter" type="search" placeholder="例如：Popup、setAutoHeight、冻结、branch">
+<p class="muted search-help"><span data-zh="无需网络或服务器。所有内容默认可见；搜索只筛选当前页。完整继承 API 请沿基类链接查阅。" data-en="No network or server required. All content is initially visible; search filters this page only. Follow base-class links for inherited APIs.">无需网络或服务器。所有内容默认可见；搜索只筛选当前页。完整继承 API 请沿基类链接查阅。</span></p>
+<p id="search-status" role="status" aria-live="polite">
+</p>
+<p>
+<a href="../../../include/virtualitemviews/tablespan.h"><span data-zh="公开头文件：include/virtualitemviews/tablespan.h" data-en="Public header: include/virtualitemviews/tablespan.h">公开头文件：include/virtualitemviews/tablespan.h</span></a>
+</p>
+<p class="api-jump">
+<a href="#public-api"><span data-zh="公开函数列表" data-en="Public function index">公开函数列表</span></a>
+</p>
+<h2><span data-zh="能力与配套设置" data-en="Capabilities and related settings">能力与配套设置</span></h2>
+<article id="spans" data-search="setSpanProvider setSpan removeSpan clearSpans anchorIndex isSpanCovered spanRect cellRect virtualtableview virtualtreetableview tablespan tablewidgetadapter">
+<h3><span data-zh="合并单元格" data-en="Merged cells">合并单元格</span></h3>
+<p>
+<code>setSpanProvider · setSpan · removeSpan · clearSpans · anchorIndex · isSpanCovered · spanRect · cellRect</code>
+</p>
+<p class="rules"><span data-zh="内置 TableSpanMap 或自定义 TableSpanProvider 提供跨度；查询/绘制/命中使用 anchorIndex 与 cellRect。跨度裁剪到模型和 anchor 所在 pane，不跨 pane。被覆盖 cell 的 cellRect 为空。RowWidgets 通过 TableRowLayoutContext 的 spans 布局业务控件；表格拖动让位在 span provider 存在等不支持条件下退回指示器。" data-en="Use TableSpanMap or a TableSpanProvider. Resolve geometry and hits with anchorIndex and cellRect. Spans are clipped to the model and anchor pane; they never cross panes. Covered cells have an empty cellRect. RowWidgets lays out children using TableRowLayoutContext spans. Body drag feedback falls back to indicators when a span provider or other unsupported conditions prevent animation.">内置 TableSpanMap 或自定义 TableSpanProvider 提供跨度；查询/绘制/命中使用 anchorIndex 与 cellRect。跨度裁剪到模型和 anchor 所在 pane，不跨 pane。被覆盖 cell 的 cellRect 为空。RowWidgets 通过 TableRowLayoutContext 的 spans 布局业务控件；表格拖动让位在 span provider 存在等不支持条件下退回指示器。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../../src/layout/tablespan.cpp">src/layout/tablespan.cpp</a> · <a href="../../../src/widgets/virtualtableview.cpp">src/widgets/virtualtableview.cpp</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../../table-layout-guide.md">docs/table-layout-guide.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（2）" data-en="Independent source examples (2)">独立源码示例（2）</span></summary>
+<ul>
+<li>
+<a href="../../../examples/table_capabilities/23_spans/example.cpp">examples/table_capabilities/23_spans/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/treetable_capabilities/28_spans/example.cpp">examples/treetable_capabilities/28_spans/example.cpp</a>
+</li>
+</ul>
+</details>
+</article>
+<h2 id="public-api" tabindex="-1"><span data-zh="公开 API、类型与信号" data-en="Public API, types and signals">公开 API、类型与信号</span></h2>
+<section class="function-index" id="function-index" tabindex="-1">
+<h3><span data-zh="公开函数列表" data-en="Public function index">公开函数列表</span></h3>
+<p class="muted"><span data-zh="按声明类型分组；每个重载单独列出，点击签名跳转到说明。信号单独列出；类型和数据成员仍保留在下方。" data-en="Grouped by declaring type. Each overload has its own link to the details. Signals are listed separately; types and data members remain below.">按声明类型分组；每个重载单独列出，点击签名跳转到说明。信号单独列出；类型和数据成员仍保留在下方。</span></p>
+<h4>TableSpan</h4>
+<ul>
+<li data-search="TableSpan isMerged">
+<a href="#TableSpan-isMerged-2">
+<code>bool isMerged() const;</code>
+</a>
+</li>
+<li data-search="TableSpan operator">
+<a href="#TableSpan-operator-3">
+<code>friend bool operator==(const TableSpan &amp;lhs, const TableSpan &amp;rhs);</code>
+</a>
+</li>
+<li data-search="TableSpan ">
+<a href="#TableSpan-entry-4">
+<code>friend bool operator!=(const TableSpan &amp;lhs, const TableSpan &amp;rhs);</code>
+</a>
+</li>
+</ul>
+<h4>TableSpanProvider</h4>
+<ul>
+<li data-search="TableSpanProvider TableSpanProvider">
+<a href="#TableSpanProvider-TableSpanProvider-0">
+<code>virtual ~TableSpanProvider() = default;</code>
+</a>
+</li>
+<li data-search="TableSpanProvider spanAt">
+<a href="#TableSpanProvider-spanAt-1">
+<code>virtual TableSpan spanAt(const QModelIndex &amp;index) const = 0;</code>
+</a>
+</li>
+<li data-search="TableSpanProvider maximumSpan">
+<a href="#TableSpanProvider-maximumSpan-2">
+<code>virtual TableSpan maximumSpan() const;</code>
+</a>
+</li>
+<li data-search="TableSpanProvider anchorOf">
+<a href="#TableSpanProvider-anchorOf-3">
+<code>virtual QModelIndex anchorOf(const QModelIndex &amp;index) const;</code>
+</a>
+</li>
+<li data-search="TableSpanProvider modelStructureChanged">
+<a href="#TableSpanProvider-modelStructureChanged-4">
+<code>virtual void modelStructureChanged();</code>
+</a>
+</li>
+</ul>
+<h4>TableSpanMap</h4>
+<ul>
+<li data-search="TableSpanMap setSpan">
+<a href="#TableSpanMap-setSpan-0">
+<code>void setSpan(const QModelIndex &amp;anchor, int rowSpan = 1, int columnSpan = 1);</code>
+</a>
+</li>
+<li data-search="TableSpanMap removeSpan">
+<a href="#TableSpanMap-removeSpan-1">
+<code>void removeSpan(const QModelIndex &amp;anchor);</code>
+</a>
+</li>
+<li data-search="TableSpanMap clearSpans">
+<a href="#TableSpanMap-clearSpans-2">
+<code>void clearSpans();</code>
+</a>
+</li>
+<li data-search="TableSpanMap isEmpty">
+<a href="#TableSpanMap-isEmpty-3">
+<code>bool isEmpty() const;</code>
+</a>
+</li>
+<li data-search="TableSpanMap count">
+<a href="#TableSpanMap-count-4">
+<code>int count() const;</code>
+</a>
+</li>
+<li data-search="TableSpanMap spanAt">
+<a href="#TableSpanMap-spanAt-5">
+<code>TableSpan spanAt(const QModelIndex &amp;index) const override;</code>
+</a>
+</li>
+<li data-search="TableSpanMap modelStructureChanged">
+<a href="#TableSpanMap-modelStructureChanged-6">
+<code>void modelStructureChanged() override;</code>
+</a>
+</li>
+<li data-search="TableSpanMap maximumSpan">
+<a href="#TableSpanMap-maximumSpan-7">
+<code>TableSpan maximumSpan() const override;</code>
+</a>
+</li>
+</ul>
+</section>
+<h2><span data-zh="函数说明" data-en="Function details">函数说明</span></h2>
+<p class="muted"><span data-zh="按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。" data-en="Read each function for its purpose and related settings. Overloads are listed separately; follow related capabilities to find examples.">按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。</span></p>
+<section>
+<h3 id="TableSpan">TableSpan</h3>
+<pre>struct TableSpan</pre>
+<article tabindex="-1" id="TableSpan-rowSpan-0" data-search="TableSpan rowSpan">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablespan.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L21</span>
+<pre>int rowSpan = 1;</pre>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TableSpan-columnSpan-1" data-search="TableSpan columnSpan">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablespan.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L22</span>
+<pre>int columnSpan = 1;</pre>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TableSpan-isMerged-2" data-search="TableSpan isMerged">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablespan.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L24</span>
+<pre>    bool isMerged() const;</pre>
+<p class="doc" data-zh="判断 cell 是否被其它锚点覆盖，或当前范围是否发生合并。" data-en="Check whether a cell is covered by another anchor, or whether the range is merged.">判断 cell 是否被其它锚点覆盖，或当前范围是否发生合并。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TableSpan-operator-3" data-search="TableSpan operator">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablespan.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L26</span>
+<pre>    friend bool operator==(const TableSpan &amp;lhs, const TableSpan &amp;rhs);</pre>
+<p class="doc" data-zh="比较两个记录的值是否相等；不比较对象地址。" data-en="Compare the values of two records, rather than their object addresses.">比较两个记录的值是否相等；不比较对象地址。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TableSpan-entry-4" data-search="TableSpan ">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablespan.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L30</span>
+<pre>    friend bool operator!=(const TableSpan &amp;lhs, const TableSpan &amp;rhs);</pre>
+<p class="doc" data-zh="比较两个记录的值是否相等；不比较对象地址。" data-en="Compare the values of two records, rather than their object addresses.">比较两个记录的值是否相等；不比较对象地址。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+</section>
+<section>
+<h3 id="TableSpanProvider">TableSpanProvider</h3>
+<pre>class VIRTUALITEMVIEWS_EXPORT TableSpanProvider</pre>
+<article tabindex="-1" id="TableSpanProvider-TableSpanProvider-0" data-search="TableSpanProvider TableSpanProvider">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablespan.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L41</span>
+<pre>virtual ~TableSpanProvider() = default;</pre>
+<p class="doc" data-zh="销毁 TableSpanProvider 并释放其拥有的资源；不在析构回调中继续使用该对象。" data-en="Destroy TableSpanProvider and release its owned resources; do not keep using the object during destruction callbacks.">销毁 TableSpanProvider 并释放其拥有的资源；不在析构回调中继续使用该对象。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TableSpanProvider-spanAt-1" data-search="TableSpanProvider spanAt">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablespan.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L44</span>
+<pre>virtual TableSpan spanAt(const QModelIndex &amp;index) const = 0;</pre>
+<p class="doc" data-zh="查询指定位置所属合并范围或其锚点；被覆盖单元格通过锚点参与布局与编辑。" data-en="Query the merged span or anchor for a position; covered cells participate in layout and editing through the anchor.">查询指定位置所属合并范围或其锚点；被覆盖单元格通过锚点参与布局与编辑。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TableSpanProvider-maximumSpan-2" data-search="TableSpanProvider maximumSpan">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablespan.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L48</span>
+<pre>    virtual TableSpan maximumSpan() const;</pre>
+<p class="doc" data-zh="返回合并单元格提供者允许的最大跨度。" data-en="Return the maximum span supported by the merged-cell provider.">返回合并单元格提供者允许的最大跨度。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TableSpanProvider-anchorOf-3" data-search="TableSpanProvider anchorOf">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablespan.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L53</span>
+<pre>virtual QModelIndex anchorOf(const QModelIndex &amp;index) const;</pre>
+<p class="doc" data-zh="查询指定位置所属合并范围或其锚点；被覆盖单元格通过锚点参与布局与编辑。" data-en="Query the merged span or anchor for a position; covered cells participate in layout and editing through the anchor.">查询指定位置所属合并范围或其锚点；被覆盖单元格通过锚点参与布局与编辑。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TableSpanProvider-modelStructureChanged-4" data-search="TableSpanProvider modelStructureChanged">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablespan.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L55</span>
+<pre>    virtual void modelStructureChanged();</pre>
+<p class="doc" data-zh="模型结构导致树可见性索引改变时发出。" data-en="Emitted when model structure changes the tree visibility index.">模型结构导致树可见性索引改变时发出。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+</section>
+<section>
+<h3 id="TableSpanMap">TableSpanMap</h3>
+<pre>class VIRTUALITEMVIEWS_EXPORT TableSpanMap : public TableSpanProvider</pre>
+<article tabindex="-1" id="TableSpanMap-setSpan-0" data-search="TableSpanMap setSpan">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablespan.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L70</span>
+<pre>void setSpan(const QModelIndex &amp;anchor, int rowSpan = 1, int columnSpan = 1);</pre>
+<p class="doc" data-zh="设置单元格合并范围；合并由锚点 cell 表示，其余被覆盖格不独立显示。" data-en="Set a merged-cell span represented by its anchor cell; covered cells are not displayed independently.">设置单元格合并范围；合并由锚点 cell 表示，其余被覆盖格不独立显示。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#spans"><span data-zh="合并单元格" data-en="Merged cells">合并单元格</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TableSpanMap-removeSpan-1" data-search="TableSpanMap removeSpan">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablespan.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L72</span>
+<pre>void removeSpan(const QModelIndex &amp;anchor);</pre>
+<p class="doc" data-zh="移除全部或指定合并范围，使受影响单元格恢复独立布局。" data-en="Remove all or the specified merged-cell span so affected cells lay out independently.">移除全部或指定合并范围，使受影响单元格恢复独立布局。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#spans"><span data-zh="合并单元格" data-en="Merged cells">合并单元格</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TableSpanMap-clearSpans-2" data-search="TableSpanMap clearSpans">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablespan.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L73</span>
+<pre>void clearSpans();</pre>
+<p class="doc" data-zh="移除全部或指定合并范围，使受影响单元格恢复独立布局。" data-en="Remove all or the specified merged-cell span so affected cells lay out independently.">移除全部或指定合并范围，使受影响单元格恢复独立布局。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#spans"><span data-zh="合并单元格" data-en="Merged cells">合并单元格</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TableSpanMap-isEmpty-3" data-search="TableSpanMap isEmpty">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablespan.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L74</span>
+<pre>    bool isEmpty() const;</pre>
+<p class="doc" data-zh="判断当前集合、窗格或范围是否为空。" data-en="Check whether the collection, pane or range is empty.">判断当前集合、窗格或范围是否为空。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TableSpanMap-count-4" data-search="TableSpanMap count">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablespan.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L75</span>
+<pre>    int count() const;</pre>
+<p class="doc" data-zh="返回布局、索引或范围中的项目数量。" data-en="Return the item count in the layout, index or range.">返回布局、索引或范围中的项目数量。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TableSpanMap-spanAt-5" data-search="TableSpanMap spanAt">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablespan.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L77</span>
+<pre>TableSpan spanAt(const QModelIndex &amp;index) const override;</pre>
+<p class="doc" data-zh="查询指定位置所属合并范围或其锚点；被覆盖单元格通过锚点参与布局与编辑。" data-en="Query the merged span or anchor for a position; covered cells participate in layout and editing through the anchor.">查询指定位置所属合并范围或其锚点；被覆盖单元格通过锚点参与布局与编辑。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TableSpanMap-modelStructureChanged-6" data-search="TableSpanMap modelStructureChanged">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablespan.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L78</span>
+<pre>void modelStructureChanged() override;</pre>
+<p class="doc" data-zh="模型结构导致树可见性索引改变时发出。" data-en="Emitted when model structure changes the tree visibility index.">模型结构导致树可见性索引改变时发出。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="TableSpanMap-maximumSpan-7" data-search="TableSpanMap maximumSpan">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/tablespan.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L79</span>
+<pre>    TableSpan maximumSpan() const override;</pre>
+<p class="doc" data-zh="返回合并单元格提供者允许的最大跨度。" data-en="Return the maximum span supported by the merged-cell provider.">返回合并单元格提供者允许的最大跨度。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+</section>
+<footer class="muted">
+<p><span data-zh="按能力查找配套设置与独立示例；通用接口请沿基类链接查阅，Qt 继承接口请参考 Qt 文档。" data-en="Find related settings and independent examples by capability. Follow base-class links for shared APIs and consult Qt documentation for inherited Qt APIs.">按能力查找配套设置与独立示例；通用接口请沿基类链接查阅，Qt 继承接口请参考 Qt 文档。</span></p>
+</footer>
+</main>
+<script src="../assets/reference.js">
+</script>
+</body>
+</html>

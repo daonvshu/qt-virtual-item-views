@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ItemPane · VirtualItemViews</title>
+<link rel="stylesheet" href="../assets/reference.css">
+</head>
+<body>
+<header>
+<div class="header-top">
+<a href="../index.html">VirtualItemViews / API</a>
+<div id="language-switch" class="language-switch" role="group" aria-label="Language / 语言" hidden>
+<button type="button" data-language="zh" aria-pressed="true" lang="zh-CN">中文</button>
+<button type="button" data-language="en" aria-pressed="false" lang="en">English</button>
+</div>
+</div>
+<h1>ItemPane</h1>
+<p><span data-zh="公开辅助接口与扩展契约" data-en="Public helper interfaces and extension contracts">公开辅助接口与扩展契约</span></p>
+</header>
+<main>
+<nav>
+<a href="../index.html"><span data-zh="能力总览" data-en="Capabilities">能力总览</span></a>
+<a href="../../AGENT_GUIDE.md"><span data-zh="Agent 索引" data-en="Agent guide">Agent 索引</span></a>
+<a href="../../../examples/README.md"><span data-zh="独立示例" data-en="Examples">独立示例</span></a>
+<a href="../../../README.md"><span data-zh="项目首页" data-en="Project home">项目首页</span></a>
+</nav>
+<label for="filter"><span data-zh="搜索本页：能力、API 名称或关键词" data-en="Search this page: capability, API name or keyword">搜索本页：能力、API 名称或关键词</span></label>
+<input id="filter" type="search" placeholder="例如：Popup、setAutoHeight、冻结、branch">
+<p class="muted search-help"><span data-zh="无需网络或服务器。所有内容默认可见；搜索只筛选当前页。完整继承 API 请沿基类链接查阅。" data-en="No network or server required. All content is initially visible; search filters this page only. Follow base-class links for inherited APIs.">无需网络或服务器。所有内容默认可见；搜索只筛选当前页。完整继承 API 请沿基类链接查阅。</span></p>
+<p id="search-status" role="status" aria-live="polite">
+</p>
+<p>
+<a href="../../../include/virtualitemviews/itempane.h"><span data-zh="公开头文件：include/virtualitemviews/itempane.h" data-en="Public header: include/virtualitemviews/itempane.h">公开头文件：include/virtualitemviews/itempane.h</span></a>
+</p>
+<p class="api-jump">
+<a href="#public-api"><span data-zh="公开函数列表" data-en="Public function index">公开函数列表</span></a>
+</p>
+<h2><span data-zh="能力与配套设置" data-en="Capabilities and related settings">能力与配套设置</span></h2>
+<article id="frozen" data-search="setFrozenRows setFrozenBottomRows setFrozenColumns setFrozenRightColumns setPanes setHorizontalOffset primaryScrollGroup virtualitemview virtualtableview virtualtreetableview tablepane itempane">
+<h3><span data-zh="冻结行列 / 多 pane / 多滚动组" data-en="Frozen rows and columns / multiple panes / scroll groups">冻结行列 / 多 pane / 多滚动组</span></h3>
+<p>
+<code>setFrozenRows · setFrozenBottomRows · setFrozenColumns · setFrozenRightColumns · setPanes · setHorizontalOffset · primaryScrollGroup</code>
+</p>
+<p class="rules"><span data-zh="List/Table 支持上下冻结行；Tree/TreeTable 不支持冻结行，TreeTable 保留冻结列。Flow/Masonry/Wrap 不支持行 pane。表格冻结列共用 HeaderGeometry，不复制宽度/顺序；左右集合冲突时左侧优先。高级 setPanes 指定列集合和滚动组，同组共享 offset，首个可滚动 pane 的组是主组；非主组用带 group 参数的接口。不要为冻结区再创建一个独立表格同步数据。" data-en="List/Table support top and bottom frozen rows. Tree/TreeTable do not; TreeTable retains frozen columns. Flow/Masonry/Wrap do not support row panes. Frozen table columns share HeaderGeometry rather than copies of widths/order; left wins if a column belongs to both frozen sets. setPanes specifies column sets and scroll groups. A group shares one offset; the first scrolling pane determines the primary group. Use group overloads for other offsets. Avoid separate synchronized tables to imitate frozen panes.">List/Table 支持上下冻结行；Tree/TreeTable 不支持冻结行，TreeTable 保留冻结列。Flow/Masonry/Wrap 不支持行 pane。表格冻结列共用 HeaderGeometry，不复制宽度/顺序；左右集合冲突时左侧优先。高级 setPanes 指定列集合和滚动组，同组共享 offset，首个可滚动 pane 的组是主组；非主组用带 group 参数的接口。不要为冻结区再创建一个独立表格同步数据。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../../src/layout/tablepane.cpp">src/layout/tablepane.cpp</a> · <a href="../../../src/core/virtualitemview.cpp">src/core/virtualitemview.cpp</a> · <a href="../../../src/widgets/virtualtableview.cpp">src/widgets/virtualtableview.cpp</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../../table-layout-guide.md">docs/table-layout-guide.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（5）" data-en="Independent source examples (5)">独立源码示例（5）</span></summary>
+<ul>
+<li>
+<a href="../../../examples/list_capabilities/14_frozen_rows/example.cpp">examples/list_capabilities/14_frozen_rows/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/table_capabilities/16_frozen_areas/example.cpp">examples/table_capabilities/16_frozen_areas/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/table_capabilities/17_panes/example.cpp">examples/table_capabilities/17_panes/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/treetable_capabilities/21_frozen_columns/example.cpp">examples/treetable_capabilities/21_frozen_columns/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/treetable_capabilities/22_panes/example.cpp">examples/treetable_capabilities/22_panes/example.cpp</a>
+</li>
+</ul>
+</details>
+</article>
+<h2 id="public-api" tabindex="-1"><span data-zh="公开 API、类型与信号" data-en="Public API, types and signals">公开 API、类型与信号</span></h2>
+<section class="function-index" id="function-index" tabindex="-1">
+<h3><span data-zh="公开函数列表" data-en="Public function index">公开函数列表</span></h3>
+<p class="muted"><span data-zh="按声明类型分组；每个重载单独列出，点击签名跳转到说明。信号单独列出；类型和数据成员仍保留在下方。" data-en="Grouped by declaring type. Each overload has its own link to the details. Signals are listed separately; types and data members remain below.">按声明类型分组；每个重载单独列出，点击签名跳转到说明。信号单独列出；类型和数据成员仍保留在下方。</span></p>
+<h4>ItemPane</h4>
+<ul>
+<li data-search="ItemPane isEmpty">
+<a href="#ItemPane-isEmpty-5">
+<code>bool isEmpty() const;</code>
+</a>
+</li>
+<li data-search="ItemPane rowCount">
+<a href="#ItemPane-rowCount-6">
+<code>qsizetype rowCount() const;</code>
+</a>
+</li>
+<li data-search="ItemPane containsRow">
+<a href="#ItemPane-containsRow-7">
+<code>bool containsRow(qsizetype row) const;</code>
+</a>
+</li>
+<li data-search="ItemPane isFrozen">
+<a href="#ItemPane-isFrozen-8">
+<code>bool isFrozen() const;</code>
+</a>
+</li>
+<li data-search="ItemPane operator">
+<a href="#ItemPane-operator-9">
+<code>friend bool operator==(const ItemPane &amp;lhs, const ItemPane &amp;rhs);</code>
+</a>
+</li>
+<li data-search="ItemPane ">
+<a href="#ItemPane-entry-10">
+<code>friend bool operator!=(const ItemPane &amp;lhs, const ItemPane &amp;rhs);</code>
+</a>
+</li>
+</ul>
+</section>
+<h2><span data-zh="函数说明" data-en="Function details">函数说明</span></h2>
+<p class="muted"><span data-zh="按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。" data-en="Read each function for its purpose and related settings. Overloads are listed separately; follow related capabilities to find examples.">按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。</span></p>
+<section>
+<h3 id="ItemPane">ItemPane</h3>
+<pre>struct ItemPane</pre>
+<article tabindex="-1" id="ItemPane-Type-0" data-search="ItemPane Type">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/itempane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L21</span>
+<pre>enum class Type
+    {
+        /// Pinned to the top edge: the first frozen rows.
+        FrozenTop,
+        /// Follows the vertical offset.
+        Scrollable,
+        /// Pinned to the bottom edge: the last frozen rows.
+        FrozenBottom,
+    };</pre>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ItemPane-type-1" data-search="ItemPane type">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/itempane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L31</span>
+<pre>Type type = Type::Scrollable;</pre>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ItemPane-viewportRect-2" data-search="ItemPane viewportRect">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/itempane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L34</span>
+<pre>QRect viewportRect;</pre>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ItemPane-firstRow-3" data-search="ItemPane firstRow">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/itempane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L36</span>
+<pre>qsizetype firstRow = -1;</pre>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ItemPane-lastRow-4" data-search="ItemPane lastRow">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/itempane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L37</span>
+<pre>qsizetype lastRow = -1;</pre>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ItemPane-isEmpty-5" data-search="ItemPane isEmpty">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/itempane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L39</span>
+<pre>    bool isEmpty() const;</pre>
+<p class="doc" data-zh="判断当前集合、窗格或范围是否为空。" data-en="Check whether the collection, pane or range is empty.">判断当前集合、窗格或范围是否为空。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ItemPane-rowCount-6" data-search="ItemPane rowCount">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/itempane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L43</span>
+<pre>    qsizetype rowCount() const;</pre>
+<p class="doc" data-zh="返回行数。" data-en="Return the row count.">返回行数。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ItemPane-containsRow-7" data-search="ItemPane containsRow">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/itempane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L44</span>
+<pre>    bool containsRow(qsizetype row) const;</pre>
+<p class="doc" data-zh="判断指定索引、行或位置是否在当前范围内。" data-en="Check whether an index, row or position is contained in this range.">判断指定索引、行或位置是否在当前范围内。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ItemPane-isFrozen-8" data-search="ItemPane isFrozen">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/itempane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L48</span>
+<pre>    bool isFrozen() const;</pre>
+<p class="doc" data-zh="判断当前窗格或指定行列是否固定在冻结区域。" data-en="Check whether the pane or specified row/column belongs to a frozen region.">判断当前窗格或指定行列是否固定在冻结区域。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ItemPane-operator-9" data-search="ItemPane operator">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/itempane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L50</span>
+<pre>    friend bool operator==(const ItemPane &amp;lhs, const ItemPane &amp;rhs);</pre>
+<p class="doc" data-zh="比较两个记录的值是否相等；不比较对象地址。" data-en="Compare the values of two records, rather than their object addresses.">比较两个记录的值是否相等；不比较对象地址。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ItemPane-entry-10" data-search="ItemPane ">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/itempane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L55</span>
+<pre>    friend bool operator!=(const ItemPane &amp;lhs, const ItemPane &amp;rhs);</pre>
+<p class="doc" data-zh="比较两个记录的值是否相等；不比较对象地址。" data-en="Compare the values of two records, rather than their object addresses.">比较两个记录的值是否相等；不比较对象地址。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+</section>
+<footer class="muted">
+<p><span data-zh="按能力查找配套设置与独立示例；通用接口请沿基类链接查阅，Qt 继承接口请参考 Qt 文档。" data-en="Find related settings and independent examples by capability. Follow base-class links for shared APIs and consult Qt documentation for inherited Qt APIs.">按能力查找配套设置与独立示例；通用接口请沿基类链接查阅，Qt 继承接口请参考 Qt 文档。</span></p>
+</footer>
+</main>
+<script src="../assets/reference.js">
+</script>
+</body>
+</html>

@@ -46,7 +46,7 @@ class ColumnSelectionCache;
 ///    columns are positioned by ColumnHost or by the adapter hook, so no
 ///    cell-level QWidget is created (§45.8).
 ///
-/// Cell Widget Mode with 2D (row x column) virtualization arrives with v0.5.
+/// Cell Widget Mode provides 2D (row x column) virtualization through CellWidgetAdapter.
 class VIRTUALITEMVIEWS_EXPORT VirtualTableView : public VirtualItemView
 {
     Q_OBJECT

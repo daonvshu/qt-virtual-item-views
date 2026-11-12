@@ -1,0 +1,341 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BranchIndicatorState / BranchIndicatorRenderer / viv namespace · VirtualItemViews</title>
+<link rel="stylesheet" href="../assets/reference.css">
+</head>
+<body>
+<header>
+<div class="header-top">
+<a href="../index.html">VirtualItemViews / API</a>
+<div id="language-switch" class="language-switch" role="group" aria-label="Language / 语言" hidden>
+<button type="button" data-language="zh" aria-pressed="true" lang="zh-CN">中文</button>
+<button type="button" data-language="en" aria-pressed="false" lang="en">English</button>
+</div>
+</div>
+<h1>BranchIndicatorState / BranchIndicatorRenderer / viv namespace</h1>
+<p><span data-zh="公开辅助接口与扩展契约" data-en="Public helper interfaces and extension contracts">公开辅助接口与扩展契约</span></p>
+</header>
+<main>
+<nav>
+<a href="../index.html"><span data-zh="能力总览" data-en="Capabilities">能力总览</span></a>
+<a href="../../AGENT_GUIDE.md"><span data-zh="Agent 索引" data-en="Agent guide">Agent 索引</span></a>
+<a href="../../../examples/README.md"><span data-zh="独立示例" data-en="Examples">独立示例</span></a>
+<a href="../../../README.md"><span data-zh="项目首页" data-en="Project home">项目首页</span></a>
+</nav>
+<label for="filter"><span data-zh="搜索本页：能力、API 名称或关键词" data-en="Search this page: capability, API name or keyword">搜索本页：能力、API 名称或关键词</span></label>
+<input id="filter" type="search" placeholder="例如：Popup、setAutoHeight、冻结、branch">
+<p class="muted search-help"><span data-zh="无需网络或服务器。所有内容默认可见；搜索只筛选当前页。完整继承 API 请沿基类链接查阅。" data-en="No network or server required. All content is initially visible; search filters this page only. Follow base-class links for inherited APIs.">无需网络或服务器。所有内容默认可见；搜索只筛选当前页。完整继承 API 请沿基类链接查阅。</span></p>
+<p id="search-status" role="status" aria-live="polite">
+</p>
+<p>
+<a href="../../../include/virtualitemviews/branchindicator.h"><span data-zh="公开头文件：include/virtualitemviews/branchindicator.h" data-en="Public header: include/virtualitemviews/branchindicator.h">公开头文件：include/virtualitemviews/branchindicator.h</span></a>
+</p>
+<p class="api-jump">
+<a href="#public-api"><span data-zh="公开函数列表" data-en="Public function index">公开函数列表</span></a>
+</p>
+<h2><span data-zh="能力与配套设置" data-en="Capabilities and related settings">能力与配套设置</span></h2>
+<article id="branch" data-search="setIndentation setBranchAreaVisible setBranchIndicatorsVisible setExpandedBranchIcon setCollapsedBranchIcon setBranchIconSize setBranchIconColor setBranchIndicatorAlignment setBranchIndicatorPadding setBranchIndicatorRenderer virtualtreeview virtualtreetableview branchindicator">
+<h3><span data-zh="branch 图标 / 旋转 / 缩进 / 自绘分支" data-en="Branch icons / rotation / indentation / custom rendering">branch 图标 / 旋转 / 缩进 / 自绘分支</span></h3>
+<p>
+<code>setIndentation · setBranchAreaVisible · setBranchIndicatorsVisible · setExpandedBranchIcon · setCollapsedBranchIcon · setBranchIconSize · setBranchIconColor · setBranchIndicatorAlignment · setBranchIndicatorPadding · setBranchIndicatorRenderer</code>
+</p>
+<p class="rules"><span data-zh="默认圆角等边三角形 10 逻辑像素。只设置展开/收起其中一个图标时随展开动画旋转 90°；两个都设置时直接切换，自定义 renderer 自行处理。隐藏 branchArea 去掉自身 branch 格但保留祖先缩进；仅隐藏 indicators 保留占位。Tree 的 setIndentLeafItems(false) 可省略全叶子兄弟组占位，TreeTable 没有该开关。常规大小/颜色/对齐/padding 用便捷接口，只有完整自绘分支/连接线才实现 BranchIndicatorRenderer。" data-en="The default is a rounded equilateral triangle, 10 logical pixels. Setting only one expanded/collapsed icon rotates it 90 degrees with expansion; setting both switches immediately. Custom renderers manage their own states. Hiding branchArea removes the current branch cell but preserves ancestor indentation; hiding indicators alone retains space. Tree setIndentLeafItems(false) omits branch cells for all-leaf sibling groups; TreeTable has no such switch. Use convenience size/color/alignment/padding APIs; implement BranchIndicatorRenderer only for custom branch/connector drawing.">默认圆角等边三角形 10 逻辑像素。只设置展开/收起其中一个图标时随展开动画旋转 90°；两个都设置时直接切换，自定义 renderer 自行处理。隐藏 branchArea 去掉自身 branch 格但保留祖先缩进；仅隐藏 indicators 保留占位。Tree 的 setIndentLeafItems(false) 可省略全叶子兄弟组占位，TreeTable 没有该开关。常规大小/颜色/对齐/padding 用便捷接口，只有完整自绘分支/连接线才实现 BranchIndicatorRenderer。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../../src/widgets/branchindicator.cpp">src/widgets/branchindicator.cpp</a> · <a href="../../../src/widgets/virtualtreeview.cpp">src/widgets/virtualtreeview.cpp</a> · <a href="../../../src/widgets/virtualtreetableview.cpp">src/widgets/virtualtreetableview.cpp</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../../tree.md">docs/tree.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（4）" data-en="Independent source examples (4)">独立源码示例（4）</span></summary>
+<ul>
+<li>
+<a href="../../../examples/tree_capabilities/09_indentation/example.cpp">examples/tree_capabilities/09_indentation/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/tree_capabilities/10_branch_icons/example.cpp">examples/tree_capabilities/10_branch_icons/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/tree_capabilities/11_branch_renderer/example.cpp">examples/tree_capabilities/11_branch_renderer/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/treetable_capabilities/10_indentation/example.cpp">examples/treetable_capabilities/10_indentation/example.cpp</a>
+</li>
+</ul>
+</details>
+</article>
+<h2 id="public-api" tabindex="-1"><span data-zh="公开 API、类型与信号" data-en="Public API, types and signals">公开 API、类型与信号</span></h2>
+<section class="function-index" id="function-index" tabindex="-1">
+<h3><span data-zh="公开函数列表" data-en="Public function index">公开函数列表</span></h3>
+<p class="muted"><span data-zh="按声明类型分组；每个重载单独列出，点击签名跳转到说明。信号单独列出；类型和数据成员仍保留在下方。" data-en="Grouped by declaring type. Each overload has its own link to the details. Signals are listed separately; types and data members remain below.">按声明类型分组；每个重载单独列出，点击签名跳转到说明。信号单独列出；类型和数据成员仍保留在下方。</span></p>
+<h4>BranchIndicatorState</h4>
+<ul>
+<li data-search="BranchIndicatorState isOpen">
+<a href="#BranchIndicatorState-isOpen-6">
+<code>bool isOpen() const;</code>
+</a>
+</li>
+<li data-search="BranchIndicatorState isClosed">
+<a href="#BranchIndicatorState-isClosed-7">
+<code>bool isClosed() const;</code>
+</a>
+</li>
+<li data-search="BranchIndicatorState isLeaf">
+<a href="#BranchIndicatorState-isLeaf-8">
+<code>bool isLeaf() const;</code>
+</a>
+</li>
+</ul>
+<h4>BranchIndicatorRenderer</h4>
+<ul>
+<li data-search="BranchIndicatorRenderer BranchIndicatorRenderer">
+<a href="#BranchIndicatorRenderer-BranchIndicatorRenderer-0">
+<code>virtual ~BranchIndicatorRenderer();</code>
+</a>
+</li>
+<li data-search="BranchIndicatorRenderer branchIcon">
+<a href="#BranchIndicatorRenderer-branchIcon-1">
+<code>virtual QIcon branchIcon(const BranchIndicatorState &amp;state, const QModelIndex &amp;index) const;</code>
+</a>
+</li>
+<li data-search="BranchIndicatorRenderer branchIndicatorTargetRect">
+<a href="#BranchIndicatorRenderer-branchIndicatorTargetRect-2">
+<code>static QRect branchIndicatorTargetRect(const QRect &amp;cellRect, int size, Qt::Alignment alignment, const QMargins &amp;padding);</code>
+</a>
+</li>
+<li data-search="BranchIndicatorRenderer branchIndicatorTargetRectF">
+<a href="#BranchIndicatorRenderer-branchIndicatorTargetRectF-3">
+<code>static QRectF branchIndicatorTargetRectF(const QRectF &amp;cellRect, qreal size, Qt::Alignment alignment, const QMarginsF &amp;padding);</code>
+</a>
+</li>
+<li data-search="BranchIndicatorRenderer paintBranch">
+<a href="#BranchIndicatorRenderer-paintBranch-4">
+<code>virtual void paintBranch(QPainter *painter, const BranchIndicatorState &amp;state, const QModelIndex &amp;index, const QRect &amp;cellRect) const;</code>
+</a>
+</li>
+<li data-search="BranchIndicatorRenderer paintBuiltinBranch">
+<a href="#BranchIndicatorRenderer-paintBuiltinBranch-5">
+<code>static void paintBuiltinBranch(QPainter *painter, const BranchIndicatorState &amp;state, const QRect &amp;cellRect, const QPalette &amp;palette);</code>
+</a>
+</li>
+<li data-search="BranchIndicatorRenderer paintBuiltinBranch">
+<a href="#BranchIndicatorRenderer-paintBuiltinBranch-6">
+<code>static void paintBuiltinBranch(QPainter *painter, const BranchIndicatorState &amp;state, const QRect &amp;cellRect, const QPalette &amp;palette, int size, const QColor &amp;color);</code>
+</a>
+</li>
+<li data-search="BranchIndicatorRenderer paintBuiltinBranch">
+<a href="#BranchIndicatorRenderer-paintBuiltinBranch-7">
+<code>static void paintBuiltinBranch(QPainter *painter, const BranchIndicatorState &amp;state, const QRect &amp;cellRect, const QPalette &amp;palette, int size, const QColor &amp;color, Qt::Alignment alignment, const QMargins &amp;padding);</code>
+</a>
+</li>
+<li data-search="BranchIndicatorRenderer paintBuiltinBranch">
+<a href="#BranchIndicatorRenderer-paintBuiltinBranch-8">
+<code>static void paintBuiltinBranch(QPainter *painter, const BranchIndicatorState &amp;state, const QRect &amp;cellRect, const QPalette &amp;palette, int size, const QColor &amp;color, Qt::Alignment alignment, const QMargins &amp;padding, qreal rotationDegrees);</code>
+</a>
+</li>
+<li data-search="BranchIndicatorRenderer paintBuiltinBranch">
+<a href="#BranchIndicatorRenderer-paintBuiltinBranch-9">
+<code>static void paintBuiltinBranch(QPainter *painter, const BranchIndicatorState &amp;state, const QRect &amp;cellRect);</code>
+</a>
+</li>
+</ul>
+</section>
+<h2><span data-zh="函数说明" data-en="Function details">函数说明</span></h2>
+<p class="muted"><span data-zh="按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。" data-en="Read each function for its purpose and related settings. Overloads are listed separately; follow related capabilities to find examples.">按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。</span></p>
+<section>
+<h3 id="BranchIndicatorState">BranchIndicatorState</h3>
+<pre>struct BranchIndicatorState</pre>
+<article tabindex="-1" id="BranchIndicatorState-hasChildren-0" data-search="BranchIndicatorState hasChildren">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/branchindicator.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L36</span>
+<pre>bool hasChildren = false;</pre>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="BranchIndicatorState-hasSiblings-1" data-search="BranchIndicatorState hasSiblings">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/branchindicator.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L39</span>
+<pre>bool hasSiblings = false;</pre>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="BranchIndicatorState-adjoinsItem-2" data-search="BranchIndicatorState adjoinsItem">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/branchindicator.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L42</span>
+<pre>bool adjoinsItem = false;</pre>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="BranchIndicatorState-isExpanded-3" data-search="BranchIndicatorState isExpanded">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/branchindicator.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L44</span>
+<pre>bool isExpanded = false;</pre>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="BranchIndicatorState-cellDepth-4" data-search="BranchIndicatorState cellDepth">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/branchindicator.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L47</span>
+<pre>int cellDepth = 0;</pre>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="BranchIndicatorState-itemDepth-5" data-search="BranchIndicatorState itemDepth">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/branchindicator.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L49</span>
+<pre>int itemDepth = 0;</pre>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="BranchIndicatorState-isOpen-6" data-search="BranchIndicatorState isOpen">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/branchindicator.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L52</span>
+<pre>    bool isOpen() const;</pre>
+<p class="doc" data-zh="判断指定节点或当前 branch 状态是否展开。" data-en="Check whether the specified node or current branch state is expanded.">判断指定节点或当前 branch 状态是否展开。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="BranchIndicatorState-isClosed-7" data-search="BranchIndicatorState isClosed">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/branchindicator.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L53</span>
+<pre>    bool isClosed() const;</pre>
+<p class="doc" data-zh="判断当前 branch 状态是否收起。" data-en="Check whether the current branch state is collapsed.">判断当前 branch 状态是否收起。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="BranchIndicatorState-isLeaf-8" data-search="BranchIndicatorState isLeaf">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/branchindicator.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L55</span>
+<pre>    bool isLeaf() const;</pre>
+<p class="doc" data-zh="判断当前 branch 是否为无子节点的叶节点。" data-en="Check whether the branch represents a leaf with no children.">判断当前 branch 是否为无子节点的叶节点。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+</section>
+<section>
+<h3 id="BranchIndicatorRenderer">BranchIndicatorRenderer</h3>
+<pre>class VIRTUALITEMVIEWS_EXPORT BranchIndicatorRenderer</pre>
+<article tabindex="-1" id="BranchIndicatorRenderer-BranchIndicatorRenderer-0" data-search="BranchIndicatorRenderer BranchIndicatorRenderer">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/branchindicator.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L71</span>
+<pre>virtual ~BranchIndicatorRenderer();</pre>
+<p class="doc" data-zh="销毁 BranchIndicatorRenderer 并释放其拥有的资源；不在析构回调中继续使用该对象。" data-en="Destroy BranchIndicatorRenderer and release its owned resources; do not keep using the object during destruction callbacks.">销毁 BranchIndicatorRenderer 并释放其拥有的资源；不在析构回调中继续使用该对象。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="BranchIndicatorRenderer-branchIcon-1" data-search="BranchIndicatorRenderer branchIcon">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/branchindicator.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L74</span>
+<pre>virtual QIcon branchIcon(const BranchIndicatorState &amp;state, const QModelIndex &amp;index) const;</pre>
+<p class="doc" data-zh="选择当前 branch 状态使用的图标。可重载以定制状态映射。" data-en="Choose the icon for the current branch state; override to customize state mapping.">选择当前 branch 状态使用的图标。可重载以定制状态映射。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="BranchIndicatorRenderer-branchIndicatorTargetRect-2" data-search="BranchIndicatorRenderer branchIndicatorTargetRect">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/branchindicator.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L83</span>
+<pre>static QRect branchIndicatorTargetRect(const QRect &amp;cellRect, int size,
+                                           Qt::Alignment alignment,
+                                           const QMargins &amp;padding);</pre>
+<p class="doc" data-zh="根据 branch 区域、图标尺寸、对齐和 padding 计算绘制目标矩形；F 版本保留浮点精度。" data-en="Compute the icon target rectangle from branch bounds, size, alignment and padding. The F variant retains floating-point precision.">根据 branch 区域、图标尺寸、对齐和 padding 计算绘制目标矩形；F 版本保留浮点精度。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="BranchIndicatorRenderer-branchIndicatorTargetRectF-3" data-search="BranchIndicatorRenderer branchIndicatorTargetRectF">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/branchindicator.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L89</span>
+<pre>static QRectF branchIndicatorTargetRectF(const QRectF &amp;cellRect, qreal size,
+                                             Qt::Alignment alignment,
+                                             const QMarginsF &amp;padding);</pre>
+<p class="doc" data-zh="根据 branch 区域、图标尺寸、对齐和 padding 计算绘制目标矩形；F 版本保留浮点精度。" data-en="Compute the icon target rectangle from branch bounds, size, alignment and padding. The F variant retains floating-point precision.">根据 branch 区域、图标尺寸、对齐和 padding 计算绘制目标矩形；F 版本保留浮点精度。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="BranchIndicatorRenderer-paintBranch-4" data-search="BranchIndicatorRenderer paintBranch">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/branchindicator.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L94</span>
+<pre>virtual void paintBranch(QPainter *painter, const BranchIndicatorState &amp;state,
+                             const QModelIndex &amp;index, const QRect &amp;cellRect) const;</pre>
+<p class="doc" data-zh="绘制当前 branch 指示器；自定义 renderer 的绘制入口。" data-en="Paint the current branch indicator; this is the drawing entry point for custom renderers.">绘制当前 branch 指示器；自定义 renderer 的绘制入口。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="BranchIndicatorRenderer-paintBuiltinBranch-5" data-search="BranchIndicatorRenderer paintBuiltinBranch">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/branchindicator.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L100</span>
+<pre>static void paintBuiltinBranch(QPainter *painter, const BranchIndicatorState &amp;state,
+                                   const QRect &amp;cellRect, const QPalette &amp;palette);</pre>
+<p class="doc" data-zh="绘制框架默认 branch 三角形；按此重载参数控制颜色、几何或旋转进度。" data-en="Paint the built-in branch triangle using this overload&#x27;s color, geometry or rotation parameters.">绘制框架默认 branch 三角形；按此重载参数控制颜色、几何或旋转进度。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="BranchIndicatorRenderer-paintBuiltinBranch-6" data-search="BranchIndicatorRenderer paintBuiltinBranch">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/branchindicator.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L104</span>
+<pre>static void paintBuiltinBranch(QPainter *painter, const BranchIndicatorState &amp;state,
+                                   const QRect &amp;cellRect, const QPalette &amp;palette,
+                                   int size, const QColor &amp;color);</pre>
+<p class="doc" data-zh="绘制框架默认 branch 三角形；按此重载参数控制颜色、几何或旋转进度。" data-en="Paint the built-in branch triangle using this overload&#x27;s color, geometry or rotation parameters.">绘制框架默认 branch 三角形；按此重载参数控制颜色、几何或旋转进度。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="BranchIndicatorRenderer-paintBuiltinBranch-7" data-search="BranchIndicatorRenderer paintBuiltinBranch">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/branchindicator.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L108</span>
+<pre>static void paintBuiltinBranch(QPainter *painter, const BranchIndicatorState &amp;state,
+                                   const QRect &amp;cellRect, const QPalette &amp;palette,
+                                   int size, const QColor &amp;color,
+                                   Qt::Alignment alignment, const QMargins &amp;padding);</pre>
+<p class="doc" data-zh="绘制框架默认 branch 三角形；按此重载参数控制颜色、几何或旋转进度。" data-en="Paint the built-in branch triangle using this overload&#x27;s color, geometry or rotation parameters.">绘制框架默认 branch 三角形；按此重载参数控制颜色、几何或旋转进度。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="BranchIndicatorRenderer-paintBuiltinBranch-8" data-search="BranchIndicatorRenderer paintBuiltinBranch">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/branchindicator.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L114</span>
+<pre>static void paintBuiltinBranch(QPainter *painter, const BranchIndicatorState &amp;state,
+                                   const QRect &amp;cellRect, const QPalette &amp;palette,
+                                   int size, const QColor &amp;color,
+                                   Qt::Alignment alignment, const QMargins &amp;padding,
+                                   qreal rotationDegrees);</pre>
+<p class="doc" data-zh="绘制框架默认 branch 三角形；按此重载参数控制颜色、几何或旋转进度。" data-en="Paint the built-in branch triangle using this overload&#x27;s color, geometry or rotation parameters.">绘制框架默认 branch 三角形；按此重载参数控制颜色、几何或旋转进度。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="BranchIndicatorRenderer-paintBuiltinBranch-9" data-search="BranchIndicatorRenderer paintBuiltinBranch">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/branchindicator.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L120</span>
+<pre>static void paintBuiltinBranch(QPainter *painter, const BranchIndicatorState &amp;state,
+                                   const QRect &amp;cellRect);</pre>
+<p class="doc" data-zh="绘制框架默认 branch 三角形；按此重载参数控制颜色、几何或旋转进度。" data-en="Paint the built-in branch triangle using this overload&#x27;s color, geometry or rotation parameters.">绘制框架默认 branch 三角形；按此重载参数控制颜色、几何或旋转进度。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+</section>
+<section>
+<h3 id="viv-namespace">viv namespace</h3>
+<pre>namespace viv</pre>
+<article tabindex="-1" id="viv-namespace-kBranchIndicatorSize-0" data-search="viv namespace kBranchIndicatorSize">
+<span class="badge">namespace</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/branchindicator.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L18</span>
+<pre>constexpr int kBranchIndicatorSize = 10;</pre>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="viv-namespace-kBranchIndicatorMargin-1" data-search="viv namespace kBranchIndicatorMargin">
+<span class="badge">namespace</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/branchindicator.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L21</span>
+<pre>constexpr int kBranchIndicatorMargin = 4;</pre>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+</section>
+<footer class="muted">
+<p><span data-zh="按能力查找配套设置与独立示例；通用接口请沿基类链接查阅，Qt 继承接口请参考 Qt 文档。" data-en="Find related settings and independent examples by capability. Follow base-class links for shared APIs and consult Qt documentation for inherited Qt APIs.">按能力查找配套设置与独立示例；通用接口请沿基类链接查阅，Qt 继承接口请参考 Qt 文档。</span></p>
+</footer>
+</main>
+<script src="../assets/reference.js">
+</script>
+</body>
+</html>

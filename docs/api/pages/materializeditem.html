@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MaterializedItem · VirtualItemViews</title>
+<link rel="stylesheet" href="../assets/reference.css">
+</head>
+<body>
+<header>
+<div class="header-top">
+<a href="../index.html">VirtualItemViews / API</a>
+<div id="language-switch" class="language-switch" role="group" aria-label="Language / 语言" hidden>
+<button type="button" data-language="zh" aria-pressed="true" lang="zh-CN">中文</button>
+<button type="button" data-language="en" aria-pressed="false" lang="en">English</button>
+</div>
+</div>
+<h1>MaterializedItem</h1>
+<p><span data-zh="公开辅助接口与扩展契约" data-en="Public helper interfaces and extension contracts">公开辅助接口与扩展契约</span></p>
+</header>
+<main>
+<nav>
+<a href="../index.html"><span data-zh="能力总览" data-en="Capabilities">能力总览</span></a>
+<a href="../../AGENT_GUIDE.md"><span data-zh="Agent 索引" data-en="Agent guide">Agent 索引</span></a>
+<a href="../../../examples/README.md"><span data-zh="独立示例" data-en="Examples">独立示例</span></a>
+<a href="../../../README.md"><span data-zh="项目首页" data-en="Project home">项目首页</span></a>
+</nav>
+<label for="filter"><span data-zh="搜索本页：能力、API 名称或关键词" data-en="Search this page: capability, API name or keyword">搜索本页：能力、API 名称或关键词</span></label>
+<input id="filter" type="search" placeholder="例如：Popup、setAutoHeight、冻结、branch">
+<p class="muted search-help"><span data-zh="无需网络或服务器。所有内容默认可见；搜索只筛选当前页。完整继承 API 请沿基类链接查阅。" data-en="No network or server required. All content is initially visible; search filters this page only. Follow base-class links for inherited APIs.">无需网络或服务器。所有内容默认可见；搜索只筛选当前页。完整继承 API 请沿基类链接查阅。</span></p>
+<p id="search-status" role="status" aria-live="polite">
+</p>
+<p>
+<a href="../../../include/virtualitemviews/materializeditem.h"><span data-zh="公开头文件：include/virtualitemviews/materializeditem.h" data-en="Public header: include/virtualitemviews/materializeditem.h">公开头文件：include/virtualitemviews/materializeditem.h</span></a>
+</p>
+<p class="api-jump">
+<a href="#public-api"><span data-zh="公开函数列表" data-en="Public function index">公开函数列表</span></a>
+</p>
+<h2><span data-zh="能力与配套设置" data-en="Capabilities and related settings">能力与配套设置</span></h2>
+<h2 id="public-api" tabindex="-1"><span data-zh="公开 API、类型与信号" data-en="Public API, types and signals">公开 API、类型与信号</span></h2>
+<section class="function-index" id="function-index" tabindex="-1">
+<h3><span data-zh="公开函数列表" data-en="Public function index">公开函数列表</span></h3>
+<p class="muted"><span data-zh="按声明类型分组；每个重载单独列出，点击签名跳转到说明。信号单独列出；类型和数据成员仍保留在下方。" data-en="Grouped by declaring type. Each overload has its own link to the details. Signals are listed separately; types and data members remain below.">按声明类型分组；每个重载单独列出，点击签名跳转到说明。信号单独列出；类型和数据成员仍保留在下方。</span></p>
+<h4>MaterializedItem</h4>
+<ul>
+<li data-search="MaterializedItem isValid">
+<a href="#MaterializedItem-isValid-5">
+<code>bool isValid() const;</code>
+</a>
+</li>
+</ul>
+</section>
+<h2><span data-zh="函数说明" data-en="Function details">函数说明</span></h2>
+<p class="muted"><span data-zh="按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。" data-en="Read each function for its purpose and related settings. Overloads are listed separately; follow related capabilities to find examples.">按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。</span></p>
+<section>
+<h3 id="MaterializedItem">MaterializedItem</h3>
+<pre>struct MaterializedItem</pre>
+<article tabindex="-1" id="MaterializedItem-index-0" data-search="MaterializedItem index">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/materializeditem.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L24</span>
+<pre>QPersistentModelIndex index;</pre>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="MaterializedItem-widget-1" data-search="MaterializedItem widget">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/materializeditem.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L25</span>
+<pre>QWidget *widget = nullptr;</pre>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="MaterializedItem-type-2" data-search="MaterializedItem type">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/materializeditem.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L26</span>
+<pre>WidgetType type = kDefaultWidgetType;</pre>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="MaterializedItem-geometry-3" data-search="MaterializedItem geometry">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/materializeditem.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L29</span>
+<pre>QRect geometry;</pre>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="MaterializedItem-pinned-4" data-search="MaterializedItem pinned">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/materializeditem.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L32</span>
+<pre>bool pinned = false;</pre>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="MaterializedItem-isValid-5" data-search="MaterializedItem isValid">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/materializeditem.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L34</span>
+<pre>    bool isValid() const;</pre>
+<p class="doc" data-zh="判断当前索引、范围或几何记录是否可用；使用几何或访问模型前先检查无效结果。" data-en="Check whether the index, range or geometry record is usable before accessing geometry or model data.">判断当前索引、范围或几何记录是否可用；使用几何或访问模型前先检查无效结果。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+</section>
+<footer class="muted">
+<p><span data-zh="按能力查找配套设置与独立示例；通用接口请沿基类链接查阅，Qt 继承接口请参考 Qt 文档。" data-en="Find related settings and independent examples by capability. Follow base-class links for shared APIs and consult Qt documentation for inherited Qt APIs.">按能力查找配套设置与独立示例；通用接口请沿基类链接查阅，Qt 继承接口请参考 Qt 文档。</span></p>
+</footer>
+</main>
+<script src="../assets/reference.js">
+</script>
+</body>
+</html>

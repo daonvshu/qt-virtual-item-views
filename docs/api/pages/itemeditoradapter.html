@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>EditRequestContext / EditTrigger / ItemEditorAdapter / viv namespace · VirtualItemViews</title>
+<link rel="stylesheet" href="../assets/reference.css">
+</head>
+<body>
+<header>
+<div class="header-top">
+<a href="../index.html">VirtualItemViews / API</a>
+<div id="language-switch" class="language-switch" role="group" aria-label="Language / 语言" hidden>
+<button type="button" data-language="zh" aria-pressed="true" lang="zh-CN">中文</button>
+<button type="button" data-language="en" aria-pressed="false" lang="en">English</button>
+</div>
+</div>
+<h1>EditRequestContext / EditTrigger / ItemEditorAdapter / viv namespace</h1>
+<p><span data-zh="公开辅助接口与扩展契约" data-en="Public helper interfaces and extension contracts">公开辅助接口与扩展契约</span></p>
+</header>
+<main>
+<nav>
+<a href="../index.html"><span data-zh="能力总览" data-en="Capabilities">能力总览</span></a>
+<a href="../../AGENT_GUIDE.md"><span data-zh="Agent 索引" data-en="Agent guide">Agent 索引</span></a>
+<a href="../../../examples/README.md"><span data-zh="独立示例" data-en="Examples">独立示例</span></a>
+<a href="../../../README.md"><span data-zh="项目首页" data-en="Project home">项目首页</span></a>
+</nav>
+<label for="filter"><span data-zh="搜索本页：能力、API 名称或关键词" data-en="Search this page: capability, API name or keyword">搜索本页：能力、API 名称或关键词</span></label>
+<input id="filter" type="search" placeholder="例如：Popup、setAutoHeight、冻结、branch">
+<p class="muted search-help"><span data-zh="无需网络或服务器。所有内容默认可见；搜索只筛选当前页。完整继承 API 请沿基类链接查阅。" data-en="No network or server required. All content is initially visible; search filters this page only. Follow base-class links for inherited APIs.">无需网络或服务器。所有内容默认可见；搜索只筛选当前页。完整继承 API 请沿基类链接查阅。</span></p>
+<p id="search-status" role="status" aria-live="polite">
+</p>
+<p>
+<a href="../../../include/virtualitemviews/itemeditoradapter.h"><span data-zh="公开头文件：include/virtualitemviews/itemeditoradapter.h" data-en="Public header: include/virtualitemviews/itemeditoradapter.h">公开头文件：include/virtualitemviews/itemeditoradapter.h</span></a>
+</p>
+<p class="api-jump">
+<a href="#public-api"><span data-zh="公开函数列表" data-en="Public function index">公开函数列表</span></a>
+</p>
+<h2><span data-zh="能力与配套设置" data-en="Capabilities and related settings">能力与配套设置</span></h2>
+<article id="binding" data-search="setItemDataRole ItemBindingContext indentationWidth branchWidth virtualitemview types widgetadapter tablewidgetadapter itemeditoradapter">
+<h3><span data-zh="整行业务 payload / 深度 / 列 / branch 上下文" data-en="Row payload / depth / column / branch context">整行业务 payload / 深度 / 列 / branch 上下文</span></h3>
+<p>
+<code>setItemDataRole · ItemBindingContext · indentationWidth · branchWidth</code>
+</p>
+<p class="rules"><span data-zh="ItemBindingContext 提供 index、rowData、logicalColumn、depth；cell 的整行业务数据从列 0 读取。负的 itemDataRole 禁用 payload 读取。树的 indentationWidth 是祖先缩进，branchWidth 是当前节点 branch 格占位，不是图标宽度，均为未裁剪的逻辑像素；TreeTable 仅逻辑列 0 有这两个宽度。" data-en="ItemBindingContext provides index, rowData, logicalColumn and depth. Cells read the row payload from column 0. A negative itemDataRole disables payload reads. For trees, indentationWidth is ancestor indentation and branchWidth is the current branch-cell reservation, not icon width. Both are unclipped logical pixels. TreeTable supplies these widths only for logical column 0.">ItemBindingContext 提供 index、rowData、logicalColumn、depth；cell 的整行业务数据从列 0 读取。负的 itemDataRole 禁用 payload 读取。树的 indentationWidth 是祖先缩进，branchWidth 是当前节点 branch 格占位，不是图标宽度，均为未裁剪的逻辑像素；TreeTable 仅逻辑列 0 有这两个宽度。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../../src/core/virtualitemview.cpp">src/core/virtualitemview.cpp</a> · <a href="../../../src/widgets/virtualtreeview.cpp">src/widgets/virtualtreeview.cpp</a> · <a href="../../../src/widgets/virtualtreetableview.cpp">src/widgets/virtualtreetableview.cpp</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../../interaction.md">docs/interaction.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（4）" data-en="Independent source examples (4)">独立源码示例（4）</span></summary>
+<ul>
+<li>
+<a href="../../../examples/list_capabilities/04_binding_context/example.cpp">examples/list_capabilities/04_binding_context/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/table_capabilities/04_binding_context/example.cpp">examples/table_capabilities/04_binding_context/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/tree_capabilities/04_binding_context/example.cpp">examples/tree_capabilities/04_binding_context/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/treetable_capabilities/05_binding_context/example.cpp">examples/treetable_capabilities/05_binding_context/example.cpp</a>
+</li>
+</ul>
+</details>
+</article>
+<article id="editor" data-search="setEditTriggers editTriggers edit createEditor setEditorData updateEditorGeometry commitEditorData destroyEditor commitEditor closeEditor editingIndex editorWidget virtualitemview itemeditoradapter widgetadapter tablewidgetadapter">
+<h3><span data-zh="覆盖编辑器 / 单双击 / F2 / 按钮 / 自定义 role" data-en="Overlay editors / click triggers / F2 / buttons / custom roles">覆盖编辑器 / 单双击 / F2 / 按钮 / 自定义 role</span></h3>
+<p>
+<code>setEditTriggers · editTriggers · edit · createEditor · setEditorData · updateEditorGeometry · commitEditorData · destroyEditor · commitEditor · closeEditor · editingIndex · editorWidget</code>
+</p>
+<p class="rules"><span data-zh="所有入口要求 ItemIsEnabled + ItemIsEditable。默认 DoubleClicked|EditKeyPressed(F2)，adapter 可按 index 重载触发方式；按钮/外部直接 edit(index)。默认 editor 为 null，业务实现 createEditor；默认数据经 Qt USER property↔EditRole，可重载提交到 UserRole。默认几何覆盖整格/项；无需 stack layout。框架处理焦点、Enter/Esc/Tab、校验和销毁；提交返回 false 保持编辑。编辑器不进入显示控件复用池，不应滚动即丢草稿。" data-en="Every entry requires ItemIsEnabled and ItemIsEditable. Defaults are DoubleClicked|EditKeyPressed (F2); adapters can override triggers per index. Buttons and external actions call edit(index). createEditor defaults to null and must be implemented. Default data exchange uses the Qt USER property and EditRole; override submission for UserRole. Default geometry covers the item/cell without a stack layout. The framework handles focus, Enter/Esc/Tab, validation and destruction. Failed submission keeps editing. Editors are not pooled display widgets; scrolling should not discard drafts.">所有入口要求 ItemIsEnabled + ItemIsEditable。默认 DoubleClicked|EditKeyPressed(F2)，adapter 可按 index 重载触发方式；按钮/外部直接 edit(index)。默认 editor 为 null，业务实现 createEditor；默认数据经 Qt USER property↔EditRole，可重载提交到 UserRole。默认几何覆盖整格/项；无需 stack layout。框架处理焦点、Enter/Esc/Tab、校验和销毁；提交返回 false 保持编辑。编辑器不进入显示控件复用池，不应滚动即丢草稿。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../../src/core/virtualitemviewediting.cpp">src/core/virtualitemviewediting.cpp</a> · <a href="../../../src/core/itemeditoradapter.cpp">src/core/itemeditoradapter.cpp</a> · <a href="../../../src/widgets/virtualtableview.cpp">src/widgets/virtualtableview.cpp</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../../interaction.md">docs/interaction.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（4）" data-en="Independent source examples (4)">独立源码示例（4）</span></summary>
+<ul>
+<li>
+<a href="../../../examples/list_capabilities/23_editors/example.cpp">examples/list_capabilities/23_editors/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/table_capabilities/33_editors/example.cpp">examples/table_capabilities/33_editors/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/tree_capabilities/29_editors/example.cpp">examples/tree_capabilities/29_editors/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/treetable_capabilities/38_editors/example.cpp">examples/treetable_capabilities/38_editors/example.cpp</a>
+</li>
+</ul>
+</details>
+</article>
+<article id="popup" data-search="editRequest EditRequestContext cancelEditRequest closeEditor indentationWidth branchWidth itemeditoradapter virtualitemview types">
+<h3><span data-zh="Popup 编辑 / 坐标 / 统一取消 / 编辑覆盖范围" data-en="Popup editing / coordinates / cancellation / editor coverage">Popup 编辑 / 坐标 / 统一取消 / 编辑覆盖范围</span></h3>
+<p>
+<code>editRequest · EditRequestContext · cancelEditRequest · closeEditor · indentationWidth · branchWidth</code>
+</p>
+<p class="rules"><span data-zh="editRequest 返回 true 表示自行处理 Popup，false 回退 createEditor。context 含 binding、view、viewport、三个坐标系的完整 rect 和 finish 回调。正常确认/关闭后调用 request.finish，仅结束对应会话，不提交模型；业务自行写数据。框架在滚动、目标失效、模型/adapter 变化、隐藏等取消条件下调用 cancelEditRequest，业务在此关闭 Popup；外部 closeEditor 同样转发。Popup 时 editingIndex 有效、editorWidget=null、commitEditor=false。跨事件保留 QPointer/QPersistentModelIndex。树编辑可用 indentationWidth+branchWidth 裁掉装饰占位并 clamp 到 rect.width。" data-en="editRequest true handles a Popup; false falls back to createEditor. Context includes binding, view, viewport, full rectangles in three coordinate systems and finish. Call request.finish after normal confirmation/dismissal; it ends only that session and does not write model data. Business code submits data. The framework calls cancelEditRequest on scrolling, invalid targets, model/adapter changes, hiding and other cancellation conditions; close the Popup there. External closeEditor also forwards cancellation. A Popup has editingIndex but editorWidget=null and commitEditor=false. Retain QPointer/QPersistentModelIndex across events. Tree editors can inset by indentationWidth+branchWidth, clamped to rect.width.">editRequest 返回 true 表示自行处理 Popup，false 回退 createEditor。context 含 binding、view、viewport、三个坐标系的完整 rect 和 finish 回调。正常确认/关闭后调用 request.finish，仅结束对应会话，不提交模型；业务自行写数据。框架在滚动、目标失效、模型/adapter 变化、隐藏等取消条件下调用 cancelEditRequest，业务在此关闭 Popup；外部 closeEditor 同样转发。Popup 时 editingIndex 有效、editorWidget=null、commitEditor=false。跨事件保留 QPointer/QPersistentModelIndex。树编辑可用 indentationWidth+branchWidth 裁掉装饰占位并 clamp 到 rect.width。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../../src/core/virtualitemviewediting.cpp">src/core/virtualitemviewediting.cpp</a> · <a href="../../../src/widgets/virtualtreeview.cpp">src/widgets/virtualtreeview.cpp</a> · <a href="../../../src/widgets/virtualtreetableview.cpp">src/widgets/virtualtreetableview.cpp</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../../interaction.md">docs/interaction.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（4）" data-en="Independent source examples (4)">独立源码示例（4）</span></summary>
+<ul>
+<li>
+<a href="../../../examples/list_capabilities/23_editors/example.cpp">examples/list_capabilities/23_editors/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/table_capabilities/33_editors/example.cpp">examples/table_capabilities/33_editors/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/tree_capabilities/29_editors/example.cpp">examples/tree_capabilities/29_editors/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/treetable_capabilities/38_editors/example.cpp">examples/treetable_capabilities/38_editors/example.cpp</a>
+</li>
+</ul>
+</details>
+</article>
+<h2 id="public-api" tabindex="-1"><span data-zh="公开 API、类型与信号" data-en="Public API, types and signals">公开 API、类型与信号</span></h2>
+<section class="function-index" id="function-index" tabindex="-1">
+<h3><span data-zh="公开函数列表" data-en="Public function index">公开函数列表</span></h3>
+<p class="muted"><span data-zh="按声明类型分组；每个重载单独列出，点击签名跳转到说明。信号单独列出；类型和数据成员仍保留在下方。" data-en="Grouped by declaring type. Each overload has its own link to the details. Signals are listed separately; types and data members remain below.">按声明类型分组；每个重载单独列出，点击签名跳转到说明。信号单独列出；类型和数据成员仍保留在下方。</span></p>
+<h4>ItemEditorAdapter</h4>
+<ul>
+<li data-search="ItemEditorAdapter ItemEditorAdapter">
+<a href="#ItemEditorAdapter-ItemEditorAdapter-0">
+<code>virtual ~ItemEditorAdapter() = default;</code>
+</a>
+</li>
+<li data-search="ItemEditorAdapter editTriggers">
+<a href="#ItemEditorAdapter-editTriggers-1">
+<code>virtual EditTriggers editTriggers(const QModelIndex &amp;index, EditTriggers defaults) const;</code>
+</a>
+</li>
+<li data-search="ItemEditorAdapter editRequest">
+<a href="#ItemEditorAdapter-editRequest-2">
+<code>virtual bool editRequest(const EditRequestContext &amp;context);</code>
+</a>
+</li>
+<li data-search="ItemEditorAdapter cancelEditRequest">
+<a href="#ItemEditorAdapter-cancelEditRequest-3">
+<code>virtual void cancelEditRequest(const ItemBindingContext &amp;context);</code>
+</a>
+</li>
+<li data-search="ItemEditorAdapter createEditor">
+<a href="#ItemEditorAdapter-createEditor-4">
+<code>virtual QWidget *createEditor(QWidget *parent, const ItemBindingContext &amp;context);</code>
+</a>
+</li>
+<li data-search="ItemEditorAdapter setEditorData">
+<a href="#ItemEditorAdapter-setEditorData-5">
+<code>virtual void setEditorData(QWidget *editor, const ItemBindingContext &amp;context);</code>
+</a>
+</li>
+<li data-search="ItemEditorAdapter updateEditorGeometry">
+<a href="#ItemEditorAdapter-updateEditorGeometry-6">
+<code>virtual void updateEditorGeometry(QWidget *editor, const QRect &amp;rect, const ItemBindingContext &amp;context);</code>
+</a>
+</li>
+<li data-search="ItemEditorAdapter commitEditorData">
+<a href="#ItemEditorAdapter-commitEditorData-7">
+<code>virtual bool commitEditorData(QWidget *editor, QAbstractItemModel *model, const ItemBindingContext &amp;context);</code>
+</a>
+</li>
+<li data-search="ItemEditorAdapter destroyEditor">
+<a href="#ItemEditorAdapter-destroyEditor-8">
+<code>virtual void destroyEditor(QWidget *editor, const ItemBindingContext &amp;context);</code>
+</a>
+</li>
+</ul>
+</section>
+<h2><span data-zh="函数说明" data-en="Function details">函数说明</span></h2>
+<p class="muted"><span data-zh="按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。" data-en="Read each function for its purpose and related settings. Overloads are listed separately; follow related capabilities to find examples.">按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。</span></p>
+<section>
+<h3 id="EditRequestContext">EditRequestContext</h3>
+<pre>struct EditRequestContext</pre>
+<article tabindex="-1" id="EditRequestContext-binding-0" data-search="EditRequestContext binding">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/itemeditoradapter.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L20</span>
+<pre>ItemBindingContext binding;</pre>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="EditRequestContext-view-1" data-search="EditRequestContext view">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/itemeditoradapter.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L21</span>
+<pre>VirtualItemView *view = nullptr;</pre>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="EditRequestContext-viewport-2" data-search="EditRequestContext viewport">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/itemeditoradapter.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L22</span>
+<pre>QWidget *viewport = nullptr;</pre>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="EditRequestContext-viewportRect-3" data-search="EditRequestContext viewportRect">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/itemeditoradapter.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L25</span>
+<pre>QRect viewportRect;</pre>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="EditRequestContext-viewRect-4" data-search="EditRequestContext viewRect">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/itemeditoradapter.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L26</span>
+<pre>QRect viewRect;</pre>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="EditRequestContext-globalRect-5" data-search="EditRequestContext globalRect">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/itemeditoradapter.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L27</span>
+<pre>QRect globalRect;</pre>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="EditRequestContext-void-6" data-search="EditRequestContext void">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/itemeditoradapter.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L30</span>
+<pre>std::function&lt;void()&gt; finish;</pre>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+</section>
+<section>
+<h3 id="EditTrigger">EditTrigger</h3>
+<pre>enum class EditTrigger</pre>
+<article tabindex="-1" id="EditTrigger-EditTrigger-0" data-search="EditTrigger EditTrigger">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/itemeditoradapter.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L34</span>
+<pre>enum class EditTrigger {
+    NoEditTriggers = 0,
+    SingleClicked = 0x1,
+    DoubleClicked = 0x2,
+    EditKeyPressed = 0x4
+};</pre>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+</section>
+<section>
+<h3 id="ItemEditorAdapter">ItemEditorAdapter</h3>
+<pre>class VIRTUALITEMVIEWS_EXPORT ItemEditorAdapter</pre>
+<article tabindex="-1" id="ItemEditorAdapter-ItemEditorAdapter-0" data-search="ItemEditorAdapter ItemEditorAdapter">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/itemeditoradapter.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L48</span>
+<pre>virtual ~ItemEditorAdapter() = default;</pre>
+<p class="doc" data-zh="销毁 ItemEditorAdapter 并释放其拥有的资源；不在析构回调中继续使用该对象。" data-en="Destroy ItemEditorAdapter and release its owned resources; do not keep using the object during destruction callbacks.">销毁 ItemEditorAdapter 并释放其拥有的资源；不在析构回调中继续使用该对象。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ItemEditorAdapter-editTriggers-1" data-search="ItemEditorAdapter editTriggers">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/itemeditoradapter.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L50</span>
+<pre>virtual EditTriggers editTriggers(const QModelIndex &amp;index, EditTriggers defaults) const;</pre>
+<p class="doc" data-zh="按 index 覆盖视图默认编辑触发条件；默认返回 defaults。NoEditTriggers 只禁用自动手势，显式 edit(index) 仍可用。" data-en="Override view edit triggers for index; the default returns defaults. NoEditTriggers disables automatic gestures while explicit edit(index) remains available.">按 index 覆盖视图默认编辑触发条件；默认返回 defaults。NoEditTriggers 只禁用自动手势，显式 edit(index) 仍可用。</p>
+<p class="doc" data-zh="视图默认 DoubleClicked | EditKeyPressed（F2）。adapter 可按 index 覆盖；按钮或外部操作直接调用 view-&gt;edit(index)。模型需设置 ItemIsEditable 和 ItemIsEnabled。" data-en="The view defaults to DoubleClicked | EditKeyPressed (F2). Adapters can override per index. Buttons and external actions call view-&gt;edit(index). The model item must have ItemIsEditable and ItemIsEnabled.">视图默认 DoubleClicked | EditKeyPressed（F2）。adapter 可按 index 覆盖；按钮或外部操作直接调用 view-&gt;edit(index)。模型需设置 ItemIsEditable 和 ItemIsEnabled。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#editor"><span data-zh="覆盖编辑器 / 单双击 / F2 / 按钮 / 自定义 role" data-en="Overlay editors / click triggers / F2 / buttons / custom roles">覆盖编辑器 / 单双击 / F2 / 按钮 / 自定义 role</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ItemEditorAdapter-editRequest-2" data-search="ItemEditorAdapter editRequest">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/itemeditoradapter.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L55</span>
+<pre>virtual bool editRequest(const EditRequestContext &amp;context);</pre>
+<p class="doc" data-zh="返回 true 表示适配器接管编辑（例如 Popup），返回 false 进入 createEditor。context 提供 viewport/view/global 矩形；业务结束调用 finish，不会自动写模型。" data-en="Return true to handle editing in the adapter, such as a Popup, or false to use createEditor. The context supplies viewport/view/global rectangles. Call finish when done; it does not write model data.">返回 true 表示适配器接管编辑（例如 Popup），返回 false 进入 createEditor。context 提供 viewport/view/global 矩形；业务结束调用 finish，不会自动写模型。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#popup"><span data-zh="Popup 编辑 / 坐标 / 统一取消 / 编辑覆盖范围" data-en="Popup editing / coordinates / cancellation / editor coverage">Popup 编辑 / 坐标 / 统一取消 / 编辑覆盖范围</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ItemEditorAdapter-cancelEditRequest-3" data-search="ItemEditorAdapter cancelEditRequest">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/itemeditoradapter.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L60</span>
+<pre>virtual void cancelEditRequest(const ItemBindingContext &amp;context);</pre>
+<p class="doc" data-zh="取消适配器接管的编辑请求；在此关闭 Popup，不提交数据。索引可能失效，控件销毁应延迟到当前事件结束。" data-en="Cancel an adapter-owned edit request. Close the Popup without committing. The index may be invalid; defer widget destruction until the current event returns.">取消适配器接管的编辑请求；在此关闭 Popup，不提交数据。索引可能失效，控件销毁应延迟到当前事件结束。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#popup"><span data-zh="Popup 编辑 / 坐标 / 统一取消 / 编辑覆盖范围" data-en="Popup editing / coordinates / cancellation / editor coverage">Popup 编辑 / 坐标 / 统一取消 / 编辑覆盖范围</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ItemEditorAdapter-createEditor-4" data-search="ItemEditorAdapter createEditor">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/itemeditoradapter.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L63</span>
+<pre>virtual QWidget *createEditor(QWidget *parent, const ItemBindingContext &amp;context);</pre>
+<p class="doc" data-zh="在给定裁剪宿主下创建覆盖编辑控件；返回 nullptr 表示不创建。组合编辑器应将焦点代理指向实际输入控件。" data-en="Create an overlay editor under the supplied clipping host; return nullptr to decline. Composite editors should set a focus proxy to the actual input.">在给定裁剪宿主下创建覆盖编辑控件；返回 nullptr 表示不创建。组合编辑器应将焦点代理指向实际输入控件。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#editor"><span data-zh="覆盖编辑器 / 单双击 / F2 / 按钮 / 自定义 role" data-en="Overlay editors / click triggers / F2 / buttons / custom roles">覆盖编辑器 / 单双击 / F2 / 按钮 / 自定义 role</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ItemEditorAdapter-setEditorData-5" data-search="ItemEditorAdapter setEditorData">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/itemeditoradapter.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L65</span>
+<pre>virtual void setEditorData(QWidget *editor, const ItemBindingContext &amp;context);</pre>
+<p class="doc" data-zh="将模型值载入编辑器。默认读取 EditRole 并写入 Qt USER 属性；自定义 role 时与 commitEditorData 成对重载。" data-en="Load model data into the editor. The default reads EditRole into the Qt USER property; override together with commitEditorData for a custom role.">将模型值载入编辑器。默认读取 EditRole 并写入 Qt USER 属性；自定义 role 时与 commitEditorData 成对重载。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#editor"><span data-zh="覆盖编辑器 / 单双击 / F2 / 按钮 / 自定义 role" data-en="Overlay editors / click triggers / F2 / buttons / custom roles">覆盖编辑器 / 单双击 / F2 / 按钮 / 自定义 role</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ItemEditorAdapter-updateEditorGeometry-6" data-search="ItemEditorAdapter updateEditorGeometry">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/itemeditoradapter.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L69</span>
+<pre>virtual void updateEditorGeometry(QWidget *editor, const QRect &amp;rect,
+                                      const ItemBindingContext &amp;context);</pre>
+<p class="doc" data-zh="更新覆盖编辑器几何；默认使用父坐标系中的完整 cell 矩形。树可按 context.indentationWidth / branchWidth 内缩，注意限制到 rect 宽度内。" data-en="Update overlay editor geometry; the default uses the full cell rectangle in parent coordinates. For trees, inset by context.indentationWidth / branchWidth, clamped to rect width.">更新覆盖编辑器几何；默认使用父坐标系中的完整 cell 矩形。树可按 context.indentationWidth / branchWidth 内缩，注意限制到 rect 宽度内。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#editor"><span data-zh="覆盖编辑器 / 单双击 / F2 / 按钮 / 自定义 role" data-en="Overlay editors / click triggers / F2 / buttons / custom roles">覆盖编辑器 / 单双击 / F2 / 按钮 / 自定义 role</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ItemEditorAdapter-commitEditorData-7" data-search="ItemEditorAdapter commitEditorData">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/itemeditoradapter.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L72</span>
+<pre>virtual bool commitEditorData(QWidget *editor, QAbstractItemModel *model,
+                                  const ItemBindingContext &amp;context);</pre>
+<p class="doc" data-zh="把编辑器内容写回模型；默认 Qt USER 属性写入 EditRole。返回 false 保持编辑器打开，可用于校验失败。" data-en="Write editor data to the model; the default writes the Qt USER property to EditRole. Return false to keep editing, for example after validation failure.">把编辑器内容写回模型；默认 Qt USER 属性写入 EditRole。返回 false 保持编辑器打开，可用于校验失败。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#editor"><span data-zh="覆盖编辑器 / 单双击 / F2 / 按钮 / 自定义 role" data-en="Overlay editors / click triggers / F2 / buttons / custom roles">覆盖编辑器 / 单双击 / F2 / 按钮 / 自定义 role</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="ItemEditorAdapter-destroyEditor-8" data-search="ItemEditorAdapter destroyEditor">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/itemeditoradapter.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L77</span>
+<pre>virtual void destroyEditor(QWidget *editor, const ItemBindingContext &amp;context);</pre>
+<p class="doc" data-zh="清理编辑器，默认 deleteLater；不要在这里提交数据。模型销毁期间索引可能已无效。" data-en="Dispose of the editor, using deleteLater by default. Do not commit here; the index may already be invalid during model teardown.">清理编辑器，默认 deleteLater；不要在这里提交数据。模型销毁期间索引可能已无效。</p>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#editor"><span data-zh="覆盖编辑器 / 单双击 / F2 / 按钮 / 自定义 role" data-en="Overlay editors / click triggers / F2 / buttons / custom roles">覆盖编辑器 / 单双击 / F2 / 按钮 / 自定义 role</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+</section>
+<section>
+<h3 id="viv-namespace">viv namespace</h3>
+<pre>namespace viv</pre>
+<article tabindex="-1" id="viv-namespace-Q_DECLARE_FLAGS-0" data-search="viv namespace Q_DECLARE_FLAGS">
+<span class="badge">namespace</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/itemeditoradapter.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L40</span>
+<pre>Q_DECLARE_FLAGS(EditTriggers, EditTrigger)</pre>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="viv-namespace-Q_DECLARE_OPERATORS_FOR_FLAGS-1" data-search="viv namespace Q_DECLARE_OPERATORS_FOR_FLAGS">
+<span class="badge">namespace</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/itemeditoradapter.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L41</span>
+<pre>Q_DECLARE_OPERATORS_FOR_FLAGS(EditTriggers)</pre>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+</section>
+<footer class="muted">
+<p><span data-zh="按能力查找配套设置与独立示例；通用接口请沿基类链接查阅，Qt 继承接口请参考 Qt 文档。" data-en="Find related settings and independent examples by capability. Follow base-class links for shared APIs and consult Qt documentation for inherited Qt APIs.">按能力查找配套设置与独立示例；通用接口请沿基类链接查阅，Qt 继承接口请参考 Qt 文档。</span></p>
+</footer>
+</main>
+<script src="../assets/reference.js">
+</script>
+</body>
+</html>

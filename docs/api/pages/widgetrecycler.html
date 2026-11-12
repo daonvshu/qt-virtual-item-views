@@ -1,0 +1,460 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>WidgetRecycler · VirtualItemViews</title>
+<link rel="stylesheet" href="../assets/reference.css">
+</head>
+<body>
+<header>
+<div class="header-top">
+<a href="../index.html">VirtualItemViews / API</a>
+<div id="language-switch" class="language-switch" role="group" aria-label="Language / 语言" hidden>
+<button type="button" data-language="zh" aria-pressed="true" lang="zh-CN">中文</button>
+<button type="button" data-language="en" aria-pressed="false" lang="en">English</button>
+</div>
+</div>
+<h1>WidgetRecycler</h1>
+<p><span data-zh="公开辅助接口与扩展契约" data-en="Public helper interfaces and extension contracts">公开辅助接口与扩展契约</span></p>
+</header>
+<main>
+<nav>
+<a href="../index.html"><span data-zh="能力总览" data-en="Capabilities">能力总览</span></a>
+<a href="../../AGENT_GUIDE.md"><span data-zh="Agent 索引" data-en="Agent guide">Agent 索引</span></a>
+<a href="../../../examples/README.md"><span data-zh="独立示例" data-en="Examples">独立示例</span></a>
+<a href="../../../README.md"><span data-zh="项目首页" data-en="Project home">项目首页</span></a>
+</nav>
+<label for="filter"><span data-zh="搜索本页：能力、API 名称或关键词" data-en="Search this page: capability, API name or keyword">搜索本页：能力、API 名称或关键词</span></label>
+<input id="filter" type="search" placeholder="例如：Popup、setAutoHeight、冻结、branch">
+<p class="muted search-help"><span data-zh="无需网络或服务器。所有内容默认可见；搜索只筛选当前页。完整继承 API 请沿基类链接查阅。" data-en="No network or server required. All content is initially visible; search filters this page only. Follow base-class links for inherited APIs.">无需网络或服务器。所有内容默认可见；搜索只筛选当前页。完整继承 API 请沿基类链接查阅。</span></p>
+<p id="search-status" role="status" aria-live="polite">
+</p>
+<p>
+<a href="../../../include/virtualitemviews/widgetrecycler.h"><span data-zh="公开头文件：include/virtualitemviews/widgetrecycler.h" data-en="Public header: include/virtualitemviews/widgetrecycler.h">公开头文件：include/virtualitemviews/widgetrecycler.h</span></a>
+</p>
+<p class="api-jump">
+<a href="#public-api"><span data-zh="公开函数列表" data-en="Public function index">公开函数列表</span></a>
+</p>
+<h2><span data-zh="能力与配套设置" data-en="Capabilities and related settings">能力与配套设置</span></h2>
+<article id="adapter" data-search="setAdapter setTableAdapter setCellAdapter widgetType createWidget bindWidget unbindWidget estimatedSize visualStateChanged virtualitemview widgetadapter tablewidgetadapter widgetrecycler">
+<h3><span data-zh="控件复用 / 多控件类型 / 异步清理" data-en="Widget recycling / widget types / async cleanup">控件复用 / 多控件类型 / 异步清理</span></h3>
+<p>
+<code>setAdapter · setTableAdapter · setCellAdapter · widgetType · createWidget · bindWidget · unbindWidget · estimatedSize · visualStateChanged</code>
+</p>
+<p class="rules"><span data-zh="先实现 adapter，框架负责创建、复用和回收。createWidget 中连接一次信号；bindWidget 必须完整覆盖旧显示状态，事件中使用当前绑定索引。unbindWidget 停止旧索引的定时器、订阅、动画和异步图片请求；异步回调核对持久索引或任务代次。按 widgetType 分池，不要按滚动自行销毁重建整表。takeOwnership 默认 false，要保证 adapter 生命周期覆盖视图使用期间。" data-en="Implement an adapter; the framework creates, reuses and recycles widgets. Connect signals once in createWidget. bindWidget must replace all old display state; event handlers must use the current binding. unbindWidget stops timers, subscriptions, animations and image requests tied to the old index. Guard async callbacks with persistent identity or a request generation. Pools are classified by widgetType. Do not rebuild the table on scroll. takeOwnership defaults to false; keep the adapter alive while the view uses it.">先实现 adapter，框架负责创建、复用和回收。createWidget 中连接一次信号；bindWidget 必须完整覆盖旧显示状态，事件中使用当前绑定索引。unbindWidget 停止旧索引的定时器、订阅、动画和异步图片请求；异步回调核对持久索引或任务代次。按 widgetType 分池，不要按滚动自行销毁重建整表。takeOwnership 默认 false，要保证 adapter 生命周期覆盖视图使用期间。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../../src/recycler/widgetrecycler.cpp">src/recycler/widgetrecycler.cpp</a> · <a href="../../../src/core/virtualitemview.cpp">src/core/virtualitemview.cpp</a> · <a href="../../../src/widgets/virtualtableview.cpp">src/widgets/virtualtableview.cpp</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../../getting-started.md">docs/getting-started.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（5）" data-en="Independent source examples (5)">独立源码示例（5）</span></summary>
+<ul>
+<li>
+<a href="../../../examples/list_capabilities/03_widget_types/example.cpp">examples/list_capabilities/03_widget_types/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/table_capabilities/03_widget_types/example.cpp">examples/table_capabilities/03_widget_types/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/tree_capabilities/03_widget_types/example.cpp">examples/tree_capabilities/03_widget_types/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/treetable_capabilities/04_widget_types/example.cpp">examples/treetable_capabilities/04_widget_types/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/list_capabilities/02_row_widgets/example.cpp">examples/list_capabilities/02_row_widgets/example.cpp</a>
+</li>
+</ul>
+</details>
+</article>
+<article id="pin" data-search="setOverscan setColumnOverscan setItemPinned pinWidget unpinWidget setMaxPinnedItems stats materializedItemCount createdWidgetCount pooledWidgetCount virtualitemview widgetrecycler virtualtableview">
+<h3><span data-zh="屏外保留 / 预加载 / 焦点 / 诊断" data-en="Offscreen retention / overscan / focus / diagnostics">屏外保留 / 预加载 / 焦点 / 诊断</span></h3>
+<p>
+<code>setOverscan · setColumnOverscan · setItemPinned · pinWidget · unpinWidget · setMaxPinnedItems · stats · materializedItemCount · createdWidgetCount · pooledWidgetCount</code>
+</p>
+<p class="rules"><span data-zh="overscan 增大意味着更多真实控件，CellWidgets 还乘以列数；先测再调。显式 pin 会保留屏外控件直到解除；拖动临时 pin 与业务 pin 独立，maxPinnedItems 是警告阈值而非自动回收上限。焦点/输入法等活动可能需要保留，不能为了降低统计数强删。状态和选择以模型为真源，不以物化控件数量为真源。" data-en="More overscan creates more real widgets; CellWidgets also multiplies by columns. Measure before increasing it. Explicit pins retain offscreen widgets until released, independently of temporary drag pins. maxPinnedItems warns rather than automatically evicting. Focus/IME activity may require retention; do not delete widgets merely to lower counters. Models and selection models, not materialized widgets, are the source of state.">overscan 增大意味着更多真实控件，CellWidgets 还乘以列数；先测再调。显式 pin 会保留屏外控件直到解除；拖动临时 pin 与业务 pin 独立，maxPinnedItems 是警告阈值而非自动回收上限。焦点/输入法等活动可能需要保留，不能为了降低统计数强删。状态和选择以模型为真源，不以物化控件数量为真源。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../../src/core/virtualitemview.cpp">src/core/virtualitemview.cpp</a> · <a href="../../../src/recycler/widgetrecycler.cpp">src/recycler/widgetrecycler.cpp</a> · <a href="../../../src/widgets/virtualtableview.cpp">src/widgets/virtualtableview.cpp</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../../accessibility-guide.md">docs/accessibility-guide.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（8）" data-en="Independent source examples (8)">独立源码示例（8）</span></summary>
+<ul>
+<li>
+<a href="../../../examples/list_capabilities/13_virtualization/example.cpp">examples/list_capabilities/13_virtualization/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/table_capabilities/15_virtualization/example.cpp">examples/table_capabilities/15_virtualization/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/tree_capabilities/18_virtualization/example.cpp">examples/tree_capabilities/18_virtualization/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/treetable_capabilities/20_virtualization/example.cpp">examples/treetable_capabilities/20_virtualization/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/list_capabilities/17_pinning/example.cpp">examples/list_capabilities/17_pinning/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/table_capabilities/27_pinning/example.cpp">examples/table_capabilities/27_pinning/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/tree_capabilities/23_pinning/example.cpp">examples/tree_capabilities/23_pinning/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/treetable_capabilities/32_pinning/example.cpp">examples/treetable_capabilities/32_pinning/example.cpp</a>
+</li>
+</ul>
+</details>
+</article>
+<h2 id="public-api" tabindex="-1"><span data-zh="公开 API、类型与信号" data-en="Public API, types and signals">公开 API、类型与信号</span></h2>
+<section class="function-index" id="function-index" tabindex="-1">
+<h3><span data-zh="公开函数列表" data-en="Public function index">公开函数列表</span></h3>
+<p class="muted"><span data-zh="按声明类型分组；每个重载单独列出，点击签名跳转到说明。信号单独列出；类型和数据成员仍保留在下方。" data-en="Grouped by declaring type. Each overload has its own link to the details. Signals are listed separately; types and data members remain below.">按声明类型分组；每个重载单独列出，点击签名跳转到说明。信号单独列出；类型和数据成员仍保留在下方。</span></p>
+<h4>WidgetRecycler</h4>
+<ul>
+<li data-search="WidgetRecycler WidgetRecycler">
+<a href="#WidgetRecycler-WidgetRecycler-2">
+<code>explicit WidgetRecycler(QObject *parent = nullptr);</code>
+</a>
+</li>
+<li data-search="WidgetRecycler WidgetRecycler">
+<a href="#WidgetRecycler-WidgetRecycler-3">
+<code>~WidgetRecycler() override;</code>
+</a>
+</li>
+<li data-search="WidgetRecycler WidgetRecycler">
+<a href="#WidgetRecycler-WidgetRecycler-4">
+<code>WidgetRecycler(const WidgetRecycler &amp;) = delete;</code>
+</a>
+</li>
+<li data-search="WidgetRecycler operator">
+<a href="#WidgetRecycler-operator-5">
+<code>WidgetRecycler &amp;operator=(const WidgetRecycler &amp;) = delete;</code>
+</a>
+</li>
+<li data-search="WidgetRecycler setParentWidget">
+<a href="#WidgetRecycler-setParentWidget-6">
+<code>void setParentWidget(QWidget *parent);</code>
+</a>
+</li>
+<li data-search="WidgetRecycler parentWidget">
+<a href="#WidgetRecycler-parentWidget-7">
+<code>QWidget *parentWidget() const;</code>
+</a>
+</li>
+<li data-search="WidgetRecycler setFactory">
+<a href="#WidgetRecycler-setFactory-8">
+<code>void setFactory(Factory factory);</code>
+</a>
+</li>
+<li data-search="WidgetRecycler acquire">
+<a href="#WidgetRecycler-acquire-9">
+<code>QWidget *acquire(WidgetType type);</code>
+</a>
+</li>
+<li data-search="WidgetRecycler recycle">
+<a href="#WidgetRecycler-recycle-10">
+<code>void recycle(WidgetType type, QWidget *widget);</code>
+</a>
+</li>
+<li data-search="WidgetRecycler discard">
+<a href="#WidgetRecycler-discard-11">
+<code>void discard(QWidget *widget);</code>
+</a>
+</li>
+<li data-search="WidgetRecycler setMaxPoolSize">
+<a href="#WidgetRecycler-setMaxPoolSize-12">
+<code>void setMaxPoolSize(WidgetType type, qsizetype size);</code>
+</a>
+</li>
+<li data-search="WidgetRecycler maxPoolSize">
+<a href="#WidgetRecycler-maxPoolSize-13">
+<code>qsizetype maxPoolSize(WidgetType type) const;</code>
+</a>
+</li>
+<li data-search="WidgetRecycler pooledCount">
+<a href="#WidgetRecycler-pooledCount-14">
+<code>qsizetype pooledCount(WidgetType type) const;</code>
+</a>
+</li>
+<li data-search="WidgetRecycler pooledCount">
+<a href="#WidgetRecycler-pooledCount-15">
+<code>qsizetype pooledCount() const;</code>
+</a>
+</li>
+<li data-search="WidgetRecycler activeCount">
+<a href="#WidgetRecycler-activeCount-16">
+<code>qsizetype activeCount() const;</code>
+</a>
+</li>
+<li data-search="WidgetRecycler createdCount">
+<a href="#WidgetRecycler-createdCount-17">
+<code>qsizetype createdCount() const;</code>
+</a>
+</li>
+<li data-search="WidgetRecycler destroyedCount">
+<a href="#WidgetRecycler-destroyedCount-18">
+<code>qsizetype destroyedCount() const;</code>
+</a>
+</li>
+<li data-search="WidgetRecycler pendingDestructionCount">
+<a href="#WidgetRecycler-pendingDestructionCount-19">
+<code>qsizetype pendingDestructionCount() const;</code>
+</a>
+</li>
+<li data-search="WidgetRecycler acquireCount">
+<a href="#WidgetRecycler-acquireCount-20">
+<code>qsizetype acquireCount() const;</code>
+</a>
+</li>
+<li data-search="WidgetRecycler reuseCount">
+<a href="#WidgetRecycler-reuseCount-21">
+<code>qsizetype reuseCount() const;</code>
+</a>
+</li>
+<li data-search="WidgetRecycler aliveCount">
+<a href="#WidgetRecycler-aliveCount-22">
+<code>qsizetype aliveCount() const;</code>
+</a>
+</li>
+<li data-search="WidgetRecycler isPooled">
+<a href="#WidgetRecycler-isPooled-23">
+<code>bool isPooled(const QWidget *widget) const;</code>
+</a>
+</li>
+<li data-search="WidgetRecycler trim">
+<a href="#WidgetRecycler-trim-24">
+<code>void trim();</code>
+</a>
+</li>
+<li data-search="WidgetRecycler clear">
+<a href="#WidgetRecycler-clear-25">
+<code>void clear();</code>
+</a>
+</li>
+</ul>
+</section>
+<h2><span data-zh="函数说明" data-en="Function details">函数说明</span></h2>
+<p class="muted"><span data-zh="按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。" data-en="Read each function for its purpose and related settings. Overloads are listed separately; follow related capabilities to find examples.">按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。</span></p>
+<section>
+<h3 id="WidgetRecycler">WidgetRecycler</h3>
+<pre>class VIRTUALITEMVIEWS_EXPORT WidgetRecycler : public QObject</pre>
+<article tabindex="-1" id="WidgetRecycler-Factory-0" data-search="WidgetRecycler Factory">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/widgetrecycler.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L31</span>
+<pre>using Factory = std::function&lt;QWidget *(WidgetType type, QWidget *parent)&gt;;</pre>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="WidgetRecycler-kDefaultMaxPoolSize-1" data-search="WidgetRecycler kDefaultMaxPoolSize">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/widgetrecycler.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L34</span>
+<pre>static constexpr qsizetype kDefaultMaxPoolSize = 256;</pre>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="WidgetRecycler-WidgetRecycler-2" data-search="WidgetRecycler WidgetRecycler">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/widgetrecycler.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L36</span>
+<pre>explicit WidgetRecycler(QObject *parent = nullptr);</pre>
+<p class="doc" data-zh="构造 WidgetRecycler；按此重载传入父对象、模型或布局参数。带 parent 的 QObject/QWidget 遵循 Qt 父子生命周期。" data-en="Construct WidgetRecycler with the parent, model or layout arguments in this overload. QObject/QWidget parent arguments follow Qt parent-child lifetime rules.">构造 WidgetRecycler；按此重载传入父对象、模型或布局参数。带 parent 的 QObject/QWidget 遵循 Qt 父子生命周期。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="WidgetRecycler-WidgetRecycler-3" data-search="WidgetRecycler WidgetRecycler">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/widgetrecycler.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L37</span>
+<pre>~WidgetRecycler() override;</pre>
+<p class="doc" data-zh="销毁 WidgetRecycler 并释放其拥有的资源；不在析构回调中继续使用该对象。" data-en="Destroy WidgetRecycler and release its owned resources; do not keep using the object during destruction callbacks.">销毁 WidgetRecycler 并释放其拥有的资源；不在析构回调中继续使用该对象。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="WidgetRecycler-WidgetRecycler-4" data-search="WidgetRecycler WidgetRecycler">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/widgetrecycler.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L39</span>
+<pre>WidgetRecycler(const WidgetRecycler &amp;) = delete;</pre>
+<p class="doc" data-zh="此复制或赋值操作被禁用；该对象不能按值复制。" data-en="This copy or assignment operation is deleted; the object cannot be copied by value.">此复制或赋值操作被禁用；该对象不能按值复制。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="WidgetRecycler-operator-5" data-search="WidgetRecycler operator">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/widgetrecycler.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L40</span>
+<pre>WidgetRecycler &amp;operator=(const WidgetRecycler &amp;) = delete;</pre>
+<p class="doc" data-zh="此复制或赋值操作被禁用；该对象不能按值复制。" data-en="This copy or assignment operation is deleted; the object cannot be copied by value.">此复制或赋值操作被禁用；该对象不能按值复制。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="WidgetRecycler-setParentWidget-6" data-search="WidgetRecycler setParentWidget">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/widgetrecycler.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L42</span>
+<pre>void setParentWidget(QWidget *parent);</pre>
+<p class="doc" data-zh="设置回收控件父控件。" data-en="Set the recycled widget parent.">设置回收控件父控件。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="WidgetRecycler-parentWidget-7" data-search="WidgetRecycler parentWidget">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/widgetrecycler.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L43</span>
+<pre>QWidget *parentWidget() const;</pre>
+<p class="doc" data-zh="返回回收控件父控件。" data-en="Return the recycled widget parent.">返回回收控件父控件。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="WidgetRecycler-setFactory-8" data-search="WidgetRecycler setFactory">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/widgetrecycler.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L45</span>
+<pre>void setFactory(Factory factory);</pre>
+<p class="doc" data-zh="设置按 WidgetType 创建控件的工厂。" data-en="Set the widget factory indexed by WidgetType.">设置按 WidgetType 创建控件的工厂。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="WidgetRecycler-acquire-9" data-search="WidgetRecycler acquire">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/widgetrecycler.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L50</span>
+<pre>QWidget *acquire(WidgetType type);</pre>
+<p class="doc" data-zh="按 widgetType 从池中取出可复用控件；池空时通过工厂创建。" data-en="Acquire a widget by type, reusing a pooled instance or creating one through the factory.">按 widgetType 从池中取出可复用控件；池空时通过工厂创建。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="WidgetRecycler-recycle-10" data-search="WidgetRecycler recycle">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/widgetrecycler.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L54</span>
+<pre>void recycle(WidgetType type, QWidget *widget);</pre>
+<p class="doc" data-zh="将控件退回按类型分类的复用池。回收前由适配器解绑业务状态。" data-en="Return a widget to its type-specific pool after adapter state has been unbound.">将控件退回按类型分类的复用池。回收前由适配器解绑业务状态。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="WidgetRecycler-discard-11" data-search="WidgetRecycler discard">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/widgetrecycler.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L56</span>
+<pre>void discard(QWidget *widget);</pre>
+<p class="doc" data-zh="将控件从回收器管理中移除并安排销毁。" data-en="Remove a widget from recycler management and schedule its destruction.">将控件从回收器管理中移除并安排销毁。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="WidgetRecycler-setMaxPoolSize-12" data-search="WidgetRecycler setMaxPoolSize">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/widgetrecycler.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L59</span>
+<pre>void setMaxPoolSize(WidgetType type, qsizetype size);</pre>
+<p class="doc" data-zh="设置回收池容量上限。" data-en="Set the recycler pool capacity limit.">设置回收池容量上限。</p>
+<p class="doc" data-zh="按 WidgetType 分别限制池容量；负数表示不限制。池满时回收控件会安排延迟删除。" data-en="Limits apply per WidgetType; negative means unlimited. Recycling into a full pool schedules deferred deletion.">按 WidgetType 分别限制池容量；负数表示不限制。池满时回收控件会安排延迟删除。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="WidgetRecycler-maxPoolSize-13" data-search="WidgetRecycler maxPoolSize">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/widgetrecycler.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L60</span>
+<pre>qsizetype maxPoolSize(WidgetType type) const;</pre>
+<p class="doc" data-zh="返回回收池容量上限。" data-en="Return the recycler pool capacity limit.">返回回收池容量上限。</p>
+<p class="doc" data-zh="按 WidgetType 分别限制池容量；负数表示不限制。池满时回收控件会安排延迟删除。" data-en="Limits apply per WidgetType; negative means unlimited. Recycling into a full pool schedules deferred deletion.">按 WidgetType 分别限制池容量；负数表示不限制。池满时回收控件会安排延迟删除。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="WidgetRecycler-pooledCount-14" data-search="WidgetRecycler pooledCount">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/widgetrecycler.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L62</span>
+<pre>qsizetype pooledCount(WidgetType type) const;</pre>
+<p class="doc" data-zh="返回当前池内空闲控件数；带类型参数的重载只统计该类型。" data-en="Return the current pooled idle widget count; typed overloads count only that type.">返回当前池内空闲控件数；带类型参数的重载只统计该类型。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="WidgetRecycler-pooledCount-15" data-search="WidgetRecycler pooledCount">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/widgetrecycler.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L63</span>
+<pre>qsizetype pooledCount() const;</pre>
+<p class="doc" data-zh="返回当前池内空闲控件数；带类型参数的重载只统计该类型。" data-en="Return the current pooled idle widget count; typed overloads count only that type.">返回当前池内空闲控件数；带类型参数的重载只统计该类型。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="WidgetRecycler-activeCount-16" data-search="WidgetRecycler activeCount">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/widgetrecycler.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L64</span>
+<pre>    qsizetype activeCount() const;</pre>
+<p class="doc" data-zh="返回当前已借出控件数。" data-en="Return the current acquired widget count.">返回当前已借出控件数。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="WidgetRecycler-createdCount-17" data-search="WidgetRecycler createdCount">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/widgetrecycler.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L67</span>
+<pre>    qsizetype createdCount() const;</pre>
+<p class="doc" data-zh="返回累计创建控件数。" data-en="Return the cumulative created widget count.">返回累计创建控件数。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="WidgetRecycler-destroyedCount-18" data-search="WidgetRecycler destroyedCount">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/widgetrecycler.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L69</span>
+<pre>    qsizetype destroyedCount() const;</pre>
+<p class="doc" data-zh="返回累计销毁控件数。" data-en="Return the cumulative destroyed widget count.">返回累计销毁控件数。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="WidgetRecycler-pendingDestructionCount-19" data-search="WidgetRecycler pendingDestructionCount">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/widgetrecycler.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L71</span>
+<pre>    qsizetype pendingDestructionCount() const;</pre>
+<p class="doc" data-zh="返回等待延迟销毁控件数。" data-en="Return the widgets pending deferred destruction.">返回等待延迟销毁控件数。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="WidgetRecycler-acquireCount-20" data-search="WidgetRecycler acquireCount">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/widgetrecycler.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L72</span>
+<pre>    qsizetype acquireCount() const;</pre>
+<p class="doc" data-zh="返回累计获取控件次数。" data-en="Return the cumulative widget acquisition count.">返回累计获取控件次数。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="WidgetRecycler-reuseCount-21" data-search="WidgetRecycler reuseCount">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/widgetrecycler.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L74</span>
+<pre>    qsizetype reuseCount() const;</pre>
+<p class="doc" data-zh="返回累计复用已有控件次数。" data-en="Return the cumulative widget reuse count.">返回累计复用已有控件次数。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="WidgetRecycler-aliveCount-22" data-search="WidgetRecycler aliveCount">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/widgetrecycler.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L77</span>
+<pre>    qsizetype aliveCount() const;</pre>
+<p class="doc" data-zh="返回当前尚存活控件总数。" data-en="Return the current live widget count.">返回当前尚存活控件总数。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="WidgetRecycler-isPooled-23" data-search="WidgetRecycler isPooled">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/widgetrecycler.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L79</span>
+<pre>bool isPooled(const QWidget *widget) const;</pre>
+<p class="doc" data-zh="判断控件是否当前位于空闲回收池。" data-en="Check whether a widget is currently in an idle recycler pool.">判断控件是否当前位于空闲回收池。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="WidgetRecycler-trim-24" data-search="WidgetRecycler trim">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/widgetrecycler.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L82</span>
+<pre>void trim();</pre>
+<p class="doc" data-zh="将空闲池缩减至容量限制，释放多余控件。" data-en="Trim idle pools to their capacity limits, releasing excess widgets.">将空闲池缩减至容量限制，释放多余控件。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="WidgetRecycler-clear-25" data-search="WidgetRecycler clear">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/widgetrecycler.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L84</span>
+<pre>void clear();</pre>
+<p class="doc" data-zh="立即删除回收池中的全部空闲控件；活动控件不属于池内清理范围。" data-en="Immediately delete all idle pooled widgets; active widgets are outside this pool cleanup.">立即删除回收池中的全部空闲控件；活动控件不属于池内清理范围。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+</section>
+<footer class="muted">
+<p><span data-zh="按能力查找配套设置与独立示例；通用接口请沿基类链接查阅，Qt 继承接口请参考 Qt 文档。" data-en="Find related settings and independent examples by capability. Follow base-class links for shared APIs and consult Qt documentation for inherited Qt APIs.">按能力查找配套设置与独立示例；通用接口请沿基类链接查阅，Qt 继承接口请参考 Qt 文档。</span></p>
+</footer>
+</main>
+<script src="../assets/reference.js">
+</script>
+</body>
+</html>
