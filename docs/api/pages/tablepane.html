@@ -347,7 +347,32 @@
 </li>
 </ul>
 </section>
-<h2><span data-zh="函数说明" data-en="Function details">函数说明</span></h2>
+<section id="type-index">
+<h3><span data-zh="结构体与枚举" data-en="Structs and enums">结构体与枚举</span></h3>
+<ul>
+<li data-search="PaneScroll">
+<a href="#PaneScroll-PaneScroll-0">
+<code>PaneScroll</code>
+</a>
+</li>
+<li data-search="TablePaneSpec">
+<a href="#TablePaneSpec">
+<code>TablePaneSpec</code>
+</a>
+</li>
+<li data-search="TablePane">
+<a href="#TablePane">
+<code>TablePane</code>
+</a>
+</li>
+<li data-search="TablePane::Type">
+<a href="#TablePane-Type-0">
+<code>TablePane::Type</code>
+</a>
+</li>
+</ul>
+</section>
+<h2><span data-zh="接口与类型说明" data-en="API and type details">接口与类型说明</span></h2>
 <p class="muted"><span data-zh="按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。" data-en="Read each function for its purpose and related settings. Overloads are listed separately; follow related capabilities to find examples.">按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。</span></p>
 <section>
 <h3 id="PaneScroll">PaneScroll</h3>
@@ -356,39 +381,74 @@
 <span class="badge">public</span>
 <span class="muted">
 <a href="../../../include/virtualitemviews/tablepane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L19</span>
-<pre>enum class PaneScroll
-{
-    /// Never moves horizontally (a frozen pane).
+<pre>enum class PaneScroll {
     Frozen,
-    /// Follows the horizontal offset of its scroll group.
     Scrollable,
 };</pre>
-<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+<p class="doc" data-zh="显式 TablePaneSpec 的横向滚动方式。" data-en="Horizontal scrolling for an explicit TablePaneSpec.">显式 TablePaneSpec 的横向滚动方式。</p>
+<div class="table-scroll">
+<table class="type-members">
+<thead>
+<tr>
+<th><span data-zh="成员 / 取值" data-en="Member / value">成员 / 取值</span></th>
+<th><span data-zh="说明" data-en="Guide">说明</span></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>Frozen</code>
+</td>
+<td class="doc" data-zh="冻结，不随横向偏移移动。" data-en="Frozen; does not follow horizontal offsets.">冻结，不随横向偏移移动。</td>
+</tr>
+<tr>
+<td>
+<code>Scrollable</code>
+</td>
+<td class="doc" data-zh="跟随 scrollGroup 偏移，TablePaneSpec 默认值。" data-en="Follow scrollGroup offsets; the TablePaneSpec default.">跟随 scrollGroup 偏移，TablePaneSpec 默认值。</td>
+</tr>
+</tbody>
+</table>
+</div>
+<a href="#type-index" class="muted"><span data-zh="返回类型列表" data-en="Back to type index">返回类型列表</span></a>
 </article>
 </section>
 <section>
 <h3 id="TablePaneSpec">TablePaneSpec</h3>
 <pre>struct TablePaneSpec</pre>
-<article tabindex="-1" id="TablePaneSpec-logicalColumns-0" data-search="TablePaneSpec logicalColumns">
-<span class="badge">public</span>
-<span class="muted">
-<a href="../../../include/virtualitemviews/tablepane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L34</span>
-<pre>QVector&lt;int&gt; logicalColumns;</pre>
-<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
-</article>
-<article tabindex="-1" id="TablePaneSpec-scroll-1" data-search="TablePaneSpec scroll">
-<span class="badge">public</span>
-<span class="muted">
-<a href="../../../include/virtualitemviews/tablepane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L35</span>
-<pre>PaneScroll scroll = PaneScroll::Scrollable;</pre>
-<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
-</article>
-<article tabindex="-1" id="TablePaneSpec-scrollGroup-2" data-search="TablePaneSpec scrollGroup">
-<span class="badge">public</span>
-<span class="muted">
-<a href="../../../include/virtualitemviews/tablepane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L38</span>
-<pre>int scrollGroup = 0;</pre>
-<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+<article data-search="TablePaneSpec">
+<p class="doc" data-zh="显式列 pane 配置。只指定列归属和滚动方式，列宽、隐藏和顺序仍由 HeaderGeometry 管理。" data-en="Explicit column-pane configuration. Defines membership and scrolling; HeaderGeometry still owns widths, visibility and order.">显式列 pane 配置。只指定列归属和滚动方式，列宽、隐藏和顺序仍由 HeaderGeometry 管理。</p>
+<div class="table-scroll">
+<table class="type-members">
+<thead>
+<tr>
+<th><span data-zh="成员 / 取值" data-en="Member / value">成员 / 取值</span></th>
+<th><span data-zh="说明" data-en="Guide">说明</span></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>QVector&lt;int&gt; logicalColumns;</code>
+</td>
+<td class="doc" data-zh="所属逻辑列号，按视觉顺序显示，初始为空。" data-en="Member logical columns, displayed in visual order; initially empty.">所属逻辑列号，按视觉顺序显示，初始为空。</td>
+</tr>
+<tr>
+<td>
+<code>PaneScroll scroll = PaneScroll::Scrollable;</code>
+</td>
+<td class="doc" data-zh="滚动方式，默认 PaneScroll::Scrollable。" data-en="Scroll behavior; defaults to PaneScroll::Scrollable.">滚动方式，默认 PaneScroll::Scrollable。</td>
+</tr>
+<tr>
+<td>
+<code>int scrollGroup = 0;</code>
+</td>
+<td class="doc" data-zh="共享横向偏移的组号，默认 0；冻结 pane 忽略。" data-en="Group sharing a horizontal offset; defaults to 0; ignored by frozen panes.">共享横向偏移的组号，默认 0；冻结 pane 忽略。</td>
+</tr>
+</tbody>
+</table>
+</div>
+<a href="#type-index" class="muted"><span data-zh="返回类型列表" data-en="Back to type index">返回类型列表</span></a>
 </article>
 <article tabindex="-1" id="TablePaneSpec-isFrozen-3" data-search="TablePaneSpec isFrozen">
 <span class="badge">public</span>
@@ -418,45 +478,87 @@
 <section>
 <h3 id="TablePane">TablePane</h3>
 <pre>struct TablePane</pre>
+<article data-search="TablePane">
+<p class="doc" data-zh="横向 pane 的布局结果。业务配置用 TablePaneSpec 或冻结列接口；此结构不保存独立列宽。" data-en="Horizontal pane layout result. Configure through TablePaneSpec or frozen-column APIs; this structure does not own column widths.">横向 pane 的布局结果。业务配置用 TablePaneSpec 或冻结列接口；此结构不保存独立列宽。</p>
+<div class="table-scroll">
+<table class="type-members">
+<thead>
+<tr>
+<th><span data-zh="成员 / 取值" data-en="Member / value">成员 / 取值</span></th>
+<th><span data-zh="说明" data-en="Guide">说明</span></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>Type type = Type::Scrollable;</code>
+</td>
+<td class="doc" data-zh="pane 类型，默认 Type::Scrollable。" data-en="Pane type; defaults to Type::Scrollable.">pane 类型，默认 Type::Scrollable。</td>
+</tr>
+<tr>
+<td>
+<code>int scrollGroup = -1;</code>
+</td>
+<td class="doc" data-zh="横向滚动组，初始 -1；冻结 pane 使用 -1。" data-en="Horizontal scroll group; initially -1, also used by frozen panes.">横向滚动组，初始 -1；冻结 pane 使用 -1。</td>
+</tr>
+<tr>
+<td>
+<code>QRect viewportRect;</code>
+</td>
+<td class="doc" data-zh="viewport 中的 pane 矩形，初始为空。" data-en="Pane rectangle in viewport coordinates; initially empty.">viewport 中的 pane 矩形，初始为空。</td>
+</tr>
+<tr>
+<td>
+<code>QVector&lt;int&gt; logicalColumns;</code>
+</td>
+<td class="doc" data-zh="按视觉顺序排列的可见逻辑列，不含隐藏列，初始为空。" data-en="Visible logical columns in visual order, excluding hidden columns; initially empty.">按视觉顺序排列的可见逻辑列，不含隐藏列，初始为空。</td>
+</tr>
+</tbody>
+</table>
+</div>
+<a href="#type-index" class="muted"><span data-zh="返回类型列表" data-en="Back to type index">返回类型列表</span></a>
+</article>
 <article tabindex="-1" id="TablePane-Type-0" data-search="TablePane Type">
 <span class="badge">public</span>
 <span class="muted">
 <a href="../../../include/virtualitemviews/tablepane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L56</span>
-<pre>enum class Type
-    {
-        FrozenLeft,
-        Scrollable,
-        FrozenRight,
-    };</pre>
-<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
-</article>
-<article tabindex="-1" id="TablePane-type-1" data-search="TablePane type">
-<span class="badge">public</span>
-<span class="muted">
-<a href="../../../include/virtualitemviews/tablepane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L63</span>
-<pre>Type type = Type::Scrollable;</pre>
-<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
-</article>
-<article tabindex="-1" id="TablePane-scrollGroup-2" data-search="TablePane scrollGroup">
-<span class="badge">public</span>
-<span class="muted">
-<a href="../../../include/virtualitemviews/tablepane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L65</span>
-<pre>int scrollGroup = -1;</pre>
-<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
-</article>
-<article tabindex="-1" id="TablePane-viewportRect-3" data-search="TablePane viewportRect">
-<span class="badge">public</span>
-<span class="muted">
-<a href="../../../include/virtualitemviews/tablepane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L68</span>
-<pre>QRect viewportRect;</pre>
-<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
-</article>
-<article tabindex="-1" id="TablePane-logicalColumns-4" data-search="TablePane logicalColumns">
-<span class="badge">public</span>
-<span class="muted">
-<a href="../../../include/virtualitemviews/tablepane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L70</span>
-<pre>QVector&lt;int&gt; logicalColumns;</pre>
-<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+<pre>enum class Type {
+    FrozenLeft,
+    Scrollable,
+    FrozenRight,
+};</pre>
+<p class="doc" data-zh="横向 pane 布局类型。" data-en="Horizontal pane layout type.">横向 pane 布局类型。</p>
+<div class="table-scroll">
+<table class="type-members">
+<thead>
+<tr>
+<th><span data-zh="成员 / 取值" data-en="Member / value">成员 / 取值</span></th>
+<th><span data-zh="说明" data-en="Guide">说明</span></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>FrozenLeft</code>
+</td>
+<td class="doc" data-zh="左侧冻结 pane。" data-en="Left frozen pane.">左侧冻结 pane。</td>
+</tr>
+<tr>
+<td>
+<code>Scrollable</code>
+</td>
+<td class="doc" data-zh="随所属组横向滚动，默认值。" data-en="Scroll horizontally with its group; the default.">随所属组横向滚动，默认值。</td>
+</tr>
+<tr>
+<td>
+<code>FrozenRight</code>
+</td>
+<td class="doc" data-zh="右侧冻结 pane。" data-en="Right frozen pane.">右侧冻结 pane。</td>
+</tr>
+</tbody>
+</table>
+</div>
+<a href="#type-index" class="muted"><span data-zh="返回类型列表" data-en="Back to type index">返回类型列表</span></a>
 </article>
 <article tabindex="-1" id="TablePane-isEmpty-5" data-search="TablePane isEmpty">
 <span class="badge">public</span>
@@ -508,6 +610,7 @@
 <a href="../../../include/virtualitemviews/tablepane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L97</span>
 <pre>    void setGeometry(const HeaderGeometry *geometry);</pre>
 <p class="doc" data-zh="设置布局几何对象或矩形。" data-en="Set the layout geometry object or rectangle.">设置布局几何对象或矩形。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：nullptr；未关联 HeaderGeometry。" data-en="Default / initial state: nullptr; no associated HeaderGeometry.">默认值／初始状态：nullptr；未关联 HeaderGeometry。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="TablePaneLayout-geometry-1" data-search="TablePaneLayout geometry">
@@ -516,6 +619,7 @@
 <a href="../../../include/virtualitemviews/tablepane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L98</span>
 <pre>    const HeaderGeometry *geometry() const;</pre>
 <p class="doc" data-zh="返回布局几何对象或矩形。" data-en="Return the layout geometry object or rectangle.">返回布局几何对象或矩形。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：nullptr；未关联 HeaderGeometry。" data-en="Default / initial state: nullptr; no associated HeaderGeometry.">默认值／初始状态：nullptr；未关联 HeaderGeometry。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="TablePaneLayout-setSplitBoundarySpacing-2" data-search="TablePaneLayout setSplitBoundarySpacing">
@@ -524,6 +628,7 @@
 <a href="../../../include/virtualitemviews/tablepane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L101</span>
 <pre>    void setSplitBoundarySpacing(bool split);</pre>
 <p class="doc" data-zh="配置窗格边界两侧的间距分配，避免冻结边界重复计算完整间距。" data-en="Configure spacing on both sides of pane boundaries to avoid counting a full gap twice.">配置窗格边界两侧的间距分配，避免冻结边界重复计算完整间距。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：独立布局为 false；表格按其 pane 间距规则配置。" data-en="Default / initial state: false for a standalone layout; tables configure it according to their pane spacing rules.">默认值／初始状态：独立布局为 false；表格按其 pane 间距规则配置。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="TablePaneLayout-setFrozenColumns-3" data-search="TablePaneLayout setFrozenColumns">
@@ -532,6 +637,7 @@
 <a href="../../../include/virtualitemviews/tablepane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L105</span>
 <pre>void setFrozenColumns(const QVector&lt;int&gt; &amp;logicalColumns);</pre>
 <p class="doc" data-zh="设置左侧冻结列数。" data-en="Set the number of left frozen columns.">设置左侧冻结列数。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：空集合，无冻结列。" data-en="Default / initial state: Empty set; no frozen columns.">默认值／初始状态：空集合，无冻结列。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#frozen"><span data-zh="冻结行列 / 多 pane / 多滚动组" data-en="Frozen rows and columns / multiple panes / scroll groups">冻结行列 / 多 pane / 多滚动组</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -541,6 +647,7 @@
 <a href="../../../include/virtualitemviews/tablepane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L106</span>
 <pre>void setFrozenRightColumns(const QVector&lt;int&gt; &amp;logicalColumns);</pre>
 <p class="doc" data-zh="设置右侧冻结列数。" data-en="Set the number of right frozen columns.">设置右侧冻结列数。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：空集合，无冻结列。" data-en="Default / initial state: Empty set; no frozen columns.">默认值／初始状态：空集合，无冻结列。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#frozen"><span data-zh="冻结行列 / 多 pane / 多滚动组" data-en="Frozen rows and columns / multiple panes / scroll groups">冻结行列 / 多 pane / 多滚动组</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -550,6 +657,7 @@
 <a href="../../../include/virtualitemviews/tablepane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L107</span>
 <pre>    const QVector&lt;int&gt; &amp;frozenColumns() const;</pre>
 <p class="doc" data-zh="返回左侧冻结列数。" data-en="Return the number of left frozen columns.">返回左侧冻结列数。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：空集合，无冻结列。" data-en="Default / initial state: Empty set; no frozen columns.">默认值／初始状态：空集合，无冻结列。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#frozen"><span data-zh="冻结行列 / 多 pane / 多滚动组" data-en="Frozen rows and columns / multiple panes / scroll groups">冻结行列 / 多 pane / 多滚动组</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -559,6 +667,7 @@
 <a href="../../../include/virtualitemviews/tablepane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L108</span>
 <pre>    const QVector&lt;int&gt; &amp;frozenRightColumns() const;</pre>
 <p class="doc" data-zh="返回右侧冻结列数。" data-en="Return the number of right frozen columns.">返回右侧冻结列数。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：空集合，无冻结列。" data-en="Default / initial state: Empty set; no frozen columns.">默认值／初始状态：空集合，无冻结列。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#frozen"><span data-zh="冻结行列 / 多 pane / 多滚动组" data-en="Frozen rows and columns / multiple panes / scroll groups">冻结行列 / 多 pane / 多滚动组</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -576,6 +685,7 @@
 <a href="../../../include/virtualitemviews/tablepane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L124</span>
 <pre>void setPaneSpecs(const QVector&lt;TablePaneSpec&gt; &amp;specs);</pre>
 <p class="doc" data-zh="设置显式列窗格配置。" data-en="Set the explicit column pane configuration.">设置显式列窗格配置。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：空列表；根据冻结集合自动构建 pane。" data-en="Default / initial state: Empty list; panes are derived from frozen column sets.">默认值／初始状态：空列表；根据冻结集合自动构建 pane。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="TablePaneLayout-paneSpecs-9" data-search="TablePaneLayout paneSpecs">
@@ -584,6 +694,7 @@
 <a href="../../../include/virtualitemviews/tablepane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L125</span>
 <pre>    const QVector&lt;TablePaneSpec&gt; &amp;paneSpecs() const;</pre>
 <p class="doc" data-zh="返回显式列窗格配置。" data-en="Return the explicit column pane configuration.">返回显式列窗格配置。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：空列表；根据冻结集合自动构建 pane。" data-en="Default / initial state: Empty list; panes are derived from frozen column sets.">默认值／初始状态：空列表；根据冻结集合自动构建 pane。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="TablePaneLayout-usesExplicitPanes-10" data-search="TablePaneLayout usesExplicitPanes">
@@ -802,6 +913,7 @@
 <a href="../../../include/virtualitemviews/tablepane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L203</span>
 <pre>void setGroupOffset(int scrollGroup, qint64 offset);</pre>
 <p class="doc" data-zh="设置指定滚动组偏移量。" data-en="Set the offset of the specified scroll group.">设置指定滚动组偏移量。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：各滚动组为 0。" data-en="Default / initial state: 0 for each scroll group.">默认值／初始状态：各滚动组为 0。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="TablePaneLayout-maximumGroupOffset-37" data-search="TablePaneLayout maximumGroupOffset">

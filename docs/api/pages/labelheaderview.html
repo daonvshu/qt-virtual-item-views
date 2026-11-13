@@ -133,7 +133,7 @@
 </li>
 </ul>
 </section>
-<h2><span data-zh="函数说明" data-en="Function details">函数说明</span></h2>
+<h2><span data-zh="接口与类型说明" data-en="API and type details">接口与类型说明</span></h2>
 <p class="muted"><span data-zh="按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。" data-en="Read each function for its purpose and related settings. Overloads are listed separately; follow related capabilities to find examples.">按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。</span></p>
 <section>
 <h3 id="LabelHeaderSection">LabelHeaderSection</h3>
@@ -152,6 +152,7 @@
 <a href="../../../include/virtualitemviews/labelheaderview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L28</span>
 <pre>    QString text() const;</pre>
 <p class="doc" data-zh="返回显示文本。" data-en="Return the display text.">返回显示文本。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：空字符串；绑定后由 adapter 填充。" data-en="Default / initial state: Empty string; populated by the adapter on binding.">默认值／初始状态：空字符串；绑定后由 adapter 填充。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="LabelHeaderSection-sortOrder-2" data-search="LabelHeaderSection sortOrder">
@@ -160,6 +161,7 @@
 <a href="../../../include/virtualitemviews/labelheaderview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L30</span>
 <pre>    int sortOrder() const;</pre>
 <p class="doc" data-zh="返回排序方向。" data-en="Return the sort order.">返回排序方向。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：-1；不显示排序箭头。" data-en="Default / initial state: -1; no sort arrow.">默认值／初始状态：-1；不显示排序箭头。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="LabelHeaderSection-setText-3" data-search="LabelHeaderSection setText">
@@ -168,6 +170,7 @@
 <a href="../../../include/virtualitemviews/labelheaderview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L32</span>
 <pre>void setText(const QString &amp;text);</pre>
 <p class="doc" data-zh="设置显示文本。" data-en="Set the display text.">设置显示文本。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：空字符串；绑定后由 adapter 填充。" data-en="Default / initial state: Empty string; populated by the adapter on binding.">默认值／初始状态：空字符串；绑定后由 adapter 填充。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="LabelHeaderSection-setSortOrder-4" data-search="LabelHeaderSection setSortOrder">
@@ -176,6 +179,7 @@
 <a href="../../../include/virtualitemviews/labelheaderview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L33</span>
 <pre>void setSortOrder(int order);</pre>
 <p class="doc" data-zh="设置排序方向。" data-en="Set the sort order.">设置排序方向。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：-1；不显示排序箭头。" data-en="Default / initial state: -1; no sort arrow.">默认值／初始状态：-1；不显示排序箭头。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="LabelHeaderSection-setTextAlignment-5" data-search="LabelHeaderSection setTextAlignment">
@@ -184,6 +188,7 @@
 <a href="../../../include/virtualitemviews/labelheaderview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L35</span>
 <pre>void setTextAlignment(Qt::Alignment alignment);</pre>
 <p class="doc" data-zh="设置文本对齐方式。" data-en="Set the text alignment.">设置文本对齐方式。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：空对齐标记；跟随所属表头，未关联表头时 Qt::AlignCenter。" data-en="Default / initial state: Empty alignment flags; follows the owning header, or Qt::AlignCenter without a header.">默认值／初始状态：空对齐标记；跟随所属表头，未关联表头时 Qt::AlignCenter。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#headers"><span data-zh="默认表头 / 样式 / section / corner" data-en="Default headers / styles / sections / corner">默认表头 / 样式 / section / corner</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -193,6 +198,7 @@
 <a href="../../../include/virtualitemviews/labelheaderview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L37</span>
 <pre>void setForegroundBrush(const QBrush &amp;brush);</pre>
 <p class="doc" data-zh="设置文本前景画刷，可用于纯色以外的文字填充。" data-en="Set the text foreground brush, including non-solid text fills.">设置文本前景画刷，可用于纯色以外的文字填充。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：Qt::NoBrush；跟随所属表头默认文字颜色。" data-en="Default / initial state: Qt::NoBrush; follows the owning header default text color.">默认值／初始状态：Qt::NoBrush；跟随所属表头默认文字颜色。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 </section>
@@ -213,6 +219,7 @@
 <a href="../../../include/virtualitemviews/labelheaderview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L64</span>
 <pre>void setLabelModel(QAbstractItemModel *model) override;</pre>
 <p class="doc" data-zh="设置表头文本模型。" data-en="Set the header label model.">设置表头文本模型。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：nullptr；未绑定模型或几何。" data-en="Default / initial state: nullptr; no model or geometry is bound.">默认值／初始状态：nullptr；未绑定模型或几何。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="LabelHeaderAdapter-setGeometryModel-2" data-search="LabelHeaderAdapter setGeometryModel">
@@ -221,6 +228,7 @@
 <a href="../../../include/virtualitemviews/labelheaderview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L65</span>
 <pre>void setGeometryModel(HeaderGeometry *geometry) override;</pre>
 <p class="doc" data-zh="设置表头 section 几何模型。" data-en="Set the header section geometry model.">设置表头 section 几何模型。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：nullptr；未绑定模型或几何。" data-en="Default / initial state: nullptr; no model or geometry is bound.">默认值／初始状态：nullptr；未绑定模型或几何。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="LabelHeaderAdapter-bindSection-3" data-search="LabelHeaderAdapter bindSection">

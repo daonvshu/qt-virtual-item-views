@@ -568,7 +568,7 @@ public:
     /// in which case the row widgets keep the viewport as parent).
     QWidget *scrollingPaneHost() const { return m_scrollPaneHost; }
 
-    // -- diagnostics (tests, benchmarks, demos) ------------------------------
+    // -- diagnostics (tests, demos) ------------------------------
     qsizetype materializedItemCount() const { return m_items.size(); }
     qsizetype pinnedItemCount() const;
     QWidget *widgetForIndex(const QModelIndex &index) const;

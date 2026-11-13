@@ -181,7 +181,7 @@
 </li>
 </ul>
 </section>
-<h2><span data-zh="函数说明" data-en="Function details">函数说明</span></h2>
+<h2><span data-zh="接口与类型说明" data-en="API and type details">接口与类型说明</span></h2>
 <p class="muted"><span data-zh="按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。" data-en="Read each function for its purpose and related settings. Overloads are listed separately; follow related capabilities to find examples.">按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。</span></p>
 <section>
 <h3 id="LayoutPolicy">LayoutPolicy</h3>
@@ -256,6 +256,7 @@
 <a href="../../../include/virtualitemviews/layoutpolicy.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L45</span>
 <pre>virtual int crossExtent() const = 0;</pre>
 <p class="doc" data-zh="返回布局交叉轴长度。" data-en="Return the layout cross-axis extent.">返回布局交叉轴长度。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：抽象接口，无统一数值；初始状态由具体布局/尺寸索引的构造或 reset 参数决定。" data-en="Default / initial state: Abstract interface with no universal value; concrete layout/size-index constructors or reset arguments determine the initial state.">默认值／初始状态：抽象接口，无统一数值；初始状态由具体布局/尺寸索引的构造或 reset 参数决定。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="LayoutPolicy-setCrossExtent-9" data-search="LayoutPolicy setCrossExtent">
@@ -264,6 +265,7 @@
 <a href="../../../include/virtualitemviews/layoutpolicy.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L46</span>
 <pre>virtual void setCrossExtent(int extent) = 0;</pre>
 <p class="doc" data-zh="设置布局交叉轴长度。" data-en="Set the layout cross-axis extent.">设置布局交叉轴长度。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：抽象接口，无统一数值；初始状态由具体布局/尺寸索引的构造或 reset 参数决定。" data-en="Default / initial state: Abstract interface with no universal value; concrete layout/size-index constructors or reset arguments determine the initial state.">默认值／初始状态：抽象接口，无统一数值；初始状态由具体布局/尺寸索引的构造或 reset 参数决定。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="LayoutPolicy-itemRect-10" data-search="LayoutPolicy itemRect">
@@ -328,6 +330,7 @@
 <a href="../../../include/virtualitemviews/layoutpolicy.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L66</span>
 <pre>    virtual SizeIndex *sizeIndex() const;</pre>
 <p class="doc" data-zh="返回项目尺寸及前缀偏移索引。" data-en="Return the index of item sizes and prefix offsets.">返回项目尺寸及前缀偏移索引。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：基类 sizeIndex() 返回 nullptr，不持有尺寸索引；takeOwnership 参数默认 true。" data-en="Default / initial state: The base sizeIndex() returns nullptr and stores no size index; takeOwnership defaults to true.">默认值／初始状态：基类 sizeIndex() 返回 nullptr，不持有尺寸索引；takeOwnership 参数默认 true。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="LayoutPolicy-setSizeIndex-18" data-search="LayoutPolicy setSizeIndex">
@@ -336,6 +339,7 @@
 <a href="../../../include/virtualitemviews/layoutpolicy.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L72</span>
 <pre>virtual void setSizeIndex(SizeIndex *index, bool takeOwnership = true);</pre>
 <p class="doc" data-zh="设置项目尺寸及前缀偏移索引。" data-en="Set the index of item sizes and prefix offsets.">设置项目尺寸及前缀偏移索引。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：基类 sizeIndex() 返回 nullptr，不持有尺寸索引；takeOwnership 参数默认 true。" data-en="Default / initial state: The base sizeIndex() returns nullptr and stores no size index; takeOwnership defaults to true.">默认值／初始状态：基类 sizeIndex() 返回 nullptr，不持有尺寸索引；takeOwnership 参数默认 true。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="LayoutPolicy-resetItems-19" data-search="LayoutPolicy resetItems">
@@ -376,6 +380,7 @@
 <a href="../../../include/virtualitemviews/layoutpolicy.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L79</span>
 <pre>virtual void setItemSize(qsizetype item, int size) = 0;</pre>
 <p class="doc" data-zh="设置项目布局主轴尺寸。" data-en="Set the item main-axis size.">设置项目布局主轴尺寸。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：抽象接口，无统一数值；初始状态由具体布局/尺寸索引的构造或 reset 参数决定。" data-en="Default / initial state: Abstract interface with no universal value; concrete layout/size-index constructors or reset arguments determine the initial state.">默认值／初始状态：抽象接口，无统一数值；初始状态由具体布局/尺寸索引的构造或 reset 参数决定。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 </section>

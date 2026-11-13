@@ -212,7 +212,7 @@
 </li>
 </ul>
 </section>
-<h2><span data-zh="函数说明" data-en="Function details">函数说明</span></h2>
+<h2><span data-zh="接口与类型说明" data-en="API and type details">接口与类型说明</span></h2>
 <p class="muted"><span data-zh="按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。" data-en="Read each function for its purpose and related settings. Overloads are listed separately; follow related capabilities to find examples.">按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。</span></p>
 <section>
 <h3 id="WrapWidget">WrapWidget</h3>
@@ -239,6 +239,24 @@
 <a href="../../../include/virtualitemviews/wrapwidget.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L20</span>
 <pre>    WrapLayout *wrapLayout() const;</pre>
 <p class="doc" data-zh="返回真实控件换行布局对象。" data-en="Return the wrapping layout for real widgets.">返回真实控件换行布局对象。</p>
+<section class="api-example">
+<h4><span data-zh="组合用法" data-en="Combination example">组合用法</span></h4>
+<p class="doc" data-zh="少量真实标签控件按行换行并限制容器高度。chips 为已加入父布局的 WrapWidget，需包含 WrapLayout 和 QLabel；addWidget() 接管标签所有权。内边距由 WrapLayout 设置，总高度上限包含容器装饰。" data-en="Wrap a small set of real label widgets and cap container height. chips is a WrapWidget already placed in its parent layout; include WrapLayout and QLabel. addWidget() takes label ownership. WrapLayout sets inner margins; the total height limit includes container decorations.">少量真实标签控件按行换行并限制容器高度。chips 为已加入父布局的 WrapWidget，需包含 WrapLayout 和 QLabel；addWidget() 接管标签所有权。内边距由 WrapLayout 设置，总高度上限包含容器装饰。</p>
+<pre>
+<code class="language-cpp">auto *layout = chips-&gt;wrapLayout();
+layout-&gt;setFixedItemHeight(32);
+layout-&gt;setItemSpacing(8);
+layout-&gt;setRowSpacing(6);
+layout-&gt;setContentsMargins(4, 4, 4, 4);
+chips-&gt;setAutoHeightMaximumHeight(120);
+chips-&gt;setAutoHeightEnabled(true);
+chips-&gt;addWidget(new QLabel(QStringLiteral(&quot;Qt Widgets&quot;)));
+chips-&gt;addWidget(new QLabel(QStringLiteral(&quot;C++&quot;)));</code>
+</pre>
+<p class="muted">
+<a href="../../../examples/wrap_capabilities/10_wrap_widget/example.cpp"><span data-zh="完整示例源码" data-en="Full example source">完整示例源码</span></a>
+</p>
+</section>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="WrapWidget-addWidget-3" data-search="WrapWidget addWidget">
@@ -281,7 +299,26 @@
 <a href="../../../include/virtualitemviews/wrapwidget.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L30</span>
 <pre>void setAutoHeightEnabled(bool enabled);</pre>
 <p class="doc" data-zh="设置按内容固定视图高度的开关。" data-en="Set the content-based fixed view height setting.">设置按内容固定视图高度的开关。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：true" data-en="Default / initial state: true">默认值／初始状态：true</p>
 <p class="doc" data-zh="虚拟视图默认关闭，WrapWidget 默认开启。启用后按内容设置固定高度，父布局不再把它压缩；上限为 0 时不限高。高度包含边距、间距、表头和实际边框等占位。使用 setAutoHeightMaximumHeight 控制上限，不要同时用 QWidget 高度约束干预；关闭后恢复原约束。内部无滚动范围时，滚轮交给外层。" data-en="Disabled by default on virtual views and enabled on WrapWidget. When enabled, content sets a fixed height that the parent layout cannot compress; a maximum of 0 is unlimited. The height includes margins, gaps, headers and occupied frame space. Use setAutoHeightMaximumHeight rather than competing QWidget height constraints; disabling restores prior constraints. Wheel input propagates outward when there is no internal scroll range.">虚拟视图默认关闭，WrapWidget 默认开启。启用后按内容设置固定高度，父布局不再把它压缩；上限为 0 时不限高。高度包含边距、间距、表头和实际边框等占位。使用 setAutoHeightMaximumHeight 控制上限，不要同时用 QWidget 高度约束干预；关闭后恢复原约束。内部无滚动范围时，滚轮交给外层。</p>
+<section class="api-example">
+<h4><span data-zh="组合用法" data-en="Combination example">组合用法</span></h4>
+<p class="doc" data-zh="少量真实标签控件按行换行并限制容器高度。chips 为已加入父布局的 WrapWidget，需包含 WrapLayout 和 QLabel；addWidget() 接管标签所有权。内边距由 WrapLayout 设置，总高度上限包含容器装饰。" data-en="Wrap a small set of real label widgets and cap container height. chips is a WrapWidget already placed in its parent layout; include WrapLayout and QLabel. addWidget() takes label ownership. WrapLayout sets inner margins; the total height limit includes container decorations.">少量真实标签控件按行换行并限制容器高度。chips 为已加入父布局的 WrapWidget，需包含 WrapLayout 和 QLabel；addWidget() 接管标签所有权。内边距由 WrapLayout 设置，总高度上限包含容器装饰。</p>
+<pre>
+<code class="language-cpp">auto *layout = chips-&gt;wrapLayout();
+layout-&gt;setFixedItemHeight(32);
+layout-&gt;setItemSpacing(8);
+layout-&gt;setRowSpacing(6);
+layout-&gt;setContentsMargins(4, 4, 4, 4);
+chips-&gt;setAutoHeightMaximumHeight(120);
+chips-&gt;setAutoHeightEnabled(true);
+chips-&gt;addWidget(new QLabel(QStringLiteral(&quot;Qt Widgets&quot;)));
+chips-&gt;addWidget(new QLabel(QStringLiteral(&quot;C++&quot;)));</code>
+</pre>
+<p class="muted">
+<a href="../../../examples/wrap_capabilities/10_wrap_widget/example.cpp"><span data-zh="完整示例源码" data-en="Full example source">完整示例源码</span></a>
+</p>
+</section>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#auto-height"><span data-zh="自适应高度 / 嵌套滚动 / 最大高度" data-en="Auto height / nested scrolling / height limits">自适应高度 / 嵌套滚动 / 最大高度</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -291,6 +328,7 @@
 <a href="../../../include/virtualitemviews/wrapwidget.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L31</span>
 <pre>    bool autoHeightEnabled() const;</pre>
 <p class="doc" data-zh="返回按内容固定视图高度的开关。" data-en="Return the content-based fixed view height setting.">返回按内容固定视图高度的开关。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：true" data-en="Default / initial state: true">默认值／初始状态：true</p>
 <p class="doc" data-zh="虚拟视图默认关闭，WrapWidget 默认开启。启用后按内容设置固定高度，父布局不再把它压缩；上限为 0 时不限高。高度包含边距、间距、表头和实际边框等占位。使用 setAutoHeightMaximumHeight 控制上限，不要同时用 QWidget 高度约束干预；关闭后恢复原约束。内部无滚动范围时，滚轮交给外层。" data-en="Disabled by default on virtual views and enabled on WrapWidget. When enabled, content sets a fixed height that the parent layout cannot compress; a maximum of 0 is unlimited. The height includes margins, gaps, headers and occupied frame space. Use setAutoHeightMaximumHeight rather than competing QWidget height constraints; disabling restores prior constraints. Wheel input propagates outward when there is no internal scroll range.">虚拟视图默认关闭，WrapWidget 默认开启。启用后按内容设置固定高度，父布局不再把它压缩；上限为 0 时不限高。高度包含边距、间距、表头和实际边框等占位。使用 setAutoHeightMaximumHeight 控制上限，不要同时用 QWidget 高度约束干预；关闭后恢复原约束。内部无滚动范围时，滚轮交给外层。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#auto-height"><span data-zh="自适应高度 / 嵌套滚动 / 最大高度" data-en="Auto height / nested scrolling / height limits">自适应高度 / 嵌套滚动 / 最大高度</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
@@ -301,7 +339,26 @@
 <a href="../../../include/virtualitemviews/wrapwidget.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L35</span>
 <pre>void setAutoHeightMaximumHeight(int height);</pre>
 <p class="doc" data-zh="设置自适应高度独立上限；0 表示不限。" data-en="Set the independent auto-height limit; 0 means unlimited.">设置自适应高度独立上限；0 表示不限。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：0；无自适应高度上限，按全部内容高度计算。" data-en="Default / initial state: 0; no auto-height limit; uses the full content height.">默认值／初始状态：0；无自适应高度上限，按全部内容高度计算。</p>
 <p class="doc" data-zh="虚拟视图默认关闭，WrapWidget 默认开启。启用后按内容设置固定高度，父布局不再把它压缩；上限为 0 时不限高。高度包含边距、间距、表头和实际边框等占位。使用 setAutoHeightMaximumHeight 控制上限，不要同时用 QWidget 高度约束干预；关闭后恢复原约束。内部无滚动范围时，滚轮交给外层。" data-en="Disabled by default on virtual views and enabled on WrapWidget. When enabled, content sets a fixed height that the parent layout cannot compress; a maximum of 0 is unlimited. The height includes margins, gaps, headers and occupied frame space. Use setAutoHeightMaximumHeight rather than competing QWidget height constraints; disabling restores prior constraints. Wheel input propagates outward when there is no internal scroll range.">虚拟视图默认关闭，WrapWidget 默认开启。启用后按内容设置固定高度，父布局不再把它压缩；上限为 0 时不限高。高度包含边距、间距、表头和实际边框等占位。使用 setAutoHeightMaximumHeight 控制上限，不要同时用 QWidget 高度约束干预；关闭后恢复原约束。内部无滚动范围时，滚轮交给外层。</p>
+<section class="api-example">
+<h4><span data-zh="组合用法" data-en="Combination example">组合用法</span></h4>
+<p class="doc" data-zh="少量真实标签控件按行换行并限制容器高度。chips 为已加入父布局的 WrapWidget，需包含 WrapLayout 和 QLabel；addWidget() 接管标签所有权。内边距由 WrapLayout 设置，总高度上限包含容器装饰。" data-en="Wrap a small set of real label widgets and cap container height. chips is a WrapWidget already placed in its parent layout; include WrapLayout and QLabel. addWidget() takes label ownership. WrapLayout sets inner margins; the total height limit includes container decorations.">少量真实标签控件按行换行并限制容器高度。chips 为已加入父布局的 WrapWidget，需包含 WrapLayout 和 QLabel；addWidget() 接管标签所有权。内边距由 WrapLayout 设置，总高度上限包含容器装饰。</p>
+<pre>
+<code class="language-cpp">auto *layout = chips-&gt;wrapLayout();
+layout-&gt;setFixedItemHeight(32);
+layout-&gt;setItemSpacing(8);
+layout-&gt;setRowSpacing(6);
+layout-&gt;setContentsMargins(4, 4, 4, 4);
+chips-&gt;setAutoHeightMaximumHeight(120);
+chips-&gt;setAutoHeightEnabled(true);
+chips-&gt;addWidget(new QLabel(QStringLiteral(&quot;Qt Widgets&quot;)));
+chips-&gt;addWidget(new QLabel(QStringLiteral(&quot;C++&quot;)));</code>
+</pre>
+<p class="muted">
+<a href="../../../examples/wrap_capabilities/10_wrap_widget/example.cpp"><span data-zh="完整示例源码" data-en="Full example source">完整示例源码</span></a>
+</p>
+</section>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#auto-height"><span data-zh="自适应高度 / 嵌套滚动 / 最大高度" data-en="Auto height / nested scrolling / height limits">自适应高度 / 嵌套滚动 / 最大高度</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -311,6 +368,7 @@
 <a href="../../../include/virtualitemviews/wrapwidget.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L36</span>
 <pre>    int autoHeightMaximumHeight() const;</pre>
 <p class="doc" data-zh="返回自适应高度独立上限；0 表示不限。" data-en="Return the independent auto-height limit; 0 means unlimited.">返回自适应高度独立上限；0 表示不限。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：0；无自适应高度上限，按全部内容高度计算。" data-en="Default / initial state: 0; no auto-height limit; uses the full content height.">默认值／初始状态：0；无自适应高度上限，按全部内容高度计算。</p>
 <p class="doc" data-zh="虚拟视图默认关闭，WrapWidget 默认开启。启用后按内容设置固定高度，父布局不再把它压缩；上限为 0 时不限高。高度包含边距、间距、表头和实际边框等占位。使用 setAutoHeightMaximumHeight 控制上限，不要同时用 QWidget 高度约束干预；关闭后恢复原约束。内部无滚动范围时，滚轮交给外层。" data-en="Disabled by default on virtual views and enabled on WrapWidget. When enabled, content sets a fixed height that the parent layout cannot compress; a maximum of 0 is unlimited. The height includes margins, gaps, headers and occupied frame space. Use setAutoHeightMaximumHeight rather than competing QWidget height constraints; disabling restores prior constraints. Wheel input propagates outward when there is no internal scroll range.">虚拟视图默认关闭，WrapWidget 默认开启。启用后按内容设置固定高度，父布局不再把它压缩；上限为 0 时不限高。高度包含边距、间距、表头和实际边框等占位。使用 setAutoHeightMaximumHeight 控制上限，不要同时用 QWidget 高度约束干预；关闭后恢复原约束。内部无滚动范围时，滚轮交给外层。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#auto-height"><span data-zh="自适应高度 / 嵌套滚动 / 最大高度" data-en="Auto height / nested scrolling / height limits">自适应高度 / 嵌套滚动 / 最大高度</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>

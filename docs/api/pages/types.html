@@ -205,7 +205,37 @@
 </li>
 </ul>
 </section>
-<h2><span data-zh="函数说明" data-en="Function details">函数说明</span></h2>
+<section id="type-index">
+<h3><span data-zh="结构体与枚举" data-en="Structs and enums">结构体与枚举</span></h3>
+<ul>
+<li data-search="GridLinePlacement">
+<a href="#GridLinePlacement-GridLinePlacement-0">
+<code>GridLinePlacement</code>
+</a>
+</li>
+<li data-search="DragOptions">
+<a href="#DragOptions">
+<code>DragOptions</code>
+</a>
+</li>
+<li data-search="ItemBindingContext">
+<a href="#ItemBindingContext">
+<code>ItemBindingContext</code>
+</a>
+</li>
+<li data-search="PaneSeparatorStyle">
+<a href="#PaneSeparatorStyle">
+<code>PaneSeparatorStyle</code>
+</a>
+</li>
+<li data-search="VisibleRange">
+<a href="#VisibleRange">
+<code>VisibleRange</code>
+</a>
+</li>
+</ul>
+</section>
+<h2><span data-zh="接口与类型说明" data-en="API and type details">接口与类型说明</span></h2>
 <p class="muted"><span data-zh="按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。" data-en="Read each function for its purpose and related settings. Overloads are listed separately; follow related capabilities to find examples.">按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。</span></p>
 <section>
 <h3 id="GridLinePlacement">GridLinePlacement</h3>
@@ -214,8 +244,36 @@
 <span class="badge">public</span>
 <span class="muted">
 <a href="../../../include/virtualitemviews/types.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L16</span>
-<pre>enum class GridLinePlacement { SpacingCenter, SpacingEdges };</pre>
-<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+<pre>enum class GridLinePlacement {
+    SpacingCenter,
+    SpacingEdges,
+};</pre>
+<p class="doc" data-zh="项间距中的分割线位置。零间距时只使用一个共享边界；支持范围需看具体视图。" data-en="Grid-line placement inside gaps. Zero spacing uses a single shared boundary; support depends on the view.">项间距中的分割线位置。零间距时只使用一个共享边界；支持范围需看具体视图。</p>
+<div class="table-scroll">
+<table class="type-members">
+<thead>
+<tr>
+<th><span data-zh="成员 / 取值" data-en="Member / value">成员 / 取值</span></th>
+<th><span data-zh="说明" data-en="Guide">说明</span></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>SpacingCenter</code>
+</td>
+<td class="doc" data-zh="间距中心画线，始终穿过另一方向间距；外侧补半间距居中。" data-en="Draw at gap centers, always crossing perpendicular gaps; outer half-gaps center content.">间距中心画线，始终穿过另一方向间距；外侧补半间距居中。</td>
+</tr>
+<tr>
+<td>
+<code>SpacingEdges</code>
+</td>
+<td class="doc" data-zh="间距两侧画线，支持的视图可配置是否跨过另一方向间距。" data-en="Draw at both gap edges; supporting views can configure perpendicular-gap crossing.">间距两侧画线，支持的视图可配置是否跨过另一方向间距。</td>
+</tr>
+</tbody>
+</table>
+</div>
+<a href="#type-index" class="muted"><span data-zh="返回类型列表" data-en="Back to type index">返回类型列表</span></a>
 </article>
 </section>
 <section>
@@ -273,104 +331,139 @@
 <section>
 <h3 id="DragOptions">DragOptions</h3>
 <pre>struct DragOptions</pre>
-<article tabindex="-1" id="DragOptions-previewWidget-0" data-search="DragOptions previewWidget">
-<span class="badge">public</span>
-<span class="muted">
-<a href="../../../include/virtualitemviews/types.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L50</span>
-<pre>QWidget *previewWidget = nullptr;</pre>
-<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
-</article>
-<article tabindex="-1" id="DragOptions-previewRect-1" data-search="DragOptions previewRect">
-<span class="badge">public</span>
-<span class="muted">
-<a href="../../../include/virtualitemviews/types.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L54</span>
-<pre>QRect previewRect;</pre>
-<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
-</article>
-<article tabindex="-1" id="DragOptions-usePressPosition-2" data-search="DragOptions usePressPosition">
-<span class="badge">public</span>
-<span class="muted">
-<a href="../../../include/virtualitemviews/types.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L56</span>
-<pre>bool usePressPosition = true;</pre>
-<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
-</article>
-<article tabindex="-1" id="DragOptions-globalPressPosition-3" data-search="DragOptions globalPressPosition">
-<span class="badge">public</span>
-<span class="muted">
-<a href="../../../include/virtualitemviews/types.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L59</span>
-<pre>OptionalPoint globalPressPosition;</pre>
-<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+<article data-search="DragOptions">
+<p class="doc" data-zh="手动 startDrag() 的预览与热点选项。默认使用视图生成的预览，并以按下位置作为热点。" data-en="Preview and hotspot options for manual startDrag(). Defaults to a view-generated preview anchored at the press position.">手动 startDrag() 的预览与热点选项。默认使用视图生成的预览，并以按下位置作为热点。</p>
+<div class="table-scroll">
+<table class="type-members">
+<thead>
+<tr>
+<th><span data-zh="成员 / 取值" data-en="Member / value">成员 / 取值</span></th>
+<th><span data-zh="说明" data-en="Guide">说明</span></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>QWidget *previewWidget = nullptr;</code>
+</td>
+<td class="doc" data-zh="截图来源控件，默认 nullptr 使用视图默认来源；不转移所有权。" data-en="Capture source; nullptr uses the view default; no ownership transfer.">截图来源控件，默认 nullptr 使用视图默认来源；不转移所有权。</td>
+</tr>
+<tr>
+<td>
+<code>QRect previewRect;</code>
+</td>
+<td class="doc" data-zh="来源控件局部截图范围，默认空矩形使用默认预览或完整指定控件；非空范围裁剪到控件边界。" data-en="Widget-local capture bounds; empty uses the default preview or whole explicit widget; nonempty bounds are clipped to the widget.">来源控件局部截图范围，默认空矩形使用默认预览或完整指定控件；非空范围裁剪到控件边界。</td>
+</tr>
+<tr>
+<td>
+<code>bool usePressPosition = true;</code>
+</td>
+<td class="doc" data-zh="使用鼠标位置作为热点，默认 true；false 时居中。" data-en="Anchor at the pointer; defaults to true; false centers the preview.">使用鼠标位置作为热点，默认 true；false 时居中。</td>
+</tr>
+<tr>
+<td>
+<code>OptionalPoint globalPressPosition;</code>
+</td>
+<td class="doc" data-zh="可选全局按下位置，默认未提供，回退到匹配按下记录或当前光标；(0,0) 也是有效显式值。" data-en="Optional global press position; absent by default, falling back to a matching press or current cursor; (0,0) is valid.">可选全局按下位置，默认未提供，回退到匹配按下记录或当前光标；(0,0) 也是有效显式值。</td>
+</tr>
+</tbody>
+</table>
+</div>
+<a href="#type-index" class="muted"><span data-zh="返回类型列表" data-en="Back to type index">返回类型列表</span></a>
 </article>
 </section>
 <section>
 <h3 id="ItemBindingContext">ItemBindingContext</h3>
 <pre>struct ItemBindingContext</pre>
-<article tabindex="-1" id="ItemBindingContext-index-0" data-search="ItemBindingContext index">
-<span class="badge">public</span>
-<span class="muted">
-<a href="../../../include/virtualitemviews/types.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L69</span>
-<pre>QModelIndex index;</pre>
-<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
-</article>
-<article tabindex="-1" id="ItemBindingContext-rowData-1" data-search="ItemBindingContext rowData">
-<span class="badge">public</span>
-<span class="muted">
-<a href="../../../include/virtualitemviews/types.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L70</span>
-<pre>QVariant rowData;</pre>
-<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
-</article>
-<article tabindex="-1" id="ItemBindingContext-logicalColumn-2" data-search="ItemBindingContext logicalColumn">
-<span class="badge">public</span>
-<span class="muted">
-<a href="../../../include/virtualitemviews/types.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L72</span>
-<pre>int logicalColumn = -1;</pre>
-<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
-</article>
-<article tabindex="-1" id="ItemBindingContext-depth-3" data-search="ItemBindingContext depth">
-<span class="badge">public</span>
-<span class="muted">
-<a href="../../../include/virtualitemviews/types.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L74</span>
-<pre>int depth = -1;</pre>
-<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
-</article>
-<article tabindex="-1" id="ItemBindingContext-indentationWidth-4" data-search="ItemBindingContext indentationWidth">
-<span class="badge">public</span>
-<span class="muted">
-<a href="../../../include/virtualitemviews/types.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L78</span>
-<pre>int indentationWidth = 0;</pre>
-<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
-</article>
-<article tabindex="-1" id="ItemBindingContext-branchWidth-5" data-search="ItemBindingContext branchWidth">
-<span class="badge">public</span>
-<span class="muted">
-<a href="../../../include/virtualitemviews/types.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L81</span>
-<pre>int branchWidth = 0;</pre>
-<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+<article data-search="ItemBindingContext">
+<p class="doc" data-zh="绑定／编辑回调的项数据与布局元信息。index 标识当前项；rowData 按 itemDataRole() 从规范列读取，表格通常为第 0 列。" data-en="Item data and layout metadata for binding/editing callbacks. index identifies the item; rowData is read with itemDataRole() from the canonical column, normally column 0 for tables.">绑定／编辑回调的项数据与布局元信息。index 标识当前项；rowData 按 itemDataRole() 从规范列读取，表格通常为第 0 列。</p>
+<div class="table-scroll">
+<table class="type-members">
+<thead>
+<tr>
+<th><span data-zh="成员 / 取值" data-en="Member / value">成员 / 取值</span></th>
+<th><span data-zh="说明" data-en="Guide">说明</span></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>QModelIndex index;</code>
+</td>
+<td class="doc" data-zh="当前项或单元格索引，默认无效。" data-en="Current item/cell index; initially invalid.">当前项或单元格索引，默认无效。</td>
+</tr>
+<tr>
+<td>
+<code>QVariant rowData;</code>
+</td>
+<td class="doc" data-zh="整行／节点业务数据，默认无效 QVariant。" data-en="Row/node payload; initially an invalid QVariant.">整行／节点业务数据，默认无效 QVariant。</td>
+</tr>
+<tr>
+<td>
+<code>int logicalColumn = -1;</code>
+</td>
+<td class="doc" data-zh="表格逻辑列号；列表／树为 -1，默认 -1。" data-en="Logical table column; -1 for lists/trees; initially -1.">表格逻辑列号；列表／树为 -1，默认 -1。</td>
+</tr>
+<tr>
+<td>
+<code>int depth = -1;</code>
+</td>
+<td class="doc" data-zh="相对显示根的深度；平面项为 0，默认 -1。" data-en="Depth relative to the displayed root; 0 for flat items; initially -1.">相对显示根的深度；平面项为 0，默认 -1。</td>
+</tr>
+<tr>
+<td>
+<code>int indentationWidth = 0;</code>
+</td>
+<td class="doc" data-zh="未裁剪的祖先缩进宽度，默认 0；非树项和树表非第 0 列为 0。" data-en="Unclipped ancestor indentation width; initially 0; 0 for non-tree items and nonzero tree-table columns.">未裁剪的祖先缩进宽度，默认 0；非树项和树表非第 0 列为 0。</td>
+</tr>
+<tr>
+<td>
+<code>int branchWidth = 0;</code>
+</td>
+<td class="doc" data-zh="节点自身 branch 格宽度，不是图标大小；默认 0，仅隐藏图标仍保留此宽度。" data-en="Node branch-cell width, not icon size; initially 0; hiding only the icon retains the width.">节点自身 branch 格宽度，不是图标大小；默认 0，仅隐藏图标仍保留此宽度。</td>
+</tr>
+</tbody>
+</table>
+</div>
+<a href="#type-index" class="muted"><span data-zh="返回类型列表" data-en="Back to type index">返回类型列表</span></a>
 </article>
 </section>
 <section>
 <h3 id="PaneSeparatorStyle">PaneSeparatorStyle</h3>
 <pre>struct PaneSeparatorStyle</pre>
-<article tabindex="-1" id="PaneSeparatorStyle-width-0" data-search="PaneSeparatorStyle width">
-<span class="badge">public</span>
-<span class="muted">
-<a href="../../../include/virtualitemviews/types.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L104</span>
-<pre>int width = 1;</pre>
-<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
-</article>
-<article tabindex="-1" id="PaneSeparatorStyle-color-1" data-search="PaneSeparatorStyle color">
-<span class="badge">public</span>
-<span class="muted">
-<a href="../../../include/virtualitemviews/types.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L108</span>
-<pre>QColor color;</pre>
-<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
-</article>
-<article tabindex="-1" id="PaneSeparatorStyle-lineStyle-2" data-search="PaneSeparatorStyle lineStyle">
-<span class="badge">public</span>
-<span class="muted">
-<a href="../../../include/virtualitemviews/types.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L110</span>
-<pre>Qt::PenStyle lineStyle = Qt::SolidLine;</pre>
-<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+<article data-search="PaneSeparatorStyle">
+<p class="doc" data-zh="冻结行／列边界样式，与普通分割线分别配置。默认 1 物理像素实线，颜色跟随样式分割线。" data-en="Frozen row/column boundary style, independent of ordinary grid lines. Defaults to a 1-physical-pixel solid stroke using the style separator color.">冻结行／列边界样式，与普通分割线分别配置。默认 1 物理像素实线，颜色跟随样式分割线。</p>
+<div class="table-scroll">
+<table class="type-members">
+<thead>
+<tr>
+<th><span data-zh="成员 / 取值" data-en="Member / value">成员 / 取值</span></th>
+<th><span data-zh="说明" data-en="Guide">说明</span></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>int width = 1;</code>
+</td>
+<td class="doc" data-zh="线宽默认 1；0 隐藏边界线。" data-en="Stroke width defaults to 1; 0 hides the separator.">线宽默认 1；0 隐藏边界线。</td>
+</tr>
+<tr>
+<td>
+<code>QColor color;</code>
+</td>
+<td class="doc" data-zh="显式颜色，默认无效 QColor 时跟随样式。" data-en="Explicit color; initially invalid QColor, using the style color.">显式颜色，默认无效 QColor 时跟随样式。</td>
+</tr>
+<tr>
+<td>
+<code>Qt::PenStyle lineStyle = Qt::SolidLine;</code>
+</td>
+<td class="doc" data-zh="线型，默认 Qt::SolidLine，可配置虚线。" data-en="Pen style; defaults to Qt::SolidLine; supports dashed lines.">线型，默认 Qt::SolidLine，可配置虚线。</td>
+</tr>
+</tbody>
+</table>
+</div>
+<a href="#type-index" class="muted"><span data-zh="返回类型列表" data-en="Back to type index">返回类型列表</span></a>
 </article>
 <article tabindex="-1" id="PaneSeparatorStyle-isVisible-3" data-search="PaneSeparatorStyle isVisible">
 <span class="badge">public</span>
@@ -408,19 +501,33 @@
 <section>
 <h3 id="VisibleRange">VisibleRange</h3>
 <pre>struct VisibleRange</pre>
-<article tabindex="-1" id="VisibleRange-first-0" data-search="VisibleRange first">
-<span class="badge">public</span>
-<span class="muted">
-<a href="../../../include/virtualitemviews/types.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L132</span>
-<pre>qsizetype first = -1;</pre>
-<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
-</article>
-<article tabindex="-1" id="VisibleRange-last-1" data-search="VisibleRange last">
-<span class="badge">public</span>
-<span class="muted">
-<a href="../../../include/virtualitemviews/types.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L133</span>
-<pre>qsizetype last = -1;</pre>
-<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+<article data-search="VisibleRange">
+<p class="doc" data-zh="包含首尾的项序号区间。默认 first=last=-1 表示无效／空区间。" data-en="Inclusive item-index range. Initially first=last=-1 denotes an invalid/empty range.">包含首尾的项序号区间。默认 first=last=-1 表示无效／空区间。</p>
+<div class="table-scroll">
+<table class="type-members">
+<thead>
+<tr>
+<th><span data-zh="成员 / 取值" data-en="Member / value">成员 / 取值</span></th>
+<th><span data-zh="说明" data-en="Guide">说明</span></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>qsizetype first = -1;</code>
+</td>
+<td class="doc" data-zh="第一个项序号，初始 -1。" data-en="First item index; initially -1.">第一个项序号，初始 -1。</td>
+</tr>
+<tr>
+<td>
+<code>qsizetype last = -1;</code>
+</td>
+<td class="doc" data-zh="最后一个项序号（包含），初始 -1。" data-en="Last item index, inclusive; initially -1.">最后一个项序号（包含），初始 -1。</td>
+</tr>
+</tbody>
+</table>
+</div>
+<a href="#type-index" class="muted"><span data-zh="返回类型列表" data-en="Back to type index">返回类型列表</span></a>
 </article>
 <article tabindex="-1" id="VisibleRange-isValid-2" data-search="VisibleRange isValid">
 <span class="badge">public</span>

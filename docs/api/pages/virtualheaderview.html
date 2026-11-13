@@ -574,7 +574,7 @@
 </li>
 </ul>
 </section>
-<h2><span data-zh="函数说明" data-en="Function details">函数说明</span></h2>
+<h2><span data-zh="接口与类型说明" data-en="API and type details">接口与类型说明</span></h2>
 <p class="muted"><span data-zh="按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。" data-en="Read each function for its purpose and related settings. Overloads are listed separately; follow related capabilities to find examples.">按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。</span></p>
 <section>
 <h3 id="VirtualHeaderView">VirtualHeaderView</h3>
@@ -602,6 +602,7 @@
 <a href="../../../include/virtualitemviews/virtualheaderview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L68</span>
 <pre>void setGeometryModel(HeaderGeometry *geometry) override;</pre>
 <p class="doc" data-zh="设置表头 section 几何模型。" data-en="Set the header section geometry model.">设置表头 section 几何模型。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：nullptr；独立创建时未绑定，装入表格后由表格提供。" data-en="Default / initial state: nullptr when constructed standalone; supplied by the table when installed.">默认值／初始状态：nullptr；独立创建时未绑定，装入表格后由表格提供。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="VirtualHeaderView-geometryModel-3" data-search="VirtualHeaderView geometryModel">
@@ -610,6 +611,7 @@
 <a href="../../../include/virtualitemviews/virtualheaderview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L69</span>
 <pre>    HeaderGeometry *geometryModel() const override;</pre>
 <p class="doc" data-zh="返回表头 section 几何模型。" data-en="Return the header section geometry model.">返回表头 section 几何模型。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：nullptr；独立创建时未绑定，装入表格后由表格提供。" data-en="Default / initial state: nullptr when constructed standalone; supplied by the table when installed.">默认值／初始状态：nullptr；独立创建时未绑定，装入表格后由表格提供。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="VirtualHeaderView-headerWidget-4" data-search="VirtualHeaderView headerWidget">
@@ -642,6 +644,7 @@
 <a href="../../../include/virtualitemviews/virtualheaderview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L73</span>
 <pre>void setLabelModel(QAbstractItemModel *model) override;</pre>
 <p class="doc" data-zh="设置表头文本模型。" data-en="Set the header label model.">设置表头文本模型。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：nullptr；独立创建时未绑定，装入表格后由表格提供。" data-en="Default / initial state: nullptr when constructed standalone; supplied by the table when installed.">默认值／初始状态：nullptr；独立创建时未绑定，装入表格后由表格提供。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="VirtualHeaderView-labelModel-8" data-search="VirtualHeaderView labelModel">
@@ -650,6 +653,7 @@
 <a href="../../../include/virtualitemviews/virtualheaderview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L74</span>
 <pre>    QAbstractItemModel *labelModel() const;</pre>
 <p class="doc" data-zh="返回表头文本模型。" data-en="Return the header label model.">返回表头文本模型。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：nullptr；独立创建时未绑定，装入表格后由表格提供。" data-en="Default / initial state: nullptr when constructed standalone; supplied by the table when installed.">默认值／初始状态：nullptr；独立创建时未绑定，装入表格后由表格提供。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="VirtualHeaderView-setSortInteractionEnabled-9" data-search="VirtualHeaderView setSortInteractionEnabled">
@@ -658,6 +662,7 @@
 <a href="../../../include/virtualitemviews/virtualheaderview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L75</span>
 <pre>void setSortInteractionEnabled(bool enabled) override;</pre>
 <p class="doc" data-zh="设置点击表头触发排序请求开关。" data-en="Set the sort requests from header clicks.">设置点击表头触发排序请求开关。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：false；装入表格后跟随 sortingEnabled()。" data-en="Default / initial state: false; follows table sortingEnabled() when installed.">默认值／初始状态：false；装入表格后跟随 sortingEnabled()。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="VirtualHeaderView-isSortInteractionEnabled-10" data-search="VirtualHeaderView isSortInteractionEnabled">
@@ -666,6 +671,7 @@
 <a href="../../../include/virtualitemviews/virtualheaderview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L76</span>
 <pre>    bool isSortInteractionEnabled() const;</pre>
 <p class="doc" data-zh="返回点击表头触发排序请求开关。" data-en="Return the sort requests from header clicks.">返回点击表头触发排序请求开关。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：false；装入表格后跟随 sortingEnabled()。" data-en="Default / initial state: false; follows table sortingEnabled() when installed.">默认值／初始状态：false；装入表格后跟随 sortingEnabled()。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="VirtualHeaderView-setPaneFilter-11" data-search="VirtualHeaderView setPaneFilter">
@@ -674,6 +680,7 @@
 <a href="../../../include/virtualitemviews/virtualheaderview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L80</span>
 <pre>void setPaneFilter(const QVector&lt;int&gt; &amp;logicalColumns, bool frozen) override;</pre>
 <p class="doc" data-zh="只让表头显示指定窗格内的 section。" data-en="Restrict the header to sections belonging to a specified pane.">只让表头显示指定窗格内的 section。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：未启用过滤，显示 geometry 中全部可见 section。" data-en="Default / initial state: No filter; displays all visible sections in the geometry.">默认值／初始状态：未启用过滤，显示 geometry 中全部可见 section。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="VirtualHeaderView-clearPaneFilter-12" data-search="VirtualHeaderView clearPaneFilter">
@@ -698,6 +705,7 @@
 <a href="../../../include/virtualitemviews/virtualheaderview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L88</span>
 <pre>void setPaneOffset(qint64 offset) override;</pre>
 <p class="doc" data-zh="设置表头窗格的滚动偏移以跟随对应内容区域。" data-en="Set the header pane offset to follow its corresponding content pane.">设置表头窗格的滚动偏移以跟随对应内容区域。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：kFollowGeometryOffset；跟随 HeaderGeometry 的 viewportOffset，初始为 0。" data-en="Default / initial state: kFollowGeometryOffset; follows HeaderGeometry viewportOffset, initially 0.">默认值／初始状态：kFollowGeometryOffset；跟随 HeaderGeometry 的 viewportOffset，初始为 0。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="VirtualHeaderView-setSectionAnimationEnabled-15" data-search="VirtualHeaderView setSectionAnimationEnabled">
@@ -706,6 +714,7 @@
 <a href="../../../include/virtualitemviews/virtualheaderview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L101</span>
 <pre>void setSectionAnimationEnabled(bool enabled) override;</pre>
 <p class="doc" data-zh="设置section 动画开关。" data-en="Set the section animation setting.">设置section 动画开关。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：true" data-en="Default / initial state: true">默认值／初始状态：true</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="VirtualHeaderView-sectionAnimationEnabled-16" data-search="VirtualHeaderView sectionAnimationEnabled">
@@ -714,6 +723,7 @@
 <a href="../../../include/virtualitemviews/virtualheaderview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L102</span>
 <pre>    bool sectionAnimationEnabled() const;</pre>
 <p class="doc" data-zh="返回section 动画开关。" data-en="Return the section animation setting.">返回section 动画开关。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：true" data-en="Default / initial state: true">默认值／初始状态：true</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="VirtualHeaderView-setSectionAnimationDuration-17" data-search="VirtualHeaderView setSectionAnimationDuration">
@@ -722,6 +732,7 @@
 <a href="../../../include/virtualitemviews/virtualheaderview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L104</span>
 <pre>void setSectionAnimationDuration(int ms) override;</pre>
 <p class="doc" data-zh="设置section 动画时长（毫秒）。" data-en="Set the section animation duration in milliseconds.">设置section 动画时长（毫秒）。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：300 ms" data-en="Default / initial state: 300 ms">默认值／初始状态：300 ms</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="VirtualHeaderView-sectionAnimationDuration-18" data-search="VirtualHeaderView sectionAnimationDuration">
@@ -730,6 +741,7 @@
 <a href="../../../include/virtualitemviews/virtualheaderview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L105</span>
 <pre>    int sectionAnimationDuration() const;</pre>
 <p class="doc" data-zh="返回section 动画时长（毫秒）。" data-en="Return the section animation duration in milliseconds.">返回section 动画时长（毫秒）。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：300 ms" data-en="Default / initial state: 300 ms">默认值／初始状态：300 ms</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="VirtualHeaderView-setSectionMoveAnimated-19" data-search="VirtualHeaderView setSectionMoveAnimated">
@@ -738,6 +750,7 @@
 <a href="../../../include/virtualitemviews/virtualheaderview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L110</span>
 <pre>    void setSectionMoveAnimated(bool animated) override;</pre>
 <p class="doc" data-zh="设置 section 移动的动画位置，供内容与表头同步。" data-en="Set animated section movement for synchronized content and header positioning.">设置 section 移动的动画位置，供内容与表头同步。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：false" data-en="Default / initial state: false">默认值／初始状态：false</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="VirtualHeaderView-setSectionStretchFactor-20" data-search="VirtualHeaderView setSectionStretchFactor">
@@ -746,6 +759,7 @@
 <a href="../../../include/virtualitemviews/virtualheaderview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L121</span>
 <pre>void setSectionStretchFactor(int logicalIndex, qreal factor);</pre>
 <p class="doc" data-zh="设置指定 section 比例权重。" data-en="Set the stretch weight of the specified section.">设置指定 section 比例权重。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：独立表头未绑定 geometry；绑定默认 HeaderGeometry 后各列 factor 为 0。" data-en="Default / initial state: A standalone header has no geometry; with a default HeaderGeometry, every factor is 0.">默认值／初始状态：独立表头未绑定 geometry；绑定默认 HeaderGeometry 后各列 factor 为 0。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="VirtualHeaderView-sectionStretchFactor-21" data-search="VirtualHeaderView sectionStretchFactor">
@@ -762,6 +776,7 @@
 <a href="../../../include/virtualitemviews/virtualheaderview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L134</span>
 <pre>    void setSectionDragEnabled(bool enabled);</pre>
 <p class="doc" data-zh="设置鼠标拖动 section 排序开关。" data-en="Set the mouse section-reorder setting.">设置鼠标拖动 section 排序开关。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：false" data-en="Default / initial state: false">默认值／初始状态：false</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="VirtualHeaderView-isSectionDragEnabled-23" data-search="VirtualHeaderView isSectionDragEnabled">
@@ -770,6 +785,7 @@
 <a href="../../../include/virtualitemviews/virtualheaderview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L135</span>
 <pre>    bool isSectionDragEnabled() const;</pre>
 <p class="doc" data-zh="返回鼠标拖动 section 排序开关。" data-en="Return the mouse section-reorder setting.">返回鼠标拖动 section 排序开关。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：false" data-en="Default / initial state: false">默认值／初始状态：false</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="VirtualHeaderView-setSectionResizeEnabled-24" data-search="VirtualHeaderView setSectionResizeEnabled">
@@ -778,6 +794,7 @@
 <a href="../../../include/virtualitemviews/virtualheaderview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L140</span>
 <pre>void setSectionResizeEnabled(bool enabled);</pre>
 <p class="doc" data-zh="设置鼠标拖动 section 尺寸开关。" data-en="Set the mouse section-resize setting.">设置鼠标拖动 section 尺寸开关。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：false" data-en="Default / initial state: false">默认值／初始状态：false</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="VirtualHeaderView-isSectionResizeEnabled-25" data-search="VirtualHeaderView isSectionResizeEnabled">
@@ -786,6 +803,7 @@
 <a href="../../../include/virtualitemviews/virtualheaderview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L141</span>
 <pre>    bool isSectionResizeEnabled() const;</pre>
 <p class="doc" data-zh="返回鼠标拖动 section 尺寸开关。" data-en="Return the mouse section-resize setting.">返回鼠标拖动 section 尺寸开关。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：false" data-en="Default / initial state: false">默认值／初始状态：false</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="VirtualHeaderView-setSectionSelectionEnabled-26" data-search="VirtualHeaderView setSectionSelectionEnabled">
@@ -794,6 +812,7 @@
 <a href="../../../include/virtualitemviews/virtualheaderview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L143</span>
 <pre>    void setSectionSelectionEnabled(bool enabled);</pre>
 <p class="doc" data-zh="设置点击表头 section 选择开关。" data-en="Set the selection by clicking a header section.">设置点击表头 section 选择开关。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：独立表头为 false；表格默认水平表头 false、垂直表头 true。" data-en="Default / initial state: false for standalone headers; a table defaults to false horizontally and true vertically.">默认值／初始状态：独立表头为 false；表格默认水平表头 false、垂直表头 true。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="VirtualHeaderView-isSectionSelectionEnabled-27" data-search="VirtualHeaderView isSectionSelectionEnabled">
@@ -802,6 +821,7 @@
 <a href="../../../include/virtualitemviews/virtualheaderview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L144</span>
 <pre>    bool isSectionSelectionEnabled() const;</pre>
 <p class="doc" data-zh="返回点击表头 section 选择开关。" data-en="Return the selection by clicking a header section.">返回点击表头 section 选择开关。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：独立表头为 false；表格默认水平表头 false、垂直表头 true。" data-en="Default / initial state: false for standalone headers; a table defaults to false horizontally and true vertically.">默认值／初始状态：独立表头为 false；表格默认水平表头 false、垂直表头 true。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="VirtualHeaderView-setSectionOrderExternal-28" data-search="VirtualHeaderView setSectionOrderExternal">
@@ -810,6 +830,7 @@
 <a href="../../../include/virtualitemviews/virtualheaderview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L153</span>
 <pre>    void setSectionOrderExternal(bool external);</pre>
 <p class="doc" data-zh="声明 section 可视顺序由外部维护，避免表头重复管理排序。" data-en="Declare that section visual order is maintained externally, avoiding duplicate order management.">声明 section 可视顺序由外部维护，避免表头重复管理排序。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：独立表头为 false；表格垂直行号条由模型驱动顺序时设置为 true。" data-en="Default / initial state: false for standalone headers; set to true for table vertical row strips whose order is model-driven.">默认值／初始状态：独立表头为 false；表格垂直行号条由模型驱动顺序时设置为 true。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="VirtualHeaderView-hasExternalSectionOrder-29" data-search="VirtualHeaderView hasExternalSectionOrder">
@@ -826,6 +847,7 @@
 <a href="../../../include/virtualitemviews/virtualheaderview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L157</span>
 <pre>void setViewportOrigin(const QPoint &amp;origin) override;</pre>
 <p class="doc" data-zh="设置表头对齐到内容视口的起点。" data-en="Set the origin aligning the header with the content viewport.">设置表头对齐到内容视口的起点。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：未显式设置，原点为 QPoint(0, 0)；装入表格后由表格布局设置。" data-en="Default / initial state: No explicit origin; initially QPoint(0, 0), then supplied by table layout when installed.">默认值／初始状态：未显式设置，原点为 QPoint(0, 0)；装入表格后由表格布局设置。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="VirtualHeaderView-setPaneTerminalColumn-31" data-search="VirtualHeaderView setPaneTerminalColumn">
@@ -834,6 +856,7 @@
 <a href="../../../include/virtualitemviews/virtualheaderview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L158</span>
 <pre>void setPaneTerminalColumn(int logicalIndex);</pre>
 <p class="doc" data-zh="指定窗格末端列，辅助宿主判断右侧绘制边界。" data-en="Specify the terminal column of a pane so the host can resolve its right drawing boundary.">指定窗格末端列，辅助宿主判断右侧绘制边界。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：-1；没有显式终端列。" data-en="Default / initial state: -1; no explicit terminal column.">默认值／初始状态：-1；没有显式终端列。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="VirtualHeaderView-setBackgroundVisible-32" data-search="VirtualHeaderView setBackgroundVisible">
@@ -842,6 +865,7 @@
 <a href="../../../include/virtualitemviews/virtualheaderview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L162</span>
 <pre>void setBackgroundVisible(bool visible) override;</pre>
 <p class="doc" data-zh="设置背景绘制开关。" data-en="Set the background painting setting.">设置背景绘制开关。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：true" data-en="Default / initial state: true">默认值／初始状态：true</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#background"><span data-zh="背景 / 项底色 / 透明 / QSS" data-en="Background / item fill / transparency / QSS">背景 / 项底色 / 透明 / QSS</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -851,6 +875,7 @@
 <a href="../../../include/virtualitemviews/virtualheaderview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L163</span>
 <pre>    bool backgroundVisible() const override;</pre>
 <p class="doc" data-zh="返回背景绘制开关。" data-en="Return the background painting setting.">返回背景绘制开关。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：true" data-en="Default / initial state: true">默认值／初始状态：true</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#background"><span data-zh="背景 / 项底色 / 透明 / QSS" data-en="Background / item fill / transparency / QSS">背景 / 项底色 / 透明 / QSS</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -860,7 +885,27 @@
 <a href="../../../include/virtualitemviews/virtualheaderview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L167</span>
 <pre>void setBackgroundColor(const QColor &amp;color) override;</pre>
 <p class="doc" data-zh="设置主体背景颜色。" data-en="Set the main background color.">设置主体背景颜色。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：无效 QColor；容器背景由 QSS / 原生表头面板规则决定。" data-en="Default / initial state: Invalid QColor; the container background follows QSS / native header panel rules.">默认值／初始状态：无效 QColor；容器背景由 QSS / 原生表头面板规则决定。</p>
 <p class="doc" data-zh="表头区域、单个 section、内容主体和间距是不同绘制层。设置 header 区域颜色不等于替换 section 填色；使用 sectionBackgroundColor 单独配置 section。QSS 规则可能覆盖对应控件的调色板或样式绘制。" data-en="Header areas, individual sections, the content body and gaps are separate layers. Changing the header area does not replace section fill; use sectionBackgroundColor for sections. QSS rules may override the relevant widget palette or styled painting.">表头区域、单个 section、内容主体和间距是不同绘制层。设置 header 区域颜色不等于替换 section 填色；使用 sectionBackgroundColor 单独配置 section。QSS 规则可能覆盖对应控件的调色板或样式绘制。</p>
+<section class="api-example">
+<h4><span data-zh="组合用法" data-en="Combination example">组合用法</span></h4>
+<p class="doc" data-zh="分别配置表头整个区域与 section 底色。view 为 VirtualTableView；horizontalHeader() 返回当前表头接口。模型的 ForegroundRole / TextAlignmentRole 以及业务自定义绘制可能覆盖文字默认设置。" data-en="Style the header container separately from its sections. view is a VirtualTableView; horizontalHeader() returns the current header interface. Model ForegroundRole / TextAlignmentRole and custom painting may override text defaults.">分别配置表头整个区域与 section 底色。view 为 VirtualTableView；horizontalHeader() 返回当前表头接口。模型的 ForegroundRole / TextAlignmentRole 以及业务自定义绘制可能覆盖文字默认设置。</p>
+<pre>
+<code class="language-cpp">auto *header = view-&gt;horizontalHeader();
+header-&gt;setBackgroundColor(QColor(QStringLiteral(&quot;#eef2f6&quot;)));
+header-&gt;setSectionBackgroundColor(QColor(QStringLiteral(&quot;#f7f8fa&quot;)));
+header-&gt;setForegroundColor(QColor(QStringLiteral(&quot;#465466&quot;)));
+header-&gt;setTextAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+header-&gt;setContentPadding(QMargins(12, 0, 12, 0));
+QFont font = header-&gt;font();
+font.setPointSize(10);
+font.setBold(true);
+header-&gt;setFont(font);</code>
+</pre>
+<p class="muted">
+<a href="../../../examples/table_capabilities/32_colors/example.cpp"><span data-zh="完整示例源码" data-en="Full example source">完整示例源码</span></a>
+</p>
+</section>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#background"><span data-zh="背景 / 项底色 / 透明 / QSS" data-en="Background / item fill / transparency / QSS">背景 / 项底色 / 透明 / QSS</span></a> <a href="#headers"><span data-zh="默认表头 / 样式 / section / corner" data-en="Default headers / styles / sections / corner">默认表头 / 样式 / section / corner</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -870,6 +915,7 @@
 <a href="../../../include/virtualitemviews/virtualheaderview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L168</span>
 <pre>    QColor backgroundColor() const override;</pre>
 <p class="doc" data-zh="返回主体背景颜色。" data-en="Return the main background color.">返回主体背景颜色。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：无效 QColor；容器背景由 QSS / 原生表头面板规则决定。" data-en="Default / initial state: Invalid QColor; the container background follows QSS / native header panel rules.">默认值／初始状态：无效 QColor；容器背景由 QSS / 原生表头面板规则决定。</p>
 <p class="doc" data-zh="表头区域、单个 section、内容主体和间距是不同绘制层。设置 header 区域颜色不等于替换 section 填色；使用 sectionBackgroundColor 单独配置 section。QSS 规则可能覆盖对应控件的调色板或样式绘制。" data-en="Header areas, individual sections, the content body and gaps are separate layers. Changing the header area does not replace section fill; use sectionBackgroundColor for sections. QSS rules may override the relevant widget palette or styled painting.">表头区域、单个 section、内容主体和间距是不同绘制层。设置 header 区域颜色不等于替换 section 填色；使用 sectionBackgroundColor 单独配置 section。QSS 规则可能覆盖对应控件的调色板或样式绘制。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#background"><span data-zh="背景 / 项底色 / 透明 / QSS" data-en="Background / item fill / transparency / QSS">背景 / 项底色 / 透明 / QSS</span></a> <a href="#headers"><span data-zh="默认表头 / 样式 / section / corner" data-en="Default headers / styles / sections / corner">默认表头 / 样式 / section / corner</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
@@ -880,7 +926,27 @@
 <a href="../../../include/virtualitemviews/virtualheaderview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L172</span>
 <pre>void setSectionBackgroundColor(const QColor &amp;color) override;</pre>
 <p class="doc" data-zh="设置各表头 section 背景颜色。" data-en="Set the individual header section background color.">设置各表头 section 背景颜色。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：无效 QColor；section 跟随容器、QSS 或原生样式，无独立覆盖。" data-en="Default / initial state: Invalid QColor; sections follow container, QSS or native style, with no separate override.">默认值／初始状态：无效 QColor；section 跟随容器、QSS 或原生样式，无独立覆盖。</p>
 <p class="doc" data-zh="表头区域、单个 section、内容主体和间距是不同绘制层。设置 header 区域颜色不等于替换 section 填色；使用 sectionBackgroundColor 单独配置 section。QSS 规则可能覆盖对应控件的调色板或样式绘制。" data-en="Header areas, individual sections, the content body and gaps are separate layers. Changing the header area does not replace section fill; use sectionBackgroundColor for sections. QSS rules may override the relevant widget palette or styled painting.">表头区域、单个 section、内容主体和间距是不同绘制层。设置 header 区域颜色不等于替换 section 填色；使用 sectionBackgroundColor 单独配置 section。QSS 规则可能覆盖对应控件的调色板或样式绘制。</p>
+<section class="api-example">
+<h4><span data-zh="组合用法" data-en="Combination example">组合用法</span></h4>
+<p class="doc" data-zh="分别配置表头整个区域与 section 底色。view 为 VirtualTableView；horizontalHeader() 返回当前表头接口。模型的 ForegroundRole / TextAlignmentRole 以及业务自定义绘制可能覆盖文字默认设置。" data-en="Style the header container separately from its sections. view is a VirtualTableView; horizontalHeader() returns the current header interface. Model ForegroundRole / TextAlignmentRole and custom painting may override text defaults.">分别配置表头整个区域与 section 底色。view 为 VirtualTableView；horizontalHeader() 返回当前表头接口。模型的 ForegroundRole / TextAlignmentRole 以及业务自定义绘制可能覆盖文字默认设置。</p>
+<pre>
+<code class="language-cpp">auto *header = view-&gt;horizontalHeader();
+header-&gt;setBackgroundColor(QColor(QStringLiteral(&quot;#eef2f6&quot;)));
+header-&gt;setSectionBackgroundColor(QColor(QStringLiteral(&quot;#f7f8fa&quot;)));
+header-&gt;setForegroundColor(QColor(QStringLiteral(&quot;#465466&quot;)));
+header-&gt;setTextAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+header-&gt;setContentPadding(QMargins(12, 0, 12, 0));
+QFont font = header-&gt;font();
+font.setPointSize(10);
+font.setBold(true);
+header-&gt;setFont(font);</code>
+</pre>
+<p class="muted">
+<a href="../../../examples/table_capabilities/32_colors/example.cpp"><span data-zh="完整示例源码" data-en="Full example source">完整示例源码</span></a>
+</p>
+</section>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#background"><span data-zh="背景 / 项底色 / 透明 / QSS" data-en="Background / item fill / transparency / QSS">背景 / 项底色 / 透明 / QSS</span></a> <a href="#headers"><span data-zh="默认表头 / 样式 / section / corner" data-en="Default headers / styles / sections / corner">默认表头 / 样式 / section / corner</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -890,6 +956,7 @@
 <a href="../../../include/virtualitemviews/virtualheaderview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L173</span>
 <pre>    QColor sectionBackgroundColor() const override;</pre>
 <p class="doc" data-zh="返回各表头 section 背景颜色。" data-en="Return the individual header section background color.">返回各表头 section 背景颜色。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：无效 QColor；section 跟随容器、QSS 或原生样式，无独立覆盖。" data-en="Default / initial state: Invalid QColor; sections follow container, QSS or native style, with no separate override.">默认值／初始状态：无效 QColor；section 跟随容器、QSS 或原生样式，无独立覆盖。</p>
 <p class="doc" data-zh="表头区域、单个 section、内容主体和间距是不同绘制层。设置 header 区域颜色不等于替换 section 填色；使用 sectionBackgroundColor 单独配置 section。QSS 规则可能覆盖对应控件的调色板或样式绘制。" data-en="Header areas, individual sections, the content body and gaps are separate layers. Changing the header area does not replace section fill; use sectionBackgroundColor for sections. QSS rules may override the relevant widget palette or styled painting.">表头区域、单个 section、内容主体和间距是不同绘制层。设置 header 区域颜色不等于替换 section 填色；使用 sectionBackgroundColor 单独配置 section。QSS 规则可能覆盖对应控件的调色板或样式绘制。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#background"><span data-zh="背景 / 项底色 / 透明 / QSS" data-en="Background / item fill / transparency / QSS">背景 / 项底色 / 透明 / QSS</span></a> <a href="#headers"><span data-zh="默认表头 / 样式 / section / corner" data-en="Default headers / styles / sections / corner">默认表头 / 样式 / section / corner</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
@@ -900,6 +967,26 @@
 <a href="../../../include/virtualitemviews/virtualheaderview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L175</span>
 <pre>void setForegroundColor(const QColor &amp;color) override;</pre>
 <p class="doc" data-zh="设置文本前景颜色。" data-en="Set the text foreground color.">设置文本前景颜色。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：无效 QColor；使用 QPalette::ButtonText，可由模型 ForegroundRole 覆盖。" data-en="Default / initial state: Invalid QColor; uses QPalette::ButtonText, overridable by model ForegroundRole.">默认值／初始状态：无效 QColor；使用 QPalette::ButtonText，可由模型 ForegroundRole 覆盖。</p>
+<section class="api-example">
+<h4><span data-zh="组合用法" data-en="Combination example">组合用法</span></h4>
+<p class="doc" data-zh="分别配置表头整个区域与 section 底色。view 为 VirtualTableView；horizontalHeader() 返回当前表头接口。模型的 ForegroundRole / TextAlignmentRole 以及业务自定义绘制可能覆盖文字默认设置。" data-en="Style the header container separately from its sections. view is a VirtualTableView; horizontalHeader() returns the current header interface. Model ForegroundRole / TextAlignmentRole and custom painting may override text defaults.">分别配置表头整个区域与 section 底色。view 为 VirtualTableView；horizontalHeader() 返回当前表头接口。模型的 ForegroundRole / TextAlignmentRole 以及业务自定义绘制可能覆盖文字默认设置。</p>
+<pre>
+<code class="language-cpp">auto *header = view-&gt;horizontalHeader();
+header-&gt;setBackgroundColor(QColor(QStringLiteral(&quot;#eef2f6&quot;)));
+header-&gt;setSectionBackgroundColor(QColor(QStringLiteral(&quot;#f7f8fa&quot;)));
+header-&gt;setForegroundColor(QColor(QStringLiteral(&quot;#465466&quot;)));
+header-&gt;setTextAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+header-&gt;setContentPadding(QMargins(12, 0, 12, 0));
+QFont font = header-&gt;font();
+font.setPointSize(10);
+font.setBold(true);
+header-&gt;setFont(font);</code>
+</pre>
+<p class="muted">
+<a href="../../../examples/table_capabilities/32_colors/example.cpp"><span data-zh="完整示例源码" data-en="Full example source">完整示例源码</span></a>
+</p>
+</section>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#headers"><span data-zh="默认表头 / 样式 / section / corner" data-en="Default headers / styles / sections / corner">默认表头 / 样式 / section / corner</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -909,6 +996,7 @@
 <a href="../../../include/virtualitemviews/virtualheaderview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L176</span>
 <pre>    QColor foregroundColor() const override;</pre>
 <p class="doc" data-zh="返回文本前景颜色。" data-en="Return the text foreground color.">返回文本前景颜色。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：无效 QColor；使用 QPalette::ButtonText，可由模型 ForegroundRole 覆盖。" data-en="Default / initial state: Invalid QColor; uses QPalette::ButtonText, overridable by model ForegroundRole.">默认值／初始状态：无效 QColor；使用 QPalette::ButtonText，可由模型 ForegroundRole 覆盖。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#headers"><span data-zh="默认表头 / 样式 / section / corner" data-en="Default headers / styles / sections / corner">默认表头 / 样式 / section / corner</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -918,6 +1006,26 @@
 <a href="../../../include/virtualitemviews/virtualheaderview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L178</span>
 <pre>void setTextAlignment(Qt::Alignment alignment) override;</pre>
 <p class="doc" data-zh="设置文本对齐方式。" data-en="Set the text alignment.">设置文本对齐方式。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：Qt::AlignCenter" data-en="Default / initial state: Qt::AlignCenter">默认值／初始状态：Qt::AlignCenter</p>
+<section class="api-example">
+<h4><span data-zh="组合用法" data-en="Combination example">组合用法</span></h4>
+<p class="doc" data-zh="分别配置表头整个区域与 section 底色。view 为 VirtualTableView；horizontalHeader() 返回当前表头接口。模型的 ForegroundRole / TextAlignmentRole 以及业务自定义绘制可能覆盖文字默认设置。" data-en="Style the header container separately from its sections. view is a VirtualTableView; horizontalHeader() returns the current header interface. Model ForegroundRole / TextAlignmentRole and custom painting may override text defaults.">分别配置表头整个区域与 section 底色。view 为 VirtualTableView；horizontalHeader() 返回当前表头接口。模型的 ForegroundRole / TextAlignmentRole 以及业务自定义绘制可能覆盖文字默认设置。</p>
+<pre>
+<code class="language-cpp">auto *header = view-&gt;horizontalHeader();
+header-&gt;setBackgroundColor(QColor(QStringLiteral(&quot;#eef2f6&quot;)));
+header-&gt;setSectionBackgroundColor(QColor(QStringLiteral(&quot;#f7f8fa&quot;)));
+header-&gt;setForegroundColor(QColor(QStringLiteral(&quot;#465466&quot;)));
+header-&gt;setTextAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+header-&gt;setContentPadding(QMargins(12, 0, 12, 0));
+QFont font = header-&gt;font();
+font.setPointSize(10);
+font.setBold(true);
+header-&gt;setFont(font);</code>
+</pre>
+<p class="muted">
+<a href="../../../examples/table_capabilities/32_colors/example.cpp"><span data-zh="完整示例源码" data-en="Full example source">完整示例源码</span></a>
+</p>
+</section>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#headers"><span data-zh="默认表头 / 样式 / section / corner" data-en="Default headers / styles / sections / corner">默认表头 / 样式 / section / corner</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -927,6 +1035,7 @@
 <a href="../../../include/virtualitemviews/virtualheaderview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L179</span>
 <pre>    Qt::Alignment textAlignment() const override;</pre>
 <p class="doc" data-zh="返回文本对齐方式。" data-en="Return the text alignment.">返回文本对齐方式。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：Qt::AlignCenter" data-en="Default / initial state: Qt::AlignCenter">默认值／初始状态：Qt::AlignCenter</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#headers"><span data-zh="默认表头 / 样式 / section / corner" data-en="Default headers / styles / sections / corner">默认表头 / 样式 / section / corner</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -936,6 +1045,26 @@
 <a href="../../../include/virtualitemviews/virtualheaderview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L181</span>
 <pre>void setContentPadding(const QMargins &amp;padding) override;</pre>
 <p class="doc" data-zh="设置内容内边距。" data-en="Set the content padding.">设置内容内边距。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：QMargins(0, 0, 0, 0)" data-en="Default / initial state: QMargins(0, 0, 0, 0)">默认值／初始状态：QMargins(0, 0, 0, 0)</p>
+<section class="api-example">
+<h4><span data-zh="组合用法" data-en="Combination example">组合用法</span></h4>
+<p class="doc" data-zh="分别配置表头整个区域与 section 底色。view 为 VirtualTableView；horizontalHeader() 返回当前表头接口。模型的 ForegroundRole / TextAlignmentRole 以及业务自定义绘制可能覆盖文字默认设置。" data-en="Style the header container separately from its sections. view is a VirtualTableView; horizontalHeader() returns the current header interface. Model ForegroundRole / TextAlignmentRole and custom painting may override text defaults.">分别配置表头整个区域与 section 底色。view 为 VirtualTableView；horizontalHeader() 返回当前表头接口。模型的 ForegroundRole / TextAlignmentRole 以及业务自定义绘制可能覆盖文字默认设置。</p>
+<pre>
+<code class="language-cpp">auto *header = view-&gt;horizontalHeader();
+header-&gt;setBackgroundColor(QColor(QStringLiteral(&quot;#eef2f6&quot;)));
+header-&gt;setSectionBackgroundColor(QColor(QStringLiteral(&quot;#f7f8fa&quot;)));
+header-&gt;setForegroundColor(QColor(QStringLiteral(&quot;#465466&quot;)));
+header-&gt;setTextAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+header-&gt;setContentPadding(QMargins(12, 0, 12, 0));
+QFont font = header-&gt;font();
+font.setPointSize(10);
+font.setBold(true);
+header-&gt;setFont(font);</code>
+</pre>
+<p class="muted">
+<a href="../../../examples/table_capabilities/32_colors/example.cpp"><span data-zh="完整示例源码" data-en="Full example source">完整示例源码</span></a>
+</p>
+</section>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#headers"><span data-zh="默认表头 / 样式 / section / corner" data-en="Default headers / styles / sections / corner">默认表头 / 样式 / section / corner</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -945,6 +1074,7 @@
 <a href="../../../include/virtualitemviews/virtualheaderview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L182</span>
 <pre>    QMargins contentPadding() const override;</pre>
 <p class="doc" data-zh="返回内容内边距。" data-en="Return the content padding.">返回内容内边距。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：QMargins(0, 0, 0, 0)" data-en="Default / initial state: QMargins(0, 0, 0, 0)">默认值／初始状态：QMargins(0, 0, 0, 0)</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#headers"><span data-zh="默认表头 / 样式 / section / corner" data-en="Default headers / styles / sections / corner">默认表头 / 样式 / section / corner</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -954,6 +1084,26 @@
 <a href="../../../include/virtualitemviews/virtualheaderview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L184</span>
 <pre>void setFont(const QFont &amp;font) override;</pre>
 <p class="doc" data-zh="设置文本字体。" data-en="Set the text font.">设置文本字体。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：继承 QWidget 的有效字体（父控件/应用字体及 QSS），无固定字号或字体族。" data-en="Default / initial state: Inherits the effective QWidget font (parent/application font and QSS), with no fixed size or family.">默认值／初始状态：继承 QWidget 的有效字体（父控件/应用字体及 QSS），无固定字号或字体族。</p>
+<section class="api-example">
+<h4><span data-zh="组合用法" data-en="Combination example">组合用法</span></h4>
+<p class="doc" data-zh="分别配置表头整个区域与 section 底色。view 为 VirtualTableView；horizontalHeader() 返回当前表头接口。模型的 ForegroundRole / TextAlignmentRole 以及业务自定义绘制可能覆盖文字默认设置。" data-en="Style the header container separately from its sections. view is a VirtualTableView; horizontalHeader() returns the current header interface. Model ForegroundRole / TextAlignmentRole and custom painting may override text defaults.">分别配置表头整个区域与 section 底色。view 为 VirtualTableView；horizontalHeader() 返回当前表头接口。模型的 ForegroundRole / TextAlignmentRole 以及业务自定义绘制可能覆盖文字默认设置。</p>
+<pre>
+<code class="language-cpp">auto *header = view-&gt;horizontalHeader();
+header-&gt;setBackgroundColor(QColor(QStringLiteral(&quot;#eef2f6&quot;)));
+header-&gt;setSectionBackgroundColor(QColor(QStringLiteral(&quot;#f7f8fa&quot;)));
+header-&gt;setForegroundColor(QColor(QStringLiteral(&quot;#465466&quot;)));
+header-&gt;setTextAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+header-&gt;setContentPadding(QMargins(12, 0, 12, 0));
+QFont font = header-&gt;font();
+font.setPointSize(10);
+font.setBold(true);
+header-&gt;setFont(font);</code>
+</pre>
+<p class="muted">
+<a href="../../../examples/table_capabilities/32_colors/example.cpp"><span data-zh="完整示例源码" data-en="Full example source">完整示例源码</span></a>
+</p>
+</section>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#headers"><span data-zh="默认表头 / 样式 / section / corner" data-en="Default headers / styles / sections / corner">默认表头 / 样式 / section / corner</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -963,6 +1113,7 @@
 <a href="../../../include/virtualitemviews/virtualheaderview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L185</span>
 <pre>    const QFont &amp;font() const override;</pre>
 <p class="doc" data-zh="返回文本字体。" data-en="Return the text font.">返回文本字体。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：继承 QWidget 的有效字体（父控件/应用字体及 QSS），无固定字号或字体族。" data-en="Default / initial state: Inherits the effective QWidget font (parent/application font and QSS), with no fixed size or family.">默认值／初始状态：继承 QWidget 的有效字体（父控件/应用字体及 QSS），无固定字号或字体族。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#headers"><span data-zh="默认表头 / 样式 / section / corner" data-en="Default headers / styles / sections / corner">默认表头 / 样式 / section / corner</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -972,6 +1123,7 @@
 <a href="../../../include/virtualitemviews/virtualheaderview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L188</span>
 <pre>void setSpacingBackgroundColor(const QColor &amp;color) override;</pre>
 <p class="doc" data-zh="设置内容或表头间距背景颜色。" data-en="Set the content or header gap background color.">设置内容或表头间距背景颜色。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：无效 QColor；跟随表头背景，无独立间距色。" data-en="Default / initial state: Invalid QColor; follows the header background, with no independent gap color.">默认值／初始状态：无效 QColor；跟随表头背景，无独立间距色。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#background"><span data-zh="背景 / 项底色 / 透明 / QSS" data-en="Background / item fill / transparency / QSS">背景 / 项底色 / 透明 / QSS</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -981,6 +1133,7 @@
 <a href="../../../include/virtualitemviews/virtualheaderview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L189</span>
 <pre>    QColor spacingBackgroundColor() const override;</pre>
 <p class="doc" data-zh="返回内容或表头间距背景颜色。" data-en="Return the content or header gap background color.">返回内容或表头间距背景颜色。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：无效 QColor；跟随表头背景，无独立间距色。" data-en="Default / initial state: Invalid QColor; follows the header background, with no independent gap color.">默认值／初始状态：无效 QColor；跟随表头背景，无独立间距色。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#background"><span data-zh="背景 / 项底色 / 透明 / QSS" data-en="Background / item fill / transparency / QSS">背景 / 项底色 / 透明 / QSS</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -990,6 +1143,7 @@
 <a href="../../../include/virtualitemviews/virtualheaderview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L191</span>
 <pre>void setSectionSeparatorsVisible(bool visible);</pre>
 <p class="doc" data-zh="设置表头 section 分割线可见性。" data-en="Set the header section separator visibility.">设置表头 section 分割线可见性。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：true" data-en="Default / initial state: true">默认值／初始状态：true</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="VirtualHeaderView-sectionSeparatorsVisible-49" data-search="VirtualHeaderView sectionSeparatorsVisible">
@@ -998,6 +1152,7 @@
 <a href="../../../include/virtualitemviews/virtualheaderview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L192</span>
 <pre>    bool sectionSeparatorsVisible() const;</pre>
 <p class="doc" data-zh="返回表头 section 分割线可见性。" data-en="Return the header section separator visibility.">返回表头 section 分割线可见性。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：true" data-en="Default / initial state: true">默认值／初始状态：true</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="VirtualHeaderView-setGridLinePlacement-50" data-search="VirtualHeaderView setGridLinePlacement">
@@ -1006,6 +1161,7 @@
 <a href="../../../include/virtualitemviews/virtualheaderview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L194</span>
 <pre>void setGridLinePlacement(GridLinePlacement placement);</pre>
 <p class="doc" data-zh="设置间距中心或两侧分割线模式。" data-en="Set the grid line placement at spacing centers or edges.">设置间距中心或两侧分割线模式。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：GridLinePlacement::SpacingCenter" data-en="Default / initial state: GridLinePlacement::SpacingCenter">默认值／初始状态：GridLinePlacement::SpacingCenter</p>
 <p class="doc" data-zh="默认 SpacingCenter：在间距中心绘制，交叉线始终穿过间距，且外侧补半间距；零间距时不重复画线。SpacingEdges 在间距两侧绘制，只有这个模式允许控制是否穿过交叉间距。是否穿过表头使用单独开关。" data-en="SpacingCenter is the default: lines run through gap centers, cross gaps unconditionally, and use outer half-gaps; zero spacing does not duplicate lines. SpacingEdges draws both gap edges and alone allows disabling crossings through perpendicular gaps. Header crossings have independent switches.">默认 SpacingCenter：在间距中心绘制，交叉线始终穿过间距，且外侧补半间距；零间距时不重复画线。SpacingEdges 在间距两侧绘制，只有这个模式允许控制是否穿过交叉间距。是否穿过表头使用单独开关。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -1015,6 +1171,7 @@
 <a href="../../../include/virtualitemviews/virtualheaderview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L195</span>
 <pre>    GridLinePlacement gridLinePlacement() const;</pre>
 <p class="doc" data-zh="返回间距中心或两侧分割线模式。" data-en="Return the grid line placement at spacing centers or edges.">返回间距中心或两侧分割线模式。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：GridLinePlacement::SpacingCenter" data-en="Default / initial state: GridLinePlacement::SpacingCenter">默认值／初始状态：GridLinePlacement::SpacingCenter</p>
 <p class="doc" data-zh="默认 SpacingCenter：在间距中心绘制，交叉线始终穿过间距，且外侧补半间距；零间距时不重复画线。SpacingEdges 在间距两侧绘制，只有这个模式允许控制是否穿过交叉间距。是否穿过表头使用单独开关。" data-en="SpacingCenter is the default: lines run through gap centers, cross gaps unconditionally, and use outer half-gaps; zero spacing does not duplicate lines. SpacingEdges draws both gap edges and alone allows disabling crossings through perpendicular gaps. Header crossings have independent switches.">默认 SpacingCenter：在间距中心绘制，交叉线始终穿过间距，且外侧补半间距；零间距时不重复画线。SpacingEdges 在间距两侧绘制，只有这个模式允许控制是否穿过交叉间距。是否穿过表头使用单独开关。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -1032,6 +1189,7 @@
 <a href="../../../include/virtualitemviews/virtualheaderview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L199</span>
 <pre>void setCrossAxisSeparatorVisible(bool visible);</pre>
 <p class="doc" data-zh="设置交叉方向分割线可见性。" data-en="Set the cross-axis separator visibility.">设置交叉方向分割线可见性。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：true" data-en="Default / initial state: true">默认值／初始状态：true</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="VirtualHeaderView-crossAxisSeparatorVisible-54" data-search="VirtualHeaderView crossAxisSeparatorVisible">
@@ -1040,6 +1198,7 @@
 <a href="../../../include/virtualitemviews/virtualheaderview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L200</span>
 <pre>    bool crossAxisSeparatorVisible() const;</pre>
 <p class="doc" data-zh="返回交叉方向分割线可见性。" data-en="Return the cross-axis separator visibility.">返回交叉方向分割线可见性。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：true" data-en="Default / initial state: true">默认值／初始状态：true</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="VirtualHeaderView-setSectionSeparatorColor-55" data-search="VirtualHeaderView setSectionSeparatorColor">
@@ -1048,6 +1207,7 @@
 <a href="../../../include/virtualitemviews/virtualheaderview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L202</span>
 <pre>void setSectionSeparatorColor(const QColor &amp;color);</pre>
 <p class="doc" data-zh="设置表头 section 分割线颜色。" data-en="Set the header section separator color.">设置表头 section 分割线颜色。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：无效 QColor；使用当前表头样式的分隔色。" data-en="Default / initial state: Invalid QColor; uses the current header style separator color.">默认值／初始状态：无效 QColor；使用当前表头样式的分隔色。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="VirtualHeaderView-sectionSeparatorColor-56" data-search="VirtualHeaderView sectionSeparatorColor">
@@ -1056,6 +1216,7 @@
 <a href="../../../include/virtualitemviews/virtualheaderview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L203</span>
 <pre>    QColor sectionSeparatorColor() const;</pre>
 <p class="doc" data-zh="返回表头 section 分割线颜色。" data-en="Return the header section separator color.">返回表头 section 分割线颜色。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：无效 QColor；使用当前表头样式的分隔色。" data-en="Default / initial state: Invalid QColor; uses the current header style separator color.">默认值／初始状态：无效 QColor；使用当前表头样式的分隔色。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="VirtualHeaderView-setCrossAxisSeparatorColor-57" data-search="VirtualHeaderView setCrossAxisSeparatorColor">
@@ -1064,6 +1225,7 @@
 <a href="../../../include/virtualitemviews/virtualheaderview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L204</span>
 <pre>void setCrossAxisSeparatorColor(const QColor &amp;color);</pre>
 <p class="doc" data-zh="设置交叉方向分割线颜色。" data-en="Set the cross-axis separator color.">设置交叉方向分割线颜色。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：无效 QColor；使用当前表头样式的分隔色。" data-en="Default / initial state: Invalid QColor; uses the current header style separator color.">默认值／初始状态：无效 QColor；使用当前表头样式的分隔色。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="VirtualHeaderView-crossAxisSeparatorColor-58" data-search="VirtualHeaderView crossAxisSeparatorColor">
@@ -1072,6 +1234,7 @@
 <a href="../../../include/virtualitemviews/virtualheaderview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L205</span>
 <pre>    QColor crossAxisSeparatorColor() const;</pre>
 <p class="doc" data-zh="返回交叉方向分割线颜色。" data-en="Return the cross-axis separator color.">返回交叉方向分割线颜色。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：无效 QColor；使用当前表头样式的分隔色。" data-en="Default / initial state: Invalid QColor; uses the current header style separator color.">默认值／初始状态：无效 QColor；使用当前表头样式的分隔色。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="VirtualHeaderView-setSectionSeparatorWidth-59" data-search="VirtualHeaderView setSectionSeparatorWidth">
@@ -1080,6 +1243,7 @@
 <a href="../../../include/virtualitemviews/virtualheaderview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L206</span>
 <pre>void setSectionSeparatorWidth(int pixels);</pre>
 <p class="doc" data-zh="设置表头 section 分割线宽度。" data-en="Set the header section separator width.">设置表头 section 分割线宽度。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：1" data-en="Default / initial state: 1">默认值／初始状态：1</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="VirtualHeaderView-sectionSeparatorWidth-60" data-search="VirtualHeaderView sectionSeparatorWidth">
@@ -1088,6 +1252,7 @@
 <a href="../../../include/virtualitemviews/virtualheaderview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L207</span>
 <pre>    int sectionSeparatorWidth() const;</pre>
 <p class="doc" data-zh="返回表头 section 分割线宽度。" data-en="Return the header section separator width.">返回表头 section 分割线宽度。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：1" data-en="Default / initial state: 1">默认值／初始状态：1</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="VirtualHeaderView-setCrossAxisSeparatorWidth-61" data-search="VirtualHeaderView setCrossAxisSeparatorWidth">
@@ -1096,6 +1261,7 @@
 <a href="../../../include/virtualitemviews/virtualheaderview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L208</span>
 <pre>void setCrossAxisSeparatorWidth(int pixels);</pre>
 <p class="doc" data-zh="设置交叉方向分割线宽度。" data-en="Set the cross-axis separator width.">设置交叉方向分割线宽度。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：1" data-en="Default / initial state: 1">默认值／初始状态：1</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="VirtualHeaderView-crossAxisSeparatorWidth-62" data-search="VirtualHeaderView crossAxisSeparatorWidth">
@@ -1104,6 +1270,7 @@
 <a href="../../../include/virtualitemviews/virtualheaderview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L209</span>
 <pre>    int crossAxisSeparatorWidth() const;</pre>
 <p class="doc" data-zh="返回交叉方向分割线宽度。" data-en="Return the cross-axis separator width.">返回交叉方向分割线宽度。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：1" data-en="Default / initial state: 1">默认值／初始状态：1</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="VirtualHeaderView-sectionVisualX-63" data-search="VirtualHeaderView sectionVisualX">
@@ -1128,6 +1295,7 @@
 <a href="../../../include/virtualitemviews/virtualheaderview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L216</span>
 <pre>void setVisualGeometryCallback(std::function&lt;void()&gt; callback) override;</pre>
 <p class="doc" data-zh="提供 section 动画或特殊布局的视觉几何查询回调。" data-en="Supply a callback for section visual geometry during animation or custom layout.">提供 section 动画或特殊布局的视觉几何查询回调。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：空回调；表格安装表头时注册同步回调。" data-en="Default / initial state: Empty callback; the table registers its synchronization callback when installing the header.">默认值／初始状态：空回调；表格安装表头时注册同步回调。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="VirtualHeaderView-refreshSectionLabels-66" data-search="VirtualHeaderView refreshSectionLabels">
@@ -1144,6 +1312,7 @@
 <a href="../../../include/virtualitemviews/virtualheaderview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L223</span>
 <pre>void setAdapter(HeaderWidgetAdapter *adapter, bool takeOwnership = false) override;</pre>
 <p class="doc" data-zh="设置项目控件适配器。" data-en="Set the item widget adapter.">设置项目控件适配器。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：内置 LabelHeaderAdapter，由表头拥有。替换 adapter 的 takeOwnership 参数默认 false。" data-en="Default / initial state: Built-in LabelHeaderAdapter owned by the header. Replacement takeOwnership defaults to false.">默认值／初始状态：内置 LabelHeaderAdapter，由表头拥有。替换 adapter 的 takeOwnership 参数默认 false。</p>
 <p class="doc" data-zh="takeOwnership 默认为 false，未转移所有权时调用方须保证 adapter 存活。RowWidgets 使用 TableWidgetAdapter，CellWidgets 使用 CellWidgetAdapter。创建控件和绑定数据应分离；复用时清除旧业务关联。" data-en="takeOwnership defaults to false; the caller must keep a non-owned adapter alive. RowWidgets uses TableWidgetAdapter and CellWidgets uses CellWidgetAdapter. Separate widget creation from binding and clear obsolete business associations on reuse.">takeOwnership 默认为 false，未转移所有权时调用方须保证 adapter 存活。RowWidgets 使用 TableWidgetAdapter，CellWidgets 使用 CellWidgetAdapter。创建控件和绑定数据应分离；复用时清除旧业务关联。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#headers"><span data-zh="默认表头 / 样式 / section / corner" data-en="Default headers / styles / sections / corner">默认表头 / 样式 / section / corner</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
@@ -1154,6 +1323,7 @@
 <a href="../../../include/virtualitemviews/virtualheaderview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L224</span>
 <pre>    HeaderWidgetAdapter *adapter() const override;</pre>
 <p class="doc" data-zh="返回项目控件适配器。" data-en="Return the item widget adapter.">返回项目控件适配器。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：内置 LabelHeaderAdapter，由表头拥有。替换 adapter 的 takeOwnership 参数默认 false。" data-en="Default / initial state: Built-in LabelHeaderAdapter owned by the header. Replacement takeOwnership defaults to false.">默认值／初始状态：内置 LabelHeaderAdapter，由表头拥有。替换 adapter 的 takeOwnership 参数默认 false。</p>
 <p class="doc" data-zh="takeOwnership 默认为 false，未转移所有权时调用方须保证 adapter 存活。RowWidgets 使用 TableWidgetAdapter，CellWidgets 使用 CellWidgetAdapter。创建控件和绑定数据应分离；复用时清除旧业务关联。" data-en="takeOwnership defaults to false; the caller must keep a non-owned adapter alive. RowWidgets uses TableWidgetAdapter and CellWidgets uses CellWidgetAdapter. Separate widget creation from binding and clear obsolete business associations on reuse.">takeOwnership 默认为 false，未转移所有权时调用方须保证 adapter 存活。RowWidgets 使用 TableWidgetAdapter，CellWidgets 使用 CellWidgetAdapter。创建控件和绑定数据应分离；复用时清除旧业务关联。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#headers"><span data-zh="默认表头 / 样式 / section / corner" data-en="Default headers / styles / sections / corner">默认表头 / 样式 / section / corner</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
@@ -1220,6 +1390,7 @@
 <a href="../../../include/virtualitemviews/virtualheaderview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L241</span>
 <pre>void setSectionOverscan(int sections);</pre>
 <p class="doc" data-zh="设置表头可见范围外预物化数量。" data-en="Set the header section overscan.">设置表头可见范围外预物化数量。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：1" data-en="Default / initial state: 1">默认值／初始状态：1</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="VirtualHeaderView-sectionOverscan-77" data-search="VirtualHeaderView sectionOverscan">
@@ -1228,6 +1399,7 @@
 <a href="../../../include/virtualitemviews/virtualheaderview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L242</span>
 <pre>    int sectionOverscan() const;</pre>
 <p class="doc" data-zh="返回表头可见范围外预物化数量。" data-en="Return the header section overscan.">返回表头可见范围外预物化数量。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：1" data-en="Default / initial state: 1">默认值／初始状态：1</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="VirtualHeaderView-appearanceChanged-78" data-search="VirtualHeaderView appearanceChanged">

@@ -282,7 +282,7 @@
 </li>
 </ul>
 </section>
-<h2><span data-zh="函数说明" data-en="Function details">函数说明</span></h2>
+<h2><span data-zh="接口与类型说明" data-en="API and type details">接口与类型说明</span></h2>
 <p class="muted"><span data-zh="按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。" data-en="Read each function for its purpose and related settings. Overloads are listed separately; follow related capabilities to find examples.">按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。</span></p>
 <section>
 <h3 id="SizeIndex">SizeIndex</h3>
@@ -349,6 +349,7 @@
 <a href="../../../include/virtualitemviews/sizeindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L40</span>
 <pre>virtual void setSize(qsizetype index, int size) = 0;</pre>
 <p class="doc" data-zh="更新尺寸索引中指定项目的尺寸并维护后续偏移。" data-en="Update an item size in the size index and maintain subsequent offsets.">更新尺寸索引中指定项目的尺寸并维护后续偏移。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：抽象接口，无统一数值；初始状态由具体布局/尺寸索引的构造或 reset 参数决定。" data-en="Default / initial state: Abstract interface with no universal value; concrete layout/size-index constructors or reset arguments determine the initial state.">默认值／初始状态：抽象接口，无统一数值；初始状态由具体布局/尺寸索引的构造或 reset 参数决定。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="SizeIndex-insert-8" data-search="SizeIndex insert">
@@ -411,6 +412,7 @@
 <a href="../../../include/virtualitemviews/sizeindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L61</span>
 <pre>void setItemSize(int size);</pre>
 <p class="doc" data-zh="设置项目布局主轴尺寸。" data-en="Set the item main-axis size.">设置项目布局主轴尺寸。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：默认构造时 count = 0、size = 0；有参构造使用传入 size，所有项尺寸相同。" data-en="Default / initial state: Default construction gives count = 0, size = 0; the parameterized constructor uses its size argument for every item.">默认值／初始状态：默认构造时 count = 0、size = 0；有参构造使用传入 size，所有项尺寸相同。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="FixedSizeIndex-itemSize-3" data-search="FixedSizeIndex itemSize">
@@ -419,6 +421,7 @@
 <a href="../../../include/virtualitemviews/sizeindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L62</span>
 <pre>    int itemSize() const;</pre>
 <p class="doc" data-zh="返回项目布局主轴尺寸。" data-en="Return the item main-axis size.">返回项目布局主轴尺寸。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：默认构造时 count = 0、size = 0；有参构造使用传入 size，所有项尺寸相同。" data-en="Default / initial state: Default construction gives count = 0, size = 0; the parameterized constructor uses its size argument for every item.">默认值／初始状态：默认构造时 count = 0、size = 0；有参构造使用传入 size，所有项尺寸相同。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="FixedSizeIndex-totalSize-4" data-search="FixedSizeIndex totalSize">
@@ -467,6 +470,7 @@
 <a href="../../../include/virtualitemviews/sizeindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L70</span>
 <pre>void setSize(qsizetype index, int size) override;</pre>
 <p class="doc" data-zh="更新尺寸索引中指定项目的尺寸并维护后续偏移。" data-en="Update an item size in the size index and maintain subsequent offsets.">更新尺寸索引中指定项目的尺寸并维护后续偏移。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：默认构造时 count = 0、size = 0；有参构造使用传入 size，所有项尺寸相同。" data-en="Default / initial state: Default construction gives count = 0, size = 0; the parameterized constructor uses its size argument for every item.">默认值／初始状态：默认构造时 count = 0、size = 0；有参构造使用传入 size，所有项尺寸相同。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="FixedSizeIndex-insert-10" data-search="FixedSizeIndex insert">
@@ -577,6 +581,7 @@
 <a href="../../../include/virtualitemviews/sizeindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L123</span>
 <pre>void setSize(qsizetype index, int size) override;</pre>
 <p class="doc" data-zh="更新尺寸索引中指定项目的尺寸并维护后续偏移。" data-en="Update an item size in the size index and maintain subsequent offsets.">更新尺寸索引中指定项目的尺寸并维护后续偏移。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：空构造时没有项目；有参构造/reset 后，未覆盖项使用传入的 estimatedSize。" data-en="Default / initial state: Empty construction has no items; after parameterized construction/reset, unmodified items use the supplied estimatedSize.">默认值／初始状态：空构造时没有项目；有参构造/reset 后，未覆盖项使用传入的 estimatedSize。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="BlockSizeIndex-insert-9" data-search="BlockSizeIndex insert">

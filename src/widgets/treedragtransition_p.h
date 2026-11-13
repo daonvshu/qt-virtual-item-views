@@ -87,6 +87,12 @@ public:
         return rowRectAt(row, progress());
     }
 
+    // Keep protected base access in the friend member context for older compilers.
+    int rowSpacingOffset(qsizetype row) const
+    {
+        return rowRect(row).y() - m_view->VirtualItemView::geometryForViewRow(row).y();
+    }
+
     struct PlaceholderBoundary {
         QRect geometry;
         bool trailingEdge = true;
@@ -270,7 +276,7 @@ public:
         if (!current())
             return;
         m_view->updateRowSpacingVisualGeometry([this](qsizetype row) {
-            return rowRect(row).y() - m_view->VirtualItemView::geometryForViewRow(row).y();
+            return rowSpacingOffset(row);
         });
         if (!current())
             return;

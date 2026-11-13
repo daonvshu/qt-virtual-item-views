@@ -141,52 +141,72 @@
 </li>
 </ul>
 </section>
-<h2><span data-zh="函数说明" data-en="Function details">函数说明</span></h2>
+<section id="type-index">
+<h3><span data-zh="结构体与枚举" data-en="Structs and enums">结构体与枚举</span></h3>
+<ul>
+<li data-search="BranchIndicatorState">
+<a href="#BranchIndicatorState">
+<code>BranchIndicatorState</code>
+</a>
+</li>
+</ul>
+</section>
+<h2><span data-zh="接口与类型说明" data-en="API and type details">接口与类型说明</span></h2>
 <p class="muted"><span data-zh="按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。" data-en="Read each function for its purpose and related settings. Overloads are listed separately; follow related capabilities to find examples.">按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。</span></p>
 <section>
 <h3 id="BranchIndicatorState">BranchIndicatorState</h3>
 <pre>struct BranchIndicatorState</pre>
-<article tabindex="-1" id="BranchIndicatorState-hasChildren-0" data-search="BranchIndicatorState hasChildren">
-<span class="badge">public</span>
-<span class="muted">
-<a href="../../../include/virtualitemviews/branchindicator.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L36</span>
-<pre>bool hasChildren = false;</pre>
-<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
-</article>
-<article tabindex="-1" id="BranchIndicatorState-hasSiblings-1" data-search="BranchIndicatorState hasSiblings">
-<span class="badge">public</span>
-<span class="muted">
-<a href="../../../include/virtualitemviews/branchindicator.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L39</span>
-<pre>bool hasSiblings = false;</pre>
-<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
-</article>
-<article tabindex="-1" id="BranchIndicatorState-adjoinsItem-2" data-search="BranchIndicatorState adjoinsItem">
-<span class="badge">public</span>
-<span class="muted">
-<a href="../../../include/virtualitemviews/branchindicator.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L42</span>
-<pre>bool adjoinsItem = false;</pre>
-<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
-</article>
-<article tabindex="-1" id="BranchIndicatorState-isExpanded-3" data-search="BranchIndicatorState isExpanded">
-<span class="badge">public</span>
-<span class="muted">
-<a href="../../../include/virtualitemviews/branchindicator.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L44</span>
-<pre>bool isExpanded = false;</pre>
-<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
-</article>
-<article tabindex="-1" id="BranchIndicatorState-cellDepth-4" data-search="BranchIndicatorState cellDepth">
-<span class="badge">public</span>
-<span class="muted">
-<a href="../../../include/virtualitemviews/branchindicator.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L47</span>
-<pre>int cellDepth = 0;</pre>
-<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
-</article>
-<article tabindex="-1" id="BranchIndicatorState-itemDepth-5" data-search="BranchIndicatorState itemDepth">
-<span class="badge">public</span>
-<span class="muted">
-<a href="../../../include/virtualitemviews/branchindicator.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L49</span>
-<pre>int itemDepth = 0;</pre>
-<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+<article data-search="BranchIndicatorState">
+<p class="doc" data-zh="传给 branch 渲染器的单个缩进格状态。当前节点格负责展开箭头，祖先格可用于连接线；布尔值默认 false、深度默认 0。" data-en="State of an indentation cell passed to a branch renderer. The node cell carries the expansion indicator; ancestor cells can carry connectors. Booleans default to false and depths to 0.">传给 branch 渲染器的单个缩进格状态。当前节点格负责展开箭头，祖先格可用于连接线；布尔值默认 false、深度默认 0。</p>
+<div class="table-scroll">
+<table class="type-members">
+<thead>
+<tr>
+<th><span data-zh="成员 / 取值" data-en="Member / value">成员 / 取值</span></th>
+<th><span data-zh="说明" data-en="Guide">说明</span></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>bool hasChildren = false;</code>
+</td>
+<td class="doc" data-zh="该格对应节点是否有子节点。" data-en="Whether the represented node has children.">该格对应节点是否有子节点。</td>
+</tr>
+<tr>
+<td>
+<code>bool hasSiblings = false;</code>
+</td>
+<td class="doc" data-zh="该格对应节点下方是否还有同级节点。" data-en="Whether another sibling follows the represented node.">该格对应节点下方是否还有同级节点。</td>
+</tr>
+<tr>
+<td>
+<code>bool adjoinsItem = false;</code>
+</td>
+<td class="doc" data-zh="是否为当前行自身的 branch 格；只有此格承载展开箭头。" data-en="Whether this is the row&#x27;s own branch cell, which carries the expansion indicator.">是否为当前行自身的 branch 格；只有此格承载展开箭头。</td>
+</tr>
+<tr>
+<td>
+<code>bool isExpanded = false;</code>
+</td>
+<td class="doc" data-zh="对应节点是否展开；有子节点时才有展开含义。" data-en="Whether the represented node is expanded; meaningful for nodes with children.">对应节点是否展开；有子节点时才有展开含义。</td>
+</tr>
+<tr>
+<td>
+<code>int cellDepth = 0;</code>
+</td>
+<td class="doc" data-zh="该格的绝对层级，0 为顶层，自身格等于 itemDepth。" data-en="Absolute cell level: 0 is top level; the node&#x27;s own cell equals itemDepth.">该格的绝对层级，0 为顶层，自身格等于 itemDepth。</td>
+</tr>
+<tr>
+<td>
+<code>int itemDepth = 0;</code>
+</td>
+<td class="doc" data-zh="当前绘制行的深度，0 为顶层节点。" data-en="Depth of the row being painted; 0 is top level.">当前绘制行的深度，0 为顶层节点。</td>
+</tr>
+</tbody>
+</table>
+</div>
+<a href="#type-index" class="muted"><span data-zh="返回类型列表" data-en="Back to type index">返回类型列表</span></a>
 </article>
 <article tabindex="-1" id="BranchIndicatorState-isOpen-6" data-search="BranchIndicatorState isOpen">
 <span class="badge">public</span>

@@ -1571,77 +1571,160 @@
 </li>
 </ul>
 </section>
-<h2><span data-zh="函数说明" data-en="Function details">函数说明</span></h2>
+<section id="type-index">
+<h3><span data-zh="结构体与枚举" data-en="Structs and enums">结构体与枚举</span></h3>
+<ul>
+<li data-search="VirtualViewStats">
+<a href="#VirtualViewStats">
+<code>VirtualViewStats</code>
+</a>
+</li>
+<li data-search="ScrollAnchor">
+<a href="#ScrollAnchor">
+<code>ScrollAnchor</code>
+</a>
+</li>
+<li data-search="VirtualItemView::ScrollHint">
+<a href="#VirtualItemView-ScrollHint-0">
+<code>VirtualItemView::ScrollHint</code>
+</a>
+</li>
+<li data-search="VirtualItemView::VisualState">
+<a href="#VirtualItemView-VisualState-30">
+<code>VirtualItemView::VisualState</code>
+</a>
+</li>
+<li data-search="VirtualItemView::SelectionMode">
+<a href="#VirtualItemView-SelectionMode-44">
+<code>VirtualItemView::SelectionMode</code>
+</a>
+</li>
+<li data-search="VirtualItemView::SelectionBehavior">
+<a href="#VirtualItemView-SelectionBehavior-45">
+<code>VirtualItemView::SelectionBehavior</code>
+</a>
+</li>
+<li data-search="VirtualItemView::DropTarget">
+<a href="#VirtualItemView-DropTarget-50">
+<code>VirtualItemView::DropTarget</code>
+</a>
+</li>
+<li data-search="VirtualItemView::DropIndicatorStyle">
+<a href="#VirtualItemView-DropIndicatorStyle-51">
+<code>VirtualItemView::DropIndicatorStyle</code>
+</a>
+</li>
+<li data-search="VirtualItemView::DragStartMode">
+<a href="#VirtualItemView-DragStartMode-54">
+<code>VirtualItemView::DragStartMode</code>
+</a>
+</li>
+<li data-search="VirtualItemView::WheelScrollMode">
+<a href="#VirtualItemView-WheelScrollMode-126">
+<code>VirtualItemView::WheelScrollMode</code>
+</a>
+</li>
+<li data-search="VirtualItemView::ItemHeightMode">
+<a href="#VirtualItemView-ItemHeightMode-135">
+<code>VirtualItemView::ItemHeightMode</code>
+</a>
+</li>
+</ul>
+</section>
+<h2><span data-zh="接口与类型说明" data-en="API and type details">接口与类型说明</span></h2>
 <p class="muted"><span data-zh="按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。" data-en="Read each function for its purpose and related settings. Overloads are listed separately; follow related capabilities to find examples.">按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。</span></p>
 <section>
 <h3 id="VirtualViewStats">VirtualViewStats</h3>
 <pre>struct VirtualViewStats</pre>
-<article tabindex="-1" id="VirtualViewStats-logicalItems-0" data-search="VirtualViewStats logicalItems">
-<span class="badge">public</span>
-<span class="muted">
-<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L60</span>
-<pre>qsizetype logicalItems = 0;</pre>
-<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
-</article>
-<article tabindex="-1" id="VirtualViewStats-materializedItems-1" data-search="VirtualViewStats materializedItems">
-<span class="badge">public</span>
-<span class="muted">
-<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L62</span>
-<pre>qsizetype materializedItems = 0;</pre>
-<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
-</article>
-<article tabindex="-1" id="VirtualViewStats-pooledWidgets-2" data-search="VirtualViewStats pooledWidgets">
-<span class="badge">public</span>
-<span class="muted">
-<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L64</span>
-<pre>qsizetype pooledWidgets = 0;</pre>
-<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
-</article>
-<article tabindex="-1" id="VirtualViewStats-pinnedWidgets-3" data-search="VirtualViewStats pinnedWidgets">
-<span class="badge">public</span>
-<span class="muted">
-<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L66</span>
-<pre>qsizetype pinnedWidgets = 0;</pre>
-<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
-</article>
-<article tabindex="-1" id="VirtualViewStats-createCount-4" data-search="VirtualViewStats createCount">
-<span class="badge">public</span>
-<span class="muted">
-<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L69</span>
-<pre>quint64 createCount = 0;</pre>
-<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
-</article>
-<article tabindex="-1" id="VirtualViewStats-bindCount-5" data-search="VirtualViewStats bindCount">
-<span class="badge">public</span>
-<span class="muted">
-<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L71</span>
-<pre>quint64 bindCount = 0;</pre>
-<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
-</article>
-<article tabindex="-1" id="VirtualViewStats-recycleCount-6" data-search="VirtualViewStats recycleCount">
-<span class="badge">public</span>
-<span class="muted">
-<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L73</span>
-<pre>quint64 recycleCount = 0;</pre>
-<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+<article data-search="VirtualViewStats">
+<p class="doc" data-zh="虚拟化状态及累计操作快照，用于观察复用。当前数量与累计次数不同，字段初始均为 0。" data-en="Snapshot of virtualization state and cumulative operations for observing reuse. Current counts differ from lifetime totals; all fields initially are 0.">虚拟化状态及累计操作快照，用于观察复用。当前数量与累计次数不同，字段初始均为 0。</p>
+<div class="table-scroll">
+<table class="type-members">
+<thead>
+<tr>
+<th><span data-zh="成员 / 取值" data-en="Member / value">成员 / 取值</span></th>
+<th><span data-zh="说明" data-en="Guide">说明</span></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>qsizetype logicalItems = 0;</code>
+</td>
+<td class="doc" data-zh="逻辑项数量。" data-en="Logical item count.">逻辑项数量。</td>
+</tr>
+<tr>
+<td>
+<code>qsizetype materializedItems = 0;</code>
+</td>
+<td class="doc" data-zh="当前拥有 QWidget 的项数量。" data-en="Current items owning QWidgets.">当前拥有 QWidget 的项数量。</td>
+</tr>
+<tr>
+<td>
+<code>qsizetype pooledWidgets = 0;</code>
+</td>
+<td class="doc" data-zh="当前在回收池等待复用的控件数。" data-en="Widgets currently awaiting reuse in pools.">当前在回收池等待复用的控件数。</td>
+</tr>
+<tr>
+<td>
+<code>qsizetype pinnedWidgets = 0;</code>
+</td>
+<td class="doc" data-zh="因焦点、输入、Popup 或显式请求而保留的控件数。" data-en="Widgets retained for focus, input, Popup or explicit pinning.">因焦点、输入、Popup 或显式请求而保留的控件数。</td>
+</tr>
+<tr>
+<td>
+<code>quint64 createCount = 0;</code>
+</td>
+<td class="doc" data-zh="视图创建以来回收器创建控件的累计次数。" data-en="Cumulative recycler widget creations since view construction.">视图创建以来回收器创建控件的累计次数。</td>
+</tr>
+<tr>
+<td>
+<code>quint64 bindCount = 0;</code>
+</td>
+<td class="doc" data-zh="已完成行／单元格绑定的累计次数，包含重新绑定。" data-en="Cumulative completed row/cell bindings, including rebindings.">已完成行／单元格绑定的累计次数，包含重新绑定。</td>
+</tr>
+<tr>
+<td>
+<code>quint64 recycleCount = 0;</code>
+</td>
+<td class="doc" data-zh="控件返回回收池的累计次数。" data-en="Cumulative widget returns to recycler pools.">控件返回回收池的累计次数。</td>
+</tr>
+</tbody>
+</table>
+</div>
+<a href="#type-index" class="muted"><span data-zh="返回类型列表" data-en="Back to type index">返回类型列表</span></a>
 </article>
 </section>
 <section>
 <h3 id="ScrollAnchor">ScrollAnchor</h3>
 <pre>struct ScrollAnchor</pre>
-<article tabindex="-1" id="ScrollAnchor-index-0" data-search="ScrollAnchor index">
-<span class="badge">public</span>
-<span class="muted">
-<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L82</span>
-<pre>QPersistentModelIndex index;</pre>
-<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
-</article>
-<article tabindex="-1" id="ScrollAnchor-offsetInsideItem-1" data-search="ScrollAnchor offsetInsideItem">
-<span class="badge">public</span>
-<span class="muted">
-<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L83</span>
-<pre>int offsetInsideItem = 0;</pre>
-<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+<article data-search="ScrollAnchor">
+<p class="doc" data-zh="持久索引和项内偏移构成的滚动锚点，用于数据变化后恢复位置。默认无效索引、0 偏移。" data-en="Scroll anchor formed by a persistent index and intra-item offset for restoring position after data changes. Initially invalid with zero offset.">持久索引和项内偏移构成的滚动锚点，用于数据变化后恢复位置。默认无效索引、0 偏移。</p>
+<div class="table-scroll">
+<table class="type-members">
+<thead>
+<tr>
+<th><span data-zh="成员 / 取值" data-en="Member / value">成员 / 取值</span></th>
+<th><span data-zh="说明" data-en="Guide">说明</span></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>QPersistentModelIndex index;</code>
+</td>
+<td class="doc" data-zh="锚点持久索引，删除该项后失效。" data-en="Persistent anchor index; invalidated when the item is removed.">锚点持久索引，删除该项后失效。</td>
+</tr>
+<tr>
+<td>
+<code>int offsetInsideItem = 0;</code>
+</td>
+<td class="doc" data-zh="viewport 顶部在锚点项内的纵向偏移，默认 0。" data-en="Vertical offset of the viewport top inside the anchor item; defaults to 0.">viewport 顶部在锚点项内的纵向偏移，默认 0。</td>
+</tr>
+</tbody>
+</table>
+</div>
+<a href="#type-index" class="muted"><span data-zh="返回类型列表" data-en="Back to type index">返回类型列表</span></a>
 </article>
 <article tabindex="-1" id="ScrollAnchor-isValid-2" data-search="ScrollAnchor isValid">
 <span class="badge">public</span>
@@ -1660,12 +1743,49 @@
 <span class="muted">
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L105</span>
 <pre>enum ScrollHint {
-        EnsureVisible,
-        PositionAtTop,
-        PositionAtBottom,
-        PositionAtCenter,
-    };</pre>
-<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+    EnsureVisible,
+    PositionAtTop,
+    PositionAtBottom,
+    PositionAtCenter,
+};</pre>
+<p class="doc" data-zh="scrollTo() 定位策略，最终位置受实际滚动范围约束。" data-en="scrollTo() positioning hint; final position is clamped to the available scroll range.">scrollTo() 定位策略，最终位置受实际滚动范围约束。</p>
+<div class="table-scroll">
+<table class="type-members">
+<thead>
+<tr>
+<th><span data-zh="成员 / 取值" data-en="Member / value">成员 / 取值</span></th>
+<th><span data-zh="说明" data-en="Guide">说明</span></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>EnsureVisible</code>
+</td>
+<td class="doc" data-zh="仅在必要时滚动使目标可见。" data-en="Scroll only as needed to expose the target.">仅在必要时滚动使目标可见。</td>
+</tr>
+<tr>
+<td>
+<code>PositionAtTop</code>
+</td>
+<td class="doc" data-zh="尽量定位到可滚动区域顶部。" data-en="Position at the top of the scrolling area where possible.">尽量定位到可滚动区域顶部。</td>
+</tr>
+<tr>
+<td>
+<code>PositionAtBottom</code>
+</td>
+<td class="doc" data-zh="尽量定位到可滚动区域底部。" data-en="Position at the bottom of the scrolling area where possible.">尽量定位到可滚动区域底部。</td>
+</tr>
+<tr>
+<td>
+<code>PositionAtCenter</code>
+</td>
+<td class="doc" data-zh="尽量定位到可滚动区域中心。" data-en="Center in the scrolling area where possible.">尽量定位到可滚动区域中心。</td>
+</tr>
+</tbody>
+</table>
+</div>
+<a href="#type-index" class="muted"><span data-zh="返回类型列表" data-en="Back to type index">返回类型列表</span></a>
 </article>
 <article tabindex="-1" id="VirtualItemView-VirtualItemView-1" data-search="VirtualItemView VirtualItemView">
 <span class="badge">public</span>
@@ -1689,6 +1809,7 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L121</span>
 <pre>void setBackgroundVisible(bool visible);</pre>
 <p class="doc" data-zh="设置背景绘制开关。" data-en="Set the background painting setting.">设置背景绘制开关。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：true" data-en="Default / initial state: true">默认值／初始状态：true</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#background"><span data-zh="背景 / 项底色 / 透明 / QSS" data-en="Background / item fill / transparency / QSS">背景 / 项底色 / 透明 / QSS</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -1698,6 +1819,7 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L122</span>
 <pre>    bool backgroundVisible() const;</pre>
 <p class="doc" data-zh="返回背景绘制开关。" data-en="Return the background painting setting.">返回背景绘制开关。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：true" data-en="Default / initial state: true">默认值／初始状态：true</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#background"><span data-zh="背景 / 项底色 / 透明 / QSS" data-en="Background / item fill / transparency / QSS">背景 / 项底色 / 透明 / QSS</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -1707,6 +1829,7 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L126</span>
 <pre>void setBackgroundColor(const QColor &amp;color);</pre>
 <p class="doc" data-zh="设置主体背景颜色。" data-en="Set the main background color.">设置主体背景颜色。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：无效 QColor；默认 QPalette::Base，遵循背景 QSS 优先级。" data-en="Default / initial state: Invalid QColor; QPalette::Base by default, subject to background QSS precedence.">默认值／初始状态：无效 QColor；默认 QPalette::Base，遵循背景 QSS 优先级。</p>
 <p class="doc" data-zh="表头区域、单个 section、内容主体和间距是不同绘制层。设置 header 区域颜色不等于替换 section 填色；使用 sectionBackgroundColor 单独配置 section。QSS 规则可能覆盖对应控件的调色板或样式绘制。" data-en="Header areas, individual sections, the content body and gaps are separate layers. Changing the header area does not replace section fill; use sectionBackgroundColor for sections. QSS rules may override the relevant widget palette or styled painting.">表头区域、单个 section、内容主体和间距是不同绘制层。设置 header 区域颜色不等于替换 section 填色；使用 sectionBackgroundColor 单独配置 section。QSS 规则可能覆盖对应控件的调色板或样式绘制。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#background"><span data-zh="背景 / 项底色 / 透明 / QSS" data-en="Background / item fill / transparency / QSS">背景 / 项底色 / 透明 / QSS</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
@@ -1717,6 +1840,7 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L127</span>
 <pre>    QColor backgroundColor() const;</pre>
 <p class="doc" data-zh="返回主体背景颜色。" data-en="Return the main background color.">返回主体背景颜色。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：无效 QColor；默认 QPalette::Base，遵循背景 QSS 优先级。" data-en="Default / initial state: Invalid QColor; QPalette::Base by default, subject to background QSS precedence.">默认值／初始状态：无效 QColor；默认 QPalette::Base，遵循背景 QSS 优先级。</p>
 <p class="doc" data-zh="表头区域、单个 section、内容主体和间距是不同绘制层。设置 header 区域颜色不等于替换 section 填色；使用 sectionBackgroundColor 单独配置 section。QSS 规则可能覆盖对应控件的调色板或样式绘制。" data-en="Header areas, individual sections, the content body and gaps are separate layers. Changing the header area does not replace section fill; use sectionBackgroundColor for sections. QSS rules may override the relevant widget palette or styled painting.">表头区域、单个 section、内容主体和间距是不同绘制层。设置 header 区域颜色不等于替换 section 填色；使用 sectionBackgroundColor 单独配置 section。QSS 规则可能覆盖对应控件的调色板或样式绘制。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#background"><span data-zh="背景 / 项底色 / 透明 / QSS" data-en="Background / item fill / transparency / QSS">背景 / 项底色 / 透明 / QSS</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
@@ -1736,6 +1860,7 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L134</span>
 <pre>void setItemBackgroundColor(const QColor &amp;color);</pre>
 <p class="doc" data-zh="设置普通项目背景颜色；透明时不绘制底色。" data-en="Set the ordinary item background color; transparent means no fill.">设置普通项目背景颜色；透明时不绘制底色。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：无效 QColor；不绘制统一项底色，保持透明。" data-en="Default / initial state: Invalid QColor; no uniform item background is painted, leaving it transparent.">默认值／初始状态：无效 QColor；不绘制统一项底色，保持透明。</p>
 <p class="doc" data-zh="默认无效颜色或完全透明颜色不绘制项目底色。表头、间距和主体仍使用各自背景；adapter 创建的控件若绘制不透明背景，会遮住框架底色。" data-en="An invalid default color or a fully transparent color disables item fill. Headers, gaps and the view body retain their own backgrounds. Opaque adapter widgets obscure the framework fill.">默认无效颜色或完全透明颜色不绘制项目底色。表头、间距和主体仍使用各自背景；adapter 创建的控件若绘制不透明背景，会遮住框架底色。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#background"><span data-zh="背景 / 项底色 / 透明 / QSS" data-en="Background / item fill / transparency / QSS">背景 / 项底色 / 透明 / QSS</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
@@ -1746,6 +1871,7 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L135</span>
 <pre>    QColor itemBackgroundColor() const;</pre>
 <p class="doc" data-zh="返回普通项目背景颜色；透明时不绘制底色。" data-en="Return the ordinary item background color; transparent means no fill.">返回普通项目背景颜色；透明时不绘制底色。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：无效 QColor；不绘制统一项底色，保持透明。" data-en="Default / initial state: Invalid QColor; no uniform item background is painted, leaving it transparent.">默认值／初始状态：无效 QColor；不绘制统一项底色，保持透明。</p>
 <p class="doc" data-zh="默认无效颜色或完全透明颜色不绘制项目底色。表头、间距和主体仍使用各自背景；adapter 创建的控件若绘制不透明背景，会遮住框架底色。" data-en="An invalid default color or a fully transparent color disables item fill. Headers, gaps and the view body retain their own backgrounds. Opaque adapter widgets obscure the framework fill.">默认无效颜色或完全透明颜色不绘制项目底色。表头、间距和主体仍使用各自背景；adapter 创建的控件若绘制不透明背景，会遮住框架底色。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#background"><span data-zh="背景 / 项底色 / 透明 / QSS" data-en="Background / item fill / transparency / QSS">背景 / 项底色 / 透明 / QSS</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
@@ -1756,6 +1882,20 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L140</span>
 <pre>void setFrameCornerRadius(int radius);</pre>
 <p class="doc" data-zh="设置视图外边框圆角半径。" data-en="Set the outer view frame corner radius.">设置视图外边框圆角半径。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：0" data-en="Default / initial state: 0">默认值／初始状态：0</p>
+<section class="api-example">
+<h4><span data-zh="组合用法" data-en="Combination example">组合用法</span></h4>
+<p class="doc" data-zh="配置圆角外框；view 为 VirtualItemView 的具体视图实例。边框宽度与可见边分别设置，四边均开启时得到完整圆角框。颜色不会改变项或表头底色。" data-en="Configure a rounded outer frame on a concrete VirtualItemView instance. Width and visible edges are separate settings; enabling all four edges gives a complete rounded frame. Border color does not change item or header backgrounds.">配置圆角外框；view 为 VirtualItemView 的具体视图实例。边框宽度与可见边分别设置，四边均开启时得到完整圆角框。颜色不会改变项或表头底色。</p>
+<pre>
+<code class="language-cpp">view-&gt;setFrameBorderWidth(1);
+view-&gt;setFrameBorderColor(QColor(QStringLiteral(&quot;#d5dbe3&quot;)));
+view-&gt;setFrameBorderEdges(Qt::LeftEdge | Qt::TopEdge | Qt::RightEdge | Qt::BottomEdge);
+view-&gt;setFrameCornerRadius(8);</code>
+</pre>
+<p class="muted">
+<a href="../../../examples/table_capabilities/30_borders/example.cpp"><span data-zh="完整示例源码" data-en="Full example source">完整示例源码</span></a>
+</p>
+</section>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#frame"><span data-zh="外边框 / 四边开关 / 抗锯齿圆角" data-en="Outer frame / per-edge visibility / antialiased corners">外边框 / 四边开关 / 抗锯齿圆角</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -1765,6 +1905,7 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L141</span>
 <pre>    int frameCornerRadius() const;</pre>
 <p class="doc" data-zh="返回视图外边框圆角半径。" data-en="Return the outer view frame corner radius.">返回视图外边框圆角半径。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：0" data-en="Default / initial state: 0">默认值／初始状态：0</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#frame"><span data-zh="外边框 / 四边开关 / 抗锯齿圆角" data-en="Outer frame / per-edge visibility / antialiased corners">外边框 / 四边开关 / 抗锯齿圆角</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -1774,6 +1915,20 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L143</span>
 <pre>void setFrameBorderWidth(int width);</pre>
 <p class="doc" data-zh="设置外边框线宽。" data-en="Set the outer frame width.">设置外边框线宽。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：0；不绘制框架外边框。" data-en="Default / initial state: 0; no framework outer border is painted.">默认值／初始状态：0；不绘制框架外边框。</p>
+<section class="api-example">
+<h4><span data-zh="组合用法" data-en="Combination example">组合用法</span></h4>
+<p class="doc" data-zh="配置圆角外框；view 为 VirtualItemView 的具体视图实例。边框宽度与可见边分别设置，四边均开启时得到完整圆角框。颜色不会改变项或表头底色。" data-en="Configure a rounded outer frame on a concrete VirtualItemView instance. Width and visible edges are separate settings; enabling all four edges gives a complete rounded frame. Border color does not change item or header backgrounds.">配置圆角外框；view 为 VirtualItemView 的具体视图实例。边框宽度与可见边分别设置，四边均开启时得到完整圆角框。颜色不会改变项或表头底色。</p>
+<pre>
+<code class="language-cpp">view-&gt;setFrameBorderWidth(1);
+view-&gt;setFrameBorderColor(QColor(QStringLiteral(&quot;#d5dbe3&quot;)));
+view-&gt;setFrameBorderEdges(Qt::LeftEdge | Qt::TopEdge | Qt::RightEdge | Qt::BottomEdge);
+view-&gt;setFrameCornerRadius(8);</code>
+</pre>
+<p class="muted">
+<a href="../../../examples/table_capabilities/30_borders/example.cpp"><span data-zh="完整示例源码" data-en="Full example source">完整示例源码</span></a>
+</p>
+</section>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#frame"><span data-zh="外边框 / 四边开关 / 抗锯齿圆角" data-en="Outer frame / per-edge visibility / antialiased corners">外边框 / 四边开关 / 抗锯齿圆角</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -1783,6 +1938,7 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L144</span>
 <pre>    int frameBorderWidth() const;</pre>
 <p class="doc" data-zh="返回外边框线宽。" data-en="Return the outer frame width.">返回外边框线宽。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：0；不绘制框架外边框。" data-en="Default / initial state: 0; no framework outer border is painted.">默认值／初始状态：0；不绘制框架外边框。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#frame"><span data-zh="外边框 / 四边开关 / 抗锯齿圆角" data-en="Outer frame / per-edge visibility / antialiased corners">外边框 / 四边开关 / 抗锯齿圆角</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -1792,6 +1948,20 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L146</span>
 <pre>void setFrameBorderColor(const QColor &amp;color);</pre>
 <p class="doc" data-zh="设置外边框颜色。" data-en="Set the outer frame border color.">设置外边框颜色。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：无效 QColor；回退 QPalette::Mid。" data-en="Default / initial state: Invalid QColor; falls back to QPalette::Mid.">默认值／初始状态：无效 QColor；回退 QPalette::Mid。</p>
+<section class="api-example">
+<h4><span data-zh="组合用法" data-en="Combination example">组合用法</span></h4>
+<p class="doc" data-zh="配置圆角外框；view 为 VirtualItemView 的具体视图实例。边框宽度与可见边分别设置，四边均开启时得到完整圆角框。颜色不会改变项或表头底色。" data-en="Configure a rounded outer frame on a concrete VirtualItemView instance. Width and visible edges are separate settings; enabling all four edges gives a complete rounded frame. Border color does not change item or header backgrounds.">配置圆角外框；view 为 VirtualItemView 的具体视图实例。边框宽度与可见边分别设置，四边均开启时得到完整圆角框。颜色不会改变项或表头底色。</p>
+<pre>
+<code class="language-cpp">view-&gt;setFrameBorderWidth(1);
+view-&gt;setFrameBorderColor(QColor(QStringLiteral(&quot;#d5dbe3&quot;)));
+view-&gt;setFrameBorderEdges(Qt::LeftEdge | Qt::TopEdge | Qt::RightEdge | Qt::BottomEdge);
+view-&gt;setFrameCornerRadius(8);</code>
+</pre>
+<p class="muted">
+<a href="../../../examples/table_capabilities/30_borders/example.cpp"><span data-zh="完整示例源码" data-en="Full example source">完整示例源码</span></a>
+</p>
+</section>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#frame"><span data-zh="外边框 / 四边开关 / 抗锯齿圆角" data-en="Outer frame / per-edge visibility / antialiased corners">外边框 / 四边开关 / 抗锯齿圆角</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -1801,6 +1971,7 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L147</span>
 <pre>    QColor frameBorderColor() const;</pre>
 <p class="doc" data-zh="返回外边框颜色。" data-en="Return the outer frame border color.">返回外边框颜色。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：无效 QColor；回退 QPalette::Mid。" data-en="Default / initial state: Invalid QColor; falls back to QPalette::Mid.">默认值／初始状态：无效 QColor；回退 QPalette::Mid。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#frame"><span data-zh="外边框 / 四边开关 / 抗锯齿圆角" data-en="Outer frame / per-edge visibility / antialiased corners">外边框 / 四边开关 / 抗锯齿圆角</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -1810,6 +1981,20 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L150</span>
 <pre>void setFrameBorderEdges(Qt::Edges edges);</pre>
 <p class="doc" data-zh="设置绘制的外边框边集合。" data-en="Set the outer frame edges to paint.">设置绘制的外边框边集合。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：Qt::LeftEdge | Qt::TopEdge | Qt::RightEdge | Qt::BottomEdge" data-en="Default / initial state: Qt::LeftEdge | Qt::TopEdge | Qt::RightEdge | Qt::BottomEdge">默认值／初始状态：Qt::LeftEdge | Qt::TopEdge | Qt::RightEdge | Qt::BottomEdge</p>
+<section class="api-example">
+<h4><span data-zh="组合用法" data-en="Combination example">组合用法</span></h4>
+<p class="doc" data-zh="配置圆角外框；view 为 VirtualItemView 的具体视图实例。边框宽度与可见边分别设置，四边均开启时得到完整圆角框。颜色不会改变项或表头底色。" data-en="Configure a rounded outer frame on a concrete VirtualItemView instance. Width and visible edges are separate settings; enabling all four edges gives a complete rounded frame. Border color does not change item or header backgrounds.">配置圆角外框；view 为 VirtualItemView 的具体视图实例。边框宽度与可见边分别设置，四边均开启时得到完整圆角框。颜色不会改变项或表头底色。</p>
+<pre>
+<code class="language-cpp">view-&gt;setFrameBorderWidth(1);
+view-&gt;setFrameBorderColor(QColor(QStringLiteral(&quot;#d5dbe3&quot;)));
+view-&gt;setFrameBorderEdges(Qt::LeftEdge | Qt::TopEdge | Qt::RightEdge | Qt::BottomEdge);
+view-&gt;setFrameCornerRadius(8);</code>
+</pre>
+<p class="muted">
+<a href="../../../examples/table_capabilities/30_borders/example.cpp"><span data-zh="完整示例源码" data-en="Full example source">完整示例源码</span></a>
+</p>
+</section>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#frame"><span data-zh="外边框 / 四边开关 / 抗锯齿圆角" data-en="Outer frame / per-edge visibility / antialiased corners">外边框 / 四边开关 / 抗锯齿圆角</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -1819,6 +2004,7 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L151</span>
 <pre>    Qt::Edges frameBorderEdges() const;</pre>
 <p class="doc" data-zh="返回绘制的外边框边集合。" data-en="Return the outer frame edges to paint.">返回绘制的外边框边集合。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：Qt::LeftEdge | Qt::TopEdge | Qt::RightEdge | Qt::BottomEdge" data-en="Default / initial state: Qt::LeftEdge | Qt::TopEdge | Qt::RightEdge | Qt::BottomEdge">默认值／初始状态：Qt::LeftEdge | Qt::TopEdge | Qt::RightEdge | Qt::BottomEdge</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#frame"><span data-zh="外边框 / 四边开关 / 抗锯齿圆角" data-en="Outer frame / per-edge visibility / antialiased corners">外边框 / 四边开关 / 抗锯齿圆角</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -1828,6 +2014,7 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L153</span>
 <pre>void setFrameBorderVisible(Qt::Edge edge, bool visible);</pre>
 <p class="doc" data-zh="设置外边框可见性。" data-en="Set the outer frame visibility.">设置外边框可见性。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：四边均为 true，但默认宽度为 0，初始不画外框。" data-en="Default / initial state: true for each edge, but the default width is 0, so no outer border is initially painted.">默认值／初始状态：四边均为 true，但默认宽度为 0，初始不画外框。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#frame"><span data-zh="外边框 / 四边开关 / 抗锯齿圆角" data-en="Outer frame / per-edge visibility / antialiased corners">外边框 / 四边开关 / 抗锯齿圆角</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -1846,7 +2033,21 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L161</span>
 <pre>void setAutoHeightEnabled(bool enabled);</pre>
 <p class="doc" data-zh="设置按内容固定视图高度的开关。" data-en="Set the content-based fixed view height setting.">设置按内容固定视图高度的开关。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：false" data-en="Default / initial state: false">默认值／初始状态：false</p>
 <p class="doc" data-zh="虚拟视图默认关闭，WrapWidget 默认开启。启用后按内容设置固定高度，父布局不再把它压缩；上限为 0 时不限高。高度包含边距、间距、表头和实际边框等占位。使用 setAutoHeightMaximumHeight 控制上限，不要同时用 QWidget 高度约束干预；关闭后恢复原约束。内部无滚动范围时，滚轮交给外层。" data-en="Disabled by default on virtual views and enabled on WrapWidget. When enabled, content sets a fixed height that the parent layout cannot compress; a maximum of 0 is unlimited. The height includes margins, gaps, headers and occupied frame space. Use setAutoHeightMaximumHeight rather than competing QWidget height constraints; disabling restores prior constraints. Wheel input propagates outward when there is no internal scroll range.">虚拟视图默认关闭，WrapWidget 默认开启。启用后按内容设置固定高度，父布局不再把它压缩；上限为 0 时不限高。高度包含边距、间距、表头和实际边框等占位。使用 setAutoHeightMaximumHeight 控制上限，不要同时用 QWidget 高度约束干预；关闭后恢复原约束。内部无滚动范围时，滚轮交给外层。</p>
+<section class="api-example">
+<h4><span data-zh="组合用法" data-en="Combination example">组合用法</span></h4>
+<p class="doc" data-zh="在垂直布局中按内容高度显示表格，最多 240 逻辑像素。view 为已设置 model 和 adapter 的 VirtualTableView；框架计算表头、内容和边框总高。不要再对同一控件调用 QWidget::setFixedHeight()。无内部滚动范围时滚轮会转交外层。" data-en="Size a table to its content in a vertical layout, capped at 240 logical pixels. view is a VirtualTableView with a model and adapter. The framework includes header, content and border heights. Do not also call QWidget::setFixedHeight() on this view. Wheel events pass outward when there is no internal scroll range.">在垂直布局中按内容高度显示表格，最多 240 逻辑像素。view 为已设置 model 和 adapter 的 VirtualTableView；框架计算表头、内容和边框总高。不要再对同一控件调用 QWidget::setFixedHeight()。无内部滚动范围时滚轮会转交外层。</p>
+<pre>
+<code class="language-cpp">view-&gt;setUniformItemHeight(36);
+view-&gt;setAutoHeightMaximumHeight(240);
+view-&gt;setAutoHeightEnabled(true);
+view-&gt;setTrailingRowGridLineAutoHideEnabled(true);</code>
+</pre>
+<p class="muted">
+<a href="../../../examples/table_capabilities/31_auto_height/example.cpp"><span data-zh="完整示例源码" data-en="Full example source">完整示例源码</span></a>
+</p>
+</section>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#auto-height"><span data-zh="自适应高度 / 嵌套滚动 / 最大高度" data-en="Auto height / nested scrolling / height limits">自适应高度 / 嵌套滚动 / 最大高度</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -1856,6 +2057,7 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L162</span>
 <pre>    bool autoHeightEnabled() const;</pre>
 <p class="doc" data-zh="返回按内容固定视图高度的开关。" data-en="Return the content-based fixed view height setting.">返回按内容固定视图高度的开关。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：false" data-en="Default / initial state: false">默认值／初始状态：false</p>
 <p class="doc" data-zh="虚拟视图默认关闭，WrapWidget 默认开启。启用后按内容设置固定高度，父布局不再把它压缩；上限为 0 时不限高。高度包含边距、间距、表头和实际边框等占位。使用 setAutoHeightMaximumHeight 控制上限，不要同时用 QWidget 高度约束干预；关闭后恢复原约束。内部无滚动范围时，滚轮交给外层。" data-en="Disabled by default on virtual views and enabled on WrapWidget. When enabled, content sets a fixed height that the parent layout cannot compress; a maximum of 0 is unlimited. The height includes margins, gaps, headers and occupied frame space. Use setAutoHeightMaximumHeight rather than competing QWidget height constraints; disabling restores prior constraints. Wheel input propagates outward when there is no internal scroll range.">虚拟视图默认关闭，WrapWidget 默认开启。启用后按内容设置固定高度，父布局不再把它压缩；上限为 0 时不限高。高度包含边距、间距、表头和实际边框等占位。使用 setAutoHeightMaximumHeight 控制上限，不要同时用 QWidget 高度约束干预；关闭后恢复原约束。内部无滚动范围时，滚轮交给外层。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#auto-height"><span data-zh="自适应高度 / 嵌套滚动 / 最大高度" data-en="Auto height / nested scrolling / height limits">自适应高度 / 嵌套滚动 / 最大高度</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
@@ -1866,7 +2068,21 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L166</span>
 <pre>void setAutoHeightMaximumHeight(int height);</pre>
 <p class="doc" data-zh="设置自适应高度独立上限；0 表示不限。" data-en="Set the independent auto-height limit; 0 means unlimited.">设置自适应高度独立上限；0 表示不限。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：0；不限制自适应高度，启用后按全部内容计算。" data-en="Default / initial state: 0; no auto-height limit; when enabled, height is calculated from all content.">默认值／初始状态：0；不限制自适应高度，启用后按全部内容计算。</p>
 <p class="doc" data-zh="虚拟视图默认关闭，WrapWidget 默认开启。启用后按内容设置固定高度，父布局不再把它压缩；上限为 0 时不限高。高度包含边距、间距、表头和实际边框等占位。使用 setAutoHeightMaximumHeight 控制上限，不要同时用 QWidget 高度约束干预；关闭后恢复原约束。内部无滚动范围时，滚轮交给外层。" data-en="Disabled by default on virtual views and enabled on WrapWidget. When enabled, content sets a fixed height that the parent layout cannot compress; a maximum of 0 is unlimited. The height includes margins, gaps, headers and occupied frame space. Use setAutoHeightMaximumHeight rather than competing QWidget height constraints; disabling restores prior constraints. Wheel input propagates outward when there is no internal scroll range.">虚拟视图默认关闭，WrapWidget 默认开启。启用后按内容设置固定高度，父布局不再把它压缩；上限为 0 时不限高。高度包含边距、间距、表头和实际边框等占位。使用 setAutoHeightMaximumHeight 控制上限，不要同时用 QWidget 高度约束干预；关闭后恢复原约束。内部无滚动范围时，滚轮交给外层。</p>
+<section class="api-example">
+<h4><span data-zh="组合用法" data-en="Combination example">组合用法</span></h4>
+<p class="doc" data-zh="在垂直布局中按内容高度显示表格，最多 240 逻辑像素。view 为已设置 model 和 adapter 的 VirtualTableView；框架计算表头、内容和边框总高。不要再对同一控件调用 QWidget::setFixedHeight()。无内部滚动范围时滚轮会转交外层。" data-en="Size a table to its content in a vertical layout, capped at 240 logical pixels. view is a VirtualTableView with a model and adapter. The framework includes header, content and border heights. Do not also call QWidget::setFixedHeight() on this view. Wheel events pass outward when there is no internal scroll range.">在垂直布局中按内容高度显示表格，最多 240 逻辑像素。view 为已设置 model 和 adapter 的 VirtualTableView；框架计算表头、内容和边框总高。不要再对同一控件调用 QWidget::setFixedHeight()。无内部滚动范围时滚轮会转交外层。</p>
+<pre>
+<code class="language-cpp">view-&gt;setUniformItemHeight(36);
+view-&gt;setAutoHeightMaximumHeight(240);
+view-&gt;setAutoHeightEnabled(true);
+view-&gt;setTrailingRowGridLineAutoHideEnabled(true);</code>
+</pre>
+<p class="muted">
+<a href="../../../examples/table_capabilities/31_auto_height/example.cpp"><span data-zh="完整示例源码" data-en="Full example source">完整示例源码</span></a>
+</p>
+</section>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#auto-height"><span data-zh="自适应高度 / 嵌套滚动 / 最大高度" data-en="Auto height / nested scrolling / height limits">自适应高度 / 嵌套滚动 / 最大高度</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -1876,6 +2092,7 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L167</span>
 <pre>    int autoHeightMaximumHeight() const;</pre>
 <p class="doc" data-zh="返回自适应高度独立上限；0 表示不限。" data-en="Return the independent auto-height limit; 0 means unlimited.">返回自适应高度独立上限；0 表示不限。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：0；不限制自适应高度，启用后按全部内容计算。" data-en="Default / initial state: 0; no auto-height limit; when enabled, height is calculated from all content.">默认值／初始状态：0；不限制自适应高度，启用后按全部内容计算。</p>
 <p class="doc" data-zh="虚拟视图默认关闭，WrapWidget 默认开启。启用后按内容设置固定高度，父布局不再把它压缩；上限为 0 时不限高。高度包含边距、间距、表头和实际边框等占位。使用 setAutoHeightMaximumHeight 控制上限，不要同时用 QWidget 高度约束干预；关闭后恢复原约束。内部无滚动范围时，滚轮交给外层。" data-en="Disabled by default on virtual views and enabled on WrapWidget. When enabled, content sets a fixed height that the parent layout cannot compress; a maximum of 0 is unlimited. The height includes margins, gaps, headers and occupied frame space. Use setAutoHeightMaximumHeight rather than competing QWidget height constraints; disabling restores prior constraints. Wheel input propagates outward when there is no internal scroll range.">虚拟视图默认关闭，WrapWidget 默认开启。启用后按内容设置固定高度，父布局不再把它压缩；上限为 0 时不限高。高度包含边距、间距、表头和实际边框等占位。使用 setAutoHeightMaximumHeight 控制上限，不要同时用 QWidget 高度约束干预；关闭后恢复原约束。内部无滚动范围时，滚轮交给外层。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#auto-height"><span data-zh="自适应高度 / 嵌套滚动 / 最大高度" data-en="Auto height / nested scrolling / height limits">自适应高度 / 嵌套滚动 / 最大高度</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
@@ -1902,6 +2119,7 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L174</span>
 <pre>virtual void setModel(QAbstractItemModel *model);</pre>
 <p class="doc" data-zh="连接新的数据模型并更新布局、选择与物化状态；模型生命周期需覆盖视图使用期间。不要用重复 setModel 代替数据变更通知。" data-en="Connect a new data model and update layout, selection and materialization. Keep the model alive while in use; do not replace change notifications with repeated setModel calls.">连接新的数据模型并更新布局、选择与物化状态；模型生命周期需覆盖视图使用期间。不要用重复 setModel 代替数据变更通知。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：nullptr；初始没有模型。" data-en="Default / initial state: nullptr; no model is attached initially.">默认值／初始状态：nullptr；初始没有模型。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#model"><span data-zh="模型 / 根节点 / 代理模型 / 更新通知" data-en="Models / roots / proxies / update notifications">模型 / 根节点 / 代理模型 / 更新通知</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -1911,6 +2129,7 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L175</span>
 <pre>    QAbstractItemModel *model() const;</pre>
 <p class="doc" data-zh="返回项目数据模型。" data-en="Return the item data model.">返回项目数据模型。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：nullptr；初始没有模型。" data-en="Default / initial state: nullptr; no model is attached initially.">默认值／初始状态：nullptr；初始没有模型。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#model"><span data-zh="模型 / 根节点 / 代理模型 / 更新通知" data-en="Models / roots / proxies / update notifications">模型 / 根节点 / 代理模型 / 更新通知</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -1920,6 +2139,7 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L181</span>
 <pre>void setSelectionModel(QItemSelectionModel *selectionModel);</pre>
 <p class="doc" data-zh="设置维护当前项和选中项的选择模型。" data-en="Set the selection model holding current and selected indexes.">设置维护当前项和选中项的选择模型。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：初始 nullptr；设置模型时自动创建对应的 QItemSelectionModel。" data-en="Default / initial state: Initially nullptr; attaching a model automatically creates the corresponding QItemSelectionModel.">默认值／初始状态：初始 nullptr；设置模型时自动创建对应的 QItemSelectionModel。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#selection"><span data-zh="选择 / 多选 / 当前项 / 表头选择" data-en="Selection / multiple selection / current item / header selection">选择 / 多选 / 当前项 / 表头选择</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -1929,6 +2149,7 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L182</span>
 <pre>    QItemSelectionModel *selectionModel() const;</pre>
 <p class="doc" data-zh="返回维护当前项和选中项的选择模型。" data-en="Return the selection model holding current and selected indexes.">返回维护当前项和选中项的选择模型。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：初始 nullptr；设置模型时自动创建对应的 QItemSelectionModel。" data-en="Default / initial state: Initially nullptr; attaching a model automatically creates the corresponding QItemSelectionModel.">默认值／初始状态：初始 nullptr；设置模型时自动创建对应的 QItemSelectionModel。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#selection"><span data-zh="选择 / 多选 / 当前项 / 表头选择" data-en="Selection / multiple selection / current item / header selection">选择 / 多选 / 当前项 / 表头选择</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -1937,12 +2158,49 @@
 <span class="muted">
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L184</span>
 <pre>struct VisualState {
-        bool hovered = false;
-        bool selected = false;
-        qreal hoverProgress = 0.0;
-        qreal selectedProgress = 0.0;
-    };</pre>
-<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+    bool hovered = false;
+    bool selected = false;
+    qreal hoverProgress = 0.0;
+    qreal selectedProgress = 0.0;
+};</pre>
+<p class="doc" data-zh="项的目标 hover/selection 状态与当前动画进度。布尔值描述目标，进度用于平滑绘制，动画期间可尚未到达目标。" data-en="Target hover/selection state and current animation progress. Booleans describe targets; progress drives smooth painting and may still be transitioning.">项的目标 hover/selection 状态与当前动画进度。布尔值描述目标，进度用于平滑绘制，动画期间可尚未到达目标。</p>
+<div class="table-scroll">
+<table class="type-members">
+<thead>
+<tr>
+<th><span data-zh="成员 / 取值" data-en="Member / value">成员 / 取值</span></th>
+<th><span data-zh="说明" data-en="Guide">说明</span></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>bool hovered = false;</code>
+</td>
+<td class="doc" data-zh="hover 目标状态，默认 false。" data-en="Target hover state; defaults to false.">hover 目标状态，默认 false。</td>
+</tr>
+<tr>
+<td>
+<code>bool selected = false;</code>
+</td>
+<td class="doc" data-zh="选中目标状态，默认 false。" data-en="Target selected state; defaults to false.">选中目标状态，默认 false。</td>
+</tr>
+<tr>
+<td>
+<code>qreal hoverProgress = 0.0;</code>
+</td>
+<td class="doc" data-zh="hover 绘制进度 0～1，默认 0。" data-en="Hover progress in [0,1]; defaults to 0.">hover 绘制进度 0～1，默认 0。</td>
+</tr>
+<tr>
+<td>
+<code>qreal selectedProgress = 0.0;</code>
+</td>
+<td class="doc" data-zh="选中绘制进度 0～1，默认 0。" data-en="Selection progress in [0,1]; defaults to 0.">选中绘制进度 0～1，默认 0。</td>
+</tr>
+</tbody>
+</table>
+</div>
+<a href="#type-index" class="muted"><span data-zh="返回类型列表" data-en="Back to type index">返回类型列表</span></a>
 </article>
 <article tabindex="-1" id="VirtualItemView-visualState-31" data-search="VirtualItemView visualState">
 <span class="badge">public</span>
@@ -1967,6 +2225,7 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L197</span>
 <pre>void setHoverBackgroundColor(const QColor &amp;color);</pre>
 <p class="doc" data-zh="设置普通 hover 背景颜色。" data-en="Set the ordinary hover background color.">设置普通 hover 背景颜色。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：#e7f4ed" data-en="Default / initial state: #e7f4ed">默认值／初始状态：#e7f4ed</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#states"><span data-zh="hover / selected 默认绘制和动画" data-en="Built-in hover / selection painting and animation">hover / selected 默认绘制和动画</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -1976,6 +2235,7 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L198</span>
 <pre>    QColor hoverBackgroundColor() const;</pre>
 <p class="doc" data-zh="返回普通 hover 背景颜色。" data-en="Return the ordinary hover background color.">返回普通 hover 背景颜色。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：#e7f4ed" data-en="Default / initial state: #e7f4ed">默认值／初始状态：#e7f4ed</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#states"><span data-zh="hover / selected 默认绘制和动画" data-en="Built-in hover / selection painting and animation">hover / selected 默认绘制和动画</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -1985,6 +2245,7 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L199</span>
 <pre>void setSelectedBackgroundColor(const QColor &amp;color);</pre>
 <p class="doc" data-zh="设置选中状态背景颜色。" data-en="Set the selected-state background color.">设置选中状态背景颜色。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：#b9d9f1" data-en="Default / initial state: #b9d9f1">默认值／初始状态：#b9d9f1</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#states"><span data-zh="hover / selected 默认绘制和动画" data-en="Built-in hover / selection painting and animation">hover / selected 默认绘制和动画</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -1994,6 +2255,7 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L200</span>
 <pre>    QColor selectedBackgroundColor() const;</pre>
 <p class="doc" data-zh="返回选中状态背景颜色。" data-en="Return the selected-state background color.">返回选中状态背景颜色。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：#b9d9f1" data-en="Default / initial state: #b9d9f1">默认值／初始状态：#b9d9f1</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#states"><span data-zh="hover / selected 默认绘制和动画" data-en="Built-in hover / selection painting and animation">hover / selected 默认绘制和动画</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -2003,6 +2265,7 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L202</span>
 <pre>void setVisualStateAnimationDuration(int milliseconds);</pre>
 <p class="doc" data-zh="设置hover 和选中动画时长（毫秒）。" data-en="Set the hover and selection animation duration in milliseconds.">设置hover 和选中动画时长（毫秒）。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：180 ms" data-en="Default / initial state: 180 ms">默认值／初始状态：180 ms</p>
 <p class="doc" data-zh="默认时长 180ms，曲线 OutCubic。adapter 应使用 visualState 中的进度，以保持子控件与框架背景同步。原生拖动期间普通 hover 暂停并清空，结束后按当前鼠标位置恢复。" data-en="Defaults to 180 ms with OutCubic easing. Adapters should use visualState progress to stay synchronized with framework backgrounds. Native dragging suspends and clears ordinary hover, restoring it at the current cursor position afterward.">默认时长 180ms，曲线 OutCubic。adapter 应使用 visualState 中的进度，以保持子控件与框架背景同步。原生拖动期间普通 hover 暂停并清空，结束后按当前鼠标位置恢复。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#states"><span data-zh="hover / selected 默认绘制和动画" data-en="Built-in hover / selection painting and animation">hover / selected 默认绘制和动画</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
@@ -2013,6 +2276,7 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L203</span>
 <pre>    int visualStateAnimationDuration() const;</pre>
 <p class="doc" data-zh="返回hover 和选中动画时长（毫秒）。" data-en="Return the hover and selection animation duration in milliseconds.">返回hover 和选中动画时长（毫秒）。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：180 ms" data-en="Default / initial state: 180 ms">默认值／初始状态：180 ms</p>
 <p class="doc" data-zh="默认时长 180ms，曲线 OutCubic。adapter 应使用 visualState 中的进度，以保持子控件与框架背景同步。原生拖动期间普通 hover 暂停并清空，结束后按当前鼠标位置恢复。" data-en="Defaults to 180 ms with OutCubic easing. Adapters should use visualState progress to stay synchronized with framework backgrounds. Native dragging suspends and clears ordinary hover, restoring it at the current cursor position afterward.">默认时长 180ms，曲线 OutCubic。adapter 应使用 visualState 中的进度，以保持子控件与框架背景同步。原生拖动期间普通 hover 暂停并清空，结束后按当前鼠标位置恢复。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#states"><span data-zh="hover / selected 默认绘制和动画" data-en="Built-in hover / selection painting and animation">hover / selected 默认绘制和动画</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
@@ -2023,6 +2287,7 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L206</span>
 <pre>void setVisualStateAnimationEasingCurve(const QEasingCurve &amp;curve);</pre>
 <p class="doc" data-zh="设置hover 和选中缓动曲线。" data-en="Set the hover and selection easing curve.">设置hover 和选中缓动曲线。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：QEasingCurve::OutCubic" data-en="Default / initial state: QEasingCurve::OutCubic">默认值／初始状态：QEasingCurve::OutCubic</p>
 <p class="doc" data-zh="默认时长 180ms，曲线 OutCubic。adapter 应使用 visualState 中的进度，以保持子控件与框架背景同步。原生拖动期间普通 hover 暂停并清空，结束后按当前鼠标位置恢复。" data-en="Defaults to 180 ms with OutCubic easing. Adapters should use visualState progress to stay synchronized with framework backgrounds. Native dragging suspends and clears ordinary hover, restoring it at the current cursor position afterward.">默认时长 180ms，曲线 OutCubic。adapter 应使用 visualState 中的进度，以保持子控件与框架背景同步。原生拖动期间普通 hover 暂停并清空，结束后按当前鼠标位置恢复。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#states"><span data-zh="hover / selected 默认绘制和动画" data-en="Built-in hover / selection painting and animation">hover / selected 默认绘制和动画</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
@@ -2033,6 +2298,7 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L207</span>
 <pre>    QEasingCurve visualStateAnimationEasingCurve() const;</pre>
 <p class="doc" data-zh="返回hover 和选中缓动曲线。" data-en="Return the hover and selection easing curve.">返回hover 和选中缓动曲线。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：QEasingCurve::OutCubic" data-en="Default / initial state: QEasingCurve::OutCubic">默认值／初始状态：QEasingCurve::OutCubic</p>
 <p class="doc" data-zh="默认时长 180ms，曲线 OutCubic。adapter 应使用 visualState 中的进度，以保持子控件与框架背景同步。原生拖动期间普通 hover 暂停并清空，结束后按当前鼠标位置恢复。" data-en="Defaults to 180 ms with OutCubic easing. Adapters should use visualState progress to stay synchronized with framework backgrounds. Native dragging suspends and clears ordinary hover, restoring it at the current cursor position afterward.">默认时长 180ms，曲线 OutCubic。adapter 应使用 visualState 中的进度，以保持子控件与框架背景同步。原生拖动期间普通 hover 暂停并清空，结束后按当前鼠标位置恢复。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#states"><span data-zh="hover / selected 默认绘制和动画" data-en="Built-in hover / selection painting and animation">hover / selected 默认绘制和动画</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
@@ -2043,6 +2309,7 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L209</span>
 <pre>QModelIndex currentIndex() const;</pre>
 <p class="doc" data-zh="返回当前项索引（区别于所有选中项）。" data-en="Return the current index, distinct from the full selection.">返回当前项索引（区别于所有选中项）。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：无效 QModelIndex；初始没有 current 项，此接口修改当前项而非配置常量。" data-en="Default / initial state: Invalid QModelIndex; there is initially no current item. This updates current state rather than a configuration constant.">默认值／初始状态：无效 QModelIndex；初始没有 current 项，此接口修改当前项而非配置常量。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#selection"><span data-zh="选择 / 多选 / 当前项 / 表头选择" data-en="Selection / multiple selection / current item / header selection">选择 / 多选 / 当前项 / 表头选择</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -2052,6 +2319,7 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L210</span>
 <pre>void setCurrentIndex(const QModelIndex &amp;index);</pre>
 <p class="doc" data-zh="设置当前项索引（区别于所有选中项）。" data-en="Set the current index, distinct from the full selection.">设置当前项索引（区别于所有选中项）。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：无效 QModelIndex；初始没有 current 项，此接口修改当前项而非配置常量。" data-en="Default / initial state: Invalid QModelIndex; there is initially no current item. This updates current state rather than a configuration constant.">默认值／初始状态：无效 QModelIndex；初始没有 current 项，此接口修改当前项而非配置常量。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#selection"><span data-zh="选择 / 多选 / 当前项 / 表头选择" data-en="Selection / multiple selection / current item / header selection">选择 / 多选 / 当前项 / 表头选择</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -2068,22 +2336,84 @@
 <span class="muted">
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L217</span>
 <pre>enum class SelectionMode {
-        NoSelection,
-        SingleSelection,
-        MultiSelection,
-        ExtendedSelection,
-    };</pre>
-<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+    NoSelection,
+    SingleSelection,
+    MultiSelection,
+    ExtendedSelection,
+};</pre>
+<p class="doc" data-zh="用户选择手势模式，不限制 selectionModel() 的显式批量选择；选择单元由 SelectionBehavior 决定。" data-en="User selection gestures, not a restriction on explicit batch selection through selectionModel(). SelectionBehavior defines the unit.">用户选择手势模式，不限制 selectionModel() 的显式批量选择；选择单元由 SelectionBehavior 决定。</p>
+<div class="table-scroll">
+<table class="type-members">
+<thead>
+<tr>
+<th><span data-zh="成员 / 取值" data-en="Member / value">成员 / 取值</span></th>
+<th><span data-zh="说明" data-en="Guide">说明</span></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>NoSelection</code>
+</td>
+<td class="doc" data-zh="用户手势不改变选择。" data-en="User gestures do not change selection.">用户手势不改变选择。</td>
+</tr>
+<tr>
+<td>
+<code>SingleSelection</code>
+</td>
+<td class="doc" data-zh="用户交互只保留一个选择项。" data-en="User interaction keeps one selected item.">用户交互只保留一个选择项。</td>
+</tr>
+<tr>
+<td>
+<code>MultiSelection</code>
+</td>
+<td class="doc" data-zh="单击切换选中，允许多项。" data-en="Clicks toggle selection, allowing multiple items.">单击切换选中，允许多项。</td>
+</tr>
+<tr>
+<td>
+<code>ExtendedSelection</code>
+</td>
+<td class="doc" data-zh="普通点击、Ctrl 切换、Shift 范围选择；默认模式。" data-en="Ordinary clicks, Ctrl toggles and Shift ranges; the default.">普通点击、Ctrl 切换、Shift 范围选择；默认模式。</td>
+</tr>
+</tbody>
+</table>
+</div>
+<a href="#type-index" class="muted"><span data-zh="返回类型列表" data-en="Back to type index">返回类型列表</span></a>
 </article>
 <article tabindex="-1" id="VirtualItemView-SelectionBehavior-45" data-search="VirtualItemView SelectionBehavior">
 <span class="badge">public</span>
 <span class="muted">
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L228</span>
 <pre>enum class SelectionBehavior {
-        SelectItems,
-        SelectRows,
-    };</pre>
-<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+    SelectItems,
+    SelectRows,
+};</pre>
+<p class="doc" data-zh="选择和内置 hover/selection 绘制范围。表格支持按格和按行。" data-en="Selection unit and built-in hover/selection extent. Tables support cells and rows.">选择和内置 hover/selection 绘制范围。表格支持按格和按行。</p>
+<div class="table-scroll">
+<table class="type-members">
+<thead>
+<tr>
+<th><span data-zh="成员 / 取值" data-en="Member / value">成员 / 取值</span></th>
+<th><span data-zh="说明" data-en="Guide">说明</span></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>SelectItems</code>
+</td>
+<td class="doc" data-zh="表格按单元格选择和绘制状态。" data-en="Select and paint state per table cell.">表格按单元格选择和绘制状态。</td>
+</tr>
+<tr>
+<td>
+<code>SelectRows</code>
+</td>
+<td class="doc" data-zh="整行选择和绘制状态，默认值。" data-en="Select and paint state across the row; the default.">整行选择和绘制状态，默认值。</td>
+</tr>
+</tbody>
+</table>
+</div>
+<a href="#type-index" class="muted"><span data-zh="返回类型列表" data-en="Back to type index">返回类型列表</span></a>
 </article>
 <article tabindex="-1" id="VirtualItemView-setSelectionMode-46" data-search="VirtualItemView setSelectionMode">
 <span class="badge">public</span>
@@ -2091,7 +2421,23 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L234</span>
 <pre>void setSelectionMode(SelectionMode mode);</pre>
 <p class="doc" data-zh="设置单选、多选、扩展或禁止用户选择模式。" data-en="Set the single, multiple, extended or no-user-selection mode.">设置单选、多选、扩展或禁止用户选择模式。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：SelectionMode::ExtendedSelection" data-en="Default / initial state: SelectionMode::ExtendedSelection">默认值／初始状态：SelectionMode::ExtendedSelection</p>
 <p class="doc" data-zh="默认 ExtendedSelection + SelectRows。SelectRows 同时让 hover/selected 按行显示；SelectItems 按 cell 显示。SelectionMode 约束用户手势；程序批量选择使用 selectionModel()-&gt;select(QItemSelection, flags)，不要循环 setCurrentIndex。" data-en="Defaults to ExtendedSelection + SelectRows. SelectRows highlights hover/selection by row; SelectItems highlights cells. SelectionMode constrains user gestures. For programmatic ranges use selectionModel()-&gt;select(QItemSelection, flags), not repeated setCurrentIndex calls.">默认 ExtendedSelection + SelectRows。SelectRows 同时让 hover/selected 按行显示；SelectItems 按 cell 显示。SelectionMode 约束用户手势；程序批量选择使用 selectionModel()-&gt;select(QItemSelection, flags)，不要循环 setCurrentIndex。</p>
+<section class="api-example">
+<h4><span data-zh="组合用法" data-en="Combination example">组合用法</span></h4>
+<p class="doc" data-zh="按单元格选择，并仅在内容区域绘制状态背景。view 为 VirtualTableView；ExtendedSelection 支持 Ctrl/Shift，SelectItems 同时决定 hover/selection 的单元格范围。关闭表头状态同步不影响内容选择。" data-en="Select cells and paint state backgrounds only in the body. view is a VirtualTableView. ExtendedSelection supports Ctrl/Shift, while SelectItems sets the cell extent for both hover and selection. Disabling header state painting does not disable body selection.">按单元格选择，并仅在内容区域绘制状态背景。view 为 VirtualTableView；ExtendedSelection 支持 Ctrl/Shift，SelectItems 同时决定 hover/selection 的单元格范围。关闭表头状态同步不影响内容选择。</p>
+<pre>
+<code class="language-cpp">view-&gt;setSelectionMode(viv::VirtualItemView::SelectionMode::ExtendedSelection);
+view-&gt;setSelectionBehavior(viv::VirtualItemView::SelectionBehavior::SelectItems);
+view-&gt;setHorizontalHeaderSelectionEnabled(false);
+view-&gt;setVerticalHeaderSelectionEnabled(true);
+view-&gt;setHeaderVisualStateBackgroundVisible(Qt::Horizontal, false);
+view-&gt;setHeaderVisualStateBackgroundVisible(Qt::Vertical, false);</code>
+</pre>
+<p class="muted">
+<a href="../../../examples/table_capabilities/12_selection/example.cpp"><span data-zh="完整示例源码" data-en="Full example source">完整示例源码</span></a>
+</p>
+</section>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#selection"><span data-zh="选择 / 多选 / 当前项 / 表头选择" data-en="Selection / multiple selection / current item / header selection">选择 / 多选 / 当前项 / 表头选择</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -2101,6 +2447,7 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L235</span>
 <pre>    SelectionMode selectionMode() const;</pre>
 <p class="doc" data-zh="返回单选、多选、扩展或禁止用户选择模式。" data-en="Return the single, multiple, extended or no-user-selection mode.">返回单选、多选、扩展或禁止用户选择模式。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：SelectionMode::ExtendedSelection" data-en="Default / initial state: SelectionMode::ExtendedSelection">默认值／初始状态：SelectionMode::ExtendedSelection</p>
 <p class="doc" data-zh="默认 ExtendedSelection + SelectRows。SelectRows 同时让 hover/selected 按行显示；SelectItems 按 cell 显示。SelectionMode 约束用户手势；程序批量选择使用 selectionModel()-&gt;select(QItemSelection, flags)，不要循环 setCurrentIndex。" data-en="Defaults to ExtendedSelection + SelectRows. SelectRows highlights hover/selection by row; SelectItems highlights cells. SelectionMode constrains user gestures. For programmatic ranges use selectionModel()-&gt;select(QItemSelection, flags), not repeated setCurrentIndex calls.">默认 ExtendedSelection + SelectRows。SelectRows 同时让 hover/selected 按行显示；SelectItems 按 cell 显示。SelectionMode 约束用户手势；程序批量选择使用 selectionModel()-&gt;select(QItemSelection, flags)，不要循环 setCurrentIndex。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#selection"><span data-zh="选择 / 多选 / 当前项 / 表头选择" data-en="Selection / multiple selection / current item / header selection">选择 / 多选 / 当前项 / 表头选择</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
@@ -2111,7 +2458,23 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L238</span>
 <pre>void setSelectionBehavior(SelectionBehavior behavior);</pre>
 <p class="doc" data-zh="设置按行或单元格选择行为。" data-en="Set the row or cell selection behavior.">设置按行或单元格选择行为。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：SelectionBehavior::SelectRows" data-en="Default / initial state: SelectionBehavior::SelectRows">默认值／初始状态：SelectionBehavior::SelectRows</p>
 <p class="doc" data-zh="默认 ExtendedSelection + SelectRows。SelectRows 同时让 hover/selected 按行显示；SelectItems 按 cell 显示。SelectionMode 约束用户手势；程序批量选择使用 selectionModel()-&gt;select(QItemSelection, flags)，不要循环 setCurrentIndex。" data-en="Defaults to ExtendedSelection + SelectRows. SelectRows highlights hover/selection by row; SelectItems highlights cells. SelectionMode constrains user gestures. For programmatic ranges use selectionModel()-&gt;select(QItemSelection, flags), not repeated setCurrentIndex calls.">默认 ExtendedSelection + SelectRows。SelectRows 同时让 hover/selected 按行显示；SelectItems 按 cell 显示。SelectionMode 约束用户手势；程序批量选择使用 selectionModel()-&gt;select(QItemSelection, flags)，不要循环 setCurrentIndex。</p>
+<section class="api-example">
+<h4><span data-zh="组合用法" data-en="Combination example">组合用法</span></h4>
+<p class="doc" data-zh="按单元格选择，并仅在内容区域绘制状态背景。view 为 VirtualTableView；ExtendedSelection 支持 Ctrl/Shift，SelectItems 同时决定 hover/selection 的单元格范围。关闭表头状态同步不影响内容选择。" data-en="Select cells and paint state backgrounds only in the body. view is a VirtualTableView. ExtendedSelection supports Ctrl/Shift, while SelectItems sets the cell extent for both hover and selection. Disabling header state painting does not disable body selection.">按单元格选择，并仅在内容区域绘制状态背景。view 为 VirtualTableView；ExtendedSelection 支持 Ctrl/Shift，SelectItems 同时决定 hover/selection 的单元格范围。关闭表头状态同步不影响内容选择。</p>
+<pre>
+<code class="language-cpp">view-&gt;setSelectionMode(viv::VirtualItemView::SelectionMode::ExtendedSelection);
+view-&gt;setSelectionBehavior(viv::VirtualItemView::SelectionBehavior::SelectItems);
+view-&gt;setHorizontalHeaderSelectionEnabled(false);
+view-&gt;setVerticalHeaderSelectionEnabled(true);
+view-&gt;setHeaderVisualStateBackgroundVisible(Qt::Horizontal, false);
+view-&gt;setHeaderVisualStateBackgroundVisible(Qt::Vertical, false);</code>
+</pre>
+<p class="muted">
+<a href="../../../examples/table_capabilities/12_selection/example.cpp"><span data-zh="完整示例源码" data-en="Full example source">完整示例源码</span></a>
+</p>
+</section>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#selection"><span data-zh="选择 / 多选 / 当前项 / 表头选择" data-en="Selection / multiple selection / current item / header selection">选择 / 多选 / 当前项 / 表头选择</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -2121,50 +2484,115 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L239</span>
 <pre>    SelectionBehavior selectionBehavior() const;</pre>
 <p class="doc" data-zh="返回按行或单元格选择行为。" data-en="Return the row or cell selection behavior.">返回按行或单元格选择行为。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：SelectionBehavior::SelectRows" data-en="Default / initial state: SelectionBehavior::SelectRows">默认值／初始状态：SelectionBehavior::SelectRows</p>
 <p class="doc" data-zh="默认 ExtendedSelection + SelectRows。SelectRows 同时让 hover/selected 按行显示；SelectItems 按 cell 显示。SelectionMode 约束用户手势；程序批量选择使用 selectionModel()-&gt;select(QItemSelection, flags)，不要循环 setCurrentIndex。" data-en="Defaults to ExtendedSelection + SelectRows. SelectRows highlights hover/selection by row; SelectItems highlights cells. SelectionMode constrains user gestures. For programmatic ranges use selectionModel()-&gt;select(QItemSelection, flags), not repeated setCurrentIndex calls.">默认 ExtendedSelection + SelectRows。SelectRows 同时让 hover/selected 按行显示；SelectItems 按 cell 显示。SelectionMode 约束用户手势；程序批量选择使用 selectionModel()-&gt;select(QItemSelection, flags)，不要循环 setCurrentIndex。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#selection"><span data-zh="选择 / 多选 / 当前项 / 表头选择" data-en="Selection / multiple selection / current item / header selection">选择 / 多选 / 当前项 / 表头选择</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualItemView-isValid-50" data-search="VirtualItemView isValid">
+<article tabindex="-1" id="VirtualItemView-DropTarget-50" data-search="VirtualItemView DropTarget">
 <span class="badge">public</span>
 <span class="muted">
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L249</span>
-<pre>struct DropTarget
-    {
-        QModelIndex parent;
-        int row = -1;
-        int column = -1;
-        /// True when the drop lands onto \a parent (a tree node or table cell)
-        /// instead of between rows.
-        bool ontoItem = false;
-        /// True when the drop landed in the empty area below the last visible
-        /// row: the indicator marks the end of the content, and \a row is the
-        /// insertion index after the parent&#x27;s last child.
-        bool trailing = false;
-
-        /// Cell payload rather than a whole row. Insertion beside a source row
-        /// is allowed because the model may insert cells while keeping that row.
-        bool cellDrop = false;
-
-        bool isValid() const
-        {
-            return row &gt;= 0 || (cellDrop &amp;&amp; ontoItem &amp;&amp; parent.isValid()
-                                &amp;&amp; row == -1 &amp;&amp; column == -1);
-        }
-    };</pre>
-<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+<pre>struct DropTarget {
+    QModelIndex parent;
+    int row = -1;
+    int column = -1;
+    bool ontoItem = false;
+    bool trailing = false;
+    bool cellDrop = false;
+    bool isValid() const;
+};</pre>
+<p class="doc" data-zh="拖放命中结果。插入 row/column 是 parent 下的模型坐标，不是展开后的可见行号；ontoItem 表示放入项内。有效位置仍需通过模型 canDropMimeData()/dropMimeData() 的限制。" data-en="Resolved drop target. Insertion row/column are model coordinates under parent, not flattened visible row numbers. ontoItem means dropping into an item. Valid locations still require model canDropMimeData()/dropMimeData() approval.">拖放命中结果。插入 row/column 是 parent 下的模型坐标，不是展开后的可见行号；ontoItem 表示放入项内。有效位置仍需通过模型 canDropMimeData()/dropMimeData() 的限制。</p>
+<div class="table-scroll">
+<table class="type-members">
+<thead>
+<tr>
+<th><span data-zh="成员 / 取值" data-en="Member / value">成员 / 取值</span></th>
+<th><span data-zh="说明" data-en="Guide">说明</span></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>QModelIndex parent;</code>
+</td>
+<td class="doc" data-zh="插入父索引；ontoItem 时表示目标项。默认无效，插入时通常代表根层级。" data-en="Insertion parent, or destination item for ontoItem. Initially invalid, normally meaning root-level insertion.">插入父索引；ontoItem 时表示目标项。默认无效，插入时通常代表根层级。</td>
+</tr>
+<tr>
+<td>
+<code>int row = -1;</code>
+</td>
+<td class="doc" data-zh="父项下的插入行，默认 -1；单元格内部放置可为 -1。" data-en="Insertion row under parent; initially -1; cell drops may use -1.">父项下的插入行，默认 -1；单元格内部放置可为 -1。</td>
+</tr>
+<tr>
+<td>
+<code>int column = -1;</code>
+</td>
+<td class="doc" data-zh="模型列位置，默认 -1，需结合 row、cellDrop、ontoItem 解释。" data-en="Model column position; initially -1; interpret with row, cellDrop and ontoItem.">模型列位置，默认 -1，需结合 row、cellDrop、ontoItem 解释。</td>
+</tr>
+<tr>
+<td>
+<code>bool ontoItem = false;</code>
+</td>
+<td class="doc" data-zh="放到 parent 表示的节点／单元格内而非行间，默认 false。" data-en="Drop into the node/cell represented by parent rather than between rows; defaults to false.">放到 parent 表示的节点／单元格内而非行间，默认 false。</td>
+</tr>
+<tr>
+<td>
+<code>bool trailing = false;</code>
+</td>
+<td class="doc" data-zh="命中末项下方空白；指示器标记内容尾部，row 为父项末尾插入位置，默认 false。" data-en="Hit space below the last item; indicator marks content end and row is insertion after the parent&#x27;s last child; defaults to false.">命中末项下方空白；指示器标记内容尾部，row 为父项末尾插入位置，默认 false。</td>
+</tr>
+<tr>
+<td>
+<code>bool cellDrop = false;</code>
+</td>
+<td class="doc" data-zh="载荷为单元格而非整行，默认 false；相邻插入不一定移除源行。" data-en="Cell payload rather than a whole row; defaults to false; adjacent insertion need not remove the source row.">载荷为单元格而非整行，默认 false；相邻插入不一定移除源行。</td>
+</tr>
+<tr>
+<td>
+<code>bool isValid() const;</code>
+</td>
+<td class="doc" data-zh="row≥0，或 cellDrop、ontoItem 均为 true、parent 有效且 row/column 均为 -1 时有效。只检查位置，不检查模型权限。" data-en="True for row&gt;=0, or cellDrop and ontoItem with valid parent and row/column both -1. Checks location, not model permission.">row≥0，或 cellDrop、ontoItem 均为 true、parent 有效且 row/column 均为 -1 时有效。只检查位置，不检查模型权限。</td>
+</tr>
+</tbody>
+</table>
+</div>
+<a href="#type-index" class="muted"><span data-zh="返回类型列表" data-en="Back to type index">返回类型列表</span></a>
 </article>
 <article tabindex="-1" id="VirtualItemView-DropIndicatorStyle-51" data-search="VirtualItemView DropIndicatorStyle">
 <span class="badge">public</span>
 <span class="muted">
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L275</span>
 <pre>enum class DropIndicatorStyle {
-        /// Line between items, with the configured width (2 logical pixels by default).
-        Line,
-        /// Frame around the item the drop lands into.
-        Frame,
-    };</pre>
-<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+    Line,
+    Frame,
+};</pre>
+<p class="doc" data-zh="拖放指示器形状，与 DragFeedbackMode 不同；命中位置也决定使用插入线还是目标框。" data-en="Drop-indicator shape, distinct from DragFeedbackMode; resolved locations also determine insertion lines versus target frames.">拖放指示器形状，与 DragFeedbackMode 不同；命中位置也决定使用插入线还是目标框。</p>
+<div class="table-scroll">
+<table class="type-members">
+<thead>
+<tr>
+<th><span data-zh="成员 / 取值" data-en="Member / value">成员 / 取值</span></th>
+<th><span data-zh="说明" data-en="Guide">说明</span></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>Line</code>
+</td>
+<td class="doc" data-zh="项之间的插入线，使用配置线宽和颜色。" data-en="Insertion line using configured width and color.">项之间的插入线，使用配置线宽和颜色。</td>
+</tr>
+<tr>
+<td>
+<code>Frame</code>
+</td>
+<td class="doc" data-zh="接收放置项的描边框。" data-en="Outline around the receiving item.">接收放置项的描边框。</td>
+</tr>
+</tbody>
+</table>
+</div>
+<a href="#type-index" class="muted"><span data-zh="返回类型列表" data-en="Back to type index">返回类型列表</span></a>
 </article>
 <article tabindex="-1" id="VirtualItemView-setDragEnabled-52" data-search="VirtualItemView setDragEnabled">
 <span class="badge">public</span>
@@ -2172,6 +2600,24 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L289</span>
 <pre>void setDragEnabled(bool enabled);</pre>
 <p class="doc" data-zh="设置项目拖动开关。" data-en="Set the item dragging setting.">设置项目拖动开关。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：false" data-en="Default / initial state: false">默认值／初始状态：false</p>
+<section class="api-example">
+<h4><span data-zh="组合用法" data-en="Combination example">组合用法</span></h4>
+<p class="doc" data-zh="为表格启用自动起拖和虚线插入指示器。view 为 VirtualTableView；模型必须提供拖放 flags、MIME 与移动/放下实现。这里不启用 setMoveRemovesSourceRows：若 dropMimeData() 自己移动原项，再删除源行会重复移除。" data-en="Enable automatic table dragging with a dashed insertion indicator. view is a VirtualTableView; its model must implement drag/drop flags, MIME and move/drop behavior. setMoveRemovesSourceRows is intentionally left disabled: if dropMimeData() already moves the originals, removing source rows again would delete them twice.">为表格启用自动起拖和虚线插入指示器。view 为 VirtualTableView；模型必须提供拖放 flags、MIME 与移动/放下实现。这里不启用 setMoveRemovesSourceRows：若 dropMimeData() 自己移动原项，再删除源行会重复移除。</p>
+<pre>
+<code class="language-cpp">view-&gt;setDragEnabled(true);
+view-&gt;setDragStartMode(viv::VirtualItemView::DragStartMode::Automatic);
+view-&gt;setDefaultDropAction(Qt::MoveAction);
+view-&gt;setDragFeedbackMode(viv::VirtualTableView::DragFeedbackMode::Indicator);
+view-&gt;setDropIndicatorShown(true);
+view-&gt;setDropIndicatorColor(QColor(QStringLiteral(&quot;#3478c7&quot;)));
+view-&gt;setDropIndicatorWidth(2);
+view-&gt;setDropIndicatorPenStyle(Qt::DashLine);</code>
+</pre>
+<p class="muted">
+<a href="../../../examples/table_capabilities/24_drag_indicator/example.cpp"><span data-zh="完整示例源码" data-en="Full example source">完整示例源码</span></a>
+</p>
+</section>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#drag"><span data-zh="原生拖放 / 手柄起拖 / 预览 / Move" data-en="Native drag/drop / handles / previews / Move">原生拖放 / 手柄起拖 / 预览 / Move</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -2181,6 +2627,7 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L290</span>
 <pre>    bool isDragEnabled() const;</pre>
 <p class="doc" data-zh="返回项目拖动开关。" data-en="Return the item dragging setting.">返回项目拖动开关。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：false" data-en="Default / initial state: false">默认值／初始状态：false</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#drag"><span data-zh="原生拖放 / 手柄起拖 / 预览 / Move" data-en="Native drag/drop / handles / previews / Move">原生拖放 / 手柄起拖 / 预览 / Move</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -2188,8 +2635,36 @@
 <span class="badge">public</span>
 <span class="muted">
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L293</span>
-<pre>enum class DragStartMode { Automatic, Manual };</pre>
-<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+<pre>enum class DragStartMode {
+    Automatic,
+    Manual,
+};</pre>
+<p class="doc" data-zh="起拖入口；均需模型支持相应 flags、MIME 和 drop 行为。" data-en="Drag-start strategy; both require corresponding model flags, MIME and drop behavior.">起拖入口；均需模型支持相应 flags、MIME 和 drop 行为。</p>
+<div class="table-scroll">
+<table class="type-members">
+<thead>
+<tr>
+<th><span data-zh="成员 / 取值" data-en="Member / value">成员 / 取值</span></th>
+<th><span data-zh="说明" data-en="Guide">说明</span></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>Automatic</code>
+</td>
+<td class="doc" data-zh="按下并移动超过拖动阈值后由视图起拖。" data-en="The view starts dragging after movement exceeds the press threshold.">按下并移动超过拖动阈值后由视图起拖。</td>
+</tr>
+<tr>
+<td>
+<code>Manual</code>
+</td>
+<td class="doc" data-zh="业务按钮或处理器显式调用 startDrag()。" data-en="Business buttons/handlers explicitly call startDrag().">业务按钮或处理器显式调用 startDrag()。</td>
+</tr>
+</tbody>
+</table>
+</div>
+<a href="#type-index" class="muted"><span data-zh="返回类型列表" data-en="Back to type index">返回类型列表</span></a>
 </article>
 <article tabindex="-1" id="VirtualItemView-setDragStartMode-55" data-search="VirtualItemView setDragStartMode">
 <span class="badge">public</span>
@@ -2197,6 +2672,24 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L295</span>
 <pre>void setDragStartMode(DragStartMode mode);</pre>
 <p class="doc" data-zh="设置自动或手动起拖模式。" data-en="Set the automatic or manual drag-start mode.">设置自动或手动起拖模式。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：DragStartMode::Automatic" data-en="Default / initial state: DragStartMode::Automatic">默认值／初始状态：DragStartMode::Automatic</p>
+<section class="api-example">
+<h4><span data-zh="组合用法" data-en="Combination example">组合用法</span></h4>
+<p class="doc" data-zh="为表格启用自动起拖和虚线插入指示器。view 为 VirtualTableView；模型必须提供拖放 flags、MIME 与移动/放下实现。这里不启用 setMoveRemovesSourceRows：若 dropMimeData() 自己移动原项，再删除源行会重复移除。" data-en="Enable automatic table dragging with a dashed insertion indicator. view is a VirtualTableView; its model must implement drag/drop flags, MIME and move/drop behavior. setMoveRemovesSourceRows is intentionally left disabled: if dropMimeData() already moves the originals, removing source rows again would delete them twice.">为表格启用自动起拖和虚线插入指示器。view 为 VirtualTableView；模型必须提供拖放 flags、MIME 与移动/放下实现。这里不启用 setMoveRemovesSourceRows：若 dropMimeData() 自己移动原项，再删除源行会重复移除。</p>
+<pre>
+<code class="language-cpp">view-&gt;setDragEnabled(true);
+view-&gt;setDragStartMode(viv::VirtualItemView::DragStartMode::Automatic);
+view-&gt;setDefaultDropAction(Qt::MoveAction);
+view-&gt;setDragFeedbackMode(viv::VirtualTableView::DragFeedbackMode::Indicator);
+view-&gt;setDropIndicatorShown(true);
+view-&gt;setDropIndicatorColor(QColor(QStringLiteral(&quot;#3478c7&quot;)));
+view-&gt;setDropIndicatorWidth(2);
+view-&gt;setDropIndicatorPenStyle(Qt::DashLine);</code>
+</pre>
+<p class="muted">
+<a href="../../../examples/table_capabilities/24_drag_indicator/example.cpp"><span data-zh="完整示例源码" data-en="Full example source">完整示例源码</span></a>
+</p>
+</section>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#drag"><span data-zh="原生拖放 / 手柄起拖 / 预览 / Move" data-en="Native drag/drop / handles / previews / Move">原生拖放 / 手柄起拖 / 预览 / Move</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -2206,6 +2699,7 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L296</span>
 <pre>    DragStartMode dragStartMode() const;</pre>
 <p class="doc" data-zh="返回自动或手动起拖模式。" data-en="Return the automatic or manual drag-start mode.">返回自动或手动起拖模式。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：DragStartMode::Automatic" data-en="Default / initial state: DragStartMode::Automatic">默认值／初始状态：DragStartMode::Automatic</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#drag"><span data-zh="原生拖放 / 手柄起拖 / 预览 / Move" data-en="Native drag/drop / handles / previews / Move">原生拖放 / 手柄起拖 / 预览 / Move</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -2244,6 +2738,7 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L309</span>
 <pre>void setDropIndicatorShown(bool shown);</pre>
 <p class="doc" data-zh="设置拖放指示器可见性。" data-en="Set the drop indicator visibility.">设置拖放指示器可见性。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：true" data-en="Default / initial state: true">默认值／初始状态：true</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#drag-feedback"><span data-zh="拖动指示器 / 让位动画 / 树末级歧义" data-en="Drop indicators / animated displacement / tree-level ambiguity">拖动指示器 / 让位动画 / 树末级歧义</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -2253,6 +2748,7 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L310</span>
 <pre>    bool isDropIndicatorShown() const;</pre>
 <p class="doc" data-zh="返回拖放指示器可见性。" data-en="Return the drop indicator visibility.">返回拖放指示器可见性。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：true" data-en="Default / initial state: true">默认值／初始状态：true</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#drag-feedback"><span data-zh="拖动指示器 / 让位动画 / 树末级歧义" data-en="Drop indicators / animated displacement / tree-level ambiguity">拖动指示器 / 让位动画 / 树末级歧义</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -2262,6 +2758,7 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L313</span>
 <pre>void setDropIndicatorColor(const QColor &amp;color);</pre>
 <p class="doc" data-zh="设置拖放指示器颜色。" data-en="Set the drop indicator color.">设置拖放指示器颜色。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：无效 QColor；使用 QPalette::Highlight。" data-en="Default / initial state: Invalid QColor; uses QPalette::Highlight.">默认值／初始状态：无效 QColor；使用 QPalette::Highlight。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#drag-feedback"><span data-zh="拖动指示器 / 让位动画 / 树末级歧义" data-en="Drop indicators / animated displacement / tree-level ambiguity">拖动指示器 / 让位动画 / 树末级歧义</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -2271,6 +2768,7 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L314</span>
 <pre>    QColor dropIndicatorColor() const;</pre>
 <p class="doc" data-zh="返回拖放指示器颜色。" data-en="Return the drop indicator color.">返回拖放指示器颜色。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：无效 QColor；使用 QPalette::Highlight。" data-en="Default / initial state: Invalid QColor; uses QPalette::Highlight.">默认值／初始状态：无效 QColor；使用 QPalette::Highlight。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#drag-feedback"><span data-zh="拖动指示器 / 让位动画 / 树末级歧义" data-en="Drop indicators / animated displacement / tree-level ambiguity">拖动指示器 / 让位动画 / 树末级歧义</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -2280,6 +2778,7 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L317</span>
 <pre>void setDropIndicatorWidth(int width);</pre>
 <p class="doc" data-zh="设置拖放指示器线宽。" data-en="Set the drop indicator width.">设置拖放指示器线宽。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：2 逻辑像素。" data-en="Default / initial state: 2 logical pixels.">默认值／初始状态：2 逻辑像素。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#drag-feedback"><span data-zh="拖动指示器 / 让位动画 / 树末级歧义" data-en="Drop indicators / animated displacement / tree-level ambiguity">拖动指示器 / 让位动画 / 树末级歧义</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -2289,6 +2788,7 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L318</span>
 <pre>    int dropIndicatorWidth() const;</pre>
 <p class="doc" data-zh="返回拖放指示器线宽。" data-en="Return the drop indicator width.">返回拖放指示器线宽。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：2 逻辑像素。" data-en="Default / initial state: 2 logical pixels.">默认值／初始状态：2 逻辑像素。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#drag-feedback"><span data-zh="拖动指示器 / 让位动画 / 树末级歧义" data-en="Drop indicators / animated displacement / tree-level ambiguity">拖动指示器 / 让位动画 / 树末级歧义</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -2298,6 +2798,24 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L321</span>
 <pre>void setDropIndicatorPenStyle(Qt::PenStyle style);</pre>
 <p class="doc" data-zh="设置拖放指示器线型。" data-en="Set the drop indicator pen style.">设置拖放指示器线型。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：Qt::SolidLine" data-en="Default / initial state: Qt::SolidLine">默认值／初始状态：Qt::SolidLine</p>
+<section class="api-example">
+<h4><span data-zh="组合用法" data-en="Combination example">组合用法</span></h4>
+<p class="doc" data-zh="为表格启用自动起拖和虚线插入指示器。view 为 VirtualTableView；模型必须提供拖放 flags、MIME 与移动/放下实现。这里不启用 setMoveRemovesSourceRows：若 dropMimeData() 自己移动原项，再删除源行会重复移除。" data-en="Enable automatic table dragging with a dashed insertion indicator. view is a VirtualTableView; its model must implement drag/drop flags, MIME and move/drop behavior. setMoveRemovesSourceRows is intentionally left disabled: if dropMimeData() already moves the originals, removing source rows again would delete them twice.">为表格启用自动起拖和虚线插入指示器。view 为 VirtualTableView；模型必须提供拖放 flags、MIME 与移动/放下实现。这里不启用 setMoveRemovesSourceRows：若 dropMimeData() 自己移动原项，再删除源行会重复移除。</p>
+<pre>
+<code class="language-cpp">view-&gt;setDragEnabled(true);
+view-&gt;setDragStartMode(viv::VirtualItemView::DragStartMode::Automatic);
+view-&gt;setDefaultDropAction(Qt::MoveAction);
+view-&gt;setDragFeedbackMode(viv::VirtualTableView::DragFeedbackMode::Indicator);
+view-&gt;setDropIndicatorShown(true);
+view-&gt;setDropIndicatorColor(QColor(QStringLiteral(&quot;#3478c7&quot;)));
+view-&gt;setDropIndicatorWidth(2);
+view-&gt;setDropIndicatorPenStyle(Qt::DashLine);</code>
+</pre>
+<p class="muted">
+<a href="../../../examples/table_capabilities/24_drag_indicator/example.cpp"><span data-zh="完整示例源码" data-en="Full example source">完整示例源码</span></a>
+</p>
+</section>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#drag-feedback"><span data-zh="拖动指示器 / 让位动画 / 树末级歧义" data-en="Drop indicators / animated displacement / tree-level ambiguity">拖动指示器 / 让位动画 / 树末级歧义</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -2307,6 +2825,7 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L322</span>
 <pre>    Qt::PenStyle dropIndicatorPenStyle() const;</pre>
 <p class="doc" data-zh="返回拖放指示器线型。" data-en="Return the drop indicator pen style.">返回拖放指示器线型。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：Qt::SolidLine" data-en="Default / initial state: Qt::SolidLine">默认值／初始状态：Qt::SolidLine</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#drag-feedback"><span data-zh="拖动指示器 / 让位动画 / 树末级歧义" data-en="Drop indicators / animated displacement / tree-level ambiguity">拖动指示器 / 让位动画 / 树末级歧义</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -2316,6 +2835,24 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L324</span>
 <pre>void setDefaultDropAction(Qt::DropAction action);</pre>
 <p class="doc" data-zh="设置默认拖放动作。" data-en="Set the default drop action.">设置默认拖放动作。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：Qt::CopyAction" data-en="Default / initial state: Qt::CopyAction">默认值／初始状态：Qt::CopyAction</p>
+<section class="api-example">
+<h4><span data-zh="组合用法" data-en="Combination example">组合用法</span></h4>
+<p class="doc" data-zh="为表格启用自动起拖和虚线插入指示器。view 为 VirtualTableView；模型必须提供拖放 flags、MIME 与移动/放下实现。这里不启用 setMoveRemovesSourceRows：若 dropMimeData() 自己移动原项，再删除源行会重复移除。" data-en="Enable automatic table dragging with a dashed insertion indicator. view is a VirtualTableView; its model must implement drag/drop flags, MIME and move/drop behavior. setMoveRemovesSourceRows is intentionally left disabled: if dropMimeData() already moves the originals, removing source rows again would delete them twice.">为表格启用自动起拖和虚线插入指示器。view 为 VirtualTableView；模型必须提供拖放 flags、MIME 与移动/放下实现。这里不启用 setMoveRemovesSourceRows：若 dropMimeData() 自己移动原项，再删除源行会重复移除。</p>
+<pre>
+<code class="language-cpp">view-&gt;setDragEnabled(true);
+view-&gt;setDragStartMode(viv::VirtualItemView::DragStartMode::Automatic);
+view-&gt;setDefaultDropAction(Qt::MoveAction);
+view-&gt;setDragFeedbackMode(viv::VirtualTableView::DragFeedbackMode::Indicator);
+view-&gt;setDropIndicatorShown(true);
+view-&gt;setDropIndicatorColor(QColor(QStringLiteral(&quot;#3478c7&quot;)));
+view-&gt;setDropIndicatorWidth(2);
+view-&gt;setDropIndicatorPenStyle(Qt::DashLine);</code>
+</pre>
+<p class="muted">
+<a href="../../../examples/table_capabilities/24_drag_indicator/example.cpp"><span data-zh="完整示例源码" data-en="Full example source">完整示例源码</span></a>
+</p>
+</section>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#drag"><span data-zh="原生拖放 / 手柄起拖 / 预览 / Move" data-en="Native drag/drop / handles / previews / Move">原生拖放 / 手柄起拖 / 预览 / Move</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -2325,6 +2862,7 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L325</span>
 <pre>    Qt::DropAction defaultDropAction() const;</pre>
 <p class="doc" data-zh="返回默认拖放动作。" data-en="Return the default drop action.">返回默认拖放动作。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：Qt::CopyAction" data-en="Default / initial state: Qt::CopyAction">默认值／初始状态：Qt::CopyAction</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#drag"><span data-zh="原生拖放 / 手柄起拖 / 预览 / Move" data-en="Native drag/drop / handles / previews / Move">原生拖放 / 手柄起拖 / 预览 / Move</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -2334,6 +2872,7 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L341</span>
 <pre>void setMoveRemovesSourceRows(bool enabled);</pre>
 <p class="doc" data-zh="设置成功移动后框架删除源行开关。" data-en="Set the framework source row removal after a successful move.">设置成功移动后框架删除源行开关。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：false" data-en="Default / initial state: false">默认值／初始状态：false</p>
 <p class="doc" data-zh="用于模型 dropMimeData 插入副本但未自行删除源行的 MoveAction。若模型已通过 moveRows 或 dropMimeData 完成移动，不应重复启用源行删除。框架删除源行时会尝试继承源项选择状态。" data-en="Use for MoveAction when dropMimeData inserts a copy without removing source rows. Do not duplicate source removal if the model already moves rows in moveRows or dropMimeData. Framework-managed removal attempts to preserve source selection.">用于模型 dropMimeData 插入副本但未自行删除源行的 MoveAction。若模型已通过 moveRows 或 dropMimeData 完成移动，不应重复启用源行删除。框架删除源行时会尝试继承源项选择状态。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#drag"><span data-zh="原生拖放 / 手柄起拖 / 预览 / Move" data-en="Native drag/drop / handles / previews / Move">原生拖放 / 手柄起拖 / 预览 / Move</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
@@ -2344,6 +2883,7 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L342</span>
 <pre>    bool moveRemovesSourceRows() const;</pre>
 <p class="doc" data-zh="返回成功移动后框架删除源行开关。" data-en="Return the framework source row removal after a successful move.">返回成功移动后框架删除源行开关。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：false" data-en="Default / initial state: false">默认值／初始状态：false</p>
 <p class="doc" data-zh="用于模型 dropMimeData 插入副本但未自行删除源行的 MoveAction。若模型已通过 moveRows 或 dropMimeData 完成移动，不应重复启用源行删除。框架删除源行时会尝试继承源项选择状态。" data-en="Use for MoveAction when dropMimeData inserts a copy without removing source rows. Do not duplicate source removal if the model already moves rows in moveRows or dropMimeData. Framework-managed removal attempts to preserve source selection.">用于模型 dropMimeData 插入副本但未自行删除源行的 MoveAction。若模型已通过 moveRows 或 dropMimeData 完成移动，不应重复启用源行删除。框架删除源行时会尝试继承源项选择状态。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#drag"><span data-zh="原生拖放 / 手柄起拖 / 预览 / Move" data-en="Native drag/drop / handles / previews / Move">原生拖放 / 手柄起拖 / 预览 / Move</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
@@ -2354,6 +2894,7 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L345</span>
 <pre>void setDragDropActions(Qt::DropActions actions);</pre>
 <p class="doc" data-zh="设置允许的拖放动作集合。" data-en="Set the allowed drag-and-drop actions.">设置允许的拖放动作集合。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：Qt::IgnoreAction；从模型 supportedDragActions() / supportedDropActions() 推导，非禁用所有操作。" data-en="Default / initial state: Qt::IgnoreAction; derive actions from model supportedDragActions() / supportedDropActions(), rather than disabling all actions.">默认值／初始状态：Qt::IgnoreAction；从模型 supportedDragActions() / supportedDropActions() 推导，非禁用所有操作。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#drag"><span data-zh="原生拖放 / 手柄起拖 / 预览 / Move" data-en="Native drag/drop / handles / previews / Move">原生拖放 / 手柄起拖 / 预览 / Move</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -2363,6 +2904,7 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L346</span>
 <pre>Qt::DropActions dragDropActions() const;</pre>
 <p class="doc" data-zh="返回允许的拖放动作集合。" data-en="Return the allowed drag-and-drop actions.">返回允许的拖放动作集合。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：Qt::IgnoreAction；从模型 supportedDragActions() / supportedDropActions() 推导，非禁用所有操作。" data-en="Default / initial state: Qt::IgnoreAction; derive actions from model supportedDragActions() / supportedDropActions(), rather than disabling all actions.">默认值／初始状态：Qt::IgnoreAction；从模型 supportedDragActions() / supportedDropActions() 推导，非禁用所有操作。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#drag"><span data-zh="原生拖放 / 手柄起拖 / 预览 / Move" data-en="Native drag/drop / handles / previews / Move">原生拖放 / 手柄起拖 / 预览 / Move</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -2396,6 +2938,7 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L360</span>
 <pre>virtual void setAdapter(WidgetAdapter *adapter, bool takeOwnership = false);</pre>
 <p class="doc" data-zh="设置项目控件适配器。" data-en="Set the item widget adapter.">设置项目控件适配器。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：nullptr；初始没有业务 adapter。takeOwnership 参数默认 false。" data-en="Default / initial state: nullptr; no application adapter is installed. The takeOwnership argument defaults to false.">默认值／初始状态：nullptr；初始没有业务 adapter。takeOwnership 参数默认 false。</p>
 <p class="doc" data-zh="takeOwnership 默认为 false，未转移所有权时调用方须保证 adapter 存活。RowWidgets 使用 TableWidgetAdapter，CellWidgets 使用 CellWidgetAdapter。创建控件和绑定数据应分离；复用时清除旧业务关联。" data-en="takeOwnership defaults to false; the caller must keep a non-owned adapter alive. RowWidgets uses TableWidgetAdapter and CellWidgets uses CellWidgetAdapter. Separate widget creation from binding and clear obsolete business associations on reuse.">takeOwnership 默认为 false，未转移所有权时调用方须保证 adapter 存活。RowWidgets 使用 TableWidgetAdapter，CellWidgets 使用 CellWidgetAdapter。创建控件和绑定数据应分离；复用时清除旧业务关联。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#adapter"><span data-zh="控件复用 / 多控件类型 / 异步清理" data-en="Widget recycling / widget types / async cleanup">控件复用 / 多控件类型 / 异步清理</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
@@ -2406,6 +2949,7 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L361</span>
 <pre>    WidgetAdapter *adapter() const;</pre>
 <p class="doc" data-zh="返回项目控件适配器。" data-en="Return the item widget adapter.">返回项目控件适配器。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：nullptr；初始没有业务 adapter。takeOwnership 参数默认 false。" data-en="Default / initial state: nullptr; no application adapter is installed. The takeOwnership argument defaults to false.">默认值／初始状态：nullptr；初始没有业务 adapter。takeOwnership 参数默认 false。</p>
 <p class="doc" data-zh="takeOwnership 默认为 false，未转移所有权时调用方须保证 adapter 存活。RowWidgets 使用 TableWidgetAdapter，CellWidgets 使用 CellWidgetAdapter。创建控件和绑定数据应分离；复用时清除旧业务关联。" data-en="takeOwnership defaults to false; the caller must keep a non-owned adapter alive. RowWidgets uses TableWidgetAdapter and CellWidgets uses CellWidgetAdapter. Separate widget creation from binding and clear obsolete business associations on reuse.">takeOwnership 默认为 false，未转移所有权时调用方须保证 adapter 存活。RowWidgets 使用 TableWidgetAdapter，CellWidgets 使用 CellWidgetAdapter。创建控件和绑定数据应分离；复用时清除旧业务关联。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#adapter"><span data-zh="控件复用 / 多控件类型 / 异步清理" data-en="Widget recycling / widget types / async cleanup">控件复用 / 多控件类型 / 异步清理</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
@@ -2424,7 +2968,24 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L367</span>
 <pre>    void setEditTriggers(EditTriggers triggers);</pre>
 <p class="doc" data-zh="设置进入编辑的交互触发条件。" data-en="Set the interaction triggers that start editing.">设置进入编辑的交互触发条件。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：EditTrigger::DoubleClicked | EditTrigger::EditKeyPressed" data-en="Default / initial state: EditTrigger::DoubleClicked | EditTrigger::EditKeyPressed">默认值／初始状态：EditTrigger::DoubleClicked | EditTrigger::EditKeyPressed</p>
 <p class="doc" data-zh="视图默认 DoubleClicked | EditKeyPressed（F2）。adapter 可按 index 覆盖；按钮或外部操作直接调用 view-&gt;edit(index)。模型需设置 ItemIsEditable 和 ItemIsEnabled。" data-en="The view defaults to DoubleClicked | EditKeyPressed (F2). Adapters can override per index. Buttons and external actions call view-&gt;edit(index). The model item must have ItemIsEditable and ItemIsEnabled.">视图默认 DoubleClicked | EditKeyPressed（F2）。adapter 可按 index 覆盖；按钮或外部操作直接调用 view-&gt;edit(index)。模型需设置 ItemIsEditable 和 ItemIsEnabled。</p>
+<section class="api-example">
+<h4><span data-zh="组合用法" data-en="Combination example">组合用法</span></h4>
+<p class="doc" data-zh="view 已绑定支持 createEditor() 的 adapter，index 是其模型的有效索引，且 flags 包含 ItemIsEnabled / ItemIsEditable。自动手势与显式 edit() 相互独立；行内按钮处理器中同样调用 edit(index)。" data-en="view has an adapter implementing createEditor(); index is valid in its model and has ItemIsEnabled / ItemIsEditable flags. Automatic gestures and explicit edit() are independent; an inline button handler can also call edit(index).">view 已绑定支持 createEditor() 的 adapter，index 是其模型的有效索引，且 flags 包含 ItemIsEnabled / ItemIsEditable。自动手势与显式 edit() 相互独立；行内按钮处理器中同样调用 edit(index)。</p>
+<pre>
+<code class="language-cpp">view-&gt;setEditTriggers(viv::EditTrigger::DoubleClicked | viv::EditTrigger::EditKeyPressed);
+
+// In an external action or an inline button handler:
+if (!view-&gt;edit(index)) {
+    // The request was rejected or no editor was supplied.
+    return;
+}</code>
+</pre>
+<p class="muted">
+<a href="../../../examples/table_capabilities/33_editors/example.cpp"><span data-zh="完整示例源码" data-en="Full example source">完整示例源码</span></a>
+</p>
+</section>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#editor"><span data-zh="覆盖编辑器 / 单双击 / F2 / 按钮 / 自定义 role" data-en="Overlay editors / click triggers / F2 / buttons / custom roles">覆盖编辑器 / 单双击 / F2 / 按钮 / 自定义 role</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -2434,6 +2995,7 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L368</span>
 <pre>    EditTriggers editTriggers() const;</pre>
 <p class="doc" data-zh="返回进入编辑的交互触发条件。" data-en="Return the interaction triggers that start editing.">返回进入编辑的交互触发条件。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：EditTrigger::DoubleClicked | EditTrigger::EditKeyPressed" data-en="Default / initial state: EditTrigger::DoubleClicked | EditTrigger::EditKeyPressed">默认值／初始状态：EditTrigger::DoubleClicked | EditTrigger::EditKeyPressed</p>
 <p class="doc" data-zh="视图默认 DoubleClicked | EditKeyPressed（F2）。adapter 可按 index 覆盖；按钮或外部操作直接调用 view-&gt;edit(index)。模型需设置 ItemIsEditable 和 ItemIsEnabled。" data-en="The view defaults to DoubleClicked | EditKeyPressed (F2). Adapters can override per index. Buttons and external actions call view-&gt;edit(index). The model item must have ItemIsEditable and ItemIsEnabled.">视图默认 DoubleClicked | EditKeyPressed（F2）。adapter 可按 index 覆盖；按钮或外部操作直接调用 view-&gt;edit(index)。模型需设置 ItemIsEditable 和 ItemIsEnabled。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#editor"><span data-zh="覆盖编辑器 / 单双击 / F2 / 按钮 / 自定义 role" data-en="Overlay editors / click triggers / F2 / buttons / custom roles">覆盖编辑器 / 单双击 / F2 / 按钮 / 自定义 role</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
@@ -2444,6 +3006,22 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L373</span>
 <pre>bool edit(const QModelIndex &amp;index);</pre>
 <p class="doc" data-zh="请求编辑指定索引，独立于自动触发配置。模型必须允许编辑且启用项目；先走 adapter.editRequest，再创建覆盖编辑器。" data-en="Request editing for the index independently of automatic triggers. The model item must be enabled and editable. adapter.editRequest runs before overlay creation.">请求编辑指定索引，独立于自动触发配置。模型必须允许编辑且启用项目；先走 adapter.editRequest，再创建覆盖编辑器。</p>
+<section class="api-example">
+<h4><span data-zh="组合用法" data-en="Combination example">组合用法</span></h4>
+<p class="doc" data-zh="view 已绑定支持 createEditor() 的 adapter，index 是其模型的有效索引，且 flags 包含 ItemIsEnabled / ItemIsEditable。自动手势与显式 edit() 相互独立；行内按钮处理器中同样调用 edit(index)。" data-en="view has an adapter implementing createEditor(); index is valid in its model and has ItemIsEnabled / ItemIsEditable flags. Automatic gestures and explicit edit() are independent; an inline button handler can also call edit(index).">view 已绑定支持 createEditor() 的 adapter，index 是其模型的有效索引，且 flags 包含 ItemIsEnabled / ItemIsEditable。自动手势与显式 edit() 相互独立；行内按钮处理器中同样调用 edit(index)。</p>
+<pre>
+<code class="language-cpp">view-&gt;setEditTriggers(viv::EditTrigger::DoubleClicked | viv::EditTrigger::EditKeyPressed);
+
+// In an external action or an inline button handler:
+if (!view-&gt;edit(index)) {
+    // The request was rejected or no editor was supplied.
+    return;
+}</code>
+</pre>
+<p class="muted">
+<a href="../../../examples/table_capabilities/33_editors/example.cpp"><span data-zh="完整示例源码" data-en="Full example source">完整示例源码</span></a>
+</p>
+</section>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#editor"><span data-zh="覆盖编辑器 / 单双击 / F2 / 按钮 / 自定义 role" data-en="Overlay editors / click triggers / F2 / buttons / custom roles">覆盖编辑器 / 单双击 / F2 / 按钮 / 自定义 role</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -2490,6 +3068,7 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L388</span>
 <pre>void setItemDataRole(int role);</pre>
 <p class="doc" data-zh="设置绑定上下文 rowData 读取的模型 role。" data-en="Set the model role read into binding context rowData.">设置绑定上下文 rowData 读取的模型 role。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：kDefaultItemDataRole = Qt::UserRole + 0x200" data-en="Default / initial state: kDefaultItemDataRole = Qt::UserRole + 0x200">默认值／初始状态：kDefaultItemDataRole = Qt::UserRole + 0x200</p>
 <p class="doc" data-zh="cell 从所在行的列 0 读取该 role。负数禁用 rowData 读取；修改 role 会重新绑定已物化控件。" data-en="Cells read this role from column 0 of their row. A negative role disables rowData reads; changing the role rebinds materialized widgets.">cell 从所在行的列 0 读取该 role。负数禁用 rowData 读取；修改 role 会重新绑定已物化控件。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#binding"><span data-zh="整行业务 payload / 深度 / 列 / branch 上下文" data-en="Row payload / depth / column / branch context">整行业务 payload / 深度 / 列 / branch 上下文</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
@@ -2500,6 +3079,7 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L389</span>
 <pre>    int itemDataRole() const;</pre>
 <p class="doc" data-zh="返回绑定上下文 rowData 读取的模型 role。" data-en="Return the model role read into binding context rowData.">返回绑定上下文 rowData 读取的模型 role。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：kDefaultItemDataRole = Qt::UserRole + 0x200" data-en="Default / initial state: kDefaultItemDataRole = Qt::UserRole + 0x200">默认值／初始状态：kDefaultItemDataRole = Qt::UserRole + 0x200</p>
 <p class="doc" data-zh="cell 从所在行的列 0 读取该 role。负数禁用 rowData 读取；修改 role 会重新绑定已物化控件。" data-en="Cells read this role from column 0 of their row. A negative role disables rowData reads; changing the role rebinds materialized widgets.">cell 从所在行的列 0 读取该 role。负数禁用 rowData 读取；修改 role 会重新绑定已物化控件。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#binding"><span data-zh="整行业务 payload / 深度 / 列 / branch 上下文" data-en="Row payload / depth / column / branch context">整行业务 payload / 深度 / 列 / branch 上下文</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
@@ -2510,6 +3090,7 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L393</span>
 <pre>void setOverscan(int before, int after);</pre>
 <p class="doc" data-zh="设置可见范围前后额外物化项数；减少它能降低控件数量，增大它可减少滚动边缘临时创建。" data-en="Set item overscan before and after the visible range. Smaller values reduce widget counts; larger values reduce materialization at scroll edges.">设置可见范围前后额外物化项数；减少它能降低控件数量，增大它可减少滚动边缘临时创建。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：before = 2, after = 2" data-en="Default / initial state: before = 2, after = 2">默认值／初始状态：before = 2, after = 2</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#pin"><span data-zh="屏外保留 / 预加载 / 焦点 / 诊断" data-en="Offscreen retention / overscan / focus / diagnostics">屏外保留 / 预加载 / 焦点 / 诊断</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -2549,6 +3130,22 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L400</span>
 <pre>virtual void setRowSpacing(int pixels);</pre>
 <p class="doc" data-zh="设置行间距。" data-en="Set the spacing between rows.">设置行间距。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：0 逻辑像素。" data-en="Default / initial state: 0 logical pixels.">默认值／初始状态：0 逻辑像素。</p>
+<section class="api-example">
+<h4><span data-zh="组合用法" data-en="Combination example">组合用法</span></h4>
+<p class="doc" data-zh="设置间距中心分割线，并在水平表头下添加完整行间距。view 为 VirtualTableView；Horizontal 对应表头下方，Vertical 对应行号条右侧。这里额外表头间距为 rowSpacing() 的 8 像素，不是独立数值。" data-en="Use centered gap separators and add a full row gap below the horizontal header. view is a VirtualTableView. Horizontal means below the column header; Vertical means right of the row-number strip. The extra header gap is rowSpacing(), 8 pixels here, rather than an independent size.">设置间距中心分割线，并在水平表头下添加完整行间距。view 为 VirtualTableView；Horizontal 对应表头下方，Vertical 对应行号条右侧。这里额外表头间距为 rowSpacing() 的 8 像素，不是独立数值。</p>
+<pre>
+<code class="language-cpp">view-&gt;setGridLinePlacement(viv::GridLinePlacement::SpacingCenter);
+view-&gt;setRowSpacing(8);
+view-&gt;setColumnSpacing(12);
+view-&gt;setHeaderContentSpacingEnabled(Qt::Horizontal, true);
+view-&gt;setHeaderContentSpacingEnabled(Qt::Vertical, false);
+view-&gt;setSpacingBackgroundColor(QColor(QStringLiteral(&quot;#edf2f7&quot;)));</code>
+</pre>
+<p class="muted">
+<a href="../../../examples/table_capabilities/09_spacing/example.cpp"><span data-zh="完整示例源码" data-en="Full example source">完整示例源码</span></a>
+</p>
+</section>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#spacing"><span data-zh="间距 / 中心分割线 / 双侧分割线 / 半间距" data-en="Spacing / center lines / edge lines / half-gaps">间距 / 中心分割线 / 双侧分割线 / 半间距</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -2558,6 +3155,7 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L401</span>
 <pre>    int rowSpacing() const;</pre>
 <p class="doc" data-zh="返回行间距。" data-en="Return the spacing between rows.">返回行间距。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：0 逻辑像素。" data-en="Default / initial state: 0 logical pixels.">默认值／初始状态：0 逻辑像素。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#spacing"><span data-zh="间距 / 中心分割线 / 双侧分割线 / 半间距" data-en="Spacing / center lines / edge lines / half-gaps">间距 / 中心分割线 / 双侧分割线 / 半间距</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -2567,7 +3165,23 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L404</span>
 <pre>virtual void setGridLinePlacement(GridLinePlacement placement);</pre>
 <p class="doc" data-zh="设置间距中心或两侧分割线模式。" data-en="Set the grid line placement at spacing centers or edges.">设置间距中心或两侧分割线模式。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：GridLinePlacement::SpacingCenter；无间距时回退到项边界，不重复绘制。" data-en="Default / initial state: GridLinePlacement::SpacingCenter; without spacing, lines fall back to item boundaries without duplicates.">默认值／初始状态：GridLinePlacement::SpacingCenter；无间距时回退到项边界，不重复绘制。</p>
 <p class="doc" data-zh="默认 SpacingCenter：在间距中心绘制，交叉线始终穿过间距，且外侧补半间距；零间距时不重复画线。SpacingEdges 在间距两侧绘制，只有这个模式允许控制是否穿过交叉间距。是否穿过表头使用单独开关。" data-en="SpacingCenter is the default: lines run through gap centers, cross gaps unconditionally, and use outer half-gaps; zero spacing does not duplicate lines. SpacingEdges draws both gap edges and alone allows disabling crossings through perpendicular gaps. Header crossings have independent switches.">默认 SpacingCenter：在间距中心绘制，交叉线始终穿过间距，且外侧补半间距；零间距时不重复画线。SpacingEdges 在间距两侧绘制，只有这个模式允许控制是否穿过交叉间距。是否穿过表头使用单独开关。</p>
+<section class="api-example">
+<h4><span data-zh="组合用法" data-en="Combination example">组合用法</span></h4>
+<p class="doc" data-zh="设置间距中心分割线，并在水平表头下添加完整行间距。view 为 VirtualTableView；Horizontal 对应表头下方，Vertical 对应行号条右侧。这里额外表头间距为 rowSpacing() 的 8 像素，不是独立数值。" data-en="Use centered gap separators and add a full row gap below the horizontal header. view is a VirtualTableView. Horizontal means below the column header; Vertical means right of the row-number strip. The extra header gap is rowSpacing(), 8 pixels here, rather than an independent size.">设置间距中心分割线，并在水平表头下添加完整行间距。view 为 VirtualTableView；Horizontal 对应表头下方，Vertical 对应行号条右侧。这里额外表头间距为 rowSpacing() 的 8 像素，不是独立数值。</p>
+<pre>
+<code class="language-cpp">view-&gt;setGridLinePlacement(viv::GridLinePlacement::SpacingCenter);
+view-&gt;setRowSpacing(8);
+view-&gt;setColumnSpacing(12);
+view-&gt;setHeaderContentSpacingEnabled(Qt::Horizontal, true);
+view-&gt;setHeaderContentSpacingEnabled(Qt::Vertical, false);
+view-&gt;setSpacingBackgroundColor(QColor(QStringLiteral(&quot;#edf2f7&quot;)));</code>
+</pre>
+<p class="muted">
+<a href="../../../examples/table_capabilities/09_spacing/example.cpp"><span data-zh="完整示例源码" data-en="Full example source">完整示例源码</span></a>
+</p>
+</section>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#spacing"><span data-zh="间距 / 中心分割线 / 双侧分割线 / 半间距" data-en="Spacing / center lines / edge lines / half-gaps">间距 / 中心分割线 / 双侧分割线 / 半间距</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -2577,6 +3191,7 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L405</span>
 <pre>    GridLinePlacement gridLinePlacement() const;</pre>
 <p class="doc" data-zh="返回间距中心或两侧分割线模式。" data-en="Return the grid line placement at spacing centers or edges.">返回间距中心或两侧分割线模式。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：GridLinePlacement::SpacingCenter；无间距时回退到项边界，不重复绘制。" data-en="Default / initial state: GridLinePlacement::SpacingCenter; without spacing, lines fall back to item boundaries without duplicates.">默认值／初始状态：GridLinePlacement::SpacingCenter；无间距时回退到项边界，不重复绘制。</p>
 <p class="doc" data-zh="默认 SpacingCenter：在间距中心绘制，交叉线始终穿过间距，且外侧补半间距；零间距时不重复画线。SpacingEdges 在间距两侧绘制，只有这个模式允许控制是否穿过交叉间距。是否穿过表头使用单独开关。" data-en="SpacingCenter is the default: lines run through gap centers, cross gaps unconditionally, and use outer half-gaps; zero spacing does not duplicate lines. SpacingEdges draws both gap edges and alone allows disabling crossings through perpendicular gaps. Header crossings have independent switches.">默认 SpacingCenter：在间距中心绘制，交叉线始终穿过间距，且外侧补半间距；零间距时不重复画线。SpacingEdges 在间距两侧绘制，只有这个模式允许控制是否穿过交叉间距。是否穿过表头使用单独开关。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#spacing"><span data-zh="间距 / 中心分割线 / 双侧分割线 / 半间距" data-en="Spacing / center lines / edge lines / half-gaps">间距 / 中心分割线 / 双侧分割线 / 半间距</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
@@ -2587,7 +3202,21 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L409</span>
 <pre>void setTrailingRowGridLineAutoHideEnabled(bool enabled);</pre>
 <p class="doc" data-zh="设置贴近底边框自动隐藏末行线开关。" data-en="Set the automatic trailing row line hiding next to the bottom frame.">设置贴近底边框自动隐藏末行线开关。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：true" data-en="Default / initial state: true">默认值／初始状态：true</p>
 <p class="doc" data-zh="默认自动隐藏，避免末行线贴合底边框叠成双线。关闭后始终按分割线规则绘制末行边界；边距、实际内容底部及滚动范围仍决定其可见位置。" data-en="Automatic hiding is enabled by default to avoid doubling a line next to the bottom frame. Disable it to retain the trailing boundary according to grid rules; margins, the actual content bottom and scroll range still determine visibility.">默认自动隐藏，避免末行线贴合底边框叠成双线。关闭后始终按分割线规则绘制末行边界；边距、实际内容底部及滚动范围仍决定其可见位置。</p>
+<section class="api-example">
+<h4><span data-zh="组合用法" data-en="Combination example">组合用法</span></h4>
+<p class="doc" data-zh="在垂直布局中按内容高度显示表格，最多 240 逻辑像素。view 为已设置 model 和 adapter 的 VirtualTableView；框架计算表头、内容和边框总高。不要再对同一控件调用 QWidget::setFixedHeight()。无内部滚动范围时滚轮会转交外层。" data-en="Size a table to its content in a vertical layout, capped at 240 logical pixels. view is a VirtualTableView with a model and adapter. The framework includes header, content and border heights. Do not also call QWidget::setFixedHeight() on this view. Wheel events pass outward when there is no internal scroll range.">在垂直布局中按内容高度显示表格，最多 240 逻辑像素。view 为已设置 model 和 adapter 的 VirtualTableView；框架计算表头、内容和边框总高。不要再对同一控件调用 QWidget::setFixedHeight()。无内部滚动范围时滚轮会转交外层。</p>
+<pre>
+<code class="language-cpp">view-&gt;setUniformItemHeight(36);
+view-&gt;setAutoHeightMaximumHeight(240);
+view-&gt;setAutoHeightEnabled(true);
+view-&gt;setTrailingRowGridLineAutoHideEnabled(true);</code>
+</pre>
+<p class="muted">
+<a href="../../../examples/table_capabilities/31_auto_height/example.cpp"><span data-zh="完整示例源码" data-en="Full example source">完整示例源码</span></a>
+</p>
+</section>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#grid"><span data-zh="分割线样式 / 最后一行 / 冻结分隔线" data-en="Grid styling / terminal row / frozen separators">分割线样式 / 最后一行 / 冻结分隔线</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -2597,6 +3226,7 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L410</span>
 <pre>    bool trailingRowGridLineAutoHideEnabled() const;</pre>
 <p class="doc" data-zh="返回贴近底边框自动隐藏末行线开关。" data-en="Return the automatic trailing row line hiding next to the bottom frame.">返回贴近底边框自动隐藏末行线开关。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：true" data-en="Default / initial state: true">默认值／初始状态：true</p>
 <p class="doc" data-zh="默认自动隐藏，避免末行线贴合底边框叠成双线。关闭后始终按分割线规则绘制末行边界；边距、实际内容底部及滚动范围仍决定其可见位置。" data-en="Automatic hiding is enabled by default to avoid doubling a line next to the bottom frame. Disable it to retain the trailing boundary according to grid rules; margins, the actual content bottom and scroll range still determine visibility.">默认自动隐藏，避免末行线贴合底边框叠成双线。关闭后始终按分割线规则绘制末行边界；边距、实际内容底部及滚动范围仍决定其可见位置。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#grid"><span data-zh="分割线样式 / 最后一行 / 冻结分隔线" data-en="Grid styling / terminal row / frozen separators">分割线样式 / 最后一行 / 冻结分隔线</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
@@ -2607,6 +3237,7 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L413</span>
 <pre>virtual void setSpacingBackgroundColor(const QColor &amp;color);</pre>
 <p class="doc" data-zh="设置内容或表头间距背景颜色。" data-en="Set the content or header gap background color.">设置内容或表头间距背景颜色。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：无效 QColor；未指定间距色，随内容背景绘制，默认 QPalette::Base。" data-en="Default / initial state: Invalid QColor; gaps follow the content background, QPalette::Base by default.">默认值／初始状态：无效 QColor；未指定间距色，随内容背景绘制，默认 QPalette::Base。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#background"><span data-zh="背景 / 项底色 / 透明 / QSS" data-en="Background / item fill / transparency / QSS">背景 / 项底色 / 透明 / QSS</span></a> <a href="#spacing"><span data-zh="间距 / 中心分割线 / 双侧分割线 / 半间距" data-en="Spacing / center lines / edge lines / half-gaps">间距 / 中心分割线 / 双侧分割线 / 半间距</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -2616,6 +3247,7 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L414</span>
 <pre>    QColor spacingBackgroundColor() const;</pre>
 <p class="doc" data-zh="返回内容或表头间距背景颜色。" data-en="Return the content or header gap background color.">返回内容或表头间距背景颜色。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：无效 QColor；未指定间距色，随内容背景绘制，默认 QPalette::Base。" data-en="Default / initial state: Invalid QColor; gaps follow the content background, QPalette::Base by default.">默认值／初始状态：无效 QColor；未指定间距色，随内容背景绘制，默认 QPalette::Base。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#background"><span data-zh="背景 / 项底色 / 透明 / QSS" data-en="Background / item fill / transparency / QSS">背景 / 项底色 / 透明 / QSS</span></a> <a href="#spacing"><span data-zh="间距 / 中心分割线 / 双侧分割线 / 半间距" data-en="Spacing / center lines / edge lines / half-gaps">间距 / 中心分割线 / 双侧分割线 / 半间距</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -2625,6 +3257,7 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L416</span>
 <pre>void setRowSpacingFactory(RowSpacingFactory factory, RowSpacingBinder binder = {});</pre>
 <p class="doc" data-zh="提供间距控件工厂以定制间距区域。优先只设置背景颜色，确实需要交互或复杂内容时再创建间距控件。" data-en="Supply a spacing-widget factory to customize gaps. Prefer a background color alone unless the gap needs interaction or complex content.">提供间距控件工厂以定制间距区域。优先只设置背景颜色，确实需要交互或复杂内容时再创建间距控件。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：工厂和 binder 均为空；不创建自定义间距控件。" data-en="Default / initial state: Empty factory and binder; no custom gap widgets.">默认值／初始状态：工厂和 binder 均为空；不创建自定义间距控件。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#gap-widget"><span data-zh="间距内自定义控件" data-en="Custom widgets inside gaps">间距内自定义控件</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -2643,6 +3276,7 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L424</span>
 <pre>void setItemPinned(const QModelIndex &amp;index, bool pinned = true);</pre>
 <p class="doc" data-zh="保留或解除保留屏外项目控件；尚未物化的项目会立即物化。maxPinnedItems 是诊断软上限，不会自动回收已保留控件，业务需要主动解除保留。" data-en="Pin or unpin an offscreen item widget, materializing it immediately if needed. maxPinnedItems is a diagnostic soft limit and never automatically recycles pinned widgets; the application must unpin them.">保留或解除保留屏外项目控件；尚未物化的项目会立即物化。maxPinnedItems 是诊断软上限，不会自动回收已保留控件，业务需要主动解除保留。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：false；没有项被显式保留。" data-en="Default / initial state: false; no items are explicitly pinned.">默认值／初始状态：false；没有项被显式保留。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#pin"><span data-zh="屏外保留 / 预加载 / 焦点 / 诊断" data-en="Offscreen retention / overscan / focus / diagnostics">屏外保留 / 预加载 / 焦点 / 诊断</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -2680,6 +3314,7 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L434</span>
 <pre>void setMaxPinnedItems(int max);</pre>
 <p class="doc" data-zh="设置屏外保留项目数的诊断软上限；超出仅警告一次，不会强制回收。非正值关闭检查。" data-en="Set the diagnostic soft limit for pinned items. Exceeding it warns once without forcibly recycling widgets; nonpositive values disable the check.">设置屏外保留项目数的诊断软上限；超出仅警告一次，不会强制回收。非正值关闭检查。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：0；不限制显式保留项数量。" data-en="Default / initial state: 0; no limit on explicitly pinned items.">默认值／初始状态：0；不限制显式保留项数量。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#pin"><span data-zh="屏外保留 / 预加载 / 焦点 / 诊断" data-en="Offscreen retention / overscan / focus / diagnostics">屏外保留 / 预加载 / 焦点 / 诊断</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -2689,6 +3324,7 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L435</span>
 <pre>    int maxPinnedItems() const;</pre>
 <p class="doc" data-zh="返回屏外保留项目数的诊断软上限；超出仅警告一次，不会强制回收。非正值关闭检查。" data-en="Return the diagnostic soft limit for pinned items. Exceeding it warns once without forcibly recycling widgets; nonpositive values disable the check.">返回屏外保留项目数的诊断软上限；超出仅警告一次，不会强制回收。非正值关闭检查。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：0；不限制显式保留项数量。" data-en="Default / initial state: 0; no limit on explicitly pinned items.">默认值／初始状态：0；不限制显式保留项数量。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#pin"><span data-zh="屏外保留 / 预加载 / 焦点 / 诊断" data-en="Offscreen retention / overscan / focus / diagnostics">屏外保留 / 预加载 / 焦点 / 诊断</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -2707,6 +3343,7 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L444</span>
 <pre>void setPerformanceLoggingEnabled(bool enabled);</pre>
 <p class="doc" data-zh="设置性能探测开关；需配合 viv.performance 日志分类过滤。" data-en="Set the performance probe setting; use with viv.performance category filtering.">设置性能探测开关；需配合 viv.performance 日志分类过滤。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：false" data-en="Default / initial state: false">默认值／初始状态：false</p>
 <p class="doc" data-zh="诊断按时间窗口聚合，分别统计布局、物化、adapter 回调及绘制等阶段；不同阶段可能包含嵌套时间，不能直接相加。关闭时跳过统计工作。" data-en="Diagnostics aggregate over time windows and separate layout, materialization, adapter callbacks and painting. Nested stage durations must not be added as independent costs. Disabling skips statistical collection.">诊断按时间窗口聚合，分别统计布局、物化、adapter 回调及绘制等阶段；不同阶段可能包含嵌套时间，不能直接相加。关闭时跳过统计工作。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#performance"><span data-zh="性能日志 / 卡顿 / 统计而非逐帧打印" data-en="Performance logs / stalls / aggregated timing">性能日志 / 卡顿 / 统计而非逐帧打印</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
@@ -2717,6 +3354,7 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L445</span>
 <pre>    bool isPerformanceLoggingEnabled() const;</pre>
 <p class="doc" data-zh="返回性能探测开关；需配合 viv.performance 日志分类过滤。" data-en="Return the performance probe setting; use with viv.performance category filtering.">返回性能探测开关；需配合 viv.performance 日志分类过滤。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：false" data-en="Default / initial state: false">默认值／初始状态：false</p>
 <p class="doc" data-zh="诊断按时间窗口聚合，分别统计布局、物化、adapter 回调及绘制等阶段；不同阶段可能包含嵌套时间，不能直接相加。关闭时跳过统计工作。" data-en="Diagnostics aggregate over time windows and separate layout, materialization, adapter callbacks and painting. Nested stage durations must not be added as independent costs. Disabling skips statistical collection.">诊断按时间窗口聚合，分别统计布局、物化、adapter 回调及绘制等阶段；不同阶段可能包含嵌套时间，不能直接相加。关闭时跳过统计工作。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#performance"><span data-zh="性能日志 / 卡顿 / 统计而非逐帧打印" data-en="Performance logs / stalls / aggregated timing">性能日志 / 卡顿 / 统计而非逐帧打印</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
@@ -2734,6 +3372,7 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L450</span>
 <pre>void setLifecycleLoggingEnabled(bool enabled);</pre>
 <p class="doc" data-zh="设置控件生命周期记录开关。" data-en="Set the widget lifecycle logging setting.">设置控件生命周期记录开关。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：false" data-en="Default / initial state: false">默认值／初始状态：false</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#performance"><span data-zh="性能日志 / 卡顿 / 统计而非逐帧打印" data-en="Performance logs / stalls / aggregated timing">性能日志 / 卡顿 / 统计而非逐帧打印</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -2743,6 +3382,7 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L451</span>
 <pre>    bool isLifecycleLoggingEnabled() const;</pre>
 <p class="doc" data-zh="返回控件生命周期记录开关。" data-en="Return the widget lifecycle logging setting.">返回控件生命周期记录开关。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：false" data-en="Default / initial state: false">默认值／初始状态：false</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#performance"><span data-zh="性能日志 / 卡顿 / 统计而非逐帧打印" data-en="Performance logs / stalls / aggregated timing">性能日志 / 卡顿 / 统计而非逐帧打印</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -2796,6 +3436,7 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L466</span>
 <pre>    qint64 verticalOffset() const;</pre>
 <p class="doc" data-zh="返回垂直滚动偏移量。" data-en="Return the vertical scroll offset.">返回垂直滚动偏移量。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：0" data-en="Default / initial state: 0">默认值／初始状态：0</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#scroll"><span data-zh="滚动 / 定位 / 几何 / 命中 / 平滑滚动" data-en="Scrolling / positioning / geometry / hits / smooth scrolling">滚动 / 定位 / 几何 / 命中 / 平滑滚动</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -2836,10 +3477,35 @@
 <span class="muted">
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L476</span>
 <pre>enum class WheelScrollMode {
-        Pixels,
-        Items,
-    };</pre>
-<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+    Pixels,
+    Items,
+};</pre>
+<p class="doc" data-zh="滚轮步进单位，与滚动条策略和外层事件转发分别配置。" data-en="Wheel-step unit, separate from scrollbar policy and outward event forwarding.">滚轮步进单位，与滚动条策略和外层事件转发分别配置。</p>
+<div class="table-scroll">
+<table class="type-members">
+<thead>
+<tr>
+<th><span data-zh="成员 / 取值" data-en="Member / value">成员 / 取值</span></th>
+<th><span data-zh="说明" data-en="Guide">说明</span></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>Pixels</code>
+</td>
+<td class="doc" data-zh="按像素距离滚动。" data-en="Scroll by pixel distance.">按像素距离滚动。</td>
+</tr>
+<tr>
+<td>
+<code>Items</code>
+</td>
+<td class="doc" data-zh="按项步进滚动。" data-en="Scroll in item steps.">按项步进滚动。</td>
+</tr>
+</tbody>
+</table>
+</div>
+<a href="#type-index" class="muted"><span data-zh="返回类型列表" data-en="Back to type index">返回类型列表</span></a>
 </article>
 <article tabindex="-1" id="VirtualItemView-setWheelScrollMode-127" data-search="VirtualItemView setWheelScrollMode">
 <span class="badge">public</span>
@@ -2847,6 +3513,7 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L482</span>
 <pre>void setWheelScrollMode(WheelScrollMode mode);</pre>
 <p class="doc" data-zh="设置按项目或像素滚动模式。" data-en="Set the item-based or pixel-based wheel scrolling mode.">设置按项目或像素滚动模式。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：WheelScrollMode::Pixels" data-en="Default / initial state: WheelScrollMode::Pixels">默认值／初始状态：WheelScrollMode::Pixels</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#scroll"><span data-zh="滚动 / 定位 / 几何 / 命中 / 平滑滚动" data-en="Scrolling / positioning / geometry / hits / smooth scrolling">滚动 / 定位 / 几何 / 命中 / 平滑滚动</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -2856,6 +3523,7 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L483</span>
 <pre>    WheelScrollMode wheelScrollMode() const;</pre>
 <p class="doc" data-zh="返回按项目或像素滚动模式。" data-en="Return the item-based or pixel-based wheel scrolling mode.">返回按项目或像素滚动模式。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：WheelScrollMode::Pixels" data-en="Default / initial state: WheelScrollMode::Pixels">默认值／初始状态：WheelScrollMode::Pixels</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#scroll"><span data-zh="滚动 / 定位 / 几何 / 命中 / 平滑滚动" data-en="Scrolling / positioning / geometry / hits / smooth scrolling">滚动 / 定位 / 几何 / 命中 / 平滑滚动</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -2865,6 +3533,7 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L485</span>
 <pre>void setWheelScrollPixels(int pixels);</pre>
 <p class="doc" data-zh="设置滚轮每步逻辑像素数。" data-en="Set the logical pixels per wheel step.">设置滚轮每步逻辑像素数。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：48" data-en="Default / initial state: 48">默认值／初始状态：48</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#scroll"><span data-zh="滚动 / 定位 / 几何 / 命中 / 平滑滚动" data-en="Scrolling / positioning / geometry / hits / smooth scrolling">滚动 / 定位 / 几何 / 命中 / 平滑滚动</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -2874,6 +3543,7 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L486</span>
 <pre>    int wheelScrollPixels() const;</pre>
 <p class="doc" data-zh="返回滚轮每步逻辑像素数。" data-en="Return the logical pixels per wheel step.">返回滚轮每步逻辑像素数。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：48" data-en="Default / initial state: 48">默认值／初始状态：48</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#scroll"><span data-zh="滚动 / 定位 / 几何 / 命中 / 平滑滚动" data-en="Scrolling / positioning / geometry / hits / smooth scrolling">滚动 / 定位 / 几何 / 命中 / 平滑滚动</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -2883,6 +3553,7 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L488</span>
 <pre>void setWheelScrollItems(int items);</pre>
 <p class="doc" data-zh="设置滚轮每步项目数。" data-en="Set the items per wheel step.">设置滚轮每步项目数。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：3" data-en="Default / initial state: 3">默认值／初始状态：3</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#scroll"><span data-zh="滚动 / 定位 / 几何 / 命中 / 平滑滚动" data-en="Scrolling / positioning / geometry / hits / smooth scrolling">滚动 / 定位 / 几何 / 命中 / 平滑滚动</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -2892,6 +3563,7 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L489</span>
 <pre>    int wheelScrollItems() const;</pre>
 <p class="doc" data-zh="返回滚轮每步项目数。" data-en="Return the items per wheel step.">返回滚轮每步项目数。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：3" data-en="Default / initial state: 3">默认值／初始状态：3</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#scroll"><span data-zh="滚动 / 定位 / 几何 / 命中 / 平滑滚动" data-en="Scrolling / positioning / geometry / hits / smooth scrolling">滚动 / 定位 / 几何 / 命中 / 平滑滚动</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -2901,6 +3573,7 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L492</span>
 <pre>void setVerticalOffset(qint64 offset);</pre>
 <p class="doc" data-zh="设置垂直滚动偏移量。" data-en="Set the vertical scroll offset.">设置垂直滚动偏移量。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：0" data-en="Default / initial state: 0">默认值／初始状态：0</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#scroll"><span data-zh="滚动 / 定位 / 几何 / 命中 / 平滑滚动" data-en="Scrolling / positioning / geometry / hits / smooth scrolling">滚动 / 定位 / 几何 / 命中 / 平滑滚动</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -2918,12 +3591,35 @@
 <span class="muted">
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L496</span>
 <pre>enum class ItemHeightMode {
-        /// All items share one height (FixedSizeIndex).
-        Uniform,
-        /// Items may differ (BlockSizeIndex + optional measurement feedback).
-        Variable,
-    };</pre>
-<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+    Uniform,
+    Variable,
+};</pre>
+<p class="doc" data-zh="内核行布局高度策略；Flow、Masonry、Wrap 使用专用尺寸接口。" data-en="Kernel row-layout height strategy; Flow, Masonry and Wrap use dedicated sizing APIs.">内核行布局高度策略；Flow、Masonry、Wrap 使用专用尺寸接口。</p>
+<div class="table-scroll">
+<table class="type-members">
+<thead>
+<tr>
+<th><span data-zh="成员 / 取值" data-en="Member / value">成员 / 取值</span></th>
+<th><span data-zh="说明" data-en="Guide">说明</span></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>Uniform</code>
+</td>
+<td class="doc" data-zh="所有项统一高度。" data-en="All items share one height.">所有项统一高度。</td>
+</tr>
+<tr>
+<td>
+<code>Variable</code>
+</td>
+<td class="doc" data-zh="不同项可有不同高度，配合估算、显式高度和测量。" data-en="Allow varying heights with estimates, explicit sizes and measurement.">不同项可有不同高度，配合估算、显式高度和测量。</td>
+</tr>
+</tbody>
+</table>
+</div>
+<a href="#type-index" class="muted"><span data-zh="返回类型列表" data-en="Back to type index">返回类型列表</span></a>
 </article>
 <article tabindex="-1" id="VirtualItemView-setItemHeightMode-136" data-search="VirtualItemView setItemHeightMode">
 <span class="badge">public</span>
@@ -2931,6 +3627,7 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L504</span>
 <pre>void setItemHeightMode(ItemHeightMode mode);</pre>
 <p class="doc" data-zh="设置统一或可变高度策略。" data-en="Set the uniform or variable item height strategy.">设置统一或可变高度策略。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：ItemHeightMode::Uniform；Flow / Masonry / Wrap 使用各自布局接口，不支持此继承设置。" data-en="Default / initial state: ItemHeightMode::Uniform; Flow / Masonry / Wrap use their own layout APIs and do not support this inherited setting.">默认值／初始状态：ItemHeightMode::Uniform；Flow / Masonry / Wrap 使用各自布局接口，不支持此继承设置。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#height"><span data-zh="动态行高 / 测量 / 显式覆盖" data-en="Dynamic row heights / measurement / explicit overrides">动态行高 / 测量 / 显式覆盖</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -2940,6 +3637,7 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L505</span>
 <pre>    ItemHeightMode itemHeightMode() const;</pre>
 <p class="doc" data-zh="返回统一或可变高度策略。" data-en="Return the uniform or variable item height strategy.">返回统一或可变高度策略。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：ItemHeightMode::Uniform；Flow / Masonry / Wrap 使用各自布局接口，不支持此继承设置。" data-en="Default / initial state: ItemHeightMode::Uniform; Flow / Masonry / Wrap use their own layout APIs and do not support this inherited setting.">默认值／初始状态：ItemHeightMode::Uniform；Flow / Masonry / Wrap 使用各自布局接口，不支持此继承设置。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#height"><span data-zh="动态行高 / 测量 / 显式覆盖" data-en="Dynamic row heights / measurement / explicit overrides">动态行高 / 测量 / 显式覆盖</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -2949,6 +3647,7 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L508</span>
 <pre>void setUniformItemHeight(int height);</pre>
 <p class="doc" data-zh="设置统一高度模式行高。" data-en="Set the row height in uniform-height mode.">设置统一高度模式行高。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：32 逻辑像素。" data-en="Default / initial state: 32 logical pixels.">默认值／初始状态：32 逻辑像素。</p>
 <p class="doc" data-zh="统一高度设为 0 且开启自动测量时，使用首个物化项确定高度。Flow/Masonry/Wrap 使用专用尺寸 API，不支持套用内核自动行高测量。" data-en="Uniform height 0 with automatic measurement uses the first materialized item to determine height. Flow/Masonry/Wrap use dedicated size APIs rather than kernel automatic row measurement.">统一高度设为 0 且开启自动测量时，使用首个物化项确定高度。Flow/Masonry/Wrap 使用专用尺寸 API，不支持套用内核自动行高测量。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#height"><span data-zh="动态行高 / 测量 / 显式覆盖" data-en="Dynamic row heights / measurement / explicit overrides">动态行高 / 测量 / 显式覆盖</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
@@ -2959,6 +3658,7 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L509</span>
 <pre>    int uniformItemHeight() const;</pre>
 <p class="doc" data-zh="返回统一高度模式行高。" data-en="Return the row height in uniform-height mode.">返回统一高度模式行高。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：32 逻辑像素。" data-en="Default / initial state: 32 logical pixels.">默认值／初始状态：32 逻辑像素。</p>
 <p class="doc" data-zh="统一高度设为 0 且开启自动测量时，使用首个物化项确定高度。Flow/Masonry/Wrap 使用专用尺寸 API，不支持套用内核自动行高测量。" data-en="Uniform height 0 with automatic measurement uses the first materialized item to determine height. Flow/Masonry/Wrap use dedicated size APIs rather than kernel automatic row measurement.">统一高度设为 0 且开启自动测量时，使用首个物化项确定高度。Flow/Masonry/Wrap 使用专用尺寸 API，不支持套用内核自动行高测量。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#height"><span data-zh="动态行高 / 测量 / 显式覆盖" data-en="Dynamic row heights / measurement / explicit overrides">动态行高 / 测量 / 显式覆盖</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
@@ -2969,6 +3669,7 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L511</span>
 <pre>void setEstimatedItemHeight(int height);</pre>
 <p class="doc" data-zh="设置未测量项目估计高度。" data-en="Set the estimated height of unmeasured items.">设置未测量项目估计高度。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：32 逻辑像素。" data-en="Default / initial state: 32 logical pixels.">默认值／初始状态：32 逻辑像素。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#height"><span data-zh="动态行高 / 测量 / 显式覆盖" data-en="Dynamic row heights / measurement / explicit overrides">动态行高 / 测量 / 显式覆盖</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -2978,6 +3679,7 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L512</span>
 <pre>    int estimatedItemHeight() const;</pre>
 <p class="doc" data-zh="返回未测量项目估计高度。" data-en="Return the estimated height of unmeasured items.">返回未测量项目估计高度。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：32 逻辑像素。" data-en="Default / initial state: 32 logical pixels.">默认值／初始状态：32 逻辑像素。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#height"><span data-zh="动态行高 / 测量 / 显式覆盖" data-en="Dynamic row heights / measurement / explicit overrides">动态行高 / 测量 / 显式覆盖</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -2987,6 +3689,7 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L517</span>
 <pre>void setAutoMeasureItemHeight(bool enabled);</pre>
 <p class="doc" data-zh="设置物化后自动测量高度的开关。" data-en="Set the automatic measurement of materialized item heights.">设置物化后自动测量高度的开关。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：true；Flow / Masonry / Wrap 构造时关闭且不支持开启，使用各自布局接口。" data-en="Default / initial state: true; Flow / Masonry / Wrap disable this in their constructors and do not support enabling it; use their own layout APIs.">默认值／初始状态：true；Flow / Masonry / Wrap 构造时关闭且不支持开启，使用各自布局接口。</p>
 <p class="doc" data-zh="统一高度设为 0 且开启自动测量时，使用首个物化项确定高度。Flow/Masonry/Wrap 使用专用尺寸 API，不支持套用内核自动行高测量。" data-en="Uniform height 0 with automatic measurement uses the first materialized item to determine height. Flow/Masonry/Wrap use dedicated size APIs rather than kernel automatic row measurement.">统一高度设为 0 且开启自动测量时，使用首个物化项确定高度。Flow/Masonry/Wrap 使用专用尺寸 API，不支持套用内核自动行高测量。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#height"><span data-zh="动态行高 / 测量 / 显式覆盖" data-en="Dynamic row heights / measurement / explicit overrides">动态行高 / 测量 / 显式覆盖</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
@@ -2997,6 +3700,7 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L518</span>
 <pre>    bool autoMeasureItemHeight() const;</pre>
 <p class="doc" data-zh="返回物化后自动测量高度的开关。" data-en="Return the automatic measurement of materialized item heights.">返回物化后自动测量高度的开关。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：true；Flow / Masonry / Wrap 构造时关闭且不支持开启，使用各自布局接口。" data-en="Default / initial state: true; Flow / Masonry / Wrap disable this in their constructors and do not support enabling it; use their own layout APIs.">默认值／初始状态：true；Flow / Masonry / Wrap 构造时关闭且不支持开启，使用各自布局接口。</p>
 <p class="doc" data-zh="统一高度设为 0 且开启自动测量时，使用首个物化项确定高度。Flow/Masonry/Wrap 使用专用尺寸 API，不支持套用内核自动行高测量。" data-en="Uniform height 0 with automatic measurement uses the first materialized item to determine height. Flow/Masonry/Wrap use dedicated size APIs rather than kernel automatic row measurement.">统一高度设为 0 且开启自动测量时，使用首个物化项确定高度。Flow/Masonry/Wrap 使用专用尺寸 API，不支持套用内核自动行高测量。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#height"><span data-zh="动态行高 / 测量 / 显式覆盖" data-en="Dynamic row heights / measurement / explicit overrides">动态行高 / 测量 / 显式覆盖</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
@@ -3015,6 +3719,7 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L532</span>
 <pre>void setFrozenRows(int count);</pre>
 <p class="doc" data-zh="设置顶部冻结行数。" data-en="Set the number of top frozen rows.">设置顶部冻结行数。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：0；无冻结行，仅支持行 pane 的视图适用。Tree / TreeTable / Flow / Masonry / Wrap 不支持。" data-en="Default / initial state: 0; no frozen rows; only views supporting row panes apply. Tree / TreeTable / Flow / Masonry / Wrap do not support them.">默认值／初始状态：0；无冻结行，仅支持行 pane 的视图适用。Tree / TreeTable / Flow / Masonry / Wrap 不支持。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#frozen"><span data-zh="冻结行列 / 多 pane / 多滚动组" data-en="Frozen rows and columns / multiple panes / scroll groups">冻结行列 / 多 pane / 多滚动组</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -3024,6 +3729,7 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L534</span>
 <pre>int frozenRows() const;</pre>
 <p class="doc" data-zh="返回顶部冻结行数。" data-en="Return the number of top frozen rows.">返回顶部冻结行数。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：0；无冻结行，仅支持行 pane 的视图适用。Tree / TreeTable / Flow / Masonry / Wrap 不支持。" data-en="Default / initial state: 0; no frozen rows; only views supporting row panes apply. Tree / TreeTable / Flow / Masonry / Wrap do not support them.">默认值／初始状态：0；无冻结行，仅支持行 pane 的视图适用。Tree / TreeTable / Flow / Masonry / Wrap 不支持。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#frozen"><span data-zh="冻结行列 / 多 pane / 多滚动组" data-en="Frozen rows and columns / multiple panes / scroll groups">冻结行列 / 多 pane / 多滚动组</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -3033,6 +3739,7 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L537</span>
 <pre>void setFrozenBottomRows(int count);</pre>
 <p class="doc" data-zh="设置底部冻结行数。" data-en="Set the number of bottom frozen rows.">设置底部冻结行数。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：0；无冻结行，仅支持行 pane 的视图适用。Tree / TreeTable / Flow / Masonry / Wrap 不支持。" data-en="Default / initial state: 0; no frozen rows; only views supporting row panes apply. Tree / TreeTable / Flow / Masonry / Wrap do not support them.">默认值／初始状态：0；无冻结行，仅支持行 pane 的视图适用。Tree / TreeTable / Flow / Masonry / Wrap 不支持。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#frozen"><span data-zh="冻结行列 / 多 pane / 多滚动组" data-en="Frozen rows and columns / multiple panes / scroll groups">冻结行列 / 多 pane / 多滚动组</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -3042,6 +3749,7 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L539</span>
 <pre>int frozenBottomRows() const;</pre>
 <p class="doc" data-zh="返回底部冻结行数。" data-en="Return the number of bottom frozen rows.">返回底部冻结行数。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：0；无冻结行，仅支持行 pane 的视图适用。Tree / TreeTable / Flow / Masonry / Wrap 不支持。" data-en="Default / initial state: 0; no frozen rows; only views supporting row panes apply. Tree / TreeTable / Flow / Masonry / Wrap do not support them.">默认值／初始状态：0；无冻结行，仅支持行 pane 的视图适用。Tree / TreeTable / Flow / Masonry / Wrap 不支持。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#frozen"><span data-zh="冻结行列 / 多 pane / 多滚动组" data-en="Frozen rows and columns / multiple panes / scroll groups">冻结行列 / 多 pane / 多滚动组</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -3083,6 +3791,7 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L553</span>
 <pre>void setItemPaneSeparatorStyle(const PaneSeparatorStyle &amp;style);</pre>
 <p class="doc" data-zh="设置冻结行窗格分隔线样式。" data-en="Set the row pane separator style.">设置冻结行窗格分隔线样式。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：width = 1，color 无效（视图默认分隔色），lineStyle = Qt::SolidLine。" data-en="Default / initial state: width = 1, invalid color (view default separator color), lineStyle = Qt::SolidLine.">默认值／初始状态：width = 1，color 无效（视图默认分隔色），lineStyle = Qt::SolidLine。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#grid"><span data-zh="分割线样式 / 最后一行 / 冻结分隔线" data-en="Grid styling / terminal row / frozen separators">分割线样式 / 最后一行 / 冻结分隔线</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -3092,6 +3801,7 @@
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L554</span>
 <pre>    PaneSeparatorStyle itemPaneSeparatorStyle() const;</pre>
 <p class="doc" data-zh="返回冻结行窗格分隔线样式。" data-en="Return the row pane separator style.">返回冻结行窗格分隔线样式。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：width = 1，color 无效（视图默认分隔色），lineStyle = Qt::SolidLine。" data-en="Default / initial state: width = 1, invalid color (view default separator color), lineStyle = Qt::SolidLine.">默认值／初始状态：width = 1，color 无效（视图默认分隔色），lineStyle = Qt::SolidLine。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#grid"><span data-zh="分割线样式 / 最后一行 / 冻结分隔线" data-en="Grid styling / terminal row / frozen separators">分割线样式 / 最后一行 / 冻结分隔线</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>

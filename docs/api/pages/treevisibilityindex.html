@@ -204,7 +204,7 @@
 </li>
 </ul>
 </section>
-<h2><span data-zh="函数说明" data-en="Function details">函数说明</span></h2>
+<h2><span data-zh="接口与类型说明" data-en="API and type details">接口与类型说明</span></h2>
 <p class="muted"><span data-zh="按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。" data-en="Read each function for its purpose and related settings. Overloads are listed separately; follow related capabilities to find examples.">按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。</span></p>
 <section>
 <h3 id="TreeVisibilityIndex">TreeVisibilityIndex</h3>
@@ -212,7 +212,7 @@
 <article tabindex="-1" id="TreeVisibilityIndex-TreeVisibilityIndex-0" data-search="TreeVisibilityIndex TreeVisibilityIndex">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/treevisibilityindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L50</span>
+<a href="../../../include/virtualitemviews/treevisibilityindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L47</span>
 <pre>explicit TreeVisibilityIndex(QAbstractItemModel *model = nullptr);</pre>
 <p class="doc" data-zh="构造 TreeVisibilityIndex；按此重载传入父对象、模型或布局参数。带 parent 的 QObject/QWidget 遵循 Qt 父子生命周期。" data-en="Construct TreeVisibilityIndex with the parent, model or layout arguments in this overload. QObject/QWidget parent arguments follow Qt parent-child lifetime rules.">构造 TreeVisibilityIndex；按此重载传入父对象、模型或布局参数。带 parent 的 QObject/QWidget 遵循 Qt 父子生命周期。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#layout-kernel"><span data-zh="布局与尺寸索引扩展" data-en="Layout and size-index extensions">布局与尺寸索引扩展</span></a> </p>
@@ -221,39 +221,43 @@
 <article tabindex="-1" id="TreeVisibilityIndex-setModel-1" data-search="TreeVisibilityIndex setModel">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/treevisibilityindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L52</span>
+<a href="../../../include/virtualitemviews/treevisibilityindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L49</span>
 <pre>void setModel(QAbstractItemModel *model);</pre>
 <p class="doc" data-zh="连接新的数据模型并更新布局、选择与物化状态；模型生命周期需覆盖视图使用期间。不要用重复 setModel 代替数据变更通知。" data-en="Connect a new data model and update layout, selection and materialization. Keep the model alive while in use; do not replace change notifications with repeated setModel calls.">连接新的数据模型并更新布局、选择与物化状态；模型生命周期需覆盖视图使用期间。不要用重复 setModel 代替数据变更通知。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：构造参数，省略时 nullptr。" data-en="Default / initial state: Constructor argument; nullptr when omitted.">默认值／初始状态：构造参数，省略时 nullptr。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="TreeVisibilityIndex-model-2" data-search="TreeVisibilityIndex model">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/treevisibilityindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L53</span>
+<a href="../../../include/virtualitemviews/treevisibilityindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L50</span>
 <pre>    QAbstractItemModel *model() const;</pre>
 <p class="doc" data-zh="返回项目数据模型。" data-en="Return the item data model.">返回项目数据模型。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：构造参数，省略时 nullptr。" data-en="Default / initial state: Constructor argument; nullptr when omitted.">默认值／初始状态：构造参数，省略时 nullptr。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="TreeVisibilityIndex-rootIndex-3" data-search="TreeVisibilityIndex rootIndex">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/treevisibilityindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L57</span>
+<a href="../../../include/virtualitemviews/treevisibilityindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L54</span>
 <pre>    QModelIndex rootIndex() const;</pre>
 <p class="doc" data-zh="返回展示子项所属模型根索引。" data-en="Return the model root index whose children are displayed.">返回展示子项所属模型根索引。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：无效 QModelIndex，显示模型根级。" data-en="Default / initial state: Invalid QModelIndex; the model root is displayed.">默认值／初始状态：无效 QModelIndex，显示模型根级。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="TreeVisibilityIndex-setRootIndex-4" data-search="TreeVisibilityIndex setRootIndex">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/treevisibilityindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L58</span>
+<a href="../../../include/virtualitemviews/treevisibilityindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L55</span>
 <pre>void setRootIndex(const QModelIndex &amp;index);</pre>
 <p class="doc" data-zh="设置展示子项所属模型根索引。" data-en="Set the model root index whose children are displayed.">设置展示子项所属模型根索引。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：无效 QModelIndex，显示模型根级。" data-en="Default / initial state: Invalid QModelIndex; the model root is displayed.">默认值／初始状态：无效 QModelIndex，显示模型根级。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="TreeVisibilityIndex-rebuild-5" data-search="TreeVisibilityIndex rebuild">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/treevisibilityindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L61</span>
+<a href="../../../include/virtualitemviews/treevisibilityindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L58</span>
 <pre>void rebuild();</pre>
 <p class="doc" data-zh="根据当前模型和展开状态重建可见树索引。" data-en="Rebuild the visible tree index from the current model and expansion state.">根据当前模型和展开状态重建可见树索引。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
@@ -261,7 +265,7 @@
 <article tabindex="-1" id="TreeVisibilityIndex-handleModelChanged-6" data-search="TreeVisibilityIndex handleModelChanged">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/treevisibilityindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L63</span>
+<a href="../../../include/virtualitemviews/treevisibilityindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L60</span>
 <pre>void handleModelChanged();</pre>
 <p class="doc" data-zh="响应模型更换或重置，同步内部树索引与缓存。" data-en="Handle model replacement or reset by synchronizing tree indexes and caches.">响应模型更换或重置，同步内部树索引与缓存。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
@@ -269,7 +273,7 @@
 <article tabindex="-1" id="TreeVisibilityIndex-handleModelReset-7" data-search="TreeVisibilityIndex handleModelReset">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/treevisibilityindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L65</span>
+<a href="../../../include/virtualitemviews/treevisibilityindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L62</span>
 <pre>void handleModelReset();</pre>
 <p class="doc" data-zh="响应模型更换或重置，同步内部树索引与缓存。" data-en="Handle model replacement or reset by synchronizing tree indexes and caches.">响应模型更换或重置，同步内部树索引与缓存。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
@@ -277,7 +281,7 @@
 <article tabindex="-1" id="TreeVisibilityIndex-visibleRowCount-8" data-search="TreeVisibilityIndex visibleRowCount">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/treevisibilityindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L69</span>
+<a href="../../../include/virtualitemviews/treevisibilityindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L66</span>
 <pre>    qsizetype visibleRowCount() const;</pre>
 <p class="doc" data-zh="返回当前树展开状态下的可见逻辑行总数（包括屏外行）。" data-en="Return the visible logical row count under current tree expansion, including offscreen rows.">返回当前树展开状态下的可见逻辑行总数（包括屏外行）。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#tree-expansion"><span data-zh="树展开 / 收起 / 渐变 / 懒加载" data-en="Tree expansion / collapse / fade / lazy loading">树展开 / 收起 / 渐变 / 懒加载</span></a> </p>
@@ -286,7 +290,7 @@
 <article tabindex="-1" id="TreeVisibilityIndex-visibleRowForIndex-9" data-search="TreeVisibilityIndex visibleRowForIndex">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/treevisibilityindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L71</span>
+<a href="../../../include/virtualitemviews/treevisibilityindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L68</span>
 <pre>qsizetype visibleRowForIndex(const QModelIndex &amp;index) const;</pre>
 <p class="doc" data-zh="在展开后的可见树行号与模型索引之间转换；子节点模型 row 不是全局可见行号。" data-en="Convert between expanded visible tree row positions and model indexes. A child model row is not a global visible row position.">在展开后的可见树行号与模型索引之间转换；子节点模型 row 不是全局可见行号。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
@@ -294,7 +298,7 @@
 <article tabindex="-1" id="TreeVisibilityIndex-indexAtVisibleRow-10" data-search="TreeVisibilityIndex indexAtVisibleRow">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/treevisibilityindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L72</span>
+<a href="../../../include/virtualitemviews/treevisibilityindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L69</span>
 <pre>QModelIndex indexAtVisibleRow(qsizetype row) const;</pre>
 <p class="doc" data-zh="在展开后的可见树行号与模型索引之间转换；子节点模型 row 不是全局可见行号。" data-en="Convert between expanded visible tree row positions and model indexes. A child model row is not a global visible row position.">在展开后的可见树行号与模型索引之间转换；子节点模型 row 不是全局可见行号。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
@@ -302,7 +306,7 @@
 <article tabindex="-1" id="TreeVisibilityIndex-isVisible-11" data-search="TreeVisibilityIndex isVisible">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/treevisibilityindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L73</span>
+<a href="../../../include/virtualitemviews/treevisibilityindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L70</span>
 <pre>    bool isVisible(const QModelIndex &amp;index) const;</pre>
 <p class="doc" data-zh="判断节点在当前展开层级中是否可见，不等于已物化到屏幕内。" data-en="Check visibility under the current expansion hierarchy; this does not imply on-screen materialization.">判断节点在当前展开层级中是否可见，不等于已物化到屏幕内。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
@@ -310,7 +314,7 @@
 <article tabindex="-1" id="TreeVisibilityIndex-depth-12" data-search="TreeVisibilityIndex depth">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/treevisibilityindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L75</span>
+<a href="../../../include/virtualitemviews/treevisibilityindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L72</span>
 <pre>int depth(const QModelIndex &amp;index) const;</pre>
 <p class="doc" data-zh="返回指定树节点的层级深度。" data-en="Return the depth of the specified tree node.">返回指定树节点的层级深度。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
@@ -318,7 +322,7 @@
 <article tabindex="-1" id="TreeVisibilityIndex-expand-13" data-search="TreeVisibilityIndex expand">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/treevisibilityindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L78</span>
+<a href="../../../include/virtualitemviews/treevisibilityindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L75</span>
 <pre>void expand(const QModelIndex &amp;index);</pre>
 <p class="doc" data-zh="展开指定节点。 子孙可见性由祖先展开状态共同决定；视图启用动画时由框架驱动真实控件布局。" data-en="Expand the specified node. Descendant visibility also depends on ancestor expansion. Views with animation enabled drive real widget layout.">展开指定节点。 子孙可见性由祖先展开状态共同决定；视图启用动画时由框架驱动真实控件布局。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#tree-expansion"><span data-zh="树展开 / 收起 / 渐变 / 懒加载" data-en="Tree expansion / collapse / fade / lazy loading">树展开 / 收起 / 渐变 / 懒加载</span></a> </p>
@@ -327,7 +331,7 @@
 <article tabindex="-1" id="TreeVisibilityIndex-collapse-14" data-search="TreeVisibilityIndex collapse">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/treevisibilityindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L79</span>
+<a href="../../../include/virtualitemviews/treevisibilityindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L76</span>
 <pre>void collapse(const QModelIndex &amp;index);</pre>
 <p class="doc" data-zh="收起指定节点。 子孙可见性由祖先展开状态共同决定；视图启用动画时由框架驱动真实控件布局。" data-en="Collapse the specified node. Descendant visibility also depends on ancestor expansion. Views with animation enabled drive real widget layout.">收起指定节点。 子孙可见性由祖先展开状态共同决定；视图启用动画时由框架驱动真实控件布局。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#tree-expansion"><span data-zh="树展开 / 收起 / 渐变 / 懒加载" data-en="Tree expansion / collapse / fade / lazy loading">树展开 / 收起 / 渐变 / 懒加载</span></a> </p>
@@ -336,7 +340,7 @@
 <article tabindex="-1" id="TreeVisibilityIndex-expandRecursively-15" data-search="TreeVisibilityIndex expandRecursively">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/treevisibilityindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L82</span>
+<a href="../../../include/virtualitemviews/treevisibilityindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L79</span>
 <pre>void expandRecursively(const QModelIndex &amp;index);</pre>
 <p class="doc" data-zh="递归展开指定节点及要求深度内的后代。大树应限制深度，避免一次显示过多项目。" data-en="Expand the specified node and descendants to the requested depth. Limit depth for large trees to avoid exposing excessive items at once.">递归展开指定节点及要求深度内的后代。大树应限制深度，避免一次显示过多项目。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#tree-expansion"><span data-zh="树展开 / 收起 / 渐变 / 懒加载" data-en="Tree expansion / collapse / fade / lazy loading">树展开 / 收起 / 渐变 / 懒加载</span></a> </p>
@@ -345,16 +349,17 @@
 <article tabindex="-1" id="TreeVisibilityIndex-setExpanded-16" data-search="TreeVisibilityIndex setExpanded">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/treevisibilityindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L83</span>
+<a href="../../../include/virtualitemviews/treevisibilityindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L80</span>
 <pre>void setExpanded(const QModelIndex &amp;index, bool expanded);</pre>
 <p class="doc" data-zh="设置指定节点展开状态。" data-en="Set the expanded state of the specified node.">设置指定节点展开状态。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：false；初始展开集合为空。" data-en="Default / initial state: false; the initial expansion set is empty.">默认值／初始状态：false；初始展开集合为空。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#tree-expansion"><span data-zh="树展开 / 收起 / 渐变 / 懒加载" data-en="Tree expansion / collapse / fade / lazy loading">树展开 / 收起 / 渐变 / 懒加载</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="TreeVisibilityIndex-toggleExpanded-17" data-search="TreeVisibilityIndex toggleExpanded">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/treevisibilityindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L84</span>
+<a href="../../../include/virtualitemviews/treevisibilityindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L81</span>
 <pre>void toggleExpanded(const QModelIndex &amp;index);</pre>
 <p class="doc" data-zh="切换指定节点的展开状态。 子孙可见性由祖先展开状态共同决定；视图启用动画时由框架驱动真实控件布局。" data-en="Toggle the specified node expansion state. Descendant visibility also depends on ancestor expansion. Views with animation enabled drive real widget layout.">切换指定节点的展开状态。 子孙可见性由祖先展开状态共同决定；视图启用动画时由框架驱动真实控件布局。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#tree-expansion"><span data-zh="树展开 / 收起 / 渐变 / 懒加载" data-en="Tree expansion / collapse / fade / lazy loading">树展开 / 收起 / 渐变 / 懒加载</span></a> </p>
@@ -363,7 +368,7 @@
 <article tabindex="-1" id="TreeVisibilityIndex-isExpanded-18" data-search="TreeVisibilityIndex isExpanded">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/treevisibilityindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L85</span>
+<a href="../../../include/virtualitemviews/treevisibilityindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L82</span>
 <pre>bool isExpanded(const QModelIndex &amp;index) const;</pre>
 <p class="doc" data-zh="判断指定节点或当前 branch 状态是否展开。" data-en="Check whether the specified node or current branch state is expanded.">判断指定节点或当前 branch 状态是否展开。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#tree-expansion"><span data-zh="树展开 / 收起 / 渐变 / 懒加载" data-en="Tree expansion / collapse / fade / lazy loading">树展开 / 收起 / 渐变 / 懒加载</span></a> </p>
@@ -372,7 +377,7 @@
 <article tabindex="-1" id="TreeVisibilityIndex-collapseAll-19" data-search="TreeVisibilityIndex collapseAll">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/treevisibilityindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L87</span>
+<a href="../../../include/virtualitemviews/treevisibilityindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L84</span>
 <pre>void collapseAll();</pre>
 <p class="doc" data-zh="收起当前树范围内的全部节点；批量收起不等同逐项调用带动画的 collapse。" data-en="Collapse all nodes in the current tree scope; bulk collapse is not equivalent to invoking animated collapse on every item.">收起当前树范围内的全部节点；批量收起不等同逐项调用带动画的 collapse。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#tree-expansion"><span data-zh="树展开 / 收起 / 渐变 / 懒加载" data-en="Tree expansion / collapse / fade / lazy loading">树展开 / 收起 / 渐变 / 懒加载</span></a> </p>
@@ -381,7 +386,7 @@
 <article tabindex="-1" id="TreeVisibilityIndex-expandedCount-20" data-search="TreeVisibilityIndex expandedCount">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/treevisibilityindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L88</span>
+<a href="../../../include/virtualitemviews/treevisibilityindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L85</span>
 <pre>    qsizetype expandedCount() const;</pre>
 <p class="doc" data-zh="返回已展开节点数。" data-en="Return the expanded node count.">返回已展开节点数。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
@@ -389,7 +394,7 @@
 <article tabindex="-1" id="TreeVisibilityIndex-modelQueryCount-21" data-search="TreeVisibilityIndex modelQueryCount">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/treevisibilityindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L93</span>
+<a href="../../../include/virtualitemviews/treevisibilityindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L90</span>
 <pre>    quint64 modelQueryCount() const;</pre>
 <p class="doc" data-zh="返回模型查询次数。" data-en="Return the model query count.">返回模型查询次数。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
@@ -397,7 +402,7 @@
 <article tabindex="-1" id="TreeVisibilityIndex-resetModelQueryCount-22" data-search="TreeVisibilityIndex resetModelQueryCount">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/treevisibilityindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L94</span>
+<a href="../../../include/virtualitemviews/treevisibilityindex.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L91</span>
 <pre>    void resetModelQueryCount();</pre>
 <p class="doc" data-zh="清零模型查询计数，用于下一段诊断测量。" data-en="Reset the model-query counter for the next diagnostic interval.">清零模型查询计数，用于下一段诊断测量。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>

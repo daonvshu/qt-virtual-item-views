@@ -380,7 +380,7 @@
 </li>
 </ul>
 </section>
-<h2><span data-zh="函数说明" data-en="Function details">函数说明</span></h2>
+<h2><span data-zh="接口与类型说明" data-en="API and type details">接口与类型说明</span></h2>
 <p class="muted"><span data-zh="按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。" data-en="Read each function for its purpose and related settings. Overloads are listed separately; follow related capabilities to find examples.">按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。</span></p>
 <section>
 <h3 id="VirtualWrapView">VirtualWrapView</h3>
@@ -399,6 +399,7 @@
 <a href="../../../include/virtualitemviews/virtualwrapview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L19</span>
 <pre>void setModel(QAbstractItemModel *model) override;</pre>
 <p class="doc" data-zh="连接新的数据模型并更新布局、选择与物化状态；模型生命周期需覆盖视图使用期间。不要用重复 setModel 代替数据变更通知。" data-en="Connect a new data model and update layout, selection and materialization. Keep the model alive while in use; do not replace change notifications with repeated setModel calls.">连接新的数据模型并更新布局、选择与物化状态；模型生命周期需覆盖视图使用期间。不要用重复 setModel 代替数据变更通知。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：nullptr；初始没有模型。" data-en="Default / initial state: nullptr; no model is attached initially.">默认值／初始状态：nullptr；初始没有模型。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#model"><span data-zh="模型 / 根节点 / 代理模型 / 更新通知" data-en="Models / roots / proxies / update notifications">模型 / 根节点 / 代理模型 / 更新通知</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -408,6 +409,7 @@
 <a href="../../../include/virtualitemviews/virtualwrapview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L20</span>
 <pre>void setAdapter(WidgetAdapter *adapter, bool takeOwnership = false) override;</pre>
 <p class="doc" data-zh="设置项目控件适配器。" data-en="Set the item widget adapter.">设置项目控件适配器。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：nullptr；初始没有业务 adapter。takeOwnership 参数默认 false。" data-en="Default / initial state: nullptr; no application adapter is installed. The takeOwnership argument defaults to false.">默认值／初始状态：nullptr；初始没有业务 adapter。takeOwnership 参数默认 false。</p>
 <p class="doc" data-zh="takeOwnership 默认为 false，未转移所有权时调用方须保证 adapter 存活。RowWidgets 使用 TableWidgetAdapter，CellWidgets 使用 CellWidgetAdapter。创建控件和绑定数据应分离；复用时清除旧业务关联。" data-en="takeOwnership defaults to false; the caller must keep a non-owned adapter alive. RowWidgets uses TableWidgetAdapter and CellWidgets uses CellWidgetAdapter. Separate widget creation from binding and clear obsolete business associations on reuse.">takeOwnership 默认为 false，未转移所有权时调用方须保证 adapter 存活。RowWidgets 使用 TableWidgetAdapter，CellWidgets 使用 CellWidgetAdapter。创建控件和绑定数据应分离；复用时清除旧业务关联。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -417,6 +419,7 @@
 <a href="../../../include/virtualitemviews/virtualwrapview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L22</span>
 <pre>void setRootIndex(const QModelIndex &amp;index);</pre>
 <p class="doc" data-zh="设置展示子项所属模型根索引。" data-en="Set the model root index whose children are displayed.">设置展示子项所属模型根索引。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：无效 QModelIndex，显示模型根级。" data-en="Default / initial state: Invalid QModelIndex; the model root is displayed.">默认值／初始状态：无效 QModelIndex，显示模型根级。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#model"><span data-zh="模型 / 根节点 / 代理模型 / 更新通知" data-en="Models / roots / proxies / update notifications">模型 / 根节点 / 代理模型 / 更新通知</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -426,6 +429,7 @@
 <a href="../../../include/virtualitemviews/virtualwrapview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L23</span>
 <pre>    QModelIndex rootIndex() const;</pre>
 <p class="doc" data-zh="返回展示子项所属模型根索引。" data-en="Return the model root index whose children are displayed.">返回展示子项所属模型根索引。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：无效 QModelIndex，显示模型根级。" data-en="Default / initial state: Invalid QModelIndex; the model root is displayed.">默认值／初始状态：无效 QModelIndex，显示模型根级。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#model"><span data-zh="模型 / 根节点 / 代理模型 / 更新通知" data-en="Models / roots / proxies / update notifications">模型 / 根节点 / 代理模型 / 更新通知</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -435,6 +439,7 @@
 <a href="../../../include/virtualitemviews/virtualwrapview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L24</span>
 <pre>void setFixedItemHeight(int height);</pre>
 <p class="doc" data-zh="设置项目统一固定高度。" data-en="Set the uniform fixed item height.">设置项目统一固定高度。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：32" data-en="Default / initial state: 32">默认值／初始状态：32</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#wrap"><span data-zh="Wrap 不等宽标签 / 自然尺寸 / 行对齐" data-en="Variable-width tags / natural sizes / line alignment">Wrap 不等宽标签 / 自然尺寸 / 行对齐</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -444,6 +449,7 @@
 <a href="../../../include/virtualitemviews/virtualwrapview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L25</span>
 <pre>int fixedItemHeight() const;</pre>
 <p class="doc" data-zh="返回项目统一固定高度。" data-en="Return the uniform fixed item height.">返回项目统一固定高度。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：32" data-en="Default / initial state: 32">默认值／初始状态：32</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#wrap"><span data-zh="Wrap 不等宽标签 / 自然尺寸 / 行对齐" data-en="Variable-width tags / natural sizes / line alignment">Wrap 不等宽标签 / 自然尺寸 / 行对齐</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -453,6 +459,7 @@
 <a href="../../../include/virtualitemviews/virtualwrapview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L27</span>
 <pre>void setItemWidthRange(int minimum, int maximum);</pre>
 <p class="doc" data-zh="设置单元格或项目的宽度上下限，影响换行和自动列数计算。" data-en="Set cell or item width bounds used by wrapping and automatic column-count calculations.">设置单元格或项目的宽度上下限，影响换行和自动列数计算。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：minimum = 1, maximum = 16777215" data-en="Default / initial state: minimum = 1, maximum = 16777215">默认值／初始状态：minimum = 1, maximum = 16777215</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#wrap"><span data-zh="Wrap 不等宽标签 / 自然尺寸 / 行对齐" data-en="Variable-width tags / natural sizes / line alignment">Wrap 不等宽标签 / 自然尺寸 / 行对齐</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -478,6 +485,7 @@
 <a href="../../../include/virtualitemviews/virtualwrapview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L31</span>
 <pre>void setItemWidth(const QModelIndex &amp;index, int width);</pre>
 <p class="doc" data-zh="设置指定项目或批量项目的宽度覆盖，触发换行布局重算。" data-en="Set individual or bulk item width overrides and recalculate wrapping.">设置指定项目或批量项目的宽度覆盖，触发换行布局重算。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：无逐项宽度覆盖；使用 adapter 估算宽度，非正值回退为 100，再应用宽度范围。" data-en="Default / initial state: No per-item width overrides; uses adapter estimated widths, falling back to 100 for nonpositive values, then applies the width range.">默认值／初始状态：无逐项宽度覆盖；使用 adapter 估算宽度，非正值回退为 100，再应用宽度范围。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#wrap"><span data-zh="Wrap 不等宽标签 / 自然尺寸 / 行对齐" data-en="Variable-width tags / natural sizes / line alignment">Wrap 不等宽标签 / 自然尺寸 / 行对齐</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -487,6 +495,7 @@
 <a href="../../../include/virtualitemviews/virtualwrapview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L33</span>
 <pre>void setItemWidths(const QVector&lt;QPair&lt;QModelIndex, int&gt;&gt; &amp;widths);</pre>
 <p class="doc" data-zh="设置指定项目或批量项目的宽度覆盖，触发换行布局重算。" data-en="Set individual or bulk item width overrides and recalculate wrapping.">设置指定项目或批量项目的宽度覆盖，触发换行布局重算。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：无逐项宽度覆盖；使用 adapter 估算宽度，非正值回退为 100，再应用宽度范围。" data-en="Default / initial state: No per-item width overrides; uses adapter estimated widths, falling back to 100 for nonpositive values, then applies the width range.">默认值／初始状态：无逐项宽度覆盖；使用 adapter 估算宽度，非正值回退为 100，再应用宽度范围。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#wrap"><span data-zh="Wrap 不等宽标签 / 自然尺寸 / 行对齐" data-en="Variable-width tags / natural sizes / line alignment">Wrap 不等宽标签 / 自然尺寸 / 行对齐</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -522,6 +531,7 @@
 <a href="../../../include/virtualitemviews/virtualwrapview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L38</span>
 <pre>void setItemSpacing(int pixels);</pre>
 <p class="doc" data-zh="设置项目间距。" data-en="Set the spacing between items.">设置项目间距。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：8" data-en="Default / initial state: 8">默认值／初始状态：8</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#wrap"><span data-zh="Wrap 不等宽标签 / 自然尺寸 / 行对齐" data-en="Variable-width tags / natural sizes / line alignment">Wrap 不等宽标签 / 自然尺寸 / 行对齐</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -531,6 +541,7 @@
 <a href="../../../include/virtualitemviews/virtualwrapview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L39</span>
 <pre>int itemSpacing() const;</pre>
 <p class="doc" data-zh="返回项目间距。" data-en="Return the spacing between items.">返回项目间距。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：8" data-en="Default / initial state: 8">默认值／初始状态：8</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#wrap"><span data-zh="Wrap 不等宽标签 / 自然尺寸 / 行对齐" data-en="Variable-width tags / natural sizes / line alignment">Wrap 不等宽标签 / 自然尺寸 / 行对齐</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -540,6 +551,7 @@
 <a href="../../../include/virtualitemviews/virtualwrapview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L40</span>
 <pre>void setRowSpacing(int pixels) override;</pre>
 <p class="doc" data-zh="设置行间距。" data-en="Set the spacing between rows.">设置行间距。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：8" data-en="Default / initial state: 8">默认值／初始状态：8</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#wrap"><span data-zh="Wrap 不等宽标签 / 自然尺寸 / 行对齐" data-en="Variable-width tags / natural sizes / line alignment">Wrap 不等宽标签 / 自然尺寸 / 行对齐</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -549,6 +561,7 @@
 <a href="../../../include/virtualitemviews/virtualwrapview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L41</span>
 <pre>void setContentMargins(const QMargins &amp;margins);</pre>
 <p class="doc" data-zh="设置内容四周外边距。" data-en="Set the margins around the content.">设置内容四周外边距。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：QMargins(0, 0, 0, 0)" data-en="Default / initial state: QMargins(0, 0, 0, 0)">默认值／初始状态：QMargins(0, 0, 0, 0)</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="VirtualWrapView-contentMargins-19" data-search="VirtualWrapView contentMargins">
@@ -557,6 +570,7 @@
 <a href="../../../include/virtualitemviews/virtualwrapview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L42</span>
 <pre>QMargins contentMargins() const;</pre>
 <p class="doc" data-zh="返回内容四周外边距。" data-en="Return the margins around the content.">返回内容四周外边距。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：QMargins(0, 0, 0, 0)" data-en="Default / initial state: QMargins(0, 0, 0, 0)">默认值／初始状态：QMargins(0, 0, 0, 0)</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="VirtualWrapView-setLineAlignment-20" data-search="VirtualWrapView setLineAlignment">
@@ -565,6 +579,7 @@
 <a href="../../../include/virtualitemviews/virtualwrapview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L44</span>
 <pre>void setLineAlignment(Qt::Alignment alignment);</pre>
 <p class="doc" data-zh="设置行内项目对齐方式。" data-en="Set the item alignment within a line.">设置行内项目对齐方式。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：Qt::AlignLeft" data-en="Default / initial state: Qt::AlignLeft">默认值／初始状态：Qt::AlignLeft</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#wrap"><span data-zh="Wrap 不等宽标签 / 自然尺寸 / 行对齐" data-en="Variable-width tags / natural sizes / line alignment">Wrap 不等宽标签 / 自然尺寸 / 行对齐</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -574,6 +589,7 @@
 <a href="../../../include/virtualitemviews/virtualwrapview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L45</span>
 <pre>Qt::Alignment lineAlignment() const;</pre>
 <p class="doc" data-zh="返回行内项目对齐方式。" data-en="Return the item alignment within a line.">返回行内项目对齐方式。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：Qt::AlignLeft" data-en="Default / initial state: Qt::AlignLeft">默认值／初始状态：Qt::AlignLeft</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#wrap"><span data-zh="Wrap 不等宽标签 / 自然尺寸 / 行对齐" data-en="Variable-width tags / natural sizes / line alignment">Wrap 不等宽标签 / 自然尺寸 / 行对齐</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -599,6 +615,7 @@
 <a href="../../../include/virtualitemviews/virtualwrapview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L49</span>
 <pre>void setVisualStateBackgroundVisible(bool visible);</pre>
 <p class="doc" data-zh="设置hover 或选中背景绘制开关。" data-en="Set the hover or selection background painting setting.">设置hover 或选中背景绘制开关。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：true；内置 hover / selection 背景启用。" data-en="Default / initial state: true; built-in hover / selection backgrounds are enabled.">默认值／初始状态：true；内置 hover / selection 背景启用。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#states"><span data-zh="hover / selected 默认绘制和动画" data-en="Built-in hover / selection painting and animation">hover / selected 默认绘制和动画</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -608,6 +625,7 @@
 <a href="../../../include/virtualitemviews/virtualwrapview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L50</span>
 <pre>    bool visualStateBackgroundVisible() const;</pre>
 <p class="doc" data-zh="返回hover 或选中背景绘制开关。" data-en="Return the hover or selection background painting setting.">返回hover 或选中背景绘制开关。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：true；内置 hover / selection 背景启用。" data-en="Default / initial state: true; built-in hover / selection backgrounds are enabled.">默认值／初始状态：true；内置 hover / selection 背景启用。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#states"><span data-zh="hover / selected 默认绘制和动画" data-en="Built-in hover / selection painting and animation">hover / selected 默认绘制和动画</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -617,6 +635,7 @@
 <a href="../../../include/virtualitemviews/virtualwrapview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L51</span>
 <pre>void setStateBackgroundCornerRadius(int pixels);</pre>
 <p class="doc" data-zh="设置状态背景圆角半径。" data-en="Set the state background corner radius.">设置状态背景圆角半径。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：0 逻辑像素，直角。" data-en="Default / initial state: 0 logical pixels; square corners.">默认值／初始状态：0 逻辑像素，直角。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="VirtualWrapView-stateBackgroundCornerRadius-27" data-search="VirtualWrapView stateBackgroundCornerRadius">
@@ -625,6 +644,7 @@
 <a href="../../../include/virtualitemviews/virtualwrapview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L52</span>
 <pre>    int stateBackgroundCornerRadius() const;</pre>
 <p class="doc" data-zh="返回状态背景圆角半径。" data-en="Return the state background corner radius.">返回状态背景圆角半径。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：0 逻辑像素，直角。" data-en="Default / initial state: 0 logical pixels; square corners.">默认值／初始状态：0 逻辑像素，直角。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="VirtualWrapView-wrapLayoutChanged-28" data-search="VirtualWrapView wrapLayoutChanged">

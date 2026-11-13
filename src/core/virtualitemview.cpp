@@ -960,7 +960,12 @@ VirtualItemView::VisualState VirtualItemView::animatedVisualState(
                 m_visualTransitions.begin().value());
             m_visualTransitions.erase(m_visualTransitions.begin());
         }
-        m_visualTransitions.insert(key, {hoverTarget, selectedTarget, hovered, selected, nullptr});
+        VisualTransition initial;
+        initial.hoverProgress = hoverTarget;
+        initial.selectedProgress = selectedTarget;
+        initial.hoverTarget = hovered;
+        initial.selectedTarget = selected;
+        m_visualTransitions.insert(key, initial);
         return state;
     }
 

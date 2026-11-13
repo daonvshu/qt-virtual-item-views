@@ -1,0 +1,1074 @@
+{
+  "schema": 1,
+  "types": [
+    {
+      "header": "include/virtualitemviews/branchindicator.h",
+      "name": "BranchIndicatorState",
+      "zh": "传给 branch 渲染器的单个缩进格状态。当前节点格负责展开箭头，祖先格可用于连接线；布尔值默认 false、深度默认 0。",
+      "en": "State of an indentation cell passed to a branch renderer. The node cell carries the expansion indicator; ancestor cells can carry connectors. Booleans default to false and depths to 0.",
+      "members": [
+        {
+          "name": "hasChildren",
+          "zh": "该格对应节点是否有子节点。",
+          "en": "Whether the represented node has children."
+        },
+        {
+          "name": "hasSiblings",
+          "zh": "该格对应节点下方是否还有同级节点。",
+          "en": "Whether another sibling follows the represented node."
+        },
+        {
+          "name": "adjoinsItem",
+          "zh": "是否为当前行自身的 branch 格；只有此格承载展开箭头。",
+          "en": "Whether this is the row's own branch cell, which carries the expansion indicator."
+        },
+        {
+          "name": "isExpanded",
+          "zh": "对应节点是否展开；有子节点时才有展开含义。",
+          "en": "Whether the represented node is expanded; meaningful for nodes with children."
+        },
+        {
+          "name": "cellDepth",
+          "zh": "该格的绝对层级，0 为顶层，自身格等于 itemDepth。",
+          "en": "Absolute cell level: 0 is top level; the node's own cell equals itemDepth."
+        },
+        {
+          "name": "itemDepth",
+          "zh": "当前绘制行的深度，0 为顶层节点。",
+          "en": "Depth of the row being painted; 0 is top level."
+        }
+      ]
+    },
+    {
+      "header": "include/virtualitemviews/headergeometry.h",
+      "name": "ColumnGeometry",
+      "zh": "HeaderGeometry 提供的列几何快照。逻辑序号标识模型列，视觉序号表示显示顺序；内容坐标和 viewport 坐标不可混用。",
+      "en": "Column geometry from HeaderGeometry. Logical indexes identify model columns; visual indexes describe display order. Content and viewport coordinates are distinct.",
+      "members": [
+        {
+          "name": "logicalIndex",
+          "zh": "模型逻辑列号，初始 -1 表示无效。",
+          "en": "Model column index; initially -1 (invalid)."
+        },
+        {
+          "name": "visualIndex",
+          "zh": "视觉顺序中的列号，初始 -1。",
+          "en": "Position in visual order; initially -1."
+        },
+        {
+          "name": "contentX",
+          "zh": "内容坐标中的左边界，初始 0。",
+          "en": "Left boundary in content coordinates; initially 0."
+        },
+        {
+          "name": "viewportX",
+          "zh": "viewport 坐标中的左边界，初始 0，随滚动变化。",
+          "en": "Left boundary in viewport coordinates; initially 0; changes with scrolling."
+        },
+        {
+          "name": "width",
+          "zh": "列宽，初始 0；隐藏列为 0。",
+          "en": "Column width; initially 0, also 0 for hidden columns."
+        },
+        {
+          "name": "hidden",
+          "zh": "是否隐藏，初始 false。",
+          "en": "Whether hidden; initially false."
+        }
+      ]
+    },
+    {
+      "header": "include/virtualitemviews/headergeometry.h",
+      "name": "HeaderGeometry::ResizeSnapshot",
+      "zh": "列边界按下时的尺寸快照，用于 resizeSectionFromEdge()。通过 resizeSnapshot() 获取，不要手工拼装；结构或可用长度变化会使快照失效。",
+      "en": "Press-time sizing snapshot for resizeSectionFromEdge(). Obtain it with resizeSnapshot() rather than assembling it manually. Structural or extent changes invalidate it.",
+      "members": [
+        {
+          "name": "sizes",
+          "zh": "按下时各逻辑 section 的尺寸，初始为空。",
+          "en": "Press-time sizes by logical section; initially empty."
+        },
+        {
+          "name": "orderRevision",
+          "zh": "结构和顺序版本，用于失效检查，初始 0。",
+          "en": "Structure/order revision for invalidation; initially 0."
+        },
+        {
+          "name": "fitRevision",
+          "zh": "填充布局版本，用于失效检查，初始 0。",
+          "en": "Fit-layout revision for invalidation; initially 0."
+        },
+        {
+          "name": "extent",
+          "zh": "捕获时可用总长度，初始 0。",
+          "en": "Available extent at capture time; initially 0."
+        },
+        {
+          "name": "minimum",
+          "zh": "捕获时最小 section 尺寸，初始 0。",
+          "en": "Minimum section size at capture time; initially 0."
+        },
+        {
+          "name": "maximum",
+          "zh": "捕获时最大 section 尺寸，初始 0。",
+          "en": "Maximum section size at capture time; initially 0."
+        },
+        {
+          "name": "spacings",
+          "zh": "捕获时间距数据，初始为空。",
+          "en": "Spacing data at capture time; initially empty."
+        }
+      ]
+    },
+    {
+      "header": "include/virtualitemviews/itemeditoradapter.h",
+      "name": "EditRequestContext",
+      "zh": "adapter 自行处理 Popup 编辑的定位与生命周期上下文。矩形是未按可见区域裁剪的完整项范围，单位为 Qt 逻辑像素；跨回调保留对象／索引使用 QPointer / QPersistentModelIndex。",
+      "en": "Positioning and lifecycle context for adapter-owned Popup editing. Rectangles are full unclipped item bounds in Qt logical pixels. Retain objects/indexes across callbacks using QPointer / QPersistentModelIndex.",
+      "members": [
+        {
+          "name": "binding",
+          "zh": "本次编辑绑定上下文，默认空上下文。",
+          "en": "Binding context for this edit; initially empty."
+        },
+        {
+          "name": "view",
+          "zh": "发起编辑的视图，初始 nullptr，不转移所有权。",
+          "en": "Requesting view; initially nullptr; no ownership transfer."
+        },
+        {
+          "name": "viewport",
+          "zh": "视图 viewport，初始 nullptr，不转移所有权。",
+          "en": "View viewport; initially nullptr; no ownership transfer."
+        },
+        {
+          "name": "viewportRect",
+          "zh": "viewport 坐标中的编辑范围，初始为空。",
+          "en": "Editor bounds in viewport coordinates; initially empty."
+        },
+        {
+          "name": "viewRect",
+          "zh": "view 坐标中的编辑范围，初始为空。",
+          "en": "Editor bounds in view coordinates; initially empty."
+        },
+        {
+          "name": "globalRect",
+          "zh": "全局屏幕坐标中的编辑范围，可用于定位 Popup，初始为空。",
+          "en": "Editor bounds in global screen coordinates for Popup placement; initially empty."
+        },
+        {
+          "name": "finish",
+          "zh": "业务确认或取消后调用；可复制延迟调用，过期请求不影响新会话。不提交模型数据，默认未设置。",
+          "en": "Call after business confirmation or dismissal. Safe to copy and call later; stale requests cannot end newer sessions. Does not commit data; initially unset."
+        }
+      ]
+    },
+    {
+      "header": "include/virtualitemviews/itempane.h",
+      "name": "ItemPane",
+      "zh": "纵向行 pane 的布局结果。首尾行号为包含边界的布局序号；具体视图是否支持冻结行需查其能力约束。",
+      "en": "Vertical row-pane layout result. Row indexes are inclusive layout indexes; consult view capabilities for frozen-row support.",
+      "members": [
+        {
+          "name": "type",
+          "zh": "pane 类型，默认 Type::Scrollable。",
+          "en": "Pane type; defaults to Type::Scrollable."
+        },
+        {
+          "name": "viewportRect",
+          "zh": "viewport 中的 pane 范围，初始为空。",
+          "en": "Pane bounds in viewport coordinates; initially empty."
+        },
+        {
+          "name": "firstRow",
+          "zh": "首行布局序号，初始 -1。",
+          "en": "First layout row; initially -1."
+        },
+        {
+          "name": "lastRow",
+          "zh": "末行布局序号，包含该行，初始 -1。",
+          "en": "Last layout row, inclusive; initially -1."
+        }
+      ]
+    },
+    {
+      "header": "include/virtualitemviews/materializeditem.h",
+      "name": "MaterializedItem",
+      "zh": "已物化项和控件记录。使用持久索引标识项，不要把 row() 缓存为长期身份；控件由框架管理。",
+      "en": "Materialized item/widget record. Use the persistent index as identity, not a cached row(). The framework manages the widget.",
+      "members": [
+        {
+          "name": "index",
+          "zh": "持久模型索引，初始无效。",
+          "en": "Persistent model index; initially invalid."
+        },
+        {
+          "name": "widget",
+          "zh": "已物化控件，初始 nullptr。",
+          "en": "Materialized widget; initially nullptr."
+        },
+        {
+          "name": "type",
+          "zh": "回收池控件类型，默认 kDefaultWidgetType（0）。",
+          "en": "Recycler widget type; defaults to kDefaultWidgetType (0)."
+        },
+        {
+          "name": "geometry",
+          "zh": "viewport 坐标中的项范围，初始为空；保留项可位于屏幕外。",
+          "en": "Item bounds in viewport coordinates; initially empty; pinned items may be offscreen."
+        },
+        {
+          "name": "pinned",
+          "zh": "是否因焦点、IME、Popup 或显式请求而保留，初始 false。",
+          "en": "Whether retained for focus, IME, Popup or explicit pinning; initially false."
+        }
+      ]
+    },
+    {
+      "header": "include/virtualitemviews/tablepane.h",
+      "name": "TablePaneSpec",
+      "zh": "显式列 pane 配置。只指定列归属和滚动方式，列宽、隐藏和顺序仍由 HeaderGeometry 管理。",
+      "en": "Explicit column-pane configuration. Defines membership and scrolling; HeaderGeometry still owns widths, visibility and order.",
+      "members": [
+        {
+          "name": "logicalColumns",
+          "zh": "所属逻辑列号，按视觉顺序显示，初始为空。",
+          "en": "Member logical columns, displayed in visual order; initially empty."
+        },
+        {
+          "name": "scroll",
+          "zh": "滚动方式，默认 PaneScroll::Scrollable。",
+          "en": "Scroll behavior; defaults to PaneScroll::Scrollable."
+        },
+        {
+          "name": "scrollGroup",
+          "zh": "共享横向偏移的组号，默认 0；冻结 pane 忽略。",
+          "en": "Group sharing a horizontal offset; defaults to 0; ignored by frozen panes."
+        }
+      ]
+    },
+    {
+      "header": "include/virtualitemviews/tablepane.h",
+      "name": "TablePane",
+      "zh": "横向 pane 的布局结果。业务配置用 TablePaneSpec 或冻结列接口；此结构不保存独立列宽。",
+      "en": "Horizontal pane layout result. Configure through TablePaneSpec or frozen-column APIs; this structure does not own column widths.",
+      "members": [
+        {
+          "name": "type",
+          "zh": "pane 类型，默认 Type::Scrollable。",
+          "en": "Pane type; defaults to Type::Scrollable."
+        },
+        {
+          "name": "scrollGroup",
+          "zh": "横向滚动组，初始 -1；冻结 pane 使用 -1。",
+          "en": "Horizontal scroll group; initially -1, also used by frozen panes."
+        },
+        {
+          "name": "viewportRect",
+          "zh": "viewport 中的 pane 矩形，初始为空。",
+          "en": "Pane rectangle in viewport coordinates; initially empty."
+        },
+        {
+          "name": "logicalColumns",
+          "zh": "按视觉顺序排列的可见逻辑列，不含隐藏列，初始为空。",
+          "en": "Visible logical columns in visual order, excluding hidden columns; initially empty."
+        }
+      ]
+    },
+    {
+      "header": "include/virtualitemviews/tablespan.h",
+      "name": "TableSpan",
+      "zh": "从锚点开始的矩形合并尺寸，锚点由查询或 setSpan() 索引指定。默认 1×1 表示未合并。",
+      "en": "Rectangular span size starting at the anchor supplied by a query or setSpan(). Defaults to 1 by 1, meaning unmerged.",
+      "members": [
+        {
+          "name": "rowSpan",
+          "zh": "包含的行数，默认 1。",
+          "en": "Number of covered rows; defaults to 1."
+        },
+        {
+          "name": "columnSpan",
+          "zh": "包含的列数，默认 1。",
+          "en": "Number of covered columns; defaults to 1."
+        }
+      ]
+    },
+    {
+      "header": "include/virtualitemviews/types.h",
+      "name": "DragOptions",
+      "zh": "手动 startDrag() 的预览与热点选项。默认使用视图生成的预览，并以按下位置作为热点。",
+      "en": "Preview and hotspot options for manual startDrag(). Defaults to a view-generated preview anchored at the press position.",
+      "members": [
+        {
+          "name": "previewWidget",
+          "zh": "截图来源控件，默认 nullptr 使用视图默认来源；不转移所有权。",
+          "en": "Capture source; nullptr uses the view default; no ownership transfer."
+        },
+        {
+          "name": "previewRect",
+          "zh": "来源控件局部截图范围，默认空矩形使用默认预览或完整指定控件；非空范围裁剪到控件边界。",
+          "en": "Widget-local capture bounds; empty uses the default preview or whole explicit widget; nonempty bounds are clipped to the widget."
+        },
+        {
+          "name": "usePressPosition",
+          "zh": "使用鼠标位置作为热点，默认 true；false 时居中。",
+          "en": "Anchor at the pointer; defaults to true; false centers the preview."
+        },
+        {
+          "name": "globalPressPosition",
+          "zh": "可选全局按下位置，默认未提供，回退到匹配按下记录或当前光标；(0,0) 也是有效显式值。",
+          "en": "Optional global press position; absent by default, falling back to a matching press or current cursor; (0,0) is valid."
+        }
+      ]
+    },
+    {
+      "header": "include/virtualitemviews/types.h",
+      "name": "ItemBindingContext",
+      "zh": "绑定／编辑回调的项数据与布局元信息。index 标识当前项；rowData 按 itemDataRole() 从规范列读取，表格通常为第 0 列。",
+      "en": "Item data and layout metadata for binding/editing callbacks. index identifies the item; rowData is read with itemDataRole() from the canonical column, normally column 0 for tables.",
+      "members": [
+        {
+          "name": "index",
+          "zh": "当前项或单元格索引，默认无效。",
+          "en": "Current item/cell index; initially invalid."
+        },
+        {
+          "name": "rowData",
+          "zh": "整行／节点业务数据，默认无效 QVariant。",
+          "en": "Row/node payload; initially an invalid QVariant."
+        },
+        {
+          "name": "logicalColumn",
+          "zh": "表格逻辑列号；列表／树为 -1，默认 -1。",
+          "en": "Logical table column; -1 for lists/trees; initially -1."
+        },
+        {
+          "name": "depth",
+          "zh": "相对显示根的深度；平面项为 0，默认 -1。",
+          "en": "Depth relative to the displayed root; 0 for flat items; initially -1."
+        },
+        {
+          "name": "indentationWidth",
+          "zh": "未裁剪的祖先缩进宽度，默认 0；非树项和树表非第 0 列为 0。",
+          "en": "Unclipped ancestor indentation width; initially 0; 0 for non-tree items and nonzero tree-table columns."
+        },
+        {
+          "name": "branchWidth",
+          "zh": "节点自身 branch 格宽度，不是图标大小；默认 0，仅隐藏图标仍保留此宽度。",
+          "en": "Node branch-cell width, not icon size; initially 0; hiding only the icon retains the width."
+        }
+      ]
+    },
+    {
+      "header": "include/virtualitemviews/types.h",
+      "name": "PaneSeparatorStyle",
+      "zh": "冻结行／列边界样式，与普通分割线分别配置。默认 1 物理像素实线，颜色跟随样式分割线。",
+      "en": "Frozen row/column boundary style, independent of ordinary grid lines. Defaults to a 1-physical-pixel solid stroke using the style separator color.",
+      "members": [
+        {
+          "name": "width",
+          "zh": "线宽默认 1；0 隐藏边界线。",
+          "en": "Stroke width defaults to 1; 0 hides the separator."
+        },
+        {
+          "name": "color",
+          "zh": "显式颜色，默认无效 QColor 时跟随样式。",
+          "en": "Explicit color; initially invalid QColor, using the style color."
+        },
+        {
+          "name": "lineStyle",
+          "zh": "线型，默认 Qt::SolidLine，可配置虚线。",
+          "en": "Pen style; defaults to Qt::SolidLine; supports dashed lines."
+        }
+      ]
+    },
+    {
+      "header": "include/virtualitemviews/types.h",
+      "name": "VisibleRange",
+      "zh": "包含首尾的项序号区间。默认 first=last=-1 表示无效／空区间。",
+      "en": "Inclusive item-index range. Initially first=last=-1 denotes an invalid/empty range.",
+      "members": [
+        {
+          "name": "first",
+          "zh": "第一个项序号，初始 -1。",
+          "en": "First item index; initially -1."
+        },
+        {
+          "name": "last",
+          "zh": "最后一个项序号（包含），初始 -1。",
+          "en": "Last item index, inclusive; initially -1."
+        }
+      ]
+    },
+    {
+      "header": "include/virtualitemviews/virtualitemview.h",
+      "name": "VirtualViewStats",
+      "zh": "虚拟化状态及累计操作快照，用于观察复用。当前数量与累计次数不同，字段初始均为 0。",
+      "en": "Snapshot of virtualization state and cumulative operations for observing reuse. Current counts differ from lifetime totals; all fields initially are 0.",
+      "members": [
+        {
+          "name": "logicalItems",
+          "zh": "逻辑项数量。",
+          "en": "Logical item count."
+        },
+        {
+          "name": "materializedItems",
+          "zh": "当前拥有 QWidget 的项数量。",
+          "en": "Current items owning QWidgets."
+        },
+        {
+          "name": "pooledWidgets",
+          "zh": "当前在回收池等待复用的控件数。",
+          "en": "Widgets currently awaiting reuse in pools."
+        },
+        {
+          "name": "pinnedWidgets",
+          "zh": "因焦点、输入、Popup 或显式请求而保留的控件数。",
+          "en": "Widgets retained for focus, input, Popup or explicit pinning."
+        },
+        {
+          "name": "createCount",
+          "zh": "视图创建以来回收器创建控件的累计次数。",
+          "en": "Cumulative recycler widget creations since view construction."
+        },
+        {
+          "name": "bindCount",
+          "zh": "已完成行／单元格绑定的累计次数，包含重新绑定。",
+          "en": "Cumulative completed row/cell bindings, including rebindings."
+        },
+        {
+          "name": "recycleCount",
+          "zh": "控件返回回收池的累计次数。",
+          "en": "Cumulative widget returns to recycler pools."
+        }
+      ]
+    },
+    {
+      "header": "include/virtualitemviews/virtualitemview.h",
+      "name": "ScrollAnchor",
+      "zh": "持久索引和项内偏移构成的滚动锚点，用于数据变化后恢复位置。默认无效索引、0 偏移。",
+      "en": "Scroll anchor formed by a persistent index and intra-item offset for restoring position after data changes. Initially invalid with zero offset.",
+      "members": [
+        {
+          "name": "index",
+          "zh": "锚点持久索引，删除该项后失效。",
+          "en": "Persistent anchor index; invalidated when the item is removed."
+        },
+        {
+          "name": "offsetInsideItem",
+          "zh": "viewport 顶部在锚点项内的纵向偏移，默认 0。",
+          "en": "Vertical offset of the viewport top inside the anchor item; defaults to 0."
+        }
+      ]
+    },
+    {
+      "header": "include/virtualitemviews/virtualitemview.h",
+      "name": "VirtualItemView::VisualState",
+      "zh": "项的目标 hover/selection 状态与当前动画进度。布尔值描述目标，进度用于平滑绘制，动画期间可尚未到达目标。",
+      "en": "Target hover/selection state and current animation progress. Booleans describe targets; progress drives smooth painting and may still be transitioning.",
+      "members": [
+        {
+          "name": "hovered",
+          "zh": "hover 目标状态，默认 false。",
+          "en": "Target hover state; defaults to false."
+        },
+        {
+          "name": "selected",
+          "zh": "选中目标状态，默认 false。",
+          "en": "Target selected state; defaults to false."
+        },
+        {
+          "name": "hoverProgress",
+          "zh": "hover 绘制进度 0～1，默认 0。",
+          "en": "Hover progress in [0,1]; defaults to 0."
+        },
+        {
+          "name": "selectedProgress",
+          "zh": "选中绘制进度 0～1，默认 0。",
+          "en": "Selection progress in [0,1]; defaults to 0."
+        }
+      ]
+    },
+    {
+      "header": "include/virtualitemviews/virtualitemview.h",
+      "name": "VirtualItemView::DropTarget",
+      "zh": "拖放命中结果。插入 row/column 是 parent 下的模型坐标，不是展开后的可见行号；ontoItem 表示放入项内。有效位置仍需通过模型 canDropMimeData()/dropMimeData() 的限制。",
+      "en": "Resolved drop target. Insertion row/column are model coordinates under parent, not flattened visible row numbers. ontoItem means dropping into an item. Valid locations still require model canDropMimeData()/dropMimeData() approval.",
+      "members": [
+        {
+          "name": "parent",
+          "zh": "插入父索引；ontoItem 时表示目标项。默认无效，插入时通常代表根层级。",
+          "en": "Insertion parent, or destination item for ontoItem. Initially invalid, normally meaning root-level insertion."
+        },
+        {
+          "name": "row",
+          "zh": "父项下的插入行，默认 -1；单元格内部放置可为 -1。",
+          "en": "Insertion row under parent; initially -1; cell drops may use -1."
+        },
+        {
+          "name": "column",
+          "zh": "模型列位置，默认 -1，需结合 row、cellDrop、ontoItem 解释。",
+          "en": "Model column position; initially -1; interpret with row, cellDrop and ontoItem."
+        },
+        {
+          "name": "ontoItem",
+          "zh": "放到 parent 表示的节点／单元格内而非行间，默认 false。",
+          "en": "Drop into the node/cell represented by parent rather than between rows; defaults to false."
+        },
+        {
+          "name": "trailing",
+          "zh": "命中末项下方空白；指示器标记内容尾部，row 为父项末尾插入位置，默认 false。",
+          "en": "Hit space below the last item; indicator marks content end and row is insertion after the parent's last child; defaults to false."
+        },
+        {
+          "name": "cellDrop",
+          "zh": "载荷为单元格而非整行，默认 false；相邻插入不一定移除源行。",
+          "en": "Cell payload rather than a whole row; defaults to false; adjacent insertion need not remove the source row."
+        },
+        {
+          "name": "isValid",
+          "zh": "row≥0，或 cellDrop、ontoItem 均为 true、parent 有效且 row/column 均为 -1 时有效。只检查位置，不检查模型权限。",
+          "en": "True for row>=0, or cellDrop and ontoItem with valid parent and row/column both -1. Checks location, not model permission."
+        }
+      ]
+    },
+    {
+      "header": "include/virtualitemviews/types.h",
+      "name": "GridLinePlacement",
+      "zh": "项间距中的分割线位置。零间距时只使用一个共享边界；支持范围需看具体视图。",
+      "en": "Grid-line placement inside gaps. Zero spacing uses a single shared boundary; support depends on the view.",
+      "members": [
+        {
+          "name": "SpacingCenter",
+          "zh": "间距中心画线，始终穿过另一方向间距；外侧补半间距居中。",
+          "en": "Draw at gap centers, always crossing perpendicular gaps; outer half-gaps center content."
+        },
+        {
+          "name": "SpacingEdges",
+          "zh": "间距两侧画线，支持的视图可配置是否跨过另一方向间距。",
+          "en": "Draw at both gap edges; supporting views can configure perpendicular-gap crossing."
+        }
+      ]
+    },
+    {
+      "header": "include/virtualitemviews/itemeditoradapter.h",
+      "name": "EditTrigger",
+      "zh": "自动编辑手势标志，用 EditTriggers 按位或组合。显式 edit(index) 独立于标志，模型仍须允许编辑。",
+      "en": "Automatic editing flags, combined through EditTriggers. Explicit edit(index) is independent; model permission still applies.",
+      "members": [
+        {
+          "name": "NoEditTriggers",
+          "zh": "0：关闭自动手势，仍允许显式 edit()。",
+          "en": "0: disable automatic gestures, retaining explicit edit()."
+        },
+        {
+          "name": "SingleClicked",
+          "zh": "0x1：单击编辑。",
+          "en": "0x1: single-click editing."
+        },
+        {
+          "name": "DoubleClicked",
+          "zh": "0x2：双击编辑。",
+          "en": "0x2: double-click editing."
+        },
+        {
+          "name": "EditKeyPressed",
+          "zh": "0x4：编辑键 F2 触发。",
+          "en": "0x4: editing via F2."
+        }
+      ]
+    },
+    {
+      "header": "include/virtualitemviews/headergeometry.h",
+      "name": "HeaderGeometry::ResizeMode",
+      "zh": "底层 section 尺寸策略。表格业务通常用 setColumnResizeMode()；FitExtent 捕获比例并清除普通拉伸设置。",
+      "en": "Low-level section-sizing strategy. Table applications normally use setColumnResizeMode(); FitExtent captures proportions and clears ordinary stretching.",
+      "members": [
+        {
+          "name": "Independent",
+          "zh": "独立尺寸及普通拉伸策略，默认模式。",
+          "en": "Independent sizes and ordinary stretching; the default."
+        },
+        {
+          "name": "FitExtent",
+          "zh": "尺寸加间距匹配可用长度，拖动按快照比例分摊；极端长度下放宽限制。",
+          "en": "Fit sizes plus gaps to available extent; distribute drags by snapshot proportions, relaxing limits at extremes."
+        }
+      ]
+    },
+    {
+      "header": "include/virtualitemviews/itempane.h",
+      "name": "ItemPane::Type",
+      "zh": "纵向 pane 的位置和滚动方式。",
+      "en": "Position and scrolling of a vertical pane.",
+      "members": [
+        {
+          "name": "FrozenTop",
+          "zh": "顶部冻结行。",
+          "en": "Top frozen rows."
+        },
+        {
+          "name": "Scrollable",
+          "zh": "跟随纵向偏移，ItemPane 默认值。",
+          "en": "Follow vertical offsets; the ItemPane default."
+        },
+        {
+          "name": "FrozenBottom",
+          "zh": "底部冻结行。",
+          "en": "Bottom frozen rows."
+        }
+      ]
+    },
+    {
+      "header": "include/virtualitemviews/tablepane.h",
+      "name": "PaneScroll",
+      "zh": "显式 TablePaneSpec 的横向滚动方式。",
+      "en": "Horizontal scrolling for an explicit TablePaneSpec.",
+      "members": [
+        {
+          "name": "Frozen",
+          "zh": "冻结，不随横向偏移移动。",
+          "en": "Frozen; does not follow horizontal offsets."
+        },
+        {
+          "name": "Scrollable",
+          "zh": "跟随 scrollGroup 偏移，TablePaneSpec 默认值。",
+          "en": "Follow scrollGroup offsets; the TablePaneSpec default."
+        }
+      ]
+    },
+    {
+      "header": "include/virtualitemviews/tablepane.h",
+      "name": "TablePane::Type",
+      "zh": "横向 pane 布局类型。",
+      "en": "Horizontal pane layout type.",
+      "members": [
+        {
+          "name": "FrozenLeft",
+          "zh": "左侧冻结 pane。",
+          "en": "Left frozen pane."
+        },
+        {
+          "name": "Scrollable",
+          "zh": "随所属组横向滚动，默认值。",
+          "en": "Scroll horizontally with its group; the default."
+        },
+        {
+          "name": "FrozenRight",
+          "zh": "右侧冻结 pane。",
+          "en": "Right frozen pane."
+        }
+      ]
+    },
+    {
+      "header": "include/virtualitemviews/virtualflowtableview.h",
+      "name": "VirtualFlowTableView::CellHeightMode",
+      "zh": "Flow 网格高度策略，使用专用 cell 尺寸接口配置。",
+      "en": "Flow grid height strategy, configured with dedicated cell-size APIs.",
+      "members": [
+        {
+          "name": "Fixed",
+          "zh": "使用 setCellHeight() 的统一高度。",
+          "en": "Use the uniform setCellHeight() value."
+        },
+        {
+          "name": "AspectRatio",
+          "zh": "按实际 cell 宽度和 setCellAspectRatio() 的宽／高比计算。",
+          "en": "Compute from actual cell width and the setCellAspectRatio() width/height ratio."
+        }
+      ]
+    },
+    {
+      "header": "include/virtualitemviews/virtualitemview.h",
+      "name": "VirtualItemView::ScrollHint",
+      "zh": "scrollTo() 定位策略，最终位置受实际滚动范围约束。",
+      "en": "scrollTo() positioning hint; final position is clamped to the available scroll range.",
+      "members": [
+        {
+          "name": "EnsureVisible",
+          "zh": "仅在必要时滚动使目标可见。",
+          "en": "Scroll only as needed to expose the target."
+        },
+        {
+          "name": "PositionAtTop",
+          "zh": "尽量定位到可滚动区域顶部。",
+          "en": "Position at the top of the scrolling area where possible."
+        },
+        {
+          "name": "PositionAtBottom",
+          "zh": "尽量定位到可滚动区域底部。",
+          "en": "Position at the bottom of the scrolling area where possible."
+        },
+        {
+          "name": "PositionAtCenter",
+          "zh": "尽量定位到可滚动区域中心。",
+          "en": "Center in the scrolling area where possible."
+        }
+      ]
+    },
+    {
+      "header": "include/virtualitemviews/virtualitemview.h",
+      "name": "VirtualItemView::SelectionMode",
+      "zh": "用户选择手势模式，不限制 selectionModel() 的显式批量选择；选择单元由 SelectionBehavior 决定。",
+      "en": "User selection gestures, not a restriction on explicit batch selection through selectionModel(). SelectionBehavior defines the unit.",
+      "members": [
+        {
+          "name": "NoSelection",
+          "zh": "用户手势不改变选择。",
+          "en": "User gestures do not change selection."
+        },
+        {
+          "name": "SingleSelection",
+          "zh": "用户交互只保留一个选择项。",
+          "en": "User interaction keeps one selected item."
+        },
+        {
+          "name": "MultiSelection",
+          "zh": "单击切换选中，允许多项。",
+          "en": "Clicks toggle selection, allowing multiple items."
+        },
+        {
+          "name": "ExtendedSelection",
+          "zh": "普通点击、Ctrl 切换、Shift 范围选择；默认模式。",
+          "en": "Ordinary clicks, Ctrl toggles and Shift ranges; the default."
+        }
+      ]
+    },
+    {
+      "header": "include/virtualitemviews/virtualitemview.h",
+      "name": "VirtualItemView::SelectionBehavior",
+      "zh": "选择和内置 hover/selection 绘制范围。表格支持按格和按行。",
+      "en": "Selection unit and built-in hover/selection extent. Tables support cells and rows.",
+      "members": [
+        {
+          "name": "SelectItems",
+          "zh": "表格按单元格选择和绘制状态。",
+          "en": "Select and paint state per table cell."
+        },
+        {
+          "name": "SelectRows",
+          "zh": "整行选择和绘制状态，默认值。",
+          "en": "Select and paint state across the row; the default."
+        }
+      ]
+    },
+    {
+      "header": "include/virtualitemviews/virtualitemview.h",
+      "name": "VirtualItemView::DropIndicatorStyle",
+      "zh": "拖放指示器形状，与 DragFeedbackMode 不同；命中位置也决定使用插入线还是目标框。",
+      "en": "Drop-indicator shape, distinct from DragFeedbackMode; resolved locations also determine insertion lines versus target frames.",
+      "members": [
+        {
+          "name": "Line",
+          "zh": "项之间的插入线，使用配置线宽和颜色。",
+          "en": "Insertion line using configured width and color."
+        },
+        {
+          "name": "Frame",
+          "zh": "接收放置项的描边框。",
+          "en": "Outline around the receiving item."
+        }
+      ]
+    },
+    {
+      "header": "include/virtualitemviews/virtualitemview.h",
+      "name": "VirtualItemView::DragStartMode",
+      "zh": "起拖入口；均需模型支持相应 flags、MIME 和 drop 行为。",
+      "en": "Drag-start strategy; both require corresponding model flags, MIME and drop behavior.",
+      "members": [
+        {
+          "name": "Automatic",
+          "zh": "按下并移动超过拖动阈值后由视图起拖。",
+          "en": "The view starts dragging after movement exceeds the press threshold."
+        },
+        {
+          "name": "Manual",
+          "zh": "业务按钮或处理器显式调用 startDrag()。",
+          "en": "Business buttons/handlers explicitly call startDrag()."
+        }
+      ]
+    },
+    {
+      "header": "include/virtualitemviews/virtualitemview.h",
+      "name": "VirtualItemView::WheelScrollMode",
+      "zh": "滚轮步进单位，与滚动条策略和外层事件转发分别配置。",
+      "en": "Wheel-step unit, separate from scrollbar policy and outward event forwarding.",
+      "members": [
+        {
+          "name": "Pixels",
+          "zh": "按像素距离滚动。",
+          "en": "Scroll by pixel distance."
+        },
+        {
+          "name": "Items",
+          "zh": "按项步进滚动。",
+          "en": "Scroll in item steps."
+        }
+      ]
+    },
+    {
+      "header": "include/virtualitemviews/virtualitemview.h",
+      "name": "VirtualItemView::ItemHeightMode",
+      "zh": "内核行布局高度策略；Flow、Masonry、Wrap 使用专用尺寸接口。",
+      "en": "Kernel row-layout height strategy; Flow, Masonry and Wrap use dedicated sizing APIs.",
+      "members": [
+        {
+          "name": "Uniform",
+          "zh": "所有项统一高度。",
+          "en": "All items share one height."
+        },
+        {
+          "name": "Variable",
+          "zh": "不同项可有不同高度，配合估算、显式高度和测量。",
+          "en": "Allow varying heights with estimates, explicit sizes and measurement."
+        }
+      ]
+    },
+    {
+      "header": "include/virtualitemviews/virtuallistview.h",
+      "name": "VirtualListView::DragFeedbackMode",
+      "zh": "拖放位置的视觉反馈，最终数据移动由模型负责。",
+      "en": "Visual drop-location feedback; the model performs the final data move.",
+      "members": [
+        {
+          "name": "Indicator",
+          "zh": "显示插入线或目标框，不让周围项移动。",
+          "en": "Show an insertion line or target frame without moving surrounding items."
+        },
+        {
+          "name": "RowMoveAnimation",
+          "zh": "周围行移动让出单行占位；结束后完成或恢复布局。",
+          "en": "Move surrounding rows to create a one-row placeholder, completing or restoring layout afterward."
+        }
+      ]
+    },
+    {
+      "header": "include/virtualitemviews/virtualtableview.h",
+      "name": "VirtualTableView::DragFeedbackMode",
+      "zh": "拖放位置的视觉反馈，最终数据移动由模型负责。",
+      "en": "Visual drop-location feedback; the model performs the final data move.",
+      "members": [
+        {
+          "name": "Indicator",
+          "zh": "显示插入线或目标框，不让周围项移动。",
+          "en": "Show an insertion line or target frame without moving surrounding items."
+        },
+        {
+          "name": "RowMoveAnimation",
+          "zh": "周围行移动让出单行占位；结束后完成或恢复布局。",
+          "en": "Move surrounding rows to create a one-row placeholder, completing or restoring layout afterward."
+        }
+      ]
+    },
+    {
+      "header": "include/virtualitemviews/virtualtreeview.h",
+      "name": "VirtualTreeView::DragFeedbackMode",
+      "zh": "拖放位置的视觉反馈，最终数据移动由模型负责。",
+      "en": "Visual drop-location feedback; the model performs the final data move.",
+      "members": [
+        {
+          "name": "Indicator",
+          "zh": "显示插入线或目标框，不让周围项移动。",
+          "en": "Show an insertion line or target frame without moving surrounding items."
+        },
+        {
+          "name": "RowMoveAnimation",
+          "zh": "周围行移动让出单行占位；结束后完成或恢复布局。",
+          "en": "Move surrounding rows to create a one-row placeholder, completing or restoring layout afterward."
+        }
+      ]
+    },
+    {
+      "header": "include/virtualitemviews/virtuallistview.h",
+      "name": "VirtualListView::VisualStateBackgroundExtent",
+      "zh": "列表状态背景和命中范围，可进一步配合背景边距和固定高度，不改变控件大小。",
+      "en": "List state-background and hit extent; may be further limited by margins/height without resizing widgets.",
+      "members": [
+        {
+          "name": "FullWidth",
+          "zh": "整行可用宽度。",
+          "en": "Full available row width."
+        },
+        {
+          "name": "WidgetOnly",
+          "zh": "项控件实际宽度。",
+          "en": "Actual item-widget width."
+        }
+      ]
+    },
+    {
+      "header": "include/virtualitemviews/virtualmasonryview.h",
+      "name": "VirtualMasonryView::ItemHeightMode",
+      "zh": "瀑布流高度策略。固定／等比例高度且大量项目时，可优先考虑 Flow 规则网格。",
+      "en": "Masonry height strategy. For many fixed/equal-aspect items, consider the Flow regular grid.",
+      "members": [
+        {
+          "name": "Fixed",
+          "zh": "统一固定高度。",
+          "en": "Uniform fixed height."
+        },
+        {
+          "name": "AspectRatio",
+          "zh": "由列宽和宽／高比计算高度。",
+          "en": "Compute height from column width and width/height ratio."
+        },
+        {
+          "name": "AdapterEstimate",
+          "zh": "adapter 估算各项高度，允许高低不一。",
+          "en": "Adapter estimates individual, potentially different heights."
+        }
+      ]
+    },
+    {
+      "header": "include/virtualitemviews/virtualtableview.h",
+      "name": "VirtualTableView::RowSizePolicy",
+      "zh": "显式行高与测量高度冲突时的优先级，配合行高模式和自动测量使用。",
+      "en": "Priority between explicit and measured row heights, used with height mode and automatic measurement.",
+      "members": [
+        {
+          "name": "ExplicitWins",
+          "zh": "显式或拖动行高优先，测量不覆盖。",
+          "en": "Explicit/manually resized height wins over measurement."
+        },
+        {
+          "name": "MeasuredWins",
+          "zh": "测量结果优先，可覆盖显式行高。",
+          "en": "Measured results win and may replace explicit height."
+        }
+      ]
+    },
+    {
+      "header": "include/virtualitemviews/virtualtableview.h",
+      "name": "VirtualTableView::MaterializationMode",
+      "zh": "表格物化控件粒度，不决定按行还是按格选择；adapter 需支持对应回调。",
+      "en": "Table widget granularity, independent of selection unit; the adapter must support matching callbacks.",
+      "members": [
+        {
+          "name": "RowWidgets",
+          "zh": "每物化行一个 QWidget 承载各列，默认模式。",
+          "en": "One QWidget per materialized row containing its columns; the default."
+        },
+        {
+          "name": "CellWidgets",
+          "zh": "每物化单元格一个 QWidget，数量随行列窗口增加。",
+          "en": "One QWidget per materialized cell; count grows with the row/column window."
+        }
+      ]
+    },
+    {
+      "header": "include/virtualitemviews/virtualtableview.h",
+      "name": "VirtualTableView::DropTargetMode",
+      "zh": "SelectItems 下的放置规则；SelectRows 始终行间插入，TreeTable 使用层级节点规则。",
+      "en": "Drop rules under SelectItems; SelectRows inserts between rows, while TreeTable uses hierarchical rules.",
+      "members": [
+        {
+          "name": "BetweenRows",
+          "zh": "仅行间插入。",
+          "en": "Insertion between rows only."
+        },
+        {
+          "name": "OnCell",
+          "zh": "放到单元格内部。",
+          "en": "Drop onto a cell."
+        },
+        {
+          "name": "BetweenRowsOrOnCell",
+          "zh": "根据命中位置区分行间和单元格内部。",
+          "en": "Distinguish row insertion and cell drops by pointer location."
+        }
+      ]
+    },
+    {
+      "header": "include/virtualitemviews/virtualtableview.h",
+      "name": "VirtualTableView::ColumnResizeMode",
+      "zh": "列宽与可用宽度的关系；普通拉伸比例和 FitViewport 是不同策略，后者接管宽度分配。",
+      "en": "Column sizing relative to available width; ordinary stretching differs from FitViewport, which takes over allocation.",
+      "members": [
+        {
+          "name": "Independent",
+          "zh": "独立列宽和普通比例拉伸；设置或拖动列宽清除普通比例限制，默认模式。",
+          "en": "Independent widths and ordinary stretch factors; setting/dragging widths clears factors; the default."
+        },
+        {
+          "name": "FitViewport",
+          "zh": "可见列宽加间距匹配 viewport；边界拖动由对应一侧列按比例分摊，极端宽度放宽限制。",
+          "en": "Fit visible widths plus gaps to viewport; edge drags redistribute proportionally on that side, relaxing limits at extremes."
+        }
+      ]
+    },
+    {
+      "header": "include/virtualitemviews/virtualtableview.h",
+      "name": "VirtualTableView::MoveAnimation",
+      "zh": "程序 moveColumn() 的表头过渡选项。几何顺序立即提交，动画只影响支持的表头渲染器。",
+      "en": "Header transition for programmatic moveColumn(). Geometry order commits immediately; animation affects supporting renderers only.",
+      "members": [
+        {
+          "name": "Immediate",
+          "zh": "立即显示最终顺序，默认值。",
+          "en": "Show final order immediately; the default."
+        },
+        {
+          "name": "Animate",
+          "zh": "请求表头位置动画；不支持的原生表头忽略。",
+          "en": "Request header movement animation; unsupported native headers ignore it."
+        }
+      ]
+    },
+    {
+      "header": "include/virtualitemviews/virtualtreeview.h",
+      "name": "VirtualTreeView::RowGridLineExtent",
+      "zh": "树行分割线范围，以边界上方节点为依据；TreeTable 不使用该模式配置。",
+      "en": "Tree separator extent based on the node above the boundary; TreeTable does not use this mode setting.",
+      "members": [
+        {
+          "name": "NodeOnly",
+          "zh": "从内容起点向右，不覆盖 branch 和祖先缩进。",
+          "en": "Rightward from node content, excluding branch and ancestor indentation."
+        },
+        {
+          "name": "NodeAndIcon",
+          "zh": "包含自身 branch 图标区域，无图标或隐藏时回退 NodeOnly。",
+          "en": "Include the node branch-icon area; use NodeOnly if absent or hidden."
+        },
+        {
+          "name": "FullWidth",
+          "zh": "整行宽度，包含缩进。",
+          "en": "Full row width including indentation."
+        }
+      ]
+    },
+    {
+      "header": "include/virtualitemviews/virtualtreeview.h",
+      "name": "VirtualTreeView::VisualStateBackgroundExtent",
+      "zh": "树状态背景与命中范围，可配合背景高度和边距；独立 branch 点击不受状态裁剪影响。TreeTable 固定使用表格行规则。",
+      "en": "Tree state-background and hit extent, combinable with state height/margins. Independent branch clicks are unaffected. TreeTable uses its table-row rules.",
+      "members": [
+        {
+          "name": "NodeOnly",
+          "zh": "节点内容起点到行右边缘。",
+          "en": "Node content start to row right edge."
+        },
+        {
+          "name": "NodeAndIcon",
+          "zh": "自身 branch 图标区域到行右边缘；无图标或隐藏时用 NodeOnly。",
+          "en": "Branch-icon area to row right edge; use NodeOnly if absent or hidden."
+        },
+        {
+          "name": "FullWidth",
+          "zh": "整行范围，包含祖先缩进。",
+          "en": "Full row including ancestor indentation."
+        },
+        {
+          "name": "WidgetOnly",
+          "zh": "实际项控件范围。",
+          "en": "Actual item-widget bounds."
+        },
+        {
+          "name": "WidgetAndIcon",
+          "zh": "实际控件及自身 branch 图标区域；无图标或隐藏时用 WidgetOnly。",
+          "en": "Actual widget plus branch-icon area; use WidgetOnly if absent or hidden."
+        }
+      ]
+    }
+  ]
+}

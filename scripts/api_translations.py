@@ -133,7 +133,13 @@ UI_EN = {
 
 # Function detail UI; actual explanations live in docs/api/data/function-docs.json.
 UI_EN.update({
- '配套能力：': 'Related capabilities: '
+ '配套能力：': 'Related capabilities: ',
+ '组合用法': 'Combination example',
+ '完整示例源码': 'Full example source',
+ '结构体与枚举': 'Structs and enums',
+ '接口与类型说明': 'API and type details',
+ '成员 / 取值': 'Member / value',
+ '返回类型列表': 'Back to type index'
 })
 
 UI_EN.update({

@@ -50,45 +50,66 @@
 </li>
 </ul>
 </section>
-<h2><span data-zh="函数说明" data-en="Function details">函数说明</span></h2>
+<section id="type-index">
+<h3><span data-zh="结构体与枚举" data-en="Structs and enums">结构体与枚举</span></h3>
+<ul>
+<li data-search="MaterializedItem">
+<a href="#MaterializedItem">
+<code>MaterializedItem</code>
+</a>
+</li>
+</ul>
+</section>
+<h2><span data-zh="接口与类型说明" data-en="API and type details">接口与类型说明</span></h2>
 <p class="muted"><span data-zh="按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。" data-en="Read each function for its purpose and related settings. Overloads are listed separately; follow related capabilities to find examples.">按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。</span></p>
 <section>
 <h3 id="MaterializedItem">MaterializedItem</h3>
 <pre>struct MaterializedItem</pre>
-<article tabindex="-1" id="MaterializedItem-index-0" data-search="MaterializedItem index">
-<span class="badge">public</span>
-<span class="muted">
-<a href="../../../include/virtualitemviews/materializeditem.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L24</span>
-<pre>QPersistentModelIndex index;</pre>
-<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
-</article>
-<article tabindex="-1" id="MaterializedItem-widget-1" data-search="MaterializedItem widget">
-<span class="badge">public</span>
-<span class="muted">
-<a href="../../../include/virtualitemviews/materializeditem.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L25</span>
-<pre>QWidget *widget = nullptr;</pre>
-<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
-</article>
-<article tabindex="-1" id="MaterializedItem-type-2" data-search="MaterializedItem type">
-<span class="badge">public</span>
-<span class="muted">
-<a href="../../../include/virtualitemviews/materializeditem.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L26</span>
-<pre>WidgetType type = kDefaultWidgetType;</pre>
-<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
-</article>
-<article tabindex="-1" id="MaterializedItem-geometry-3" data-search="MaterializedItem geometry">
-<span class="badge">public</span>
-<span class="muted">
-<a href="../../../include/virtualitemviews/materializeditem.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L29</span>
-<pre>QRect geometry;</pre>
-<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
-</article>
-<article tabindex="-1" id="MaterializedItem-pinned-4" data-search="MaterializedItem pinned">
-<span class="badge">public</span>
-<span class="muted">
-<a href="../../../include/virtualitemviews/materializeditem.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L32</span>
-<pre>bool pinned = false;</pre>
-<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+<article data-search="MaterializedItem">
+<p class="doc" data-zh="已物化项和控件记录。使用持久索引标识项，不要把 row() 缓存为长期身份；控件由框架管理。" data-en="Materialized item/widget record. Use the persistent index as identity, not a cached row(). The framework manages the widget.">已物化项和控件记录。使用持久索引标识项，不要把 row() 缓存为长期身份；控件由框架管理。</p>
+<div class="table-scroll">
+<table class="type-members">
+<thead>
+<tr>
+<th><span data-zh="成员 / 取值" data-en="Member / value">成员 / 取值</span></th>
+<th><span data-zh="说明" data-en="Guide">说明</span></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>QPersistentModelIndex index;</code>
+</td>
+<td class="doc" data-zh="持久模型索引，初始无效。" data-en="Persistent model index; initially invalid.">持久模型索引，初始无效。</td>
+</tr>
+<tr>
+<td>
+<code>QWidget *widget = nullptr;</code>
+</td>
+<td class="doc" data-zh="已物化控件，初始 nullptr。" data-en="Materialized widget; initially nullptr.">已物化控件，初始 nullptr。</td>
+</tr>
+<tr>
+<td>
+<code>WidgetType type = kDefaultWidgetType;</code>
+</td>
+<td class="doc" data-zh="回收池控件类型，默认 kDefaultWidgetType（0）。" data-en="Recycler widget type; defaults to kDefaultWidgetType (0).">回收池控件类型，默认 kDefaultWidgetType（0）。</td>
+</tr>
+<tr>
+<td>
+<code>QRect geometry;</code>
+</td>
+<td class="doc" data-zh="viewport 坐标中的项范围，初始为空；保留项可位于屏幕外。" data-en="Item bounds in viewport coordinates; initially empty; pinned items may be offscreen.">viewport 坐标中的项范围，初始为空；保留项可位于屏幕外。</td>
+</tr>
+<tr>
+<td>
+<code>bool pinned = false;</code>
+</td>
+<td class="doc" data-zh="是否因焦点、IME、Popup 或显式请求而保留，初始 false。" data-en="Whether retained for focus, IME, Popup or explicit pinning; initially false.">是否因焦点、IME、Popup 或显式请求而保留，初始 false。</td>
+</tr>
+</tbody>
+</table>
+</div>
+<a href="#type-index" class="muted"><span data-zh="返回类型列表" data-en="Back to type index">返回类型列表</span></a>
 </article>
 <article tabindex="-1" id="MaterializedItem-isValid-5" data-search="MaterializedItem isValid">
 <span class="badge">public</span>

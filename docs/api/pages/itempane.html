@@ -106,53 +106,107 @@
 </li>
 </ul>
 </section>
-<h2><span data-zh="函数说明" data-en="Function details">函数说明</span></h2>
+<section id="type-index">
+<h3><span data-zh="结构体与枚举" data-en="Structs and enums">结构体与枚举</span></h3>
+<ul>
+<li data-search="ItemPane">
+<a href="#ItemPane">
+<code>ItemPane</code>
+</a>
+</li>
+<li data-search="ItemPane::Type">
+<a href="#ItemPane-Type-0">
+<code>ItemPane::Type</code>
+</a>
+</li>
+</ul>
+</section>
+<h2><span data-zh="接口与类型说明" data-en="API and type details">接口与类型说明</span></h2>
 <p class="muted"><span data-zh="按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。" data-en="Read each function for its purpose and related settings. Overloads are listed separately; follow related capabilities to find examples.">按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。</span></p>
 <section>
 <h3 id="ItemPane">ItemPane</h3>
 <pre>struct ItemPane</pre>
+<article data-search="ItemPane">
+<p class="doc" data-zh="纵向行 pane 的布局结果。首尾行号为包含边界的布局序号；具体视图是否支持冻结行需查其能力约束。" data-en="Vertical row-pane layout result. Row indexes are inclusive layout indexes; consult view capabilities for frozen-row support.">纵向行 pane 的布局结果。首尾行号为包含边界的布局序号；具体视图是否支持冻结行需查其能力约束。</p>
+<div class="table-scroll">
+<table class="type-members">
+<thead>
+<tr>
+<th><span data-zh="成员 / 取值" data-en="Member / value">成员 / 取值</span></th>
+<th><span data-zh="说明" data-en="Guide">说明</span></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>Type type = Type::Scrollable;</code>
+</td>
+<td class="doc" data-zh="pane 类型，默认 Type::Scrollable。" data-en="Pane type; defaults to Type::Scrollable.">pane 类型，默认 Type::Scrollable。</td>
+</tr>
+<tr>
+<td>
+<code>QRect viewportRect;</code>
+</td>
+<td class="doc" data-zh="viewport 中的 pane 范围，初始为空。" data-en="Pane bounds in viewport coordinates; initially empty.">viewport 中的 pane 范围，初始为空。</td>
+</tr>
+<tr>
+<td>
+<code>qsizetype firstRow = -1;</code>
+</td>
+<td class="doc" data-zh="首行布局序号，初始 -1。" data-en="First layout row; initially -1.">首行布局序号，初始 -1。</td>
+</tr>
+<tr>
+<td>
+<code>qsizetype lastRow = -1;</code>
+</td>
+<td class="doc" data-zh="末行布局序号，包含该行，初始 -1。" data-en="Last layout row, inclusive; initially -1.">末行布局序号，包含该行，初始 -1。</td>
+</tr>
+</tbody>
+</table>
+</div>
+<a href="#type-index" class="muted"><span data-zh="返回类型列表" data-en="Back to type index">返回类型列表</span></a>
+</article>
 <article tabindex="-1" id="ItemPane-Type-0" data-search="ItemPane Type">
 <span class="badge">public</span>
 <span class="muted">
 <a href="../../../include/virtualitemviews/itempane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L21</span>
-<pre>enum class Type
-    {
-        /// Pinned to the top edge: the first frozen rows.
-        FrozenTop,
-        /// Follows the vertical offset.
-        Scrollable,
-        /// Pinned to the bottom edge: the last frozen rows.
-        FrozenBottom,
-    };</pre>
-<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
-</article>
-<article tabindex="-1" id="ItemPane-type-1" data-search="ItemPane type">
-<span class="badge">public</span>
-<span class="muted">
-<a href="../../../include/virtualitemviews/itempane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L31</span>
-<pre>Type type = Type::Scrollable;</pre>
-<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
-</article>
-<article tabindex="-1" id="ItemPane-viewportRect-2" data-search="ItemPane viewportRect">
-<span class="badge">public</span>
-<span class="muted">
-<a href="../../../include/virtualitemviews/itempane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L34</span>
-<pre>QRect viewportRect;</pre>
-<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
-</article>
-<article tabindex="-1" id="ItemPane-firstRow-3" data-search="ItemPane firstRow">
-<span class="badge">public</span>
-<span class="muted">
-<a href="../../../include/virtualitemviews/itempane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L36</span>
-<pre>qsizetype firstRow = -1;</pre>
-<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
-</article>
-<article tabindex="-1" id="ItemPane-lastRow-4" data-search="ItemPane lastRow">
-<span class="badge">public</span>
-<span class="muted">
-<a href="../../../include/virtualitemviews/itempane.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L37</span>
-<pre>qsizetype lastRow = -1;</pre>
-<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+<pre>enum class Type {
+    FrozenTop,
+    Scrollable,
+    FrozenBottom,
+};</pre>
+<p class="doc" data-zh="纵向 pane 的位置和滚动方式。" data-en="Position and scrolling of a vertical pane.">纵向 pane 的位置和滚动方式。</p>
+<div class="table-scroll">
+<table class="type-members">
+<thead>
+<tr>
+<th><span data-zh="成员 / 取值" data-en="Member / value">成员 / 取值</span></th>
+<th><span data-zh="说明" data-en="Guide">说明</span></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>FrozenTop</code>
+</td>
+<td class="doc" data-zh="顶部冻结行。" data-en="Top frozen rows.">顶部冻结行。</td>
+</tr>
+<tr>
+<td>
+<code>Scrollable</code>
+</td>
+<td class="doc" data-zh="跟随纵向偏移，ItemPane 默认值。" data-en="Follow vertical offsets; the ItemPane default.">跟随纵向偏移，ItemPane 默认值。</td>
+</tr>
+<tr>
+<td>
+<code>FrozenBottom</code>
+</td>
+<td class="doc" data-zh="底部冻结行。" data-en="Bottom frozen rows.">底部冻结行。</td>
+</tr>
+</tbody>
+</table>
+</div>
+<a href="#type-index" class="muted"><span data-zh="返回类型列表" data-en="Back to type index">返回类型列表</span></a>
 </article>
 <article tabindex="-1" id="ItemPane-isEmpty-5" data-search="ItemPane isEmpty">
 <span class="badge">public</span>

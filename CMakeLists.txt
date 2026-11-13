@@ -25,7 +25,6 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
 option(VIRTUALITEMVIEWS_BUILD_SHARED "Build VirtualItemViews as a shared library" OFF)
 option(VIRTUALITEMVIEWS_BUILD_EXAMPLES "Build VirtualItemViews examples" OFF)
 option(VIRTUALITEMVIEWS_BUILD_TESTS "Build VirtualItemViews tests" OFF)
-option(VIRTUALITEMVIEWS_BUILD_BENCHMARKS "Build VirtualItemViews benchmarks" OFF)
 option(VIRTUALITEMVIEWS_BUILD_GUI_TESTS "Build tests that synthesize mouse/keyboard input" OFF)
 
 # ---------------------------------------------------------------------------
@@ -169,7 +168,7 @@ if(VIRTUALITEMVIEWS_BUILD_SHARED)
 else()
     # A static library must not be consumed with __declspec(dllimport): the
     # define travels with the exported target, so find_package() consumers and
-    # in-tree targets (tests, examples, benchmarks) agree with the library.
+    # in-tree targets (tests, examples) agree with the library.
     target_compile_definitions(VirtualItemViews PUBLIC VIRTUALITEMVIEWS_STATIC)
 endif()
 
@@ -196,10 +195,6 @@ endif()
 if(VIRTUALITEMVIEWS_BUILD_TESTS)
     enable_testing()
     add_subdirectory(tests)
-endif()
-
-if(VIRTUALITEMVIEWS_BUILD_BENCHMARKS)
-    add_subdirectory(benchmarks)
 endif()
 
 if(VIRTUALITEMVIEWS_BUILD_EXAMPLES)

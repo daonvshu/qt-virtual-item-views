@@ -100,8 +100,10 @@ def entries(source, start, end, access):
         if braces == 0 and parentheses == 0 and (clean.rstrip().endswith(';') or clean.rstrip().endswith('}')):
             raw = '\n'.join(code)
             sig = signature(raw)
-            # Nested type bodies are intentionally retained in the owning API entry.
-            names = re.findall(r'\b(~?[A-Za-z_]\w*)\s*\(', mask(sig))
+            # Index nested types by name, not calls inside their bodies.
+            nested = re.match(r'\s*(?:enum(?:\s+class)?|struct|class)\s+(\w+)', mask(sig))
+            names = ([nested.group(1)] if nested else
+                     re.findall(r'\b(~?[A-Za-z_]\w*)\s*\(', mask(sig)))
             symbols = [n for n in names if n not in {'Q_UNUSED', 'decltype', 'sizeof', 'alignof'}]
             if not symbols:
                 found = re.search(r'\b(?:enum class|enum|struct|class|using)\s+(\w+)', sig)
@@ -231,7 +233,7 @@ a{color:var(--accent);text-underline-offset:3px}h1{margin:6px 0;font-size:30px;l
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}.card,article,details{background:white;border:1px solid var(--line);border-radius:10px;padding:18px;margin:14px 0;overflow-wrap:anywhere}.grid .card{margin:0}
 .card p,article p{margin:9px 0}.muted{color:var(--muted);font-size:14px}.rules{border-left:4px solid #3485cf;padding-left:14px}
 pre{background:#f0f4f8;padding:14px;border-radius:6px;overflow:auto;font-size:13px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere}code{font-family:Consolas,monospace;font-size:.92em}p code,li code{background:#edf3fa;padding:1px 4px}
-input{width:100%;padding:12px;border:1px solid #7b93ac;border-radius:6px;font:inherit}label{font-weight:600}summary{cursor:pointer;font-weight:600}.doc{white-space:pre-wrap}.badge{display:inline-block;font-size:12px;background:#e7f0fa;color:#244e7c;border-radius:5px;padding:2px 7px;margin-right:6px}
+input{width:100%;padding:12px;border:1px solid #7b93ac;border-radius:6px;font:inherit}label{font-weight:600}summary{cursor:pointer;font-weight:600}.doc{white-space:pre-wrap}.api-example{border-top:1px solid var(--line);margin-top:16px;padding-top:8px}.api-example h4{margin:8px 0}.defaults{border-left:3px solid #3485cf;padding:8px 12px;background:#f0f4f8}.badge{display:inline-block;font-size:12px;background:#e7f0fa;color:#244e7c;border-radius:5px;padding:2px 7px;margin-right:6px}
 table{width:100%;border-collapse:collapse;background:white}td,th{text-align:left;vertical-align:top;border:1px solid var(--line);padding:10px}th{background:#eaf0f8}.table-scroll{overflow:auto}[hidden]{display:none!important}:focus-visible{outline:3px solid #edaa23;outline-offset:3px}
 .header-top{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
 .language-switch{display:flex;gap:4px;padding:4px;background:#203d5d;border-radius:8px}
@@ -422,6 +424,131 @@ def function_index(header):
     return ''.join(parts)
 
 
+
+def type_references(header):
+    """Locate public structs/enums and their documented fields or enumerators."""
+    refs = []
+    for typ in header['types']:
+        if typ['kind'] == 'struct':
+            fields = [e for e in typ['entries'] if not is_function(e)
+                      and not re.match(r'\s*(?:enum|struct|class|using)\b', mask(e['signature']))]
+            refs.append(dict(name=typ['name'], kind='struct', target=typ,
+                             members=data_members(fields), anchor=typ['name']))
+        for number, entry in enumerate(typ['entries']):
+            clean = mask(entry['signature'])
+            match = re.match(r'\s*(enum(?:\s+class)?|struct)\s+(\w+)[^{]*\{', clean)
+            if not match:
+                continue
+            kind, name = match.groups()
+            qualified = name if typ['kind'].startswith('enum') else typ['name'] + '::' + name
+            opening = clean.index('{')
+            closing = matching_brace(clean, opening)
+            if kind.startswith('enum'):
+                members = []
+                for value in clean[opening + 1:closing].split(','):
+                    value = value.strip()
+                    if value:
+                        symbol = re.match(r'(\w+)\b', value).group(1)
+                        members.append(dict(name=symbol, declaration=value))
+            else:
+                nested_entries = entries(entry['signature'], opening + 1, closing, 'public')
+                members = data_members(nested_entries)
+            refs.append(dict(name=qualified, kind=kind, target=entry,
+                             members=members, anchor=api_anchor(typ, entry, number)))
+    return refs
+
+
+def data_members(declarations):
+    """Describe field identities and nested helper signatures without function bodies."""
+    members = []
+    for entry in declarations:
+        declaration = entry['signature'].strip()
+        if is_function(entry):
+            name = entry['symbols'][0]
+        else:
+            match = re.search(r'(\w+)\s*(?:=[\s\S]*)?;$', mask(declaration))
+            if not match:
+                raise ValueError('Unparsed type member: ' + declaration)
+            name = match.group(1)
+        members.append(dict(name=name, declaration=declaration))
+    return members
+
+
+def load_type_docs(headers, path=None):
+    """Require authored bilingual explanations for every public struct/enum member."""
+    path = path or OUT / 'data' / 'type-docs.json'
+    source = json.loads(path.read_text(encoding='utf-8'))
+    if source.get('schema') != 1:
+        raise ValueError('Unsupported type documentation schema')
+    records = {}
+    for record in source['types']:
+        key = (record['header'], record['name'])
+        if key in records:
+            raise ValueError('Duplicate type documentation: ' + str(key))
+        members = record.get('members')
+        if not isinstance(members, list) or any(not isinstance(m, dict) for m in members):
+            raise ValueError('Invalid type members: ' + str(key))
+        for pair in [record] + members:
+            if any(not isinstance(pair.get(lang), str) or not pair[lang].strip()
+                   for lang in ('zh', 'en')):
+                raise ValueError('Missing bilingual type explanation: ' + str(key))
+        names = [member.get('name') for member in members]
+        if any(not isinstance(n, str) or not n for n in names) or len(set(names)) != len(names):
+            raise ValueError('Invalid or duplicate type member: ' + str(key))
+        records[key] = record
+    expected = set()
+    for header in headers:
+        for ref in type_references(header):
+            key = (header['header'], ref['name'])
+            expected.add(key)
+            if key not in records:
+                raise ValueError('Missing type documentation: ' + str(key))
+            record = records[key]
+            authored = {m['name']: m for m in record['members']}
+            if set(authored) != {m['name'] for m in ref['members']}:
+                raise ValueError('Update documented type members: ' + str(key))
+            ref['target']['documentation'] = dict(
+                zh=record['zh'], en=record['en'],
+                members=[dict(m, zh=authored[m['name']]['zh'], en=authored[m['name']]['en'])
+                         for m in ref['members']])
+    if records.keys() - expected:
+        raise ValueError('Obsolete type documentation: ' + repr(sorted(records.keys() - expected)))
+
+
+def type_index(header):
+    """Provide direct links to struct and enum descriptions, separate from functions."""
+    refs = type_references(header)
+    if not refs:
+        return ''
+    return ('<section id="type-index"><h3>结构体与枚举</h3><ul>'
+            + ''.join('<li data-search="' + esc(r['name']) + '"><a href="#' + esc(r['anchor']) + '"><code>' + esc(r['name'])
+                      + '</code></a></li>' for r in refs) + '</ul></section>')
+
+
+def type_description(doc):
+    """Render maintained type summaries and member semantics in both languages."""
+    body = ('<p class="doc" data-zh="' + esc(doc['zh']) + '" data-en="'
+            + esc(doc['en']) + '">' + esc(doc['zh']) + '</p>')
+    body += '<div class="table-scroll"><table class="type-members"><thead><tr><th>成员 / 取值</th><th>说明</th></tr></thead><tbody>'
+    for member in doc['members']:
+        body += ('<tr><td><code>' + esc(member['declaration']) + '</code></td><td class="doc" data-zh="'
+                 + esc(member['zh']) + '" data-en="' + esc(member['en']) + '">'
+                 + esc(member['zh']) + '</td></tr>')
+    return body + '</tbody></table></div><a href="#type-index" class="muted">返回类型列表</a>'
+
+
+def type_signature(entry):
+    """Show compact type declarations without embedded implementation bodies."""
+    clean = mask(entry['signature'])
+    opening = clean.index('{')
+    closing = matching_brace(clean, opening)
+    head = entry['signature'][:opening].strip()
+    if clean.lstrip().startswith('struct'):
+        declarations = entries(entry['signature'], opening + 1, closing, 'public')
+        return head + ' {\n' + '\n'.join('    ' + e['signature'].strip() for e in declarations) + '\n};'
+    return head + ' {\n' + '\n'.join('    ' + v.strip() + ',' for v in clean[opening + 1:closing].split(',') if v.strip()) + '\n};'
+
+
 def function_key(header, type_name, signature):
     """Identify overloads without depending on source lines or source comments."""
     return (header, type_name, re.sub(r'\s+', ' ', signature).strip())
@@ -439,13 +566,35 @@ def load_function_docs(headers, features, path=None):
         key = function_key(record['header'], record['type'], record['signature'])
         if key in records:
             raise ValueError('Duplicate function documentation: ' + str(key))
-        for pair in [record] + record.get('notes', []):
+        defaults = record.get('defaults')
+        if re.search(r'\bset[A-Z]\w*\s*\(', record['signature']) and defaults is None:
+            raise ValueError('Missing setter defaults: ' + str(key))
+        if defaults is not None and not isinstance(defaults, dict):
+            raise ValueError('Invalid function defaults: ' + str(key))
+        pairs = [record] + record.get('notes', [])
+        if defaults is not None:
+            pairs.append(defaults)
+        examples = record.get('examples', [])
+        if not isinstance(examples, list):
+            raise ValueError('Invalid function examples: ' + str(key))
+        for example in examples:
+            if not isinstance(example, dict):
+                raise ValueError('Invalid function example: ' + str(key))
+            if not isinstance(example.get('code'), str) or not example['code'].strip():
+                raise ValueError('Missing example code: ' + str(key))
+            source_path = example.get('source')
+            if (not isinstance(source_path, str) or not source_path.startswith('examples/')
+                    or '\\' in source_path or '..' in source_path.split('/')
+                    or not (ROOT / source_path).is_file()):
+                raise ValueError('Invalid example source: ' + str(key))
+            pairs.append(example)
+        for pair in pairs:
             if any(not isinstance(pair.get(lang), str) or not pair[lang].strip()
                    for lang in ('zh', 'en')):
                 raise ValueError('Missing bilingual function explanation: ' + str(key))
         if set(record.get('related', [])) - feature_ids:
             raise ValueError('Unknown related capability: ' + str(key))
-        records[key] = {field: record[field] for field in ('zh', 'en', 'notes', 'related') if field in record}
+        records[key] = {field: record[field] for field in ('zh', 'en', 'notes', 'related', 'defaults', 'examples') if field in record}
     expected = set()
     for header in headers:
         for typ in header['types']:
@@ -467,9 +616,22 @@ def function_description(entry, stem, features):
     """Render maintained locale pairs, never falling back to header comments."""
     doc = entry['documentation']
     body = ''
-    for pair in [doc] + doc.get('notes', []):
-        body += ('<p class="doc" data-zh="' + esc(pair['zh']) + '" data-en="'
+    pairs = [(doc, 'doc')]
+    if 'defaults' in doc:
+        defaults = doc['defaults']
+        pairs.append(({'zh': '默认值／初始状态：' + defaults['zh'],
+                       'en': 'Default / initial state: ' + defaults['en']}, 'doc defaults'))
+    pairs.extend((note, 'doc') for note in doc.get('notes', []))
+    for pair, css_class in pairs:
+        body += ('<p class="' + css_class + '" data-zh="' + esc(pair['zh']) + '" data-en="'
                  + esc(pair['en']) + '">' + esc(pair['zh']) + '</p>')
+    for example in doc.get('examples', []):
+        body += ('<section class="api-example"><h4>组合用法</h4>'
+                 '<p class="doc" data-zh="' + esc(example['zh']) + '" data-en="'
+                 + esc(example['en']) + '">' + esc(example['zh']) + '</p>'
+                 '<pre><code class="language-cpp">' + esc(example['code']) + '</code></pre>')
+        source_link = link(example['source'], '完整示例源码')
+        body += '<p class="muted">' + source_link + '</p></section>'
     related = {feature['id']: feature for feature in features}
     if doc.get('related'):
         body += '<p class="muted">配套能力：'
@@ -503,18 +665,27 @@ def page(header, features, all_examples):
         chapter_list = [e for e in all_examples if e['group'] == info[3] + '_capabilities']
         body += '<details><summary>此视图全部能力章节（' + str(len(chapter_list)) + '）</summary><ul>'
         body += ''.join('<li>' + link(e['path'], e['title']) + ' · ' + link(e['readme'], '说明') + '</li>' for e in chapter_list) + '</ul></details>'
-    body += '<h2 id="public-api" tabindex="-1">公开 API、类型与信号</h2>' + function_index(header) + '<h2>函数说明</h2><p class="muted">按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。</p>'
+    body += '<h2 id="public-api" tabindex="-1">公开 API、类型与信号</h2>' + function_index(header) + type_index(header) + '<h2>接口与类型说明</h2><p class="muted">按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。</p>'
     for typ in header['types']:
         body += '<section><h3 id="' + esc(typ['name'].replace(' ', '-')) + '">' + esc(typ['name']) + '</h3>'
         body += '<pre>' + esc(typ['declaration']) + '</pre>'
+        if typ['kind'] == 'struct':
+            body += '<article data-search="' + esc(typ['name']) + '">' + type_description(typ['documentation']) + '</article>'
         for number, entry in enumerate(typ['entries']):
+            if typ['kind'] == 'struct' and not is_function(entry) and 'documentation' not in entry:
+                continue
             anchor = api_anchor(typ, entry, number)
             body += '<article tabindex="-1" id="' + esc(anchor) + '" data-search="' + esc(typ['name'] + ' ' + ' '.join(entry['symbols'])) + '">'
             body += '<span class="badge">' + esc(entry['access']) + '</span><span class="muted">' + link(header['header'], '头文件') + ' · L' + str(entry['line']) + '</span>'
-            body += '<pre>' + esc(entry['signature']) + '</pre>'
-            if is_function(entry):
+            is_type = 'members' in entry.get('documentation', {})
+            body += '<pre>' + esc(type_signature(entry) if is_type else entry['signature']) + '</pre>'
+            if is_type:
+                body += type_description(entry['documentation'])
+            elif is_function(entry):
                 body += function_description(entry, stem, features)
-            body += '<a href="#function-index" class="muted">返回函数列表</a></article>'
+            if not is_type:
+                body += '<a href="#function-index" class="muted">返回函数列表</a>'
+            body += '</article>'
         body += '</section>'
     return shell(title, body, info[1] if info else '公开辅助接口与扩展契约')
 
@@ -557,7 +728,7 @@ def agent_guide(headers, features, chapters):
              '4. Before custom hover/selection paint, timer animation, editor stacks, popup cancellation filters, wheel forwarding, pooling, frozen clones, manual height or column geometry: check the routes below.',
              '5. Reuse a public setter/adapter first. Use custom drawing/layout only for behavior not covered by the public configuration or adapter callbacks.',
              '6. Apply the documented layout and lifecycle constraints. Implementation links help clarify behavior; do not call private *_p.h helpers from application code.',
-             '7. Query `docs/api/data/public-api.json` by header/type: entries provide signature, symbols, access, line and documentation (zh/en, notes, related capabilities). Read only the types relevant to the requirement.',
+             '7. Query `docs/api/data/public-api.json` by header/type: entries provide signature, symbols, access, line and documentation (zh/en, defaults, examples, related capabilities). Struct documentation is on the type; nested structs/enums carry documentation on their entry. documentation.members explains each field/enumerator. Read only the types relevant to the requirement.',
              '8. Offline reference: `docs/api/index.html`, with Chinese/English switching, keyword search and per-overload function links.', '',
              '## View matrix']
     for stem, info in VIEWS.items():
@@ -688,6 +859,7 @@ def generate():
     headers = [extract(p) for p in sorted((ROOT / 'include' / 'virtualitemviews').glob('*.h'))]
     features, chapters = resolved_features(), examples()
     load_function_docs(headers, features)
+    load_type_docs(headers)
     known = {Path(h['header']).stem for h in headers}
     for item in features:
         if set(item['headers']) - known:

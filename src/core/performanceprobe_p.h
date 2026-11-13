@@ -42,7 +42,12 @@ public:
     // Keep disabled callback probes out of scope construction entirely.
     static bool mayRecord(const QObject *owner)
     {
+#if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
         return owner && s_enabledViews.loadRelaxed() != 0;
+#else
+        // Before Qt 5.14, load() provides the same relaxed atomic read.
+        return owner && s_enabledViews.load() != 0;
+#endif
     }
     static bool mayRecord(const VirtualItemView *view)
     {

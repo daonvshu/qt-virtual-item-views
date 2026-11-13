@@ -24,10 +24,8 @@ namespace viv {
 ///  - expand()/collapse() splice the flat visible list and traverse the model
 ///    only for the expanded subtree; the whole tree is never re-flattened. The
 ///    splice moves the rows below the anchor once (memmove - QModelIndex is a value
-///    type) and only writes the new sub-tree, so what is left is the tail move of a
-///    flat vector: ~1.5 ms per splice on a million visible rows. Removing even that
-///    needs a rope/block structure, which changes this class' member layout - an ABI
-///    break, so it belongs to the next major version (docs/history/roadmap.md 决策表),
+///    type) and only writes the new sub-tree. Moving the tail remains linear in
+///    the number of subsequent visible rows,
 ///  - indexAtVisibleRow() is O(1),
 ///  - visibleRowForIndex()/isVisible() are O(depth x log(siblings)): the row of an
 ///    item is the sum, over its ancestors, of "1 + the visible sub-tree sizes of
@@ -35,10 +33,9 @@ namespace viv {
 ///    parent (see BranchBlock), so a wide parent costs 4 bytes per child and
 ///    nothing is rebuilt when the expansion state changes,
 ///  - no per-row lookup table at all: a table keyed by the model index *value*
-///    would have to be rebuilt on every expand/collapse (that is the O(visible
-///    rows) cost the benchmark used to show), and keying by
-///    QPersistentModelIndex would register a million persistent indexes with the
-///    model instead,
+///    would have to be rebuilt on every expand/collapse (O(visible rows)); using
+///    QPersistentModelIndex keys would instead register one persistent index per
+///    visible row with the model,
 ///  - a structural change rebuilds the visible list (O(visible rows)), an
 ///    expand()/collapse() only walks its own sub-tree and pokes the ancestors on
 ///    the path - the model is never walked for a collapsed sub-tree,

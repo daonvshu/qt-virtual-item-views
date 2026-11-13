@@ -241,7 +241,7 @@
 </li>
 </ul>
 </section>
-<h2><span data-zh="函数说明" data-en="Function details">函数说明</span></h2>
+<h2><span data-zh="接口与类型说明" data-en="API and type details">接口与类型说明</span></h2>
 <p class="muted"><span data-zh="按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。" data-en="Read each function for its purpose and related settings. Overloads are listed separately; follow related capabilities to find examples.">按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。</span></p>
 <section>
 <h3 id="ListLayout">ListLayout</h3>
@@ -278,6 +278,7 @@
 <a href="../../../include/virtualitemviews/listlayout.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L23</span>
 <pre>    Qt::Orientation orientation() const override;</pre>
 <p class="doc" data-zh="返回主轴或表头方向。" data-en="Return the main-axis or header orientation.">返回主轴或表头方向。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：构造参数，省略时 Qt::Vertical。" data-en="Default / initial state: Constructor argument; Qt::Vertical when omitted.">默认值／初始状态：构造参数，省略时 Qt::Vertical。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="ListLayout-setOrientation-4" data-search="ListLayout setOrientation">
@@ -286,6 +287,7 @@
 <a href="../../../include/virtualitemviews/listlayout.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L24</span>
 <pre>void setOrientation(Qt::Orientation orientation);</pre>
 <p class="doc" data-zh="设置主轴或表头方向。" data-en="Set the main-axis or header orientation.">设置主轴或表头方向。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：构造参数，省略时 Qt::Vertical。" data-en="Default / initial state: Constructor argument; Qt::Vertical when omitted.">默认值／初始状态：构造参数，省略时 Qt::Vertical。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="ListLayout-sizeIndex-5" data-search="ListLayout sizeIndex">
@@ -294,6 +296,7 @@
 <a href="../../../include/virtualitemviews/listlayout.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L26</span>
 <pre>    SizeIndex *sizeIndex() const override;</pre>
 <p class="doc" data-zh="返回项目尺寸及前缀偏移索引。" data-en="Return the index of item sizes and prefix offsets.">返回项目尺寸及前缀偏移索引。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：默认创建并拥有空 FixedSizeIndex；传入索引的构造重载使用所传对象。takeOwnership 参数默认 true。" data-en="Default / initial state: Creates and owns an empty FixedSizeIndex by default; the index-taking constructor uses the supplied object. takeOwnership defaults to true.">默认值／初始状态：默认创建并拥有空 FixedSizeIndex；传入索引的构造重载使用所传对象。takeOwnership 参数默认 true。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="ListLayout-setSizeIndex-6" data-search="ListLayout setSizeIndex">
@@ -302,6 +305,7 @@
 <a href="../../../include/virtualitemviews/listlayout.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L28</span>
 <pre>void setSizeIndex(SizeIndex *sizeIndex, bool takeOwnership = true) override;</pre>
 <p class="doc" data-zh="设置项目尺寸及前缀偏移索引。" data-en="Set the index of item sizes and prefix offsets.">设置项目尺寸及前缀偏移索引。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：默认创建并拥有空 FixedSizeIndex；传入索引的构造重载使用所传对象。takeOwnership 参数默认 true。" data-en="Default / initial state: Creates and owns an empty FixedSizeIndex by default; the index-taking constructor uses the supplied object. takeOwnership defaults to true.">默认值／初始状态：默认创建并拥有空 FixedSizeIndex；传入索引的构造重载使用所传对象。takeOwnership 参数默认 true。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="ListLayout-itemCount-7" data-search="ListLayout itemCount">
@@ -374,6 +378,7 @@
 <a href="../../../include/virtualitemviews/listlayout.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L43</span>
 <pre>    int crossExtent() const override;</pre>
 <p class="doc" data-zh="返回布局交叉轴长度。" data-en="Return the layout cross-axis extent.">返回布局交叉轴长度。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：0" data-en="Default / initial state: 0">默认值／初始状态：0</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="ListLayout-setCrossExtent-16" data-search="ListLayout setCrossExtent">
@@ -382,6 +387,7 @@
 <a href="../../../include/virtualitemviews/listlayout.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L44</span>
 <pre>void setCrossExtent(int extent) override;</pre>
 <p class="doc" data-zh="设置布局交叉轴长度。" data-en="Set the layout cross-axis extent.">设置布局交叉轴长度。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：0" data-en="Default / initial state: 0">默认值／初始状态：0</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="ListLayout-itemRect-17" data-search="ListLayout itemRect">
@@ -446,6 +452,7 @@
 <a href="../../../include/virtualitemviews/listlayout.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L55</span>
 <pre>void setItemSize(qsizetype item, int size) override;</pre>
 <p class="doc" data-zh="设置项目布局主轴尺寸。" data-en="Set the item main-axis size.">设置项目布局主轴尺寸。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：空布局没有项目；各项初始尺寸来自构造传入的索引或 resetItems(count, estimate)。" data-en="Default / initial state: An empty layout has no items; initial sizes come from the constructor-supplied index or resetItems(count, estimate).">默认值／初始状态：空布局没有项目；各项初始尺寸来自构造传入的索引或 resetItems(count, estimate)。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="ListLayout-setItemSpacing-25" data-search="ListLayout setItemSpacing">
@@ -454,6 +461,7 @@
 <a href="../../../include/virtualitemviews/listlayout.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L58</span>
 <pre>void setItemSpacing(int pixels);</pre>
 <p class="doc" data-zh="设置项目间距。" data-en="Set the spacing between items.">设置项目间距。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：0" data-en="Default / initial state: 0">默认值／初始状态：0</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="ListLayout-itemSpacing-26" data-search="ListLayout itemSpacing">
@@ -462,6 +470,7 @@
 <a href="../../../include/virtualitemviews/listlayout.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L59</span>
 <pre>    int itemSpacing() const;</pre>
 <p class="doc" data-zh="返回项目间距。" data-en="Return the spacing between items.">返回项目间距。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：0" data-en="Default / initial state: 0">默认值／初始状态：0</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="ListLayout-setSpacingAfter-27" data-search="ListLayout setSpacingAfter">
@@ -470,6 +479,7 @@
 <a href="../../../include/virtualitemviews/listlayout.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L60</span>
 <pre>void setSpacingAfter(qsizetype item, int pixels);</pre>
 <p class="doc" data-zh="设置指定项目后间距。" data-en="Set the spacing after the specified item.">设置指定项目后间距。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：无逐项覆盖，跟随 itemSpacing()，初始为 0。" data-en="Default / initial state: No per-item overrides; follows itemSpacing(), initially 0.">默认值／初始状态：无逐项覆盖，跟随 itemSpacing()，初始为 0。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="ListLayout-spacingAfter-28" data-search="ListLayout spacingAfter">
@@ -486,6 +496,7 @@
 <a href="../../../include/virtualitemviews/listlayout.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L64</span>
 <pre>void setEdgeSpacing(int leading, int trailing);</pre>
 <p class="doc" data-zh="设置布局首尾边距，常用于中心分割线模式的半间距。" data-en="Set leading and trailing layout spacing, typically half-gaps for centered grid lines.">设置布局首尾边距，常用于中心分割线模式的半间距。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：leading = 0, trailing = 0" data-en="Default / initial state: leading = 0, trailing = 0">默认值／初始状态：leading = 0, trailing = 0</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="ListLayout-leadingSpacing-30" data-search="ListLayout leadingSpacing">
@@ -510,6 +521,7 @@
 <a href="../../../include/virtualitemviews/listlayout.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L69</span>
 <pre>    int estimate() const;</pre>
 <p class="doc" data-zh="返回未测量项目估计高度。" data-en="Return the estimated height of unmeasured items.">返回未测量项目估计高度。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：0" data-en="Default / initial state: 0">默认值／初始状态：0</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="ListLayout-setEstimate-33" data-search="ListLayout setEstimate">
@@ -518,6 +530,7 @@
 <a href="../../../include/virtualitemviews/listlayout.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L70</span>
 <pre>void setEstimate(int estimate);</pre>
 <p class="doc" data-zh="设置未测量项目估计高度。" data-en="Set the estimated height of unmeasured items.">设置未测量项目估计高度。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：0" data-en="Default / initial state: 0">默认值／初始状态：0</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="ListLayout-viewportMargins-34" data-search="ListLayout viewportMargins">
@@ -526,6 +539,7 @@
 <a href="../../../include/virtualitemviews/listlayout.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L73</span>
 <pre>    QMargins viewportMargins() const;</pre>
 <p class="doc" data-zh="返回布局视口四周边距。" data-en="Return the layout viewport margins.">返回布局视口四周边距。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：QMargins(0, 0, 0, 0)" data-en="Default / initial state: QMargins(0, 0, 0, 0)">默认值／初始状态：QMargins(0, 0, 0, 0)</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="ListLayout-setViewportMargins-35" data-search="ListLayout setViewportMargins">
@@ -534,6 +548,7 @@
 <a href="../../../include/virtualitemviews/listlayout.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L74</span>
 <pre>void setViewportMargins(const QMargins &amp;margins);</pre>
 <p class="doc" data-zh="设置布局视口四周边距。" data-en="Set the layout viewport margins.">设置布局视口四周边距。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：QMargins(0, 0, 0, 0)" data-en="Default / initial state: QMargins(0, 0, 0, 0)">默认值／初始状态：QMargins(0, 0, 0, 0)</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 </section>

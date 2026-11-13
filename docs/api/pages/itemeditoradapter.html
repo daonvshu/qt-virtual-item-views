@@ -174,59 +174,83 @@
 </li>
 </ul>
 </section>
-<h2><span data-zh="函数说明" data-en="Function details">函数说明</span></h2>
+<section id="type-index">
+<h3><span data-zh="结构体与枚举" data-en="Structs and enums">结构体与枚举</span></h3>
+<ul>
+<li data-search="EditRequestContext">
+<a href="#EditRequestContext">
+<code>EditRequestContext</code>
+</a>
+</li>
+<li data-search="EditTrigger">
+<a href="#EditTrigger-EditTrigger-0">
+<code>EditTrigger</code>
+</a>
+</li>
+</ul>
+</section>
+<h2><span data-zh="接口与类型说明" data-en="API and type details">接口与类型说明</span></h2>
 <p class="muted"><span data-zh="按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。" data-en="Read each function for its purpose and related settings. Overloads are listed separately; follow related capabilities to find examples.">按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。</span></p>
 <section>
 <h3 id="EditRequestContext">EditRequestContext</h3>
 <pre>struct EditRequestContext</pre>
-<article tabindex="-1" id="EditRequestContext-binding-0" data-search="EditRequestContext binding">
-<span class="badge">public</span>
-<span class="muted">
-<a href="../../../include/virtualitemviews/itemeditoradapter.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L20</span>
-<pre>ItemBindingContext binding;</pre>
-<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
-</article>
-<article tabindex="-1" id="EditRequestContext-view-1" data-search="EditRequestContext view">
-<span class="badge">public</span>
-<span class="muted">
-<a href="../../../include/virtualitemviews/itemeditoradapter.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L21</span>
-<pre>VirtualItemView *view = nullptr;</pre>
-<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
-</article>
-<article tabindex="-1" id="EditRequestContext-viewport-2" data-search="EditRequestContext viewport">
-<span class="badge">public</span>
-<span class="muted">
-<a href="../../../include/virtualitemviews/itemeditoradapter.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L22</span>
-<pre>QWidget *viewport = nullptr;</pre>
-<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
-</article>
-<article tabindex="-1" id="EditRequestContext-viewportRect-3" data-search="EditRequestContext viewportRect">
-<span class="badge">public</span>
-<span class="muted">
-<a href="../../../include/virtualitemviews/itemeditoradapter.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L25</span>
-<pre>QRect viewportRect;</pre>
-<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
-</article>
-<article tabindex="-1" id="EditRequestContext-viewRect-4" data-search="EditRequestContext viewRect">
-<span class="badge">public</span>
-<span class="muted">
-<a href="../../../include/virtualitemviews/itemeditoradapter.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L26</span>
-<pre>QRect viewRect;</pre>
-<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
-</article>
-<article tabindex="-1" id="EditRequestContext-globalRect-5" data-search="EditRequestContext globalRect">
-<span class="badge">public</span>
-<span class="muted">
-<a href="../../../include/virtualitemviews/itemeditoradapter.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L27</span>
-<pre>QRect globalRect;</pre>
-<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
-</article>
-<article tabindex="-1" id="EditRequestContext-void-6" data-search="EditRequestContext void">
-<span class="badge">public</span>
-<span class="muted">
-<a href="../../../include/virtualitemviews/itemeditoradapter.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L30</span>
-<pre>std::function&lt;void()&gt; finish;</pre>
-<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+<article data-search="EditRequestContext">
+<p class="doc" data-zh="adapter 自行处理 Popup 编辑的定位与生命周期上下文。矩形是未按可见区域裁剪的完整项范围，单位为 Qt 逻辑像素；跨回调保留对象／索引使用 QPointer / QPersistentModelIndex。" data-en="Positioning and lifecycle context for adapter-owned Popup editing. Rectangles are full unclipped item bounds in Qt logical pixels. Retain objects/indexes across callbacks using QPointer / QPersistentModelIndex.">adapter 自行处理 Popup 编辑的定位与生命周期上下文。矩形是未按可见区域裁剪的完整项范围，单位为 Qt 逻辑像素；跨回调保留对象／索引使用 QPointer / QPersistentModelIndex。</p>
+<div class="table-scroll">
+<table class="type-members">
+<thead>
+<tr>
+<th><span data-zh="成员 / 取值" data-en="Member / value">成员 / 取值</span></th>
+<th><span data-zh="说明" data-en="Guide">说明</span></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>ItemBindingContext binding;</code>
+</td>
+<td class="doc" data-zh="本次编辑绑定上下文，默认空上下文。" data-en="Binding context for this edit; initially empty.">本次编辑绑定上下文，默认空上下文。</td>
+</tr>
+<tr>
+<td>
+<code>VirtualItemView *view = nullptr;</code>
+</td>
+<td class="doc" data-zh="发起编辑的视图，初始 nullptr，不转移所有权。" data-en="Requesting view; initially nullptr; no ownership transfer.">发起编辑的视图，初始 nullptr，不转移所有权。</td>
+</tr>
+<tr>
+<td>
+<code>QWidget *viewport = nullptr;</code>
+</td>
+<td class="doc" data-zh="视图 viewport，初始 nullptr，不转移所有权。" data-en="View viewport; initially nullptr; no ownership transfer.">视图 viewport，初始 nullptr，不转移所有权。</td>
+</tr>
+<tr>
+<td>
+<code>QRect viewportRect;</code>
+</td>
+<td class="doc" data-zh="viewport 坐标中的编辑范围，初始为空。" data-en="Editor bounds in viewport coordinates; initially empty.">viewport 坐标中的编辑范围，初始为空。</td>
+</tr>
+<tr>
+<td>
+<code>QRect viewRect;</code>
+</td>
+<td class="doc" data-zh="view 坐标中的编辑范围，初始为空。" data-en="Editor bounds in view coordinates; initially empty.">view 坐标中的编辑范围，初始为空。</td>
+</tr>
+<tr>
+<td>
+<code>QRect globalRect;</code>
+</td>
+<td class="doc" data-zh="全局屏幕坐标中的编辑范围，可用于定位 Popup，初始为空。" data-en="Editor bounds in global screen coordinates for Popup placement; initially empty.">全局屏幕坐标中的编辑范围，可用于定位 Popup，初始为空。</td>
+</tr>
+<tr>
+<td>
+<code>std::function&lt;void()&gt; finish;</code>
+</td>
+<td class="doc" data-zh="业务确认或取消后调用；可复制延迟调用，过期请求不影响新会话。不提交模型数据，默认未设置。" data-en="Call after business confirmation or dismissal. Safe to copy and call later; stale requests cannot end newer sessions. Does not commit data; initially unset.">业务确认或取消后调用；可复制延迟调用，过期请求不影响新会话。不提交模型数据，默认未设置。</td>
+</tr>
+</tbody>
+</table>
+</div>
+<a href="#type-index" class="muted"><span data-zh="返回类型列表" data-en="Back to type index">返回类型列表</span></a>
 </article>
 </section>
 <section>
@@ -240,9 +264,46 @@
     NoEditTriggers = 0,
     SingleClicked = 0x1,
     DoubleClicked = 0x2,
-    EditKeyPressed = 0x4
+    EditKeyPressed = 0x4,
 };</pre>
-<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+<p class="doc" data-zh="自动编辑手势标志，用 EditTriggers 按位或组合。显式 edit(index) 独立于标志，模型仍须允许编辑。" data-en="Automatic editing flags, combined through EditTriggers. Explicit edit(index) is independent; model permission still applies.">自动编辑手势标志，用 EditTriggers 按位或组合。显式 edit(index) 独立于标志，模型仍须允许编辑。</p>
+<div class="table-scroll">
+<table class="type-members">
+<thead>
+<tr>
+<th><span data-zh="成员 / 取值" data-en="Member / value">成员 / 取值</span></th>
+<th><span data-zh="说明" data-en="Guide">说明</span></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>NoEditTriggers = 0</code>
+</td>
+<td class="doc" data-zh="0：关闭自动手势，仍允许显式 edit()。" data-en="0: disable automatic gestures, retaining explicit edit().">0：关闭自动手势，仍允许显式 edit()。</td>
+</tr>
+<tr>
+<td>
+<code>SingleClicked = 0x1</code>
+</td>
+<td class="doc" data-zh="0x1：单击编辑。" data-en="0x1: single-click editing.">0x1：单击编辑。</td>
+</tr>
+<tr>
+<td>
+<code>DoubleClicked = 0x2</code>
+</td>
+<td class="doc" data-zh="0x2：双击编辑。" data-en="0x2: double-click editing.">0x2：双击编辑。</td>
+</tr>
+<tr>
+<td>
+<code>EditKeyPressed = 0x4</code>
+</td>
+<td class="doc" data-zh="0x4：编辑键 F2 触发。" data-en="0x4: editing via F2.">0x4：编辑键 F2 触发。</td>
+</tr>
+</tbody>
+</table>
+</div>
+<a href="#type-index" class="muted"><span data-zh="返回类型列表" data-en="Back to type index">返回类型列表</span></a>
 </article>
 </section>
 <section>
@@ -263,6 +324,24 @@
 <pre>virtual EditTriggers editTriggers(const QModelIndex &amp;index, EditTriggers defaults) const;</pre>
 <p class="doc" data-zh="按 index 覆盖视图默认编辑触发条件；默认返回 defaults。NoEditTriggers 只禁用自动手势，显式 edit(index) 仍可用。" data-en="Override view edit triggers for index; the default returns defaults. NoEditTriggers disables automatic gestures while explicit edit(index) remains available.">按 index 覆盖视图默认编辑触发条件；默认返回 defaults。NoEditTriggers 只禁用自动手势，显式 edit(index) 仍可用。</p>
 <p class="doc" data-zh="视图默认 DoubleClicked | EditKeyPressed（F2）。adapter 可按 index 覆盖；按钮或外部操作直接调用 view-&gt;edit(index)。模型需设置 ItemIsEditable 和 ItemIsEnabled。" data-en="The view defaults to DoubleClicked | EditKeyPressed (F2). Adapters can override per index. Buttons and external actions call view-&gt;edit(index). The model item must have ItemIsEditable and ItemIsEnabled.">视图默认 DoubleClicked | EditKeyPressed（F2）。adapter 可按 index 覆盖；按钮或外部操作直接调用 view-&gt;edit(index)。模型需设置 ItemIsEditable 和 ItemIsEnabled。</p>
+<section class="api-example">
+<h4><span data-zh="组合用法" data-en="Combination example">组合用法</span></h4>
+<p class="doc" data-zh="以下重载放在已有的行/单元格 adapter 类中：第 0 列单击编辑，第 1 列沿用视图设置，其余列只允许显式 edit(index)。模型编辑权限仍然有效。" data-en="Place this override inside an existing row/cell adapter: column 0 edits on a single click, column 1 inherits view settings, and other columns require explicit edit(index). Model editing permissions still apply.">以下重载放在已有的行/单元格 adapter 类中：第 0 列单击编辑，第 1 列沿用视图设置，其余列只允许显式 edit(index)。模型编辑权限仍然有效。</p>
+<pre>
+<code class="language-cpp">viv::EditTriggers editTriggers(const QModelIndex &amp;index,
+                              viv::EditTriggers defaults) const override
+{
+    if (index.column() == 0)
+        return viv::EditTrigger::SingleClicked | viv::EditTrigger::EditKeyPressed;
+    if (index.column() == 1)
+        return defaults;
+    return viv::EditTrigger::NoEditTriggers;
+}</code>
+</pre>
+<p class="muted">
+<a href="../../../examples/table_capabilities/33_editors/example.cpp"><span data-zh="完整示例源码" data-en="Full example source">完整示例源码</span></a>
+</p>
+</section>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#editor"><span data-zh="覆盖编辑器 / 单双击 / F2 / 按钮 / 自定义 role" data-en="Overlay editors / click triggers / F2 / buttons / custom roles">覆盖编辑器 / 单双击 / F2 / 按钮 / 自定义 role</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -290,6 +369,37 @@
 <a href="../../../include/virtualitemviews/itemeditoradapter.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L63</span>
 <pre>virtual QWidget *createEditor(QWidget *parent, const ItemBindingContext &amp;context);</pre>
 <p class="doc" data-zh="在给定裁剪宿主下创建覆盖编辑控件；返回 nullptr 表示不创建。组合编辑器应将焦点代理指向实际输入控件。" data-en="Create an overlay editor under the supplied clipping host; return nullptr to decline. Composite editors should set a focus proxy to the actual input.">在给定裁剪宿主下创建覆盖编辑控件；返回 nullptr 表示不创建。组合编辑器应将焦点代理指向实际输入控件。</p>
+<section class="api-example">
+<h4><span data-zh="组合用法" data-en="Combination example">组合用法</span></h4>
+<p class="doc" data-zh="以下三个方法放在用于整数项的现有 adapter 类内，需包含 QSpinBox 和 QAbstractItemModel。原值保存于 Qt::UserRole + 1；bindWidget()/bindCellWidget() 从同一 role 读取并格式化。若混用不同编辑器，应先按列或类型分支，再进行 static_cast。" data-en="Place these three methods inside an existing adapter for integer items; include QSpinBox and QAbstractItemModel. Raw values live in Qt::UserRole + 1; bindWidget()/bindCellWidget() reads that same role for display formatting. When mixing editor types, branch by column/type before static_cast.">以下三个方法放在用于整数项的现有 adapter 类内，需包含 QSpinBox 和 QAbstractItemModel。原值保存于 Qt::UserRole + 1；bindWidget()/bindCellWidget() 从同一 role 读取并格式化。若混用不同编辑器，应先按列或类型分支，再进行 static_cast。</p>
+<pre>
+<code class="language-cpp">QWidget *createEditor(QWidget *parent, const viv::ItemBindingContext &amp;) override
+{
+    auto *input = new QSpinBox(parent);
+    input-&gt;setRange(0, 1000000);
+    return input;
+}
+
+void setEditorData(QWidget *editor, const viv::ItemBindingContext &amp;context) override
+{
+    auto *input = static_cast&lt;QSpinBox *&gt;(editor);
+    input-&gt;setValue(context.index.data(Qt::UserRole + 1).toInt());
+}
+
+bool commitEditorData(QWidget *editor, QAbstractItemModel *model,
+                      const viv::ItemBindingContext &amp;context) override
+{
+    if (!model || !context.index.isValid())
+        return false;
+    auto *input = static_cast&lt;QSpinBox *&gt;(editor);
+    input-&gt;interpretText();
+    return model-&gt;setData(context.index, input-&gt;value(), Qt::UserRole + 1);
+}</code>
+</pre>
+<p class="muted">
+<a href="../../../examples/table_capabilities/33_editors/example.cpp"><span data-zh="完整示例源码" data-en="Full example source">完整示例源码</span></a>
+</p>
+</section>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#editor"><span data-zh="覆盖编辑器 / 单双击 / F2 / 按钮 / 自定义 role" data-en="Overlay editors / click triggers / F2 / buttons / custom roles">覆盖编辑器 / 单双击 / F2 / 按钮 / 自定义 role</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -299,6 +409,38 @@
 <a href="../../../include/virtualitemviews/itemeditoradapter.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L65</span>
 <pre>virtual void setEditorData(QWidget *editor, const ItemBindingContext &amp;context);</pre>
 <p class="doc" data-zh="将模型值载入编辑器。默认读取 EditRole 并写入 Qt USER 属性；自定义 role 时与 commitEditorData 成对重载。" data-en="Load model data into the editor. The default reads EditRole into the Qt USER property; override together with commitEditorData for a custom role.">将模型值载入编辑器。默认读取 EditRole 并写入 Qt USER 属性；自定义 role 时与 commitEditorData 成对重载。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：无固定初始文本；默认读取 context.index 的 Qt::EditRole，写入 editor 的 USER 属性。" data-en="Default / initial state: No fixed initial text; the default reads Qt::EditRole from context.index and writes it to the editor USER property.">默认值／初始状态：无固定初始文本；默认读取 context.index 的 Qt::EditRole，写入 editor 的 USER 属性。</p>
+<section class="api-example">
+<h4><span data-zh="组合用法" data-en="Combination example">组合用法</span></h4>
+<p class="doc" data-zh="以下三个方法放在用于整数项的现有 adapter 类内，需包含 QSpinBox 和 QAbstractItemModel。原值保存于 Qt::UserRole + 1；bindWidget()/bindCellWidget() 从同一 role 读取并格式化。若混用不同编辑器，应先按列或类型分支，再进行 static_cast。" data-en="Place these three methods inside an existing adapter for integer items; include QSpinBox and QAbstractItemModel. Raw values live in Qt::UserRole + 1; bindWidget()/bindCellWidget() reads that same role for display formatting. When mixing editor types, branch by column/type before static_cast.">以下三个方法放在用于整数项的现有 adapter 类内，需包含 QSpinBox 和 QAbstractItemModel。原值保存于 Qt::UserRole + 1；bindWidget()/bindCellWidget() 从同一 role 读取并格式化。若混用不同编辑器，应先按列或类型分支，再进行 static_cast。</p>
+<pre>
+<code class="language-cpp">QWidget *createEditor(QWidget *parent, const viv::ItemBindingContext &amp;) override
+{
+    auto *input = new QSpinBox(parent);
+    input-&gt;setRange(0, 1000000);
+    return input;
+}
+
+void setEditorData(QWidget *editor, const viv::ItemBindingContext &amp;context) override
+{
+    auto *input = static_cast&lt;QSpinBox *&gt;(editor);
+    input-&gt;setValue(context.index.data(Qt::UserRole + 1).toInt());
+}
+
+bool commitEditorData(QWidget *editor, QAbstractItemModel *model,
+                      const viv::ItemBindingContext &amp;context) override
+{
+    if (!model || !context.index.isValid())
+        return false;
+    auto *input = static_cast&lt;QSpinBox *&gt;(editor);
+    input-&gt;interpretText();
+    return model-&gt;setData(context.index, input-&gt;value(), Qt::UserRole + 1);
+}</code>
+</pre>
+<p class="muted">
+<a href="../../../examples/table_capabilities/33_editors/example.cpp"><span data-zh="完整示例源码" data-en="Full example source">完整示例源码</span></a>
+</p>
+</section>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#editor"><span data-zh="覆盖编辑器 / 单双击 / F2 / 按钮 / 自定义 role" data-en="Overlay editors / click triggers / F2 / buttons / custom roles">覆盖编辑器 / 单双击 / F2 / 按钮 / 自定义 role</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -319,6 +461,37 @@
 <pre>virtual bool commitEditorData(QWidget *editor, QAbstractItemModel *model,
                                   const ItemBindingContext &amp;context);</pre>
 <p class="doc" data-zh="把编辑器内容写回模型；默认 Qt USER 属性写入 EditRole。返回 false 保持编辑器打开，可用于校验失败。" data-en="Write editor data to the model; the default writes the Qt USER property to EditRole. Return false to keep editing, for example after validation failure.">把编辑器内容写回模型；默认 Qt USER 属性写入 EditRole。返回 false 保持编辑器打开，可用于校验失败。</p>
+<section class="api-example">
+<h4><span data-zh="组合用法" data-en="Combination example">组合用法</span></h4>
+<p class="doc" data-zh="以下三个方法放在用于整数项的现有 adapter 类内，需包含 QSpinBox 和 QAbstractItemModel。原值保存于 Qt::UserRole + 1；bindWidget()/bindCellWidget() 从同一 role 读取并格式化。若混用不同编辑器，应先按列或类型分支，再进行 static_cast。" data-en="Place these three methods inside an existing adapter for integer items; include QSpinBox and QAbstractItemModel. Raw values live in Qt::UserRole + 1; bindWidget()/bindCellWidget() reads that same role for display formatting. When mixing editor types, branch by column/type before static_cast.">以下三个方法放在用于整数项的现有 adapter 类内，需包含 QSpinBox 和 QAbstractItemModel。原值保存于 Qt::UserRole + 1；bindWidget()/bindCellWidget() 从同一 role 读取并格式化。若混用不同编辑器，应先按列或类型分支，再进行 static_cast。</p>
+<pre>
+<code class="language-cpp">QWidget *createEditor(QWidget *parent, const viv::ItemBindingContext &amp;) override
+{
+    auto *input = new QSpinBox(parent);
+    input-&gt;setRange(0, 1000000);
+    return input;
+}
+
+void setEditorData(QWidget *editor, const viv::ItemBindingContext &amp;context) override
+{
+    auto *input = static_cast&lt;QSpinBox *&gt;(editor);
+    input-&gt;setValue(context.index.data(Qt::UserRole + 1).toInt());
+}
+
+bool commitEditorData(QWidget *editor, QAbstractItemModel *model,
+                      const viv::ItemBindingContext &amp;context) override
+{
+    if (!model || !context.index.isValid())
+        return false;
+    auto *input = static_cast&lt;QSpinBox *&gt;(editor);
+    input-&gt;interpretText();
+    return model-&gt;setData(context.index, input-&gt;value(), Qt::UserRole + 1);
+}</code>
+</pre>
+<p class="muted">
+<a href="../../../examples/table_capabilities/33_editors/example.cpp"><span data-zh="完整示例源码" data-en="Full example source">完整示例源码</span></a>
+</p>
+</section>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#editor"><span data-zh="覆盖编辑器 / 单双击 / F2 / 按钮 / 自定义 role" data-en="Overlay editors / click triggers / F2 / buttons / custom roles">覆盖编辑器 / 单双击 / F2 / 按钮 / 自定义 role</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>

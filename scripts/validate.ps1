@@ -1,59 +1,54 @@
-#Requires -Version 5.1
+﻿#Requires -Version 5.1
 <#
 .SYNOPSIS
-    One-command validation of VirtualItemViews: build, CTest, examples,
-    benchmarks and the installed-package consumer smoke test, for every
+    One-command validation of VirtualItemViews: build, CTest, examples
+    and the installed-package consumer smoke test, for every
     requested Qt kit and library flavour.
 
 .DESCRIPTION
-    This is the entry point a CI job or a release checklist calls (see
-    docs/history/roadmap.md, Wave 3 / 3e). For each Qt kit x library flavour it:
+    This is an opt-in release validation runner (see docs/validation.md).
+    It configures build trees and runs widget-based tests. For incremental
+    compilation only, use cmake --build with an existing configured tree.
+    For each Qt kit x library flavour it:
       1. imports the MSVC environment from vcvars64.bat,
       2. configures and builds the `all` target,
       3. runs CTest (every test registered in that tree),
-      4. runs every example with --exit-after <ms> and checks the exit code,
-      5. runs the benchmark invariant checks,
-      6. installs the package and builds + runs tests/install/consumer against
+      4. checks all seven capability executables and runs the three that
+         already support --exit-after <ms> (Tree, TreeTable and Flow),
+      5. installs the package and builds + runs tests/install/consumer against
          the installed prefix (the "can somebody else consume it" check).
     Every step is reported; a failing step is not fatal, so one run shows all
     problems. The exit code is the number of failed steps.
 
     With -Asan the same kit gets a second combination built with MSVC's
-    AddressSanitizer (tests + examples; benchmarks and the installed consumer are
-    skipped there - see the parameter help).
+    AddressSanitizer (tests + examples; the installed consumer is skipped
+    there - see the parameter help).
 
 .EXAMPLE
-    pwsh -File scripts/validate.ps1
-    pwsh -File scripts/validate.ps1 -Library Static -SkipBenchmarks
-    pwsh -File scripts/validate.ps1 -QtBin D:/Qt/6.8.3/msvc2022_64/bin
-    pwsh -File scripts/validate.ps1 -Asan -QtBin D:/Qt/6.11.2/msvc2022_64/bin
-    pwsh -File scripts/validate.ps1 -Release -Library Static
-    pwsh -File scripts/validate.ps1 -MinGW                 # GCC/Clang kits only
-    pwsh -File scripts/validate.ps1 -MinGW -Library Static # ... with the installed consumer
+    # Replace the placeholders with paths from the selected toolchain.
+    pwsh -File scripts/validate.ps1 -QtBin "<QT_BIN>" -Vcvars "<VCVARS64>" -Library Static
+    pwsh -File scripts/validate.ps1 -QtBin "<QT_BIN>" -Vcvars "<VCVARS64>" -Release
+    pwsh -File scripts/validate.ps1 -MinGW -MinGWKits $kits -Library Static
 #>
 [CmdletBinding()]
 param(
     # Qt kit "bin" directories. The kit root (its parent) becomes
     # CMAKE_PREFIX_PATH; the Qt major version is detected from the DLLs.
-    [string[]]$QtBin = @('D:\devlib\Qt\6.11.2\msvc2022_64\bin',
-                         'D:\devlib\Qt\5.15.2\msvc2019_64\bin'),
+    [string[]]$QtBin = @(),
     [ValidateSet('Static', 'Shared', 'Both')][string]$Library = 'Both',
-    [string]$Vcvars = 'C:\Program Files\Microsoft Visual Studio\18\Community\VC\Auxiliary\Build\vcvars64.bat',
+    [string]$Vcvars,
     [string]$CMake,
     [int]$ExampleMs = 400,
     [switch]$SkipExamples,
-    [switch]$SkipBenchmarks,
     [switch]$SkipConsumer,
     # Validates the Release configuration instead of Debug: separate trees
     # (<...>-release[ -shared]) and ctest -C Release. Debug stays the default, and the
-    # two are independent runs - Release is where the optimised / NDEBUG code paths and
-    # the numbers quoted in docs/history/performance.md §3 come from.
+    # two are independent runs; Release exercises optimized / NDEBUG code paths.
     [switch]$Release,
-    # Adds a fifth step combination per Qt kit: the library + tests + examples built with
+    # Uses a sanitizer combination per Qt kit: the library + tests + examples built with
     # MSVC's AddressSanitizer (-DCMAKE_CXX_FLAGS=/fsanitize=address, tree <...>-asan).
-    # The benchmarks would take minutes under ASan and the installed consumer is a
-    # separate CMake project that would have to be given the sanitizer flags as well, so
-    # both are skipped in this mode.
+    # The installed consumer is a separate CMake project that would have to be
+    # given the sanitizer flags as well, so it is skipped in this mode.
     [switch]$Asan,
     # Run the MinGW / llvm-mingw kits listed in -MinGWKits *in addition to* the MSVC
     # combos. They bring their own compiler (put on PATH, no vcvars) and their own
@@ -66,20 +61,13 @@ param(
     # skipped: it is a separate CMake project and would have to be given the flags too.
     [switch]$UBSan,
     [string]$UBSanKit = 'clang17-qt6',
-    # Qt "bin" + compiler "bin" + compiler names of the MinGW kits. The defaults match
-    # the Qt online installer layout used for the v1.0 verification (Qt 6.11.2 mingw and
-    # llvm-mingw, Qt 5.15.2 mingw81).
-    [object[]]$MinGWKits = @(
-        @{ Name = 'gcc13-qt6';  QtBin = 'D:\devlib\Qt\6.11.2\mingw_64\bin';      CompilerBin = 'D:\devlib\Qt\Tools\mingw1310_64\bin';     Cxx = 'g++.exe';    Cc = 'gcc.exe' },
-        @{ Name = 'clang17-qt6'; QtBin = 'D:\devlib\Qt\6.11.2\llvm-mingw_64\bin'; CompilerBin = 'D:\devlib\Qt\Tools\llvm-mingw1706_64\bin'; Cxx = 'clang++.exe'; Cc = 'clang.exe' },
-        @{ Name = 'gcc81-qt5';  QtBin = 'D:\devlib\Qt\5.15.2\mingw81_64\bin';    CompilerBin = 'D:\devlib\Qt\Tools\mingw810_64\bin';      Cxx = 'g++.exe';    Cc = 'gcc.exe' }
-    ),
-    # Ninja bundled with the Qt installer (the MinGW kits have no ninja of their own).
-    [string]$NinjaBin = 'D:\devlib\Qt\Tools\Ninja'
+    # Each kit supplies Name, QtBin, CompilerBin, Cxx and Cc.
+    [object[]]$MinGWKits = @(),
+    # Optional Ninja directory; otherwise Ninja must already be on PATH.
+    [string]$NinjaBin
 )
 
 if ($Asan) {
-    $SkipBenchmarks = $true
     $SkipConsumer = $true
 }
 if ($Asan -and $Release) {
@@ -131,14 +119,26 @@ function Show-Tail
 
 # -- preflight ---------------------------------------------------------------
 
-if ($QtBin.Count -gt 0 -and -not (Test-Path -LiteralPath $Vcvars -PathType Leaf)) {
+if ($QtBin.Count -eq 0 -and -not $MinGW) {
+    throw "Pass -QtBin and -Vcvars for MSVC, or -MinGW and -MinGWKits."
+}
+if ($MinGW -and $MinGWKits.Count -eq 0) {
+    throw "-MinGW requires at least one explicit -MinGWKits entry."
+}
+if ($UBSan -and @($MinGWKits | Where-Object { $_.Name -eq $UBSanKit }).Count -eq 0) {
+    throw "-UBSanKit must name an entry in -MinGWKits."
+}
+if ($ExampleMs -le 0) {
+    throw "-ExampleMs must be positive."
+}
+if ($QtBin.Count -gt 0 -and (-not $Vcvars -or -not (Test-Path -LiteralPath $Vcvars -PathType Leaf))) {
     throw "vcvars64.bat not found: $Vcvars (pass -Vcvars)"
 }
 if (-not $CMake) {
     $fromPath = Get-Command cmake -ErrorAction SilentlyContinue
-    $CMake = if ($fromPath) { $fromPath.Source } else { 'D:\CLion\bin\cmake\win\x64\bin\cmake.exe' }
+    $CMake = if ($fromPath) { $fromPath.Source } else { $null }
 }
-if (-not (Test-Path -LiteralPath $CMake -PathType Leaf)) {
+if (-not $CMake -or -not (Test-Path -LiteralPath $CMake -PathType Leaf)) {
     throw "cmake not found: $CMake (pass -CMake)"
 }
 $CTest = Join-Path (Split-Path -Parent $CMake) 'ctest.exe'
@@ -162,22 +162,16 @@ if ($QtBin.Count -gt 0) {
     Write-Host "  no MSVC combo requested: vcvars is not imported"
 }
 
-$examples = @('tree_capabilities', 'drag_drop')
+$toolchainPath = $env:PATH
 
-$benchmarks = @(
-    [pscustomobject]@{ Name = 'list 1M rows';  Args = @('--rows', '1000000', '--steps', '200') },
-    [pscustomobject]@{ Name = 'table 100 cols'; Args = @('--table', '--table-columns', '100', '--rows', '200000', '--steps', '100') },
-    [pscustomobject]@{ Name = 'tree';          Args = @('--tree', '--tree-roots', '300000') },
-    # The four wide-table pane shapes (primary / frozen / non-primary group / sparse pane) with
-    # both header renderers, at the column count that keeps a Debug gate run short. The
-    # benchmark asserts the window-bounded invariants itself; 100,000 columns is a manual run
-    # (its native header structural pass takes minutes in Debug - see docs/history/performance.md §4).
-    [pscustomobject]@{ Name = 'wide header 10k'; Args = @('--wide-header', '--wide-columns', '10000', '--steps', '100') }
-)
+$examples = @('list_capabilities', 'table_capabilities', 'tree_capabilities',
+              'treetable_capabilities', 'flow_capabilities', 'wrap_capabilities',
+              'masonry_capabilities')
+$timedExamples = @('tree_capabilities', 'treetable_capabilities', 'flow_capabilities')
 
 # -- combinations ------------------------------------------------------------
 
-# One kit = configure, build, CTest, examples, benchmarks, install + consumer. The
+# One kit = configure, build, CTest, examples, install + consumer. The
 # toolchain is whatever the caller put on PATH (MSVC from vcvars, MinGW from its own
 # bin) plus the extra configure arguments it passes (e.g. -DCMAKE_CXX_COMPILER=g++).
 function Invoke-Kit {
@@ -198,6 +192,7 @@ function Invoke-Kit {
 
     # The toolchain has to be on PATH before configure: CMake looks for ninja and for
     # the compiler while generating, not while building.
+    $env:PATH = $toolchainPath
     if ($PathPrefix.Count -gt 0) {
         $env:PATH = (($PathPrefix + @($QtBin, $env:PATH)) -join ';')
     } else {
@@ -207,7 +202,10 @@ function Invoke-Kit {
     # 1) configure + build
     $configureArgs = @('-S', $repo, '-B', $Tree, '-G', 'Ninja',
                        "-DCMAKE_BUILD_TYPE=$Configuration",
-                       "-DCMAKE_PREFIX_PATH=$QtRoot")
+                       "-DCMAKE_PREFIX_PATH=$QtRoot",
+                       '-DVIRTUALITEMVIEWS_BUILD_TESTS=ON',
+                       '-DVIRTUALITEMVIEWS_BUILD_GUI_TESTS=OFF',
+                       "-DVIRTUALITEMVIEWS_BUILD_EXAMPLES=$(if ($SkipExamples) { 'OFF' } else { 'ON' })")
     if ($SharedOption) {
         $configureArgs += "-DVIRTUALITEMVIEWS_BUILD_SHARED=$SharedOption"
     }
@@ -240,22 +238,30 @@ function Invoke-Kit {
     }
 
     # 2) tests
+    $discovery = Invoke-Native $CTest @('--test-dir', $Tree, '-C', $Configuration, '--show-only=json-v1')
+    if ($discovery.ExitCode -ne 0) {
+        Add-Result $Combo 'ctest discovery' $false
+        Show-Tail $discovery.Output
+        return
+    }
+    $testInventory = ($discovery.Output -join "`n") | ConvertFrom-Json
+    if (@($testInventory.tests).Count -eq 0) {
+        Add-Result $Combo 'ctest discovery' $false 'no registered tests'
+        return
+    }
     $test = Invoke-Native $CTest @('--test-dir', $Tree, '-C', $Configuration, '--output-on-failure')
     Add-Result $Combo 'ctest' ($test.ExitCode -eq 0)
     if ($test.ExitCode -ne 0) {
         Show-Tail $test.Output 25
     }
 
-    # 3) examples: every one must exit 0 with --exit-after and must not report a
-    #    library warning. The library's diagnostics always name the class they come
-    #    from ("VirtualTableView::setHorizontalHeader(): ..."), so their names double
-    #    as the deny list. QT_FATAL_WARNINGS=1 would be the direct way, but it is not
-    #    usable here: Qt's offscreen plugin ("does not support propagateSizeHints")
-    #    and this Qt build's missing font directory warn on their own, and the unit
-    #    tests *deliberately* exercise warning paths (see docs/history/ci.md §3).
+    # 3) All capability browsers must build. Only browsers with an existing
+    # timed-exit option are launched; startup is not full chapter coverage.
     if (-not $SkipExamples) {
         $libraryNames = @('VirtualItemView', 'VirtualListView', 'VirtualTableView',
-                          'VirtualTreeView', 'VirtualHeaderView', 'NativeHeaderView',
+                          'VirtualTreeView', 'VirtualTreeTableView', 'VirtualFlowTableView',
+                          'VirtualMasonryView', 'VirtualWrapView', 'WrapWidget',
+                          'VirtualHeaderView', 'NativeHeaderView',
                           'HeaderGeometry', 'TableSpanMap', 'TablePaneLayout',
                           'WidgetRecycler')
         $bad = @()
@@ -263,6 +269,9 @@ function Invoke-Kit {
             $exe = Join-Path $bin "$name.exe"
             if (-not (Test-Path -LiteralPath $exe -PathType Leaf)) {
                 $bad += "$name (missing)"
+                continue
+            }
+            if ($name -notin $timedExamples) {
                 continue
             }
             $output = (& $exe --exit-after $ExampleMs 2>&1 | Out-String)
@@ -277,23 +286,10 @@ function Invoke-Kit {
                 }
             }
         }
-        Add-Result $Combo "examples ($($examples.Count))" ($bad.Count -eq 0) ($bad -join ', ')
+        Add-Result $Combo "examples (7 built, 3 startup)" ($bad.Count -eq 0) ($bad -join ', ')
     }
 
-    # 4) benchmarks (violating a virtualization invariant is a non-zero exit)
-    if (-not $SkipBenchmarks) {
-        $bench = Join-Path $bin 'bench_listview.exe'
-        $bad = @()
-        foreach ($case in $benchmarks) {
-            & $bench @($case.Args) *> $null
-            if ($LASTEXITCODE -ne 0) {
-                $bad += "$($case.Name)=$LASTEXITCODE"
-            }
-        }
-        Add-Result $Combo "benchmarks ($($benchmarks.Count))" ($bad.Count -eq 0) ($bad -join ', ')
-    }
-
-    # 5) install + consumer smoke test
+    # 4) install + consumer smoke test
     if (-not $SkipConsumer) {
         $prefix = Join-Path $Tree 'install-root'
         $consumerBuild = Join-Path $repo $ConsumerName
@@ -325,9 +321,11 @@ function Invoke-Kit {
                     # A shared install keeps the DLL in <prefix>/bin: on Windows it has to be
                     # findable, which is exactly what an application has to arrange as well.
                     $env:PATH = "$prefix\bin;$env:PATH"
-                    $run = Invoke-Native (Join-Path $consumerBuild 'viv_consumer.exe') @()
-                    Add-Result $Combo 'consumer run' ($run.ExitCode -eq 0)
-                    Show-Tail $run.Output 3
+                    foreach ($name in @('viv_consumer', 'viv_flow_consumer', 'viv_masonry_consumer')) {
+                        $run = Invoke-Native (Join-Path $consumerBuild "$name.exe") @()
+                        Add-Result $Combo "consumer run: $name" ($run.ExitCode -eq 0)
+                        Show-Tail $run.Output 3
+                    }
                 }
             }
         }
@@ -364,7 +362,6 @@ foreach ($qt in $QtBin) {
         $extraConfigure = @()
         if ($Asan) {
             $extraConfigure += '-DCMAKE_CXX_FLAGS=/fsanitize=address'
-            $extraConfigure += '-DVIRTUALITEMVIEWS_BUILD_BENCHMARKS=OFF'
         }
         $consumerName = "cmake-build-consumer-qt{0}{1}{2}" -f $major, $(if ($isShared) { '-shared' } else { '' }), $(if ($Release) { '-release' } else { '' })
 

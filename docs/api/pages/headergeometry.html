@@ -510,52 +510,82 @@
 </li>
 </ul>
 </section>
-<h2><span data-zh="函数说明" data-en="Function details">函数说明</span></h2>
+<section id="type-index">
+<h3><span data-zh="结构体与枚举" data-en="Structs and enums">结构体与枚举</span></h3>
+<ul>
+<li data-search="ColumnGeometry">
+<a href="#ColumnGeometry">
+<code>ColumnGeometry</code>
+</a>
+</li>
+<li data-search="HeaderGeometry::ResizeMode">
+<a href="#HeaderGeometry-ResizeMode-15">
+<code>HeaderGeometry::ResizeMode</code>
+</a>
+</li>
+<li data-search="HeaderGeometry::ResizeSnapshot">
+<a href="#HeaderGeometry-ResizeSnapshot-18">
+<code>HeaderGeometry::ResizeSnapshot</code>
+</a>
+</li>
+</ul>
+</section>
+<h2><span data-zh="接口与类型说明" data-en="API and type details">接口与类型说明</span></h2>
 <p class="muted"><span data-zh="按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。" data-en="Read each function for its purpose and related settings. Overloads are listed separately; follow related capabilities to find examples.">按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。</span></p>
 <section>
 <h3 id="ColumnGeometry">ColumnGeometry</h3>
 <pre>struct ColumnGeometry</pre>
-<article tabindex="-1" id="ColumnGeometry-logicalIndex-0" data-search="ColumnGeometry logicalIndex">
-<span class="badge">public</span>
-<span class="muted">
-<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L22</span>
-<pre>int logicalIndex = -1;</pre>
-<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
-</article>
-<article tabindex="-1" id="ColumnGeometry-visualIndex-1" data-search="ColumnGeometry visualIndex">
-<span class="badge">public</span>
-<span class="muted">
-<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L23</span>
-<pre>int visualIndex = -1;</pre>
-<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
-</article>
-<article tabindex="-1" id="ColumnGeometry-contentX-2" data-search="ColumnGeometry contentX">
-<span class="badge">public</span>
-<span class="muted">
-<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L25</span>
-<pre>qint64 contentX = 0;</pre>
-<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
-</article>
-<article tabindex="-1" id="ColumnGeometry-viewportX-3" data-search="ColumnGeometry viewportX">
-<span class="badge">public</span>
-<span class="muted">
-<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L27</span>
-<pre>int viewportX = 0;</pre>
-<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
-</article>
-<article tabindex="-1" id="ColumnGeometry-width-4" data-search="ColumnGeometry width">
-<span class="badge">public</span>
-<span class="muted">
-<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L29</span>
-<pre>int width = 0;</pre>
-<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
-</article>
-<article tabindex="-1" id="ColumnGeometry-hidden-5" data-search="ColumnGeometry hidden">
-<span class="badge">public</span>
-<span class="muted">
-<a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L30</span>
-<pre>bool hidden = false;</pre>
-<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+<article data-search="ColumnGeometry">
+<p class="doc" data-zh="HeaderGeometry 提供的列几何快照。逻辑序号标识模型列，视觉序号表示显示顺序；内容坐标和 viewport 坐标不可混用。" data-en="Column geometry from HeaderGeometry. Logical indexes identify model columns; visual indexes describe display order. Content and viewport coordinates are distinct.">HeaderGeometry 提供的列几何快照。逻辑序号标识模型列，视觉序号表示显示顺序；内容坐标和 viewport 坐标不可混用。</p>
+<div class="table-scroll">
+<table class="type-members">
+<thead>
+<tr>
+<th><span data-zh="成员 / 取值" data-en="Member / value">成员 / 取值</span></th>
+<th><span data-zh="说明" data-en="Guide">说明</span></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>int logicalIndex = -1;</code>
+</td>
+<td class="doc" data-zh="模型逻辑列号，初始 -1 表示无效。" data-en="Model column index; initially -1 (invalid).">模型逻辑列号，初始 -1 表示无效。</td>
+</tr>
+<tr>
+<td>
+<code>int visualIndex = -1;</code>
+</td>
+<td class="doc" data-zh="视觉顺序中的列号，初始 -1。" data-en="Position in visual order; initially -1.">视觉顺序中的列号，初始 -1。</td>
+</tr>
+<tr>
+<td>
+<code>qint64 contentX = 0;</code>
+</td>
+<td class="doc" data-zh="内容坐标中的左边界，初始 0。" data-en="Left boundary in content coordinates; initially 0.">内容坐标中的左边界，初始 0。</td>
+</tr>
+<tr>
+<td>
+<code>int viewportX = 0;</code>
+</td>
+<td class="doc" data-zh="viewport 坐标中的左边界，初始 0，随滚动变化。" data-en="Left boundary in viewport coordinates; initially 0; changes with scrolling.">viewport 坐标中的左边界，初始 0，随滚动变化。</td>
+</tr>
+<tr>
+<td>
+<code>int width = 0;</code>
+</td>
+<td class="doc" data-zh="列宽，初始 0；隐藏列为 0。" data-en="Column width; initially 0, also 0 for hidden columns.">列宽，初始 0；隐藏列为 0。</td>
+</tr>
+<tr>
+<td>
+<code>bool hidden = false;</code>
+</td>
+<td class="doc" data-zh="是否隐藏，初始 false。" data-en="Whether hidden; initially false.">是否隐藏，初始 false。</td>
+</tr>
+</tbody>
+</table>
+</div>
+<a href="#type-index" class="muted"><span data-zh="返回类型列表" data-en="Back to type index">返回类型列表</span></a>
 </article>
 <article tabindex="-1" id="ColumnGeometry-isValid-6" data-search="ColumnGeometry isValid">
 <span class="badge">public</span>
@@ -600,6 +630,7 @@
 <a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L56</span>
 <pre>    int sectionCount() const;</pre>
 <p class="doc" data-zh="返回表头 section 数量。" data-en="Return the header section count.">返回表头 section 数量。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：0" data-en="Default / initial state: 0">默认值／初始状态：0</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="HeaderGeometry-storedSectionStateCount-4" data-search="HeaderGeometry storedSectionStateCount">
@@ -624,6 +655,7 @@
 <a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L70</span>
 <pre>void setSectionCount(int count);</pre>
 <p class="doc" data-zh="设置表头 section 数量。" data-en="Set the header section count.">设置表头 section 数量。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：0" data-en="Default / initial state: 0">默认值／初始状态：0</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="HeaderGeometry-insertLogicalSections-7" data-search="HeaderGeometry insertLogicalSections">
@@ -694,8 +726,36 @@
 <span class="badge">public</span>
 <span class="muted">
 <a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L95</span>
-<pre>enum class ResizeMode { Independent, FitExtent };</pre>
-<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+<pre>enum class ResizeMode {
+    Independent,
+    FitExtent,
+};</pre>
+<p class="doc" data-zh="底层 section 尺寸策略。表格业务通常用 setColumnResizeMode()；FitExtent 捕获比例并清除普通拉伸设置。" data-en="Low-level section-sizing strategy. Table applications normally use setColumnResizeMode(); FitExtent captures proportions and clears ordinary stretching.">底层 section 尺寸策略。表格业务通常用 setColumnResizeMode()；FitExtent 捕获比例并清除普通拉伸设置。</p>
+<div class="table-scroll">
+<table class="type-members">
+<thead>
+<tr>
+<th><span data-zh="成员 / 取值" data-en="Member / value">成员 / 取值</span></th>
+<th><span data-zh="说明" data-en="Guide">说明</span></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>Independent</code>
+</td>
+<td class="doc" data-zh="独立尺寸及普通拉伸策略，默认模式。" data-en="Independent sizes and ordinary stretching; the default.">独立尺寸及普通拉伸策略，默认模式。</td>
+</tr>
+<tr>
+<td>
+<code>FitExtent</code>
+</td>
+<td class="doc" data-zh="尺寸加间距匹配可用长度，拖动按快照比例分摊；极端长度下放宽限制。" data-en="Fit sizes plus gaps to available extent; distribute drags by snapshot proportions, relaxing limits at extremes.">尺寸加间距匹配可用长度，拖动按快照比例分摊；极端长度下放宽限制。</td>
+</tr>
+</tbody>
+</table>
+</div>
+<a href="#type-index" class="muted"><span data-zh="返回类型列表" data-en="Back to type index">返回类型列表</span></a>
 </article>
 <article tabindex="-1" id="HeaderGeometry-resizeMode-16" data-search="HeaderGeometry resizeMode">
 <span class="badge">public</span>
@@ -703,6 +763,7 @@
 <a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L97</span>
 <pre>    ResizeMode resizeMode() const;</pre>
 <p class="doc" data-zh="返回section 尺寸调整模式。" data-en="Return the section resize mode.">返回section 尺寸调整模式。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：ResizeMode::Independent" data-en="Default / initial state: ResizeMode::Independent">默认值／初始状态：ResizeMode::Independent</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="HeaderGeometry-setResizeMode-17" data-search="HeaderGeometry setResizeMode">
@@ -711,6 +772,7 @@
 <a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L100</span>
 <pre>void setResizeMode(ResizeMode mode);</pre>
 <p class="doc" data-zh="设置section 尺寸调整模式。" data-en="Set the section resize mode.">设置section 尺寸调整模式。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：ResizeMode::Independent" data-en="Default / initial state: ResizeMode::Independent">默认值／初始状态：ResizeMode::Independent</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="HeaderGeometry-ResizeSnapshot-18" data-search="HeaderGeometry ResizeSnapshot">
@@ -718,15 +780,70 @@
 <span class="muted">
 <a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L103</span>
 <pre>struct ResizeSnapshot {
-        QVector&lt;int&gt; sizes;
-        quint32 orderRevision = 0;
-        quint32 fitRevision = 0;
-        qint64 extent = 0;
-        int minimum = 0;
-        int maximum = 0;
-        QVector&lt;int&gt; spacings;
-    };</pre>
-<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+    QVector&lt;int&gt; sizes;
+    quint32 orderRevision = 0;
+    quint32 fitRevision = 0;
+    qint64 extent = 0;
+    int minimum = 0;
+    int maximum = 0;
+    QVector&lt;int&gt; spacings;
+};</pre>
+<p class="doc" data-zh="列边界按下时的尺寸快照，用于 resizeSectionFromEdge()。通过 resizeSnapshot() 获取，不要手工拼装；结构或可用长度变化会使快照失效。" data-en="Press-time sizing snapshot for resizeSectionFromEdge(). Obtain it with resizeSnapshot() rather than assembling it manually. Structural or extent changes invalidate it.">列边界按下时的尺寸快照，用于 resizeSectionFromEdge()。通过 resizeSnapshot() 获取，不要手工拼装；结构或可用长度变化会使快照失效。</p>
+<div class="table-scroll">
+<table class="type-members">
+<thead>
+<tr>
+<th><span data-zh="成员 / 取值" data-en="Member / value">成员 / 取值</span></th>
+<th><span data-zh="说明" data-en="Guide">说明</span></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>QVector&lt;int&gt; sizes;</code>
+</td>
+<td class="doc" data-zh="按下时各逻辑 section 的尺寸，初始为空。" data-en="Press-time sizes by logical section; initially empty.">按下时各逻辑 section 的尺寸，初始为空。</td>
+</tr>
+<tr>
+<td>
+<code>quint32 orderRevision = 0;</code>
+</td>
+<td class="doc" data-zh="结构和顺序版本，用于失效检查，初始 0。" data-en="Structure/order revision for invalidation; initially 0.">结构和顺序版本，用于失效检查，初始 0。</td>
+</tr>
+<tr>
+<td>
+<code>quint32 fitRevision = 0;</code>
+</td>
+<td class="doc" data-zh="填充布局版本，用于失效检查，初始 0。" data-en="Fit-layout revision for invalidation; initially 0.">填充布局版本，用于失效检查，初始 0。</td>
+</tr>
+<tr>
+<td>
+<code>qint64 extent = 0;</code>
+</td>
+<td class="doc" data-zh="捕获时可用总长度，初始 0。" data-en="Available extent at capture time; initially 0.">捕获时可用总长度，初始 0。</td>
+</tr>
+<tr>
+<td>
+<code>int minimum = 0;</code>
+</td>
+<td class="doc" data-zh="捕获时最小 section 尺寸，初始 0。" data-en="Minimum section size at capture time; initially 0.">捕获时最小 section 尺寸，初始 0。</td>
+</tr>
+<tr>
+<td>
+<code>int maximum = 0;</code>
+</td>
+<td class="doc" data-zh="捕获时最大 section 尺寸，初始 0。" data-en="Maximum section size at capture time; initially 0.">捕获时最大 section 尺寸，初始 0。</td>
+</tr>
+<tr>
+<td>
+<code>QVector&lt;int&gt; spacings;</code>
+</td>
+<td class="doc" data-zh="捕获时间距数据，初始为空。" data-en="Spacing data at capture time; initially empty.">捕获时间距数据，初始为空。</td>
+</tr>
+</tbody>
+</table>
+</div>
+<a href="#type-index" class="muted"><span data-zh="返回类型列表" data-en="Back to type index">返回类型列表</span></a>
 </article>
 <article tabindex="-1" id="HeaderGeometry-resizeSnapshot-19" data-search="HeaderGeometry resizeSnapshot">
 <span class="badge">public</span>
@@ -775,6 +892,7 @@
 <a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L127</span>
 <pre>    int defaultSectionSize() const;</pre>
 <p class="doc" data-zh="返回未覆盖 section 尺寸时的默认值。" data-en="Return the default size for sections without overrides.">返回未覆盖 section 尺寸时的默认值。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：100" data-en="Default / initial state: 100">默认值／初始状态：100</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="HeaderGeometry-setDefaultSectionSize-25" data-search="HeaderGeometry setDefaultSectionSize">
@@ -783,6 +901,7 @@
 <a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L128</span>
 <pre>void setDefaultSectionSize(int size);</pre>
 <p class="doc" data-zh="设置未覆盖 section 尺寸时的默认值。" data-en="Set the default size for sections without overrides.">设置未覆盖 section 尺寸时的默认值。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：100" data-en="Default / initial state: 100">默认值／初始状态：100</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="HeaderGeometry-sectionSpacing-26" data-search="HeaderGeometry sectionSpacing">
@@ -791,6 +910,7 @@
 <a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L130</span>
 <pre>    int sectionSpacing() const;</pre>
 <p class="doc" data-zh="返回相邻表头 section 间距。" data-en="Return the spacing between adjacent header sections.">返回相邻表头 section 间距。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：0" data-en="Default / initial state: 0">默认值／初始状态：0</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="HeaderGeometry-setSectionSpacing-27" data-search="HeaderGeometry setSectionSpacing">
@@ -799,6 +919,7 @@
 <a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L131</span>
 <pre>void setSectionSpacing(int pixels);</pre>
 <p class="doc" data-zh="设置相邻表头 section 间距。" data-en="Set the spacing between adjacent header sections.">设置相邻表头 section 间距。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：0" data-en="Default / initial state: 0">默认值／初始状态：0</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="HeaderGeometry-setSectionSpacingOverrides-28" data-search="HeaderGeometry setSectionSpacingOverrides">
@@ -807,6 +928,7 @@
 <a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L134</span>
 <pre>void setSectionSpacingOverrides(const QVector&lt;int&gt; &amp;spacings);</pre>
 <p class="doc" data-zh="覆盖指定 section 后的间距；稀疏版本适合仅少量 section 需要特殊间距。" data-en="Override spacing after sections; the sparse variant suits a small number of exceptional gaps.">覆盖指定 section 后的间距；稀疏版本适合仅少量 section 需要特殊间距。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：无单独覆盖；所有间距使用 sectionSpacing()，初始为 0。" data-en="Default / initial state: No per-section overrides; gaps use sectionSpacing(), initially 0.">默认值／初始状态：无单独覆盖；所有间距使用 sectionSpacing()，初始为 0。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="HeaderGeometry-setSparseSectionSpacingOverrides-29" data-search="HeaderGeometry setSparseSectionSpacingOverrides">
@@ -815,6 +937,7 @@
 <a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L137</span>
 <pre>void setSparseSectionSpacingOverrides(const QVector&lt;QPair&lt;int, int&gt;&gt; &amp;spacings);</pre>
 <p class="doc" data-zh="覆盖指定 section 后的间距；稀疏版本适合仅少量 section 需要特殊间距。" data-en="Override spacing after sections; the sparse variant suits a small number of exceptional gaps.">覆盖指定 section 后的间距；稀疏版本适合仅少量 section 需要特殊间距。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：无单独覆盖；所有间距使用 sectionSpacing()，初始为 0。" data-en="Default / initial state: No per-section overrides; gaps use sectionSpacing(), initially 0.">默认值／初始状态：无单独覆盖；所有间距使用 sectionSpacing()，初始为 0。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="HeaderGeometry-sectionSpacingAfter-30" data-search="HeaderGeometry sectionSpacingAfter">
@@ -831,6 +954,7 @@
 <a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L141</span>
 <pre>void setEdgeSpacing(int leading, int trailing);</pre>
 <p class="doc" data-zh="设置布局首尾边距，常用于中心分割线模式的半间距。" data-en="Set leading and trailing layout spacing, typically half-gaps for centered grid lines.">设置布局首尾边距，常用于中心分割线模式的半间距。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：leading = 0, trailing = 0" data-en="Default / initial state: leading = 0, trailing = 0">默认值／初始状态：leading = 0, trailing = 0</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="HeaderGeometry-leadingSpacing-32" data-search="HeaderGeometry leadingSpacing">
@@ -855,6 +979,7 @@
 <a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L144</span>
 <pre>    int minimumSectionSize() const;</pre>
 <p class="doc" data-zh="返回section 最小尺寸。" data-en="Return the minimum section size.">返回section 最小尺寸。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：24" data-en="Default / initial state: 24">默认值／初始状态：24</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="HeaderGeometry-setMinimumSectionSize-35" data-search="HeaderGeometry setMinimumSectionSize">
@@ -863,6 +988,7 @@
 <a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L145</span>
 <pre>void setMinimumSectionSize(int size);</pre>
 <p class="doc" data-zh="设置section 最小尺寸。" data-en="Set the minimum section size.">设置section 最小尺寸。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：24" data-en="Default / initial state: 24">默认值／初始状态：24</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="HeaderGeometry-maximumSectionSize-36" data-search="HeaderGeometry maximumSectionSize">
@@ -871,6 +997,7 @@
 <a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L146</span>
 <pre>    int maximumSectionSize() const;</pre>
 <p class="doc" data-zh="返回section 最大尺寸。" data-en="Return the maximum section size.">返回section 最大尺寸。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：100000" data-en="Default / initial state: 100000">默认值／初始状态：100000</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="HeaderGeometry-setMaximumSectionSize-37" data-search="HeaderGeometry setMaximumSectionSize">
@@ -879,6 +1006,7 @@
 <a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L147</span>
 <pre>void setMaximumSectionSize(int size);</pre>
 <p class="doc" data-zh="设置section 最大尺寸。" data-en="Set the maximum section size.">设置section 最大尺寸。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：100000" data-en="Default / initial state: 100000">默认值／初始状态：100000</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="HeaderGeometry-sectionPosition-38" data-search="HeaderGeometry sectionPosition">
@@ -975,6 +1103,7 @@
 <a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L172</span>
 <pre>void setSectionHidden(int logicalIndex, bool hidden);</pre>
 <p class="doc" data-zh="隐藏或显示指定逻辑 section/列，保持模型数据不变。" data-en="Hide or show a logical section/column without changing model data.">隐藏或显示指定逻辑 section/列，保持模型数据不变。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：false" data-en="Default / initial state: false">默认值／初始状态：false</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="HeaderGeometry-setAllSectionsHidden-50" data-search="HeaderGeometry setAllSectionsHidden">
@@ -983,6 +1112,7 @@
 <a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L173</span>
 <pre>void setAllSectionsHidden(bool hidden);</pre>
 <p class="doc" data-zh="统一隐藏或显示所有 section。" data-en="Hide or show all sections together.">统一隐藏或显示所有 section。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：false" data-en="Default / initial state: false">默认值／初始状态：false</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="HeaderGeometry-viewportOffset-51" data-search="HeaderGeometry viewportOffset">
@@ -991,6 +1121,7 @@
 <a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L176</span>
 <pre>    qint64 viewportOffset() const;</pre>
 <p class="doc" data-zh="返回表头视口滚动偏移量。" data-en="Return the header viewport scroll offset.">返回表头视口滚动偏移量。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：0" data-en="Default / initial state: 0">默认值／初始状态：0</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="HeaderGeometry-setViewportOffset-52" data-search="HeaderGeometry setViewportOffset">
@@ -999,6 +1130,7 @@
 <a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L177</span>
 <pre>void setViewportOffset(qint64 offset);</pre>
 <p class="doc" data-zh="设置表头视口滚动偏移量。" data-en="Set the header viewport scroll offset.">设置表头视口滚动偏移量。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：0" data-en="Default / initial state: 0">默认值／初始状态：0</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="HeaderGeometry-maximumViewportOffset-53" data-search="HeaderGeometry maximumViewportOffset">
@@ -1071,6 +1203,7 @@
 <a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L203</span>
 <pre>void setSortIndicator(int logicalIndex, Qt::SortOrder order);</pre>
 <p class="doc" data-zh="设置排序标记对应列和方向；标记本身不等于模型已完成排序。" data-en="Set the sort indicator section and order; the indicator alone does not imply the model has been sorted.">设置排序标记对应列和方向；标记本身不等于模型已完成排序。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：logicalIndex = -1，无指示项；order = Qt::AscendingOrder。" data-en="Default / initial state: logicalIndex = -1, no indicator; order = Qt::AscendingOrder.">默认值／初始状态：logicalIndex = -1，无指示项；order = Qt::AscendingOrder。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#sort-persist"><span data-zh="排序 / 过滤 / 布局保存恢复" data-en="Sorting / filtering / layout persistence">排序 / 过滤 / 布局保存恢复</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -1080,6 +1213,7 @@
 <a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L207</span>
 <pre>    bool stretchLastSection() const;</pre>
 <p class="doc" data-zh="返回末 section 填充剩余长度开关。" data-en="Return the whether the last section fills remaining extent.">返回末 section 填充剩余长度开关。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：false" data-en="Default / initial state: false">默认值／初始状态：false</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="HeaderGeometry-setStretchLastSection-63" data-search="HeaderGeometry setStretchLastSection">
@@ -1088,6 +1222,7 @@
 <a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L208</span>
 <pre>void setStretchLastSection(bool stretch);</pre>
 <p class="doc" data-zh="设置末 section 填充剩余长度开关。" data-en="Set the whether the last section fills remaining extent.">设置末 section 填充剩余长度开关。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：false" data-en="Default / initial state: false">默认值／初始状态：false</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="HeaderGeometry-stretchExtent-64" data-search="HeaderGeometry stretchExtent">
@@ -1096,6 +1231,7 @@
 <a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L219</span>
 <pre>    qint64 stretchExtent() const;</pre>
 <p class="doc" data-zh="返回比例计算可用长度。" data-en="Return the available stretch extent.">返回比例计算可用长度。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：0" data-en="Default / initial state: 0">默认值／初始状态：0</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="HeaderGeometry-setStretchExtent-65" data-search="HeaderGeometry setStretchExtent">
@@ -1104,6 +1240,7 @@
 <a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L220</span>
 <pre>void setStretchExtent(qint64 extent);</pre>
 <p class="doc" data-zh="设置比例计算可用长度。" data-en="Set the available stretch extent.">设置比例计算可用长度。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：0" data-en="Default / initial state: 0">默认值／初始状态：0</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="HeaderGeometry-sectionStretchFactor-66" data-search="HeaderGeometry sectionStretchFactor">
@@ -1120,6 +1257,7 @@
 <a href="../../../include/virtualitemviews/headergeometry.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L233</span>
 <pre>void setSectionStretchFactor(int logicalIndex, qreal factor);</pre>
 <p class="doc" data-zh="设置指定 section 比例权重。" data-en="Set the stretch weight of the specified section.">设置指定 section 比例权重。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：各项为 0，无比例拉伸。" data-en="Default / initial state: 0 for every section; no proportional stretching.">默认值／初始状态：各项为 0，无比例拉伸。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="HeaderGeometry-hasStretchSections-68" data-search="HeaderGeometry hasStretchSections">

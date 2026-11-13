@@ -236,7 +236,7 @@
 </li>
 </ul>
 </section>
-<h2><span data-zh="函数说明" data-en="Function details">函数说明</span></h2>
+<h2><span data-zh="接口与类型说明" data-en="API and type details">接口与类型说明</span></h2>
 <p class="muted"><span data-zh="按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。" data-en="Read each function for its purpose and related settings. Overloads are listed separately; follow related capabilities to find examples.">按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。</span></p>
 <section>
 <h3 id="WidgetRecycler">WidgetRecycler</h3>
@@ -293,6 +293,7 @@
 <a href="../../../include/virtualitemviews/widgetrecycler.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L42</span>
 <pre>void setParentWidget(QWidget *parent);</pre>
 <p class="doc" data-zh="设置回收控件父控件。" data-en="Set the recycled widget parent.">设置回收控件父控件。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：构造 parent 为 QWidget 时使用该对象，否则 nullptr。" data-en="Default / initial state: Uses the constructor parent if it is a QWidget, otherwise nullptr.">默认值／初始状态：构造 parent 为 QWidget 时使用该对象，否则 nullptr。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="WidgetRecycler-parentWidget-7" data-search="WidgetRecycler parentWidget">
@@ -301,6 +302,7 @@
 <a href="../../../include/virtualitemviews/widgetrecycler.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L43</span>
 <pre>QWidget *parentWidget() const;</pre>
 <p class="doc" data-zh="返回回收控件父控件。" data-en="Return the recycled widget parent.">返回回收控件父控件。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：构造 parent 为 QWidget 时使用该对象，否则 nullptr。" data-en="Default / initial state: Uses the constructor parent if it is a QWidget, otherwise nullptr.">默认值／初始状态：构造 parent 为 QWidget 时使用该对象，否则 nullptr。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="WidgetRecycler-setFactory-8" data-search="WidgetRecycler setFactory">
@@ -309,6 +311,7 @@
 <a href="../../../include/virtualitemviews/widgetrecycler.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L45</span>
 <pre>void setFactory(Factory factory);</pre>
 <p class="doc" data-zh="设置按 WidgetType 创建控件的工厂。" data-en="Set the widget factory indexed by WidgetType.">设置按 WidgetType 创建控件的工厂。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：空工厂；独立 recycler 不会创建控件，视图会安装自己的工厂。" data-en="Default / initial state: Empty factory; a standalone recycler cannot create widgets, while views install their own factories.">默认值／初始状态：空工厂；独立 recycler 不会创建控件，视图会安装自己的工厂。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="WidgetRecycler-acquire-9" data-search="WidgetRecycler acquire">
@@ -341,6 +344,7 @@
 <a href="../../../include/virtualitemviews/widgetrecycler.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L59</span>
 <pre>void setMaxPoolSize(WidgetType type, qsizetype size);</pre>
 <p class="doc" data-zh="设置回收池容量上限。" data-en="Set the recycler pool capacity limit.">设置回收池容量上限。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：每种 WidgetType 默认 256（kDefaultMaxPoolSize）。" data-en="Default / initial state: 256 per WidgetType (kDefaultMaxPoolSize).">默认值／初始状态：每种 WidgetType 默认 256（kDefaultMaxPoolSize）。</p>
 <p class="doc" data-zh="按 WidgetType 分别限制池容量；负数表示不限制。池满时回收控件会安排延迟删除。" data-en="Limits apply per WidgetType; negative means unlimited. Recycling into a full pool schedules deferred deletion.">按 WidgetType 分别限制池容量；负数表示不限制。池满时回收控件会安排延迟删除。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>

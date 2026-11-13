@@ -595,7 +595,17 @@
 </li>
 </ul>
 </section>
-<h2><span data-zh="函数说明" data-en="Function details">函数说明</span></h2>
+<section id="type-index">
+<h3><span data-zh="结构体与枚举" data-en="Structs and enums">结构体与枚举</span></h3>
+<ul>
+<li data-search="VirtualMasonryView::ItemHeightMode">
+<a href="#VirtualMasonryView-ItemHeightMode-0">
+<code>VirtualMasonryView::ItemHeightMode</code>
+</a>
+</li>
+</ul>
+</section>
+<h2><span data-zh="接口与类型说明" data-en="API and type details">接口与类型说明</span></h2>
 <p class="muted"><span data-zh="按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。" data-en="Read each function for its purpose and related settings. Overloads are listed separately; follow related capabilities to find examples.">按函数查看用途与配套设置；重载分别列出，可通过相关能力链接查找示例。</span></p>
 <section>
 <h3 id="VirtualMasonryView">VirtualMasonryView</h3>
@@ -604,8 +614,43 @@
 <span class="badge">public</span>
 <span class="muted">
 <a href="../../../include/virtualitemviews/virtualmasonryview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L29</span>
-<pre>enum class ItemHeightMode { Fixed, AspectRatio, AdapterEstimate };</pre>
-<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+<pre>enum class ItemHeightMode {
+    Fixed,
+    AspectRatio,
+    AdapterEstimate,
+};</pre>
+<p class="doc" data-zh="瀑布流高度策略。固定／等比例高度且大量项目时，可优先考虑 Flow 规则网格。" data-en="Masonry height strategy. For many fixed/equal-aspect items, consider the Flow regular grid.">瀑布流高度策略。固定／等比例高度且大量项目时，可优先考虑 Flow 规则网格。</p>
+<div class="table-scroll">
+<table class="type-members">
+<thead>
+<tr>
+<th><span data-zh="成员 / 取值" data-en="Member / value">成员 / 取值</span></th>
+<th><span data-zh="说明" data-en="Guide">说明</span></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>Fixed</code>
+</td>
+<td class="doc" data-zh="统一固定高度。" data-en="Uniform fixed height.">统一固定高度。</td>
+</tr>
+<tr>
+<td>
+<code>AspectRatio</code>
+</td>
+<td class="doc" data-zh="由列宽和宽／高比计算高度。" data-en="Compute height from column width and width/height ratio.">由列宽和宽／高比计算高度。</td>
+</tr>
+<tr>
+<td>
+<code>AdapterEstimate</code>
+</td>
+<td class="doc" data-zh="adapter 估算各项高度，允许高低不一。" data-en="Adapter estimates individual, potentially different heights.">adapter 估算各项高度，允许高低不一。</td>
+</tr>
+</tbody>
+</table>
+</div>
+<a href="#type-index" class="muted"><span data-zh="返回类型列表" data-en="Back to type index">返回类型列表</span></a>
 </article>
 <article tabindex="-1" id="VirtualMasonryView-VirtualMasonryView-1" data-search="VirtualMasonryView VirtualMasonryView">
 <span class="badge">public</span>
@@ -621,6 +666,7 @@
 <a href="../../../include/virtualitemviews/virtualmasonryview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L33</span>
 <pre>void setModel(QAbstractItemModel *model) override;</pre>
 <p class="doc" data-zh="连接新的数据模型并更新布局、选择与物化状态；模型生命周期需覆盖视图使用期间。不要用重复 setModel 代替数据变更通知。" data-en="Connect a new data model and update layout, selection and materialization. Keep the model alive while in use; do not replace change notifications with repeated setModel calls.">连接新的数据模型并更新布局、选择与物化状态；模型生命周期需覆盖视图使用期间。不要用重复 setModel 代替数据变更通知。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：nullptr；初始没有模型。" data-en="Default / initial state: nullptr; no model is attached initially.">默认值／初始状态：nullptr；初始没有模型。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#model"><span data-zh="模型 / 根节点 / 代理模型 / 更新通知" data-en="Models / roots / proxies / update notifications">模型 / 根节点 / 代理模型 / 更新通知</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -630,6 +676,7 @@
 <a href="../../../include/virtualitemviews/virtualmasonryview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L35</span>
 <pre>void setAdapter(WidgetAdapter *adapter, bool takeOwnership = false) override;</pre>
 <p class="doc" data-zh="设置项目控件适配器。" data-en="Set the item widget adapter.">设置项目控件适配器。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：nullptr；初始没有业务 adapter。takeOwnership 参数默认 false。" data-en="Default / initial state: nullptr; no application adapter is installed. The takeOwnership argument defaults to false.">默认值／初始状态：nullptr；初始没有业务 adapter。takeOwnership 参数默认 false。</p>
 <p class="doc" data-zh="takeOwnership 默认为 false，未转移所有权时调用方须保证 adapter 存活。RowWidgets 使用 TableWidgetAdapter，CellWidgets 使用 CellWidgetAdapter。创建控件和绑定数据应分离；复用时清除旧业务关联。" data-en="takeOwnership defaults to false; the caller must keep a non-owned adapter alive. RowWidgets uses TableWidgetAdapter and CellWidgets uses CellWidgetAdapter. Separate widget creation from binding and clear obsolete business associations on reuse.">takeOwnership 默认为 false，未转移所有权时调用方须保证 adapter 存活。RowWidgets 使用 TableWidgetAdapter，CellWidgets 使用 CellWidgetAdapter。创建控件和绑定数据应分离；复用时清除旧业务关联。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -639,6 +686,7 @@
 <a href="../../../include/virtualitemviews/virtualmasonryview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L38</span>
 <pre>void setRootIndex(const QModelIndex &amp;index);</pre>
 <p class="doc" data-zh="设置展示子项所属模型根索引。" data-en="Set the model root index whose children are displayed.">设置展示子项所属模型根索引。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：无效 QModelIndex，显示模型根级。" data-en="Default / initial state: Invalid QModelIndex; the model root is displayed.">默认值／初始状态：无效 QModelIndex，显示模型根级。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#model"><span data-zh="模型 / 根节点 / 代理模型 / 更新通知" data-en="Models / roots / proxies / update notifications">模型 / 根节点 / 代理模型 / 更新通知</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -648,6 +696,7 @@
 <a href="../../../include/virtualitemviews/virtualmasonryview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L39</span>
 <pre>    QModelIndex rootIndex() const;</pre>
 <p class="doc" data-zh="返回展示子项所属模型根索引。" data-en="Return the model root index whose children are displayed.">返回展示子项所属模型根索引。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：无效 QModelIndex，显示模型根级。" data-en="Default / initial state: Invalid QModelIndex; the model root is displayed.">默认值／初始状态：无效 QModelIndex，显示模型根级。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#model"><span data-zh="模型 / 根节点 / 代理模型 / 更新通知" data-en="Models / roots / proxies / update notifications">模型 / 根节点 / 代理模型 / 更新通知</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -657,6 +706,7 @@
 <a href="../../../include/virtualitemviews/virtualmasonryview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L41</span>
 <pre>void setCellWidthRange(int minimum, int maximum);</pre>
 <p class="doc" data-zh="设置单元格或项目的宽度上下限，影响换行和自动列数计算。" data-en="Set cell or item width bounds used by wrapping and automatic column-count calculations.">设置单元格或项目的宽度上下限，影响换行和自动列数计算。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：minimum = 100，maximum = 200 逻辑像素；最终列宽由视口和列数决定。" data-en="Default / initial state: minimum = 100, maximum = 200 logical pixels; effective column width depends on viewport width and column count.">默认值／初始状态：minimum = 100，maximum = 200 逻辑像素；最终列宽由视口和列数决定。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#masonry"><span data-zh="Masonry 最短列 / 图片估值 / 高度更新" data-en="Masonry shortest-column layout / image estimates / height changes">Masonry 最短列 / 图片估值 / 高度更新</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -682,6 +732,7 @@
 <a href="../../../include/virtualitemviews/virtualmasonryview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L45</span>
 <pre>void setColumnCount(int count);</pre>
 <p class="doc" data-zh="设置逻辑列数。" data-en="Set the logical column count.">设置逻辑列数。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：0；自动根据视口宽度和列宽范围计算列数。" data-en="Default / initial state: 0; derives the column count from viewport width and the width range.">默认值／初始状态：0；自动根据视口宽度和列宽范围计算列数。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#masonry"><span data-zh="Masonry 最短列 / 图片估值 / 高度更新" data-en="Masonry shortest-column layout / image estimates / height changes">Masonry 最短列 / 图片估值 / 高度更新</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -691,6 +742,7 @@
 <a href="../../../include/virtualitemviews/virtualmasonryview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L46</span>
 <pre>int columnCount() const;</pre>
 <p class="doc" data-zh="返回逻辑列数。" data-en="Return the logical column count.">返回逻辑列数。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：0；自动根据视口宽度和列宽范围计算列数。" data-en="Default / initial state: 0; derives the column count from viewport width and the width range.">默认值／初始状态：0；自动根据视口宽度和列宽范围计算列数。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#masonry"><span data-zh="Masonry 最短列 / 图片估值 / 高度更新" data-en="Masonry shortest-column layout / image estimates / height changes">Masonry 最短列 / 图片估值 / 高度更新</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -700,6 +752,7 @@
 <a href="../../../include/virtualitemviews/virtualmasonryview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L47</span>
 <pre>void setColumnSpacing(int pixels);</pre>
 <p class="doc" data-zh="设置内容列间距。" data-en="Set the spacing between content columns.">设置内容列间距。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：0 逻辑像素。" data-en="Default / initial state: 0 logical pixels.">默认值／初始状态：0 逻辑像素。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#spacing"><span data-zh="间距 / 中心分割线 / 双侧分割线 / 半间距" data-en="Spacing / center lines / edge lines / half-gaps">间距 / 中心分割线 / 双侧分割线 / 半间距</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -709,6 +762,7 @@
 <a href="../../../include/virtualitemviews/virtualmasonryview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L48</span>
 <pre>int columnSpacing() const;</pre>
 <p class="doc" data-zh="返回内容列间距。" data-en="Return the spacing between content columns.">返回内容列间距。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：0 逻辑像素。" data-en="Default / initial state: 0 logical pixels.">默认值／初始状态：0 逻辑像素。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#spacing"><span data-zh="间距 / 中心分割线 / 双侧分割线 / 半间距" data-en="Spacing / center lines / edge lines / half-gaps">间距 / 中心分割线 / 双侧分割线 / 半间距</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -718,6 +772,7 @@
 <a href="../../../include/virtualitemviews/virtualmasonryview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L49</span>
 <pre>void setRowSpacing(int pixels) override;</pre>
 <p class="doc" data-zh="设置行间距。" data-en="Set the spacing between rows.">设置行间距。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：0 逻辑像素。" data-en="Default / initial state: 0 logical pixels.">默认值／初始状态：0 逻辑像素。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#spacing"><span data-zh="间距 / 中心分割线 / 双侧分割线 / 半间距" data-en="Spacing / center lines / edge lines / half-gaps">间距 / 中心分割线 / 双侧分割线 / 半间距</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -727,6 +782,7 @@
 <a href="../../../include/virtualitemviews/virtualmasonryview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L50</span>
 <pre>int rowSpacing() const;</pre>
 <p class="doc" data-zh="返回行间距。" data-en="Return the spacing between rows.">返回行间距。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：0 逻辑像素。" data-en="Default / initial state: 0 logical pixels.">默认值／初始状态：0 逻辑像素。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#spacing"><span data-zh="间距 / 中心分割线 / 双侧分割线 / 半间距" data-en="Spacing / center lines / edge lines / half-gaps">间距 / 中心分割线 / 双侧分割线 / 半间距</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -736,6 +792,7 @@
 <a href="../../../include/virtualitemviews/virtualmasonryview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L53</span>
 <pre>void setGridLinePlacement(GridLinePlacement placement) override;</pre>
 <p class="doc" data-zh="设置间距中心或两侧分割线模式。" data-en="Set the grid line placement at spacing centers or edges.">设置间距中心或两侧分割线模式。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：GridLinePlacement::SpacingCenter；无间距时回退到项边界，不重复绘制。" data-en="Default / initial state: GridLinePlacement::SpacingCenter; without spacing, lines fall back to item boundaries without duplicates.">默认值／初始状态：GridLinePlacement::SpacingCenter；无间距时回退到项边界，不重复绘制。</p>
 <p class="doc" data-zh="默认 SpacingCenter：在间距中心绘制，交叉线始终穿过间距，且外侧补半间距；零间距时不重复画线。SpacingEdges 在间距两侧绘制，只有这个模式允许控制是否穿过交叉间距。是否穿过表头使用单独开关。" data-en="SpacingCenter is the default: lines run through gap centers, cross gaps unconditionally, and use outer half-gaps; zero spacing does not duplicate lines. SpacingEdges draws both gap edges and alone allows disabling crossings through perpendicular gaps. Header crossings have independent switches.">默认 SpacingCenter：在间距中心绘制，交叉线始终穿过间距，且外侧补半间距；零间距时不重复画线。SpacingEdges 在间距两侧绘制，只有这个模式允许控制是否穿过交叉间距。是否穿过表头使用单独开关。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#spacing"><span data-zh="间距 / 中心分割线 / 双侧分割线 / 半间距" data-en="Spacing / center lines / edge lines / half-gaps">间距 / 中心分割线 / 双侧分割线 / 半间距</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
@@ -746,6 +803,7 @@
 <a href="../../../include/virtualitemviews/virtualmasonryview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L54</span>
 <pre>void setContentMargins(const QMargins &amp;margins);</pre>
 <p class="doc" data-zh="设置内容四周外边距。" data-en="Set the margins around the content.">设置内容四周外边距。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：QMargins(0, 0, 0, 0)" data-en="Default / initial state: QMargins(0, 0, 0, 0)">默认值／初始状态：QMargins(0, 0, 0, 0)</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="VirtualMasonryView-contentMargins-17" data-search="VirtualMasonryView contentMargins">
@@ -754,6 +812,7 @@
 <a href="../../../include/virtualitemviews/virtualmasonryview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L55</span>
 <pre>QMargins contentMargins() const;</pre>
 <p class="doc" data-zh="返回内容四周外边距。" data-en="Return the margins around the content.">返回内容四周外边距。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：QMargins(0, 0, 0, 0)" data-en="Default / initial state: QMargins(0, 0, 0, 0)">默认值／初始状态：QMargins(0, 0, 0, 0)</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="VirtualMasonryView-setSpacingBackgroundColor-18" data-search="VirtualMasonryView setSpacingBackgroundColor">
@@ -762,6 +821,7 @@
 <a href="../../../include/virtualitemviews/virtualmasonryview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L58</span>
 <pre>void setSpacingBackgroundColor(const QColor &amp;color) override;</pre>
 <p class="doc" data-zh="设置内容或表头间距背景颜色。" data-en="Set the content or header gap background color.">设置内容或表头间距背景颜色。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：无效 QColor；未指定间距色，随内容背景绘制，默认 QPalette::Base。" data-en="Default / initial state: Invalid QColor; gaps follow the content background, QPalette::Base by default.">默认值／初始状态：无效 QColor；未指定间距色，随内容背景绘制，默认 QPalette::Base。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#spacing"><span data-zh="间距 / 中心分割线 / 双侧分割线 / 半间距" data-en="Spacing / center lines / edge lines / half-gaps">间距 / 中心分割线 / 双侧分割线 / 半间距</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -771,6 +831,7 @@
 <a href="../../../include/virtualitemviews/virtualmasonryview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L60</span>
 <pre>void setItemHeightMode(ItemHeightMode mode);</pre>
 <p class="doc" data-zh="设置统一或可变高度策略。" data-en="Set the uniform or variable item height strategy.">设置统一或可变高度策略。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：ItemHeightMode::Fixed" data-en="Default / initial state: ItemHeightMode::Fixed">默认值／初始状态：ItemHeightMode::Fixed</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#masonry"><span data-zh="Masonry 最短列 / 图片估值 / 高度更新" data-en="Masonry shortest-column layout / image estimates / height changes">Masonry 最短列 / 图片估值 / 高度更新</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -780,6 +841,7 @@
 <a href="../../../include/virtualitemviews/virtualmasonryview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L61</span>
 <pre>ItemHeightMode itemHeightMode() const;</pre>
 <p class="doc" data-zh="返回统一或可变高度策略。" data-en="Return the uniform or variable item height strategy.">返回统一或可变高度策略。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：ItemHeightMode::Fixed" data-en="Default / initial state: ItemHeightMode::Fixed">默认值／初始状态：ItemHeightMode::Fixed</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#masonry"><span data-zh="Masonry 最短列 / 图片估值 / 高度更新" data-en="Masonry shortest-column layout / image estimates / height changes">Masonry 最短列 / 图片估值 / 高度更新</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -789,6 +851,7 @@
 <a href="../../../include/virtualitemviews/virtualmasonryview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L62</span>
 <pre>void setFixedItemHeight(int height);</pre>
 <p class="doc" data-zh="设置项目统一固定高度。" data-en="Set the uniform fixed item height.">设置项目统一固定高度。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：100 逻辑像素。" data-en="Default / initial state: 100 logical pixels.">默认值／初始状态：100 逻辑像素。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#masonry"><span data-zh="Masonry 最短列 / 图片估值 / 高度更新" data-en="Masonry shortest-column layout / image estimates / height changes">Masonry 最短列 / 图片估值 / 高度更新</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -798,6 +861,7 @@
 <a href="../../../include/virtualitemviews/virtualmasonryview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L63</span>
 <pre>int fixedItemHeight() const;</pre>
 <p class="doc" data-zh="返回项目统一固定高度。" data-en="Return the uniform fixed item height.">返回项目统一固定高度。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：100 逻辑像素。" data-en="Default / initial state: 100 logical pixels.">默认值／初始状态：100 逻辑像素。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#masonry"><span data-zh="Masonry 最短列 / 图片估值 / 高度更新" data-en="Masonry shortest-column layout / image estimates / height changes">Masonry 最短列 / 图片估值 / 高度更新</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -807,6 +871,7 @@
 <a href="../../../include/virtualitemviews/virtualmasonryview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L64</span>
 <pre>void setItemAspectRatio(qreal widthOverHeight);</pre>
 <p class="doc" data-zh="设置项目宽高比（宽 / 高）。" data-en="Set the item aspect ratio (width / height).">设置项目宽高比（宽 / 高）。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：1.0（宽 / 高）。" data-en="Default / initial state: 1.0 (width / height).">默认值／初始状态：1.0（宽 / 高）。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#masonry"><span data-zh="Masonry 最短列 / 图片估值 / 高度更新" data-en="Masonry shortest-column layout / image estimates / height changes">Masonry 最短列 / 图片估值 / 高度更新</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -816,6 +881,7 @@
 <a href="../../../include/virtualitemviews/virtualmasonryview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L65</span>
 <pre>qreal itemAspectRatio() const;</pre>
 <p class="doc" data-zh="返回项目宽高比（宽 / 高）。" data-en="Return the item aspect ratio (width / height).">返回项目宽高比（宽 / 高）。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：1.0（宽 / 高）。" data-en="Default / initial state: 1.0 (width / height).">默认值／初始状态：1.0（宽 / 高）。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#masonry"><span data-zh="Masonry 最短列 / 图片估值 / 高度更新" data-en="Masonry shortest-column layout / image estimates / height changes">Masonry 最短列 / 图片估值 / 高度更新</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -825,6 +891,7 @@
 <a href="../../../include/virtualitemviews/virtualmasonryview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L67</span>
 <pre>void setItemEstimatedSize(const QModelIndex &amp;index, const QSize &amp;size);</pre>
 <p class="doc" data-zh="设置单个或批量项目的估计尺寸；用于尚未测量项目的布局和滚动范围估算。" data-en="Set individual or bulk size estimates used for layout and scroll ranges before measurement.">设置单个或批量项目的估计尺寸；用于尚未测量项目的布局和滚动范围估算。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：无逐项估算尺寸覆盖；按当前高度模式和 adapter 的估算值布局。" data-en="Default / initial state: No per-item estimated-size overrides; layout uses the height mode and adapter estimates.">默认值／初始状态：无逐项估算尺寸覆盖；按当前高度模式和 adapter 的估算值布局。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#masonry"><span data-zh="Masonry 最短列 / 图片估值 / 高度更新" data-en="Masonry shortest-column layout / image estimates / height changes">Masonry 最短列 / 图片估值 / 高度更新</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -834,6 +901,7 @@
 <a href="../../../include/virtualitemviews/virtualmasonryview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L69</span>
 <pre>void setItemEstimatedSizes(const QVector&lt;QSize&gt; &amp;sizes);</pre>
 <p class="doc" data-zh="设置单个或批量项目的估计尺寸；用于尚未测量项目的布局和滚动范围估算。" data-en="Set individual or bulk size estimates used for layout and scroll ranges before measurement.">设置单个或批量项目的估计尺寸；用于尚未测量项目的布局和滚动范围估算。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：无逐项估算尺寸覆盖；按当前高度模式和 adapter 的估算值布局。" data-en="Default / initial state: No per-item estimated-size overrides; layout uses the height mode and adapter estimates.">默认值／初始状态：无逐项估算尺寸覆盖；按当前高度模式和 adapter 的估算值布局。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#masonry"><span data-zh="Masonry 最短列 / 图片估值 / 高度更新" data-en="Masonry shortest-column layout / image estimates / height changes">Masonry 最短列 / 图片估值 / 高度更新</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -843,6 +911,7 @@
 <a href="../../../include/virtualitemviews/virtualmasonryview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L71</span>
 <pre>void setItemHeight(const QModelIndex &amp;index, int height);</pre>
 <p class="doc" data-zh="设置指定项目的高度，更新其后项目的几何位置。" data-en="Set an item height and update subsequent item positions.">设置指定项目的高度，更新其后项目的几何位置。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：无逐项高度覆盖；默认 Fixed 模式使用 100。" data-en="Default / initial state: No per-item height overrides; the default Fixed mode uses 100.">默认值／初始状态：无逐项高度覆盖；默认 Fixed 模式使用 100。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#masonry"><span data-zh="Masonry 最短列 / 图片估值 / 高度更新" data-en="Masonry shortest-column layout / image estimates / height changes">Masonry 最短列 / 图片估值 / 高度更新</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -861,6 +930,7 @@
 <a href="../../../include/virtualitemviews/virtualmasonryview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L75</span>
 <pre>void setItemHeightAnimationEnabled(bool enabled);</pre>
 <p class="doc" data-zh="设置项目高度动画开关。" data-en="Set the item height animation setting.">设置项目高度动画开关。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：false" data-en="Default / initial state: false">默认值／初始状态：false</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#masonry"><span data-zh="Masonry 最短列 / 图片估值 / 高度更新" data-en="Masonry shortest-column layout / image estimates / height changes">Masonry 最短列 / 图片估值 / 高度更新</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -870,6 +940,7 @@
 <a href="../../../include/virtualitemviews/virtualmasonryview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L76</span>
 <pre>    bool itemHeightAnimationEnabled() const;</pre>
 <p class="doc" data-zh="返回项目高度动画开关。" data-en="Return the item height animation setting.">返回项目高度动画开关。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：false" data-en="Default / initial state: false">默认值／初始状态：false</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#masonry"><span data-zh="Masonry 最短列 / 图片估值 / 高度更新" data-en="Masonry shortest-column layout / image estimates / height changes">Masonry 最短列 / 图片估值 / 高度更新</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -879,6 +950,7 @@
 <a href="../../../include/virtualitemviews/virtualmasonryview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L77</span>
 <pre>void setItemHeightAnimationDuration(int milliseconds);</pre>
 <p class="doc" data-zh="设置项目高度动画时长（毫秒）。" data-en="Set the item height animation duration in milliseconds.">设置项目高度动画时长（毫秒）。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：300 ms" data-en="Default / initial state: 300 ms">默认值／初始状态：300 ms</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="VirtualMasonryView-itemHeightAnimationDuration-32" data-search="VirtualMasonryView itemHeightAnimationDuration">
@@ -887,6 +959,7 @@
 <a href="../../../include/virtualitemviews/virtualmasonryview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L78</span>
 <pre>    int itemHeightAnimationDuration() const;</pre>
 <p class="doc" data-zh="返回项目高度动画时长（毫秒）。" data-en="Return the item height animation duration in milliseconds.">返回项目高度动画时长（毫秒）。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：300 ms" data-en="Default / initial state: 300 ms">默认值／初始状态：300 ms</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="VirtualMasonryView-itemColumn-33" data-search="VirtualMasonryView itemColumn">
@@ -919,6 +992,7 @@
 <a href="../../../include/virtualitemviews/virtualmasonryview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L84</span>
 <pre>void setVisualStateBackgroundVisible(bool visible);</pre>
 <p class="doc" data-zh="设置hover 或选中背景绘制开关。" data-en="Set the hover or selection background painting setting.">设置hover 或选中背景绘制开关。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：true；内置 hover / selection 背景启用。" data-en="Default / initial state: true; built-in hover / selection backgrounds are enabled.">默认值／初始状态：true；内置 hover / selection 背景启用。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#states"><span data-zh="hover / selected 默认绘制和动画" data-en="Built-in hover / selection painting and animation">hover / selected 默认绘制和动画</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -928,6 +1002,7 @@
 <a href="../../../include/virtualitemviews/virtualmasonryview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L85</span>
 <pre>    bool visualStateBackgroundVisible() const;</pre>
 <p class="doc" data-zh="返回hover 或选中背景绘制开关。" data-en="Return the hover or selection background painting setting.">返回hover 或选中背景绘制开关。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：true；内置 hover / selection 背景启用。" data-en="Default / initial state: true; built-in hover / selection backgrounds are enabled.">默认值／初始状态：true；内置 hover / selection 背景启用。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#states"><span data-zh="hover / selected 默认绘制和动画" data-en="Built-in hover / selection painting and animation">hover / selected 默认绘制和动画</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -937,6 +1012,7 @@
 <a href="../../../include/virtualitemviews/virtualmasonryview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L86</span>
 <pre>void setStateBackgroundCornerRadius(int pixels);</pre>
 <p class="doc" data-zh="设置状态背景圆角半径。" data-en="Set the state background corner radius.">设置状态背景圆角半径。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：0 逻辑像素，直角。" data-en="Default / initial state: 0 logical pixels; square corners.">默认值／初始状态：0 逻辑像素，直角。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="VirtualMasonryView-stateBackgroundCornerRadius-39" data-search="VirtualMasonryView stateBackgroundCornerRadius">
@@ -945,6 +1021,7 @@
 <a href="../../../include/virtualitemviews/virtualmasonryview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L87</span>
 <pre>    int stateBackgroundCornerRadius() const;</pre>
 <p class="doc" data-zh="返回状态背景圆角半径。" data-en="Return the state background corner radius.">返回状态背景圆角半径。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：0 逻辑像素，直角。" data-en="Default / initial state: 0 logical pixels; square corners.">默认值／初始状态：0 逻辑像素，直角。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="VirtualMasonryView-setVerticalGridLinesVisible-40" data-search="VirtualMasonryView setVerticalGridLinesVisible">
@@ -953,6 +1030,7 @@
 <a href="../../../include/virtualitemviews/virtualmasonryview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L90</span>
 <pre>void setVerticalGridLinesVisible(bool visible);</pre>
 <p class="doc" data-zh="设置纵向分割线可见性。" data-en="Set the vertical grid line visibility.">设置纵向分割线可见性。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：true" data-en="Default / initial state: true">默认值／初始状态：true</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#grid"><span data-zh="分割线样式 / 最后一行 / 冻结分隔线" data-en="Grid styling / terminal row / frozen separators">分割线样式 / 最后一行 / 冻结分隔线</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -962,6 +1040,7 @@
 <a href="../../../include/virtualitemviews/virtualmasonryview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L91</span>
 <pre>    bool verticalGridLinesVisible() const;</pre>
 <p class="doc" data-zh="返回纵向分割线可见性。" data-en="Return the vertical grid line visibility.">返回纵向分割线可见性。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：true" data-en="Default / initial state: true">默认值／初始状态：true</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#grid"><span data-zh="分割线样式 / 最后一行 / 冻结分隔线" data-en="Grid styling / terminal row / frozen separators">分割线样式 / 最后一行 / 冻结分隔线</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -971,6 +1050,7 @@
 <a href="../../../include/virtualitemviews/virtualmasonryview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L92</span>
 <pre>void setHorizontalGridLinesVisible(bool visible);</pre>
 <p class="doc" data-zh="设置横向分割线可见性。" data-en="Set the horizontal grid line visibility.">设置横向分割线可见性。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：true" data-en="Default / initial state: true">默认值／初始状态：true</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#grid"><span data-zh="分割线样式 / 最后一行 / 冻结分隔线" data-en="Grid styling / terminal row / frozen separators">分割线样式 / 最后一行 / 冻结分隔线</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -980,6 +1060,7 @@
 <a href="../../../include/virtualitemviews/virtualmasonryview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L93</span>
 <pre>    bool horizontalGridLinesVisible() const;</pre>
 <p class="doc" data-zh="返回横向分割线可见性。" data-en="Return the horizontal grid line visibility.">返回横向分割线可见性。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：true" data-en="Default / initial state: true">默认值／初始状态：true</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#grid"><span data-zh="分割线样式 / 最后一行 / 冻结分隔线" data-en="Grid styling / terminal row / frozen separators">分割线样式 / 最后一行 / 冻结分隔线</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
@@ -989,6 +1070,7 @@
 <a href="../../../include/virtualitemviews/virtualmasonryview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L94</span>
 <pre>void setVerticalGridLineWidth(int pixels);</pre>
 <p class="doc" data-zh="设置纵向分割线宽度。" data-en="Set the vertical grid line width.">设置纵向分割线宽度。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：1 像素；缩放与对齐遵循该分割线接口的规则。" data-en="Default / initial state: 1 pixel; scaling and alignment follow this separator API.">默认值／初始状态：1 像素；缩放与对齐遵循该分割线接口的规则。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="VirtualMasonryView-verticalGridLineWidth-45" data-search="VirtualMasonryView verticalGridLineWidth">
@@ -997,6 +1079,7 @@
 <a href="../../../include/virtualitemviews/virtualmasonryview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L95</span>
 <pre>    int verticalGridLineWidth() const;</pre>
 <p class="doc" data-zh="返回纵向分割线宽度。" data-en="Return the vertical grid line width.">返回纵向分割线宽度。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：1 像素；缩放与对齐遵循该分割线接口的规则。" data-en="Default / initial state: 1 pixel; scaling and alignment follow this separator API.">默认值／初始状态：1 像素；缩放与对齐遵循该分割线接口的规则。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="VirtualMasonryView-setHorizontalGridLineWidth-46" data-search="VirtualMasonryView setHorizontalGridLineWidth">
@@ -1005,6 +1088,7 @@
 <a href="../../../include/virtualitemviews/virtualmasonryview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L96</span>
 <pre>void setHorizontalGridLineWidth(int pixels);</pre>
 <p class="doc" data-zh="设置横向分割线宽度。" data-en="Set the horizontal grid line width.">设置横向分割线宽度。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：1 像素；缩放与对齐遵循该分割线接口的规则。" data-en="Default / initial state: 1 pixel; scaling and alignment follow this separator API.">默认值／初始状态：1 像素；缩放与对齐遵循该分割线接口的规则。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="VirtualMasonryView-horizontalGridLineWidth-47" data-search="VirtualMasonryView horizontalGridLineWidth">
@@ -1013,6 +1097,7 @@
 <a href="../../../include/virtualitemviews/virtualmasonryview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L97</span>
 <pre>    int horizontalGridLineWidth() const;</pre>
 <p class="doc" data-zh="返回横向分割线宽度。" data-en="Return the horizontal grid line width.">返回横向分割线宽度。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：1 像素；缩放与对齐遵循该分割线接口的规则。" data-en="Default / initial state: 1 pixel; scaling and alignment follow this separator API.">默认值／初始状态：1 像素；缩放与对齐遵循该分割线接口的规则。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="VirtualMasonryView-setVerticalGridLineColor-48" data-search="VirtualMasonryView setVerticalGridLineColor">
@@ -1021,6 +1106,7 @@
 <a href="../../../include/virtualitemviews/virtualmasonryview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L98</span>
 <pre>void setVerticalGridLineColor(const QColor &amp;color);</pre>
 <p class="doc" data-zh="设置纵向分割线颜色。" data-en="Set the vertical grid line color.">设置纵向分割线颜色。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：无效 QColor；绘制时使用 QPalette::Mid。" data-en="Default / initial state: Invalid QColor; painting uses QPalette::Mid.">默认值／初始状态：无效 QColor；绘制时使用 QPalette::Mid。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="VirtualMasonryView-verticalGridLineColor-49" data-search="VirtualMasonryView verticalGridLineColor">
@@ -1029,6 +1115,7 @@
 <a href="../../../include/virtualitemviews/virtualmasonryview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L99</span>
 <pre>    QColor verticalGridLineColor() const;</pre>
 <p class="doc" data-zh="返回纵向分割线颜色。" data-en="Return the vertical grid line color.">返回纵向分割线颜色。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：无效 QColor；绘制时使用 QPalette::Mid。" data-en="Default / initial state: Invalid QColor; painting uses QPalette::Mid.">默认值／初始状态：无效 QColor；绘制时使用 QPalette::Mid。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="VirtualMasonryView-setHorizontalGridLineColor-50" data-search="VirtualMasonryView setHorizontalGridLineColor">
@@ -1037,6 +1124,7 @@
 <a href="../../../include/virtualitemviews/virtualmasonryview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L100</span>
 <pre>void setHorizontalGridLineColor(const QColor &amp;color);</pre>
 <p class="doc" data-zh="设置横向分割线颜色。" data-en="Set the horizontal grid line color.">设置横向分割线颜色。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：无效 QColor；绘制时使用 QPalette::Mid。" data-en="Default / initial state: Invalid QColor; painting uses QPalette::Mid.">默认值／初始状态：无效 QColor；绘制时使用 QPalette::Mid。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="VirtualMasonryView-horizontalGridLineColor-51" data-search="VirtualMasonryView horizontalGridLineColor">
@@ -1045,6 +1133,7 @@
 <a href="../../../include/virtualitemviews/virtualmasonryview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L101</span>
 <pre>    QColor horizontalGridLineColor() const;</pre>
 <p class="doc" data-zh="返回横向分割线颜色。" data-en="Return the horizontal grid line color.">返回横向分割线颜色。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：无效 QColor；绘制时使用 QPalette::Mid。" data-en="Default / initial state: Invalid QColor; painting uses QPalette::Mid.">默认值／初始状态：无效 QColor；绘制时使用 QPalette::Mid。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="VirtualMasonryView-setVerticalSpacingLineThroughRowSpacing-52" data-search="VirtualMasonryView setVerticalSpacingLineThroughRowSpacing">
@@ -1053,6 +1142,7 @@
 <a href="../../../include/virtualitemviews/virtualmasonryview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L104</span>
 <pre>void setVerticalSpacingLineThroughRowSpacing(bool enabled);</pre>
 <p class="doc" data-zh="设置两侧模式下纵向线穿过行间距开关。" data-en="Set the whether vertical lines cross row gaps in edge mode.">设置两侧模式下纵向线穿过行间距开关。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：true；SpacingCenter 始终穿过间距，此开关仅在 SpacingEdges 生效。" data-en="Default / initial state: true; SpacingCenter always crosses gaps; this switch only affects SpacingEdges.">默认值／初始状态：true；SpacingCenter 始终穿过间距，此开关仅在 SpacingEdges 生效。</p>
 <p class="doc" data-zh="默认 SpacingCenter：在间距中心绘制，交叉线始终穿过间距，且外侧补半间距；零间距时不重复画线。SpacingEdges 在间距两侧绘制，只有这个模式允许控制是否穿过交叉间距。是否穿过表头使用单独开关。" data-en="SpacingCenter is the default: lines run through gap centers, cross gaps unconditionally, and use outer half-gaps; zero spacing does not duplicate lines. SpacingEdges draws both gap edges and alone allows disabling crossings through perpendicular gaps. Header crossings have independent switches.">默认 SpacingCenter：在间距中心绘制，交叉线始终穿过间距，且外侧补半间距；零间距时不重复画线。SpacingEdges 在间距两侧绘制，只有这个模式允许控制是否穿过交叉间距。是否穿过表头使用单独开关。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#spacing"><span data-zh="间距 / 中心分割线 / 双侧分割线 / 半间距" data-en="Spacing / center lines / edge lines / half-gaps">间距 / 中心分割线 / 双侧分割线 / 半间距</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
@@ -1063,6 +1153,7 @@
 <a href="../../../include/virtualitemviews/virtualmasonryview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L105</span>
 <pre>    bool verticalSpacingLineThroughRowSpacing() const;</pre>
 <p class="doc" data-zh="返回两侧模式下纵向线穿过行间距开关。" data-en="Return the whether vertical lines cross row gaps in edge mode.">返回两侧模式下纵向线穿过行间距开关。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：true；SpacingCenter 始终穿过间距，此开关仅在 SpacingEdges 生效。" data-en="Default / initial state: true; SpacingCenter always crosses gaps; this switch only affects SpacingEdges.">默认值／初始状态：true；SpacingCenter 始终穿过间距，此开关仅在 SpacingEdges 生效。</p>
 <p class="doc" data-zh="默认 SpacingCenter：在间距中心绘制，交叉线始终穿过间距，且外侧补半间距；零间距时不重复画线。SpacingEdges 在间距两侧绘制，只有这个模式允许控制是否穿过交叉间距。是否穿过表头使用单独开关。" data-en="SpacingCenter is the default: lines run through gap centers, cross gaps unconditionally, and use outer half-gaps; zero spacing does not duplicate lines. SpacingEdges draws both gap edges and alone allows disabling crossings through perpendicular gaps. Header crossings have independent switches.">默认 SpacingCenter：在间距中心绘制，交叉线始终穿过间距，且外侧补半间距；零间距时不重复画线。SpacingEdges 在间距两侧绘制，只有这个模式允许控制是否穿过交叉间距。是否穿过表头使用单独开关。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#spacing"><span data-zh="间距 / 中心分割线 / 双侧分割线 / 半间距" data-en="Spacing / center lines / edge lines / half-gaps">间距 / 中心分割线 / 双侧分割线 / 半间距</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
@@ -1073,6 +1164,7 @@
 <a href="../../../include/virtualitemviews/virtualmasonryview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L108</span>
 <pre>void setHorizontalSpacingLineThroughColumnSpacing(bool enabled);</pre>
 <p class="doc" data-zh="设置两侧模式下横向线穿过列间距开关。" data-en="Set the whether horizontal lines cross column gaps in edge mode.">设置两侧模式下横向线穿过列间距开关。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：true；SpacingCenter 始终穿过间距，此开关仅在 SpacingEdges 生效。" data-en="Default / initial state: true; SpacingCenter always crosses gaps; this switch only affects SpacingEdges.">默认值／初始状态：true；SpacingCenter 始终穿过间距，此开关仅在 SpacingEdges 生效。</p>
 <p class="doc" data-zh="默认 SpacingCenter：在间距中心绘制，交叉线始终穿过间距，且外侧补半间距；零间距时不重复画线。SpacingEdges 在间距两侧绘制，只有这个模式允许控制是否穿过交叉间距。是否穿过表头使用单独开关。" data-en="SpacingCenter is the default: lines run through gap centers, cross gaps unconditionally, and use outer half-gaps; zero spacing does not duplicate lines. SpacingEdges draws both gap edges and alone allows disabling crossings through perpendicular gaps. Header crossings have independent switches.">默认 SpacingCenter：在间距中心绘制，交叉线始终穿过间距，且外侧补半间距；零间距时不重复画线。SpacingEdges 在间距两侧绘制，只有这个模式允许控制是否穿过交叉间距。是否穿过表头使用单独开关。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#spacing"><span data-zh="间距 / 中心分割线 / 双侧分割线 / 半间距" data-en="Spacing / center lines / edge lines / half-gaps">间距 / 中心分割线 / 双侧分割线 / 半间距</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
@@ -1083,6 +1175,7 @@
 <a href="../../../include/virtualitemviews/virtualmasonryview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L109</span>
 <pre>    bool horizontalSpacingLineThroughColumnSpacing() const;</pre>
 <p class="doc" data-zh="返回两侧模式下横向线穿过列间距开关。" data-en="Return the whether horizontal lines cross column gaps in edge mode.">返回两侧模式下横向线穿过列间距开关。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：true；SpacingCenter 始终穿过间距，此开关仅在 SpacingEdges 生效。" data-en="Default / initial state: true; SpacingCenter always crosses gaps; this switch only affects SpacingEdges.">默认值／初始状态：true；SpacingCenter 始终穿过间距，此开关仅在 SpacingEdges 生效。</p>
 <p class="doc" data-zh="默认 SpacingCenter：在间距中心绘制，交叉线始终穿过间距，且外侧补半间距；零间距时不重复画线。SpacingEdges 在间距两侧绘制，只有这个模式允许控制是否穿过交叉间距。是否穿过表头使用单独开关。" data-en="SpacingCenter is the default: lines run through gap centers, cross gaps unconditionally, and use outer half-gaps; zero spacing does not duplicate lines. SpacingEdges draws both gap edges and alone allows disabling crossings through perpendicular gaps. Header crossings have independent switches.">默认 SpacingCenter：在间距中心绘制，交叉线始终穿过间距，且外侧补半间距；零间距时不重复画线。SpacingEdges 在间距两侧绘制，只有这个模式允许控制是否穿过交叉间距。是否穿过表头使用单独开关。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#spacing"><span data-zh="间距 / 中心分割线 / 双侧分割线 / 半间距" data-en="Spacing / center lines / edge lines / half-gaps">间距 / 中心分割线 / 双侧分割线 / 半间距</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
