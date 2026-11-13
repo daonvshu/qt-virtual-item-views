@@ -184,7 +184,7 @@ void VirtualListView::paintEvent(QPaintEvent *event)
         const VisualState state = visualState(item.index);
         if (state.hoverProgress <= 0.0 && state.selectedProgress <= 0.0)
             continue;
-        const QRect background = visualStateBackgroundRect(item.index, rect);
+        const QRect background = applyRowVisualStateInsets(visualStateBackgroundRect(item.index, rect));
         if (background.isEmpty())
             continue;
         statePerformance.count("paint.state-rows");

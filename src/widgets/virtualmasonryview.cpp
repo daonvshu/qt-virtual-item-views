@@ -895,6 +895,20 @@ void VirtualMasonryView::afterMaterialize()
     m_gridOverlay->update();
 }
 
+QRect VirtualMasonryView::gridLineContentBounds() const
+{
+    QRect bounds = VirtualItemView::gridLineContentBounds();
+    bounds.adjust(0, contentMargins().top(), 0, -contentMargins().bottom());
+    const int count = int(qMin<qsizetype>(m_masonry->columnCount(), viewItemCount()));
+    if (count > 0) {
+        const QMargins outer = m_masonry->outerSpacing();
+        bounds.setLeft(viewport()->x() + m_masonry->columnX(0) - outer.left());
+        bounds.setRight(viewport()->x() + m_masonry->columnX(count - 1)
+            + m_masonry->columnWidth(count - 1) + outer.right() - 1);
+    }
+    return bounds;
+}
+
 void VirtualMasonryView::paintGridLines(QPainter *painter) const
 {
     detail::PerformanceScope performance(this, "paint.masonry-grid", detail::PerformanceDomain::Paint);
@@ -1045,7 +1059,8 @@ void VirtualMasonryView::paintGridLines(QPainter *painter) const
         painter->save();
         painter->setRenderHint(QPainter::Antialiasing, false);
         const QColor color = colorFor(m_horizontalLineColor);
-        for (const QRect &band : horizontalCenterBands)
+        const QRegion insetBands = GridLinePaintGeometry::apply(painter, horizontalCenterBands, Qt::Horizontal);
+        for (const QRect &band : insetBands)
             painter->fillRect(inverse.mapRect(QRectF(band)), color);
         painter->restore();
         fillPixelLines(painter, horizontalTrailing, m_horizontalLineWidth,

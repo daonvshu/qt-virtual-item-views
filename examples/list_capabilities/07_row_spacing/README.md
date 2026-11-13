@@ -32,3 +32,9 @@ int main(int argc, char **argv)
 ```
 
 [返回全部能力](../README.md)
+
+## 分割线边距参照
+
+`setGridLineMarginReference(VirtualItemView::GridLineMarginReference::Viewport)` 为默认值，按可见区域设置整线边距。切到 `Content` 后使用完整内容端点；未滚动到右侧或底部时，屏幕边缘不会提前留出对应边距。左右控制横线，上下控制竖线；正数缩短、负数延伸，超过视图的部分正常裁剪。表头与内容使用同一组整体端点。
+
+`setRowVisualStateMargins(left, right)` 单独调整 hover 和选中行背景的左右边距，默认均为 0；正数缩短、负数延伸。在原有状态范围计算后应用，保持控件尺寸、命中和选择范围不变。表格仅在 `SelectRows` 模式下生效；垂直表头显示且启用状态背景时，与内容合并为整行范围，边距只计算一次，圆角跟随整体端点。表头隐藏或关闭状态背景时从内容端点计算；水平表头和单元格选择模式不受影响。List／Tree 原有的 `setVisualStateBackgroundMargins` 仍可单独配置状态范围及命中。

@@ -57,6 +57,37 @@ private:
 
     void setupExample()
     {
+        // Content references keep offscreen endpoints uncut until they scroll into view.
+        connect(ui->lineReference, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int mode) {
+            ui->view->setGridLineMarginReference(mode == 0
+                ? viv::VirtualItemView::GridLineMarginReference::Viewport
+                : viv::VirtualItemView::GridLineMarginReference::Content);
+        });
+        const auto updateStateMargins = [this] {
+            // Paint-only insets preserve existing widget geometry and mouse hits.
+            ui->view->setRowVisualStateMargins(ui->stateLeft->value(), ui->stateRight->value());
+        };
+        connect(ui->stateLeft, QOverload<int>::of(&QSpinBox::valueChanged), this, updateStateMargins);
+        connect(ui->stateRight, QOverload<int>::of(&QSpinBox::valueChanged), this, updateStateMargins);
+
+        // An empty depth set keeps all separators. Depth zero means a complete
+        // root group: its separator follows the last visible descendant.
+        connect(ui->lineDepths, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int mode) {
+            QSet<int> depths;
+            if (mode == 1 || mode == 3)
+                depths.insert(0);
+            if (mode == 2 || mode == 3)
+                depths.insert(1);
+            ui->view->setRowGridLineDepths(depths);
+        });
+        const auto updateLineMargins = [this] {
+            // Apply endpoint insets after the view computes the complete line.
+            // Negative values extend it; cells do not each receive their own inset.
+            ui->view->setGridLineMargins(QMargins(ui->lineLeft->value(),
+                0, ui->lineRight->value(), 0));
+        };
+        connect(ui->lineLeft, QOverload<int>::of(&QSpinBox::valueChanged), this, updateLineMargins);
+        connect(ui->lineRight, QOverload<int>::of(&QSpinBox::valueChanged), this, updateLineMargins);
         // A plain QStandardItemModel owns the hierarchy; only column zero owns children.
         m_model = new QStandardItemModel(ui->view);
         for (int group = 0; group < 5; ++group) {

@@ -137,8 +137,10 @@ public:
         std::sort(rows.begin(), rows.end());
         rows.erase(std::unique(rows.begin(), rows.end()), rows.end());
         const qreal current = progress();
-        const int left = m_view->rowGridLineInset(m_source);
-        const int width = m_view->viewport()->width() - left;
+        const auto endpoints = m_view->horizontalGridLineRange(m_view->rowGridLineInset(m_source));
+        const int left = endpoints.first;
+        const int right = endpoints.second;
+        const int width = right - left;
         for (qsizetype row : rows) {
             if (row < 0 || row > count || m_preview.containsSource(row))
                 continue;
@@ -146,6 +148,11 @@ public:
                 ? m_preview.source() - 1 : row - 1;
             const QRect gap = placeholderGapBefore(row, current);
             if (gap.isEmpty())
+                continue;
+            const int targetDepth = m_targetParent == m_view->rootIndex()
+                ? 0 : m_view->itemDepth(m_targetParent) + 1;
+            if (!m_view->rowGridLineDepthFilter().isEmpty()
+                && !m_view->rowGridLineDepthFilter().contains(targetDepth))
                 continue;
             // Reuse a preceding trailing edge; at the start of the tree there
             // is no preceding row, so anchor the border to the leading edge.

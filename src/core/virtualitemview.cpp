@@ -210,12 +210,14 @@ protected:
         if (property("vivShowSpacingLines").toBool()
             && !property("vivSpacingPaneBoundary").toBool()) {
             const int left = qBound(0, property("vivSpacingLineLeftInset").toInt(), width());
-            const int skipLeft = qBound(left, property("vivSpacingLineSkipX").toInt(), width());
+            const int right = int(qBound<qint64>(qint64(left),
+                qint64(width()) - property("vivSpacingLineRightInset").toInt(), qint64(width())));
+            const int skipLeft = qBound(left, property("vivSpacingLineSkipX").toInt(), right);
             const int skipRight = qBound(skipLeft,
-                skipLeft + qMax(0, property("vivSpacingLineSkipWidth").toInt()), width());
+                skipLeft + qMax(0, property("vivSpacingLineSkipWidth").toInt()), right);
             fillPixelLines(&painter,
                 {QRect(left, 0, skipLeft - left, height()),
-                 QRect(skipRight, 0, width() - skipRight, height())},
+                 QRect(skipRight, 0, right - skipRight, height())},
                 lineWidth, m_lineColor, Qt::Horizontal, false,
                 !property("vivSpacingLineCentered").toBool(),
                 property("vivSpacingLineCentered").toBool());
@@ -343,8 +345,12 @@ VirtualItemView::VirtualItemView(QWidget *parent)
     });
 }
 
+int VirtualItemView::s_gridLineMarginViews = 0;
+
 VirtualItemView::~VirtualItemView()
 {
+    if (!m_gridLineMargins.isNull())
+        --s_gridLineMarginViews;
     m_destroying = true;
     closeEditor();
     setPerformanceLoggingEnabled(false);
@@ -718,6 +724,115 @@ void VirtualItemView::applyRowSpacingOverrides()
 void VirtualItemView::configureRowSpacingWidget(QWidget *widget) const
 {
     Q_UNUSED(widget);
+}
+
+void VirtualItemView::setGridLineMargins(const QMargins &margins)
+{
+    if (m_gridLineMargins == margins)
+        return;
+    s_gridLineMarginViews += int(!margins.isNull()) - int(!m_gridLineMargins.isNull());
+    m_gridLineMargins = margins;
+    ++m_rowSpacingStateSerial;
+    markDirty();
+    viewport()->update();
+    for (QWidget *widget : findChildren<QWidget *>())
+        widget->update();
+}
+
+void VirtualItemView::setGridLineMarginReference(GridLineMarginReference reference)
+{
+    if ((reference != GridLineMarginReference::Viewport && reference != GridLineMarginReference::Content)
+        || m_gridLineMarginReference == reference)
+        return;
+    m_gridLineMarginReference = reference;
+    ++m_rowSpacingStateSerial;
+    markDirty();
+    viewport()->update();
+    for (QWidget *widget : findChildren<QWidget *>())
+        widget->update();
+}
+
+QRect VirtualItemView::gridLineBounds() const
+{
+    return m_gridLineMarginReference == GridLineMarginReference::Content
+        ? gridLineContentBounds() : viewport()->geometry();
+}
+
+QRect VirtualItemView::gridLineContentBounds() const
+{
+    if (!m_layout || m_layout->itemCount() <= 0)
+        return viewport()->geometry();
+    const auto *rows = dynamic_cast<const ListLayout *>(m_layout);
+    const QMargins margins = rows ? rows->viewportMargins() : QMargins();
+    const qint64 limit = std::numeric_limits<int>::max() / 2;
+    const int top = int(qBound<qint64>(-limit, qint64(margins.top()) - verticalOffset(), limit));
+    const int bottom = int(qBound<qint64>(-limit,
+        m_layout->contentExtent() - margins.bottom() - verticalOffset(), limit));
+    return QRect(margins.left(), top,
+                 qMax(0, m_layout->crossExtent() - margins.left() - margins.right()),
+                 qMax(0, bottom - top)).translated(viewport()->pos());
+}
+
+QPair<int, int> VirtualItemView::horizontalGridLineRange(int itemInset) const
+{
+    const int width = viewport()->width();
+    if (m_gridLineMargins.left() == 0 && m_gridLineMargins.right() == 0)
+        return qMakePair(qBound(0, itemInset, width), width);
+    const QRect bounds = gridLineBounds().translated(-viewport()->pos());
+    const int left = int(qBound<qint64>(qint64(0), qint64(qMax(itemInset, bounds.left()))
+        + m_gridLineMargins.left(), qint64(width)));
+    const int right = int(qBound<qint64>(qint64(left), qint64(bounds.right()) + 1
+        - m_gridLineMargins.right(), qint64(width)));
+    return qMakePair(left, right);
+}
+
+void VirtualItemView::setRowVisualStateInsets(int left, int right)
+{
+    const QMargins margins(left, 0, right, 0);
+    if (m_rowVisualStateInsets == margins)
+        return;
+    m_rowVisualStateInsets = margins;
+    viewport()->update();
+    for (QWidget *widget : findChildren<QWidget *>())
+        widget->update();
+}
+
+QRect VirtualItemView::applyRowVisualStateInsets(const QRect &rect) const
+{
+    if (rect.isEmpty() || m_rowVisualStateInsets.isNull())
+        return rect;
+    const qint64 limit = std::numeric_limits<int>::max() / 2;
+    const int left = int(qBound<qint64>(-limit, qint64(rect.left()) + m_rowVisualStateInsets.left(), limit));
+    const int right = int(qBound<qint64>(qint64(left), qint64(rect.right()) + 1
+        - m_rowVisualStateInsets.right(), limit));
+    return QRect(left, rect.y(), right - left, rect.height());
+}
+
+void VirtualItemView::setRowGridLineDepthFilter(const QSet<int> &depths)
+{
+    QSet<int> normalized;
+    for (int depth : depths) {
+        if (depth >= 0)
+            normalized.insert(depth);
+    }
+    if (m_rowGridLineDepths == normalized)
+        return;
+    m_rowGridLineDepths = normalized;
+    ++m_rowSpacingStateSerial;
+    markDirty();
+    viewport()->update();
+    for (QWidget *widget : findChildren<QWidget *>())
+        widget->update();
+}
+
+bool VirtualItemView::rowGridLineVisibleAfter(qsizetype row) const
+{
+    if (m_rowGridLineDepths.isEmpty())
+        return true;
+    if (row < 0 || row >= viewItemCount())
+        return false;
+    const int depth = row + 1 < viewItemCount() ? itemDepth(viewIndex(row + 1)) : 0;
+    return m_rowGridLineDepths.contains(depth);
 }
 
 void VirtualItemView::setGridLinePlacement(GridLinePlacement placement)

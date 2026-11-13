@@ -15,3 +15,7 @@
 底部内容边距大于零时，末行下边线始终保留（仍受“横线”总开关控制）。底部边距为零时，内容可滚动或启用整体自适应高度会默认隐藏末行下边线；勾选“始终绘制末行下边线”可保留。视图位于顶部时调整间距、边距或窗口尺寸，会保持滚动位置为零，从而完整显示配置的上边距。
 
 运行 `flow_capabilities --example 3`。复制本目录中的源码、头文件和布局文件即可；在自己的 CMake 目标启用 `AUTOUIC`，链接 `VirtualItemViews::VirtualItemViews` 和对应版本的 Qt Widgets，然后将 `flow_spacing_grid::createExample(parent)` 返回的 QWidget 加入布局。
+
+## 分割线边距参照
+
+`setGridLineMarginReference(VirtualItemView::GridLineMarginReference::Viewport)` 为默认值，按可见区域设置整线边距。切到 `Content` 后使用完整内容端点；未滚动到右侧或底部时，屏幕边缘不会提前留出对应边距。左右控制横线，上下控制竖线；正数缩短、负数延伸，超过视图的部分正常裁剪。表头与内容使用同一组整体端点。

@@ -222,6 +222,8 @@ void VirtualHeaderView::paintEvent(QPaintEvent *event)
         if (!isHorizontal() && !m_trailingSectionSeparatorVisible
             && it.key() + 1 == m_geometry->sectionCount())
             continue;
+        if (m_rowGridLineFilter && !m_rowGridLineFilter(it.key()))
+            continue;
         const bool sectionOwnsBorder = section->isVisible()
             && qobject_cast<const StyledHeaderSection *>(section);
         if (trailing > 0 || paneBoundary) {
@@ -291,10 +293,12 @@ void VirtualHeaderView::paintEvent(QPaintEvent *event)
     }
     if (m_sectionSeparatorsVisible) {
         painter.setOpacity(1.0);
-        for (int edge : rowDragPlaceholderTrailingEdges())
-            fillHorizontalPixelLines(&painter,
-                {QRect(0, edge - m_sectionSeparatorWidth, width(), m_sectionSeparatorWidth)},
-                m_sectionSeparatorWidth, sectionColor, true);
+        if (!m_rowGridLineFilter || m_rowGridLineFilter(m_dragSection)) {
+            for (int edge : rowDragPlaceholderTrailingEdges())
+                fillHorizontalPixelLines(&painter,
+                    {QRect(0, edge - m_sectionSeparatorWidth, width(), m_sectionSeparatorWidth)},
+                    m_sectionSeparatorWidth, sectionColor, true);
+        }
     }
 }
 
@@ -750,7 +754,8 @@ bool VirtualHeaderView::sectionSeparatorVisible(int logicalIndex) const
     if (isHorizontal() && logicalIndex == m_frameAdjacentColumn
         && sectionTrailingEdgeSpacing(logicalIndex) == 0)
         return false;
-    return m_sectionSeparatorsVisible && (isHorizontal() || m_trailingSectionSeparatorVisible
+    return (!m_rowGridLineFilter || m_rowGridLineFilter(logicalIndex))
+        && m_sectionSeparatorsVisible && (isHorizontal() || m_trailingSectionSeparatorVisible
         || !m_geometry || logicalIndex + 1 != m_geometry->sectionCount());
 }
 
@@ -1666,7 +1671,7 @@ void VirtualHeaderView::positionDraggedSections()
             widget->raise();
     }
     QWidget *dragged = m_sectionWidgets.value(m_dragSection, nullptr);
-    if (m_sectionSeparatorsVisible && dragged && dragged->isVisible()) {
+    if (sectionSeparatorVisible(m_dragSection) && dragged && dragged->isVisible()) {
         if (!m_dragLeadingSeparator) {
             auto *line = new PixelAlignedLine(this, isHorizontal() ? Qt::Vertical : Qt::Horizontal);
             line->setObjectName(QStringLiteral("vivHeaderDragSeparator"));

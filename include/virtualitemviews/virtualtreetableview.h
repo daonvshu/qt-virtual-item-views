@@ -74,6 +74,12 @@ public:
     /// Pixels above this node, added to the preceding node's below gap.
     /// Missing/negative values mean zero; the first visible row has no leading gap.
     static constexpr int NodeRowSpacingAboveRole = Qt::UserRole + 0x101;
+    /// Visible group-boundary depths relative to the displayed root (root = 0).
+    /// Empty (default) draws all depths; negative entries are ignored. {0} draws
+    /// after each complete root subtree, not between a root and its children.
+    /// End-of-content remains subject to trailingRowGridLineAutoHideEnabled().
+    void setRowGridLineDepths(const QSet<int> &depths) { setRowGridLineDepthFilter(depths); }
+    QSet<int> rowGridLineDepths() const { return rowGridLineDepthFilter(); }
     /// Row lines span the actual columns, including the branch and indentation areas.
     /// Row line style is the table's horizontal grid line style.
     void setRowGridLinesVisible(bool visible) { setHorizontalGridLinesVisible(visible); }

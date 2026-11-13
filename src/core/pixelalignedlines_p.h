@@ -1,6 +1,7 @@
 #pragma once
 
 #include "performanceprobe_p.h"
+#include <virtualitemviews/virtualitemview.h>
 
 #include <QPainter>
 #include <QPainterPath>
@@ -9,6 +10,68 @@
 #include <QWidget>
 
 namespace viv {
+
+// Resolve one whole-view endpoint interval for all cells, gaps and built-in headers.
+class GridLinePaintGeometry
+{
+public:
+    static bool enabled() { return VirtualItemView::s_gridLineMarginViews > 0; }
+
+    static QRegion apply(QPainter *painter, const QRegion &bands, Qt::Orientation orientation)
+    {
+        if (!enabled() || bands.isEmpty())
+            return bands;
+        const auto *widget = dynamic_cast<const QWidget *>(painter->device());
+        if (!widget)
+            return bands;
+        const QWidget *ancestor = widget;
+        const VirtualItemView *view = nullptr;
+        while (ancestor && !(view = qobject_cast<const VirtualItemView *>(ancestor)))
+            ancestor = ancestor->parentWidget();
+        if (!view || view->gridLineMargins().isNull()
+            || (orientation == Qt::Horizontal && widget->property("vivHorizontalGridMarginsApplied").toBool()))
+            return bands;
+        const QMargins margins = view->gridLineMargins();
+        const QPoint origin = widget->mapTo(view, QPoint());
+        const QRectF bounds = QRectF(view->gridLineBounds()).translated(-origin);
+        const bool horizontal = orientation == Qt::Horizontal;
+        const int leading = horizontal ? margins.left() : margins.top();
+        const int trailing = horizontal ? margins.right() : margins.bottom();
+        if (qreal(leading) + trailing >= (horizontal ? bounds.width() : bounds.height()))
+            return {};
+        const QTransform transform = painter->deviceTransform();
+        const QRectF natural = transform.mapRect(bounds);
+        const QRectF adjusted = transform.mapRect(horizontal
+            ? bounds.adjusted(leading, 0, -qreal(trailing), 0)
+            : bounds.adjusted(0, leading, 0, -qreal(trailing)));
+        const QRectF deviceWidget = transform.mapRect(QRectF(widget->rect()));
+        const qreal minimum = horizontal ? deviceWidget.left() : deviceWidget.top();
+        const qreal maximum = horizontal ? deviceWidget.right() : deviceWidget.bottom();
+        const int first = qRound(qBound(minimum, horizontal ? adjusted.left() : adjusted.top(), maximum));
+        const int last = qMax(first, qRound(qBound(minimum,
+            horizontal ? adjusted.right() : adjusted.bottom(), maximum)));
+        const qreal naturalFirst = horizontal ? natural.left() : natural.top();
+        const qreal naturalLast = horizontal ? natural.right() : natural.bottom();
+        QRegion result;
+        for (QRect band : bands) {
+            int start = horizontal ? band.left() : band.top();
+            int end = horizontal ? band.right() + 1 : band.bottom() + 1;
+            // Only fragments reaching an overall endpoint can extend. Interior
+            // cell/gap boundaries keep their original endpoints and continuity.
+            if (leading < 0 && start <= naturalFirst + 0.5)
+                start = qMin(start, first);
+            if (trailing < 0 && end >= naturalLast - 0.5)
+                end = qMax(end, last);
+            start = qMax(start, first);
+            end = qMin(end, last);
+            if (end <= start)
+                continue;
+            result += horizontal ? QRect(start, band.y(), end - start, band.height())
+                                 : QRect(band.x(), start, band.width(), end - start);
+        }
+        return result;
+    }
+};
 
 // Reserve a trailing border in physical pixels; the caller owns painter save/restore.
 inline void clipPixelAlignedBottomInset(QPainter *painter, const QRect &rect, int pixelInset)
@@ -98,7 +161,7 @@ inline void fillPixelAlignedRoundedRegion(QPainter *painter, const QRect &rect,
 inline void fillPixelLines(QPainter *painter, const QVector<QRect> &lines,
                            int pixelWidth, const QColor &color, Qt::Orientation orientation,
                            bool trailingEdge = false, bool bothEdges = false,
-                           bool centered = false)
+                           bool centered = false, bool applyGridMargins = true)
 {
     const QTransform transform = painter->deviceTransform();
     bool invertible = false;
@@ -134,6 +197,8 @@ inline void fillPixelLines(QPainter *painter, const QVector<QRect> &lines,
             bands += band;
         }
     }
+    if (applyGridMargins)
+        bands = GridLinePaintGeometry::apply(painter, bands, orientation);
     painter->save();
     painter->setRenderHint(QPainter::Antialiasing, false);
     for (const QRect &band : bands)
@@ -171,7 +236,7 @@ inline void drawPixelAlignedSeparator(QPainter *painter, const QRect &rect,
     if (rect.isEmpty() || pixelWidth <= 0 || style == Qt::NoPen || color.alpha() == 0)
         return;
     if (style == Qt::SolidLine) {
-        fillPixelLines(painter, {rect}, pixelWidth, color, orientation, trailingEdge);
+        fillPixelLines(painter, {rect}, pixelWidth, color, orientation, trailingEdge, false, false, false);
         return;
     }
     const QTransform transform = painter->deviceTransform();

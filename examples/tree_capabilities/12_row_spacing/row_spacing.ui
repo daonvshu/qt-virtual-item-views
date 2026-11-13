@@ -2,7 +2,7 @@
 <ui version="4.0">
  <class>TreeRowSpacingPage</class>
  <widget class="QWidget" name="TreeRowSpacingPage">
-  <layout class="QVBoxLayout" name="layout" stretch="0,0,0,1">
+  <layout class="QVBoxLayout" name="layout" stretch="0,0,0,0,0,1">
    <item>
     <widget class="QLabel" name="description">
      <property name="text">
@@ -132,6 +132,48 @@
        </property>
       </spacer>
      </item>
+    </layout>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="gridLineControls">
+     <item><widget class="QComboBox" name="lineDepths">
+      <item><property name="text"><string>全部深度分割线</string></property></item>
+      <item><property name="text"><string>仅主节点分组</string></property></item>
+      <item><property name="text"><string>仅一级子节点</string></property></item>
+      <item><property name="text"><string>主节点及一级子节点</string></property></item>
+     </widget></item>
+     <item><widget class="QSpinBox" name="lineLeft">
+      <property name="minimum"><number>-120</number></property>
+      <property name="maximum"><number>240</number></property>
+      <property name="prefix"><string>横线左边距 </string></property>
+      <property name="suffix"><string> px</string></property>
+     </widget></item>
+     <item><widget class="QSpinBox" name="lineRight">
+      <property name="minimum"><number>-120</number></property>
+      <property name="maximum"><number>240</number></property>
+      <property name="prefix"><string>横线右边距 </string></property>
+      <property name="suffix"><string> px</string></property>
+     </widget></item>
+    </layout>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="marginReferenceControls">
+     <item><widget class="QComboBox" name="lineReference">
+      <item><property name="text"><string>分割线边距：viewport 区域</string></property></item>
+      <item><property name="text"><string>分割线边距：完整内容区域</string></property></item>
+     </widget></item>
+     <item><widget class="QSpinBox" name="stateLeft">
+      <property name="minimum"><number>-120</number></property>
+      <property name="maximum"><number>240</number></property>
+      <property name="prefix"><string>状态左边距 </string></property>
+      <property name="suffix"><string> px</string></property>
+     </widget></item>
+     <item><widget class="QSpinBox" name="stateRight">
+      <property name="minimum"><number>-120</number></property>
+      <property name="maximum"><number>240</number></property>
+      <property name="prefix"><string>状态右边距 </string></property>
+      <property name="suffix"><string> px</string></property>
+     </widget></item>
     </layout>
    </item>
    <item>

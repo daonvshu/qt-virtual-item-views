@@ -467,6 +467,7 @@ private:
     int m_lastPaneRow = std::numeric_limits<int>::max();
     qint64 m_paneOffset = kFollowGeometryOffset;
     int m_paneTerminalColumn = -1;
+    std::function<bool(int)> m_rowGridLineFilter;
     bool m_sectionSeparatorsVisible = true;
     bool m_trailingSectionSeparatorVisible = true;
     int m_frameAdjacentColumn = -1;

@@ -5,3 +5,7 @@
 中心模式在内容四周预留半间距，独立于内容边距；切换两侧模式后移除半间距。间距颜色同时覆盖内部间距和外侧半间距。各列最后一项下方补齐分割线，贴近底边框时遵循 `setTrailingRowGridLineAutoHideEnabled()` 的设置。
 
 入口为 [example.cpp](example.cpp)，页面布局为 [spacing_grid.ui](spacing_grid.ui)。本目录独立定义 model、adapter 和控件，不依赖其他章节。复制时保留本目录的源码与 UI 文件，将 UI 加入启用 `AUTOUIC` 的目标。
+
+## 分割线边距参照
+
+`setGridLineMarginReference(VirtualItemView::GridLineMarginReference::Viewport)` 为默认值，按可见区域设置整线边距。切到 `Content` 后使用完整内容端点；未滚动到右侧或底部时，屏幕边缘不会提前留出对应边距。左右控制横线，上下控制竖线；正数缩短、负数延伸，超过视图的部分正常裁剪。表头与内容使用同一组整体端点。

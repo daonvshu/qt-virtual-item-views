@@ -1,3 +1,4 @@
+#include <QComboBox>
 #include "ui_row_spacing.h"
 #include <memory>
 #include "example.h"
@@ -58,6 +59,26 @@ private:
 
     void setupExample()
     {
+        // Content references keep offscreen endpoints uncut until they scroll into view.
+        connect(ui->lineReference, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int mode) {
+            ui->view->setGridLineMarginReference(mode == 0
+                ? viv::VirtualItemView::GridLineMarginReference::Viewport
+                : viv::VirtualItemView::GridLineMarginReference::Content);
+        });
+        const auto updateLineMargins = [this] {
+            // These are overall endpoints, not padding repeated on each cell.
+            ui->view->setGridLineMargins(QMargins(ui->lineLeft->value(), 0,
+                ui->lineRight->value(), 0));
+        };
+        connect(ui->lineLeft, QOverload<int>::of(&QSpinBox::valueChanged), this, updateLineMargins);
+        connect(ui->lineRight, QOverload<int>::of(&QSpinBox::valueChanged), this, updateLineMargins);
+        const auto updateStateMargins = [this] {
+            // Paint-only insets preserve existing widget geometry and mouse hits.
+            ui->view->setRowVisualStateMargins(ui->stateLeft->value(), ui->stateRight->value());
+        };
+        connect(ui->stateLeft, QOverload<int>::of(&QSpinBox::valueChanged), this, updateStateMargins);
+        connect(ui->stateRight, QOverload<int>::of(&QSpinBox::valueChanged), this, updateStateMargins);
+
         QStringList records;
         for (int row = 0; row < 100; ++row)
             records.append(QStringLiteral("条目 %1").arg(row + 1));

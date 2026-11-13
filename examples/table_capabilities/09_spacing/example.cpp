@@ -56,6 +56,29 @@ private:
 
     void setupExample()
     {
+        // Content references keep offscreen endpoints uncut until they scroll into view.
+        connect(ui->lineReference, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int mode) {
+            ui->view->setGridLineMarginReference(mode == 0
+                ? viv::VirtualItemView::GridLineMarginReference::Viewport
+                : viv::VirtualItemView::GridLineMarginReference::Content);
+        });
+        const auto updateLineMargins = [this] {
+            // These are overall endpoints, not padding repeated on each cell.
+            ui->view->setGridLineMargins(QMargins(ui->lineLeft->value(), ui->lineTop->value(),
+                ui->lineRight->value(), ui->lineBottom->value()));
+        };
+        connect(ui->lineLeft, QOverload<int>::of(&QSpinBox::valueChanged), this, updateLineMargins);
+        connect(ui->lineTop, QOverload<int>::of(&QSpinBox::valueChanged), this, updateLineMargins);
+        connect(ui->lineRight, QOverload<int>::of(&QSpinBox::valueChanged), this, updateLineMargins);
+        connect(ui->lineBottom, QOverload<int>::of(&QSpinBox::valueChanged), this, updateLineMargins);
+        const auto updateStateMargins = [this] {
+            // Insets start at the visible row header when its state background is enabled.
+            // Header and body share one range; widget geometry and mouse hits stay unchanged.
+            ui->view->setRowVisualStateMargins(ui->stateLeft->value(), ui->stateRight->value());
+        };
+        connect(ui->stateLeft, QOverload<int>::of(&QSpinBox::valueChanged), this, updateStateMargins);
+        connect(ui->stateRight, QOverload<int>::of(&QSpinBox::valueChanged), this, updateStateMargins);
+
         // Materialize cells independently so horizontally offscreen cells can also be recycled.
         ui->view->setMaterializationMode(viv::VirtualTableView::MaterializationMode::CellWidgets);
         ui->view->setCellAdapter(new CellAdapter, true);

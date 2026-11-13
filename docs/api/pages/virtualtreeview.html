@@ -185,6 +185,28 @@
 </ul>
 </details>
 </article>
+<article id="grid-line-range" data-search="setGridLineMargins gridLineMargins setGridLineMarginReference gridLineMarginReference setRowGridLineDepths rowGridLineDepths setRowVisualStateMargins rowVisualStateMargins virtualitemview virtuallistview virtualtreeview virtualtableview virtualtreetableview virtualflowtableview virtualmasonryview">
+<h3><span data-zh="分割线深度过滤 / 整线四向边距" data-en="Grid depth filtering / whole-line endpoint margins">分割线深度过滤 / 整线四向边距</span></h3>
+<p>
+<code>setGridLineMargins · gridLineMargins · setGridLineMarginReference · gridLineMarginReference · setRowGridLineDepths · rowGridLineDepths · setRowVisualStateMargins · rowVisualStateMargins</code>
+</p>
+<p class="rules"><span data-zh="gridLineMarginReference 默认 Viewport，Content 使用完整内容端点，未滚到末尾不截短屏幕边缘。List/Tree/Table/TreeTable 的 setRowVisualStateMargins(left,right) 默认 0，仅调整行 hover/select 绘制，不改变命中；表格仅 SelectRows 生效，显示且开启状态背景的垂直表头与内容共享端点，边距只扣一次；隐藏或关闭表头状态时退回内容范围。gridLineMargins 默认全零，横线使用 left/right，竖线使用 top/bottom；计算完整线范围后应用，正数缩短、负数伸长，不是每个 cell 的 padding。表头与内容共享范围；外框、冻结分隔线和拖放指示器独立。树和树表的深度集合默认空（全部），{0} 只画完整主节点子树之后的边界，{0,1} 还画一级子节点边界。深度相对于显示根；负值忽略，末行自动隐藏仍生效。" data-en="gridLineMarginReference defaults to Viewport; Content follows full content endpoints without prematurely trimming offscreen ends. List/Tree/Table/TreeTable setRowVisualStateMargins(left,right) defaults to zero and changes row hover/select painting only, preserving hits; tables require SelectRows and share endpoints with a visible state-enabled vertical header, applying insets once; hidden or state-disabled headers leave body-only bounds. gridLineMargins defaults to zero. Horizontal lines use left/right and vertical lines use top/bottom, applied after complete line geometry: positive shortens, negative extends, never per-cell padding. Headers and body share endpoints; frames, frozen dividers and drop indicators remain independent. Tree and tree-table depth sets default to empty (all). {0} draws after complete root subtrees; {0,1} includes first-level child boundaries. Depths are relative to the displayed root; negative depths are ignored and trailing-line auto-hide still applies.">gridLineMarginReference 默认 Viewport，Content 使用完整内容端点，未滚到末尾不截短屏幕边缘。List/Tree/Table/TreeTable 的 setRowVisualStateMargins(left,right) 默认 0，仅调整行 hover/select 绘制，不改变命中；表格仅 SelectRows 生效，显示且开启状态背景的垂直表头与内容共享端点，边距只扣一次；隐藏或关闭表头状态时退回内容范围。gridLineMargins 默认全零，横线使用 left/right，竖线使用 top/bottom；计算完整线范围后应用，正数缩短、负数伸长，不是每个 cell 的 padding。表头与内容共享范围；外框、冻结分隔线和拖放指示器独立。树和树表的深度集合默认空（全部），{0} 只画完整主节点子树之后的边界，{0,1} 还画一级子节点边界。深度相对于显示根；负值忽略，末行自动隐藏仍生效。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../../src/core/virtualitemview.cpp">src/core/virtualitemview.cpp</a> · <a href="../../../src/core/pixelalignedlines_p.h">src/core/pixelalignedlines_p.h</a> · <a href="../../../src/widgets/virtualtreeview.cpp">src/widgets/virtualtreeview.cpp</a> · <a href="../../../src/widgets/virtualtableview.cpp">src/widgets/virtualtableview.cpp</a> · <a href="../../../src/widgets/virtualheaderview.cpp">src/widgets/virtualheaderview.cpp</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../../table-layout-guide.md">docs/table-layout-guide.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（2）" data-en="Independent source examples (2)">独立源码示例（2）</span></summary>
+<ul>
+<li>
+<a href="../../../examples/tree_capabilities/12_row_spacing/example.cpp">examples/tree_capabilities/12_row_spacing/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/treetable_capabilities/14_spacing/example.cpp">examples/treetable_capabilities/14_spacing/example.cpp</a>
+</li>
+</ul>
+</details>
+</article>
 <article id="grid" data-search="setRowGridLinesVisible setRowGridLineColor setRowGridLineWidth setHorizontalGridLinesVisible setVerticalGridLinesVisible setTrailingRowGridLineAutoHideEnabled setItemPaneSeparatorStyle setPaneSeparatorStyle virtualitemview virtuallistview virtualtreeview virtualtableview virtualflowtableview virtualmasonryview">
 <h3><span data-zh="分割线样式 / 最后一行 / 冻结分隔线" data-en="Grid styling / terminal row / frozen separators">分割线样式 / 最后一行 / 冻结分隔线</span></h3>
 <p>
@@ -612,218 +634,238 @@
 <code>bool indentLeafItems() const;</code>
 </a>
 </li>
+<li data-search="VirtualTreeView setRowGridLineDepths">
+<a href="#VirtualTreeView-setRowGridLineDepths-35">
+<code>void setRowGridLineDepths(const QSet&lt;int&gt; &amp;depths);</code>
+</a>
+</li>
+<li data-search="VirtualTreeView rowGridLineDepths">
+<a href="#VirtualTreeView-rowGridLineDepths-36">
+<code>QSet&lt;int&gt; rowGridLineDepths() const;</code>
+</a>
+</li>
 <li data-search="VirtualTreeView setRowGridLinesVisible">
-<a href="#VirtualTreeView-setRowGridLinesVisible-35">
+<a href="#VirtualTreeView-setRowGridLinesVisible-37">
 <code>void setRowGridLinesVisible(bool visible);</code>
 </a>
 </li>
 <li data-search="VirtualTreeView rowGridLinesVisible">
-<a href="#VirtualTreeView-rowGridLinesVisible-36">
+<a href="#VirtualTreeView-rowGridLinesVisible-38">
 <code>bool rowGridLinesVisible() const;</code>
 </a>
 </li>
 <li data-search="VirtualTreeView setRowGridLineWidth">
-<a href="#VirtualTreeView-setRowGridLineWidth-37">
+<a href="#VirtualTreeView-setRowGridLineWidth-39">
 <code>void setRowGridLineWidth(int pixels);</code>
 </a>
 </li>
 <li data-search="VirtualTreeView rowGridLineWidth">
-<a href="#VirtualTreeView-rowGridLineWidth-38">
+<a href="#VirtualTreeView-rowGridLineWidth-40">
 <code>int rowGridLineWidth() const;</code>
 </a>
 </li>
 <li data-search="VirtualTreeView setRowGridLineColor">
-<a href="#VirtualTreeView-setRowGridLineColor-39">
+<a href="#VirtualTreeView-setRowGridLineColor-41">
 <code>void setRowGridLineColor(const QColor &amp;color);</code>
 </a>
 </li>
 <li data-search="VirtualTreeView rowGridLineColor">
-<a href="#VirtualTreeView-rowGridLineColor-40">
+<a href="#VirtualTreeView-rowGridLineColor-42">
 <code>QColor rowGridLineColor() const;</code>
 </a>
 </li>
 <li data-search="VirtualTreeView setRowGridLineExtent">
-<a href="#VirtualTreeView-setRowGridLineExtent-42">
+<a href="#VirtualTreeView-setRowGridLineExtent-44">
 <code>void setRowGridLineExtent(RowGridLineExtent extent);</code>
 </a>
 </li>
 <li data-search="VirtualTreeView rowGridLineExtent">
-<a href="#VirtualTreeView-rowGridLineExtent-43">
+<a href="#VirtualTreeView-rowGridLineExtent-45">
 <code>RowGridLineExtent rowGridLineExtent() const;</code>
 </a>
 </li>
 <li data-search="VirtualTreeView setVisualStateBackgroundVisible">
-<a href="#VirtualTreeView-setVisualStateBackgroundVisible-44">
+<a href="#VirtualTreeView-setVisualStateBackgroundVisible-46">
 <code>void setVisualStateBackgroundVisible(bool visible);</code>
 </a>
 </li>
 <li data-search="VirtualTreeView visualStateBackgroundVisible">
-<a href="#VirtualTreeView-visualStateBackgroundVisible-45">
+<a href="#VirtualTreeView-visualStateBackgroundVisible-47">
 <code>bool visualStateBackgroundVisible() const;</code>
 </a>
 </li>
 <li data-search="VirtualTreeView setVisualStateCornerRadius">
-<a href="#VirtualTreeView-setVisualStateCornerRadius-46">
+<a href="#VirtualTreeView-setVisualStateCornerRadius-48">
 <code>void setVisualStateCornerRadius(int radius);</code>
 </a>
 </li>
 <li data-search="VirtualTreeView visualStateCornerRadius">
-<a href="#VirtualTreeView-visualStateCornerRadius-47">
+<a href="#VirtualTreeView-visualStateCornerRadius-49">
 <code>int visualStateCornerRadius() const;</code>
 </a>
 </li>
+<li data-search="VirtualTreeView setRowVisualStateMargins">
+<a href="#VirtualTreeView-setRowVisualStateMargins-50">
+<code>void setRowVisualStateMargins(int left, int right);</code>
+</a>
+</li>
+<li data-search="VirtualTreeView rowVisualStateMargins">
+<a href="#VirtualTreeView-rowVisualStateMargins-51">
+<code>QMargins rowVisualStateMargins() const;</code>
+</a>
+</li>
 <li data-search="VirtualTreeView setVisualStateBackgroundMargins">
-<a href="#VirtualTreeView-setVisualStateBackgroundMargins-48">
+<a href="#VirtualTreeView-setVisualStateBackgroundMargins-52">
 <code>void setVisualStateBackgroundMargins(const QMargins &amp;margins);</code>
 </a>
 </li>
 <li data-search="VirtualTreeView setVisualStateBackgroundMargins">
-<a href="#VirtualTreeView-setVisualStateBackgroundMargins-49">
+<a href="#VirtualTreeView-setVisualStateBackgroundMargins-53">
 <code>void setVisualStateBackgroundMargins(int left, int top, int right, int bottom);</code>
 </a>
 </li>
 <li data-search="VirtualTreeView visualStateBackgroundMargins">
-<a href="#VirtualTreeView-visualStateBackgroundMargins-50">
+<a href="#VirtualTreeView-visualStateBackgroundMargins-54">
 <code>QMargins visualStateBackgroundMargins() const;</code>
 </a>
 </li>
 <li data-search="VirtualTreeView setVisualStateBackgroundHeight">
-<a href="#VirtualTreeView-setVisualStateBackgroundHeight-51">
+<a href="#VirtualTreeView-setVisualStateBackgroundHeight-55">
 <code>void setVisualStateBackgroundHeight(int height);</code>
 </a>
 </li>
 <li data-search="VirtualTreeView visualStateBackgroundHeight">
-<a href="#VirtualTreeView-visualStateBackgroundHeight-52">
+<a href="#VirtualTreeView-visualStateBackgroundHeight-56">
 <code>int visualStateBackgroundHeight() const;</code>
 </a>
 </li>
 <li data-search="VirtualTreeView setVisualStateBackgroundExtent">
-<a href="#VirtualTreeView-setVisualStateBackgroundExtent-54">
+<a href="#VirtualTreeView-setVisualStateBackgroundExtent-58">
 <code>void setVisualStateBackgroundExtent(VisualStateBackgroundExtent extent);</code>
 </a>
 </li>
 <li data-search="VirtualTreeView visualStateBackgroundExtent">
-<a href="#VirtualTreeView-visualStateBackgroundExtent-55">
+<a href="#VirtualTreeView-visualStateBackgroundExtent-59">
 <code>VisualStateBackgroundExtent visualStateBackgroundExtent() const;</code>
 </a>
 </li>
 <li data-search="VirtualTreeView itemPaneSeparatorColor">
-<a href="#VirtualTreeView-itemPaneSeparatorColor-56">
+<a href="#VirtualTreeView-itemPaneSeparatorColor-60">
 <code>QColor itemPaneSeparatorColor() const override;</code>
 </a>
 </li>
 <li data-search="VirtualTreeView setBranchIndicatorsVisible">
-<a href="#VirtualTreeView-setBranchIndicatorsVisible-57">
+<a href="#VirtualTreeView-setBranchIndicatorsVisible-61">
 <code>void setBranchIndicatorsVisible(bool visible);</code>
 </a>
 </li>
 <li data-search="VirtualTreeView branchIndicatorsVisible">
-<a href="#VirtualTreeView-branchIndicatorsVisible-58">
+<a href="#VirtualTreeView-branchIndicatorsVisible-62">
 <code>bool branchIndicatorsVisible() const;</code>
 </a>
 </li>
 <li data-search="VirtualTreeView setExpandedBranchIcon">
-<a href="#VirtualTreeView-setExpandedBranchIcon-59">
+<a href="#VirtualTreeView-setExpandedBranchIcon-63">
 <code>void setExpandedBranchIcon(const QIcon &amp;icon);</code>
 </a>
 </li>
 <li data-search="VirtualTreeView expandedBranchIcon">
-<a href="#VirtualTreeView-expandedBranchIcon-60">
+<a href="#VirtualTreeView-expandedBranchIcon-64">
 <code>QIcon expandedBranchIcon() const;</code>
 </a>
 </li>
 <li data-search="VirtualTreeView setCollapsedBranchIcon">
-<a href="#VirtualTreeView-setCollapsedBranchIcon-61">
+<a href="#VirtualTreeView-setCollapsedBranchIcon-65">
 <code>void setCollapsedBranchIcon(const QIcon &amp;icon);</code>
 </a>
 </li>
 <li data-search="VirtualTreeView collapsedBranchIcon">
-<a href="#VirtualTreeView-collapsedBranchIcon-62">
+<a href="#VirtualTreeView-collapsedBranchIcon-66">
 <code>QIcon collapsedBranchIcon() const;</code>
 </a>
 </li>
 <li data-search="VirtualTreeView setBranchIconSize">
-<a href="#VirtualTreeView-setBranchIconSize-63">
+<a href="#VirtualTreeView-setBranchIconSize-67">
 <code>void setBranchIconSize(int pixels);</code>
 </a>
 </li>
 <li data-search="VirtualTreeView branchIconSize">
-<a href="#VirtualTreeView-branchIconSize-64">
+<a href="#VirtualTreeView-branchIconSize-68">
 <code>int branchIconSize() const;</code>
 </a>
 </li>
 <li data-search="VirtualTreeView setBranchIconColor">
-<a href="#VirtualTreeView-setBranchIconColor-65">
+<a href="#VirtualTreeView-setBranchIconColor-69">
 <code>void setBranchIconColor(const QColor &amp;color);</code>
 </a>
 </li>
 <li data-search="VirtualTreeView branchIconColor">
-<a href="#VirtualTreeView-branchIconColor-66">
+<a href="#VirtualTreeView-branchIconColor-70">
 <code>QColor branchIconColor() const;</code>
 </a>
 </li>
 <li data-search="VirtualTreeView setBranchIndicatorAlignment">
-<a href="#VirtualTreeView-setBranchIndicatorAlignment-67">
+<a href="#VirtualTreeView-setBranchIndicatorAlignment-71">
 <code>void setBranchIndicatorAlignment(Qt::Alignment alignment);</code>
 </a>
 </li>
 <li data-search="VirtualTreeView branchIndicatorAlignment">
-<a href="#VirtualTreeView-branchIndicatorAlignment-68">
+<a href="#VirtualTreeView-branchIndicatorAlignment-72">
 <code>Qt::Alignment branchIndicatorAlignment() const;</code>
 </a>
 </li>
 <li data-search="VirtualTreeView setBranchIndicatorPadding">
-<a href="#VirtualTreeView-setBranchIndicatorPadding-69">
+<a href="#VirtualTreeView-setBranchIndicatorPadding-73">
 <code>void setBranchIndicatorPadding(const QMargins &amp;padding);</code>
 </a>
 </li>
 <li data-search="VirtualTreeView setBranchIndicatorPadding">
-<a href="#VirtualTreeView-setBranchIndicatorPadding-70">
+<a href="#VirtualTreeView-setBranchIndicatorPadding-74">
 <code>void setBranchIndicatorPadding(int left, int top, int right, int bottom);</code>
 </a>
 </li>
 <li data-search="VirtualTreeView branchIndicatorPadding">
-<a href="#VirtualTreeView-branchIndicatorPadding-71">
+<a href="#VirtualTreeView-branchIndicatorPadding-75">
 <code>QMargins branchIndicatorPadding() const;</code>
 </a>
 </li>
 <li data-search="VirtualTreeView setBranchIndicatorRenderer">
-<a href="#VirtualTreeView-setBranchIndicatorRenderer-72">
+<a href="#VirtualTreeView-setBranchIndicatorRenderer-76">
 <code>void setBranchIndicatorRenderer(BranchIndicatorRenderer *renderer, bool takeOwnership = false);</code>
 </a>
 </li>
 <li data-search="VirtualTreeView branchIndicatorRenderer">
-<a href="#VirtualTreeView-branchIndicatorRenderer-73">
+<a href="#VirtualTreeView-branchIndicatorRenderer-77">
 <code>BranchIndicatorRenderer *branchIndicatorRenderer() const;</code>
 </a>
 </li>
 <li data-search="VirtualTreeView branchState">
-<a href="#VirtualTreeView-branchState-74">
+<a href="#VirtualTreeView-branchState-78">
 <code>BranchIndicatorState branchState(const QModelIndex &amp;index, int cellDepth = -1) const;</code>
 </a>
 </li>
 <li data-search="VirtualTreeView visibilityIndex">
-<a href="#VirtualTreeView-visibilityIndex-75">
+<a href="#VirtualTreeView-visibilityIndex-79">
 <code>TreeVisibilityIndex *visibilityIndex() const;</code>
 </a>
 </li>
 <li data-search="VirtualTreeView visibleRowCount">
-<a href="#VirtualTreeView-visibleRowCount-76">
+<a href="#VirtualTreeView-visibleRowCount-80">
 <code>qsizetype visibleRowCount() const;</code>
 </a>
 </li>
 <li data-search="VirtualTreeView indexAt">
-<a href="#VirtualTreeView-indexAt-77">
+<a href="#VirtualTreeView-indexAt-81">
 <code>QModelIndex indexAt(const QPoint &amp;viewportPos) const override;</code>
 </a>
 </li>
 <li data-search="VirtualTreeView itemDepth">
-<a href="#VirtualTreeView-itemDepth-78">
+<a href="#VirtualTreeView-itemDepth-82">
 <code>int itemDepth(const QModelIndex &amp;index) const override;</code>
 </a>
 </li>
 <li data-search="VirtualTreeView applyRowSpacingOverrides">
-<a href="#VirtualTreeView-applyRowSpacingOverrides-79">
+<a href="#VirtualTreeView-applyRowSpacingOverrides-83">
 <code>void applyRowSpacingOverrides() override;</code>
 </a>
 </li>
@@ -832,12 +874,12 @@
 <h4>VirtualTreeView</h4>
 <ul>
 <li data-search="VirtualTreeView expanded">
-<a href="#VirtualTreeView-expanded-80">
+<a href="#VirtualTreeView-expanded-84">
 <code>void expanded(const QModelIndex &amp;index);</code>
 </a>
 </li>
 <li data-search="VirtualTreeView collapsed">
-<a href="#VirtualTreeView-collapsed-81">
+<a href="#VirtualTreeView-collapsed-85">
 <code>void collapsed(const QModelIndex &amp;index);</code>
 </a>
 </li>
@@ -852,12 +894,12 @@
 </a>
 </li>
 <li data-search="VirtualTreeView::RowGridLineExtent">
-<a href="#VirtualTreeView-RowGridLineExtent-41">
+<a href="#VirtualTreeView-RowGridLineExtent-43">
 <code>VirtualTreeView::RowGridLineExtent</code>
 </a>
 </li>
 <li data-search="VirtualTreeView::VisualStateBackgroundExtent">
-<a href="#VirtualTreeView-VisualStateBackgroundExtent-53">
+<a href="#VirtualTreeView-VisualStateBackgroundExtent-57">
 <code>VirtualTreeView::VisualStateBackgroundExtent</code>
 </a>
 </li>
@@ -1259,70 +1301,120 @@ view-&gt;setExpanded(index, true);</code>
 <pre>static constexpr int NodeRowSpacingAboveRole = Qt::UserRole + 0x101;</pre>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualTreeView-setRowGridLinesVisible-35" data-search="VirtualTreeView setRowGridLinesVisible">
+<article tabindex="-1" id="VirtualTreeView-setRowGridLineDepths-35" data-search="VirtualTreeView setRowGridLineDepths">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L109</span>
+<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L112</span>
+<pre>    void setRowGridLineDepths(const QSet&lt;int&gt; &amp;depths);</pre>
+<p class="doc" data-zh="设置或读取需要显示分组边界的节点深度集合。显示根下的主节点深度为 0。空集合显示全部；负深度被忽略。边界按下一个可见节点的深度归属，内容末尾按 0 处理，因此 {0} 会在完整主节点子树结束后画线，不在主节点与第一个子节点之间画线。树表行号表头同步过滤；不影响列分割线、表头与内容的交界线或冻结分隔线。末尾是否绘制仍由末行自动隐藏开关控制。" data-en="Set or query node depths whose group boundaries are drawn. Roots below the displayed root have depth 0. An empty set draws all depths; negative depths are ignored. A boundary belongs to the next visible node depth, or 0 at content end, so {0} draws after complete root subtrees rather than between a root and its first child. Tree-table row headers use the same filter. Column lines, header/body boundaries and frozen dividers are unaffected. Terminal drawing still follows trailing-line auto-hide.">设置或读取需要显示分组边界的节点深度集合。显示根下的主节点深度为 0。空集合显示全部；负深度被忽略。边界按下一个可见节点的深度归属，内容末尾按 0 处理，因此 {0} 会在完整主节点子树结束后画线，不在主节点与第一个子节点之间画线。树表行号表头同步过滤；不影响列分割线、表头与内容的交界线或冻结分隔线。末尾是否绘制仍由末行自动隐藏开关控制。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：空 QSet&lt;int&gt;，显示所有深度的分割线。" data-en="Default / initial state: Empty QSet&lt;int&gt;: draw separators at all depths.">默认值／初始状态：空 QSet&lt;int&gt;，显示所有深度的分割线。</p>
+<section class="api-example">
+<h4><span data-zh="组合用法" data-en="Combination example">组合用法</span></h4>
+<p class="doc" data-zh="view 为 VirtualTreeView 或 VirtualTreeTableView；0/1 相对于当前 rootIndex。可在展开、收起或滚动后继续使用同一配置。" data-en="view is a VirtualTreeView or VirtualTreeTableView; 0/1 are relative to the current rootIndex. The configuration remains valid through expansion, collapse and scrolling.">view 为 VirtualTreeView 或 VirtualTreeTableView；0/1 相对于当前 rootIndex。可在展开、收起或滚动后继续使用同一配置。</p>
+<pre>
+<code class="language-cpp">// Draw only boundaries between complete root groups.
+view-&gt;setRowGridLineDepths(QSet&lt;int&gt;{0});
+// Include first-level child boundaries as well.
+view-&gt;setRowGridLineDepths(QSet&lt;int&gt;{0, 1});
+// Restore all depths.
+view-&gt;setRowGridLineDepths(QSet&lt;int&gt;{});</code>
+</pre>
+<p class="muted">
+<a href="../../../examples/tree_capabilities/12_row_spacing/example.cpp"><span data-zh="完整示例源码" data-en="Full example source">完整示例源码</span></a>
+</p>
+</section>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#grid-line-range"><span data-zh="分割线深度过滤 / 整线四向边距" data-en="Grid depth filtering / whole-line endpoint margins">分割线深度过滤 / 整线四向边距</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualTreeView-rowGridLineDepths-36" data-search="VirtualTreeView rowGridLineDepths">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L113</span>
+<pre>    QSet&lt;int&gt; rowGridLineDepths() const;</pre>
+<p class="doc" data-zh="设置或读取需要显示分组边界的节点深度集合。显示根下的主节点深度为 0。空集合显示全部；负深度被忽略。边界按下一个可见节点的深度归属，内容末尾按 0 处理，因此 {0} 会在完整主节点子树结束后画线，不在主节点与第一个子节点之间画线。树表行号表头同步过滤；不影响列分割线、表头与内容的交界线或冻结分隔线。末尾是否绘制仍由末行自动隐藏开关控制。" data-en="Set or query node depths whose group boundaries are drawn. Roots below the displayed root have depth 0. An empty set draws all depths; negative depths are ignored. A boundary belongs to the next visible node depth, or 0 at content end, so {0} draws after complete root subtrees rather than between a root and its first child. Tree-table row headers use the same filter. Column lines, header/body boundaries and frozen dividers are unaffected. Terminal drawing still follows trailing-line auto-hide.">设置或读取需要显示分组边界的节点深度集合。显示根下的主节点深度为 0。空集合显示全部；负深度被忽略。边界按下一个可见节点的深度归属，内容末尾按 0 处理，因此 {0} 会在完整主节点子树结束后画线，不在主节点与第一个子节点之间画线。树表行号表头同步过滤；不影响列分割线、表头与内容的交界线或冻结分隔线。末尾是否绘制仍由末行自动隐藏开关控制。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：空 QSet&lt;int&gt;，显示所有深度的分割线。" data-en="Default / initial state: Empty QSet&lt;int&gt;: draw separators at all depths.">默认值／初始状态：空 QSet&lt;int&gt;，显示所有深度的分割线。</p>
+<section class="api-example">
+<h4><span data-zh="组合用法" data-en="Combination example">组合用法</span></h4>
+<p class="doc" data-zh="view 为 VirtualTreeView 或 VirtualTreeTableView；0/1 相对于当前 rootIndex。可在展开、收起或滚动后继续使用同一配置。" data-en="view is a VirtualTreeView or VirtualTreeTableView; 0/1 are relative to the current rootIndex. The configuration remains valid through expansion, collapse and scrolling.">view 为 VirtualTreeView 或 VirtualTreeTableView；0/1 相对于当前 rootIndex。可在展开、收起或滚动后继续使用同一配置。</p>
+<pre>
+<code class="language-cpp">// Draw only boundaries between complete root groups.
+view-&gt;setRowGridLineDepths(QSet&lt;int&gt;{0});
+// Include first-level child boundaries as well.
+view-&gt;setRowGridLineDepths(QSet&lt;int&gt;{0, 1});
+// Restore all depths.
+view-&gt;setRowGridLineDepths(QSet&lt;int&gt;{});</code>
+</pre>
+<p class="muted">
+<a href="../../../examples/tree_capabilities/12_row_spacing/example.cpp"><span data-zh="完整示例源码" data-en="Full example source">完整示例源码</span></a>
+</p>
+</section>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#grid-line-range"><span data-zh="分割线深度过滤 / 整线四向边距" data-en="Grid depth filtering / whole-line endpoint margins">分割线深度过滤 / 整线四向边距</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualTreeView-setRowGridLinesVisible-37" data-search="VirtualTreeView setRowGridLinesVisible">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L115</span>
 <pre>void setRowGridLinesVisible(bool visible);</pre>
 <p class="doc" data-zh="设置行分割线可见性。" data-en="Set the row grid line visibility.">设置行分割线可见性。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：true" data-en="Default / initial state: true">默认值／初始状态：true</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#grid"><span data-zh="分割线样式 / 最后一行 / 冻结分隔线" data-en="Grid styling / terminal row / frozen separators">分割线样式 / 最后一行 / 冻结分隔线</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualTreeView-rowGridLinesVisible-36" data-search="VirtualTreeView rowGridLinesVisible">
+<article tabindex="-1" id="VirtualTreeView-rowGridLinesVisible-38" data-search="VirtualTreeView rowGridLinesVisible">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L110</span>
+<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L116</span>
 <pre>    bool rowGridLinesVisible() const;</pre>
 <p class="doc" data-zh="返回行分割线可见性。" data-en="Return the row grid line visibility.">返回行分割线可见性。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：true" data-en="Default / initial state: true">默认值／初始状态：true</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#grid"><span data-zh="分割线样式 / 最后一行 / 冻结分隔线" data-en="Grid styling / terminal row / frozen separators">分割线样式 / 最后一行 / 冻结分隔线</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualTreeView-setRowGridLineWidth-37" data-search="VirtualTreeView setRowGridLineWidth">
+<article tabindex="-1" id="VirtualTreeView-setRowGridLineWidth-39" data-search="VirtualTreeView setRowGridLineWidth">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L112</span>
+<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L118</span>
 <pre>void setRowGridLineWidth(int pixels);</pre>
 <p class="doc" data-zh="设置行分割线宽度。" data-en="Set the row grid line width.">设置行分割线宽度。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：1 像素；缩放与对齐遵循该分割线接口的规则。" data-en="Default / initial state: 1 pixel; scaling and alignment follow this separator API.">默认值／初始状态：1 像素；缩放与对齐遵循该分割线接口的规则。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#grid"><span data-zh="分割线样式 / 最后一行 / 冻结分隔线" data-en="Grid styling / terminal row / frozen separators">分割线样式 / 最后一行 / 冻结分隔线</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualTreeView-rowGridLineWidth-38" data-search="VirtualTreeView rowGridLineWidth">
+<article tabindex="-1" id="VirtualTreeView-rowGridLineWidth-40" data-search="VirtualTreeView rowGridLineWidth">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L113</span>
+<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L119</span>
 <pre>    int rowGridLineWidth() const;</pre>
 <p class="doc" data-zh="返回行分割线宽度。" data-en="Return the row grid line width.">返回行分割线宽度。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：1 像素；缩放与对齐遵循该分割线接口的规则。" data-en="Default / initial state: 1 pixel; scaling and alignment follow this separator API.">默认值／初始状态：1 像素；缩放与对齐遵循该分割线接口的规则。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#grid"><span data-zh="分割线样式 / 最后一行 / 冻结分隔线" data-en="Grid styling / terminal row / frozen separators">分割线样式 / 最后一行 / 冻结分隔线</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualTreeView-setRowGridLineColor-39" data-search="VirtualTreeView setRowGridLineColor">
+<article tabindex="-1" id="VirtualTreeView-setRowGridLineColor-41" data-search="VirtualTreeView setRowGridLineColor">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L115</span>
+<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L121</span>
 <pre>void setRowGridLineColor(const QColor &amp;color);</pre>
 <p class="doc" data-zh="设置行分割线颜色。" data-en="Set the row grid line color.">设置行分割线颜色。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：无效 QColor；绘制时使用 QPalette::Mid。" data-en="Default / initial state: Invalid QColor; painting uses QPalette::Mid.">默认值／初始状态：无效 QColor；绘制时使用 QPalette::Mid。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#grid"><span data-zh="分割线样式 / 最后一行 / 冻结分隔线" data-en="Grid styling / terminal row / frozen separators">分割线样式 / 最后一行 / 冻结分隔线</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualTreeView-rowGridLineColor-40" data-search="VirtualTreeView rowGridLineColor">
+<article tabindex="-1" id="VirtualTreeView-rowGridLineColor-42" data-search="VirtualTreeView rowGridLineColor">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L116</span>
+<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L122</span>
 <pre>    QColor rowGridLineColor() const;</pre>
 <p class="doc" data-zh="返回行分割线颜色。" data-en="Return the row grid line color.">返回行分割线颜色。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：无效 QColor；绘制时使用 QPalette::Mid。" data-en="Default / initial state: Invalid QColor; painting uses QPalette::Mid.">默认值／初始状态：无效 QColor；绘制时使用 QPalette::Mid。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#grid"><span data-zh="分割线样式 / 最后一行 / 冻结分隔线" data-en="Grid styling / terminal row / frozen separators">分割线样式 / 最后一行 / 冻结分隔线</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualTreeView-RowGridLineExtent-41" data-search="VirtualTreeView RowGridLineExtent">
+<article tabindex="-1" id="VirtualTreeView-RowGridLineExtent-43" data-search="VirtualTreeView RowGridLineExtent">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L118</span>
+<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L124</span>
 <pre>enum class RowGridLineExtent {
     NodeOnly,
     NodeAndIcon,
@@ -1361,68 +1453,108 @@ view-&gt;setExpanded(index, true);</code>
 </div>
 <a href="#type-index" class="muted"><span data-zh="返回类型列表" data-en="Back to type index">返回类型列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualTreeView-setRowGridLineExtent-42" data-search="VirtualTreeView setRowGridLineExtent">
+<article tabindex="-1" id="VirtualTreeView-setRowGridLineExtent-44" data-search="VirtualTreeView setRowGridLineExtent">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L119</span>
+<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L125</span>
 <pre>void setRowGridLineExtent(RowGridLineExtent extent);</pre>
 <p class="doc" data-zh="设置行分割线水平范围。" data-en="Set the horizontal extent of row grid lines.">设置行分割线水平范围。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：RowGridLineExtent::FullWidth" data-en="Default / initial state: RowGridLineExtent::FullWidth">默认值／初始状态：RowGridLineExtent::FullWidth</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#state-extent"><span data-zh="状态范围 / 命中范围 / 固定高度 / padding" data-en="State extent / hit region / fixed height / padding">状态范围 / 命中范围 / 固定高度 / padding</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualTreeView-rowGridLineExtent-43" data-search="VirtualTreeView rowGridLineExtent">
+<article tabindex="-1" id="VirtualTreeView-rowGridLineExtent-45" data-search="VirtualTreeView rowGridLineExtent">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L120</span>
+<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L126</span>
 <pre>    RowGridLineExtent rowGridLineExtent() const;</pre>
 <p class="doc" data-zh="返回行分割线水平范围。" data-en="Return the horizontal extent of row grid lines.">返回行分割线水平范围。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：RowGridLineExtent::FullWidth" data-en="Default / initial state: RowGridLineExtent::FullWidth">默认值／初始状态：RowGridLineExtent::FullWidth</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#state-extent"><span data-zh="状态范围 / 命中范围 / 固定高度 / padding" data-en="State extent / hit region / fixed height / padding">状态范围 / 命中范围 / 固定高度 / padding</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualTreeView-setVisualStateBackgroundVisible-44" data-search="VirtualTreeView setVisualStateBackgroundVisible">
+<article tabindex="-1" id="VirtualTreeView-setVisualStateBackgroundVisible-46" data-search="VirtualTreeView setVisualStateBackgroundVisible">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L122</span>
+<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L128</span>
 <pre>void setVisualStateBackgroundVisible(bool visible);</pre>
 <p class="doc" data-zh="设置hover 或选中背景绘制开关。" data-en="Set the hover or selection background painting setting.">设置hover 或选中背景绘制开关。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：true；内置 hover / selection 背景启用。" data-en="Default / initial state: true; built-in hover / selection backgrounds are enabled.">默认值／初始状态：true；内置 hover / selection 背景启用。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#states"><span data-zh="hover / selected 默认绘制和动画" data-en="Built-in hover / selection painting and animation">hover / selected 默认绘制和动画</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualTreeView-visualStateBackgroundVisible-45" data-search="VirtualTreeView visualStateBackgroundVisible">
+<article tabindex="-1" id="VirtualTreeView-visualStateBackgroundVisible-47" data-search="VirtualTreeView visualStateBackgroundVisible">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L123</span>
+<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L129</span>
 <pre>    bool visualStateBackgroundVisible() const;</pre>
 <p class="doc" data-zh="返回hover 或选中背景绘制开关。" data-en="Return the hover or selection background painting setting.">返回hover 或选中背景绘制开关。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：true；内置 hover / selection 背景启用。" data-en="Default / initial state: true; built-in hover / selection backgrounds are enabled.">默认值／初始状态：true；内置 hover / selection 背景启用。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#states"><span data-zh="hover / selected 默认绘制和动画" data-en="Built-in hover / selection painting and animation">hover / selected 默认绘制和动画</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualTreeView-setVisualStateCornerRadius-46" data-search="VirtualTreeView setVisualStateCornerRadius">
+<article tabindex="-1" id="VirtualTreeView-setVisualStateCornerRadius-48" data-search="VirtualTreeView setVisualStateCornerRadius">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L125</span>
+<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L131</span>
 <pre>void setVisualStateCornerRadius(int radius);</pre>
 <p class="doc" data-zh="设置状态背景圆角半径。" data-en="Set the state background corner radius.">设置状态背景圆角半径。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：0 逻辑像素，直角。" data-en="Default / initial state: 0 logical pixels; square corners.">默认值／初始状态：0 逻辑像素，直角。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualTreeView-visualStateCornerRadius-47" data-search="VirtualTreeView visualStateCornerRadius">
+<article tabindex="-1" id="VirtualTreeView-visualStateCornerRadius-49" data-search="VirtualTreeView visualStateCornerRadius">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L126</span>
+<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L132</span>
 <pre>    int visualStateCornerRadius() const;</pre>
 <p class="doc" data-zh="返回状态背景圆角半径。" data-en="Return the state background corner radius.">返回状态背景圆角半径。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：0 逻辑像素，直角。" data-en="Default / initial state: 0 logical pixels; square corners.">默认值／初始状态：0 逻辑像素，直角。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualTreeView-setVisualStateBackgroundMargins-48" data-search="VirtualTreeView setVisualStateBackgroundMargins">
+<article tabindex="-1" id="VirtualTreeView-setRowVisualStateMargins-50" data-search="VirtualTreeView setRowVisualStateMargins">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L130</span>
+<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L136</span>
+<pre>    void setRowVisualStateMargins(int left, int right);</pre>
+<p class="doc" data-zh="设置或读取整行 hover／选中背景的左右绘制边距，返回 QMargins 的上下值始终为 0。在原有状态形状计算后应用：正数缩短、负数延伸，最终受视图和行区域裁剪。只改变框架背景绘制，不改变控件几何、命中范围或选择；不受分割线边距参照开关影响。List／Tree 可与原有状态范围、状态 padding 和固定高度组合。Table／TreeTable 仅在 SelectRows 模式下生效。垂直表头显示且启用状态背景时，表头和内容合并为整行范围，边距只计算一次，圆角沿整体端点绘制；表头隐藏或关闭状态背景时从内容范围计算。不重复作用于每个 cell，水平表头及 SelectItems 模式不受影响。" data-en="Set or query paint-only left/right insets of complete hover/selection row backgrounds; the returned QMargins always has zero top/bottom. Applied after the existing state shape: positive shortens, negative extends, with normal view and row clipping. Does not change widget geometry, hits or selection, and is independent of the grid margin reference. List/Tree can combine this with existing state extents, padding and fixed height. Table/TreeTable apply it only in SelectRows. A visible vertical header with state backgrounds enabled shares the whole-row bounds with the body: margins are applied once and corners follow the overall endpoints. A hidden header or disabled header state background leaves the body as the reference. Insets are never repeated per cell; horizontal headers and SelectItems are unaffected.">设置或读取整行 hover／选中背景的左右绘制边距，返回 QMargins 的上下值始终为 0。在原有状态形状计算后应用：正数缩短、负数延伸，最终受视图和行区域裁剪。只改变框架背景绘制，不改变控件几何、命中范围或选择；不受分割线边距参照开关影响。List／Tree 可与原有状态范围、状态 padding 和固定高度组合。Table／TreeTable 仅在 SelectRows 模式下生效。垂直表头显示且启用状态背景时，表头和内容合并为整行范围，边距只计算一次，圆角沿整体端点绘制；表头隐藏或关闭状态背景时从内容范围计算。不重复作用于每个 cell，水平表头及 SelectItems 模式不受影响。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：left = 0，right = 0。" data-en="Default / initial state: left = 0, right = 0.">默认值／初始状态：left = 0，right = 0。</p>
+<section class="api-example">
+<h4><span data-zh="组合用法" data-en="Combination example">组合用法</span></h4>
+<p class="doc" data-zh="背景两侧各留出 12px，命中范围保持不变。" data-en="Inset both background ends by 12px without changing mouse hits.">背景两侧各留出 12px，命中范围保持不变。</p>
+<pre>
+<code class="language-cpp">view-&gt;setRowVisualStateMargins(12, 12);</code>
+</pre>
+<p class="muted">
+<a href="../../../examples/tree_capabilities/12_row_spacing/example.cpp"><span data-zh="完整示例源码" data-en="Full example source">完整示例源码</span></a>
+</p>
+</section>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#grid-line-range"><span data-zh="分割线深度过滤 / 整线四向边距" data-en="Grid depth filtering / whole-line endpoint margins">分割线深度过滤 / 整线四向边距</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualTreeView-rowVisualStateMargins-51" data-search="VirtualTreeView rowVisualStateMargins">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L137</span>
+<pre>    QMargins rowVisualStateMargins() const;</pre>
+<p class="doc" data-zh="设置或读取整行 hover／选中背景的左右绘制边距，返回 QMargins 的上下值始终为 0。在原有状态形状计算后应用：正数缩短、负数延伸，最终受视图和行区域裁剪。只改变框架背景绘制，不改变控件几何、命中范围或选择；不受分割线边距参照开关影响。List／Tree 可与原有状态范围、状态 padding 和固定高度组合。Table／TreeTable 仅在 SelectRows 模式下生效。垂直表头显示且启用状态背景时，表头和内容合并为整行范围，边距只计算一次，圆角沿整体端点绘制；表头隐藏或关闭状态背景时从内容范围计算。不重复作用于每个 cell，水平表头及 SelectItems 模式不受影响。" data-en="Set or query paint-only left/right insets of complete hover/selection row backgrounds; the returned QMargins always has zero top/bottom. Applied after the existing state shape: positive shortens, negative extends, with normal view and row clipping. Does not change widget geometry, hits or selection, and is independent of the grid margin reference. List/Tree can combine this with existing state extents, padding and fixed height. Table/TreeTable apply it only in SelectRows. A visible vertical header with state backgrounds enabled shares the whole-row bounds with the body: margins are applied once and corners follow the overall endpoints. A hidden header or disabled header state background leaves the body as the reference. Insets are never repeated per cell; horizontal headers and SelectItems are unaffected.">设置或读取整行 hover／选中背景的左右绘制边距，返回 QMargins 的上下值始终为 0。在原有状态形状计算后应用：正数缩短、负数延伸，最终受视图和行区域裁剪。只改变框架背景绘制，不改变控件几何、命中范围或选择；不受分割线边距参照开关影响。List／Tree 可与原有状态范围、状态 padding 和固定高度组合。Table／TreeTable 仅在 SelectRows 模式下生效。垂直表头显示且启用状态背景时，表头和内容合并为整行范围，边距只计算一次，圆角沿整体端点绘制；表头隐藏或关闭状态背景时从内容范围计算。不重复作用于每个 cell，水平表头及 SelectItems 模式不受影响。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：left = 0，right = 0。" data-en="Default / initial state: left = 0, right = 0.">默认值／初始状态：left = 0，right = 0。</p>
+<section class="api-example">
+<h4><span data-zh="组合用法" data-en="Combination example">组合用法</span></h4>
+<p class="doc" data-zh="背景两侧各留出 12px，命中范围保持不变。" data-en="Inset both background ends by 12px without changing mouse hits.">背景两侧各留出 12px，命中范围保持不变。</p>
+<pre>
+<code class="language-cpp">view-&gt;setRowVisualStateMargins(12, 12);</code>
+</pre>
+<p class="muted">
+<a href="../../../examples/tree_capabilities/12_row_spacing/example.cpp"><span data-zh="完整示例源码" data-en="Full example source">完整示例源码</span></a>
+</p>
+</section>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#grid-line-range"><span data-zh="分割线深度过滤 / 整线四向边距" data-en="Grid depth filtering / whole-line endpoint margins">分割线深度过滤 / 整线四向边距</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualTreeView-setVisualStateBackgroundMargins-52" data-search="VirtualTreeView setVisualStateBackgroundMargins">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L141</span>
 <pre>void setVisualStateBackgroundMargins(const QMargins &amp;margins);</pre>
 <p class="doc" data-zh="设置状态背景内缩边距。" data-en="Set the state background insets.">设置状态背景内缩边距。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：QMargins(0, 0, 0, 0)" data-en="Default / initial state: QMargins(0, 0, 0, 0)">默认值／初始状态：QMargins(0, 0, 0, 0)</p>
@@ -1445,10 +1577,10 @@ view-&gt;setVisualStateCornerRadius(6);</code>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#state-extent"><span data-zh="状态范围 / 命中范围 / 固定高度 / padding" data-en="State extent / hit region / fixed height / padding">状态范围 / 命中范围 / 固定高度 / padding</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualTreeView-setVisualStateBackgroundMargins-49" data-search="VirtualTreeView setVisualStateBackgroundMargins">
+<article tabindex="-1" id="VirtualTreeView-setVisualStateBackgroundMargins-53" data-search="VirtualTreeView setVisualStateBackgroundMargins">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L131</span>
+<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L142</span>
 <pre>    void setVisualStateBackgroundMargins(int left, int top, int right, int bottom);</pre>
 <p class="doc" data-zh="设置状态背景内缩边距。" data-en="Set the state background insets.">设置状态背景内缩边距。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：QMargins(0, 0, 0, 0)" data-en="Default / initial state: QMargins(0, 0, 0, 0)">默认值／初始状态：QMargins(0, 0, 0, 0)</p>
@@ -1471,10 +1603,10 @@ view-&gt;setVisualStateCornerRadius(6);</code>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#state-extent"><span data-zh="状态范围 / 命中范围 / 固定高度 / padding" data-en="State extent / hit region / fixed height / padding">状态范围 / 命中范围 / 固定高度 / padding</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualTreeView-visualStateBackgroundMargins-50" data-search="VirtualTreeView visualStateBackgroundMargins">
+<article tabindex="-1" id="VirtualTreeView-visualStateBackgroundMargins-54" data-search="VirtualTreeView visualStateBackgroundMargins">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L135</span>
+<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L146</span>
 <pre>    QMargins visualStateBackgroundMargins() const;</pre>
 <p class="doc" data-zh="返回状态背景内缩边距。" data-en="Return the state background insets.">返回状态背景内缩边距。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：QMargins(0, 0, 0, 0)" data-en="Default / initial state: QMargins(0, 0, 0, 0)">默认值／初始状态：QMargins(0, 0, 0, 0)</p>
@@ -1482,10 +1614,10 @@ view-&gt;setVisualStateCornerRadius(6);</code>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#state-extent"><span data-zh="状态范围 / 命中范围 / 固定高度 / padding" data-en="State extent / hit region / fixed height / padding">状态范围 / 命中范围 / 固定高度 / padding</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualTreeView-setVisualStateBackgroundHeight-51" data-search="VirtualTreeView setVisualStateBackgroundHeight">
+<article tabindex="-1" id="VirtualTreeView-setVisualStateBackgroundHeight-55" data-search="VirtualTreeView setVisualStateBackgroundHeight">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L138</span>
+<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L149</span>
 <pre>void setVisualStateBackgroundHeight(int height);</pre>
 <p class="doc" data-zh="设置状态背景固定高度；0 使用可用高度。" data-en="Set the fixed state background height; 0 uses available height.">设置状态背景固定高度；0 使用可用高度。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：0；不固定高度，按项几何与状态边距计算。" data-en="Default / initial state: 0; no fixed height; item geometry and state margins determine the height.">默认值／初始状态：0；不固定高度，按项几何与状态边距计算。</p>
@@ -1508,10 +1640,10 @@ view-&gt;setVisualStateCornerRadius(6);</code>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#state-extent"><span data-zh="状态范围 / 命中范围 / 固定高度 / padding" data-en="State extent / hit region / fixed height / padding">状态范围 / 命中范围 / 固定高度 / padding</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualTreeView-visualStateBackgroundHeight-52" data-search="VirtualTreeView visualStateBackgroundHeight">
+<article tabindex="-1" id="VirtualTreeView-visualStateBackgroundHeight-56" data-search="VirtualTreeView visualStateBackgroundHeight">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L139</span>
+<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L150</span>
 <pre>    int visualStateBackgroundHeight() const;</pre>
 <p class="doc" data-zh="返回状态背景固定高度；0 使用可用高度。" data-en="Return the fixed state background height; 0 uses available height.">返回状态背景固定高度；0 使用可用高度。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：0；不固定高度，按项几何与状态边距计算。" data-en="Default / initial state: 0; no fixed height; item geometry and state margins determine the height.">默认值／初始状态：0；不固定高度，按项几何与状态边距计算。</p>
@@ -1519,10 +1651,10 @@ view-&gt;setVisualStateCornerRadius(6);</code>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#state-extent"><span data-zh="状态范围 / 命中范围 / 固定高度 / padding" data-en="State extent / hit region / fixed height / padding">状态范围 / 命中范围 / 固定高度 / padding</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualTreeView-VisualStateBackgroundExtent-53" data-search="VirtualTreeView VisualStateBackgroundExtent">
+<article tabindex="-1" id="VirtualTreeView-VisualStateBackgroundExtent-57" data-search="VirtualTreeView VisualStateBackgroundExtent">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L147</span>
+<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L158</span>
 <pre>enum class VisualStateBackgroundExtent {
     NodeOnly,
     NodeAndIcon,
@@ -1575,10 +1707,10 @@ view-&gt;setVisualStateCornerRadius(6);</code>
 </div>
 <a href="#type-index" class="muted"><span data-zh="返回类型列表" data-en="Back to type index">返回类型列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualTreeView-setVisualStateBackgroundExtent-54" data-search="VirtualTreeView setVisualStateBackgroundExtent">
+<article tabindex="-1" id="VirtualTreeView-setVisualStateBackgroundExtent-58" data-search="VirtualTreeView setVisualStateBackgroundExtent">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L148</span>
+<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L159</span>
 <pre>void setVisualStateBackgroundExtent(VisualStateBackgroundExtent extent);</pre>
 <p class="doc" data-zh="设置树或列表状态背景水平范围。" data-en="Set the horizontal tree or list state background extent.">设置树或列表状态背景水平范围。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：VisualStateBackgroundExtent::FullWidth" data-en="Default / initial state: VisualStateBackgroundExtent::FullWidth">默认值／初始状态：VisualStateBackgroundExtent::FullWidth</p>
@@ -1601,10 +1733,10 @@ view-&gt;setVisualStateCornerRadius(6);</code>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#state-extent"><span data-zh="状态范围 / 命中范围 / 固定高度 / padding" data-en="State extent / hit region / fixed height / padding">状态范围 / 命中范围 / 固定高度 / padding</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualTreeView-visualStateBackgroundExtent-55" data-search="VirtualTreeView visualStateBackgroundExtent">
+<article tabindex="-1" id="VirtualTreeView-visualStateBackgroundExtent-59" data-search="VirtualTreeView visualStateBackgroundExtent">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L149</span>
+<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L160</span>
 <pre>    VisualStateBackgroundExtent visualStateBackgroundExtent() const;</pre>
 <p class="doc" data-zh="返回树或列表状态背景水平范围。" data-en="Return the horizontal tree or list state background extent.">返回树或列表状态背景水平范围。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：VisualStateBackgroundExtent::FullWidth" data-en="Default / initial state: VisualStateBackgroundExtent::FullWidth">默认值／初始状态：VisualStateBackgroundExtent::FullWidth</p>
@@ -1612,38 +1744,38 @@ view-&gt;setVisualStateCornerRadius(6);</code>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#state-extent"><span data-zh="状态范围 / 命中范围 / 固定高度 / padding" data-en="State extent / hit region / fixed height / padding">状态范围 / 命中范围 / 固定高度 / padding</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualTreeView-itemPaneSeparatorColor-56" data-search="VirtualTreeView itemPaneSeparatorColor">
+<article tabindex="-1" id="VirtualTreeView-itemPaneSeparatorColor-60" data-search="VirtualTreeView itemPaneSeparatorColor">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L153</span>
+<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L164</span>
 <pre>QColor itemPaneSeparatorColor() const override;</pre>
 <p class="doc" data-zh="返回行窗格分隔线颜色。" data-en="Return the row pane separator color.">返回行窗格分隔线颜色。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualTreeView-setBranchIndicatorsVisible-57" data-search="VirtualTreeView setBranchIndicatorsVisible">
+<article tabindex="-1" id="VirtualTreeView-setBranchIndicatorsVisible-61" data-search="VirtualTreeView setBranchIndicatorsVisible">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L155</span>
+<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L166</span>
 <pre>void setBranchIndicatorsVisible(bool visible);</pre>
 <p class="doc" data-zh="设置展开箭头绘制开关。" data-en="Set the expansion indicator visibility.">设置展开箭头绘制开关。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：true" data-en="Default / initial state: true">默认值／初始状态：true</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#branch"><span data-zh="branch 图标 / 旋转 / 缩进 / 自绘分支" data-en="Branch icons / rotation / indentation / custom rendering">branch 图标 / 旋转 / 缩进 / 自绘分支</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualTreeView-branchIndicatorsVisible-58" data-search="VirtualTreeView branchIndicatorsVisible">
+<article tabindex="-1" id="VirtualTreeView-branchIndicatorsVisible-62" data-search="VirtualTreeView branchIndicatorsVisible">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L156</span>
+<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L167</span>
 <pre>    bool branchIndicatorsVisible() const;</pre>
 <p class="doc" data-zh="返回展开箭头绘制开关。" data-en="Return the expansion indicator visibility.">返回展开箭头绘制开关。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：true" data-en="Default / initial state: true">默认值／初始状态：true</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#branch"><span data-zh="branch 图标 / 旋转 / 缩进 / 自绘分支" data-en="Branch icons / rotation / indentation / custom rendering">branch 图标 / 旋转 / 缩进 / 自绘分支</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualTreeView-setExpandedBranchIcon-59" data-search="VirtualTreeView setExpandedBranchIcon">
+<article tabindex="-1" id="VirtualTreeView-setExpandedBranchIcon-63" data-search="VirtualTreeView setExpandedBranchIcon">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L160</span>
+<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L171</span>
 <pre>void setExpandedBranchIcon(const QIcon &amp;icon);</pre>
 <p class="doc" data-zh="设置展开状态 branch 图标。" data-en="Set the branch icon for expanded nodes.">设置展开状态 branch 图标。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：空 QIcon；未提供自定义图标时绘制内置圆角三角形，随展开进度旋转。" data-en="Default / initial state: Null QIcon; without custom icons, the built-in rounded triangle rotates with expansion progress.">默认值／初始状态：空 QIcon；未提供自定义图标时绘制内置圆角三角形，随展开进度旋转。</p>
@@ -1651,10 +1783,10 @@ view-&gt;setVisualStateCornerRadius(6);</code>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#branch"><span data-zh="branch 图标 / 旋转 / 缩进 / 自绘分支" data-en="Branch icons / rotation / indentation / custom rendering">branch 图标 / 旋转 / 缩进 / 自绘分支</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualTreeView-expandedBranchIcon-60" data-search="VirtualTreeView expandedBranchIcon">
+<article tabindex="-1" id="VirtualTreeView-expandedBranchIcon-64" data-search="VirtualTreeView expandedBranchIcon">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L161</span>
+<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L172</span>
 <pre>    QIcon expandedBranchIcon() const;</pre>
 <p class="doc" data-zh="返回展开状态 branch 图标。" data-en="Return the branch icon for expanded nodes.">返回展开状态 branch 图标。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：空 QIcon；未提供自定义图标时绘制内置圆角三角形，随展开进度旋转。" data-en="Default / initial state: Null QIcon; without custom icons, the built-in rounded triangle rotates with expansion progress.">默认值／初始状态：空 QIcon；未提供自定义图标时绘制内置圆角三角形，随展开进度旋转。</p>
@@ -1662,10 +1794,10 @@ view-&gt;setVisualStateCornerRadius(6);</code>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#branch"><span data-zh="branch 图标 / 旋转 / 缩进 / 自绘分支" data-en="Branch icons / rotation / indentation / custom rendering">branch 图标 / 旋转 / 缩进 / 自绘分支</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualTreeView-setCollapsedBranchIcon-61" data-search="VirtualTreeView setCollapsedBranchIcon">
+<article tabindex="-1" id="VirtualTreeView-setCollapsedBranchIcon-65" data-search="VirtualTreeView setCollapsedBranchIcon">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L162</span>
+<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L173</span>
 <pre>void setCollapsedBranchIcon(const QIcon &amp;icon);</pre>
 <p class="doc" data-zh="设置收起状态 branch 图标。" data-en="Set the branch icon for collapsed nodes.">设置收起状态 branch 图标。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：空 QIcon；未提供自定义图标时绘制内置圆角三角形，随展开进度旋转。" data-en="Default / initial state: Null QIcon; without custom icons, the built-in rounded triangle rotates with expansion progress.">默认值／初始状态：空 QIcon；未提供自定义图标时绘制内置圆角三角形，随展开进度旋转。</p>
@@ -1673,10 +1805,10 @@ view-&gt;setVisualStateCornerRadius(6);</code>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#branch"><span data-zh="branch 图标 / 旋转 / 缩进 / 自绘分支" data-en="Branch icons / rotation / indentation / custom rendering">branch 图标 / 旋转 / 缩进 / 自绘分支</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualTreeView-collapsedBranchIcon-62" data-search="VirtualTreeView collapsedBranchIcon">
+<article tabindex="-1" id="VirtualTreeView-collapsedBranchIcon-66" data-search="VirtualTreeView collapsedBranchIcon">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L163</span>
+<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L174</span>
 <pre>    QIcon collapsedBranchIcon() const;</pre>
 <p class="doc" data-zh="返回收起状态 branch 图标。" data-en="Return the branch icon for collapsed nodes.">返回收起状态 branch 图标。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：空 QIcon；未提供自定义图标时绘制内置圆角三角形，随展开进度旋转。" data-en="Default / initial state: Null QIcon; without custom icons, the built-in rounded triangle rotates with expansion progress.">默认值／初始状态：空 QIcon；未提供自定义图标时绘制内置圆角三角形，随展开进度旋转。</p>
@@ -1684,100 +1816,100 @@ view-&gt;setVisualStateCornerRadius(6);</code>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#branch"><span data-zh="branch 图标 / 旋转 / 缩进 / 自绘分支" data-en="Branch icons / rotation / indentation / custom rendering">branch 图标 / 旋转 / 缩进 / 自绘分支</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualTreeView-setBranchIconSize-63" data-search="VirtualTreeView setBranchIconSize">
+<article tabindex="-1" id="VirtualTreeView-setBranchIconSize-67" data-search="VirtualTreeView setBranchIconSize">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L165</span>
+<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L176</span>
 <pre>void setBranchIconSize(int pixels);</pre>
 <p class="doc" data-zh="设置branch 图标逻辑像素尺寸。" data-en="Set the branch icon size in logical pixels.">设置branch 图标逻辑像素尺寸。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：10 逻辑像素。" data-en="Default / initial state: 10 logical pixels.">默认值／初始状态：10 逻辑像素。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#branch"><span data-zh="branch 图标 / 旋转 / 缩进 / 自绘分支" data-en="Branch icons / rotation / indentation / custom rendering">branch 图标 / 旋转 / 缩进 / 自绘分支</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualTreeView-branchIconSize-64" data-search="VirtualTreeView branchIconSize">
+<article tabindex="-1" id="VirtualTreeView-branchIconSize-68" data-search="VirtualTreeView branchIconSize">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L166</span>
+<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L177</span>
 <pre>    int branchIconSize() const;</pre>
 <p class="doc" data-zh="返回branch 图标逻辑像素尺寸。" data-en="Return the branch icon size in logical pixels.">返回branch 图标逻辑像素尺寸。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：10 逻辑像素。" data-en="Default / initial state: 10 logical pixels.">默认值／初始状态：10 逻辑像素。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#branch"><span data-zh="branch 图标 / 旋转 / 缩进 / 自绘分支" data-en="Branch icons / rotation / indentation / custom rendering">branch 图标 / 旋转 / 缩进 / 自绘分支</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualTreeView-setBranchIconColor-65" data-search="VirtualTreeView setBranchIconColor">
+<article tabindex="-1" id="VirtualTreeView-setBranchIconColor-69" data-search="VirtualTreeView setBranchIconColor">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L168</span>
+<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L179</span>
 <pre>void setBranchIconColor(const QColor &amp;color);</pre>
 <p class="doc" data-zh="设置默认 branch 图标颜色。" data-en="Set the built-in branch icon color.">设置默认 branch 图标颜色。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：无效 QColor；自定义图标保留原色，内置三角形使用 QPalette::WindowText。" data-en="Default / initial state: Invalid QColor; custom icons retain their colors, and the built-in triangle uses QPalette::WindowText.">默认值／初始状态：无效 QColor；自定义图标保留原色，内置三角形使用 QPalette::WindowText。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#branch"><span data-zh="branch 图标 / 旋转 / 缩进 / 自绘分支" data-en="Branch icons / rotation / indentation / custom rendering">branch 图标 / 旋转 / 缩进 / 自绘分支</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualTreeView-branchIconColor-66" data-search="VirtualTreeView branchIconColor">
+<article tabindex="-1" id="VirtualTreeView-branchIconColor-70" data-search="VirtualTreeView branchIconColor">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L169</span>
+<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L180</span>
 <pre>    QColor branchIconColor() const;</pre>
 <p class="doc" data-zh="返回默认 branch 图标颜色。" data-en="Return the built-in branch icon color.">返回默认 branch 图标颜色。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：无效 QColor；自定义图标保留原色，内置三角形使用 QPalette::WindowText。" data-en="Default / initial state: Invalid QColor; custom icons retain their colors, and the built-in triangle uses QPalette::WindowText.">默认值／初始状态：无效 QColor；自定义图标保留原色，内置三角形使用 QPalette::WindowText。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#branch"><span data-zh="branch 图标 / 旋转 / 缩进 / 自绘分支" data-en="Branch icons / rotation / indentation / custom rendering">branch 图标 / 旋转 / 缩进 / 自绘分支</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualTreeView-setBranchIndicatorAlignment-67" data-search="VirtualTreeView setBranchIndicatorAlignment">
+<article tabindex="-1" id="VirtualTreeView-setBranchIndicatorAlignment-71" data-search="VirtualTreeView setBranchIndicatorAlignment">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L173</span>
+<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L184</span>
 <pre>void setBranchIndicatorAlignment(Qt::Alignment alignment);</pre>
 <p class="doc" data-zh="设置图标在 branch 格中的对齐方式。" data-en="Set the icon alignment within the branch cell.">设置图标在 branch 格中的对齐方式。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：Qt::AlignCenter" data-en="Default / initial state: Qt::AlignCenter">默认值／初始状态：Qt::AlignCenter</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#branch"><span data-zh="branch 图标 / 旋转 / 缩进 / 自绘分支" data-en="Branch icons / rotation / indentation / custom rendering">branch 图标 / 旋转 / 缩进 / 自绘分支</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualTreeView-branchIndicatorAlignment-68" data-search="VirtualTreeView branchIndicatorAlignment">
+<article tabindex="-1" id="VirtualTreeView-branchIndicatorAlignment-72" data-search="VirtualTreeView branchIndicatorAlignment">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L174</span>
+<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L185</span>
 <pre>    Qt::Alignment branchIndicatorAlignment() const;</pre>
 <p class="doc" data-zh="返回图标在 branch 格中的对齐方式。" data-en="Return the icon alignment within the branch cell.">返回图标在 branch 格中的对齐方式。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：Qt::AlignCenter" data-en="Default / initial state: Qt::AlignCenter">默认值／初始状态：Qt::AlignCenter</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#branch"><span data-zh="branch 图标 / 旋转 / 缩进 / 自绘分支" data-en="Branch icons / rotation / indentation / custom rendering">branch 图标 / 旋转 / 缩进 / 自绘分支</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualTreeView-setBranchIndicatorPadding-69" data-search="VirtualTreeView setBranchIndicatorPadding">
+<article tabindex="-1" id="VirtualTreeView-setBranchIndicatorPadding-73" data-search="VirtualTreeView setBranchIndicatorPadding">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L178</span>
+<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L189</span>
 <pre>void setBranchIndicatorPadding(const QMargins &amp;padding);</pre>
 <p class="doc" data-zh="设置branch 图标区域内边距。" data-en="Set the padding inside the branch icon area.">设置branch 图标区域内边距。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：QMargins(0, 0, 0, 0)" data-en="Default / initial state: QMargins(0, 0, 0, 0)">默认值／初始状态：QMargins(0, 0, 0, 0)</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#branch"><span data-zh="branch 图标 / 旋转 / 缩进 / 自绘分支" data-en="Branch icons / rotation / indentation / custom rendering">branch 图标 / 旋转 / 缩进 / 自绘分支</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualTreeView-setBranchIndicatorPadding-70" data-search="VirtualTreeView setBranchIndicatorPadding">
+<article tabindex="-1" id="VirtualTreeView-setBranchIndicatorPadding-74" data-search="VirtualTreeView setBranchIndicatorPadding">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L179</span>
+<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L190</span>
 <pre>    void setBranchIndicatorPadding(int left, int top, int right, int bottom);</pre>
 <p class="doc" data-zh="设置branch 图标区域内边距。" data-en="Set the padding inside the branch icon area.">设置branch 图标区域内边距。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：QMargins(0, 0, 0, 0)" data-en="Default / initial state: QMargins(0, 0, 0, 0)">默认值／初始状态：QMargins(0, 0, 0, 0)</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#branch"><span data-zh="branch 图标 / 旋转 / 缩进 / 自绘分支" data-en="Branch icons / rotation / indentation / custom rendering">branch 图标 / 旋转 / 缩进 / 自绘分支</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualTreeView-branchIndicatorPadding-71" data-search="VirtualTreeView branchIndicatorPadding">
+<article tabindex="-1" id="VirtualTreeView-branchIndicatorPadding-75" data-search="VirtualTreeView branchIndicatorPadding">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L183</span>
+<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L194</span>
 <pre>    QMargins branchIndicatorPadding() const;</pre>
 <p class="doc" data-zh="返回branch 图标区域内边距。" data-en="Return the padding inside the branch icon area.">返回branch 图标区域内边距。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：QMargins(0, 0, 0, 0)" data-en="Default / initial state: QMargins(0, 0, 0, 0)">默认值／初始状态：QMargins(0, 0, 0, 0)</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#branch"><span data-zh="branch 图标 / 旋转 / 缩进 / 自绘分支" data-en="Branch icons / rotation / indentation / custom rendering">branch 图标 / 旋转 / 缩进 / 自绘分支</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualTreeView-setBranchIndicatorRenderer-72" data-search="VirtualTreeView setBranchIndicatorRenderer">
+<article tabindex="-1" id="VirtualTreeView-setBranchIndicatorRenderer-76" data-search="VirtualTreeView setBranchIndicatorRenderer">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L192</span>
+<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L203</span>
 <pre>void setBranchIndicatorRenderer(BranchIndicatorRenderer *renderer, bool takeOwnership = false);</pre>
 <p class="doc" data-zh="设置branch 图标渲染器。" data-en="Set the branch indicator renderer.">设置branch 图标渲染器。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：nullptr；使用视图内置 branch 绘制。takeOwnership 参数默认 false。" data-en="Default / initial state: nullptr; uses built-in branch painting. The takeOwnership argument defaults to false.">默认值／初始状态：nullptr；使用视图内置 branch 绘制。takeOwnership 参数默认 false。</p>
@@ -1785,10 +1917,10 @@ view-&gt;setVisualStateCornerRadius(6);</code>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#branch"><span data-zh="branch 图标 / 旋转 / 缩进 / 自绘分支" data-en="Branch icons / rotation / indentation / custom rendering">branch 图标 / 旋转 / 缩进 / 自绘分支</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualTreeView-branchIndicatorRenderer-73" data-search="VirtualTreeView branchIndicatorRenderer">
+<article tabindex="-1" id="VirtualTreeView-branchIndicatorRenderer-77" data-search="VirtualTreeView branchIndicatorRenderer">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L193</span>
+<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L204</span>
 <pre>    BranchIndicatorRenderer *branchIndicatorRenderer() const;</pre>
 <p class="doc" data-zh="返回branch 图标渲染器。" data-en="Return the branch indicator renderer.">返回branch 图标渲染器。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：nullptr；使用视图内置 branch 绘制。takeOwnership 参数默认 false。" data-en="Default / initial state: nullptr; uses built-in branch painting. The takeOwnership argument defaults to false.">默认值／初始状态：nullptr；使用视图内置 branch 绘制。takeOwnership 参数默认 false。</p>
@@ -1796,68 +1928,68 @@ view-&gt;setVisualStateCornerRadius(6);</code>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#branch"><span data-zh="branch 图标 / 旋转 / 缩进 / 自绘分支" data-en="Branch icons / rotation / indentation / custom rendering">branch 图标 / 旋转 / 缩进 / 自绘分支</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualTreeView-branchState-74" data-search="VirtualTreeView branchState">
+<article tabindex="-1" id="VirtualTreeView-branchState-78" data-search="VirtualTreeView branchState">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L199</span>
+<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L210</span>
 <pre>BranchIndicatorState branchState(const QModelIndex &amp;index, int cellDepth = -1) const;</pre>
 <p class="doc" data-zh="返回指定节点的 branch 状态，包含有无子项和展开信息。" data-en="Return branch state for the specified node, including child and expansion information.">返回指定节点的 branch 状态，包含有无子项和展开信息。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualTreeView-visibilityIndex-75" data-search="VirtualTreeView visibilityIndex">
+<article tabindex="-1" id="VirtualTreeView-visibilityIndex-79" data-search="VirtualTreeView visibilityIndex">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L201</span>
+<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L212</span>
 <pre>    TreeVisibilityIndex *visibilityIndex() const;</pre>
 <p class="doc" data-zh="返回树可见顺序索引；用于模型节点与展开行序号互查。" data-en="Return the tree visibility index mapping model nodes to expanded row positions.">返回树可见顺序索引；用于模型节点与展开行序号互查。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualTreeView-visibleRowCount-76" data-search="VirtualTreeView visibleRowCount">
+<article tabindex="-1" id="VirtualTreeView-visibleRowCount-80" data-search="VirtualTreeView visibleRowCount">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L202</span>
+<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L213</span>
 <pre>qsizetype visibleRowCount() const;</pre>
 <p class="doc" data-zh="返回当前树展开状态下的可见逻辑行总数（包括屏外行）。" data-en="Return the visible logical row count under current tree expansion, including offscreen rows.">返回当前树展开状态下的可见逻辑行总数（包括屏外行）。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#tree-expansion"><span data-zh="树展开 / 收起 / 渐变 / 懒加载" data-en="Tree expansion / collapse / fade / lazy loading">树展开 / 收起 / 渐变 / 懒加载</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualTreeView-indexAt-77" data-search="VirtualTreeView indexAt">
+<article tabindex="-1" id="VirtualTreeView-indexAt-81" data-search="VirtualTreeView indexAt">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L205</span>
+<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L216</span>
 <pre>QModelIndex indexAt(const QPoint &amp;viewportPos) const override;</pre>
 <p class="doc" data-zh="命中给定坐标对应的项目；视图接口使用视口坐标，布局策略使用布局坐标。空白区域返回无效结果。" data-en="Hit-test an item at a position. Views use viewport coordinates; layout policies use layout coordinates. Blank space returns an invalid result.">命中给定坐标对应的项目；视图接口使用视口坐标，布局策略使用布局坐标。空白区域返回无效结果。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualTreeView-itemDepth-78" data-search="VirtualTreeView itemDepth">
+<article tabindex="-1" id="VirtualTreeView-itemDepth-82" data-search="VirtualTreeView itemDepth">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L207</span>
+<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L218</span>
 <pre>int itemDepth(const QModelIndex &amp;index) const override;</pre>
 <p class="doc" data-zh="返回指定树节点的层级深度。" data-en="Return the depth of the specified tree node.">返回指定树节点的层级深度。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualTreeView-applyRowSpacingOverrides-79" data-search="VirtualTreeView applyRowSpacingOverrides">
+<article tabindex="-1" id="VirtualTreeView-applyRowSpacingOverrides-83" data-search="VirtualTreeView applyRowSpacingOverrides">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L208</span>
+<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L219</span>
 <pre>void applyRowSpacingOverrides() override;</pre>
 <p class="doc" data-zh="将树节点间的间距覆盖同步到当前行布局。" data-en="Apply tree-node spacing overrides to the current row layout.">将树节点间的间距覆盖同步到当前行布局。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualTreeView-expanded-80" data-search="VirtualTreeView expanded">
+<article tabindex="-1" id="VirtualTreeView-expanded-84" data-search="VirtualTreeView expanded">
 <span class="badge">signals</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L211</span>
+<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L222</span>
 <pre>void expanded(const QModelIndex &amp;index);</pre>
 <p class="doc" data-zh="指定节点完成展开状态切换时发出；用于监听树状态变化，不代表整个动画已结束。" data-en="Emitted when the node&#x27;s expansion state changes; this does not by itself mean the entire animation has finished.">指定节点完成展开状态切换时发出；用于监听树状态变化，不代表整个动画已结束。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#tree-expansion"><span data-zh="树展开 / 收起 / 渐变 / 懒加载" data-en="Tree expansion / collapse / fade / lazy loading">树展开 / 收起 / 渐变 / 懒加载</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualTreeView-collapsed-81" data-search="VirtualTreeView collapsed">
+<article tabindex="-1" id="VirtualTreeView-collapsed-85" data-search="VirtualTreeView collapsed">
 <span class="badge">signals</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L212</span>
+<a href="../../../include/virtualitemviews/virtualtreeview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L223</span>
 <pre>void collapsed(const QModelIndex &amp;index);</pre>
 <p class="doc" data-zh="指定节点完成展开状态切换时发出；用于监听树状态变化，不代表整个动画已结束。" data-en="Emitted when the node&#x27;s expansion state changes; this does not by itself mean the entire animation has finished.">指定节点完成展开状态切换时发出；用于监听树状态变化，不代表整个动画已结束。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>

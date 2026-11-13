@@ -185,6 +185,28 @@
 </ul>
 </details>
 </article>
+<article id="grid-line-range" data-search="setGridLineMargins gridLineMargins setGridLineMarginReference gridLineMarginReference setRowGridLineDepths rowGridLineDepths setRowVisualStateMargins rowVisualStateMargins virtualitemview virtuallistview virtualtreeview virtualtableview virtualtreetableview virtualflowtableview virtualmasonryview">
+<h3><span data-zh="分割线深度过滤 / 整线四向边距" data-en="Grid depth filtering / whole-line endpoint margins">分割线深度过滤 / 整线四向边距</span></h3>
+<p>
+<code>setGridLineMargins · gridLineMargins · setGridLineMarginReference · gridLineMarginReference · setRowGridLineDepths · rowGridLineDepths · setRowVisualStateMargins · rowVisualStateMargins</code>
+</p>
+<p class="rules"><span data-zh="gridLineMarginReference 默认 Viewport，Content 使用完整内容端点，未滚到末尾不截短屏幕边缘。List/Tree/Table/TreeTable 的 setRowVisualStateMargins(left,right) 默认 0，仅调整行 hover/select 绘制，不改变命中；表格仅 SelectRows 生效，显示且开启状态背景的垂直表头与内容共享端点，边距只扣一次；隐藏或关闭表头状态时退回内容范围。gridLineMargins 默认全零，横线使用 left/right，竖线使用 top/bottom；计算完整线范围后应用，正数缩短、负数伸长，不是每个 cell 的 padding。表头与内容共享范围；外框、冻结分隔线和拖放指示器独立。树和树表的深度集合默认空（全部），{0} 只画完整主节点子树之后的边界，{0,1} 还画一级子节点边界。深度相对于显示根；负值忽略，末行自动隐藏仍生效。" data-en="gridLineMarginReference defaults to Viewport; Content follows full content endpoints without prematurely trimming offscreen ends. List/Tree/Table/TreeTable setRowVisualStateMargins(left,right) defaults to zero and changes row hover/select painting only, preserving hits; tables require SelectRows and share endpoints with a visible state-enabled vertical header, applying insets once; hidden or state-disabled headers leave body-only bounds. gridLineMargins defaults to zero. Horizontal lines use left/right and vertical lines use top/bottom, applied after complete line geometry: positive shortens, negative extends, never per-cell padding. Headers and body share endpoints; frames, frozen dividers and drop indicators remain independent. Tree and tree-table depth sets default to empty (all). {0} draws after complete root subtrees; {0,1} includes first-level child boundaries. Depths are relative to the displayed root; negative depths are ignored and trailing-line auto-hide still applies.">gridLineMarginReference 默认 Viewport，Content 使用完整内容端点，未滚到末尾不截短屏幕边缘。List/Tree/Table/TreeTable 的 setRowVisualStateMargins(left,right) 默认 0，仅调整行 hover/select 绘制，不改变命中；表格仅 SelectRows 生效，显示且开启状态背景的垂直表头与内容共享端点，边距只扣一次；隐藏或关闭表头状态时退回内容范围。gridLineMargins 默认全零，横线使用 left/right，竖线使用 top/bottom；计算完整线范围后应用，正数缩短、负数伸长，不是每个 cell 的 padding。表头与内容共享范围；外框、冻结分隔线和拖放指示器独立。树和树表的深度集合默认空（全部），{0} 只画完整主节点子树之后的边界，{0,1} 还画一级子节点边界。深度相对于显示根；负值忽略，末行自动隐藏仍生效。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../../src/core/virtualitemview.cpp">src/core/virtualitemview.cpp</a> · <a href="../../../src/core/pixelalignedlines_p.h">src/core/pixelalignedlines_p.h</a> · <a href="../../../src/widgets/virtualtreeview.cpp">src/widgets/virtualtreeview.cpp</a> · <a href="../../../src/widgets/virtualtableview.cpp">src/widgets/virtualtableview.cpp</a> · <a href="../../../src/widgets/virtualheaderview.cpp">src/widgets/virtualheaderview.cpp</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../../table-layout-guide.md">docs/table-layout-guide.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（2）" data-en="Independent source examples (2)">独立源码示例（2）</span></summary>
+<ul>
+<li>
+<a href="../../../examples/tree_capabilities/12_row_spacing/example.cpp">examples/tree_capabilities/12_row_spacing/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/treetable_capabilities/14_spacing/example.cpp">examples/treetable_capabilities/14_spacing/example.cpp</a>
+</li>
+</ul>
+</details>
+</article>
 <article id="grid" data-search="setRowGridLinesVisible setRowGridLineColor setRowGridLineWidth setHorizontalGridLinesVisible setVerticalGridLinesVisible setTrailingRowGridLineAutoHideEnabled setItemPaneSeparatorStyle setPaneSeparatorStyle virtualitemview virtuallistview virtualtreeview virtualtableview virtualflowtableview virtualmasonryview">
 <h3><span data-zh="分割线样式 / 最后一行 / 冻结分隔线" data-en="Grid styling / terminal row / frozen separators">分割线样式 / 最后一行 / 冻结分隔线</span></h3>
 <p>
@@ -471,48 +493,58 @@
 <code>int visualStateCornerRadius() const;</code>
 </a>
 </li>
+<li data-search="VirtualListView setRowVisualStateMargins">
+<a href="#VirtualListView-setRowVisualStateMargins-24">
+<code>void setRowVisualStateMargins(int left, int right);</code>
+</a>
+</li>
+<li data-search="VirtualListView rowVisualStateMargins">
+<a href="#VirtualListView-rowVisualStateMargins-25">
+<code>QMargins rowVisualStateMargins() const;</code>
+</a>
+</li>
 <li data-search="VirtualListView setVisualStateBackgroundExtent">
-<a href="#VirtualListView-setVisualStateBackgroundExtent-25">
+<a href="#VirtualListView-setVisualStateBackgroundExtent-27">
 <code>void setVisualStateBackgroundExtent(VisualStateBackgroundExtent extent);</code>
 </a>
 </li>
 <li data-search="VirtualListView visualStateBackgroundExtent">
-<a href="#VirtualListView-visualStateBackgroundExtent-26">
+<a href="#VirtualListView-visualStateBackgroundExtent-28">
 <code>VisualStateBackgroundExtent visualStateBackgroundExtent() const;</code>
 </a>
 </li>
 <li data-search="VirtualListView setVisualStateBackgroundMargins">
-<a href="#VirtualListView-setVisualStateBackgroundMargins-27">
+<a href="#VirtualListView-setVisualStateBackgroundMargins-29">
 <code>void setVisualStateBackgroundMargins(const QMargins &amp;margins);</code>
 </a>
 </li>
 <li data-search="VirtualListView setVisualStateBackgroundMargins">
-<a href="#VirtualListView-setVisualStateBackgroundMargins-28">
+<a href="#VirtualListView-setVisualStateBackgroundMargins-30">
 <code>void setVisualStateBackgroundMargins(int left, int top, int right, int bottom);</code>
 </a>
 </li>
 <li data-search="VirtualListView visualStateBackgroundMargins">
-<a href="#VirtualListView-visualStateBackgroundMargins-29">
+<a href="#VirtualListView-visualStateBackgroundMargins-31">
 <code>QMargins visualStateBackgroundMargins() const;</code>
 </a>
 </li>
 <li data-search="VirtualListView setVisualStateBackgroundHeight">
-<a href="#VirtualListView-setVisualStateBackgroundHeight-30">
+<a href="#VirtualListView-setVisualStateBackgroundHeight-32">
 <code>void setVisualStateBackgroundHeight(int height);</code>
 </a>
 </li>
 <li data-search="VirtualListView visualStateBackgroundHeight">
-<a href="#VirtualListView-visualStateBackgroundHeight-31">
+<a href="#VirtualListView-visualStateBackgroundHeight-33">
 <code>int visualStateBackgroundHeight() const;</code>
 </a>
 </li>
 <li data-search="VirtualListView indexAt">
-<a href="#VirtualListView-indexAt-32">
+<a href="#VirtualListView-indexAt-34">
 <code>QModelIndex indexAt(const QPoint &amp;viewportPos) const override;</code>
 </a>
 </li>
 <li data-search="VirtualListView itemPaneSeparatorColor">
-<a href="#VirtualListView-itemPaneSeparatorColor-33">
+<a href="#VirtualListView-itemPaneSeparatorColor-35">
 <code>QColor itemPaneSeparatorColor() const override;</code>
 </a>
 </li>
@@ -527,7 +559,7 @@
 </a>
 </li>
 <li data-search="VirtualListView::VisualStateBackgroundExtent">
-<a href="#VirtualListView-VisualStateBackgroundExtent-24">
+<a href="#VirtualListView-VisualStateBackgroundExtent-26">
 <code>VirtualListView::VisualStateBackgroundExtent</code>
 </a>
 </li>
@@ -792,10 +824,50 @@
 <p class="doc defaults" data-zh="默认值／初始状态：0 逻辑像素，直角。" data-en="Default / initial state: 0 logical pixels; square corners.">默认值／初始状态：0 逻辑像素，直角。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualListView-VisualStateBackgroundExtent-24" data-search="VirtualListView VisualStateBackgroundExtent">
+<article tabindex="-1" id="VirtualListView-setRowVisualStateMargins-24" data-search="VirtualListView setRowVisualStateMargins">
 <span class="badge">public</span>
 <span class="muted">
 <a href="../../../include/virtualitemviews/virtuallistview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L83</span>
+<pre>    void setRowVisualStateMargins(int left, int right);</pre>
+<p class="doc" data-zh="设置或读取整行 hover／选中背景的左右绘制边距，返回 QMargins 的上下值始终为 0。在原有状态形状计算后应用：正数缩短、负数延伸，最终受视图和行区域裁剪。只改变框架背景绘制，不改变控件几何、命中范围或选择；不受分割线边距参照开关影响。List／Tree 可与原有状态范围、状态 padding 和固定高度组合。Table／TreeTable 仅在 SelectRows 模式下生效。垂直表头显示且启用状态背景时，表头和内容合并为整行范围，边距只计算一次，圆角沿整体端点绘制；表头隐藏或关闭状态背景时从内容范围计算。不重复作用于每个 cell，水平表头及 SelectItems 模式不受影响。" data-en="Set or query paint-only left/right insets of complete hover/selection row backgrounds; the returned QMargins always has zero top/bottom. Applied after the existing state shape: positive shortens, negative extends, with normal view and row clipping. Does not change widget geometry, hits or selection, and is independent of the grid margin reference. List/Tree can combine this with existing state extents, padding and fixed height. Table/TreeTable apply it only in SelectRows. A visible vertical header with state backgrounds enabled shares the whole-row bounds with the body: margins are applied once and corners follow the overall endpoints. A hidden header or disabled header state background leaves the body as the reference. Insets are never repeated per cell; horizontal headers and SelectItems are unaffected.">设置或读取整行 hover／选中背景的左右绘制边距，返回 QMargins 的上下值始终为 0。在原有状态形状计算后应用：正数缩短、负数延伸，最终受视图和行区域裁剪。只改变框架背景绘制，不改变控件几何、命中范围或选择；不受分割线边距参照开关影响。List／Tree 可与原有状态范围、状态 padding 和固定高度组合。Table／TreeTable 仅在 SelectRows 模式下生效。垂直表头显示且启用状态背景时，表头和内容合并为整行范围，边距只计算一次，圆角沿整体端点绘制；表头隐藏或关闭状态背景时从内容范围计算。不重复作用于每个 cell，水平表头及 SelectItems 模式不受影响。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：left = 0，right = 0。" data-en="Default / initial state: left = 0, right = 0.">默认值／初始状态：left = 0，right = 0。</p>
+<section class="api-example">
+<h4><span data-zh="组合用法" data-en="Combination example">组合用法</span></h4>
+<p class="doc" data-zh="背景两侧各留出 12px，命中范围保持不变。" data-en="Inset both background ends by 12px without changing mouse hits.">背景两侧各留出 12px，命中范围保持不变。</p>
+<pre>
+<code class="language-cpp">view-&gt;setRowVisualStateMargins(12, 12);</code>
+</pre>
+<p class="muted">
+<a href="../../../examples/list_capabilities/07_row_spacing/example.cpp"><span data-zh="完整示例源码" data-en="Full example source">完整示例源码</span></a>
+</p>
+</section>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#grid-line-range"><span data-zh="分割线深度过滤 / 整线四向边距" data-en="Grid depth filtering / whole-line endpoint margins">分割线深度过滤 / 整线四向边距</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualListView-rowVisualStateMargins-25" data-search="VirtualListView rowVisualStateMargins">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtuallistview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L84</span>
+<pre>    QMargins rowVisualStateMargins() const;</pre>
+<p class="doc" data-zh="设置或读取整行 hover／选中背景的左右绘制边距，返回 QMargins 的上下值始终为 0。在原有状态形状计算后应用：正数缩短、负数延伸，最终受视图和行区域裁剪。只改变框架背景绘制，不改变控件几何、命中范围或选择；不受分割线边距参照开关影响。List／Tree 可与原有状态范围、状态 padding 和固定高度组合。Table／TreeTable 仅在 SelectRows 模式下生效。垂直表头显示且启用状态背景时，表头和内容合并为整行范围，边距只计算一次，圆角沿整体端点绘制；表头隐藏或关闭状态背景时从内容范围计算。不重复作用于每个 cell，水平表头及 SelectItems 模式不受影响。" data-en="Set or query paint-only left/right insets of complete hover/selection row backgrounds; the returned QMargins always has zero top/bottom. Applied after the existing state shape: positive shortens, negative extends, with normal view and row clipping. Does not change widget geometry, hits or selection, and is independent of the grid margin reference. List/Tree can combine this with existing state extents, padding and fixed height. Table/TreeTable apply it only in SelectRows. A visible vertical header with state backgrounds enabled shares the whole-row bounds with the body: margins are applied once and corners follow the overall endpoints. A hidden header or disabled header state background leaves the body as the reference. Insets are never repeated per cell; horizontal headers and SelectItems are unaffected.">设置或读取整行 hover／选中背景的左右绘制边距，返回 QMargins 的上下值始终为 0。在原有状态形状计算后应用：正数缩短、负数延伸，最终受视图和行区域裁剪。只改变框架背景绘制，不改变控件几何、命中范围或选择；不受分割线边距参照开关影响。List／Tree 可与原有状态范围、状态 padding 和固定高度组合。Table／TreeTable 仅在 SelectRows 模式下生效。垂直表头显示且启用状态背景时，表头和内容合并为整行范围，边距只计算一次，圆角沿整体端点绘制；表头隐藏或关闭状态背景时从内容范围计算。不重复作用于每个 cell，水平表头及 SelectItems 模式不受影响。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：left = 0，right = 0。" data-en="Default / initial state: left = 0, right = 0.">默认值／初始状态：left = 0，right = 0。</p>
+<section class="api-example">
+<h4><span data-zh="组合用法" data-en="Combination example">组合用法</span></h4>
+<p class="doc" data-zh="背景两侧各留出 12px，命中范围保持不变。" data-en="Inset both background ends by 12px without changing mouse hits.">背景两侧各留出 12px，命中范围保持不变。</p>
+<pre>
+<code class="language-cpp">view-&gt;setRowVisualStateMargins(12, 12);</code>
+</pre>
+<p class="muted">
+<a href="../../../examples/list_capabilities/07_row_spacing/example.cpp"><span data-zh="完整示例源码" data-en="Full example source">完整示例源码</span></a>
+</p>
+</section>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#grid-line-range"><span data-zh="分割线深度过滤 / 整线四向边距" data-en="Grid depth filtering / whole-line endpoint margins">分割线深度过滤 / 整线四向边距</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualListView-VisualStateBackgroundExtent-26" data-search="VirtualListView VisualStateBackgroundExtent">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtuallistview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L88</span>
 <pre>enum class VisualStateBackgroundExtent {
     FullWidth,
     WidgetOnly,
@@ -827,10 +899,10 @@
 </div>
 <a href="#type-index" class="muted"><span data-zh="返回类型列表" data-en="Back to type index">返回类型列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualListView-setVisualStateBackgroundExtent-25" data-search="VirtualListView setVisualStateBackgroundExtent">
+<article tabindex="-1" id="VirtualListView-setVisualStateBackgroundExtent-27" data-search="VirtualListView setVisualStateBackgroundExtent">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtuallistview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L85</span>
+<a href="../../../include/virtualitemviews/virtuallistview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L90</span>
 <pre>void setVisualStateBackgroundExtent(VisualStateBackgroundExtent extent);</pre>
 <p class="doc" data-zh="设置树或列表状态背景水平范围。" data-en="Set the horizontal tree or list state background extent.">设置树或列表状态背景水平范围。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：VisualStateBackgroundExtent::FullWidth" data-en="Default / initial state: VisualStateBackgroundExtent::FullWidth">默认值／初始状态：VisualStateBackgroundExtent::FullWidth</p>
@@ -838,10 +910,10 @@
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#state-extent"><span data-zh="状态范围 / 命中范围 / 固定高度 / padding" data-en="State extent / hit region / fixed height / padding">状态范围 / 命中范围 / 固定高度 / padding</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualListView-visualStateBackgroundExtent-26" data-search="VirtualListView visualStateBackgroundExtent">
+<article tabindex="-1" id="VirtualListView-visualStateBackgroundExtent-28" data-search="VirtualListView visualStateBackgroundExtent">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtuallistview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L86</span>
+<a href="../../../include/virtualitemviews/virtuallistview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L91</span>
 <pre>    VisualStateBackgroundExtent visualStateBackgroundExtent() const;</pre>
 <p class="doc" data-zh="返回树或列表状态背景水平范围。" data-en="Return the horizontal tree or list state background extent.">返回树或列表状态背景水平范围。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：VisualStateBackgroundExtent::FullWidth" data-en="Default / initial state: VisualStateBackgroundExtent::FullWidth">默认值／初始状态：VisualStateBackgroundExtent::FullWidth</p>
@@ -849,10 +921,10 @@
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#state-extent"><span data-zh="状态范围 / 命中范围 / 固定高度 / padding" data-en="State extent / hit region / fixed height / padding">状态范围 / 命中范围 / 固定高度 / padding</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualListView-setVisualStateBackgroundMargins-27" data-search="VirtualListView setVisualStateBackgroundMargins">
+<article tabindex="-1" id="VirtualListView-setVisualStateBackgroundMargins-29" data-search="VirtualListView setVisualStateBackgroundMargins">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtuallistview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L92</span>
+<a href="../../../include/virtualitemviews/virtuallistview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L97</span>
 <pre>void setVisualStateBackgroundMargins(const QMargins &amp;margins);</pre>
 <p class="doc" data-zh="设置状态背景内缩边距。" data-en="Set the state background insets.">设置状态背景内缩边距。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：QMargins(0, 0, 0, 0)" data-en="Default / initial state: QMargins(0, 0, 0, 0)">默认值／初始状态：QMargins(0, 0, 0, 0)</p>
@@ -860,10 +932,10 @@
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#state-extent"><span data-zh="状态范围 / 命中范围 / 固定高度 / padding" data-en="State extent / hit region / fixed height / padding">状态范围 / 命中范围 / 固定高度 / padding</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualListView-setVisualStateBackgroundMargins-28" data-search="VirtualListView setVisualStateBackgroundMargins">
+<article tabindex="-1" id="VirtualListView-setVisualStateBackgroundMargins-30" data-search="VirtualListView setVisualStateBackgroundMargins">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtuallistview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L93</span>
+<a href="../../../include/virtualitemviews/virtuallistview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L98</span>
 <pre>    void setVisualStateBackgroundMargins(int left, int top, int right, int bottom);</pre>
 <p class="doc" data-zh="设置状态背景内缩边距。" data-en="Set the state background insets.">设置状态背景内缩边距。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：QMargins(0, 0, 0, 0)" data-en="Default / initial state: QMargins(0, 0, 0, 0)">默认值／初始状态：QMargins(0, 0, 0, 0)</p>
@@ -871,10 +943,10 @@
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#state-extent"><span data-zh="状态范围 / 命中范围 / 固定高度 / padding" data-en="State extent / hit region / fixed height / padding">状态范围 / 命中范围 / 固定高度 / padding</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualListView-visualStateBackgroundMargins-29" data-search="VirtualListView visualStateBackgroundMargins">
+<article tabindex="-1" id="VirtualListView-visualStateBackgroundMargins-31" data-search="VirtualListView visualStateBackgroundMargins">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtuallistview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L97</span>
+<a href="../../../include/virtualitemviews/virtuallistview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L102</span>
 <pre>    QMargins visualStateBackgroundMargins() const;</pre>
 <p class="doc" data-zh="返回状态背景内缩边距。" data-en="Return the state background insets.">返回状态背景内缩边距。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：QMargins(0, 0, 0, 0)" data-en="Default / initial state: QMargins(0, 0, 0, 0)">默认值／初始状态：QMargins(0, 0, 0, 0)</p>
@@ -882,10 +954,10 @@
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#state-extent"><span data-zh="状态范围 / 命中范围 / 固定高度 / padding" data-en="State extent / hit region / fixed height / padding">状态范围 / 命中范围 / 固定高度 / padding</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualListView-setVisualStateBackgroundHeight-30" data-search="VirtualListView setVisualStateBackgroundHeight">
+<article tabindex="-1" id="VirtualListView-setVisualStateBackgroundHeight-32" data-search="VirtualListView setVisualStateBackgroundHeight">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtuallistview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L100</span>
+<a href="../../../include/virtualitemviews/virtuallistview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L105</span>
 <pre>void setVisualStateBackgroundHeight(int height);</pre>
 <p class="doc" data-zh="设置状态背景固定高度；0 使用可用高度。" data-en="Set the fixed state background height; 0 uses available height.">设置状态背景固定高度；0 使用可用高度。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：0；不固定高度，按项几何与状态边距计算。" data-en="Default / initial state: 0; no fixed height; item geometry and state margins determine the height.">默认值／初始状态：0；不固定高度，按项几何与状态边距计算。</p>
@@ -893,10 +965,10 @@
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#state-extent"><span data-zh="状态范围 / 命中范围 / 固定高度 / padding" data-en="State extent / hit region / fixed height / padding">状态范围 / 命中范围 / 固定高度 / padding</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualListView-visualStateBackgroundHeight-31" data-search="VirtualListView visualStateBackgroundHeight">
+<article tabindex="-1" id="VirtualListView-visualStateBackgroundHeight-33" data-search="VirtualListView visualStateBackgroundHeight">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtuallistview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L101</span>
+<a href="../../../include/virtualitemviews/virtuallistview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L106</span>
 <pre>    int visualStateBackgroundHeight() const;</pre>
 <p class="doc" data-zh="返回状态背景固定高度；0 使用可用高度。" data-en="Return the fixed state background height; 0 uses available height.">返回状态背景固定高度；0 使用可用高度。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：0；不固定高度，按项几何与状态边距计算。" data-en="Default / initial state: 0; no fixed height; item geometry and state margins determine the height.">默认值／初始状态：0；不固定高度，按项几何与状态边距计算。</p>
@@ -904,18 +976,18 @@
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#state-extent"><span data-zh="状态范围 / 命中范围 / 固定高度 / padding" data-en="State extent / hit region / fixed height / padding">状态范围 / 命中范围 / 固定高度 / padding</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualListView-indexAt-32" data-search="VirtualListView indexAt">
+<article tabindex="-1" id="VirtualListView-indexAt-34" data-search="VirtualListView indexAt">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtuallistview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L103</span>
+<a href="../../../include/virtualitemviews/virtuallistview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L108</span>
 <pre>QModelIndex indexAt(const QPoint &amp;viewportPos) const override;</pre>
 <p class="doc" data-zh="命中给定坐标对应的项目；视图接口使用视口坐标，布局策略使用布局坐标。空白区域返回无效结果。" data-en="Hit-test an item at a position. Views use viewport coordinates; layout policies use layout coordinates. Blank space returns an invalid result.">命中给定坐标对应的项目；视图接口使用视口坐标，布局策略使用布局坐标。空白区域返回无效结果。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualListView-itemPaneSeparatorColor-33" data-search="VirtualListView itemPaneSeparatorColor">
+<article tabindex="-1" id="VirtualListView-itemPaneSeparatorColor-35" data-search="VirtualListView itemPaneSeparatorColor">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtuallistview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L104</span>
+<a href="../../../include/virtualitemviews/virtuallistview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L109</span>
 <pre>QColor itemPaneSeparatorColor() const override;</pre>
 <p class="doc" data-zh="返回行窗格分隔线颜色。" data-en="Return the row pane separator color.">返回行窗格分隔线颜色。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>

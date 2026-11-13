@@ -25,6 +25,7 @@ class QWheelEvent;
 namespace viv {
 
 class VirtualHeaderView;
+class StyledHeaderSection;
 class RowDragPreview;
 
 class ListLayout;
@@ -558,6 +559,13 @@ public:
     /// Corners follow the complete row or cell bounds, including offscreen ends.
     void setVisualStateCornerRadius(int radius);
     int visualStateCornerRadius() const { return m_visualStateCornerRadius; }
+    /// Signed paint-only left/right insets of the complete row state background.
+    /// Default zero. Positive values shorten, negatives extend; mouse hits and
+    /// widget geometry are unchanged. Applies only in SelectRows mode. A visible
+    /// vertical header with state backgrounds enabled shares the complete row's
+    /// endpoints; otherwise insets start at the body. Headers do not repeat insets.
+    void setRowVisualStateMargins(int left, int right) { setRowVisualStateInsets(left, right); }
+    QMargins rowVisualStateMargins() const { return rowVisualStateInsets(); }
     /// Extends the state radius to built-in headers. Enabled by default.
     /// SelectRows rounds only the row header's left corners; row content joins with square left corners.
     /// SelectItems rounds all four corners of row headers and cells independently.
@@ -633,6 +641,8 @@ protected:
     virtual int leadingCellInset(const QModelIndex &index) const;
     /// Portion of a horizontal row line occupied by tree decoration, in viewport x.
     virtual QRect rowGridLineExclusion(int depth) const;
+    QRect gridLineBounds() const override;
+    QRect gridLineContentBounds() const override;
     /// Visual x of a column while its header section is being dragged or animated.
     bool columnVisualX(int logicalIndex, int *viewportX) const;
     /// Reports a scrolling row's preview y only while row following is enabled.
@@ -712,6 +722,11 @@ protected:
     void refreshItemData() override;
 
 private:
+    friend class StyledHeaderSection;
+    /// A participating row header contributes the overall left state endpoint.
+    bool rowVisualStateHeaderParticipates() const;
+    /// Applies row insets once to the header/body union in viewport coordinates.
+    QRect rowVisualStatePaintRect(const QRect &body) const;
     /// Visible viewport band of a row preview, clipped to its frozen or scrolling pane.
     QRect rowDragPreviewRect(const QModelIndex &index) const;
     /// Current elapsed-time sample, so a fast retarget does not start from a stale tick.

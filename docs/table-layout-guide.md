@@ -115,3 +115,43 @@ table.setSpanProvider(&spans);
 `setSpanProvider()` 默认由业务持有 provider。可用 `anchorIndex(index)` 找到被覆盖单元格的锚点。合并区域不能跨 pane，实际矩形会裁剪到锚点 pane。单元格模式只物化锚点控件；行控件模式可从 `TableRowLayoutContext::spans()` 读取覆盖关系。
 
 合并跨度只描述模型坐标中的覆盖关系；列宽、行高、隐藏和冻结变化时，合并区域的显示矩形由视图重新计算。
+
+## 分割线端点与树分组边界
+
+内置分割线可通过 `setGridLineMargins(QMargins(left, top, right, bottom))` 设置整体端点边距，默认全零。横线用左右值，竖线用上下值，正数向内缩短，负数向外延伸。边距不改变项目或表头布局，也不逐 cell 重复扣除；表头与内容共享同一组端点。外边框、冻结分隔线与拖放指示器使用各自接口。
+
+```cpp
+view->setGridLineMargins(QMargins(16, 8, 16, 12));
+```
+
+`VirtualTreeView` 和 `VirtualTreeTableView` 还可选择分割线所在的分组深度：
+
+```cpp
+tree->setRowGridLineDepths(QSet<int>{0});    // Separate complete root groups.
+tree->setRowGridLineDepths(QSet<int>{0, 1}); // Also separate first-level children.
+tree->setRowGridLineDepths(QSet<int>{});     // Restore all depths.
+```
+
+主节点深度为 0，相对于当前显示根。展开时主节点分割线跟随整组最后一个可见后代；主节点与第一个子节点之间不属于深度 0 的分组边界。树表行号表头同步过滤，列分割线不受影响。末尾线仍受 `setTrailingRowGridLineAutoHideEnabled()` 控制。
+
+树的 `NodeOnly` / `NodeAndIcon` 会先计算原有起点，再应用左右边距；负左边距可向缩进区延伸，超出视图的部分正常裁剪。可运行示例见[树间距章节](../examples/tree_capabilities/12_row_spacing/example.cpp)和[树表间距章节](../examples/treetable_capabilities/14_spacing/example.cpp)。
+
+### 可见区域与完整内容参照
+
+```cpp
+view->setGridLineMargins(QMargins(16, 8, 24, 12));
+view->setGridLineMarginReference(
+    viv::VirtualItemView::GridLineMarginReference::Content);
+```
+
+默认 `Viewport` 在可见区域端点应用边距。`Content` 跟随完整内容的真实端点，因此未横向滚动到最右侧时，横线仍可连续画到屏幕右边缘；只有内容末尾进入视口才显示右边距。纵向上下边距遵循同样规则。表头共享整线范围，冻结首尾端点保持固定。此接口适用于 List、Tree、Table、TreeTable、FlowTable 和 Masonry；Wrap 没有内置网格分割线。
+
+### 行状态左右绘制边距
+
+```cpp
+view->setRowVisualStateMargins(12, 20);
+```
+
+List、Tree、Table、TreeTable 支持此接口，默认左右均为 0。正数缩短、负数延伸，在原有背景形状计算后应用，正常裁剪到视图和行区域。不影响项目几何、命中或选择，也不使用分割线的参照设置。List／Tree 可以继续组合原有状态范围、padding 和固定高度；Table／TreeTable 在 `SelectRows` 下把可见且启用状态背景的垂直表头纳入整行范围，边距只计算一次。表头隐藏或关闭状态背景时从内容端点计算；水平表头和 `SelectItems` 不应用该边距。
+
+例如行号表头宽 40px、左边距 12px 时，只在表头左侧留出 12px，表头右侧与内容左侧继续衔接；左边距为 52px 时，表头状态背景完全缩去，内容左端再缩进 12px。圆角跟随最终整行端点；关闭表头圆角扩展时仍保留独立的内容圆角样式。

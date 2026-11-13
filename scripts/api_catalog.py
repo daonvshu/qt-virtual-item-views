@@ -108,6 +108,12 @@ feature('spacing', '间距 / 中心分割线 / 双侧分割线 / 半间距',
     '默认 SpacingCenter，在间距中心画线，并在支持的网格布局外围补半间距；SpacingEdges 在两侧画线。间距 0 都回退到单一共享边界。Center 始终穿过交叉间距，不能关闭；Edges 才允许配置穿过与否。内容 margins 与项目 spacing 不是同一层。冻结区域交界将间距分成两半，由冻结分割线标识边界，不应业务重复补线。Wrap 的水平间距叫 setItemSpacing，没有表格网格线 API。',
     'src/core/virtualitemview.cpp src/widgets/virtualtableview.cpp src/layout/flowtablelayout.cpp src/layout/masonrylayout.cpp src/core/pixelalignedlines_p.h',
     'examples/table_capabilities/09_spacing/example.cpp examples/treetable_capabilities/14_spacing/example.cpp examples/flow_capabilities/03_spacing_grid/example.cpp examples/masonry_capabilities/03_spacing_grid/example.cpp', 'docs/table-layout-guide.md')
+feature('grid-line-range', '分割线深度过滤 / 整线四向边距',
+    'virtualitemview virtuallistview virtualtreeview virtualtableview virtualtreetableview virtualflowtableview virtualmasonryview',
+    'setGridLineMargins gridLineMargins setGridLineMarginReference gridLineMarginReference setRowGridLineDepths rowGridLineDepths setRowVisualStateMargins rowVisualStateMargins',
+    'gridLineMarginReference 默认 Viewport，Content 使用完整内容端点，未滚到末尾不截短屏幕边缘。List/Tree/Table/TreeTable 的 setRowVisualStateMargins(left,right) 默认 0，仅调整行 hover/select 绘制，不改变命中；表格仅 SelectRows 生效，显示且开启状态背景的垂直表头与内容共享端点，边距只扣一次；隐藏或关闭表头状态时退回内容范围。gridLineMargins 默认全零，横线使用 left/right，竖线使用 top/bottom；计算完整线范围后应用，正数缩短、负数伸长，不是每个 cell 的 padding。表头与内容共享范围；外框、冻结分隔线和拖放指示器独立。树和树表的深度集合默认空（全部），{0} 只画完整主节点子树之后的边界，{0,1} 还画一级子节点边界。深度相对于显示根；负值忽略，末行自动隐藏仍生效。',
+    'src/core/virtualitemview.cpp src/core/pixelalignedlines_p.h src/widgets/virtualtreeview.cpp src/widgets/virtualtableview.cpp src/widgets/virtualheaderview.cpp',
+    'examples/tree_capabilities/12_row_spacing/example.cpp examples/treetable_capabilities/14_spacing/example.cpp', 'docs/table-layout-guide.md')
 feature('header-gap', '表头与内容间距 / 穿过表头 / 状态穿过间距',
     'virtualtableview virtualtreetableview',
     'setHeaderContentSpacingEnabled setVerticalGridLinesThroughHeader setHorizontalGridLinesThroughHeader setHeaderSpacingBackgroundColor setVisualStateThroughColumnSpacing setVisualStateThroughRowSpacing',

@@ -140,6 +140,8 @@ protected:
     void paintVisualStateBackgrounds(QPainter *painter, const QRect &dirty) const;
     /// Paints visible boundaries and column tails, without absent-item borders.
     void paintGridLines(QPainter *painter) const;
+    /// Uncut occupied grid bounds, including outer half gaps.
+    QRect gridLineContentBounds() const override;
     /// Paints gap geometry independently of widget materialization.
     void paintRowSpacingBackground(QPainter *painter, const QRect &dirtyRect) const override;
 

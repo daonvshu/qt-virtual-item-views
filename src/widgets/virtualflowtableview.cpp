@@ -441,6 +441,20 @@ VisibleRange VirtualFlowTableView::gridPaintRange() const
     return range;
 }
 
+QRect VirtualFlowTableView::gridLineContentBounds() const
+{
+    QRect bounds = VirtualItemView::gridLineContentBounds();
+    bounds.adjust(0, contentMargins().top(), 0, -contentMargins().bottom());
+    const int count = int(qMin<qsizetype>(m_flow->columnCount(), viewItemCount()));
+    if (count > 0) {
+        const QMargins outer = m_flow->outerSpacing();
+        bounds.setLeft(viewport()->x() + m_flow->columnX(0) - outer.left());
+        bounds.setRight(viewport()->x() + m_flow->columnX(count - 1)
+            + m_flow->columnWidth(count - 1) + outer.right() - 1);
+    }
+    return bounds;
+}
+
 void VirtualFlowTableView::paintGridLines(QPainter *painter) const
 {
     detail::PerformanceScope performance(this, "paint.flow-grid", detail::PerformanceDomain::Paint);

@@ -163,6 +163,28 @@
 </ul>
 </details>
 </article>
+<article id="grid-line-range" data-search="setGridLineMargins gridLineMargins setGridLineMarginReference gridLineMarginReference setRowGridLineDepths rowGridLineDepths setRowVisualStateMargins rowVisualStateMargins virtualitemview virtuallistview virtualtreeview virtualtableview virtualtreetableview virtualflowtableview virtualmasonryview">
+<h3><span data-zh="分割线深度过滤 / 整线四向边距" data-en="Grid depth filtering / whole-line endpoint margins">分割线深度过滤 / 整线四向边距</span></h3>
+<p>
+<code>setGridLineMargins · gridLineMargins · setGridLineMarginReference · gridLineMarginReference · setRowGridLineDepths · rowGridLineDepths · setRowVisualStateMargins · rowVisualStateMargins</code>
+</p>
+<p class="rules"><span data-zh="gridLineMarginReference 默认 Viewport，Content 使用完整内容端点，未滚到末尾不截短屏幕边缘。List/Tree/Table/TreeTable 的 setRowVisualStateMargins(left,right) 默认 0，仅调整行 hover/select 绘制，不改变命中；表格仅 SelectRows 生效，显示且开启状态背景的垂直表头与内容共享端点，边距只扣一次；隐藏或关闭表头状态时退回内容范围。gridLineMargins 默认全零，横线使用 left/right，竖线使用 top/bottom；计算完整线范围后应用，正数缩短、负数伸长，不是每个 cell 的 padding。表头与内容共享范围；外框、冻结分隔线和拖放指示器独立。树和树表的深度集合默认空（全部），{0} 只画完整主节点子树之后的边界，{0,1} 还画一级子节点边界。深度相对于显示根；负值忽略，末行自动隐藏仍生效。" data-en="gridLineMarginReference defaults to Viewport; Content follows full content endpoints without prematurely trimming offscreen ends. List/Tree/Table/TreeTable setRowVisualStateMargins(left,right) defaults to zero and changes row hover/select painting only, preserving hits; tables require SelectRows and share endpoints with a visible state-enabled vertical header, applying insets once; hidden or state-disabled headers leave body-only bounds. gridLineMargins defaults to zero. Horizontal lines use left/right and vertical lines use top/bottom, applied after complete line geometry: positive shortens, negative extends, never per-cell padding. Headers and body share endpoints; frames, frozen dividers and drop indicators remain independent. Tree and tree-table depth sets default to empty (all). {0} draws after complete root subtrees; {0,1} includes first-level child boundaries. Depths are relative to the displayed root; negative depths are ignored and trailing-line auto-hide still applies.">gridLineMarginReference 默认 Viewport，Content 使用完整内容端点，未滚到末尾不截短屏幕边缘。List/Tree/Table/TreeTable 的 setRowVisualStateMargins(left,right) 默认 0，仅调整行 hover/select 绘制，不改变命中；表格仅 SelectRows 生效，显示且开启状态背景的垂直表头与内容共享端点，边距只扣一次；隐藏或关闭表头状态时退回内容范围。gridLineMargins 默认全零，横线使用 left/right，竖线使用 top/bottom；计算完整线范围后应用，正数缩短、负数伸长，不是每个 cell 的 padding。表头与内容共享范围；外框、冻结分隔线和拖放指示器独立。树和树表的深度集合默认空（全部），{0} 只画完整主节点子树之后的边界，{0,1} 还画一级子节点边界。深度相对于显示根；负值忽略，末行自动隐藏仍生效。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../../src/core/virtualitemview.cpp">src/core/virtualitemview.cpp</a> · <a href="../../../src/core/pixelalignedlines_p.h">src/core/pixelalignedlines_p.h</a> · <a href="../../../src/widgets/virtualtreeview.cpp">src/widgets/virtualtreeview.cpp</a> · <a href="../../../src/widgets/virtualtableview.cpp">src/widgets/virtualtableview.cpp</a> · <a href="../../../src/widgets/virtualheaderview.cpp">src/widgets/virtualheaderview.cpp</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../../table-layout-guide.md">docs/table-layout-guide.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（2）" data-en="Independent source examples (2)">独立源码示例（2）</span></summary>
+<ul>
+<li>
+<a href="../../../examples/tree_capabilities/12_row_spacing/example.cpp">examples/tree_capabilities/12_row_spacing/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/treetable_capabilities/14_spacing/example.cpp">examples/treetable_capabilities/14_spacing/example.cpp</a>
+</li>
+</ul>
+</details>
+</article>
 <article id="grid" data-search="setRowGridLinesVisible setRowGridLineColor setRowGridLineWidth setHorizontalGridLinesVisible setVerticalGridLinesVisible setTrailingRowGridLineAutoHideEnabled setItemPaneSeparatorStyle setPaneSeparatorStyle virtualitemview virtuallistview virtualtreeview virtualtableview virtualflowtableview virtualmasonryview">
 <h3><span data-zh="分割线样式 / 最后一行 / 冻结分隔线" data-en="Grid styling / terminal row / frozen separators">分割线样式 / 最后一行 / 冻结分隔线</span></h3>
 <p>

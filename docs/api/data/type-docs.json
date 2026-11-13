@@ -1069,6 +1069,24 @@
           "en": "Actual widget plus branch-icon area; use WidgetOnly if absent or hidden."
         }
       ]
+    },
+    {
+      "header": "include/virtualitemviews/virtualitemview.h",
+      "name": "VirtualItemView::GridLineMarginReference",
+      "zh": "整条分割线边距的参照区域。只改变分割线端点计算，不修改布局。",
+      "en": "Reference region for whole-grid-line endpoint margins. Does not change layout.",
+      "members": [
+        {
+          "name": "Viewport",
+          "zh": "默认；按可见区域端点设置边距，表格包含参与绘制的表头。",
+          "en": "Default: apply margins at visible endpoints, including participating table headers."
+        },
+        {
+          "name": "Content",
+          "zh": "按完整内容端点设置边距，随滚动移动；冻结端点保持锚定。",
+          "en": "Apply margins at full content endpoints that move with scrolling; frozen endpoints remain anchored."
+        }
+      ]
     }
   ]
 }

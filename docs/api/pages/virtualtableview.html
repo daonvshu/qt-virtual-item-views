@@ -244,6 +244,28 @@
 </ul>
 </details>
 </article>
+<article id="grid-line-range" data-search="setGridLineMargins gridLineMargins setGridLineMarginReference gridLineMarginReference setRowGridLineDepths rowGridLineDepths setRowVisualStateMargins rowVisualStateMargins virtualitemview virtuallistview virtualtreeview virtualtableview virtualtreetableview virtualflowtableview virtualmasonryview">
+<h3><span data-zh="分割线深度过滤 / 整线四向边距" data-en="Grid depth filtering / whole-line endpoint margins">分割线深度过滤 / 整线四向边距</span></h3>
+<p>
+<code>setGridLineMargins · gridLineMargins · setGridLineMarginReference · gridLineMarginReference · setRowGridLineDepths · rowGridLineDepths · setRowVisualStateMargins · rowVisualStateMargins</code>
+</p>
+<p class="rules"><span data-zh="gridLineMarginReference 默认 Viewport，Content 使用完整内容端点，未滚到末尾不截短屏幕边缘。List/Tree/Table/TreeTable 的 setRowVisualStateMargins(left,right) 默认 0，仅调整行 hover/select 绘制，不改变命中；表格仅 SelectRows 生效，显示且开启状态背景的垂直表头与内容共享端点，边距只扣一次；隐藏或关闭表头状态时退回内容范围。gridLineMargins 默认全零，横线使用 left/right，竖线使用 top/bottom；计算完整线范围后应用，正数缩短、负数伸长，不是每个 cell 的 padding。表头与内容共享范围；外框、冻结分隔线和拖放指示器独立。树和树表的深度集合默认空（全部），{0} 只画完整主节点子树之后的边界，{0,1} 还画一级子节点边界。深度相对于显示根；负值忽略，末行自动隐藏仍生效。" data-en="gridLineMarginReference defaults to Viewport; Content follows full content endpoints without prematurely trimming offscreen ends. List/Tree/Table/TreeTable setRowVisualStateMargins(left,right) defaults to zero and changes row hover/select painting only, preserving hits; tables require SelectRows and share endpoints with a visible state-enabled vertical header, applying insets once; hidden or state-disabled headers leave body-only bounds. gridLineMargins defaults to zero. Horizontal lines use left/right and vertical lines use top/bottom, applied after complete line geometry: positive shortens, negative extends, never per-cell padding. Headers and body share endpoints; frames, frozen dividers and drop indicators remain independent. Tree and tree-table depth sets default to empty (all). {0} draws after complete root subtrees; {0,1} includes first-level child boundaries. Depths are relative to the displayed root; negative depths are ignored and trailing-line auto-hide still applies.">gridLineMarginReference 默认 Viewport，Content 使用完整内容端点，未滚到末尾不截短屏幕边缘。List/Tree/Table/TreeTable 的 setRowVisualStateMargins(left,right) 默认 0，仅调整行 hover/select 绘制，不改变命中；表格仅 SelectRows 生效，显示且开启状态背景的垂直表头与内容共享端点，边距只扣一次；隐藏或关闭表头状态时退回内容范围。gridLineMargins 默认全零，横线使用 left/right，竖线使用 top/bottom；计算完整线范围后应用，正数缩短、负数伸长，不是每个 cell 的 padding。表头与内容共享范围；外框、冻结分隔线和拖放指示器独立。树和树表的深度集合默认空（全部），{0} 只画完整主节点子树之后的边界，{0,1} 还画一级子节点边界。深度相对于显示根；负值忽略，末行自动隐藏仍生效。</span></p>
+<p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../../src/core/virtualitemview.cpp">src/core/virtualitemview.cpp</a> · <a href="../../../src/core/pixelalignedlines_p.h">src/core/pixelalignedlines_p.h</a> · <a href="../../../src/widgets/virtualtreeview.cpp">src/widgets/virtualtreeview.cpp</a> · <a href="../../../src/widgets/virtualtableview.cpp">src/widgets/virtualtableview.cpp</a> · <a href="../../../src/widgets/virtualheaderview.cpp">src/widgets/virtualheaderview.cpp</a>
+</p>
+<p><span data-zh="配套说明：" data-en="Related guide: ">配套说明：</span><a href="../../table-layout-guide.md">docs/table-layout-guide.md</a>
+</p>
+<details>
+<summary><span data-zh="独立源码示例（2）" data-en="Independent source examples (2)">独立源码示例（2）</span></summary>
+<ul>
+<li>
+<a href="../../../examples/tree_capabilities/12_row_spacing/example.cpp">examples/tree_capabilities/12_row_spacing/example.cpp</a>
+</li>
+<li>
+<a href="../../../examples/treetable_capabilities/14_spacing/example.cpp">examples/treetable_capabilities/14_spacing/example.cpp</a>
+</li>
+</ul>
+</details>
+</article>
 <article id="header-gap" data-search="setHeaderContentSpacingEnabled setVerticalGridLinesThroughHeader setHorizontalGridLinesThroughHeader setHeaderSpacingBackgroundColor setVisualStateThroughColumnSpacing setVisualStateThroughRowSpacing virtualtableview virtualtreetableview">
 <h3><span data-zh="表头与内容间距 / 穿过表头 / 状态穿过间距" data-en="Header-content spacing / header lines / state gap coverage">表头与内容间距 / 穿过表头 / 状态穿过间距</span></h3>
 <p>
@@ -1696,33 +1718,43 @@
 <code>int visualStateCornerRadius() const;</code>
 </a>
 </li>
+<li data-search="VirtualTableView setRowVisualStateMargins">
+<a href="#VirtualTableView-setRowVisualStateMargins-192">
+<code>void setRowVisualStateMargins(int left, int right);</code>
+</a>
+</li>
+<li data-search="VirtualTableView rowVisualStateMargins">
+<a href="#VirtualTableView-rowVisualStateMargins-193">
+<code>QMargins rowVisualStateMargins() const;</code>
+</a>
+</li>
 <li data-search="VirtualTableView setVisualStateCornerRadiusIncludesHeaders">
-<a href="#VirtualTableView-setVisualStateCornerRadiusIncludesHeaders-192">
+<a href="#VirtualTableView-setVisualStateCornerRadiusIncludesHeaders-194">
 <code>void setVisualStateCornerRadiusIncludesHeaders(bool enabled);</code>
 </a>
 </li>
 <li data-search="VirtualTableView visualStateCornerRadiusIncludesHeaders">
-<a href="#VirtualTableView-visualStateCornerRadiusIncludesHeaders-193">
+<a href="#VirtualTableView-visualStateCornerRadiusIncludesHeaders-195">
 <code>bool visualStateCornerRadiusIncludesHeaders() const;</code>
 </a>
 </li>
 <li data-search="VirtualTableView visualState">
-<a href="#VirtualTableView-visualState-194">
+<a href="#VirtualTableView-visualState-196">
 <code>VisualState visualState(const QModelIndex &amp;index) const override;</code>
 </a>
 </li>
 <li data-search="VirtualTableView indexForWidget">
-<a href="#VirtualTableView-indexForWidget-195">
+<a href="#VirtualTableView-indexForWidget-197">
 <code>QModelIndex indexForWidget(const QWidget *widget) const override;</code>
 </a>
 </li>
 <li data-search="VirtualTableView cellIndexForWidget">
-<a href="#VirtualTableView-cellIndexForWidget-196">
+<a href="#VirtualTableView-cellIndexForWidget-198">
 <code>QModelIndex cellIndexForWidget(const QWidget *widget) const;</code>
 </a>
 </li>
 <li data-search="VirtualTableView materializedCellIndexes">
-<a href="#VirtualTableView-materializedCellIndexes-197">
+<a href="#VirtualTableView-materializedCellIndexes-199">
 <code>QList&lt;QModelIndex&gt; materializedCellIndexes() const;</code>
 </a>
 </li>
@@ -1731,27 +1763,27 @@
 <h4>VirtualTableView</h4>
 <ul>
 <li data-search="VirtualTableView sortIndicatorRequested">
-<a href="#VirtualTableView-sortIndicatorRequested-198">
+<a href="#VirtualTableView-sortIndicatorRequested-200">
 <code>void sortIndicatorRequested(int logicalIndex, Qt::SortOrder order);</code>
 </a>
 </li>
 <li data-search="VirtualTableView rowMoveRequested">
-<a href="#VirtualTableView-rowMoveRequested-199">
+<a href="#VirtualTableView-rowMoveRequested-201">
 <code>void rowMoveRequested(int fromRow, int toRow);</code>
 </a>
 </li>
 <li data-search="VirtualTableView horizontalOffsetChanged">
-<a href="#VirtualTableView-horizontalOffsetChanged-200">
+<a href="#VirtualTableView-horizontalOffsetChanged-202">
 <code>void horizontalOffsetChanged(qint64 offset);</code>
 </a>
 </li>
 <li data-search="VirtualTableView columnGeometryChanged">
-<a href="#VirtualTableView-columnGeometryChanged-201">
+<a href="#VirtualTableView-columnGeometryChanged-203">
 <code>void columnGeometryChanged();</code>
 </a>
 </li>
 <li data-search="VirtualTableView rowHeightChanged">
-<a href="#VirtualTableView-rowHeightChanged-202">
+<a href="#VirtualTableView-rowHeightChanged-204">
 <code>void rowHeightChanged(qsizetype row, int height);</code>
 </a>
 </li>
@@ -1800,35 +1832,35 @@
 <article tabindex="-1" id="VirtualTableView-ItemHeightMode-0" data-search="VirtualTableView ItemHeightMode">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L55</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L56</span>
 <pre>using ItemHeightMode = VirtualItemView::ItemHeightMode;</pre>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="VirtualTableView-SelectionBehavior-1" data-search="VirtualTableView SelectionBehavior">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L56</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L57</span>
 <pre>using SelectionBehavior = VirtualItemView::SelectionBehavior;</pre>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="VirtualTableView-SelectionMode-2" data-search="VirtualTableView SelectionMode">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L57</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L58</span>
 <pre>using SelectionMode = VirtualItemView::SelectionMode;</pre>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="VirtualTableView-WheelScrollMode-3" data-search="VirtualTableView WheelScrollMode">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L58</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L59</span>
 <pre>using WheelScrollMode = VirtualItemView::WheelScrollMode;</pre>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="VirtualTableView-RowSizePolicy-4" data-search="VirtualTableView RowSizePolicy">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L61</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L62</span>
 <pre>enum class RowSizePolicy {
     ExplicitWins,
     MeasuredWins,
@@ -1863,7 +1895,7 @@
 <article tabindex="-1" id="VirtualTableView-MaterializationMode-5" data-search="VirtualTableView MaterializationMode">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L68</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L69</span>
 <pre>enum class MaterializationMode {
     RowWidgets,
     CellWidgets,
@@ -1898,7 +1930,7 @@
 <article tabindex="-1" id="VirtualTableView-DropTargetMode-6" data-search="VirtualTableView DropTargetMode">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L78</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L79</span>
 <pre>enum class DropTargetMode {
     BetweenRows,
     OnCell,
@@ -1940,7 +1972,7 @@
 <article tabindex="-1" id="VirtualTableView-setDropTargetMode-7" data-search="VirtualTableView setDropTargetMode">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L89</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L90</span>
 <pre>void setDropTargetMode(DropTargetMode mode);</pre>
 <p class="doc" data-zh="设置拖放目标解释方式。" data-en="Set the drop target interpretation mode.">设置拖放目标解释方式。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：DropTargetMode::BetweenRows" data-en="Default / initial state: DropTargetMode::BetweenRows">默认值／初始状态：DropTargetMode::BetweenRows</p>
@@ -1950,7 +1982,7 @@
 <article tabindex="-1" id="VirtualTableView-dropTargetMode-8" data-search="VirtualTableView dropTargetMode">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L90</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L91</span>
 <pre>    DropTargetMode dropTargetMode() const;</pre>
 <p class="doc" data-zh="返回拖放目标解释方式。" data-en="Return the drop target interpretation mode.">返回拖放目标解释方式。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：DropTargetMode::BetweenRows" data-en="Default / initial state: DropTargetMode::BetweenRows">默认值／初始状态：DropTargetMode::BetweenRows</p>
@@ -1960,7 +1992,7 @@
 <article tabindex="-1" id="VirtualTableView-DragFeedbackMode-9" data-search="VirtualTableView DragFeedbackMode">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L93</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L94</span>
 <pre>enum class DragFeedbackMode {
     Indicator,
     RowMoveAnimation,
@@ -1995,7 +2027,7 @@
 <article tabindex="-1" id="VirtualTableView-setDragFeedbackMode-10" data-search="VirtualTableView setDragFeedbackMode">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L98</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L99</span>
 <pre>void setDragFeedbackMode(DragFeedbackMode mode);</pre>
 <p class="doc" data-zh="设置指示器或让位动画反馈模式。" data-en="Set the indicator or reorder-animation feedback mode.">设置指示器或让位动画反馈模式。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：DragFeedbackMode::RowMoveAnimation；不满足动画条件时回退到指示器。" data-en="Default / initial state: DragFeedbackMode::RowMoveAnimation; unsupported cases fall back to the indicator.">默认值／初始状态：DragFeedbackMode::RowMoveAnimation；不满足动画条件时回退到指示器。</p>
@@ -2022,7 +2054,7 @@ view-&gt;setDropIndicatorPenStyle(Qt::DashLine);</code>
 <article tabindex="-1" id="VirtualTableView-dragFeedbackMode-11" data-search="VirtualTableView dragFeedbackMode">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L99</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L100</span>
 <pre>    DragFeedbackMode dragFeedbackMode() const;</pre>
 <p class="doc" data-zh="返回指示器或让位动画反馈模式。" data-en="Return the indicator or reorder-animation feedback mode.">返回指示器或让位动画反馈模式。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：DragFeedbackMode::RowMoveAnimation；不满足动画条件时回退到指示器。" data-en="Default / initial state: DragFeedbackMode::RowMoveAnimation; unsupported cases fall back to the indicator.">默认值／初始状态：DragFeedbackMode::RowMoveAnimation；不满足动画条件时回退到指示器。</p>
@@ -2032,7 +2064,7 @@ view-&gt;setDropIndicatorPenStyle(Qt::DashLine);</code>
 <article tabindex="-1" id="VirtualTableView-setDragReorderAnimationDuration-12" data-search="VirtualTableView setDragReorderAnimationDuration">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L101</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L102</span>
 <pre>void setDragReorderAnimationDuration(int milliseconds);</pre>
 <p class="doc" data-zh="设置拖动让位动画时长（毫秒）。" data-en="Set the drag reorder duration in milliseconds.">设置拖动让位动画时长（毫秒）。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：180 ms" data-en="Default / initial state: 180 ms">默认值／初始状态：180 ms</p>
@@ -2042,7 +2074,7 @@ view-&gt;setDropIndicatorPenStyle(Qt::DashLine);</code>
 <article tabindex="-1" id="VirtualTableView-dragReorderAnimationDuration-13" data-search="VirtualTableView dragReorderAnimationDuration">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L102</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L103</span>
 <pre>    int dragReorderAnimationDuration() const;</pre>
 <p class="doc" data-zh="返回拖动让位动画时长（毫秒）。" data-en="Return the drag reorder duration in milliseconds.">返回拖动让位动画时长（毫秒）。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：180 ms" data-en="Default / initial state: 180 ms">默认值／初始状态：180 ms</p>
@@ -2052,7 +2084,7 @@ view-&gt;setDropIndicatorPenStyle(Qt::DashLine);</code>
 <article tabindex="-1" id="VirtualTableView-setDragReorderAnimationEasingCurve-14" data-search="VirtualTableView setDragReorderAnimationEasingCurve">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L104</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L105</span>
 <pre>void setDragReorderAnimationEasingCurve(const QEasingCurve &amp;curve);</pre>
 <p class="doc" data-zh="设置拖动让位缓动曲线。" data-en="Set the drag reorder easing curve.">设置拖动让位缓动曲线。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：QEasingCurve::OutCubic" data-en="Default / initial state: QEasingCurve::OutCubic">默认值／初始状态：QEasingCurve::OutCubic</p>
@@ -2062,7 +2094,7 @@ view-&gt;setDropIndicatorPenStyle(Qt::DashLine);</code>
 <article tabindex="-1" id="VirtualTableView-dragReorderAnimationEasingCurve-15" data-search="VirtualTableView dragReorderAnimationEasingCurve">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L105</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L106</span>
 <pre>    QEasingCurve dragReorderAnimationEasingCurve() const;</pre>
 <p class="doc" data-zh="返回拖动让位缓动曲线。" data-en="Return the drag reorder easing curve.">返回拖动让位缓动曲线。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：QEasingCurve::OutCubic" data-en="Default / initial state: QEasingCurve::OutCubic">默认值／初始状态：QEasingCurve::OutCubic</p>
@@ -2072,7 +2104,7 @@ view-&gt;setDropIndicatorPenStyle(Qt::DashLine);</code>
 <article tabindex="-1" id="VirtualTableView-VirtualTableView-16" data-search="VirtualTableView VirtualTableView">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L107</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L108</span>
 <pre>explicit VirtualTableView(QWidget *parent = nullptr);</pre>
 <p class="doc" data-zh="构造 VirtualTableView；按此重载传入父对象、模型或布局参数。带 parent 的 QObject/QWidget 遵循 Qt 父子生命周期。" data-en="Construct VirtualTableView with the parent, model or layout arguments in this overload. QObject/QWidget parent arguments follow Qt parent-child lifetime rules.">构造 VirtualTableView；按此重载传入父对象、模型或布局参数。带 parent 的 QObject/QWidget 遵循 Qt 父子生命周期。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
@@ -2080,7 +2112,7 @@ view-&gt;setDropIndicatorPenStyle(Qt::DashLine);</code>
 <article tabindex="-1" id="VirtualTableView-VirtualTableView-17" data-search="VirtualTableView VirtualTableView">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L108</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L109</span>
 <pre>~VirtualTableView() override;</pre>
 <p class="doc" data-zh="销毁 VirtualTableView 并释放其拥有的资源；不在析构回调中继续使用该对象。" data-en="Destroy VirtualTableView and release its owned resources; do not keep using the object during destruction callbacks.">销毁 VirtualTableView 并释放其拥有的资源；不在析构回调中继续使用该对象。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
@@ -2088,7 +2120,7 @@ view-&gt;setDropIndicatorPenStyle(Qt::DashLine);</code>
 <article tabindex="-1" id="VirtualTableView-setModel-18" data-search="VirtualTableView setModel">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L110</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L111</span>
 <pre>void setModel(QAbstractItemModel *model) override;</pre>
 <p class="doc" data-zh="连接新的数据模型并更新布局、选择与物化状态；模型生命周期需覆盖视图使用期间。不要用重复 setModel 代替数据变更通知。" data-en="Connect a new data model and update layout, selection and materialization. Keep the model alive while in use; do not replace change notifications with repeated setModel calls.">连接新的数据模型并更新布局、选择与物化状态；模型生命周期需覆盖视图使用期间。不要用重复 setModel 代替数据变更通知。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：nullptr；初始没有模型。" data-en="Default / initial state: nullptr; no model is attached initially.">默认值／初始状态：nullptr；初始没有模型。</p>
@@ -2098,7 +2130,7 @@ view-&gt;setDropIndicatorPenStyle(Qt::DashLine);</code>
 <article tabindex="-1" id="VirtualTableView-horizontalHeaderGeometry-19" data-search="VirtualTableView horizontalHeaderGeometry">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L113</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L114</span>
 <pre>    HeaderGeometry *horizontalHeaderGeometry() const;</pre>
 <p class="doc" data-zh="返回水平或垂直表头的 section 几何模型。" data-en="Return the horizontal or vertical header section geometry model.">返回水平或垂直表头的 section 几何模型。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
@@ -2106,7 +2138,7 @@ view-&gt;setDropIndicatorPenStyle(Qt::DashLine);</code>
 <article tabindex="-1" id="VirtualTableView-verticalHeaderGeometry-20" data-search="VirtualTableView verticalHeaderGeometry">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L114</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L115</span>
 <pre>    HeaderGeometry *verticalHeaderGeometry() const;</pre>
 <p class="doc" data-zh="返回水平或垂直表头的 section 几何模型。" data-en="Return the horizontal or vertical header section geometry model.">返回水平或垂直表头的 section 几何模型。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
@@ -2114,7 +2146,7 @@ view-&gt;setDropIndicatorPenStyle(Qt::DashLine);</code>
 <article tabindex="-1" id="VirtualTableView-setHorizontalHeader-21" data-search="VirtualTableView setHorizontalHeader">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L116</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L117</span>
 <pre>void setHorizontalHeader(HeaderViewInterface *header);</pre>
 <p class="doc" data-zh="设置水平表头接口。" data-en="Set the horizontal header interface.">设置水平表头接口。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：构造时创建并拥有 VirtualHeaderView，使用 LabelHeaderAdapter；TreeTable 垂直表头改用可见行号 adapter。" data-en="Default / initial state: Constructs and owns VirtualHeaderView with LabelHeaderAdapter; TreeTable uses a visible-row-number adapter for the vertical header.">默认值／初始状态：构造时创建并拥有 VirtualHeaderView，使用 LabelHeaderAdapter；TreeTable 垂直表头改用可见行号 adapter。</p>
@@ -2124,7 +2156,7 @@ view-&gt;setDropIndicatorPenStyle(Qt::DashLine);</code>
 <article tabindex="-1" id="VirtualTableView-horizontalHeader-22" data-search="VirtualTableView horizontalHeader">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L117</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L118</span>
 <pre>    HeaderViewInterface *horizontalHeader() const;</pre>
 <p class="doc" data-zh="返回水平表头接口。" data-en="Return the horizontal header interface.">返回水平表头接口。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：构造时创建并拥有 VirtualHeaderView，使用 LabelHeaderAdapter；TreeTable 垂直表头改用可见行号 adapter。" data-en="Default / initial state: Constructs and owns VirtualHeaderView with LabelHeaderAdapter; TreeTable uses a visible-row-number adapter for the vertical header.">默认值／初始状态：构造时创建并拥有 VirtualHeaderView，使用 LabelHeaderAdapter；TreeTable 垂直表头改用可见行号 adapter。</p>
@@ -2153,7 +2185,7 @@ header-&gt;setFont(font);</code>
 <article tabindex="-1" id="VirtualTableView-setVerticalHeader-23" data-search="VirtualTableView setVerticalHeader">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L118</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L119</span>
 <pre>void setVerticalHeader(HeaderViewInterface *header);</pre>
 <p class="doc" data-zh="设置垂直表头接口。" data-en="Set the vertical header interface.">设置垂直表头接口。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：构造时创建并拥有 VirtualHeaderView，使用 LabelHeaderAdapter；TreeTable 垂直表头改用可见行号 adapter。" data-en="Default / initial state: Constructs and owns VirtualHeaderView with LabelHeaderAdapter; TreeTable uses a visible-row-number adapter for the vertical header.">默认值／初始状态：构造时创建并拥有 VirtualHeaderView，使用 LabelHeaderAdapter；TreeTable 垂直表头改用可见行号 adapter。</p>
@@ -2163,7 +2195,7 @@ header-&gt;setFont(font);</code>
 <article tabindex="-1" id="VirtualTableView-verticalHeader-24" data-search="VirtualTableView verticalHeader">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L119</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L120</span>
 <pre>    HeaderViewInterface *verticalHeader() const;</pre>
 <p class="doc" data-zh="返回垂直表头接口。" data-en="Return the vertical header interface.">返回垂直表头接口。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：构造时创建并拥有 VirtualHeaderView，使用 LabelHeaderAdapter；TreeTable 垂直表头改用可见行号 adapter。" data-en="Default / initial state: Constructs and owns VirtualHeaderView with LabelHeaderAdapter; TreeTable uses a visible-row-number adapter for the vertical header.">默认值／初始状态：构造时创建并拥有 VirtualHeaderView，使用 LabelHeaderAdapter；TreeTable 垂直表头改用可见行号 adapter。</p>
@@ -2173,7 +2205,7 @@ header-&gt;setFont(font);</code>
 <article tabindex="-1" id="VirtualTableView-setHeaderCornerWidget-25" data-search="VirtualTableView setHeaderCornerWidget">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L125</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L126</span>
 <pre>void setHeaderCornerWidget(QWidget *widget);</pre>
 <p class="doc" data-zh="设置左上角表头交叉区域控件。" data-en="Set the top-left header corner widget.">设置左上角表头交叉区域控件。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：内置 HeaderCornerWidget，跟随表头外观；没有自定义 corner。" data-en="Default / initial state: Built-in HeaderCornerWidget following header appearance; no custom corner.">默认值／初始状态：内置 HeaderCornerWidget，跟随表头外观；没有自定义 corner。</p>
@@ -2183,7 +2215,7 @@ header-&gt;setFont(font);</code>
 <article tabindex="-1" id="VirtualTableView-headerCornerWidget-26" data-search="VirtualTableView headerCornerWidget">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L126</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L127</span>
 <pre>    QWidget *headerCornerWidget() const;</pre>
 <p class="doc" data-zh="返回左上角表头交叉区域控件。" data-en="Return the top-left header corner widget.">返回左上角表头交叉区域控件。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：内置 HeaderCornerWidget，跟随表头外观；没有自定义 corner。" data-en="Default / initial state: Built-in HeaderCornerWidget following header appearance; no custom corner.">默认值／初始状态：内置 HeaderCornerWidget，跟随表头外观；没有自定义 corner。</p>
@@ -2193,7 +2225,7 @@ header-&gt;setFont(font);</code>
 <article tabindex="-1" id="VirtualTableView-setHorizontalHeaderVisible-27" data-search="VirtualTableView setHorizontalHeaderVisible">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L127</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L128</span>
 <pre>void setHorizontalHeaderVisible(bool visible);</pre>
 <p class="doc" data-zh="设置水平表头可见性。" data-en="Set the horizontal header visibility.">设置水平表头可见性。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：true" data-en="Default / initial state: true">默认值／初始状态：true</p>
@@ -2202,7 +2234,7 @@ header-&gt;setFont(font);</code>
 <article tabindex="-1" id="VirtualTableView-isHorizontalHeaderVisible-28" data-search="VirtualTableView isHorizontalHeaderVisible">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L128</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L129</span>
 <pre>    bool isHorizontalHeaderVisible() const;</pre>
 <p class="doc" data-zh="返回水平表头可见性。" data-en="Return the horizontal header visibility.">返回水平表头可见性。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：true" data-en="Default / initial state: true">默认值／初始状态：true</p>
@@ -2211,7 +2243,7 @@ header-&gt;setFont(font);</code>
 <article tabindex="-1" id="VirtualTableView-setVerticalHeaderVisible-29" data-search="VirtualTableView setVerticalHeaderVisible">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L129</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L130</span>
 <pre>void setVerticalHeaderVisible(bool visible);</pre>
 <p class="doc" data-zh="设置垂直表头可见性。" data-en="Set the vertical header visibility.">设置垂直表头可见性。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：true" data-en="Default / initial state: true">默认值／初始状态：true</p>
@@ -2220,7 +2252,7 @@ header-&gt;setFont(font);</code>
 <article tabindex="-1" id="VirtualTableView-isVerticalHeaderVisible-30" data-search="VirtualTableView isVerticalHeaderVisible">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L132</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L133</span>
 <pre>    bool isVerticalHeaderVisible() const;</pre>
 <p class="doc" data-zh="返回垂直表头可见性。" data-en="Return the vertical header visibility.">返回垂直表头可见性。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：true" data-en="Default / initial state: true">默认值／初始状态：true</p>
@@ -2229,7 +2261,7 @@ header-&gt;setFont(font);</code>
 <article tabindex="-1" id="VirtualTableView-isVerticalHeaderShown-31" data-search="VirtualTableView isVerticalHeaderShown">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L137</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L138</span>
 <pre>    bool isVerticalHeaderShown() const;</pre>
 <p class="doc" data-zh="返回垂直表头在当前布局中是否实际显示，区别于仅查询配置开关。" data-en="Return whether the vertical header is actually shown in the current layout, rather than only its configured visibility.">返回垂直表头在当前布局中是否实际显示，区别于仅查询配置开关。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
@@ -2237,7 +2269,7 @@ header-&gt;setFont(font);</code>
 <article tabindex="-1" id="VirtualTableView-setHeaderHeight-32" data-search="VirtualTableView setHeaderHeight">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L138</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L139</span>
 <pre>void setHeaderHeight(int height);</pre>
 <p class="doc" data-zh="设置水平表头高度。" data-en="Set the horizontal header height.">设置水平表头高度。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：28 逻辑像素。" data-en="Default / initial state: 28 logical pixels.">默认值／初始状态：28 逻辑像素。</p>
@@ -2246,7 +2278,7 @@ header-&gt;setFont(font);</code>
 <article tabindex="-1" id="VirtualTableView-headerHeight-33" data-search="VirtualTableView headerHeight">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L139</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L140</span>
 <pre>    int headerHeight() const;</pre>
 <p class="doc" data-zh="返回水平表头高度。" data-en="Return the horizontal header height.">返回水平表头高度。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：28 逻辑像素。" data-en="Default / initial state: 28 logical pixels.">默认值／初始状态：28 逻辑像素。</p>
@@ -2255,7 +2287,7 @@ header-&gt;setFont(font);</code>
 <article tabindex="-1" id="VirtualTableView-setVerticalHeaderWidth-34" data-search="VirtualTableView setVerticalHeaderWidth">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L140</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L141</span>
 <pre>void setVerticalHeaderWidth(int width);</pre>
 <p class="doc" data-zh="设置垂直表头宽度。" data-en="Set the vertical header width.">设置垂直表头宽度。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：56 逻辑像素。" data-en="Default / initial state: 56 logical pixels.">默认值／初始状态：56 逻辑像素。</p>
@@ -2264,7 +2296,7 @@ header-&gt;setFont(font);</code>
 <article tabindex="-1" id="VirtualTableView-verticalHeaderWidth-35" data-search="VirtualTableView verticalHeaderWidth">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L141</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L142</span>
 <pre>    int verticalHeaderWidth() const;</pre>
 <p class="doc" data-zh="返回垂直表头宽度。" data-en="Return the vertical header width.">返回垂直表头宽度。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：56 逻辑像素。" data-en="Default / initial state: 56 logical pixels.">默认值／初始状态：56 逻辑像素。</p>
@@ -2273,7 +2305,7 @@ header-&gt;setFont(font);</code>
 <article tabindex="-1" id="VirtualTableView-setHeaderBackgroundVisible-36" data-search="VirtualTableView setHeaderBackgroundVisible">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L147</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L148</span>
 <pre>void setHeaderBackgroundVisible(bool visible);</pre>
 <p class="doc" data-zh="设置指定方向表头区域背景开关。" data-en="Set the background painting of the specified header area.">设置指定方向表头区域背景开关。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：true" data-en="Default / initial state: true">默认值／初始状态：true</p>
@@ -2282,7 +2314,7 @@ header-&gt;setFont(font);</code>
 <article tabindex="-1" id="VirtualTableView-headerBackgroundVisible-37" data-search="VirtualTableView headerBackgroundVisible">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L148</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L149</span>
 <pre>bool headerBackgroundVisible() const;</pre>
 <p class="doc" data-zh="返回指定方向表头区域背景开关。" data-en="Return the background painting of the specified header area.">返回指定方向表头区域背景开关。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：true" data-en="Default / initial state: true">默认值／初始状态：true</p>
@@ -2291,7 +2323,7 @@ header-&gt;setFont(font);</code>
 <article tabindex="-1" id="VirtualTableView-setHeaderBackgroundColor-38" data-search="VirtualTableView setHeaderBackgroundColor">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L153</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L154</span>
 <pre>void setHeaderBackgroundColor(const QColor &amp;color);</pre>
 <p class="doc" data-zh="设置指定方向表头区域背景颜色。" data-en="Set the background color of the specified header area.">设置指定方向表头区域背景颜色。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：无效 QColor；由表头样式或 QSS 决定，不是固定 RGB。" data-en="Default / initial state: Invalid QColor; header style or QSS supplies the color, not a fixed RGB.">默认值／初始状态：无效 QColor；由表头样式或 QSS 决定，不是固定 RGB。</p>
@@ -2301,7 +2333,7 @@ header-&gt;setFont(font);</code>
 <article tabindex="-1" id="VirtualTableView-headerBackgroundColor-39" data-search="VirtualTableView headerBackgroundColor">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L154</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L155</span>
 <pre>QColor headerBackgroundColor() const;</pre>
 <p class="doc" data-zh="返回指定方向表头区域背景颜色。" data-en="Return the background color of the specified header area.">返回指定方向表头区域背景颜色。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：无效 QColor；由表头样式或 QSS 决定，不是固定 RGB。" data-en="Default / initial state: Invalid QColor; header style or QSS supplies the color, not a fixed RGB.">默认值／初始状态：无效 QColor；由表头样式或 QSS 决定，不是固定 RGB。</p>
@@ -2311,7 +2343,7 @@ header-&gt;setFont(font);</code>
 <article tabindex="-1" id="VirtualTableView-setHorizontalHeaderSelectionEnabled-40" data-search="VirtualTableView setHorizontalHeaderSelectionEnabled">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L159</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L160</span>
 <pre>void setHorizontalHeaderSelectionEnabled(bool enabled);</pre>
 <p class="doc" data-zh="设置点击水平表头选整列开关，默认关闭。" data-en="Set the column selection by horizontal header click, disabled by default.">设置点击水平表头选整列开关，默认关闭。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：false" data-en="Default / initial state: false">默认值／初始状态：false</p>
@@ -2336,7 +2368,7 @@ view-&gt;setHeaderVisualStateBackgroundVisible(Qt::Vertical, false);</code>
 <article tabindex="-1" id="VirtualTableView-isHorizontalHeaderSelectionEnabled-41" data-search="VirtualTableView isHorizontalHeaderSelectionEnabled">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L160</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L161</span>
 <pre>    bool isHorizontalHeaderSelectionEnabled() const;</pre>
 <p class="doc" data-zh="返回点击水平表头选整列开关，默认关闭。" data-en="Return the column selection by horizontal header click, disabled by default.">返回点击水平表头选整列开关，默认关闭。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：false" data-en="Default / initial state: false">默认值／初始状态：false</p>
@@ -2346,7 +2378,7 @@ view-&gt;setHeaderVisualStateBackgroundVisible(Qt::Vertical, false);</code>
 <article tabindex="-1" id="VirtualTableView-setVerticalHeaderSelectionEnabled-42" data-search="VirtualTableView setVerticalHeaderSelectionEnabled">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L163</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L164</span>
 <pre>void setVerticalHeaderSelectionEnabled(bool enabled);</pre>
 <p class="doc" data-zh="设置点击垂直表头选整行开关，默认启用。" data-en="Set the row selection by vertical header click, enabled by default.">设置点击垂直表头选整行开关，默认启用。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：true" data-en="Default / initial state: true">默认值／初始状态：true</p>
@@ -2371,7 +2403,7 @@ view-&gt;setHeaderVisualStateBackgroundVisible(Qt::Vertical, false);</code>
 <article tabindex="-1" id="VirtualTableView-isVerticalHeaderSelectionEnabled-43" data-search="VirtualTableView isVerticalHeaderSelectionEnabled">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L164</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L165</span>
 <pre>    bool isVerticalHeaderSelectionEnabled() const;</pre>
 <p class="doc" data-zh="返回点击垂直表头选整行开关，默认启用。" data-en="Return the row selection by vertical header click, enabled by default.">返回点击垂直表头选整行开关，默认启用。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：true" data-en="Default / initial state: true">默认值／初始状态：true</p>
@@ -2381,7 +2413,7 @@ view-&gt;setHeaderVisualStateBackgroundVisible(Qt::Vertical, false);</code>
 <article tabindex="-1" id="VirtualTableView-setHeaderVisualStateBackgroundVisible-44" data-search="VirtualTableView setHeaderVisualStateBackgroundVisible">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L167</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L168</span>
 <pre>void setHeaderVisualStateBackgroundVisible(Qt::Orientation orientation, bool visible);</pre>
 <p class="doc" data-zh="设置指定方向表头同步状态背景开关。" data-en="Set the synchronized state background of the specified header.">设置指定方向表头同步状态背景开关。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：水平和垂直方向均为 true；实际状态取决于选择行为和表头选择设置。" data-en="Default / initial state: true in both orientations; actual states depend on selection behavior and header selection settings.">默认值／初始状态：水平和垂直方向均为 true；实际状态取决于选择行为和表头选择设置。</p>
@@ -2406,7 +2438,7 @@ view-&gt;setHeaderVisualStateBackgroundVisible(Qt::Vertical, false);</code>
 <article tabindex="-1" id="VirtualTableView-headerVisualStateBackgroundVisible-45" data-search="VirtualTableView headerVisualStateBackgroundVisible">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L168</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L169</span>
 <pre>bool headerVisualStateBackgroundVisible(Qt::Orientation orientation) const;</pre>
 <p class="doc" data-zh="返回指定方向表头同步状态背景开关。" data-en="Return the synchronized state background of the specified header.">返回指定方向表头同步状态背景开关。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#header-state"><span data-zh="表头同步 hover / selected / 圆角" data-en="Header hover / selection synchronization / corners">表头同步 hover / selected / 圆角</span></a> </p>
@@ -2415,7 +2447,7 @@ view-&gt;setHeaderVisualStateBackgroundVisible(Qt::Vertical, false);</code>
 <article tabindex="-1" id="VirtualTableView-headerVisualState-46" data-search="VirtualTableView headerVisualState">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L173</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L174</span>
 <pre>VisualState headerVisualState(Qt::Orientation orientation, int logicalIndex) const;</pre>
 <p class="doc" data-zh="返回表头对应的 hover、选中和动画状态，用于保持内容与表头同步。" data-en="Return header hover, selection and animation state to keep header and content synchronized.">返回表头对应的 hover、选中和动画状态，用于保持内容与表头同步。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#header-state"><span data-zh="表头同步 hover / selected / 圆角" data-en="Header hover / selection synchronization / corners">表头同步 hover / selected / 圆角</span></a> </p>
@@ -2424,7 +2456,7 @@ view-&gt;setHeaderVisualStateBackgroundVisible(Qt::Vertical, false);</code>
 <article tabindex="-1" id="VirtualTableView-setColumnDragEnabled-47" data-search="VirtualTableView setColumnDragEnabled">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L183</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L184</span>
 <pre>void setColumnDragEnabled(bool enabled);</pre>
 <p class="doc" data-zh="设置鼠标拖动列排序开关。" data-en="Set the mouse column-reorder setting.">设置鼠标拖动列排序开关。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：false" data-en="Default / initial state: false">默认值／初始状态：false</p>
@@ -2434,7 +2466,7 @@ view-&gt;setHeaderVisualStateBackgroundVisible(Qt::Vertical, false);</code>
 <article tabindex="-1" id="VirtualTableView-isColumnDragEnabled-48" data-search="VirtualTableView isColumnDragEnabled">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L184</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L185</span>
 <pre>    bool isColumnDragEnabled() const;</pre>
 <p class="doc" data-zh="返回鼠标拖动列排序开关。" data-en="Return the mouse column-reorder setting.">返回鼠标拖动列排序开关。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：false" data-en="Default / initial state: false">默认值／初始状态：false</p>
@@ -2444,7 +2476,7 @@ view-&gt;setHeaderVisualStateBackgroundVisible(Qt::Vertical, false);</code>
 <article tabindex="-1" id="VirtualTableView-setVerticalHeaderDragEnabled-49" data-search="VirtualTableView setVerticalHeaderDragEnabled">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L202</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L203</span>
 <pre>void setVerticalHeaderDragEnabled(bool enabled);</pre>
 <p class="doc" data-zh="设置鼠标拖动行号排序开关。" data-en="Set the row reordering by dragging row headers.">设置鼠标拖动行号排序开关。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：false" data-en="Default / initial state: false">默认值／初始状态：false</p>
@@ -2454,7 +2486,7 @@ view-&gt;setHeaderVisualStateBackgroundVisible(Qt::Vertical, false);</code>
 <article tabindex="-1" id="VirtualTableView-isVerticalHeaderDragEnabled-50" data-search="VirtualTableView isVerticalHeaderDragEnabled">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L203</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L204</span>
 <pre>    bool isVerticalHeaderDragEnabled() const;</pre>
 <p class="doc" data-zh="返回鼠标拖动行号排序开关。" data-en="Return the row reordering by dragging row headers.">返回鼠标拖动行号排序开关。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：false" data-en="Default / initial state: false">默认值／初始状态：false</p>
@@ -2464,7 +2496,7 @@ view-&gt;setHeaderVisualStateBackgroundVisible(Qt::Vertical, false);</code>
 <article tabindex="-1" id="VirtualTableView-setColumnResizeEnabled-51" data-search="VirtualTableView setColumnResizeEnabled">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L208</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L209</span>
 <pre>void setColumnResizeEnabled(bool enabled);</pre>
 <p class="doc" data-zh="设置鼠标拖动列宽开关。" data-en="Set the mouse column-resize setting.">设置鼠标拖动列宽开关。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：false" data-en="Default / initial state: false">默认值／初始状态：false</p>
@@ -2489,7 +2521,7 @@ view-&gt;setColumnResizeEnabled(true);</code>
 <article tabindex="-1" id="VirtualTableView-isColumnResizeEnabled-52" data-search="VirtualTableView isColumnResizeEnabled">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L209</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L210</span>
 <pre>    bool isColumnResizeEnabled() const;</pre>
 <p class="doc" data-zh="返回鼠标拖动列宽开关。" data-en="Return the mouse column-resize setting.">返回鼠标拖动列宽开关。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：false" data-en="Default / initial state: false">默认值／初始状态：false</p>
@@ -2499,7 +2531,7 @@ view-&gt;setColumnResizeEnabled(true);</code>
 <article tabindex="-1" id="VirtualTableView-setVerticalHeaderResizeEnabled-53" data-search="VirtualTableView setVerticalHeaderResizeEnabled">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L210</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L211</span>
 <pre>void setVerticalHeaderResizeEnabled(bool enabled);</pre>
 <p class="doc" data-zh="设置鼠标拖动行号边缘调整行高开关。" data-en="Set the row resizing by dragging row header edges.">设置鼠标拖动行号边缘调整行高开关。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：false" data-en="Default / initial state: false">默认值／初始状态：false</p>
@@ -2509,7 +2541,7 @@ view-&gt;setColumnResizeEnabled(true);</code>
 <article tabindex="-1" id="VirtualTableView-isVerticalHeaderResizeEnabled-54" data-search="VirtualTableView isVerticalHeaderResizeEnabled">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L211</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L212</span>
 <pre>    bool isVerticalHeaderResizeEnabled() const;</pre>
 <p class="doc" data-zh="返回鼠标拖动行号边缘调整行高开关。" data-en="Return the row resizing by dragging row header edges.">返回鼠标拖动行号边缘调整行高开关。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：false" data-en="Default / initial state: false">默认值／初始状态：false</p>
@@ -2519,7 +2551,7 @@ view-&gt;setColumnResizeEnabled(true);</code>
 <article tabindex="-1" id="VirtualTableView-columnCount-55" data-search="VirtualTableView columnCount">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L214</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L215</span>
 <pre>virtual int columnCount() const;</pre>
 <p class="doc" data-zh="返回逻辑列数。" data-en="Return the logical column count.">返回逻辑列数。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
@@ -2527,7 +2559,7 @@ view-&gt;setColumnResizeEnabled(true);</code>
 <article tabindex="-1" id="VirtualTableView-columnGeometry-56" data-search="VirtualTableView columnGeometry">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L215</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L216</span>
 <pre>ColumnGeometry columnGeometry(int logicalIndex) const;</pre>
 <p class="doc" data-zh="返回指定逻辑列的尺寸、位置和可见性信息。" data-en="Return the size, position and visibility of the specified logical column.">返回指定逻辑列的尺寸、位置和可见性信息。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
@@ -2535,7 +2567,7 @@ view-&gt;setColumnResizeEnabled(true);</code>
 <article tabindex="-1" id="VirtualTableView-columnWidth-57" data-search="VirtualTableView columnWidth">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L216</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L217</span>
 <pre>int columnWidth(int logicalIndex) const;</pre>
 <p class="doc" data-zh="返回指定逻辑列宽度。" data-en="Return the width of the specified logical column.">返回指定逻辑列宽度。</p>
 <p class="doc" data-zh="普通比例拉伸在手动拖动或显式设置列宽后整体取消。FitViewport 是独立模式，让列总宽适配视口，并按拖动边缘在另一侧列中分摊宽度；不要混同于普通 stretch 权重。" data-en="Ordinary proportional stretching is cleared by manual resizing or explicit column widths. FitViewport is a separate mode that fits total column width to the viewport and distributes a resize across columns on the corresponding side; it is distinct from ordinary stretch weights.">普通比例拉伸在手动拖动或显式设置列宽后整体取消。FitViewport 是独立模式，让列总宽适配视口，并按拖动边缘在另一侧列中分摊宽度；不要混同于普通 stretch 权重。</p>
@@ -2545,21 +2577,21 @@ view-&gt;setColumnResizeEnabled(true);</code>
 <article tabindex="-1" id="VirtualTableView-ColumnSpacingFactory-58" data-search="VirtualTableView ColumnSpacingFactory">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L217</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L218</span>
 <pre>using ColumnSpacingFactory = std::function&lt;QWidget *(int, QWidget *)&gt;;</pre>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="VirtualTableView-void-59" data-search="VirtualTableView void">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L218</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L219</span>
 <pre>using ColumnSpacingBinder = std::function&lt;void(QWidget *, int)&gt;;</pre>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
 <article tabindex="-1" id="VirtualTableView-setColumnSpacing-60" data-search="VirtualTableView setColumnSpacing">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L220</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L221</span>
 <pre>void setColumnSpacing(int pixels);</pre>
 <p class="doc" data-zh="设置内容列间距。" data-en="Set the spacing between content columns.">设置内容列间距。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：0 逻辑像素。" data-en="Default / initial state: 0 logical pixels.">默认值／初始状态：0 逻辑像素。</p>
@@ -2584,7 +2616,7 @@ view-&gt;setSpacingBackgroundColor(QColor(QStringLiteral(&quot;#edf2f7&quot;)));
 <article tabindex="-1" id="VirtualTableView-columnSpacing-61" data-search="VirtualTableView columnSpacing">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L221</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L222</span>
 <pre>    int columnSpacing() const;</pre>
 <p class="doc" data-zh="返回内容列间距。" data-en="Return the spacing between content columns.">返回内容列间距。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：0 逻辑像素。" data-en="Default / initial state: 0 logical pixels.">默认值／初始状态：0 逻辑像素。</p>
@@ -2594,7 +2626,7 @@ view-&gt;setSpacingBackgroundColor(QColor(QStringLiteral(&quot;#edf2f7&quot;)));
 <article tabindex="-1" id="VirtualTableView-setHeaderContentSpacingEnabled-62" data-search="VirtualTableView setHeaderContentSpacingEnabled">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L227</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L228</span>
 <pre>void setHeaderContentSpacingEnabled(Qt::Orientation orientation, bool enabled);</pre>
 <p class="doc" data-zh="设置指定方向表头与内容完整间距开关。" data-en="Set the full gap between the specified header and content.">设置指定方向表头与内容完整间距开关。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：两个方向均为 false；不插入额外完整间距。SpacingCenter 外侧半间距仍按布局规则处理。" data-en="Default / initial state: false in both orientations; no additional full gap. SpacingCenter outer half-gaps still follow layout rules.">默认值／初始状态：两个方向均为 false；不插入额外完整间距。SpacingCenter 外侧半间距仍按布局规则处理。</p>
@@ -2620,7 +2652,7 @@ view-&gt;setSpacingBackgroundColor(QColor(QStringLiteral(&quot;#edf2f7&quot;)));
 <article tabindex="-1" id="VirtualTableView-headerContentSpacingEnabled-63" data-search="VirtualTableView headerContentSpacingEnabled">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L228</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L229</span>
 <pre>bool headerContentSpacingEnabled(Qt::Orientation orientation) const;</pre>
 <p class="doc" data-zh="返回指定方向表头与内容完整间距开关。" data-en="Return the full gap between the specified header and content.">返回指定方向表头与内容完整间距开关。</p>
 <p class="doc" data-zh="默认两个方向都关闭。Horizontal 使用完整 rowSpacing 在水平表头下方留空；Vertical 使用完整 columnSpacing 在垂直表头右侧留空。只开开关而间距为 0 不会增加空隙；隐藏表头仍使用普通内容外侧间距。" data-en="Disabled in both orientations by default. Horizontal adds a full rowSpacing below the horizontal header; Vertical adds a full columnSpacing after the vertical header. Enabling with zero spacing adds no gap. Hidden headers retain ordinary outer content spacing.">默认两个方向都关闭。Horizontal 使用完整 rowSpacing 在水平表头下方留空；Vertical 使用完整 columnSpacing 在垂直表头右侧留空。只开开关而间距为 0 不会增加空隙；隐藏表头仍使用普通内容外侧间距。</p>
@@ -2630,7 +2662,7 @@ view-&gt;setSpacingBackgroundColor(QColor(QStringLiteral(&quot;#edf2f7&quot;)));
 <article tabindex="-1" id="VirtualTableView-setSpacingBackgroundColor-64" data-search="VirtualTableView setSpacingBackgroundColor">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L230</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L231</span>
 <pre>void setSpacingBackgroundColor(const QColor &amp;color) override;</pre>
 <p class="doc" data-zh="设置内容或表头间距背景颜色。" data-en="Set the content or header gap background color.">设置内容或表头间距背景颜色。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：无效 QColor；未指定间距色，随内容背景绘制，默认 QPalette::Base。" data-en="Default / initial state: Invalid QColor; gaps follow the content background, QPalette::Base by default.">默认值／初始状态：无效 QColor；未指定间距色，随内容背景绘制，默认 QPalette::Base。</p>
@@ -2640,7 +2672,7 @@ view-&gt;setSpacingBackgroundColor(QColor(QStringLiteral(&quot;#edf2f7&quot;)));
 <article tabindex="-1" id="VirtualTableView-setVisualStateThroughColumnSpacing-65" data-search="VirtualTableView setVisualStateThroughColumnSpacing">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L233</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L234</span>
 <pre>void setVisualStateThroughColumnSpacing(bool enabled);</pre>
 <p class="doc" data-zh="设置状态背景填充列间距开关。" data-en="Set the whether state backgrounds fill column gaps.">设置状态背景填充列间距开关。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：true" data-en="Default / initial state: true">默认值／初始状态：true</p>
@@ -2650,7 +2682,7 @@ view-&gt;setSpacingBackgroundColor(QColor(QStringLiteral(&quot;#edf2f7&quot;)));
 <article tabindex="-1" id="VirtualTableView-visualStateThroughColumnSpacing-66" data-search="VirtualTableView visualStateThroughColumnSpacing">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L234</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L235</span>
 <pre>    bool visualStateThroughColumnSpacing() const;</pre>
 <p class="doc" data-zh="返回状态背景填充列间距开关。" data-en="Return the whether state backgrounds fill column gaps.">返回状态背景填充列间距开关。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：true" data-en="Default / initial state: true">默认值／初始状态：true</p>
@@ -2660,7 +2692,7 @@ view-&gt;setSpacingBackgroundColor(QColor(QStringLiteral(&quot;#edf2f7&quot;)));
 <article tabindex="-1" id="VirtualTableView-setVisualStateThroughRowSpacing-67" data-search="VirtualTableView setVisualStateThroughRowSpacing">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L237</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L238</span>
 <pre>void setVisualStateThroughRowSpacing(bool enabled);</pre>
 <p class="doc" data-zh="设置中心模式下状态填充上下半间距开关。" data-en="Set the whether state backgrounds fill vertical half-gaps in center mode.">设置中心模式下状态填充上下半间距开关。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：true" data-en="Default / initial state: true">默认值／初始状态：true</p>
@@ -2670,7 +2702,7 @@ view-&gt;setSpacingBackgroundColor(QColor(QStringLiteral(&quot;#edf2f7&quot;)));
 <article tabindex="-1" id="VirtualTableView-visualStateThroughRowSpacing-68" data-search="VirtualTableView visualStateThroughRowSpacing">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L238</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L239</span>
 <pre>    bool visualStateThroughRowSpacing() const;</pre>
 <p class="doc" data-zh="返回中心模式下状态填充上下半间距开关。" data-en="Return the whether state backgrounds fill vertical half-gaps in center mode.">返回中心模式下状态填充上下半间距开关。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：true" data-en="Default / initial state: true">默认值／初始状态：true</p>
@@ -2680,7 +2712,7 @@ view-&gt;setSpacingBackgroundColor(QColor(QStringLiteral(&quot;#edf2f7&quot;)));
 <article tabindex="-1" id="VirtualTableView-setHeaderSpacingBackgroundColor-69" data-search="VirtualTableView setHeaderSpacingBackgroundColor">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L242</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L243</span>
 <pre>void setHeaderSpacingBackgroundColor(const QColor &amp;color);</pre>
 <p class="doc" data-zh="设置指定方向表头间距背景颜色。" data-en="Set the spacing color of the specified header.">设置指定方向表头间距背景颜色。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：无效 QColor；随对应表头背景，无独立间距色。" data-en="Default / initial state: Invalid QColor; follows the corresponding header background, with no separate gap color.">默认值／初始状态：无效 QColor；随对应表头背景，无独立间距色。</p>
@@ -2690,7 +2722,7 @@ view-&gt;setSpacingBackgroundColor(QColor(QStringLiteral(&quot;#edf2f7&quot;)));
 <article tabindex="-1" id="VirtualTableView-headerSpacingBackgroundColor-70" data-search="VirtualTableView headerSpacingBackgroundColor">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L243</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L244</span>
 <pre>QColor headerSpacingBackgroundColor() const;</pre>
 <p class="doc" data-zh="返回指定方向表头间距背景颜色。" data-en="Return the spacing color of the specified header.">返回指定方向表头间距背景颜色。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：无效 QColor；随对应表头背景，无独立间距色。" data-en="Default / initial state: Invalid QColor; follows the corresponding header background, with no separate gap color.">默认值／初始状态：无效 QColor；随对应表头背景，无独立间距色。</p>
@@ -2700,7 +2732,7 @@ view-&gt;setSpacingBackgroundColor(QColor(QStringLiteral(&quot;#edf2f7&quot;)));
 <article tabindex="-1" id="VirtualTableView-setColumnSpacingFactory-71" data-search="VirtualTableView setColumnSpacingFactory">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L245</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L246</span>
 <pre>void setColumnSpacingFactory(ColumnSpacingFactory factory, ColumnSpacingBinder binder = {});</pre>
 <p class="doc" data-zh="提供间距控件工厂以定制间距区域。优先只设置背景颜色，确实需要交互或复杂内容时再创建间距控件。" data-en="Supply a spacing-widget factory to customize gaps. Prefer a background color alone unless the gap needs interaction or complex content.">提供间距控件工厂以定制间距区域。优先只设置背景颜色，确实需要交互或复杂内容时再创建间距控件。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：工厂与 binder 均为空。" data-en="Default / initial state: Empty factory and binder.">默认值／初始状态：工厂与 binder 均为空。</p>
@@ -2710,7 +2742,7 @@ view-&gt;setSpacingBackgroundColor(QColor(QStringLiteral(&quot;#edf2f7&quot;)));
 <article tabindex="-1" id="VirtualTableView-setHeaderColumnSpacingFactory-72" data-search="VirtualTableView setHeaderColumnSpacingFactory">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L246</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L247</span>
 <pre>void setHeaderColumnSpacingFactory(ColumnSpacingFactory factory, ColumnSpacingBinder binder = {});</pre>
 <p class="doc" data-zh="提供间距控件工厂以定制间距区域。优先只设置背景颜色，确实需要交互或复杂内容时再创建间距控件。" data-en="Supply a spacing-widget factory to customize gaps. Prefer a background color alone unless the gap needs interaction or complex content.">提供间距控件工厂以定制间距区域。优先只设置背景颜色，确实需要交互或复杂内容时再创建间距控件。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：工厂与 binder 均为空。" data-en="Default / initial state: Empty factory and binder.">默认值／初始状态：工厂与 binder 均为空。</p>
@@ -2720,7 +2752,7 @@ view-&gt;setSpacingBackgroundColor(QColor(QStringLiteral(&quot;#edf2f7&quot;)));
 <article tabindex="-1" id="VirtualTableView-setGridLinePlacement-73" data-search="VirtualTableView setGridLinePlacement">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L247</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L248</span>
 <pre>void setGridLinePlacement(GridLinePlacement placement) override;</pre>
 <p class="doc" data-zh="设置间距中心或两侧分割线模式。" data-en="Set the grid line placement at spacing centers or edges.">设置间距中心或两侧分割线模式。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：GridLinePlacement::SpacingCenter；无间距时回退到项边界，不重复绘制。" data-en="Default / initial state: GridLinePlacement::SpacingCenter; without spacing, lines fall back to item boundaries without duplicates.">默认值／初始状态：GridLinePlacement::SpacingCenter；无间距时回退到项边界，不重复绘制。</p>
@@ -2745,7 +2777,7 @@ view-&gt;setHorizontalSpacingLineThroughColumnSpacing(false);</code>
 <article tabindex="-1" id="VirtualTableView-setVerticalSpacingLineThroughRowSpacing-74" data-search="VirtualTableView setVerticalSpacingLineThroughRowSpacing">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L250</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L251</span>
 <pre>void setVerticalSpacingLineThroughRowSpacing(bool enabled);</pre>
 <p class="doc" data-zh="设置两侧模式下纵向线穿过行间距开关。" data-en="Set the whether vertical lines cross row gaps in edge mode.">设置两侧模式下纵向线穿过行间距开关。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：true；SpacingCenter 始终穿过间距，此开关仅在 SpacingEdges 生效。" data-en="Default / initial state: true; SpacingCenter always crosses gaps; this switch only affects SpacingEdges.">默认值／初始状态：true；SpacingCenter 始终穿过间距，此开关仅在 SpacingEdges 生效。</p>
@@ -2770,7 +2802,7 @@ view-&gt;setHorizontalSpacingLineThroughColumnSpacing(false);</code>
 <article tabindex="-1" id="VirtualTableView-verticalSpacingLineThroughRowSpacing-75" data-search="VirtualTableView verticalSpacingLineThroughRowSpacing">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L251</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L252</span>
 <pre>    bool verticalSpacingLineThroughRowSpacing() const;</pre>
 <p class="doc" data-zh="返回两侧模式下纵向线穿过行间距开关。" data-en="Return the whether vertical lines cross row gaps in edge mode.">返回两侧模式下纵向线穿过行间距开关。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：true；SpacingCenter 始终穿过间距，此开关仅在 SpacingEdges 生效。" data-en="Default / initial state: true; SpacingCenter always crosses gaps; this switch only affects SpacingEdges.">默认值／初始状态：true；SpacingCenter 始终穿过间距，此开关仅在 SpacingEdges 生效。</p>
@@ -2781,7 +2813,7 @@ view-&gt;setHorizontalSpacingLineThroughColumnSpacing(false);</code>
 <article tabindex="-1" id="VirtualTableView-setHorizontalSpacingLineThroughColumnSpacing-76" data-search="VirtualTableView setHorizontalSpacingLineThroughColumnSpacing">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L253</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L254</span>
 <pre>void setHorizontalSpacingLineThroughColumnSpacing(bool enabled);</pre>
 <p class="doc" data-zh="设置两侧模式下横向线穿过列间距开关。" data-en="Set the whether horizontal lines cross column gaps in edge mode.">设置两侧模式下横向线穿过列间距开关。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：true；SpacingCenter 始终穿过间距，此开关仅在 SpacingEdges 生效。" data-en="Default / initial state: true; SpacingCenter always crosses gaps; this switch only affects SpacingEdges.">默认值／初始状态：true；SpacingCenter 始终穿过间距，此开关仅在 SpacingEdges 生效。</p>
@@ -2806,7 +2838,7 @@ view-&gt;setHorizontalSpacingLineThroughColumnSpacing(false);</code>
 <article tabindex="-1" id="VirtualTableView-horizontalSpacingLineThroughColumnSpacing-77" data-search="VirtualTableView horizontalSpacingLineThroughColumnSpacing">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L254</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L255</span>
 <pre>    bool horizontalSpacingLineThroughColumnSpacing() const;</pre>
 <p class="doc" data-zh="返回两侧模式下横向线穿过列间距开关。" data-en="Return the whether horizontal lines cross column gaps in edge mode.">返回两侧模式下横向线穿过列间距开关。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：true；SpacingCenter 始终穿过间距，此开关仅在 SpacingEdges 生效。" data-en="Default / initial state: true; SpacingCenter always crosses gaps; this switch only affects SpacingEdges.">默认值／初始状态：true；SpacingCenter 始终穿过间距，此开关仅在 SpacingEdges 生效。</p>
@@ -2817,7 +2849,7 @@ view-&gt;setHorizontalSpacingLineThroughColumnSpacing(false);</code>
 <article tabindex="-1" id="VirtualTableView-setVerticalGridLinesThroughHeader-78" data-search="VirtualTableView setVerticalGridLinesThroughHeader">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L259</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L260</span>
 <pre>void setVerticalGridLinesThroughHeader(bool enabled);</pre>
 <p class="doc" data-zh="设置纵向线穿过水平表头开关。" data-en="Set the whether vertical lines cross the horizontal header.">设置纵向线穿过水平表头开关。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：true" data-en="Default / initial state: true">默认值／初始状态：true</p>
@@ -2827,7 +2859,7 @@ view-&gt;setHorizontalSpacingLineThroughColumnSpacing(false);</code>
 <article tabindex="-1" id="VirtualTableView-verticalGridLinesThroughHeader-79" data-search="VirtualTableView verticalGridLinesThroughHeader">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L260</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L261</span>
 <pre>    bool verticalGridLinesThroughHeader() const;</pre>
 <p class="doc" data-zh="返回纵向线穿过水平表头开关。" data-en="Return the whether vertical lines cross the horizontal header.">返回纵向线穿过水平表头开关。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：true" data-en="Default / initial state: true">默认值／初始状态：true</p>
@@ -2837,7 +2869,7 @@ view-&gt;setHorizontalSpacingLineThroughColumnSpacing(false);</code>
 <article tabindex="-1" id="VirtualTableView-setHorizontalGridLinesThroughHeader-80" data-search="VirtualTableView setHorizontalGridLinesThroughHeader">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L263</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L264</span>
 <pre>void setHorizontalGridLinesThroughHeader(bool enabled);</pre>
 <p class="doc" data-zh="设置横向线穿过垂直表头开关。" data-en="Set the whether horizontal lines cross the vertical header.">设置横向线穿过垂直表头开关。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：true" data-en="Default / initial state: true">默认值／初始状态：true</p>
@@ -2847,7 +2879,7 @@ view-&gt;setHorizontalSpacingLineThroughColumnSpacing(false);</code>
 <article tabindex="-1" id="VirtualTableView-horizontalGridLinesThroughHeader-81" data-search="VirtualTableView horizontalGridLinesThroughHeader">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L264</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L265</span>
 <pre>    bool horizontalGridLinesThroughHeader() const;</pre>
 <p class="doc" data-zh="返回横向线穿过垂直表头开关。" data-en="Return the whether horizontal lines cross the vertical header.">返回横向线穿过垂直表头开关。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：true" data-en="Default / initial state: true">默认值／初始状态：true</p>
@@ -2857,7 +2889,7 @@ view-&gt;setHorizontalSpacingLineThroughColumnSpacing(false);</code>
 <article tabindex="-1" id="VirtualTableView-setVerticalGridLinesVisible-82" data-search="VirtualTableView setVerticalGridLinesVisible">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L266</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L267</span>
 <pre>void setVerticalGridLinesVisible(bool visible);</pre>
 <p class="doc" data-zh="设置纵向分割线可见性。" data-en="Set the vertical grid line visibility.">设置纵向分割线可见性。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：true" data-en="Default / initial state: true">默认值／初始状态：true</p>
@@ -2867,7 +2899,7 @@ view-&gt;setHorizontalSpacingLineThroughColumnSpacing(false);</code>
 <article tabindex="-1" id="VirtualTableView-verticalGridLinesVisible-83" data-search="VirtualTableView verticalGridLinesVisible">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L267</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L268</span>
 <pre>    bool verticalGridLinesVisible() const;</pre>
 <p class="doc" data-zh="返回纵向分割线可见性。" data-en="Return the vertical grid line visibility.">返回纵向分割线可见性。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：true" data-en="Default / initial state: true">默认值／初始状态：true</p>
@@ -2877,7 +2909,7 @@ view-&gt;setHorizontalSpacingLineThroughColumnSpacing(false);</code>
 <article tabindex="-1" id="VirtualTableView-setHorizontalGridLinesVisible-84" data-search="VirtualTableView setHorizontalGridLinesVisible">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L268</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L269</span>
 <pre>void setHorizontalGridLinesVisible(bool visible);</pre>
 <p class="doc" data-zh="设置横向分割线可见性。" data-en="Set the horizontal grid line visibility.">设置横向分割线可见性。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：true" data-en="Default / initial state: true">默认值／初始状态：true</p>
@@ -2887,7 +2919,7 @@ view-&gt;setHorizontalSpacingLineThroughColumnSpacing(false);</code>
 <article tabindex="-1" id="VirtualTableView-horizontalGridLinesVisible-85" data-search="VirtualTableView horizontalGridLinesVisible">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L269</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L270</span>
 <pre>    bool horizontalGridLinesVisible() const;</pre>
 <p class="doc" data-zh="返回横向分割线可见性。" data-en="Return the horizontal grid line visibility.">返回横向分割线可见性。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：true" data-en="Default / initial state: true">默认值／初始状态：true</p>
@@ -2897,7 +2929,7 @@ view-&gt;setHorizontalSpacingLineThroughColumnSpacing(false);</code>
 <article tabindex="-1" id="VirtualTableView-setVerticalGridLineColor-86" data-search="VirtualTableView setVerticalGridLineColor">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L271</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L272</span>
 <pre>void setVerticalGridLineColor(const QColor &amp;color);</pre>
 <p class="doc" data-zh="设置纵向分割线颜色。" data-en="Set the vertical grid line color.">设置纵向分割线颜色。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：无效 QColor；使用当前表头样式的分割线颜色。" data-en="Default / initial state: Invalid QColor; uses the current header style separator color.">默认值／初始状态：无效 QColor；使用当前表头样式的分割线颜色。</p>
@@ -2906,7 +2938,7 @@ view-&gt;setHorizontalSpacingLineThroughColumnSpacing(false);</code>
 <article tabindex="-1" id="VirtualTableView-verticalGridLineColor-87" data-search="VirtualTableView verticalGridLineColor">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L272</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L273</span>
 <pre>    QColor verticalGridLineColor() const;</pre>
 <p class="doc" data-zh="返回纵向分割线颜色。" data-en="Return the vertical grid line color.">返回纵向分割线颜色。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：无效 QColor；使用当前表头样式的分割线颜色。" data-en="Default / initial state: Invalid QColor; uses the current header style separator color.">默认值／初始状态：无效 QColor；使用当前表头样式的分割线颜色。</p>
@@ -2915,7 +2947,7 @@ view-&gt;setHorizontalSpacingLineThroughColumnSpacing(false);</code>
 <article tabindex="-1" id="VirtualTableView-setHorizontalGridLineColor-88" data-search="VirtualTableView setHorizontalGridLineColor">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L273</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L274</span>
 <pre>void setHorizontalGridLineColor(const QColor &amp;color);</pre>
 <p class="doc" data-zh="设置横向分割线颜色。" data-en="Set the horizontal grid line color.">设置横向分割线颜色。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：无效 QColor；使用当前表头样式的分割线颜色。" data-en="Default / initial state: Invalid QColor; uses the current header style separator color.">默认值／初始状态：无效 QColor；使用当前表头样式的分割线颜色。</p>
@@ -2924,7 +2956,7 @@ view-&gt;setHorizontalSpacingLineThroughColumnSpacing(false);</code>
 <article tabindex="-1" id="VirtualTableView-horizontalGridLineColor-89" data-search="VirtualTableView horizontalGridLineColor">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L274</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L275</span>
 <pre>    QColor horizontalGridLineColor() const;</pre>
 <p class="doc" data-zh="返回横向分割线颜色。" data-en="Return the horizontal grid line color.">返回横向分割线颜色。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：无效 QColor；使用当前表头样式的分割线颜色。" data-en="Default / initial state: Invalid QColor; uses the current header style separator color.">默认值／初始状态：无效 QColor；使用当前表头样式的分割线颜色。</p>
@@ -2933,7 +2965,7 @@ view-&gt;setHorizontalSpacingLineThroughColumnSpacing(false);</code>
 <article tabindex="-1" id="VirtualTableView-setVerticalGridLineWidth-90" data-search="VirtualTableView setVerticalGridLineWidth">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L275</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L276</span>
 <pre>void setVerticalGridLineWidth(int pixels);</pre>
 <p class="doc" data-zh="设置纵向分割线宽度。" data-en="Set the vertical grid line width.">设置纵向分割线宽度。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：1 像素；缩放与对齐遵循该分割线接口的规则。" data-en="Default / initial state: 1 pixel; scaling and alignment follow this separator API.">默认值／初始状态：1 像素；缩放与对齐遵循该分割线接口的规则。</p>
@@ -2942,7 +2974,7 @@ view-&gt;setHorizontalSpacingLineThroughColumnSpacing(false);</code>
 <article tabindex="-1" id="VirtualTableView-verticalGridLineWidth-91" data-search="VirtualTableView verticalGridLineWidth">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L276</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L277</span>
 <pre>    int verticalGridLineWidth() const;</pre>
 <p class="doc" data-zh="返回纵向分割线宽度。" data-en="Return the vertical grid line width.">返回纵向分割线宽度。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：1 像素；缩放与对齐遵循该分割线接口的规则。" data-en="Default / initial state: 1 pixel; scaling and alignment follow this separator API.">默认值／初始状态：1 像素；缩放与对齐遵循该分割线接口的规则。</p>
@@ -2951,7 +2983,7 @@ view-&gt;setHorizontalSpacingLineThroughColumnSpacing(false);</code>
 <article tabindex="-1" id="VirtualTableView-setHorizontalGridLineWidth-92" data-search="VirtualTableView setHorizontalGridLineWidth">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L277</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L278</span>
 <pre>void setHorizontalGridLineWidth(int pixels);</pre>
 <p class="doc" data-zh="设置横向分割线宽度。" data-en="Set the horizontal grid line width.">设置横向分割线宽度。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：1 像素；缩放与对齐遵循该分割线接口的规则。" data-en="Default / initial state: 1 pixel; scaling and alignment follow this separator API.">默认值／初始状态：1 像素；缩放与对齐遵循该分割线接口的规则。</p>
@@ -2960,7 +2992,7 @@ view-&gt;setHorizontalSpacingLineThroughColumnSpacing(false);</code>
 <article tabindex="-1" id="VirtualTableView-horizontalGridLineWidth-93" data-search="VirtualTableView horizontalGridLineWidth">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L278</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L279</span>
 <pre>    int horizontalGridLineWidth() const;</pre>
 <p class="doc" data-zh="返回横向分割线宽度。" data-en="Return the horizontal grid line width.">返回横向分割线宽度。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：1 像素；缩放与对齐遵循该分割线接口的规则。" data-en="Default / initial state: 1 pixel; scaling and alignment follow this separator API.">默认值／初始状态：1 像素；缩放与对齐遵循该分割线接口的规则。</p>
@@ -2969,7 +3001,7 @@ view-&gt;setHorizontalSpacingLineThroughColumnSpacing(false);</code>
 <article tabindex="-1" id="VirtualTableView-columnAtViewportX-94" data-search="VirtualTableView columnAtViewportX">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L284</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L285</span>
 <pre>int columnAtViewportX(int viewportX) const;</pre>
 <p class="doc" data-zh="按视口横坐标查找逻辑列，考虑隐藏列、冻结窗格和滚动组。" data-en="Find a logical column at a viewport x coordinate, accounting for hidden columns, frozen panes and scroll groups.">按视口横坐标查找逻辑列，考虑隐藏列、冻结窗格和滚动组。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
@@ -2977,7 +3009,7 @@ view-&gt;setHorizontalSpacingLineThroughColumnSpacing(false);</code>
 <article tabindex="-1" id="VirtualTableView-visibleColumns-95" data-search="VirtualTableView visibleColumns">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L286</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L287</span>
 <pre>VisibleRange visibleColumns() const;</pre>
 <p class="doc" data-zh="返回当前布局可见列、行或滚动窗口范围。" data-en="Return the current visible column, row or scrolling window range.">返回当前布局可见列、行或滚动窗口范围。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
@@ -2985,7 +3017,7 @@ view-&gt;setHorizontalSpacingLineThroughColumnSpacing(false);</code>
 <article tabindex="-1" id="VirtualTableView-visibleRows-96" data-search="VirtualTableView visibleRows">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L288</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L289</span>
 <pre>    VisibleRange visibleRows() const;</pre>
 <p class="doc" data-zh="返回当前布局可见列、行或滚动窗口范围。" data-en="Return the current visible column, row or scrolling window range.">返回当前布局可见列、行或滚动窗口范围。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
@@ -2993,7 +3025,7 @@ view-&gt;setHorizontalSpacingLineThroughColumnSpacing(false);</code>
 <article tabindex="-1" id="VirtualTableView-visibleColumnLogicalIndexes-97" data-search="VirtualTableView visibleColumnLogicalIndexes">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L290</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L291</span>
 <pre>QVector&lt;int&gt; visibleColumnLogicalIndexes() const;</pre>
 <p class="doc" data-zh="返回按可视顺序排列的可见逻辑列或 section。" data-en="Return the visible logical columns or sections in visual order.">返回按可视顺序排列的可见逻辑列或 section。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
@@ -3001,7 +3033,7 @@ view-&gt;setHorizontalSpacingLineThroughColumnSpacing(false);</code>
 <article tabindex="-1" id="VirtualTableView-setColumnOverscan-98" data-search="VirtualTableView setColumnOverscan">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L291</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L292</span>
 <pre>void setColumnOverscan(int columns);</pre>
 <p class="doc" data-zh="设置可见范围两侧预物化列数。" data-en="Set the column overscan around the visible range.">设置可见范围两侧预物化列数。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：1" data-en="Default / initial state: 1">默认值／初始状态：1</p>
@@ -3011,7 +3043,7 @@ view-&gt;setHorizontalSpacingLineThroughColumnSpacing(false);</code>
 <article tabindex="-1" id="VirtualTableView-columnOverscan-99" data-search="VirtualTableView columnOverscan">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L292</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L293</span>
 <pre>    int columnOverscan() const;</pre>
 <p class="doc" data-zh="返回可见范围两侧预物化列数。" data-en="Return the column overscan around the visible range.">返回可见范围两侧预物化列数。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：1" data-en="Default / initial state: 1">默认值／初始状态：1</p>
@@ -3021,7 +3053,7 @@ view-&gt;setHorizontalSpacingLineThroughColumnSpacing(false);</code>
 <article tabindex="-1" id="VirtualTableView-setColumnWidth-100" data-search="VirtualTableView setColumnWidth">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L295</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L296</span>
 <pre>void setColumnWidth(int logicalIndex, int width);</pre>
 <p class="doc" data-zh="设置指定逻辑列宽度。" data-en="Set the width of the specified logical column.">设置指定逻辑列宽度。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：无单列覆盖；初始使用 defaultColumnWidth() = 100，实际宽度受比例和 FitViewport 等设置影响。" data-en="Default / initial state: No per-column override; initially uses defaultColumnWidth() = 100, subject to stretching and FitViewport settings.">默认值／初始状态：无单列覆盖；初始使用 defaultColumnWidth() = 100，实际宽度受比例和 FitViewport 等设置影响。</p>
@@ -3046,7 +3078,7 @@ view-&gt;setColumnStretchFactor(1, 6);</code>
 <article tabindex="-1" id="VirtualTableView-ColumnResizeMode-101" data-search="VirtualTableView ColumnResizeMode">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L299</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L300</span>
 <pre>enum class ColumnResizeMode {
     Independent,
     FitViewport,
@@ -3081,7 +3113,7 @@ view-&gt;setColumnStretchFactor(1, 6);</code>
 <article tabindex="-1" id="VirtualTableView-setColumnResizeMode-102" data-search="VirtualTableView setColumnResizeMode">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L301</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L302</span>
 <pre>void setColumnResizeMode(ColumnResizeMode mode);</pre>
 <p class="doc" data-zh="设置列宽调整模式。" data-en="Set the column resize mode.">设置列宽调整模式。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：ColumnResizeMode::Independent" data-en="Default / initial state: ColumnResizeMode::Independent">默认值／初始状态：ColumnResizeMode::Independent</p>
@@ -3107,7 +3139,7 @@ view-&gt;setColumnResizeEnabled(true);</code>
 <article tabindex="-1" id="VirtualTableView-columnResizeMode-103" data-search="VirtualTableView columnResizeMode">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L302</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L303</span>
 <pre>ColumnResizeMode columnResizeMode() const;</pre>
 <p class="doc" data-zh="返回列宽调整模式。" data-en="Return the column resize mode.">返回列宽调整模式。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：ColumnResizeMode::Independent" data-en="Default / initial state: ColumnResizeMode::Independent">默认值／初始状态：ColumnResizeMode::Independent</p>
@@ -3118,7 +3150,7 @@ view-&gt;setColumnResizeEnabled(true);</code>
 <article tabindex="-1" id="VirtualTableView-setColumnHidden-104" data-search="VirtualTableView setColumnHidden">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L303</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L304</span>
 <pre>void setColumnHidden(int logicalIndex, bool hidden);</pre>
 <p class="doc" data-zh="隐藏或显示指定逻辑 section/列，保持模型数据不变。" data-en="Hide or show a logical section/column without changing model data.">隐藏或显示指定逻辑 section/列，保持模型数据不变。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：false" data-en="Default / initial state: false">默认值／初始状态：false</p>
@@ -3128,7 +3160,7 @@ view-&gt;setColumnResizeEnabled(true);</code>
 <article tabindex="-1" id="VirtualTableView-isColumnHidden-105" data-search="VirtualTableView isColumnHidden">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L304</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L305</span>
 <pre>bool isColumnHidden(int logicalIndex) const;</pre>
 <p class="doc" data-zh="返回指定逻辑列隐藏状态。" data-en="Return the hidden state of the specified logical column.">返回指定逻辑列隐藏状态。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#columns"><span data-zh="列宽 / 比例 / FitViewport / 隐藏换序" data-en="Column widths / stretch factors / FitViewport / hide and reorder">列宽 / 比例 / FitViewport / 隐藏换序</span></a> </p>
@@ -3137,7 +3169,7 @@ view-&gt;setColumnResizeEnabled(true);</code>
 <article tabindex="-1" id="VirtualTableView-MoveAnimation-106" data-search="VirtualTableView MoveAnimation">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L313</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L314</span>
 <pre>enum class MoveAnimation {
     Immediate,
     Animate,
@@ -3172,7 +3204,7 @@ view-&gt;setColumnResizeEnabled(true);</code>
 <article tabindex="-1" id="VirtualTableView-moveColumn-107" data-search="VirtualTableView moveColumn">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L318</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L319</span>
 <pre>void moveColumn(int fromLogicalIndex, int toLogicalIndex,
                     MoveAnimation animation = MoveAnimation::Immediate);</pre>
 <p class="doc" data-zh="移动列或 section 的可视位置；逻辑索引与可视索引不是同一个概念。" data-en="Move a column or section visually. Logical and visual indexes are distinct.">移动列或 section 的可视位置；逻辑索引与可视索引不是同一个概念。</p>
@@ -3182,7 +3214,7 @@ view-&gt;setColumnResizeEnabled(true);</code>
 <article tabindex="-1" id="VirtualTableView-setDefaultColumnWidth-108" data-search="VirtualTableView setDefaultColumnWidth">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L320</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L321</span>
 <pre>void setDefaultColumnWidth(int width);</pre>
 <p class="doc" data-zh="设置未覆盖列宽时的默认宽度。" data-en="Set the default width for columns without overrides.">设置未覆盖列宽时的默认宽度。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：100" data-en="Default / initial state: 100">默认值／初始状态：100</p>
@@ -3191,7 +3223,7 @@ view-&gt;setColumnResizeEnabled(true);</code>
 <article tabindex="-1" id="VirtualTableView-defaultColumnWidth-109" data-search="VirtualTableView defaultColumnWidth">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L321</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L322</span>
 <pre>int defaultColumnWidth() const;</pre>
 <p class="doc" data-zh="返回未覆盖列宽时的默认宽度。" data-en="Return the default width for columns without overrides.">返回未覆盖列宽时的默认宽度。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：100" data-en="Default / initial state: 100">默认值／初始状态：100</p>
@@ -3200,7 +3232,7 @@ view-&gt;setColumnResizeEnabled(true);</code>
 <article tabindex="-1" id="VirtualTableView-setColumnMinimumWidth-110" data-search="VirtualTableView setColumnMinimumWidth">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L322</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L323</span>
 <pre>void setColumnMinimumWidth(int width);</pre>
 <p class="doc" data-zh="设置指定列的宽度下限或上限，约束后续调整。" data-en="Set the minimum or maximum width constraining subsequent column resizing.">设置指定列的宽度下限或上限，约束后续调整。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：24" data-en="Default / initial state: 24">默认值／初始状态：24</p>
@@ -3210,7 +3242,7 @@ view-&gt;setColumnResizeEnabled(true);</code>
 <article tabindex="-1" id="VirtualTableView-setColumnMaximumWidth-111" data-search="VirtualTableView setColumnMaximumWidth">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L323</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L324</span>
 <pre>void setColumnMaximumWidth(int width);</pre>
 <p class="doc" data-zh="设置指定列的宽度下限或上限，约束后续调整。" data-en="Set the minimum or maximum width constraining subsequent column resizing.">设置指定列的宽度下限或上限，约束后续调整。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：100000" data-en="Default / initial state: 100000">默认值／初始状态：100000</p>
@@ -3220,7 +3252,7 @@ view-&gt;setColumnResizeEnabled(true);</code>
 <article tabindex="-1" id="VirtualTableView-setColumnStretchFactor-112" data-search="VirtualTableView setColumnStretchFactor">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L335</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L336</span>
 <pre>void setColumnStretchFactor(int logicalIndex, qreal factor);</pre>
 <p class="doc" data-zh="设置指定列比例权重。" data-en="Set the stretch weight of the specified column.">设置指定列比例权重。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：各列为 0，不参与比例分配。" data-en="Default / initial state: 0 for every column; no proportional stretching.">默认值／初始状态：各列为 0，不参与比例分配。</p>
@@ -3245,7 +3277,7 @@ view-&gt;setColumnStretchFactor(1, 6);</code>
 <article tabindex="-1" id="VirtualTableView-columnStretchFactor-113" data-search="VirtualTableView columnStretchFactor">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L336</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L337</span>
 <pre>qreal columnStretchFactor(int logicalIndex) const;</pre>
 <p class="doc" data-zh="返回指定列比例权重。" data-en="Return the stretch weight of the specified column.">返回指定列比例权重。</p>
 <p class="doc" data-zh="普通比例拉伸在手动拖动或显式设置列宽后整体取消。FitViewport 是独立模式，让列总宽适配视口，并按拖动边缘在另一侧列中分摊宽度；不要混同于普通 stretch 权重。" data-en="Ordinary proportional stretching is cleared by manual resizing or explicit column widths. FitViewport is a separate mode that fits total column width to the viewport and distributes a resize across columns on the corresponding side; it is distinct from ordinary stretch weights.">普通比例拉伸在手动拖动或显式设置列宽后整体取消。FitViewport 是独立模式，让列总宽适配视口，并按拖动边缘在另一侧列中分摊宽度；不要混同于普通 stretch 权重。</p>
@@ -3255,7 +3287,7 @@ view-&gt;setColumnStretchFactor(1, 6);</code>
 <article tabindex="-1" id="VirtualTableView-setStretchLastColumn-114" data-search="VirtualTableView setStretchLastColumn">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L337</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L338</span>
 <pre>void setStretchLastColumn(bool stretch);</pre>
 <p class="doc" data-zh="设置末列填充剩余宽度开关。" data-en="Set the whether the last column fills remaining width.">设置末列填充剩余宽度开关。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：false" data-en="Default / initial state: false">默认值／初始状态：false</p>
@@ -3266,7 +3298,7 @@ view-&gt;setColumnStretchFactor(1, 6);</code>
 <article tabindex="-1" id="VirtualTableView-stretchLastColumn-115" data-search="VirtualTableView stretchLastColumn">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L338</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L339</span>
 <pre>bool stretchLastColumn() const;</pre>
 <p class="doc" data-zh="返回末列填充剩余宽度开关。" data-en="Return the whether the last column fills remaining width.">返回末列填充剩余宽度开关。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：false" data-en="Default / initial state: false">默认值／初始状态：false</p>
@@ -3277,7 +3309,7 @@ view-&gt;setColumnStretchFactor(1, 6);</code>
 <article tabindex="-1" id="VirtualTableView-horizontalOffset-116" data-search="VirtualTableView horizontalOffset">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L343</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L344</span>
 <pre>qint64 horizontalOffset() const;</pre>
 <p class="doc" data-zh="返回水平滚动偏移量。" data-en="Return the horizontal scroll offset.">返回水平滚动偏移量。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：0" data-en="Default / initial state: 0">默认值／初始状态：0</p>
@@ -3287,7 +3319,7 @@ view-&gt;setColumnStretchFactor(1, 6);</code>
 <article tabindex="-1" id="VirtualTableView-setHorizontalOffset-117" data-search="VirtualTableView setHorizontalOffset">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L344</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L345</span>
 <pre>void setHorizontalOffset(qint64 offset);</pre>
 <p class="doc" data-zh="设置水平滚动偏移量。" data-en="Set the horizontal scroll offset.">设置水平滚动偏移量。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：0" data-en="Default / initial state: 0">默认值／初始状态：0</p>
@@ -3297,7 +3329,7 @@ view-&gt;setColumnStretchFactor(1, 6);</code>
 <article tabindex="-1" id="VirtualTableView-scrollByHorizontalPixels-118" data-search="VirtualTableView scrollByHorizontalPixels">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L345</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L346</span>
 <pre>void scrollByHorizontalPixels(qint64 pixels);</pre>
 <p class="doc" data-zh="按逻辑像素增量滚动，并限制到当前有效滚动范围。" data-en="Scroll by a logical-pixel delta, clamped to the current valid range.">按逻辑像素增量滚动，并限制到当前有效滚动范围。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
@@ -3305,7 +3337,7 @@ view-&gt;setColumnStretchFactor(1, 6);</code>
 <article tabindex="-1" id="VirtualTableView-maximumHorizontalOffset-119" data-search="VirtualTableView maximumHorizontalOffset">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L346</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L347</span>
 <pre>qint64 maximumHorizontalOffset() const;</pre>
 <p class="doc" data-zh="返回有效滚动偏移上限。" data-en="Return the maximum valid scroll offset.">返回有效滚动偏移上限。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
@@ -3313,7 +3345,7 @@ view-&gt;setColumnStretchFactor(1, 6);</code>
 <article tabindex="-1" id="VirtualTableView-horizontalContentExtent-120" data-search="VirtualTableView horizontalContentExtent">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L347</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L348</span>
 <pre>qint64 horizontalContentExtent() const;</pre>
 <p class="doc" data-zh="返回内容水平总长度。" data-en="Return the total horizontal content extent.">返回内容水平总长度。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
@@ -3321,7 +3353,7 @@ view-&gt;setColumnStretchFactor(1, 6);</code>
 <article tabindex="-1" id="VirtualTableView-setHorizontalWheelPixels-121" data-search="VirtualTableView setHorizontalWheelPixels">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L348</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L349</span>
 <pre>void setHorizontalWheelPixels(int pixels);</pre>
 <p class="doc" data-zh="设置横向滚轮每步逻辑像素数。" data-en="Set the logical pixels per horizontal wheel step.">设置横向滚轮每步逻辑像素数。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：48" data-en="Default / initial state: 48">默认值／初始状态：48</p>
@@ -3330,7 +3362,7 @@ view-&gt;setColumnStretchFactor(1, 6);</code>
 <article tabindex="-1" id="VirtualTableView-horizontalWheelPixels-122" data-search="VirtualTableView horizontalWheelPixels">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L349</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L350</span>
 <pre>    int horizontalWheelPixels() const;</pre>
 <p class="doc" data-zh="返回横向滚轮每步逻辑像素数。" data-en="Return the logical pixels per horizontal wheel step.">返回横向滚轮每步逻辑像素数。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：48" data-en="Default / initial state: 48">默认值／初始状态：48</p>
@@ -3339,7 +3371,7 @@ view-&gt;setColumnStretchFactor(1, 6);</code>
 <article tabindex="-1" id="VirtualTableView-setFrozenColumns-123" data-search="VirtualTableView setFrozenColumns">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L357</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L358</span>
 <pre>void setFrozenColumns(const QVector&lt;int&gt; &amp;logicalColumns);</pre>
 <p class="doc" data-zh="设置左侧冻结列数。" data-en="Set the number of left frozen columns.">设置左侧冻结列数。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：空集合，无冻结列。" data-en="Default / initial state: Empty set; no frozen columns.">默认值／初始状态：空集合，无冻结列。</p>
@@ -3349,7 +3381,7 @@ view-&gt;setColumnStretchFactor(1, 6);</code>
 <article tabindex="-1" id="VirtualTableView-setFrozenRightColumns-124" data-search="VirtualTableView setFrozenRightColumns">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L358</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L359</span>
 <pre>void setFrozenRightColumns(const QVector&lt;int&gt; &amp;logicalColumns);</pre>
 <p class="doc" data-zh="设置右侧冻结列数。" data-en="Set the number of right frozen columns.">设置右侧冻结列数。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：空集合，无冻结列。" data-en="Default / initial state: Empty set; no frozen columns.">默认值／初始状态：空集合，无冻结列。</p>
@@ -3359,7 +3391,7 @@ view-&gt;setColumnStretchFactor(1, 6);</code>
 <article tabindex="-1" id="VirtualTableView-clearFrozenColumns-125" data-search="VirtualTableView clearFrozenColumns">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L359</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L360</span>
 <pre>void clearFrozenColumns();</pre>
 <p class="doc" data-zh="清除冻结列配置，恢复普通可滚动列布局。" data-en="Clear frozen-column configuration and restore ordinary scrollable columns.">清除冻结列配置，恢复普通可滚动列布局。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
@@ -3367,7 +3399,7 @@ view-&gt;setColumnStretchFactor(1, 6);</code>
 <article tabindex="-1" id="VirtualTableView-frozenColumns-126" data-search="VirtualTableView frozenColumns">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L360</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L361</span>
 <pre>    QVector&lt;int&gt; frozenColumns() const;</pre>
 <p class="doc" data-zh="返回左侧冻结列数。" data-en="Return the number of left frozen columns.">返回左侧冻结列数。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：空集合，无冻结列。" data-en="Default / initial state: Empty set; no frozen columns.">默认值／初始状态：空集合，无冻结列。</p>
@@ -3377,7 +3409,7 @@ view-&gt;setColumnStretchFactor(1, 6);</code>
 <article tabindex="-1" id="VirtualTableView-frozenRightColumns-127" data-search="VirtualTableView frozenRightColumns">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L361</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L362</span>
 <pre>    QVector&lt;int&gt; frozenRightColumns() const;</pre>
 <p class="doc" data-zh="返回右侧冻结列数。" data-en="Return the number of right frozen columns.">返回右侧冻结列数。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：空集合，无冻结列。" data-en="Default / initial state: Empty set; no frozen columns.">默认值／初始状态：空集合，无冻结列。</p>
@@ -3387,7 +3419,7 @@ view-&gt;setColumnStretchFactor(1, 6);</code>
 <article tabindex="-1" id="VirtualTableView-isColumnFrozen-128" data-search="VirtualTableView isColumnFrozen">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L362</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L363</span>
 <pre>    bool isColumnFrozen(int logicalIndex) const;</pre>
 <p class="doc" data-zh="判断当前窗格或指定行列是否固定在冻结区域。" data-en="Check whether the pane or specified row/column belongs to a frozen region.">判断当前窗格或指定行列是否固定在冻结区域。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
@@ -3395,7 +3427,7 @@ view-&gt;setColumnStretchFactor(1, 6);</code>
 <article tabindex="-1" id="VirtualTableView-panes-129" data-search="VirtualTableView panes">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L364</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L365</span>
 <pre>    QVector&lt;TablePane&gt; panes() const;</pre>
 <p class="doc" data-zh="返回窗格集合。" data-en="Return the pane collection.">返回窗格集合。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：没有显式 pane 配置，自动使用未冻结列的主滚动区域。" data-en="Default / initial state: No explicit pane specification; the primary scrollable area is derived from unfrozen columns.">默认值／初始状态：没有显式 pane 配置，自动使用未冻结列的主滚动区域。</p>
@@ -3405,7 +3437,7 @@ view-&gt;setColumnStretchFactor(1, 6);</code>
 <article tabindex="-1" id="VirtualTableView-paneTypeForColumn-130" data-search="VirtualTableView paneTypeForColumn">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L365</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L366</span>
 <pre>    TablePane::Type paneTypeForColumn(int logicalIndex) const;</pre>
 <p class="doc" data-zh="查询指定列或位置所属窗格的记录、索引或类型；隐藏列或未知列可能没有窗格。" data-en="Resolve a column or position to a pane record, index or type; hidden or unknown columns may have no pane.">查询指定列或位置所属窗格的记录、索引或类型；隐藏列或未知列可能没有窗格。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
@@ -3413,7 +3445,7 @@ view-&gt;setColumnStretchFactor(1, 6);</code>
 <article tabindex="-1" id="VirtualTableView-itemPaneSeparatorLeftExtension-131" data-search="VirtualTableView itemPaneSeparatorLeftExtension">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L371</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L372</span>
 <pre>int itemPaneSeparatorLeftExtension() const override;</pre>
 <p class="doc" data-zh="返回行窗格分隔线向左延伸长度。" data-en="Return the left extension of row pane separators.">返回行窗格分隔线向左延伸长度。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
@@ -3421,7 +3453,7 @@ view-&gt;setColumnStretchFactor(1, 6);</code>
 <article tabindex="-1" id="VirtualTableView-itemPaneSeparatorColor-132" data-search="VirtualTableView itemPaneSeparatorColor">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L374</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L375</span>
 <pre>QColor itemPaneSeparatorColor() const override;</pre>
 <p class="doc" data-zh="返回行窗格分隔线颜色。" data-en="Return the row pane separator color.">返回行窗格分隔线颜色。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
@@ -3429,7 +3461,7 @@ view-&gt;setColumnStretchFactor(1, 6);</code>
 <article tabindex="-1" id="VirtualTableView-setPanes-133" data-search="VirtualTableView setPanes">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L385</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L386</span>
 <pre>void setPanes(const QVector&lt;TablePaneSpec&gt; &amp;panes);</pre>
 <p class="doc" data-zh="设置窗格集合。" data-en="Set the pane collection.">设置窗格集合。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：没有显式 pane 配置，自动使用未冻结列的主滚动区域。" data-en="Default / initial state: No explicit pane specification; the primary scrollable area is derived from unfrozen columns.">默认值／初始状态：没有显式 pane 配置，自动使用未冻结列的主滚动区域。</p>
@@ -3439,7 +3471,7 @@ view-&gt;setColumnStretchFactor(1, 6);</code>
 <article tabindex="-1" id="VirtualTableView-paneSpecs-134" data-search="VirtualTableView paneSpecs">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L386</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L387</span>
 <pre>    QVector&lt;TablePaneSpec&gt; paneSpecs() const;</pre>
 <p class="doc" data-zh="返回显式列窗格配置。" data-en="Return the explicit column pane configuration.">返回显式列窗格配置。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
@@ -3447,7 +3479,7 @@ view-&gt;setColumnStretchFactor(1, 6);</code>
 <article tabindex="-1" id="VirtualTableView-paneIndexOfColumn-135" data-search="VirtualTableView paneIndexOfColumn">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L388</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L389</span>
 <pre>    int paneIndexOfColumn(int logicalIndex) const;</pre>
 <p class="doc" data-zh="查询指定列或位置所属窗格的记录、索引或类型；隐藏列或未知列可能没有窗格。" data-en="Resolve a column or position to a pane record, index or type; hidden or unknown columns may have no pane.">查询指定列或位置所属窗格的记录、索引或类型；隐藏列或未知列可能没有窗格。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
@@ -3455,7 +3487,7 @@ view-&gt;setColumnStretchFactor(1, 6);</code>
 <article tabindex="-1" id="VirtualTableView-scrollGroups-136" data-search="VirtualTableView scrollGroups">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L390</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L391</span>
 <pre>    QVector&lt;int&gt; scrollGroups() const;</pre>
 <p class="doc" data-zh="返回所有滚动组标识。" data-en="Return the scroll group identifiers.">返回所有滚动组标识。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
@@ -3463,7 +3495,7 @@ view-&gt;setColumnStretchFactor(1, 6);</code>
 <article tabindex="-1" id="VirtualTableView-primaryScrollGroup-137" data-search="VirtualTableView primaryScrollGroup">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L393</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L394</span>
 <pre>    int primaryScrollGroup() const;</pre>
 <p class="doc" data-zh="返回主滚动组标识。" data-en="Return the primary scroll group identifier.">返回主滚动组标识。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#frozen"><span data-zh="冻结行列 / 多 pane / 多滚动组" data-en="Frozen rows and columns / multiple panes / scroll groups">冻结行列 / 多 pane / 多滚动组</span></a> </p>
@@ -3472,7 +3504,7 @@ view-&gt;setColumnStretchFactor(1, 6);</code>
 <article tabindex="-1" id="VirtualTableView-horizontalOffset-138" data-search="VirtualTableView horizontalOffset">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L396</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L397</span>
 <pre>    qint64 horizontalOffset(int scrollGroup) const;</pre>
 <p class="doc" data-zh="返回水平滚动偏移量。" data-en="Return the horizontal scroll offset.">返回水平滚动偏移量。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#frozen"><span data-zh="冻结行列 / 多 pane / 多滚动组" data-en="Frozen rows and columns / multiple panes / scroll groups">冻结行列 / 多 pane / 多滚动组</span></a> <a href="#scroll"><span data-zh="滚动 / 定位 / 几何 / 命中 / 平滑滚动" data-en="Scrolling / positioning / geometry / hits / smooth scrolling">滚动 / 定位 / 几何 / 命中 / 平滑滚动</span></a> </p>
@@ -3481,7 +3513,7 @@ view-&gt;setColumnStretchFactor(1, 6);</code>
 <article tabindex="-1" id="VirtualTableView-setHorizontalOffset-139" data-search="VirtualTableView setHorizontalOffset">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L399</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L400</span>
 <pre>void setHorizontalOffset(int scrollGroup, qint64 offset);</pre>
 <p class="doc" data-zh="设置水平滚动偏移量。" data-en="Set the horizontal scroll offset.">设置水平滚动偏移量。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：0" data-en="Default / initial state: 0">默认值／初始状态：0</p>
@@ -3491,7 +3523,7 @@ view-&gt;setColumnStretchFactor(1, 6);</code>
 <article tabindex="-1" id="VirtualTableView-maximumHorizontalOffset-140" data-search="VirtualTableView maximumHorizontalOffset">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L400</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L401</span>
 <pre>    qint64 maximumHorizontalOffset(int scrollGroup) const;</pre>
 <p class="doc" data-zh="返回有效滚动偏移上限。" data-en="Return the maximum valid scroll offset.">返回有效滚动偏移上限。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
@@ -3499,7 +3531,7 @@ view-&gt;setColumnStretchFactor(1, 6);</code>
 <article tabindex="-1" id="VirtualTableView-paneSeparatorRects-141" data-search="VirtualTableView paneSeparatorRects">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L406</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L407</span>
 <pre>QVector&lt;QRect&gt; paneSeparatorRects() const;</pre>
 <p class="doc" data-zh="返回列或行窗格分隔线矩形集合。" data-en="Return the column or row pane separator rectangles.">返回列或行窗格分隔线矩形集合。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
@@ -3507,7 +3539,7 @@ view-&gt;setColumnStretchFactor(1, 6);</code>
 <article tabindex="-1" id="VirtualTableView-setPaneSeparatorStyle-142" data-search="VirtualTableView setPaneSeparatorStyle">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L411</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L412</span>
 <pre>void setPaneSeparatorStyle(const PaneSeparatorStyle &amp;style);</pre>
 <p class="doc" data-zh="设置列窗格分隔线样式。" data-en="Set the column pane separator style.">设置列窗格分隔线样式。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：width = 1，color 无效（当前表头分隔色），lineStyle = Qt::SolidLine。" data-en="Default / initial state: width = 1, invalid color (current header separator color), lineStyle = Qt::SolidLine.">默认值／初始状态：width = 1，color 无效（当前表头分隔色），lineStyle = Qt::SolidLine。</p>
@@ -3517,7 +3549,7 @@ view-&gt;setColumnStretchFactor(1, 6);</code>
 <article tabindex="-1" id="VirtualTableView-paneSeparatorStyle-143" data-search="VirtualTableView paneSeparatorStyle">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L412</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L413</span>
 <pre>    PaneSeparatorStyle paneSeparatorStyle() const;</pre>
 <p class="doc" data-zh="返回列窗格分隔线样式。" data-en="Return the column pane separator style.">返回列窗格分隔线样式。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：width = 1，color 无效（当前表头分隔色），lineStyle = Qt::SolidLine。" data-en="Default / initial state: width = 1, invalid color (current header separator color), lineStyle = Qt::SolidLine.">默认值／初始状态：width = 1，color 无效（当前表头分隔色），lineStyle = Qt::SolidLine。</p>
@@ -3527,7 +3559,7 @@ view-&gt;setColumnStretchFactor(1, 6);</code>
 <article tabindex="-1" id="VirtualTableView-sectionSeparatorColor-144" data-search="VirtualTableView sectionSeparatorColor">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L420</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L421</span>
 <pre>static QColor sectionSeparatorColor(const QWidget *context);</pre>
 <p class="doc" data-zh="返回表头 section 分割线颜色。" data-en="Return the header section separator color.">返回表头 section 分割线颜色。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
@@ -3535,7 +3567,7 @@ view-&gt;setColumnStretchFactor(1, 6);</code>
 <article tabindex="-1" id="VirtualTableView-drawPaneSeparator-145" data-search="VirtualTableView drawPaneSeparator">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L423</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L424</span>
 <pre>static void drawPaneSeparator(QPainter *painter, const QRect &amp;rect,
                                   const PaneSeparatorStyle &amp;style,
                                   const QColor &amp;styleSeparatorColor);</pre>
@@ -3545,7 +3577,7 @@ view-&gt;setColumnStretchFactor(1, 6);</code>
 <article tabindex="-1" id="VirtualTableView-horizontalLayoutColumnVisits-146" data-search="VirtualTableView horizontalLayoutColumnVisits">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L428</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L429</span>
 <pre>    qsizetype horizontalLayoutColumnVisits() const;</pre>
 <p class="doc" data-zh="返回最近布局更新访问列数。" data-en="Return the columns visited in the latest layout update.">返回最近布局更新访问列数。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
@@ -3553,7 +3585,7 @@ view-&gt;setColumnStretchFactor(1, 6);</code>
 <article tabindex="-1" id="VirtualTableView-setHeaderAnimationEnabled-147" data-search="VirtualTableView setHeaderAnimationEnabled">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L438</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L439</span>
 <pre>void setHeaderAnimationEnabled(bool enabled);</pre>
 <p class="doc" data-zh="设置表头动画开关。" data-en="Set the header animation setting.">设置表头动画开关。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：true" data-en="Default / initial state: true">默认值／初始状态：true</p>
@@ -3563,7 +3595,7 @@ view-&gt;setColumnStretchFactor(1, 6);</code>
 <article tabindex="-1" id="VirtualTableView-headerAnimationEnabled-148" data-search="VirtualTableView headerAnimationEnabled">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L439</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L440</span>
 <pre>    bool headerAnimationEnabled() const;</pre>
 <p class="doc" data-zh="返回表头动画开关。" data-en="Return the header animation setting.">返回表头动画开关。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：true" data-en="Default / initial state: true">默认值／初始状态：true</p>
@@ -3573,7 +3605,7 @@ view-&gt;setColumnStretchFactor(1, 6);</code>
 <article tabindex="-1" id="VirtualTableView-setHeaderAnimationDuration-149" data-search="VirtualTableView setHeaderAnimationDuration">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L441</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L442</span>
 <pre>void setHeaderAnimationDuration(int ms);</pre>
 <p class="doc" data-zh="设置表头动画时长（毫秒）。" data-en="Set the header animation duration in milliseconds.">设置表头动画时长（毫秒）。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：300 ms" data-en="Default / initial state: 300 ms">默认值／初始状态：300 ms</p>
@@ -3583,7 +3615,7 @@ view-&gt;setColumnStretchFactor(1, 6);</code>
 <article tabindex="-1" id="VirtualTableView-headerAnimationDuration-150" data-search="VirtualTableView headerAnimationDuration">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L442</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L443</span>
 <pre>    int headerAnimationDuration() const;</pre>
 <p class="doc" data-zh="返回表头动画时长（毫秒）。" data-en="Return the header animation duration in milliseconds.">返回表头动画时长（毫秒）。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：300 ms" data-en="Default / initial state: 300 ms">默认值／初始状态：300 ms</p>
@@ -3593,7 +3625,7 @@ view-&gt;setColumnStretchFactor(1, 6);</code>
 <article tabindex="-1" id="VirtualTableView-setColumnFollowsHeaderVisual-151" data-search="VirtualTableView setColumnFollowsHeaderVisual">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L457</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L458</span>
 <pre>void setColumnFollowsHeaderVisual(bool follows);</pre>
 <p class="doc" data-zh="设置内容列跟随表头可视顺序的开关。" data-en="Set the whether content columns follow visual header order.">设置内容列跟随表头可视顺序的开关。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：true" data-en="Default / initial state: true">默认值／初始状态：true</p>
@@ -3603,7 +3635,7 @@ view-&gt;setColumnStretchFactor(1, 6);</code>
 <article tabindex="-1" id="VirtualTableView-columnFollowsHeaderVisual-152" data-search="VirtualTableView columnFollowsHeaderVisual">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L458</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L459</span>
 <pre>    bool columnFollowsHeaderVisual() const;</pre>
 <p class="doc" data-zh="返回内容列跟随表头可视顺序的开关。" data-en="Return the whether content columns follow visual header order.">返回内容列跟随表头可视顺序的开关。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：true" data-en="Default / initial state: true">默认值／初始状态：true</p>
@@ -3613,7 +3645,7 @@ view-&gt;setColumnStretchFactor(1, 6);</code>
 <article tabindex="-1" id="VirtualTableView-setRowFollowsHeaderVisual-153" data-search="VirtualTableView setRowFollowsHeaderVisual">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L468</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L469</span>
 <pre>void setRowFollowsHeaderVisual(bool follows);</pre>
 <p class="doc" data-zh="设置内容行跟随表头可视顺序开关。" data-en="Set the whether content rows follow visual header order.">设置内容行跟随表头可视顺序开关。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：true" data-en="Default / initial state: true">默认值／初始状态：true</p>
@@ -3623,7 +3655,7 @@ view-&gt;setColumnStretchFactor(1, 6);</code>
 <article tabindex="-1" id="VirtualTableView-rowFollowsHeaderVisual-154" data-search="VirtualTableView rowFollowsHeaderVisual">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L469</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L470</span>
 <pre>    bool rowFollowsHeaderVisual() const;</pre>
 <p class="doc" data-zh="返回内容行跟随表头可视顺序开关。" data-en="Return the whether content rows follow visual header order.">返回内容行跟随表头可视顺序开关。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：true" data-en="Default / initial state: true">默认值／初始状态：true</p>
@@ -3633,7 +3665,7 @@ view-&gt;setColumnStretchFactor(1, 6);</code>
 <article tabindex="-1" id="VirtualTableView-setRowSizePolicy-155" data-search="VirtualTableView setRowSizePolicy">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L472</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L473</span>
 <pre>void setRowSizePolicy(RowSizePolicy policy);</pre>
 <p class="doc" data-zh="设置表格行高测量更新策略。" data-en="Set the table row measurement and update policy.">设置表格行高测量更新策略。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：RowSizePolicy::ExplicitWins" data-en="Default / initial state: RowSizePolicy::ExplicitWins">默认值／初始状态：RowSizePolicy::ExplicitWins</p>
@@ -3644,7 +3676,7 @@ view-&gt;setColumnStretchFactor(1, 6);</code>
 <article tabindex="-1" id="VirtualTableView-rowSizePolicy-156" data-search="VirtualTableView rowSizePolicy">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L473</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L474</span>
 <pre>    RowSizePolicy rowSizePolicy() const;</pre>
 <p class="doc" data-zh="返回表格行高测量更新策略。" data-en="Return the table row measurement and update policy.">返回表格行高测量更新策略。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：RowSizePolicy::ExplicitWins" data-en="Default / initial state: RowSizePolicy::ExplicitWins">默认值／初始状态：RowSizePolicy::ExplicitWins</p>
@@ -3655,7 +3687,7 @@ view-&gt;setColumnStretchFactor(1, 6);</code>
 <article tabindex="-1" id="VirtualTableView-rowHeight-157" data-search="VirtualTableView rowHeight">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L474</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L475</span>
 <pre>int rowHeight(qsizetype row) const;</pre>
 <p class="doc" data-zh="返回指定行高度。" data-en="Return the height of the specified row.">返回指定行高度。</p>
 <p class="doc" data-zh="显式 setRowHeight 或拖动行高形成的覆盖优先于自动测量；clearRowHeight 后恢复测量策略。列宽变化会影响换行高度，请按业务选择 RowSizePolicy。" data-en="Explicit setRowHeight values and resize-drag overrides take precedence over automatic measurement. clearRowHeight restores the measurement policy. Column width affects wrapped text height; select a suitable RowSizePolicy.">显式 setRowHeight 或拖动行高形成的覆盖优先于自动测量；clearRowHeight 后恢复测量策略。列宽变化会影响换行高度，请按业务选择 RowSizePolicy。</p>
@@ -3665,7 +3697,7 @@ view-&gt;setColumnStretchFactor(1, 6);</code>
 <article tabindex="-1" id="VirtualTableView-setRowHeight-158" data-search="VirtualTableView setRowHeight">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L476</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L477</span>
 <pre>void setRowHeight(qsizetype row, int height);</pre>
 <p class="doc" data-zh="设置指定行高度。" data-en="Set the height of the specified row.">设置指定行高度。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：无显式行高覆盖；按当前模式计算，默认统一高度 32。" data-en="Default / initial state: No explicit height override; uses the current height mode, initially uniform height 32.">默认值／初始状态：无显式行高覆盖；按当前模式计算，默认统一高度 32。</p>
@@ -3676,7 +3708,7 @@ view-&gt;setColumnStretchFactor(1, 6);</code>
 <article tabindex="-1" id="VirtualTableView-clearRowHeight-159" data-search="VirtualTableView clearRowHeight">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L477</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L478</span>
 <pre>void clearRowHeight(qsizetype row);</pre>
 <p class="doc" data-zh="清除指定行的显式高度覆盖，使测量策略重新生效。" data-en="Clear an explicit row-height override so measurement policies can apply again.">清除指定行的显式高度覆盖，使测量策略重新生效。</p>
 <p class="doc" data-zh="显式 setRowHeight 或拖动行高形成的覆盖优先于自动测量；clearRowHeight 后恢复测量策略。列宽变化会影响换行高度，请按业务选择 RowSizePolicy。" data-en="Explicit setRowHeight values and resize-drag overrides take precedence over automatic measurement. clearRowHeight restores the measurement policy. Column width affects wrapped text height; select a suitable RowSizePolicy.">显式 setRowHeight 或拖动行高形成的覆盖优先于自动测量；clearRowHeight 后恢复测量策略。列宽变化会影响换行高度，请按业务选择 RowSizePolicy。</p>
@@ -3686,7 +3718,7 @@ view-&gt;setColumnStretchFactor(1, 6);</code>
 <article tabindex="-1" id="VirtualTableView-hasExplicitRowHeight-160" data-search="VirtualTableView hasExplicitRowHeight">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L478</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L479</span>
 <pre>bool hasExplicitRowHeight(qsizetype row) const;</pre>
 <p class="doc" data-zh="判断行或 section 是否有显式尺寸覆盖；这类覆盖优先于自动测量或默认尺寸。" data-en="Check for an explicit row or section size override, which takes precedence over measurement or defaults.">判断行或 section 是否有显式尺寸覆盖；这类覆盖优先于自动测量或默认尺寸。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
@@ -3694,7 +3726,7 @@ view-&gt;setColumnStretchFactor(1, 6);</code>
 <article tabindex="-1" id="VirtualTableView-setSpanProvider-161" data-search="VirtualTableView setSpanProvider">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L484</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L485</span>
 <pre>void setSpanProvider(TableSpanProvider *provider, bool takeOwnership = false);</pre>
 <p class="doc" data-zh="设置合并单元格范围提供对象。" data-en="Set the merged-cell span provider.">设置合并单元格范围提供对象。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：nullptr；无跨度 provider。" data-en="Default / initial state: nullptr; no span provider.">默认值／初始状态：nullptr；无跨度 provider。</p>
@@ -3716,7 +3748,7 @@ view-&gt;setSpan(2, 1, 3, 2);</code>
 <article tabindex="-1" id="VirtualTableView-spanProvider-162" data-search="VirtualTableView spanProvider">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L485</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L486</span>
 <pre>    TableSpanProvider *spanProvider() const;</pre>
 <p class="doc" data-zh="返回合并单元格范围提供对象。" data-en="Return the merged-cell span provider.">返回合并单元格范围提供对象。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：nullptr；无跨度 provider。" data-en="Default / initial state: nullptr; no span provider.">默认值／初始状态：nullptr；无跨度 provider。</p>
@@ -3726,7 +3758,7 @@ view-&gt;setSpan(2, 1, 3, 2);</code>
 <article tabindex="-1" id="VirtualTableView-setSpan-163" data-search="VirtualTableView setSpan">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L488</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L489</span>
 <pre>void setSpan(int row, int column, int rowSpan = 1, int columnSpan = 1);</pre>
 <p class="doc" data-zh="设置单元格合并范围；合并由锚点 cell 表示，其余被覆盖格不独立显示。" data-en="Set a merged-cell span represented by its anchor cell; covered cells are not displayed independently.">设置单元格合并范围；合并由锚点 cell 表示，其余被覆盖格不独立显示。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：无合并，每格独立为 1×1。" data-en="Default / initial state: No merged cells; each cell occupies 1×1.">默认值／初始状态：无合并，每格独立为 1×1。</p>
@@ -3748,7 +3780,7 @@ view-&gt;setSpan(2, 1, 3, 2);</code>
 <article tabindex="-1" id="VirtualTableView-removeSpan-164" data-search="VirtualTableView removeSpan">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L490</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L491</span>
 <pre>void removeSpan(int row, int column);</pre>
 <p class="doc" data-zh="移除全部或指定合并范围，使受影响单元格恢复独立布局。" data-en="Remove all or the specified merged-cell span so affected cells lay out independently.">移除全部或指定合并范围，使受影响单元格恢复独立布局。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#spans"><span data-zh="合并单元格" data-en="Merged cells">合并单元格</span></a> </p>
@@ -3757,7 +3789,7 @@ view-&gt;setSpan(2, 1, 3, 2);</code>
 <article tabindex="-1" id="VirtualTableView-clearSpans-165" data-search="VirtualTableView clearSpans">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L491</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L492</span>
 <pre>void clearSpans();</pre>
 <p class="doc" data-zh="移除全部或指定合并范围，使受影响单元格恢复独立布局。" data-en="Remove all or the specified merged-cell span so affected cells lay out independently.">移除全部或指定合并范围，使受影响单元格恢复独立布局。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#spans"><span data-zh="合并单元格" data-en="Merged cells">合并单元格</span></a> </p>
@@ -3766,7 +3798,7 @@ view-&gt;setSpan(2, 1, 3, 2);</code>
 <article tabindex="-1" id="VirtualTableView-spanAt-166" data-search="VirtualTableView spanAt">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L493</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L494</span>
 <pre>TableSpan spanAt(const QModelIndex &amp;index) const;</pre>
 <p class="doc" data-zh="查询指定位置所属合并范围或其锚点；被覆盖单元格通过锚点参与布局与编辑。" data-en="Query the merged span or anchor for a position; covered cells participate in layout and editing through the anchor.">查询指定位置所属合并范围或其锚点；被覆盖单元格通过锚点参与布局与编辑。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
@@ -3774,7 +3806,7 @@ view-&gt;setSpan(2, 1, 3, 2);</code>
 <article tabindex="-1" id="VirtualTableView-anchorIndex-167" data-search="VirtualTableView anchorIndex">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L496</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L497</span>
 <pre>QModelIndex anchorIndex(const QModelIndex &amp;index) const;</pre>
 <p class="doc" data-zh="返回合并区域锚点模型索引。" data-en="Return the model index of the merged region anchor.">返回合并区域锚点模型索引。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#spans"><span data-zh="合并单元格" data-en="Merged cells">合并单元格</span></a> </p>
@@ -3783,7 +3815,7 @@ view-&gt;setSpan(2, 1, 3, 2);</code>
 <article tabindex="-1" id="VirtualTableView-isSpanCovered-168" data-search="VirtualTableView isSpanCovered">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L498</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L499</span>
 <pre>bool isSpanCovered(const QModelIndex &amp;index) const;</pre>
 <p class="doc" data-zh="判断 cell 是否被其它锚点覆盖，或当前范围是否发生合并。" data-en="Check whether a cell is covered by another anchor, or whether the range is merged.">判断 cell 是否被其它锚点覆盖，或当前范围是否发生合并。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#spans"><span data-zh="合并单元格" data-en="Merged cells">合并单元格</span></a> </p>
@@ -3792,7 +3824,7 @@ view-&gt;setSpan(2, 1, 3, 2);</code>
 <article tabindex="-1" id="VirtualTableView-spanRect-169" data-search="VirtualTableView spanRect">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L502</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L503</span>
 <pre>QRect spanRect(const QModelIndex &amp;index) const;</pre>
 <p class="doc" data-zh="查询对应项目、单元格、窗格或合并区域的矩形。视图结果为视口坐标；布局策略结果为布局坐标；屏外矩形可超出可见区域。" data-en="Query the item, cell, pane or span rectangle. View results use viewport coordinates; layout policies use layout coordinates. Offscreen rectangles may extend beyond the visible area.">查询对应项目、单元格、窗格或合并区域的矩形。视图结果为视口坐标；布局策略结果为布局坐标；屏外矩形可超出可见区域。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#spans"><span data-zh="合并单元格" data-en="Merged cells">合并单元格</span></a> </p>
@@ -3801,7 +3833,7 @@ view-&gt;setSpan(2, 1, 3, 2);</code>
 <article tabindex="-1" id="VirtualTableView-cellRect-170" data-search="VirtualTableView cellRect">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L505</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L506</span>
 <pre>QRect cellRect(const QModelIndex &amp;index) const;</pre>
 <p class="doc" data-zh="查询对应项目、单元格、窗格或合并区域的矩形。视图结果为视口坐标；布局策略结果为布局坐标；屏外矩形可超出可见区域。" data-en="Query the item, cell, pane or span rectangle. View results use viewport coordinates; layout policies use layout coordinates. Offscreen rectangles may extend beyond the visible area.">查询对应项目、单元格、窗格或合并区域的矩形。视图结果为视口坐标；布局策略结果为布局坐标；屏外矩形可超出可见区域。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#spans"><span data-zh="合并单元格" data-en="Merged cells">合并单元格</span></a> </p>
@@ -3810,7 +3842,7 @@ view-&gt;setSpan(2, 1, 3, 2);</code>
 <article tabindex="-1" id="VirtualTableView-setSortingEnabled-171" data-search="VirtualTableView setSortingEnabled">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L508</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L509</span>
 <pre>void setSortingEnabled(bool enabled);</pre>
 <p class="doc" data-zh="设置表格排序交互开关。" data-en="Set the table sorting interaction setting.">设置表格排序交互开关。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：false" data-en="Default / initial state: false">默认值／初始状态：false</p>
@@ -3820,7 +3852,7 @@ view-&gt;setSpan(2, 1, 3, 2);</code>
 <article tabindex="-1" id="VirtualTableView-isSortingEnabled-172" data-search="VirtualTableView isSortingEnabled">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L509</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L510</span>
 <pre>    bool isSortingEnabled() const;</pre>
 <p class="doc" data-zh="返回表格排序交互开关。" data-en="Return the table sorting interaction setting.">返回表格排序交互开关。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：false" data-en="Default / initial state: false">默认值／初始状态：false</p>
@@ -3830,7 +3862,7 @@ view-&gt;setSpan(2, 1, 3, 2);</code>
 <article tabindex="-1" id="VirtualTableView-sortByColumn-173" data-search="VirtualTableView sortByColumn">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L510</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L511</span>
 <pre>void sortByColumn(int logicalIndex, Qt::SortOrder order);</pre>
 <p class="doc" data-zh="请求按指定列和方向排序，模型或业务排序实现决定实际数据顺序。" data-en="Request sorting by the specified column and order; model or application sorting determines the actual order.">请求按指定列和方向排序，模型或业务排序实现决定实际数据顺序。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#sort-persist"><span data-zh="排序 / 过滤 / 布局保存恢复" data-en="Sorting / filtering / layout persistence">排序 / 过滤 / 布局保存恢复</span></a> </p>
@@ -3839,7 +3871,7 @@ view-&gt;setSpan(2, 1, 3, 2);</code>
 <article tabindex="-1" id="VirtualTableView-setSortIndicator-174" data-search="VirtualTableView setSortIndicator">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L511</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L512</span>
 <pre>void setSortIndicator(int logicalIndex, Qt::SortOrder order);</pre>
 <p class="doc" data-zh="设置排序标记对应列和方向；标记本身不等于模型已完成排序。" data-en="Set the sort indicator section and order; the indicator alone does not imply the model has been sorted.">设置排序标记对应列和方向；标记本身不等于模型已完成排序。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：section = -1，无排序指示列；order = Qt::AscendingOrder。" data-en="Default / initial state: section = -1, no sort indicator column; order = Qt::AscendingOrder.">默认值／初始状态：section = -1，无排序指示列；order = Qt::AscendingOrder。</p>
@@ -3849,7 +3881,7 @@ view-&gt;setSpan(2, 1, 3, 2);</code>
 <article tabindex="-1" id="VirtualTableView-saveHeaderState-175" data-search="VirtualTableView saveHeaderState">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L514</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L515</span>
 <pre>QByteArray saveHeaderState() const;</pre>
 <p class="doc" data-zh="序列化当前表头布局状态用于持久化；恢复时使用配套 restore 接口。" data-en="Serialize current header layout state for persistence; restore it with the matching restore method.">序列化当前表头布局状态用于持久化；恢复时使用配套 restore 接口。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#sort-persist"><span data-zh="排序 / 过滤 / 布局保存恢复" data-en="Sorting / filtering / layout persistence">排序 / 过滤 / 布局保存恢复</span></a> </p>
@@ -3858,7 +3890,7 @@ view-&gt;setSpan(2, 1, 3, 2);</code>
 <article tabindex="-1" id="VirtualTableView-restoreHeaderState-176" data-search="VirtualTableView restoreHeaderState">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L518</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L519</span>
 <pre>bool restoreHeaderState(const QByteArray &amp;state);</pre>
 <p class="doc" data-zh="恢复序列化表头布局；返回值表明数据是否被接受，调用方应处理不兼容或损坏状态。" data-en="Restore serialized header layout; the return value indicates acceptance. Handle incompatible or damaged state in the caller.">恢复序列化表头布局；返回值表明数据是否被接受，调用方应处理不兼容或损坏状态。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#sort-persist"><span data-zh="排序 / 过滤 / 布局保存恢复" data-en="Sorting / filtering / layout persistence">排序 / 过滤 / 布局保存恢复</span></a> </p>
@@ -3867,7 +3899,7 @@ view-&gt;setSpan(2, 1, 3, 2);</code>
 <article tabindex="-1" id="VirtualTableView-setAdapter-177" data-search="VirtualTableView setAdapter">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L530</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L531</span>
 <pre>void setAdapter(WidgetAdapter *adapter, bool takeOwnership = false) override;</pre>
 <p class="doc" data-zh="设置项目控件适配器。" data-en="Set the item widget adapter.">设置项目控件适配器。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：nullptr；初始没有业务 adapter。takeOwnership 参数默认 false。" data-en="Default / initial state: nullptr; no application adapter is installed. The takeOwnership argument defaults to false.">默认值／初始状态：nullptr；初始没有业务 adapter。takeOwnership 参数默认 false。</p>
@@ -3878,7 +3910,7 @@ view-&gt;setSpan(2, 1, 3, 2);</code>
 <article tabindex="-1" id="VirtualTableView-setTableAdapter-178" data-search="VirtualTableView setTableAdapter">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L533</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L534</span>
 <pre>void setTableAdapter(TableWidgetAdapter *adapter, bool takeOwnership = false);</pre>
 <p class="doc" data-zh="设置整行物化表格适配器。" data-en="Set the table adapter for row materialization.">设置整行物化表格适配器。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：nullptr；初始没有业务 adapter。takeOwnership 参数默认 false。" data-en="Default / initial state: nullptr; no application adapter is installed. The takeOwnership argument defaults to false.">默认值／初始状态：nullptr；初始没有业务 adapter。takeOwnership 参数默认 false。</p>
@@ -3889,7 +3921,7 @@ view-&gt;setSpan(2, 1, 3, 2);</code>
 <article tabindex="-1" id="VirtualTableView-tableAdapter-179" data-search="VirtualTableView tableAdapter">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L534</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L535</span>
 <pre>TableWidgetAdapter *tableAdapter() const;</pre>
 <p class="doc" data-zh="返回整行物化表格适配器。" data-en="Return the table adapter for row materialization.">返回整行物化表格适配器。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：nullptr；初始没有业务 adapter。takeOwnership 参数默认 false。" data-en="Default / initial state: nullptr; no application adapter is installed. The takeOwnership argument defaults to false.">默认值／初始状态：nullptr；初始没有业务 adapter。takeOwnership 参数默认 false。</p>
@@ -3900,7 +3932,7 @@ view-&gt;setSpan(2, 1, 3, 2);</code>
 <article tabindex="-1" id="VirtualTableView-setMaterializationMode-180" data-search="VirtualTableView setMaterializationMode">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L536</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L537</span>
 <pre>void setMaterializationMode(MaterializationMode mode);</pre>
 <p class="doc" data-zh="设置行控件或单元格物化模式。" data-en="Set the row-widget or cell-widget materialization mode.">设置行控件或单元格物化模式。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：MaterializationMode::RowWidgets" data-en="Default / initial state: MaterializationMode::RowWidgets">默认值／初始状态：MaterializationMode::RowWidgets</p>
@@ -3911,7 +3943,7 @@ view-&gt;setSpan(2, 1, 3, 2);</code>
 <article tabindex="-1" id="VirtualTableView-materializationMode-181" data-search="VirtualTableView materializationMode">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L537</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L538</span>
 <pre>    MaterializationMode materializationMode() const;</pre>
 <p class="doc" data-zh="返回行控件或单元格物化模式。" data-en="Return the row-widget or cell-widget materialization mode.">返回行控件或单元格物化模式。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：MaterializationMode::RowWidgets" data-en="Default / initial state: MaterializationMode::RowWidgets">默认值／初始状态：MaterializationMode::RowWidgets</p>
@@ -3922,7 +3954,7 @@ view-&gt;setSpan(2, 1, 3, 2);</code>
 <article tabindex="-1" id="VirtualTableView-usesItemWidgets-182" data-search="VirtualTableView usesItemWidgets">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L539</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L540</span>
 <pre>bool usesItemWidgets() const override;</pre>
 <p class="doc" data-zh="判断布局当前是否以项目控件物化数据。" data-en="Check whether the layout currently materializes item widgets.">判断布局当前是否以项目控件物化数据。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
@@ -3930,7 +3962,7 @@ view-&gt;setSpan(2, 1, 3, 2);</code>
 <article tabindex="-1" id="VirtualTableView-stats-183" data-search="VirtualTableView stats">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L541</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L542</span>
 <pre>VirtualViewStats stats() const override;</pre>
 <p class="doc" data-zh="返回虚拟化与控件复用统计信息。" data-en="Return the virtualization and widget recycling statistics.">返回虚拟化与控件复用统计信息。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#pin"><span data-zh="屏外保留 / 预加载 / 焦点 / 诊断" data-en="Offscreen retention / overscan / focus / diagnostics">屏外保留 / 预加载 / 焦点 / 诊断</span></a> </p>
@@ -3939,7 +3971,7 @@ view-&gt;setSpan(2, 1, 3, 2);</code>
 <article tabindex="-1" id="VirtualTableView-setCellAdapter-184" data-search="VirtualTableView setCellAdapter">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L544</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L545</span>
 <pre>void setCellAdapter(CellWidgetAdapter *adapter, bool takeOwnership = false);</pre>
 <p class="doc" data-zh="设置单元格控件适配器。" data-en="Set the cell widget adapter.">设置单元格控件适配器。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：nullptr；初始没有业务 adapter。takeOwnership 参数默认 false。" data-en="Default / initial state: nullptr; no application adapter is installed. The takeOwnership argument defaults to false.">默认值／初始状态：nullptr；初始没有业务 adapter。takeOwnership 参数默认 false。</p>
@@ -3950,7 +3982,7 @@ view-&gt;setSpan(2, 1, 3, 2);</code>
 <article tabindex="-1" id="VirtualTableView-cellAdapter-185" data-search="VirtualTableView cellAdapter">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L545</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L546</span>
 <pre>    CellWidgetAdapter *cellAdapter() const;</pre>
 <p class="doc" data-zh="返回单元格控件适配器。" data-en="Return the cell widget adapter.">返回单元格控件适配器。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：nullptr；初始没有业务 adapter。takeOwnership 参数默认 false。" data-en="Default / initial state: nullptr; no application adapter is installed. The takeOwnership argument defaults to false.">默认值／初始状态：nullptr；初始没有业务 adapter。takeOwnership 参数默认 false。</p>
@@ -3961,7 +3993,7 @@ view-&gt;setSpan(2, 1, 3, 2);</code>
 <article tabindex="-1" id="VirtualTableView-materializedCellCount-186" data-search="VirtualTableView materializedCellCount">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L548</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L549</span>
 <pre>    qsizetype materializedCellCount() const;</pre>
 <p class="doc" data-zh="返回当前物化的 cell、项目或 section 数量。" data-en="Return the current materialized cell, item or section count.">返回当前物化的 cell、项目或 section 数量。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#materialization"><span data-zh="RowWidgets / CellWidgets / 物化成本" data-en="RowWidgets / CellWidgets / materialization cost">RowWidgets / CellWidgets / 物化成本</span></a> </p>
@@ -3970,7 +4002,7 @@ view-&gt;setSpan(2, 1, 3, 2);</code>
 <article tabindex="-1" id="VirtualTableView-cellWidget-187" data-search="VirtualTableView cellWidget">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L549</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L550</span>
 <pre>QWidget *cellWidget(const QModelIndex &amp;index) const;</pre>
 <p class="doc" data-zh="查询当前物化控件；屏外未物化时可为空，不代表模型项或选择状态不存在。" data-en="Query the currently materialized widget. It may be null offscreen; that does not mean the model item or selection is absent.">查询当前物化控件；屏外未物化时可为空，不代表模型项或选择状态不存在。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#materialization"><span data-zh="RowWidgets / CellWidgets / 物化成本" data-en="RowWidgets / CellWidgets / materialization cost">RowWidgets / CellWidgets / 物化成本</span></a> </p>
@@ -3979,7 +4011,7 @@ view-&gt;setSpan(2, 1, 3, 2);</code>
 <article tabindex="-1" id="VirtualTableView-setVisualStateBackgroundVisible-188" data-search="VirtualTableView setVisualStateBackgroundVisible">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L554</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L555</span>
 <pre>virtual void setVisualStateBackgroundVisible(bool visible);</pre>
 <p class="doc" data-zh="设置hover 或选中背景绘制开关。" data-en="Set the hover or selection background painting setting.">设置hover 或选中背景绘制开关。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：true；内置 hover / selection 背景启用。" data-en="Default / initial state: true; built-in hover / selection backgrounds are enabled.">默认值／初始状态：true；内置 hover / selection 背景启用。</p>
@@ -3989,7 +4021,7 @@ view-&gt;setSpan(2, 1, 3, 2);</code>
 <article tabindex="-1" id="VirtualTableView-visualStateBackgroundVisible-189" data-search="VirtualTableView visualStateBackgroundVisible">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L555</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L556</span>
 <pre>    bool visualStateBackgroundVisible() const;</pre>
 <p class="doc" data-zh="返回hover 或选中背景绘制开关。" data-en="Return the hover or selection background painting setting.">返回hover 或选中背景绘制开关。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：true；内置 hover / selection 背景启用。" data-en="Default / initial state: true; built-in hover / selection backgrounds are enabled.">默认值／初始状态：true；内置 hover / selection 背景启用。</p>
@@ -3999,7 +4031,7 @@ view-&gt;setSpan(2, 1, 3, 2);</code>
 <article tabindex="-1" id="VirtualTableView-setVisualStateCornerRadius-190" data-search="VirtualTableView setVisualStateCornerRadius">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L559</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L560</span>
 <pre>void setVisualStateCornerRadius(int radius);</pre>
 <p class="doc" data-zh="设置状态背景圆角半径。" data-en="Set the state background corner radius.">设置状态背景圆角半径。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：0 逻辑像素，直角。" data-en="Default / initial state: 0 logical pixels; square corners.">默认值／初始状态：0 逻辑像素，直角。</p>
@@ -4008,103 +4040,147 @@ view-&gt;setSpan(2, 1, 3, 2);</code>
 <article tabindex="-1" id="VirtualTableView-visualStateCornerRadius-191" data-search="VirtualTableView visualStateCornerRadius">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L560</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L561</span>
 <pre>    int visualStateCornerRadius() const;</pre>
 <p class="doc" data-zh="返回状态背景圆角半径。" data-en="Return the state background corner radius.">返回状态背景圆角半径。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：0 逻辑像素，直角。" data-en="Default / initial state: 0 logical pixels; square corners.">默认值／初始状态：0 逻辑像素，直角。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualTableView-setVisualStateCornerRadiusIncludesHeaders-192" data-search="VirtualTableView setVisualStateCornerRadiusIncludesHeaders">
+<article tabindex="-1" id="VirtualTableView-setRowVisualStateMargins-192" data-search="VirtualTableView setRowVisualStateMargins">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L565</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L567</span>
+<pre>    void setRowVisualStateMargins(int left, int right);</pre>
+<p class="doc" data-zh="设置或读取整行 hover／选中背景的左右绘制边距，返回 QMargins 的上下值始终为 0。在原有状态形状计算后应用：正数缩短、负数延伸，最终受视图和行区域裁剪。只改变框架背景绘制，不改变控件几何、命中范围或选择；不受分割线边距参照开关影响。List／Tree 可与原有状态范围、状态 padding 和固定高度组合。Table／TreeTable 仅在 SelectRows 模式下生效。垂直表头显示且启用状态背景时，表头和内容合并为整行范围，边距只计算一次，圆角沿整体端点绘制；表头隐藏或关闭状态背景时从内容范围计算。不重复作用于每个 cell，水平表头及 SelectItems 模式不受影响。" data-en="Set or query paint-only left/right insets of complete hover/selection row backgrounds; the returned QMargins always has zero top/bottom. Applied after the existing state shape: positive shortens, negative extends, with normal view and row clipping. Does not change widget geometry, hits or selection, and is independent of the grid margin reference. List/Tree can combine this with existing state extents, padding and fixed height. Table/TreeTable apply it only in SelectRows. A visible vertical header with state backgrounds enabled shares the whole-row bounds with the body: margins are applied once and corners follow the overall endpoints. A hidden header or disabled header state background leaves the body as the reference. Insets are never repeated per cell; horizontal headers and SelectItems are unaffected.">设置或读取整行 hover／选中背景的左右绘制边距，返回 QMargins 的上下值始终为 0。在原有状态形状计算后应用：正数缩短、负数延伸，最终受视图和行区域裁剪。只改变框架背景绘制，不改变控件几何、命中范围或选择；不受分割线边距参照开关影响。List／Tree 可与原有状态范围、状态 padding 和固定高度组合。Table／TreeTable 仅在 SelectRows 模式下生效。垂直表头显示且启用状态背景时，表头和内容合并为整行范围，边距只计算一次，圆角沿整体端点绘制；表头隐藏或关闭状态背景时从内容范围计算。不重复作用于每个 cell，水平表头及 SelectItems 模式不受影响。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：left = 0，right = 0。" data-en="Default / initial state: left = 0, right = 0.">默认值／初始状态：left = 0，right = 0。</p>
+<section class="api-example">
+<h4><span data-zh="组合用法" data-en="Combination example">组合用法</span></h4>
+<p class="doc" data-zh="垂直表头参与整行背景；左侧 12px 先从表头扣除，内容与表头仍连续。表头关闭后从内容左端扣除。" data-en="The vertical header participates in the row background: the first 12px are consumed inside the header, keeping the body continuous. Hiding the header moves the reference to the body.">垂直表头参与整行背景；左侧 12px 先从表头扣除，内容与表头仍连续。表头关闭后从内容左端扣除。</p>
+<pre>
+<code class="language-cpp">view-&gt;setVerticalHeaderVisible(true);
+view-&gt;setHeaderVisualStateBackgroundVisible(Qt::Vertical, true);
+view-&gt;setRowVisualStateMargins(12, 12);</code>
+</pre>
+<p class="muted">
+<a href="../../../examples/table_capabilities/09_spacing/example.cpp"><span data-zh="完整示例源码" data-en="Full example source">完整示例源码</span></a>
+</p>
+</section>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#grid-line-range"><span data-zh="分割线深度过滤 / 整线四向边距" data-en="Grid depth filtering / whole-line endpoint margins">分割线深度过滤 / 整线四向边距</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualTableView-rowVisualStateMargins-193" data-search="VirtualTableView rowVisualStateMargins">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L568</span>
+<pre>    QMargins rowVisualStateMargins() const;</pre>
+<p class="doc" data-zh="设置或读取整行 hover／选中背景的左右绘制边距，返回 QMargins 的上下值始终为 0。在原有状态形状计算后应用：正数缩短、负数延伸，最终受视图和行区域裁剪。只改变框架背景绘制，不改变控件几何、命中范围或选择；不受分割线边距参照开关影响。List／Tree 可与原有状态范围、状态 padding 和固定高度组合。Table／TreeTable 仅在 SelectRows 模式下生效。垂直表头显示且启用状态背景时，表头和内容合并为整行范围，边距只计算一次，圆角沿整体端点绘制；表头隐藏或关闭状态背景时从内容范围计算。不重复作用于每个 cell，水平表头及 SelectItems 模式不受影响。" data-en="Set or query paint-only left/right insets of complete hover/selection row backgrounds; the returned QMargins always has zero top/bottom. Applied after the existing state shape: positive shortens, negative extends, with normal view and row clipping. Does not change widget geometry, hits or selection, and is independent of the grid margin reference. List/Tree can combine this with existing state extents, padding and fixed height. Table/TreeTable apply it only in SelectRows. A visible vertical header with state backgrounds enabled shares the whole-row bounds with the body: margins are applied once and corners follow the overall endpoints. A hidden header or disabled header state background leaves the body as the reference. Insets are never repeated per cell; horizontal headers and SelectItems are unaffected.">设置或读取整行 hover／选中背景的左右绘制边距，返回 QMargins 的上下值始终为 0。在原有状态形状计算后应用：正数缩短、负数延伸，最终受视图和行区域裁剪。只改变框架背景绘制，不改变控件几何、命中范围或选择；不受分割线边距参照开关影响。List／Tree 可与原有状态范围、状态 padding 和固定高度组合。Table／TreeTable 仅在 SelectRows 模式下生效。垂直表头显示且启用状态背景时，表头和内容合并为整行范围，边距只计算一次，圆角沿整体端点绘制；表头隐藏或关闭状态背景时从内容范围计算。不重复作用于每个 cell，水平表头及 SelectItems 模式不受影响。</p>
+<p class="doc defaults" data-zh="默认值／初始状态：left = 0，right = 0。" data-en="Default / initial state: left = 0, right = 0.">默认值／初始状态：left = 0，right = 0。</p>
+<section class="api-example">
+<h4><span data-zh="组合用法" data-en="Combination example">组合用法</span></h4>
+<p class="doc" data-zh="垂直表头参与整行背景；左侧 12px 先从表头扣除，内容与表头仍连续。表头关闭后从内容左端扣除。" data-en="The vertical header participates in the row background: the first 12px are consumed inside the header, keeping the body continuous. Hiding the header moves the reference to the body.">垂直表头参与整行背景；左侧 12px 先从表头扣除，内容与表头仍连续。表头关闭后从内容左端扣除。</p>
+<pre>
+<code class="language-cpp">view-&gt;setVerticalHeaderVisible(true);
+view-&gt;setHeaderVisualStateBackgroundVisible(Qt::Vertical, true);
+view-&gt;setRowVisualStateMargins(12, 12);</code>
+</pre>
+<p class="muted">
+<a href="../../../examples/table_capabilities/09_spacing/example.cpp"><span data-zh="完整示例源码" data-en="Full example source">完整示例源码</span></a>
+</p>
+</section>
+<p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#grid-line-range"><span data-zh="分割线深度过滤 / 整线四向边距" data-en="Grid depth filtering / whole-line endpoint margins">分割线深度过滤 / 整线四向边距</span></a> </p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualTableView-setVisualStateCornerRadiusIncludesHeaders-194" data-search="VirtualTableView setVisualStateCornerRadiusIncludesHeaders">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L573</span>
 <pre>void setVisualStateCornerRadiusIncludesHeaders(bool enabled);</pre>
 <p class="doc" data-zh="设置状态圆角扩展到表头开关。" data-en="Set the whether state rounding includes headers.">设置状态圆角扩展到表头开关。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：true" data-en="Default / initial state: true">默认值／初始状态：true</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#header-state"><span data-zh="表头同步 hover / selected / 圆角" data-en="Header hover / selection synchronization / corners">表头同步 hover / selected / 圆角</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualTableView-visualStateCornerRadiusIncludesHeaders-193" data-search="VirtualTableView visualStateCornerRadiusIncludesHeaders">
+<article tabindex="-1" id="VirtualTableView-visualStateCornerRadiusIncludesHeaders-195" data-search="VirtualTableView visualStateCornerRadiusIncludesHeaders">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L566</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L574</span>
 <pre>    bool visualStateCornerRadiusIncludesHeaders() const;</pre>
 <p class="doc" data-zh="返回状态圆角扩展到表头开关。" data-en="Return the whether state rounding includes headers.">返回状态圆角扩展到表头开关。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：true" data-en="Default / initial state: true">默认值／初始状态：true</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#header-state"><span data-zh="表头同步 hover / selected / 圆角" data-en="Header hover / selection synchronization / corners">表头同步 hover / selected / 圆角</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualTableView-visualState-194" data-search="VirtualTableView visualState">
+<article tabindex="-1" id="VirtualTableView-visualState-196" data-search="VirtualTableView visualState">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L567</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L575</span>
 <pre>VisualState visualState(const QModelIndex &amp;index) const override;</pre>
 <p class="doc" data-zh="返回指定项目或 section 的当前视觉状态与动画进度。adapter 与背景绘制应使用同一份状态。" data-en="Return the current visual state and animation progress for an item or section. Adapters and background painting should use consistent state.">返回指定项目或 section 的当前视觉状态与动画进度。adapter 与背景绘制应使用同一份状态。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#states"><span data-zh="hover / selected 默认绘制和动画" data-en="Built-in hover / selection painting and animation">hover / selected 默认绘制和动画</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualTableView-indexForWidget-195" data-search="VirtualTableView indexForWidget">
+<article tabindex="-1" id="VirtualTableView-indexForWidget-197" data-search="VirtualTableView indexForWidget">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L568</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L576</span>
 <pre>QModelIndex indexForWidget(const QWidget *widget) const override;</pre>
 <p class="doc" data-zh="从物化控件反查当前绑定索引。复用后索引会变化，不应把控件地址当作永久业务标识。" data-en="Resolve a materialized widget to its current bound index. Recycling changes bindings; a widget address is not a permanent business identity.">从物化控件反查当前绑定索引。复用后索引会变化，不应把控件地址当作永久业务标识。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#scroll"><span data-zh="滚动 / 定位 / 几何 / 命中 / 平滑滚动" data-en="Scrolling / positioning / geometry / hits / smooth scrolling">滚动 / 定位 / 几何 / 命中 / 平滑滚动</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualTableView-cellIndexForWidget-196" data-search="VirtualTableView cellIndexForWidget">
+<article tabindex="-1" id="VirtualTableView-cellIndexForWidget-198" data-search="VirtualTableView cellIndexForWidget">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L569</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L577</span>
 <pre>QModelIndex cellIndexForWidget(const QWidget *widget) const;</pre>
 <p class="doc" data-zh="从物化控件反查当前绑定索引。复用后索引会变化，不应把控件地址当作永久业务标识。" data-en="Resolve a materialized widget to its current bound index. Recycling changes bindings; a widget address is not a permanent business identity.">从物化控件反查当前绑定索引。复用后索引会变化，不应把控件地址当作永久业务标识。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualTableView-materializedCellIndexes-197" data-search="VirtualTableView materializedCellIndexes">
+<article tabindex="-1" id="VirtualTableView-materializedCellIndexes-199" data-search="VirtualTableView materializedCellIndexes">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L570</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L578</span>
 <pre>QList&lt;QModelIndex&gt; materializedCellIndexes() const;</pre>
 <p class="doc" data-zh="返回当前物化单元格对应的模型索引集合。" data-en="Return the model indexes of currently materialized cells.">返回当前物化单元格对应的模型索引集合。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualTableView-sortIndicatorRequested-198" data-search="VirtualTableView sortIndicatorRequested">
+<article tabindex="-1" id="VirtualTableView-sortIndicatorRequested-200" data-search="VirtualTableView sortIndicatorRequested">
 <span class="badge">signals</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L573</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L581</span>
 <pre>void sortIndicatorRequested(int logicalIndex, Qt::SortOrder order);</pre>
 <p class="doc" data-zh="用户请求排序时发出，外部排序实现可接收列号和排序方向。" data-en="Emitted for a user sort request so external sorting can receive the column and order.">用户请求排序时发出，外部排序实现可接收列号和排序方向。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualTableView-rowMoveRequested-199" data-search="VirtualTableView rowMoveRequested">
+<article tabindex="-1" id="VirtualTableView-rowMoveRequested-201" data-search="VirtualTableView rowMoveRequested">
 <span class="badge">signals</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L578</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L586</span>
 <pre>void rowMoveRequested(int fromRow, int toRow);</pre>
 <p class="doc" data-zh="请求移动 section 或模型行；业务或框架连接的处理者执行实际移动。" data-en="Request a section or model-row move; the connected application or framework handler performs it.">请求移动 section 或模型行；业务或框架连接的处理者执行实际移动。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#header-reorder"><span data-zh="表头拖动换序 / 行号拖动 / 动画" data-en="Header reordering / row-number dragging / animation">表头拖动换序 / 行号拖动 / 动画</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualTableView-horizontalOffsetChanged-200" data-search="VirtualTableView horizontalOffsetChanged">
+<article tabindex="-1" id="VirtualTableView-horizontalOffsetChanged-202" data-search="VirtualTableView horizontalOffsetChanged">
 <span class="badge">signals</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L579</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L587</span>
 <pre>void horizontalOffsetChanged(qint64 offset);</pre>
 <p class="doc" data-zh="水平或表头滚动偏移变化时发出。" data-en="Emitted when the horizontal or header scroll offset changes.">水平或表头滚动偏移变化时发出。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualTableView-columnGeometryChanged-201" data-search="VirtualTableView columnGeometryChanged">
+<article tabindex="-1" id="VirtualTableView-columnGeometryChanged-203" data-search="VirtualTableView columnGeometryChanged">
 <span class="badge">signals</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L580</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L588</span>
 <pre>void columnGeometryChanged();</pre>
 <p class="doc" data-zh="几何变化通知；批量信号用于一次处理多项变化，避免逐项重复布局。" data-en="Geometry change notification; bulk signals allow handling multiple changes without repeated per-item relayout.">几何变化通知；批量信号用于一次处理多项变化，避免逐项重复布局。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualTableView-rowHeightChanged-202" data-search="VirtualTableView rowHeightChanged">
+<article tabindex="-1" id="VirtualTableView-rowHeightChanged-204" data-search="VirtualTableView rowHeightChanged">
 <span class="badge">signals</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L581</span>
+<a href="../../../include/virtualitemviews/virtualtableview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L589</span>
 <pre>void rowHeightChanged(qsizetype row, int height);</pre>
 <p class="doc" data-zh="指定行有效高度变化时发出。" data-en="Emitted when a row&#x27;s effective height changes.">指定行有效高度变化时发出。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>

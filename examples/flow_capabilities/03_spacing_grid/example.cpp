@@ -1,3 +1,5 @@
+#include <QSpinBox>
+#include <QComboBox>
 #include "example.h"
 #include "ui_spacing_grid.h"
 #include <virtualitemviews/widgetadapter.h>
@@ -51,6 +53,22 @@ private:
 
     void setupExample()
     {
+        // Content references keep offscreen endpoints uncut until they scroll into view.
+        connect(m_ui.lineReference, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int mode) {
+            m_ui.view->setGridLineMarginReference(mode == 0
+                ? viv::VirtualItemView::GridLineMarginReference::Viewport
+                : viv::VirtualItemView::GridLineMarginReference::Content);
+        });
+        const auto updateLineMargins = [this] {
+            // These are overall endpoints, not padding repeated on each cell.
+            m_ui.view->setGridLineMargins(QMargins(m_ui.lineLeft->value(), m_ui.lineTop->value(),
+                m_ui.lineRight->value(), m_ui.lineBottom->value()));
+        };
+        connect(m_ui.lineLeft, QOverload<int>::of(&QSpinBox::valueChanged), this, updateLineMargins);
+        connect(m_ui.lineTop, QOverload<int>::of(&QSpinBox::valueChanged), this, updateLineMargins);
+        connect(m_ui.lineRight, QOverload<int>::of(&QSpinBox::valueChanged), this, updateLineMargins);
+        connect(m_ui.lineBottom, QOverload<int>::of(&QSpinBox::valueChanged), this, updateLineMargins);
+
         // Use a plain one-column model; display columns are calculated by the view.
         m_model = new QStandardItemModel(0, 1, m_ui.view);
         for (int row = 0; row < 17; ++row)

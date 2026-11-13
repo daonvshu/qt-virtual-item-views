@@ -107,11 +107,24 @@ void StyledHeaderSection::paintVisualStateBackground(QPainter *painter, const QR
     const auto *table = tableView();
     if (!header || !table || !table->headerVisualStateBackgroundVisible(orientation()))
         return;
+    QRect background = shape;
+    const bool sharedShape = orientation() == Qt::Vertical
+        && !table->rowVisualStateMargins().isNull() && table->rowVisualStateHeaderParticipates();
+    if (sharedShape) {
+        const QRect complete = table->rowVisualStatePaintRect(
+            table->rowVisualStateColumnBounds(table->panes()));
+        const QPoint origin = mapTo(table, QPoint()) - table->viewport()->pos();
+        // The same full-row endpoints are used by the body and frozen header
+        // sections; clipping keeps each layer inside its own widget or gap.
+        background = QRect(complete.x() - origin.x(), shape.y(), complete.width(), shape.height());
+    }
+    if (background.isEmpty())
+        return;
     const auto state = visualState();
     const int radius = table->visualStateCornerRadiusIncludesHeaders()
         ? table->visualStateCornerRadius() : 0;
     // Only row selection joins the row-header background to the body.
-    const bool roundRight = orientation() != Qt::Vertical
+    const bool roundRight = sharedShape || orientation() != Qt::Vertical
         || table->selectionBehavior() == VirtualItemView::SelectionBehavior::SelectItems;
     painter->save();
     if (orientation() == Qt::Vertical && header->sectionSeparatorVisible(logicalIndex())
@@ -121,11 +134,11 @@ void StyledHeaderSection::paintVisualStateBackground(QPainter *painter, const QR
         clipPixelAlignedBottomInset(painter, shape, header->sectionSeparatorWidth());
     const qreal opacity = painter->opacity();
     painter->setOpacity(opacity * state.hoverProgress);
-    fillPixelAlignedRoundedRegion(painter, shape, clip, radius,
+    fillPixelAlignedRoundedRegion(painter, background, clip, radius,
                                   visualStateBackgroundBrush(false, table->hoverBackgroundColor()),
                                   true, roundRight);
     painter->setOpacity(opacity * state.selectedProgress);
-    fillPixelAlignedRoundedRegion(painter, shape, clip, radius,
+    fillPixelAlignedRoundedRegion(painter, background, clip, radius,
                                   visualStateBackgroundBrush(true, table->selectedBackgroundColor()),
                                   true, roundRight);
     painter->restore();

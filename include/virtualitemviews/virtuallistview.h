@@ -77,6 +77,11 @@ public:
     /// Radius in logical pixels, clamped to zero; item spacing remains unpainted.
     void setVisualStateCornerRadius(int radius);
     int visualStateCornerRadius() const { return m_visualStateCornerRadius; }
+    /// Signed paint-only left/right insets of the complete row state background.
+    /// Default zero. Positive values shorten, negatives extend; mouse hits and
+    /// widget geometry are unchanged. Tables apply these only in SelectRows mode.
+    void setRowVisualStateMargins(int left, int right) { setRowVisualStateInsets(left, right); }
+    QMargins rowVisualStateMargins() const { return rowVisualStateInsets(); }
     /// FullWidth (the default) paints the row; WidgetOnly follows the actual
     /// materialized widget rectangle. Mouse hits follow the same rectangle,
     /// independently of background visibility, keyboard and programmatic selection.

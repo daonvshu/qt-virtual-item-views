@@ -105,6 +105,12 @@ public:
     /// Pixels above this node, added to the preceding node's below gap.
     /// Missing/negative values mean zero; the first visible row has no leading gap.
     static constexpr int NodeRowSpacingAboveRole = Qt::UserRole + 0x101;
+    /// Visible group-boundary depths relative to the displayed root (root = 0).
+    /// Empty (default) draws all depths; negative entries are ignored. {0} draws
+    /// after each complete root subtree, not between a root and its children.
+    /// End-of-content remains subject to trailingRowGridLineAutoHideEnabled().
+    void setRowGridLineDepths(const QSet<int> &depths) { setRowGridLineDepthFilter(depths); }
+    QSet<int> rowGridLineDepths() const { return rowGridLineDepthFilter(); }
     /// Row separators are visible by default, including after nodes with zero spacing.
     void setRowGridLinesVisible(bool visible);
     bool rowGridLinesVisible() const { return m_rowGridLinesVisible; }
@@ -124,6 +130,11 @@ public:
     /// Radius of hover/selection backgrounds; negative values become zero (default zero).
     void setVisualStateCornerRadius(int radius);
     int visualStateCornerRadius() const { return m_visualStateCornerRadius; }
+    /// Signed paint-only left/right insets of the complete row state background.
+    /// Default zero. Positive values shorten, negatives extend; mouse hits and
+    /// widget geometry are unchanged. Tables apply these only in SelectRows mode.
+    void setRowVisualStateMargins(int left, int right) { setRowVisualStateInsets(left, right); }
+    QMargins rowVisualStateMargins() const { return rowVisualStateInsets(); }
     /// Insets of the hover/selection rectangle in logical pixels (default zero).
     /// Negative margins become zero. Mouse hits follow the inset rectangle;
     /// row heights, item widgets and independent branch clicks are unchanged.

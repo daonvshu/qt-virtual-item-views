@@ -2,7 +2,7 @@
 <ui version="4.0">
  <class>MasonrySpacingGridPage</class>
  <widget class="QWidget" name="MasonrySpacingGridPage">
-  <layout class="QVBoxLayout" name="pageLayout" stretch="0,0,1,0">
+  <layout class="QVBoxLayout" name="pageLayout" stretch="0,0,0,0,1,0">
    <item>
     <widget class="QLabel" name="description">
      <property name="text">
@@ -133,6 +133,42 @@
        </property>
       </widget>
      </item>
+    </layout>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="marginReferenceControls">
+     <item><widget class="QComboBox" name="lineReference">
+      <item><property name="text"><string>分割线边距：viewport 区域</string></property></item>
+      <item><property name="text"><string>分割线边距：完整内容区域</string></property></item>
+     </widget></item>
+    </layout>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="lineMarginControls">
+     <item><widget class="QSpinBox" name="lineLeft">
+      <property name="minimum"><number>-120</number></property>
+      <property name="maximum"><number>240</number></property>
+      <property name="prefix"><string>横线左边距 </string></property>
+      <property name="suffix"><string> px</string></property>
+     </widget></item>
+     <item><widget class="QSpinBox" name="lineTop">
+      <property name="minimum"><number>-120</number></property>
+      <property name="maximum"><number>240</number></property>
+      <property name="prefix"><string>竖线上边距 </string></property>
+      <property name="suffix"><string> px</string></property>
+     </widget></item>
+     <item><widget class="QSpinBox" name="lineRight">
+      <property name="minimum"><number>-120</number></property>
+      <property name="maximum"><number>240</number></property>
+      <property name="prefix"><string>横线右边距 </string></property>
+      <property name="suffix"><string> px</string></property>
+     </widget></item>
+     <item><widget class="QSpinBox" name="lineBottom">
+      <property name="minimum"><number>-120</number></property>
+      <property name="maximum"><number>240</number></property>
+      <property name="prefix"><string>竖线下边距 </string></property>
+      <property name="suffix"><string> px</string></property>
+     </widget></item>
     </layout>
    </item>
    <item>

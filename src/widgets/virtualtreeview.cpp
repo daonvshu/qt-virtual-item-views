@@ -398,9 +398,16 @@ bool VirtualTreeView::hasOwnBranchCell(const QModelIndex &index) const
 
 int VirtualTreeView::rowGridLineInset(const QModelIndex &index) const
 {
-    const int depth = itemDepth(index);
+    QModelIndex boundary = index;
+    if (!rowGridLineDepthFilter().isEmpty()) {
+        const qsizetype row = viewItemForIndex(index);
+        const int nextDepth = row + 1 < viewItemCount() ? itemDepth(viewIndex(row + 1)) : 0;
+        while (boundary.isValid() && itemDepth(boundary) > nextDepth)
+            boundary = boundary.parent();
+    }
+    const int depth = itemDepth(boundary);
     const qint64 cells = m_rowGridLineExtent == RowGridLineExtent::NodeOnly
-        ? qint64(depth) + int(hasOwnBranchCell(index))
+        ? qint64(depth) + int(hasOwnBranchCell(boundary))
         : m_rowGridLineExtent == RowGridLineExtent::NodeAndIcon ? qint64(depth) : 0;
     return int(qMin<qint64>(qMax(0, viewport()->width()), qMax<qint64>(0, cells) * m_indentation));
 }
@@ -413,10 +420,14 @@ QColor VirtualTreeView::itemPaneSeparatorColor() const
 
 void VirtualTreeView::configureRowSpacingWidget(QWidget *widget) const
 {
-    widget->setProperty("vivShowSpacingLines", m_rowGridLinesVisible);
+    widget->setProperty("vivHorizontalGridMarginsApplied", true);
     widget->setProperty("vivSpacingLineWidth", m_rowGridLineWidth);
     const QModelIndex index = widget->property("vivSpacingIndex").value<QModelIndex>();
-    widget->setProperty("vivSpacingLineLeftInset", rowGridLineInset(index));
+    widget->setProperty("vivShowSpacingLines", m_rowGridLinesVisible
+                        && rowGridLineVisibleAfter(viewItemForIndex(index)));
+    const auto range = horizontalGridLineRange(rowGridLineInset(index));
+    widget->setProperty("vivSpacingLineLeftInset", range.first);
+    widget->setProperty("vivSpacingLineRightInset", viewport()->width() - range.second);
     widget->setProperty("vivFillSpacingBackground", true);
 }
 
@@ -1050,15 +1061,18 @@ void VirtualTreeView::syncRowGridLines()
             if (row < 0)
                 continue;
             // The terminal visible node shares the outer frame when fitted or scrolling.
-            if ((row == last && !showTrailingLine) || m_rowLayout->spacingAfter(row) > 0)
+            if (!rowGridLineVisibleAfter(row) || (row == last && !showTrailingLine)
+                || m_rowLayout->spacingAfter(row) > 0)
                 continue;
             const QRect rowRect = visualRowRect(row);
             if (!rowRect.intersects(viewport()->rect()))
                 continue;
-            const int left = rowGridLineInset(viewIndex(row));
+            const auto endpoints = horizontalGridLineRange(rowGridLineInset(viewIndex(row)));
+            const int left = endpoints.first;
+            const int right = endpoints.second;
             const QRect lineRect(viewportRect.x() + left,
                                  viewportRect.y() + rowRect.bottom() - m_rowGridLineWidth + 1,
-                                 viewportRect.width() - left, m_rowGridLineWidth);
+                                 right - left, m_rowGridLineWidth);
             const QRect paneRect = itemPaneRect(itemPaneForRow(row))
                 .translated(viewportRect.topLeft());
             const QRect clipped = lineRect.intersected(paneRect);
@@ -1113,6 +1127,7 @@ void VirtualTreeView::syncRowGridLines()
         colors.setColor(QPalette::Window, color);
         line->setPalette(colors);
         static_cast<PixelAlignedHorizontalLine *>(line)->setTrailingEdge(!leadingEdges.contains(it.key()));
+        line->setProperty("vivHorizontalGridMarginsApplied", true);
         line->setGeometry(it.value());
         line->clearMask();
         line->show();
@@ -1233,7 +1248,7 @@ void VirtualTreeView::paintVisualStateBackgrounds(QPainter *painter, const QRect
         const VisualState state = visualState(QModelIndex(item.index));
         if (state.hoverProgress <= 0.0 && state.selectedProgress <= 0.0)
             continue;
-        const QRect background = visualStateBackgroundRect(item.index, rowGeometry);
+        const QRect background = applyRowVisualStateInsets(visualStateBackgroundRect(item.index, rowGeometry));
         const QRect clip = rowGeometry.intersected(itemPaneRect(itemPaneForRow(row)))
             .intersected(viewportRect).intersected(dirty);
         if (background.isEmpty() || clip.isEmpty())

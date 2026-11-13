@@ -49,6 +49,7 @@ class WidgetAdapter;
 class WidgetRecycler;
 class DragMoveSelection;
 class ItemEditorSession;
+class GridLinePaintGeometry;
 
 /// Snapshot of the virtualization state.
 ///
@@ -403,6 +404,20 @@ public:
     /// With zero spacing both modes use a single shared item boundary.
     virtual void setGridLinePlacement(GridLinePlacement placement);
     GridLinePlacement gridLinePlacement() const { return m_gridLinePlacement; }
+    /// Whole-line endpoint insets in logical pixels, applied after layout (default zero).
+    /// Left/right affect horizontal grid lines; top/bottom affect vertical grid lines.
+    /// Negative values extend endpoints. These are not per-cell padding and do not
+    /// change layout, hit testing, frame borders or frozen-pane divider styles.
+    /// Built-in table headers share the same whole-view endpoints as the body.
+    void setGridLineMargins(const QMargins &margins);
+    QMargins gridLineMargins() const { return m_gridLineMargins; }
+    /// Viewport keeps endpoint insets on screen; Content follows full scrolling bounds.
+    enum class GridLineMarginReference { Viewport, Content };
+    Q_ENUM(GridLineMarginReference)
+    /// Reference for whole-line margins (default Viewport). Content uses uncut
+    /// content endpoints, so an offscreen trailing edge is not inset on screen.
+    void setGridLineMarginReference(GridLineMarginReference reference);
+    GridLineMarginReference gridLineMarginReference() const { return m_gridLineMarginReference; }
     /// Automatically hides the terminal row grid line for auto height or vertical
     /// overflow (default true). False keeps it whenever row grid lines are enabled.
     /// Shared by list, tree, table, tree-table and flow views, including default row headers.
@@ -655,6 +670,21 @@ protected:
     /// Applies view-specific spacing (tree depth) after a row layout reset.
     virtual void applyRowSpacingOverrides();
     virtual void configureRowSpacingWidget(QWidget *widget) const;
+    /// Endpoints in view coordinates, shared by all fragments of a grid line.
+    virtual QRect gridLineBounds() const;
+    /// Full uncut content bounds in view coordinates, including scroll offsets.
+    virtual QRect gridLineContentBounds() const;
+    /// Horizontal endpoints in viewport coordinates after reference and signed insets.
+    QPair<int, int> horizontalGridLineRange(int itemInset = 0) const;
+    /// Paint-only row state insets shared by list, tree and table implementations.
+    void setRowVisualStateInsets(int left, int right);
+    QMargins rowVisualStateInsets() const { return m_rowVisualStateInsets; }
+    QRect applyRowVisualStateInsets(const QRect &rect) const;
+    /// Tree boundary depth is the following visible node's depth, or zero at the end.
+    bool rowGridLineVisibleAfter(qsizetype row) const;
+    /// Normalizes tree depth configuration and invalidates all grid layers.
+    void setRowGridLineDepthFilter(const QSet<int> &depths);
+    const QSet<int> &rowGridLineDepthFilter() const { return m_rowGridLineDepths; }
     /// Paints optional state layers in row gaps, using viewport coordinates.
     virtual void paintRowSpacingBackground(QPainter *painter, const QRect &dirtyRect) const;
     /// Repaints materialized row gaps after a state transition.
@@ -917,6 +947,7 @@ protected:
 
 private:
     friend class ItemEditorSession;
+    friend class GridLinePaintGeometry;
     /// Applies adapter-specific trigger filtering before entering editing.
     bool triggerEdit(const QModelIndex &index, EditTrigger trigger);
     ItemEditorSession *m_editorSession = nullptr;
@@ -1103,6 +1134,11 @@ private:
     quint64 m_rowSpacingStateSerial = 0;
     int m_rowSpacing = 0;
     GridLinePlacement m_gridLinePlacement = GridLinePlacement::SpacingCenter;
+    static int s_gridLineMarginViews;
+    QMargins m_gridLineMargins;
+    GridLineMarginReference m_gridLineMarginReference = GridLineMarginReference::Viewport;
+    QMargins m_rowVisualStateInsets;
+    QSet<int> m_rowGridLineDepths;
     bool m_trailingRowGridLineAutoHideEnabled = true;
     QColor m_spacingBackgroundColor;
     PaneSeparatorStyle m_itemPaneSeparatorStyle;

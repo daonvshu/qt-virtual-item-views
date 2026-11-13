@@ -15088,6 +15088,314 @@
       "signature": "QSize minimumSizeHint() const override;",
       "zh": "返回布局或控件的建议尺寸或最小建议尺寸，供父布局协商；auto height 启用时由内容固定高度。",
       "en": "Return preferred or minimum size hints for parent layout negotiation; auto height fixes the actual height from content when enabled."
+    },
+    {
+      "header": "include/virtualitemviews/virtualitemview.h",
+      "type": "VirtualItemView",
+      "signature": "void setGridLineMargins(const QMargins &margins);",
+      "related": [
+        "grid-line-range"
+      ],
+      "zh": "设置或读取内置分割线的整线端点边距，单位为 Qt 逻辑像素。QMargins 的 left/right 用于横线，top/bottom 用于竖线；正数缩短、负数延伸，最终受视图裁剪。先计算原有线范围，再应用边距，例如树的 NodeOnly 起点可用负左边距向缩进区延伸。表格的 section、间距和内容共享整体范围，不会每个 cell 都扣一次。不会改变布局、命中、线宽、外边框、冻结分隔线或拖放指示器；业务自绘分割线需自行遵守此设置。 使用 setGridLineMarginReference 切换 Viewport（默认）和 Content；Content 在真实内容端点应用边距，不在尚未滚到末尾时截短屏幕边缘。支持 List、Tree、Table、TreeTable、FlowTable、Masonry。",
+      "en": "Set or query whole-line endpoint insets for built-in grid lines, in Qt logical pixels. QMargins left/right affect horizontal lines; top/bottom affect vertical lines. Positive values shorten and negative values extend, subject to view clipping. Insets follow existing extent calculation, so a negative left inset can extend a tree NodeOnly line into indentation. Table sections, gaps and body share the overall interval, without repeating insets per cell. Does not change layout, hits, stroke width, frame borders, frozen-pane dividers or drop indicators. Custom-painted lines must honor this setting themselves. Use setGridLineMarginReference to choose Viewport (default) or Content. Content applies insets at real content endpoints without shortening a screen edge before the content end arrives. Supported by List, Tree, Table, TreeTable, FlowTable and Masonry.",
+      "defaults": {
+        "zh": "QMargins(0, 0, 0, 0)，不修改已有端点。",
+        "en": "QMargins(0, 0, 0, 0): preserve existing endpoints."
+      },
+      "examples": [
+        {
+          "zh": "tree 是已绑定模型的 VirtualTreeView。先选择从节点内容起点绘制，再向左延伸 12 像素，右端缩短 20 像素。树表可同样设置边距，top/bottom 还会约束表头和内容的竖线整体端点。",
+          "en": "tree is a VirtualTreeView with a model. First start lines at node content, then extend left by 12 pixels and shorten right by 20. Tree tables use the same margins; top/bottom also constrain whole vertical lines shared by headers and body.",
+          "code": "tree->setRowGridLineExtent(viv::VirtualTreeView::RowGridLineExtent::NodeOnly);\ntree->setRowGridLineDepths(QSet<int>{0});\ntree->setGridLineMargins(QMargins(-12, 0, 20, 0));",
+          "source": "examples/tree_capabilities/12_row_spacing/example.cpp"
+        }
+      ]
+    },
+    {
+      "header": "include/virtualitemviews/virtualitemview.h",
+      "type": "VirtualItemView",
+      "signature": "QMargins gridLineMargins() const;",
+      "related": [
+        "grid-line-range"
+      ],
+      "zh": "设置或读取内置分割线的整线端点边距，单位为 Qt 逻辑像素。QMargins 的 left/right 用于横线，top/bottom 用于竖线；正数缩短、负数延伸，最终受视图裁剪。先计算原有线范围，再应用边距，例如树的 NodeOnly 起点可用负左边距向缩进区延伸。表格的 section、间距和内容共享整体范围，不会每个 cell 都扣一次。不会改变布局、命中、线宽、外边框、冻结分隔线或拖放指示器；业务自绘分割线需自行遵守此设置。 使用 setGridLineMarginReference 切换 Viewport（默认）和 Content；Content 在真实内容端点应用边距，不在尚未滚到末尾时截短屏幕边缘。支持 List、Tree、Table、TreeTable、FlowTable、Masonry。",
+      "en": "Set or query whole-line endpoint insets for built-in grid lines, in Qt logical pixels. QMargins left/right affect horizontal lines; top/bottom affect vertical lines. Positive values shorten and negative values extend, subject to view clipping. Insets follow existing extent calculation, so a negative left inset can extend a tree NodeOnly line into indentation. Table sections, gaps and body share the overall interval, without repeating insets per cell. Does not change layout, hits, stroke width, frame borders, frozen-pane dividers or drop indicators. Custom-painted lines must honor this setting themselves. Use setGridLineMarginReference to choose Viewport (default) or Content. Content applies insets at real content endpoints without shortening a screen edge before the content end arrives. Supported by List, Tree, Table, TreeTable, FlowTable and Masonry.",
+      "defaults": {
+        "zh": "QMargins(0, 0, 0, 0)，不修改已有端点。",
+        "en": "QMargins(0, 0, 0, 0): preserve existing endpoints."
+      },
+      "examples": [
+        {
+          "zh": "tree 是已绑定模型的 VirtualTreeView。先选择从节点内容起点绘制，再向左延伸 12 像素，右端缩短 20 像素。树表可同样设置边距，top/bottom 还会约束表头和内容的竖线整体端点。",
+          "en": "tree is a VirtualTreeView with a model. First start lines at node content, then extend left by 12 pixels and shorten right by 20. Tree tables use the same margins; top/bottom also constrain whole vertical lines shared by headers and body.",
+          "code": "tree->setRowGridLineExtent(viv::VirtualTreeView::RowGridLineExtent::NodeOnly);\ntree->setRowGridLineDepths(QSet<int>{0});\ntree->setGridLineMargins(QMargins(-12, 0, 20, 0));",
+          "source": "examples/tree_capabilities/12_row_spacing/example.cpp"
+        }
+      ]
+    },
+    {
+      "header": "include/virtualitemviews/virtualtreeview.h",
+      "type": "VirtualTreeView",
+      "signature": "void setRowGridLineDepths(const QSet<int> &depths);",
+      "related": [
+        "grid-line-range"
+      ],
+      "zh": "设置或读取需要显示分组边界的节点深度集合。显示根下的主节点深度为 0。空集合显示全部；负深度被忽略。边界按下一个可见节点的深度归属，内容末尾按 0 处理，因此 {0} 会在完整主节点子树结束后画线，不在主节点与第一个子节点之间画线。树表行号表头同步过滤；不影响列分割线、表头与内容的交界线或冻结分隔线。末尾是否绘制仍由末行自动隐藏开关控制。",
+      "en": "Set or query node depths whose group boundaries are drawn. Roots below the displayed root have depth 0. An empty set draws all depths; negative depths are ignored. A boundary belongs to the next visible node depth, or 0 at content end, so {0} draws after complete root subtrees rather than between a root and its first child. Tree-table row headers use the same filter. Column lines, header/body boundaries and frozen dividers are unaffected. Terminal drawing still follows trailing-line auto-hide.",
+      "defaults": {
+        "zh": "空 QSet<int>，显示所有深度的分割线。",
+        "en": "Empty QSet<int>: draw separators at all depths."
+      },
+      "examples": [
+        {
+          "zh": "view 为 VirtualTreeView 或 VirtualTreeTableView；0/1 相对于当前 rootIndex。可在展开、收起或滚动后继续使用同一配置。",
+          "en": "view is a VirtualTreeView or VirtualTreeTableView; 0/1 are relative to the current rootIndex. The configuration remains valid through expansion, collapse and scrolling.",
+          "code": "// Draw only boundaries between complete root groups.\nview->setRowGridLineDepths(QSet<int>{0});\n// Include first-level child boundaries as well.\nview->setRowGridLineDepths(QSet<int>{0, 1});\n// Restore all depths.\nview->setRowGridLineDepths(QSet<int>{});",
+          "source": "examples/tree_capabilities/12_row_spacing/example.cpp"
+        }
+      ]
+    },
+    {
+      "header": "include/virtualitemviews/virtualtreeview.h",
+      "type": "VirtualTreeView",
+      "signature": "QSet<int> rowGridLineDepths() const;",
+      "related": [
+        "grid-line-range"
+      ],
+      "zh": "设置或读取需要显示分组边界的节点深度集合。显示根下的主节点深度为 0。空集合显示全部；负深度被忽略。边界按下一个可见节点的深度归属，内容末尾按 0 处理，因此 {0} 会在完整主节点子树结束后画线，不在主节点与第一个子节点之间画线。树表行号表头同步过滤；不影响列分割线、表头与内容的交界线或冻结分隔线。末尾是否绘制仍由末行自动隐藏开关控制。",
+      "en": "Set or query node depths whose group boundaries are drawn. Roots below the displayed root have depth 0. An empty set draws all depths; negative depths are ignored. A boundary belongs to the next visible node depth, or 0 at content end, so {0} draws after complete root subtrees rather than between a root and its first child. Tree-table row headers use the same filter. Column lines, header/body boundaries and frozen dividers are unaffected. Terminal drawing still follows trailing-line auto-hide.",
+      "defaults": {
+        "zh": "空 QSet<int>，显示所有深度的分割线。",
+        "en": "Empty QSet<int>: draw separators at all depths."
+      },
+      "examples": [
+        {
+          "zh": "view 为 VirtualTreeView 或 VirtualTreeTableView；0/1 相对于当前 rootIndex。可在展开、收起或滚动后继续使用同一配置。",
+          "en": "view is a VirtualTreeView or VirtualTreeTableView; 0/1 are relative to the current rootIndex. The configuration remains valid through expansion, collapse and scrolling.",
+          "code": "// Draw only boundaries between complete root groups.\nview->setRowGridLineDepths(QSet<int>{0});\n// Include first-level child boundaries as well.\nview->setRowGridLineDepths(QSet<int>{0, 1});\n// Restore all depths.\nview->setRowGridLineDepths(QSet<int>{});",
+          "source": "examples/tree_capabilities/12_row_spacing/example.cpp"
+        }
+      ]
+    },
+    {
+      "header": "include/virtualitemviews/virtualtreetableview.h",
+      "type": "VirtualTreeTableView",
+      "signature": "void setRowGridLineDepths(const QSet<int> &depths);",
+      "related": [
+        "grid-line-range"
+      ],
+      "zh": "设置或读取需要显示分组边界的节点深度集合。显示根下的主节点深度为 0。空集合显示全部；负深度被忽略。边界按下一个可见节点的深度归属，内容末尾按 0 处理，因此 {0} 会在完整主节点子树结束后画线，不在主节点与第一个子节点之间画线。树表行号表头同步过滤；不影响列分割线、表头与内容的交界线或冻结分隔线。末尾是否绘制仍由末行自动隐藏开关控制。",
+      "en": "Set or query node depths whose group boundaries are drawn. Roots below the displayed root have depth 0. An empty set draws all depths; negative depths are ignored. A boundary belongs to the next visible node depth, or 0 at content end, so {0} draws after complete root subtrees rather than between a root and its first child. Tree-table row headers use the same filter. Column lines, header/body boundaries and frozen dividers are unaffected. Terminal drawing still follows trailing-line auto-hide.",
+      "defaults": {
+        "zh": "空 QSet<int>，显示所有深度的分割线。",
+        "en": "Empty QSet<int>: draw separators at all depths."
+      },
+      "examples": [
+        {
+          "zh": "view 为 VirtualTreeView 或 VirtualTreeTableView；0/1 相对于当前 rootIndex。可在展开、收起或滚动后继续使用同一配置。",
+          "en": "view is a VirtualTreeView or VirtualTreeTableView; 0/1 are relative to the current rootIndex. The configuration remains valid through expansion, collapse and scrolling.",
+          "code": "// Draw only boundaries between complete root groups.\nview->setRowGridLineDepths(QSet<int>{0});\n// Include first-level child boundaries as well.\nview->setRowGridLineDepths(QSet<int>{0, 1});\n// Restore all depths.\nview->setRowGridLineDepths(QSet<int>{});",
+          "source": "examples/treetable_capabilities/14_spacing/example.cpp"
+        }
+      ]
+    },
+    {
+      "header": "include/virtualitemviews/virtualtreetableview.h",
+      "type": "VirtualTreeTableView",
+      "signature": "QSet<int> rowGridLineDepths() const;",
+      "related": [
+        "grid-line-range"
+      ],
+      "zh": "设置或读取需要显示分组边界的节点深度集合。显示根下的主节点深度为 0。空集合显示全部；负深度被忽略。边界按下一个可见节点的深度归属，内容末尾按 0 处理，因此 {0} 会在完整主节点子树结束后画线，不在主节点与第一个子节点之间画线。树表行号表头同步过滤；不影响列分割线、表头与内容的交界线或冻结分隔线。末尾是否绘制仍由末行自动隐藏开关控制。",
+      "en": "Set or query node depths whose group boundaries are drawn. Roots below the displayed root have depth 0. An empty set draws all depths; negative depths are ignored. A boundary belongs to the next visible node depth, or 0 at content end, so {0} draws after complete root subtrees rather than between a root and its first child. Tree-table row headers use the same filter. Column lines, header/body boundaries and frozen dividers are unaffected. Terminal drawing still follows trailing-line auto-hide.",
+      "defaults": {
+        "zh": "空 QSet<int>，显示所有深度的分割线。",
+        "en": "Empty QSet<int>: draw separators at all depths."
+      },
+      "examples": [
+        {
+          "zh": "view 为 VirtualTreeView 或 VirtualTreeTableView；0/1 相对于当前 rootIndex。可在展开、收起或滚动后继续使用同一配置。",
+          "en": "view is a VirtualTreeView or VirtualTreeTableView; 0/1 are relative to the current rootIndex. The configuration remains valid through expansion, collapse and scrolling.",
+          "code": "// Draw only boundaries between complete root groups.\nview->setRowGridLineDepths(QSet<int>{0});\n// Include first-level child boundaries as well.\nview->setRowGridLineDepths(QSet<int>{0, 1});\n// Restore all depths.\nview->setRowGridLineDepths(QSet<int>{});",
+          "source": "examples/treetable_capabilities/14_spacing/example.cpp"
+        }
+      ]
+    },
+    {
+      "header": "include/virtualitemviews/virtualitemview.h",
+      "type": "VirtualItemView",
+      "signature": "void setGridLineMarginReference(GridLineMarginReference reference);",
+      "zh": "设置或读取分割线边距的参照区域。Viewport（默认）在可见区域端点应用边距；Content 使用随滚动移动的完整内容端点，因此右端或底端尚未进入屏幕时不会提前截短。表格表头与内容共享整体范围；冻结首尾按冻结区域的实际端点处理。配合 setGridLineMargins 使用，适用于 List、Tree、Table、TreeTable、FlowTable、Masonry 的内置分割线。Wrap 没有内置网格分割线。",
+      "en": "Set or query the reference for grid-line margins. Viewport (default) applies insets at visible endpoints. Content follows full scrolling content endpoints, so an offscreen right or bottom edge is not prematurely shortened on screen. Table headers and body share overall bounds; frozen endpoints remain anchored. Use with setGridLineMargins on List, Tree, Table, TreeTable, FlowTable and Masonry built-in grids. Wrap has no built-in grid lines.",
+      "defaults": {
+        "zh": "GridLineMarginReference::Viewport。",
+        "en": "GridLineMarginReference::Viewport."
+      },
+      "related": [
+        "grid-line-range"
+      ],
+      "examples": [
+        {
+          "zh": "在表格右端滚入屏幕后才显示 24px 右边距。",
+          "en": "Show the 24px right inset only when the table content end scrolls into view.",
+          "code": "view->setGridLineMargins(QMargins(16, 8, 24, 12));\nview->setGridLineMarginReference(\n    viv::VirtualItemView::GridLineMarginReference::Content);",
+          "source": "examples/table_capabilities/09_spacing/example.cpp"
+        }
+      ]
+    },
+    {
+      "header": "include/virtualitemviews/virtualitemview.h",
+      "type": "VirtualItemView",
+      "signature": "GridLineMarginReference gridLineMarginReference() const;",
+      "zh": "设置或读取分割线边距的参照区域。Viewport（默认）在可见区域端点应用边距；Content 使用随滚动移动的完整内容端点，因此右端或底端尚未进入屏幕时不会提前截短。表格表头与内容共享整体范围；冻结首尾按冻结区域的实际端点处理。配合 setGridLineMargins 使用，适用于 List、Tree、Table、TreeTable、FlowTable、Masonry 的内置分割线。Wrap 没有内置网格分割线。",
+      "en": "Set or query the reference for grid-line margins. Viewport (default) applies insets at visible endpoints. Content follows full scrolling content endpoints, so an offscreen right or bottom edge is not prematurely shortened on screen. Table headers and body share overall bounds; frozen endpoints remain anchored. Use with setGridLineMargins on List, Tree, Table, TreeTable, FlowTable and Masonry built-in grids. Wrap has no built-in grid lines.",
+      "defaults": {
+        "zh": "GridLineMarginReference::Viewport。",
+        "en": "GridLineMarginReference::Viewport."
+      },
+      "related": [
+        "grid-line-range"
+      ],
+      "examples": [
+        {
+          "zh": "在表格右端滚入屏幕后才显示 24px 右边距。",
+          "en": "Show the 24px right inset only when the table content end scrolls into view.",
+          "code": "view->setGridLineMargins(QMargins(16, 8, 24, 12));\nview->setGridLineMarginReference(\n    viv::VirtualItemView::GridLineMarginReference::Content);",
+          "source": "examples/table_capabilities/09_spacing/example.cpp"
+        }
+      ]
+    },
+    {
+      "header": "include/virtualitemviews/virtuallistview.h",
+      "type": "VirtualListView",
+      "signature": "void setRowVisualStateMargins(int left, int right);",
+      "zh": "设置或读取整行 hover／选中背景的左右绘制边距，返回 QMargins 的上下值始终为 0。在原有状态形状计算后应用：正数缩短、负数延伸，最终受视图和行区域裁剪。只改变框架背景绘制，不改变控件几何、命中范围或选择；不受分割线边距参照开关影响。List／Tree 可与原有状态范围、状态 padding 和固定高度组合。Table／TreeTable 仅在 SelectRows 模式下生效。垂直表头显示且启用状态背景时，表头和内容合并为整行范围，边距只计算一次，圆角沿整体端点绘制；表头隐藏或关闭状态背景时从内容范围计算。不重复作用于每个 cell，水平表头及 SelectItems 模式不受影响。",
+      "en": "Set or query paint-only left/right insets of complete hover/selection row backgrounds; the returned QMargins always has zero top/bottom. Applied after the existing state shape: positive shortens, negative extends, with normal view and row clipping. Does not change widget geometry, hits or selection, and is independent of the grid margin reference. List/Tree can combine this with existing state extents, padding and fixed height. Table/TreeTable apply it only in SelectRows. A visible vertical header with state backgrounds enabled shares the whole-row bounds with the body: margins are applied once and corners follow the overall endpoints. A hidden header or disabled header state background leaves the body as the reference. Insets are never repeated per cell; horizontal headers and SelectItems are unaffected.",
+      "defaults": {
+        "zh": "left = 0，right = 0。",
+        "en": "left = 0, right = 0."
+      },
+      "related": [
+        "grid-line-range"
+      ],
+      "examples": [
+        {
+          "zh": "背景两侧各留出 12px，命中范围保持不变。",
+          "en": "Inset both background ends by 12px without changing mouse hits.",
+          "code": "view->setRowVisualStateMargins(12, 12);",
+          "source": "examples/list_capabilities/07_row_spacing/example.cpp"
+        }
+      ]
+    },
+    {
+      "header": "include/virtualitemviews/virtuallistview.h",
+      "type": "VirtualListView",
+      "signature": "QMargins rowVisualStateMargins() const;",
+      "zh": "设置或读取整行 hover／选中背景的左右绘制边距，返回 QMargins 的上下值始终为 0。在原有状态形状计算后应用：正数缩短、负数延伸，最终受视图和行区域裁剪。只改变框架背景绘制，不改变控件几何、命中范围或选择；不受分割线边距参照开关影响。List／Tree 可与原有状态范围、状态 padding 和固定高度组合。Table／TreeTable 仅在 SelectRows 模式下生效。垂直表头显示且启用状态背景时，表头和内容合并为整行范围，边距只计算一次，圆角沿整体端点绘制；表头隐藏或关闭状态背景时从内容范围计算。不重复作用于每个 cell，水平表头及 SelectItems 模式不受影响。",
+      "en": "Set or query paint-only left/right insets of complete hover/selection row backgrounds; the returned QMargins always has zero top/bottom. Applied after the existing state shape: positive shortens, negative extends, with normal view and row clipping. Does not change widget geometry, hits or selection, and is independent of the grid margin reference. List/Tree can combine this with existing state extents, padding and fixed height. Table/TreeTable apply it only in SelectRows. A visible vertical header with state backgrounds enabled shares the whole-row bounds with the body: margins are applied once and corners follow the overall endpoints. A hidden header or disabled header state background leaves the body as the reference. Insets are never repeated per cell; horizontal headers and SelectItems are unaffected.",
+      "defaults": {
+        "zh": "left = 0，right = 0。",
+        "en": "left = 0, right = 0."
+      },
+      "related": [
+        "grid-line-range"
+      ],
+      "examples": [
+        {
+          "zh": "背景两侧各留出 12px，命中范围保持不变。",
+          "en": "Inset both background ends by 12px without changing mouse hits.",
+          "code": "view->setRowVisualStateMargins(12, 12);",
+          "source": "examples/list_capabilities/07_row_spacing/example.cpp"
+        }
+      ]
+    },
+    {
+      "header": "include/virtualitemviews/virtualtreeview.h",
+      "type": "VirtualTreeView",
+      "signature": "void setRowVisualStateMargins(int left, int right);",
+      "zh": "设置或读取整行 hover／选中背景的左右绘制边距，返回 QMargins 的上下值始终为 0。在原有状态形状计算后应用：正数缩短、负数延伸，最终受视图和行区域裁剪。只改变框架背景绘制，不改变控件几何、命中范围或选择；不受分割线边距参照开关影响。List／Tree 可与原有状态范围、状态 padding 和固定高度组合。Table／TreeTable 仅在 SelectRows 模式下生效。垂直表头显示且启用状态背景时，表头和内容合并为整行范围，边距只计算一次，圆角沿整体端点绘制；表头隐藏或关闭状态背景时从内容范围计算。不重复作用于每个 cell，水平表头及 SelectItems 模式不受影响。",
+      "en": "Set or query paint-only left/right insets of complete hover/selection row backgrounds; the returned QMargins always has zero top/bottom. Applied after the existing state shape: positive shortens, negative extends, with normal view and row clipping. Does not change widget geometry, hits or selection, and is independent of the grid margin reference. List/Tree can combine this with existing state extents, padding and fixed height. Table/TreeTable apply it only in SelectRows. A visible vertical header with state backgrounds enabled shares the whole-row bounds with the body: margins are applied once and corners follow the overall endpoints. A hidden header or disabled header state background leaves the body as the reference. Insets are never repeated per cell; horizontal headers and SelectItems are unaffected.",
+      "defaults": {
+        "zh": "left = 0，right = 0。",
+        "en": "left = 0, right = 0."
+      },
+      "related": [
+        "grid-line-range"
+      ],
+      "examples": [
+        {
+          "zh": "背景两侧各留出 12px，命中范围保持不变。",
+          "en": "Inset both background ends by 12px without changing mouse hits.",
+          "code": "view->setRowVisualStateMargins(12, 12);",
+          "source": "examples/tree_capabilities/12_row_spacing/example.cpp"
+        }
+      ]
+    },
+    {
+      "header": "include/virtualitemviews/virtualtreeview.h",
+      "type": "VirtualTreeView",
+      "signature": "QMargins rowVisualStateMargins() const;",
+      "zh": "设置或读取整行 hover／选中背景的左右绘制边距，返回 QMargins 的上下值始终为 0。在原有状态形状计算后应用：正数缩短、负数延伸，最终受视图和行区域裁剪。只改变框架背景绘制，不改变控件几何、命中范围或选择；不受分割线边距参照开关影响。List／Tree 可与原有状态范围、状态 padding 和固定高度组合。Table／TreeTable 仅在 SelectRows 模式下生效。垂直表头显示且启用状态背景时，表头和内容合并为整行范围，边距只计算一次，圆角沿整体端点绘制；表头隐藏或关闭状态背景时从内容范围计算。不重复作用于每个 cell，水平表头及 SelectItems 模式不受影响。",
+      "en": "Set or query paint-only left/right insets of complete hover/selection row backgrounds; the returned QMargins always has zero top/bottom. Applied after the existing state shape: positive shortens, negative extends, with normal view and row clipping. Does not change widget geometry, hits or selection, and is independent of the grid margin reference. List/Tree can combine this with existing state extents, padding and fixed height. Table/TreeTable apply it only in SelectRows. A visible vertical header with state backgrounds enabled shares the whole-row bounds with the body: margins are applied once and corners follow the overall endpoints. A hidden header or disabled header state background leaves the body as the reference. Insets are never repeated per cell; horizontal headers and SelectItems are unaffected.",
+      "defaults": {
+        "zh": "left = 0，right = 0。",
+        "en": "left = 0, right = 0."
+      },
+      "related": [
+        "grid-line-range"
+      ],
+      "examples": [
+        {
+          "zh": "背景两侧各留出 12px，命中范围保持不变。",
+          "en": "Inset both background ends by 12px without changing mouse hits.",
+          "code": "view->setRowVisualStateMargins(12, 12);",
+          "source": "examples/tree_capabilities/12_row_spacing/example.cpp"
+        }
+      ]
+    },
+    {
+      "header": "include/virtualitemviews/virtualtableview.h",
+      "type": "VirtualTableView",
+      "signature": "void setRowVisualStateMargins(int left, int right);",
+      "zh": "设置或读取整行 hover／选中背景的左右绘制边距，返回 QMargins 的上下值始终为 0。在原有状态形状计算后应用：正数缩短、负数延伸，最终受视图和行区域裁剪。只改变框架背景绘制，不改变控件几何、命中范围或选择；不受分割线边距参照开关影响。List／Tree 可与原有状态范围、状态 padding 和固定高度组合。Table／TreeTable 仅在 SelectRows 模式下生效。垂直表头显示且启用状态背景时，表头和内容合并为整行范围，边距只计算一次，圆角沿整体端点绘制；表头隐藏或关闭状态背景时从内容范围计算。不重复作用于每个 cell，水平表头及 SelectItems 模式不受影响。",
+      "en": "Set or query paint-only left/right insets of complete hover/selection row backgrounds; the returned QMargins always has zero top/bottom. Applied after the existing state shape: positive shortens, negative extends, with normal view and row clipping. Does not change widget geometry, hits or selection, and is independent of the grid margin reference. List/Tree can combine this with existing state extents, padding and fixed height. Table/TreeTable apply it only in SelectRows. A visible vertical header with state backgrounds enabled shares the whole-row bounds with the body: margins are applied once and corners follow the overall endpoints. A hidden header or disabled header state background leaves the body as the reference. Insets are never repeated per cell; horizontal headers and SelectItems are unaffected.",
+      "defaults": {
+        "zh": "left = 0，right = 0。",
+        "en": "left = 0, right = 0."
+      },
+      "related": [
+        "grid-line-range"
+      ],
+      "examples": [
+        {
+          "zh": "垂直表头参与整行背景；左侧 12px 先从表头扣除，内容与表头仍连续。表头关闭后从内容左端扣除。",
+          "en": "The vertical header participates in the row background: the first 12px are consumed inside the header, keeping the body continuous. Hiding the header moves the reference to the body.",
+          "code": "view->setVerticalHeaderVisible(true);\nview->setHeaderVisualStateBackgroundVisible(Qt::Vertical, true);\nview->setRowVisualStateMargins(12, 12);",
+          "source": "examples/table_capabilities/09_spacing/example.cpp"
+        }
+      ]
+    },
+    {
+      "header": "include/virtualitemviews/virtualtableview.h",
+      "type": "VirtualTableView",
+      "signature": "QMargins rowVisualStateMargins() const;",
+      "zh": "设置或读取整行 hover／选中背景的左右绘制边距，返回 QMargins 的上下值始终为 0。在原有状态形状计算后应用：正数缩短、负数延伸，最终受视图和行区域裁剪。只改变框架背景绘制，不改变控件几何、命中范围或选择；不受分割线边距参照开关影响。List／Tree 可与原有状态范围、状态 padding 和固定高度组合。Table／TreeTable 仅在 SelectRows 模式下生效。垂直表头显示且启用状态背景时，表头和内容合并为整行范围，边距只计算一次，圆角沿整体端点绘制；表头隐藏或关闭状态背景时从内容范围计算。不重复作用于每个 cell，水平表头及 SelectItems 模式不受影响。",
+      "en": "Set or query paint-only left/right insets of complete hover/selection row backgrounds; the returned QMargins always has zero top/bottom. Applied after the existing state shape: positive shortens, negative extends, with normal view and row clipping. Does not change widget geometry, hits or selection, and is independent of the grid margin reference. List/Tree can combine this with existing state extents, padding and fixed height. Table/TreeTable apply it only in SelectRows. A visible vertical header with state backgrounds enabled shares the whole-row bounds with the body: margins are applied once and corners follow the overall endpoints. A hidden header or disabled header state background leaves the body as the reference. Insets are never repeated per cell; horizontal headers and SelectItems are unaffected.",
+      "defaults": {
+        "zh": "left = 0，right = 0。",
+        "en": "left = 0, right = 0."
+      },
+      "related": [
+        "grid-line-range"
+      ],
+      "examples": [
+        {
+          "zh": "垂直表头参与整行背景；左侧 12px 先从表头扣除，内容与表头仍连续。表头关闭后从内容左端扣除。",
+          "en": "The vertical header participates in the row background: the first 12px are consumed inside the header, keeping the body continuous. Hiding the header moves the reference to the body.",
+          "code": "view->setVerticalHeaderVisible(true);\nview->setHeaderVisualStateBackgroundVisible(Qt::Vertical, true);\nview->setRowVisualStateMargins(12, 12);",
+          "source": "examples/table_capabilities/09_spacing/example.cpp"
+        }
+      ]
     }
   ]
 }

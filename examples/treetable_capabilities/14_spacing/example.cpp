@@ -84,6 +84,40 @@ private:
 
     void setupExample()
     {
+        // Content references keep offscreen endpoints uncut until they scroll into view.
+        connect(ui->lineReference, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int mode) {
+            ui->view->setGridLineMarginReference(mode == 0
+                ? viv::VirtualItemView::GridLineMarginReference::Viewport
+                : viv::VirtualItemView::GridLineMarginReference::Content);
+        });
+        const auto updateStateMargins = [this] {
+            // Insets start at the visible row header when its state background is enabled.
+            // Header and body share one range; widget geometry and mouse hits stay unchanged.
+            ui->view->setRowVisualStateMargins(ui->stateLeft->value(), ui->stateRight->value());
+        };
+        connect(ui->stateLeft, QOverload<int>::of(&QSpinBox::valueChanged), this, updateStateMargins);
+        connect(ui->stateRight, QOverload<int>::of(&QSpinBox::valueChanged), this, updateStateMargins);
+
+        // An empty depth set keeps all separators. Depth zero means a complete
+        // root group: its separator follows the last visible descendant.
+        connect(ui->lineDepths, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int mode) {
+            QSet<int> depths;
+            if (mode == 1 || mode == 3)
+                depths.insert(0);
+            if (mode == 2 || mode == 3)
+                depths.insert(1);
+            ui->view->setRowGridLineDepths(depths);
+        });
+        const auto updateLineMargins = [this] {
+            // Apply endpoint insets after the view computes the complete line.
+            // Negative values extend it; cells do not each receive their own inset.
+            ui->view->setGridLineMargins(QMargins(ui->lineLeft->value(),
+                ui->lineTop->value(), ui->lineRight->value(), ui->lineBottom->value()));
+        };
+        connect(ui->lineLeft, QOverload<int>::of(&QSpinBox::valueChanged), this, updateLineMargins);
+        connect(ui->lineRight, QOverload<int>::of(&QSpinBox::valueChanged), this, updateLineMargins);
+        connect(ui->lineTop, QOverload<int>::of(&QSpinBox::valueChanged), this, updateLineMargins);
+        connect(ui->lineBottom, QOverload<int>::of(&QSpinBox::valueChanged), this, updateLineMargins);
         // Materialize cells independently so horizontally offscreen cells can also be recycled.
         ui->view->setMaterializationMode(viv::VirtualTreeTableView::MaterializationMode::CellWidgets);
         ui->view->setCellAdapter(new CellAdapter, true);

@@ -119,6 +119,8 @@ protected:
     /// A bottom content margin keeps the terminal line; otherwise the final row
     /// follows the shared trailing-row grid line auto-hide policy.
     void paintGridLines(QPainter *painter) const;
+    /// Uncut occupied grid bounds, including outer half gaps.
+    QRect gridLineContentBounds() const override;
     bool handleItemKeyPress(QKeyEvent *event) override;
     /// Includes viewport-painted backgrounds and separators within the source capture.
     QPixmap grabDragPreview(QWidget *sourceWidget, const QRect &capture) override;
