@@ -5,6 +5,7 @@
 #include "../core/pixelalignedlines_p.h"
 #include "../core/wheeleventforwarding_p.h"
 #include "../core/stylesheetbackground_p.h"
+#include "../core/widgetupdatesblocker_p.h"
 
 #include <virtualitemviews/headergeometry.h>
 #include <virtualitemviews/labelheaderview.h>
@@ -415,6 +416,7 @@ void VirtualHeaderView::setGeometryModel(HeaderGeometry *geometry)
                  "orientation; ignored");
         return;
     }
+    const detail::WidgetUpdatesBlocker updatesBlocker(this);
     const QPointer<VirtualHeaderView> self(this);
     finishPointerInteraction(false);
     if (!self)
@@ -450,6 +452,7 @@ void VirtualHeaderView::connectGeometry(HeaderGeometry *geometry, bool connectSi
         // QPointer goes null at the same moment, so both sides agree without guessing
         // (P1.3 of the fourth review).
         connect(geometry, &QObject::destroyed, this, [this]() {
+            const detail::WidgetUpdatesBlocker updatesBlocker(this);
             const QPointer<VirtualHeaderView> self(this);
             finishPointerInteraction(false);
             if (!self)
@@ -492,6 +495,7 @@ void VirtualHeaderView::setLabelModel(QAbstractItemModel *model)
 {
     if (m_labelModel == model)
         return;
+    const detail::WidgetUpdatesBlocker updatesBlocker(this);
     if (m_labelModel)
         disconnect(m_labelModel, nullptr, this, nullptr);
     m_labelModel = model;
@@ -500,6 +504,7 @@ void VirtualHeaderView::setLabelModel(QAbstractItemModel *model)
         // "no model": the adapter then holds no pointer that it would have to clear itself
         // (P1.3 of the fourth review; the header's own QPointer covers the header side).
         connect(m_labelModel, &QObject::destroyed, this, [this]() {
+            const detail::WidgetUpdatesBlocker updatesBlocker(this);
             if (m_adapter)
                 m_adapter->setLabelModel(nullptr);
             rebindMaterializedSections(std::numeric_limits<int>::min(),
@@ -557,6 +562,7 @@ void VirtualHeaderView::rebindMaterializedSections(int first, int last)
 {
     if (!m_adapter)
         return;
+    const detail::WidgetUpdatesBlocker updatesBlocker(m_sectionWidgets.isEmpty() ? nullptr : this);
     QPointer<VirtualHeaderView> self(this);
     HeaderWidgetAdapter *const adapter = m_adapter;
     const quint64 adapterSerial = m_adapterSerial;
@@ -973,6 +979,7 @@ void VirtualHeaderView::setAdapter(HeaderWidgetAdapter *adapter, bool takeOwners
         m_ownAdapter = m_ownAdapter || takeOwnership;
         return;
     }
+    const detail::WidgetUpdatesBlocker updatesBlocker(this);
     ++m_adapterSerial;
     // Collaborators that borrowed the old adapter (the table's pane renderers) have to
     // release their sections first: they unbind through that adapter, which is still alive
@@ -1132,6 +1139,9 @@ int VirtualHeaderView::sectionPos(int logicalIndex) const
 void VirtualHeaderView::relayout()
 {
     detail::PerformanceScope performance(this, "header.materialize");
+    // Header adapters have their own recycling path. Defer synchronous repaints
+    // until the whole batch is bound and positioned, including standalone headers.
+    const detail::WidgetUpdatesBlocker updatesBlocker(this);
     QPointer<VirtualHeaderView> self(this);
     HeaderWidgetAdapter *const adapter = m_adapter;
     const quint64 adapterSerial = m_adapterSerial;
@@ -1956,6 +1966,7 @@ void VirtualHeaderView::recycleAllSections()
         m_sectionWidgets.clear();
         return;
     }
+    const detail::WidgetUpdatesBlocker updatesBlocker(m_sectionWidgets.isEmpty() ? nullptr : this);
     QPointer<VirtualHeaderView> self(this);
     HeaderWidgetAdapter *const adapter = m_adapter;
     const quint64 adapterSerial = m_adapterSerial;

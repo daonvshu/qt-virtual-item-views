@@ -10,6 +10,7 @@
 #include "../core/rowselection_p.h"
 #include "../core/columnselectioncache_p.h"
 #include "../core/wheeleventforwarding_p.h"
+#include "../core/widgetupdatesblocker_p.h"
 
 #include <virtualitemviews/virtualheaderview.h>
 #include <virtualitemviews/headercornerwidget.h>
@@ -1478,6 +1479,9 @@ void VirtualTableView::setModel(QAbstractItemModel *model)
     QAbstractItemModel *previous = VirtualItemView::model();
     if (previous == model)
         return;
+    // Keep the base model switch and the subsequent cell/header layout atomic
+    // with respect to synchronous repaints from adapter callbacks.
+    const detail::WidgetUpdatesBlocker updatesBlocker(this);
     // A model the application installed - not the one this view instantiated for the row
     // drag - latches "the application owns the model": from then on the view never
     // instantiates one, whether it was set before or after the drag was switched on.
@@ -1668,6 +1672,7 @@ void VirtualTableView::rekeyPersistentTableState()
             invalidCells.insert(it.key(), it.value());
     }
     m_cells.swap(cells);
+    const detail::WidgetUpdatesBlocker updatesBlocker(invalidCells.isEmpty() ? nullptr : this);
     if (!invalidCells.isEmpty())
         ++m_cellLifecycleSerial;
     CellWidgetAdapter *const activeAdapter = m_cellAdapter;
@@ -4717,6 +4722,7 @@ void VirtualTableView::recycleAllCells()
 {
     if (m_cells.isEmpty())
         return;
+    const detail::WidgetUpdatesBlocker updatesBlocker(this);
     ++m_cellLifecycleSerial;
     QHash<QPersistentModelIndex, QWidget *> cells;
     cells.swap(m_cells);
@@ -4774,6 +4780,7 @@ void VirtualTableView::recycleCellsInRowRange(const QModelIndex &parent, int fir
             kept.insert(it.key(), it.value());
     }
     m_cells.swap(kept);
+    const detail::WidgetUpdatesBlocker updatesBlocker(removedCells.isEmpty() ? nullptr : this);
     CellWidgetAdapter *const activeAdapter = m_cellAdapter;
     for (auto it = removedCells.constBegin(); it != removedCells.constEnd(); ++it) {
         if (m_cellAdapter == activeAdapter)
@@ -4801,6 +4808,7 @@ void VirtualTableView::recycleCellsInColumnRange(const QModelIndex &parent, int 
             kept.insert(it.key(), it.value());
     }
     m_cells.swap(kept);
+    const detail::WidgetUpdatesBlocker updatesBlocker(removedCells.isEmpty() ? nullptr : this);
     CellWidgetAdapter *const activeAdapter = m_cellAdapter;
     for (auto it = removedCells.constBegin(); it != removedCells.constEnd(); ++it) {
         if (m_cellAdapter == activeAdapter)
@@ -5251,6 +5259,7 @@ void VirtualTableView::rebindItemsInRange(const QModelIndex &topLeft, const QMod
     }
     if (!m_cellAdapter)
         return;
+    const detail::WidgetUpdatesBlocker updatesBlocker(m_cells.isEmpty() ? nullptr : this);
     const quint64 modelSerial = modelChangeSerial();
     const quint64 mappingSerial = viewMappingSerial();
     const quint64 configurationSerial = m_cellConfigurationSerial;

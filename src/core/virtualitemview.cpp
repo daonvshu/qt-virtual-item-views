@@ -6,6 +6,7 @@
 #include "dragmoveselection_p.h"
 #include "viewbackground_p.h"
 #include "transparenthost_p.h"
+#include "widgetupdatesblocker_p.h"
 
 #include <virtualitemviews/widgetadapter.h>
 #include <virtualitemviews/layoutpolicy.h>
@@ -580,6 +581,7 @@ void VirtualItemView::setModel(QAbstractItemModel *model)
     detail::PerformanceScope performance(this, "refresh.set-model");
     if (m_model.data() == model)
         return;
+    const detail::WidgetUpdatesBlocker updatesBlocker(this);
     const QPointer<VirtualItemView> self(this);
     const quint64 changeSerial = ++m_modelChangeSerial;
     const QPointer<QAbstractItemModel> requestedModel(model);
@@ -3260,6 +3262,10 @@ void VirtualItemView::relayout()
         return;
     }
 
+    // Binding and recycling callbacks may repaint synchronously. Keep the batch
+    // hidden until new widgets have their final pane geometry and scroll offsets.
+    const detail::WidgetUpdatesBlocker updatesBlocker(this);
+
     // A view that materializes its own widgets (table cell mode) does not need
     // a WidgetAdapter: the kernel only computes ranges for it.
     if (!m_layout || (!m_adapter && usesItemWidgets())) {
@@ -3725,6 +3731,7 @@ void VirtualItemView::recycleItem(MaterializedItem &item)
 
 void VirtualItemView::recycleAllItems()
 {
+    const detail::WidgetUpdatesBlocker updatesBlocker(m_items.isEmpty() ? nullptr : this);
     ++m_itemLifecycleSerial;
     QList<MaterializedItem> items;
     items.swap(m_items);
@@ -3836,6 +3843,7 @@ void VirtualItemView::rebindItemsInModelRange(const QModelIndex &parent, int fir
     detail::PerformanceScope performance(this, "refresh.rebind-rows");
     if (!m_adapter)
         return;
+    const detail::WidgetUpdatesBlocker updatesBlocker(m_items.isEmpty() ? nullptr : this);
     const quint64 modelSerial = m_modelChangeSerial;
     const quint64 mappingSerial = viewMappingSerial();
     const quint64 lifecycleSerial = m_itemLifecycleSerial;
@@ -3952,6 +3960,7 @@ void VirtualItemView::recycleItemsInModelRange(const QModelIndex &parent, int fi
     rebuildLookup();
     if (removedItems.isEmpty())
         return;
+    const detail::WidgetUpdatesBlocker updatesBlocker(this);
     ++m_itemLifecycleSerial;
     QVector<QPointer<QWidget>> widgets;
     widgets.reserve(removedItems.size());
