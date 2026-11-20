@@ -1410,24 +1410,25 @@ void VirtualTableView::layoutHeaderWidgets()
     // that the table drives it may have written its own width to the geometry, so the owner
     // re-asserts it once the layout is settled (a no-op when it is already right).
     m_columns->setStretchExtent(viewport()->width());
-    if (m_verticalHeader) {
-        layoutVerticalHeaderStrips();
-    }
     if (m_headerCornerWidget) {
         m_headerCornerWidget->setGeometry(viewportRect.x() - rowHeaderWidth,
                                           viewportRect.y() - headerHeight,
                                           rowHeaderWidth, headerHeight);
-        m_headerCornerWidget->setVisible(rowHeaderWidth > 0 && headerHeight > 0);
-        m_headerCornerWidget->raise();
     }
+    layoutVerticalHeaderStrips();
+    if (m_headerCornerWidget)
+        m_headerCornerWidget->raise();
     applyGridLineVisibilityToHeaders();
     m_headersLaidOut = true;
 }
 
 void VirtualTableView::layoutVerticalHeaderStrips()
 {
-    if (!m_verticalHeader)
+    if (!m_verticalHeader) {
+        if (m_headerCornerWidget)
+            m_headerCornerWidget->hide();
         return;
+    }
     // The row-number strip mirrors the row panes: every band is its own renderer, placed
     // on its pane rectangle, so the numbers stay glued to their rows even when some rows
     // are frozen (§31 row direction).
@@ -1435,6 +1436,7 @@ void VirtualTableView::layoutVerticalHeaderStrips()
         = (isVerticalHeaderShown() && m_verticalHeader) ? m_verticalHeaderWidth : 0;
     const QRect viewportRect = viewport()->geometry();
     const QVector<ItemPane> panes = itemPanes();
+    bool rowStripVisible = false;
     for (HeaderViewInterface *header : {m_verticalHeader, m_frozenTopRowsHeader,
                                         m_frozenBottomRowsHeader}) {
         if (!header)
@@ -1457,13 +1459,25 @@ void VirtualTableView::layoutVerticalHeaderStrips()
         const QRect rect = pane->viewportRect;
         strip->setGeometry(viewportRect.x() - rowHeaderWidth, viewportRect.y() + rect.y(),
                            rowHeaderWidth, rect.height());
-        strip->setVisible(rowHeaderWidth > 0 && rect.height() > 0);
+        const bool visible = rowHeaderWidth > 0 && rect.height() > 0;
+        strip->setVisible(visible);
+        rowStripVisible |= visible && pane->firstRow <= pane->lastRow;
         // A widget strip derives its section positions from the geometry, so it needs to
         // know where the viewport starts inside the view - exactly like the column header
         // (a pane strip with an explicit offset ignores it).
         header->setViewportOrigin(viewportRect.topLeft());
         if (header != m_verticalHeader)
             strip->raise();
+    }
+    if (m_headerCornerWidget) {
+        // Reserved header margins can remain even when there are no sections.
+        const auto &columnPanes = m_panes.panes();
+        const bool cornerVisible = rowStripVisible && m_horizontalHeaderVisible
+            && m_horizontalHeader && m_headerHeight > 0
+            && std::any_of(columnPanes.cbegin(), columnPanes.cend(), [](const TablePane &pane) {
+                return pane.width() > 0 && !pane.isEmpty();
+            });
+        m_headerCornerWidget->setVisible(cornerVisible);
     }
     // Frozen strips were raised above their siblings; keep row separators over the headers.
     raiseItemPaneSeparatorLines();
