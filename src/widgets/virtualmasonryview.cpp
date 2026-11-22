@@ -686,12 +686,12 @@ int VirtualMasonryView::itemColumn(const QModelIndex &index) const
 QRect VirtualMasonryView::visualRect(const QModelIndex &index) const
 {
     const qsizetype item = viewItemForIndex(index);
-    return item < 0 ? QRect() : m_masonry->itemRect(item, verticalOffset());
+    return item < 0 ? QRect() : m_masonry->itemRect(item, visualVerticalOffset());
 }
 
 QModelIndex VirtualMasonryView::indexAt(const QPoint &position) const
 {
-    const qsizetype item = m_masonry->itemAtPoint(position, verticalOffset());
+    const qsizetype item = m_masonry->itemAtPoint(position, visualVerticalOffset());
     return item < 0 ? QModelIndex() : viewIndex(item);
 }
 
@@ -785,7 +785,7 @@ void VirtualMasonryView::setHorizontalSpacingLineThroughColumnSpacing(bool enabl
 QVector<qsizetype> VirtualMasonryView::materializationItems(const QVector<VisibleRange> &ranges) const
 {
     QVector<qsizetype> items = m_masonry->itemsInVerticalRange(
-        verticalOffset(), verticalOffset() + viewportMainExtent() - 1,
+        visualVerticalOffset(), visualVerticalOffset() + viewportMainExtent() - 1,
         overscanBefore(), overscanAfter());
     Q_UNUSED(ranges);
     for (const QPersistentModelIndex &index : explicitPinnedIndexes()) {
@@ -834,10 +834,10 @@ void VirtualMasonryView::paintRowSpacingBackground(QPainter *painter, const QRec
     const QRegion clip(dirtyRect.intersected(viewport()->rect()));
     const int columns = int(qMin<qsizetype>(m_masonry->columnCount(), viewItemCount()));
     const QVector<qsizetype> items = m_masonry->itemsInVerticalRange(
-        verticalOffset(), verticalOffset() + viewportMainExtent() - 1, 1, 1);
+        visualVerticalOffset(), visualVerticalOffset() + viewportMainExtent() - 1, 1, 1);
     QRegion gaps;
     for (qsizetype item : items) {
-        const QRect rect = m_masonry->itemRect(item, verticalOffset());
+        const QRect rect = m_masonry->itemRect(item, visualVerticalOffset());
         const int column = m_masonry->itemColumn(item);
         // Either neighbor may be taller, so both sides contribute to shared gaps.
         const int left = column == 0 ? outer.left() : columnSpacing();
@@ -953,16 +953,16 @@ void VirtualMasonryView::paintGridLines(QPainter *painter) const
 
     // Gap edges remain visible even after the adjacent card widget is recycled.
     const QVector<qsizetype> items = m_masonry->itemsInVerticalRange(
-        verticalOffset(), verticalOffset() + viewportMainExtent() - 1, 1, 1);
+        visualVerticalOffset(), visualVerticalOffset() + viewportMainExtent() - 1, 1, 1);
     for (qsizetype item : items) {
-        const QRect rect = m_masonry->itemRect(item, verticalOffset());
+        const QRect rect = m_masonry->itemRect(item, visualVerticalOffset());
         if (rect.isEmpty())
             continue;
         const int column = m_masonry->itemColumn(item);
         if (column < 0)
             continue;
         const qsizetype next = m_masonry->nextItemInColumn(item);
-        const QRect nextRect = next >= 0 ? m_masonry->itemRect(next, verticalOffset()) : QRect();
+        const QRect nextRect = next >= 0 ? m_masonry->itemRect(next, visualVerticalOffset()) : QRect();
         const bool hasLeftColumn = column > 0;
         const bool hasRightColumn = column + 1 < columns;
         // Keep the boundary before unused layout columns when only a few items exist.
@@ -1099,7 +1099,7 @@ void VirtualMasonryView::paintVisualStateBackgrounds(QPainter *painter, const QR
         const qsizetype ordinal = viewItemForIndex(item.index);
         if (ordinal < 0)
             continue;
-        const QRect rect = m_masonry->itemRect(ordinal, verticalOffset());
+        const QRect rect = m_masonry->itemRect(ordinal, visualVerticalOffset());
         const QRegion clip(rect.intersected(viewport()->rect()).intersected(dirty));
         if (clip.isEmpty())
             continue;
@@ -1183,16 +1183,16 @@ VirtualItemView::DropTarget VirtualMasonryView::resolveDropTarget(const QPoint &
         return target;
     }
 
-    const qsizetype hit = m_masonry->itemAtPoint(position, verticalOffset());
+    const qsizetype hit = m_masonry->itemAtPoint(position, visualVerticalOffset());
     if (hit >= 0) {
-        const QRect rect = m_masonry->itemRect(hit, verticalOffset());
+        const QRect rect = m_masonry->itemRect(hit, visualVerticalOffset());
         target.parent = rootIndex();
         target.row = int(hit + (position.y() > rect.center().y() ? 1 : 0));
         target.trailing = target.row == count;
         return target;
     }
 
-    const qint64 logicalY = qint64(position.y()) + verticalOffset();
+    const qint64 logicalY = qint64(position.y()) + visualVerticalOffset();
     int column = -1;
     for (int candidate = 0; candidate < m_masonry->columnCount(); ++candidate) {
         const qint64 left = m_masonry->columnX(candidate);
@@ -1221,7 +1221,7 @@ QRect VirtualMasonryView::resolveDropIndicatorRect(const DropTarget &target) con
             : QRect();
     const bool trailing = target.row >= viewItemCount();
     const qsizetype item = trailing ? viewItemCount() - 1 : target.row;
-    const QRect itemRect = m_masonry->itemRect(item, verticalOffset());
+        const QRect itemRect = m_masonry->itemRect(item, visualVerticalOffset());
     if (itemRect.isEmpty())
         return {};
     const int y = trailing ? itemRect.bottom() : itemRect.top() - 1;

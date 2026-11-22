@@ -393,7 +393,7 @@ void VirtualFlowTableView::paintRowSpacingBackground(QPainter *painter, const QR
     const bool centered = gridLinePlacement() == GridLinePlacement::SpacingCenter;
     QRegion gaps;
     for (qsizetype ordinal = range.first; ordinal <= range.last; ++ordinal) {
-        const QRect rect = m_flow->itemRect(ordinal, verticalOffset());
+        const QRect rect = m_flow->itemRect(ordinal, visualVerticalOffset());
         const bool columnGap = ordinal % columnCount() + 1 < columnCount();
         const bool rowGap = ordinal / columnCount() + 1 < displayRowCount();
         const bool nextColumn = columnGap && ordinal + 1 < viewItemCount();
@@ -416,7 +416,7 @@ void VirtualFlowTableView::paintVisualStateBackgrounds(QPainter *painter, const 
         const qsizetype ordinal = viewItemForIndex(item.index);
         if (ordinal < 0)
             continue;
-        const QRect rect = m_flow->itemRect(ordinal, verticalOffset());
+        const QRect rect = m_flow->itemRect(ordinal, visualVerticalOffset());
         const QRegion clip(rect.intersected(viewport()->rect()).intersected(dirty));
         if (clip.isEmpty())
             continue;
@@ -472,7 +472,7 @@ void VirtualFlowTableView::paintGridLines(QPainter *painter) const
     // A bottom content margin separates the terminal line from the outer frame.
     const bool showTrailingLine = contentMargins().bottom() > 0 || trailingRowGridLineVisible();
     for (qsizetype ordinal = range.first; ordinal <= range.last; ++ordinal) {
-        const QRect rect = m_flow->itemRect(ordinal, verticalOffset());
+        const QRect rect = m_flow->itemRect(ordinal, visualVerticalOffset());
         const bool hasTrailingColumnBoundary = ordinal % columnCount() + 1 < columnCount();
         const bool hasNextColumn = hasTrailingColumnBoundary && ordinal + 1 < viewItemCount();
         const bool hasNextRow = ordinal / columnCount() + 1 < displayRowCount();
@@ -716,7 +716,7 @@ VirtualItemView::DropTarget VirtualFlowTableView::resolveDropTarget(const QPoint
     if (!model() || !viewport()->rect().contains(position)
         || position.x() < contentMargins().left()
         || position.x() >= viewport()->width() - contentMargins().right()
-        || position.y() + verticalOffset() < contentMargins().top())
+        || position.y() + visualVerticalOffset() < contentMargins().top())
         return target;
     const qsizetype count = viewItemCount();
     const QModelIndex hit = indexAt(position);
@@ -725,10 +725,10 @@ VirtualItemView::DropTarget VirtualFlowTableView::resolveDropTarget(const QPoint
         const QRect rect = visualRect(hit);
         insertion = hit.row() + (position.x() >= rect.x() + rect.width() / 2 ? 1 : 0);
     } else if (count > 0) {
-        const qint64 y = position.y() + verticalOffset();
+        const qint64 y = position.y() + visualVerticalOffset();
         const qsizetype first = m_flow->indexAtOffset(y);
         if (first < count) {
-            const QRect row = m_flow->itemRect(first, verticalOffset());
+            const QRect row = m_flow->itemRect(first, visualVerticalOffset());
             if (position.y() >= row.y() + m_flow->rowHeight()) {
                 insertion = qMin<qsizetype>(count, first + columnCount());
             } else {

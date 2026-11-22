@@ -18,6 +18,7 @@
 #include "12_images/example.h"
 #include "13_borders_colors/example.h"
 #include "14_auto_height/example.h"
+#include "../refresh_demo/page.h"
 
 namespace {
 struct Entry { const char *title; QWidget *(*create)(QWidget *); };
@@ -36,6 +37,7 @@ const Entry entries[] = {
     {u8"12 异步图片卡片", masonry_images::createExample},
     {u8"13 圆角、边框与颜色", masonry_borders_colors::createExample},
     {u8"14 自适应高度", masonry_auto_height::createExample},
+    {u8"15 惯性滚动与刷新分页", refresh_demo::masonry},
 };
 constexpr int chapterCount = int(sizeof(entries) / sizeof(entries[0]));
 
@@ -70,7 +72,7 @@ int main(int argc, char **argv)
     QApplication app(argc, argv);
     QCommandLineParser parser;
     parser.addHelpOption();
-    parser.addOption({QStringLiteral("example"), QStringLiteral("Chapter 1-14"), QStringLiteral("number"), QStringLiteral("1")});
+    parser.addOption({QStringLiteral("example"), QStringLiteral("Chapter 1-15"), QStringLiteral("number"), QStringLiteral("1")});
     parser.process(app);
     bool valid = false;
     const int chapter = parser.value(QStringLiteral("example")).toInt(&valid);

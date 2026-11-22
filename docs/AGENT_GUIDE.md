@@ -276,6 +276,14 @@ impl: src/core/virtualitemviewediting.cpp src/widgets/virtualtreeview.cpp src/wi
 doc: docs/interaction.md
 examples: examples/list_capabilities/23_editors/example.cpp examples/table_capabilities/33_editors/example.cpp examples/tree_capabilities/29_editors/example.cpp examples/treetable_capabilities/38_editors/example.cpp
 
+### scroll-refresh | 滚动边缘 / 下拉刷新 / 触底分页
+api: scrollEdges scrollEdgeReached scrollEdgeLeft setPullToRefreshEnabled setLoadMoreEnabled setIndicatorModes setIndicatorHeights refreshRequested loadMoreRequested finishRefresh finishLoadMore failRequest retryLoadMore setRefreshIndicator setLoadMoreIndicator
+headers: include/virtualitemviews/virtualitemview.h
+rules: 顶部和底部可分别设置为占位或覆盖模式。下拉高度跟随手势，松手后回到停留高度。在界面线程更新模型后，已知末页调用 finishLoadMore(id, false)。未知末页调用 finishLoadMore(id)，空页使占位模式显示末尾提示。
+impl: src/core/virtualitemviewrefresh.cpp
+doc: examples/README.md
+examples: examples/flow_capabilities/12_kinetic_refresh/example.cpp examples/list_capabilities/24_kinetic_refresh/example.cpp examples/masonry_capabilities/15_kinetic_refresh/example.cpp examples/table_capabilities/34_kinetic_refresh/example.cpp examples/tree_capabilities/30_kinetic_refresh/example.cpp examples/treetable_capabilities/39_kinetic_refresh/example.cpp examples/wrap_capabilities/11_kinetic_refresh/example.cpp
+
 ### scroll | 滚动 / 定位 / 几何 / 命中 / 平滑滚动
 api: scrollTo setVerticalOffset scrollByPixels setWheelScrollMode setWheelScrollPixels setWheelScrollItems indexAt visualRect widgetForIndex indexForWidget setHorizontalOffset
 headers: include/virtualitemviews/virtualitemview.h include/virtualitemviews/virtualtableview.h include/virtualitemviews/scrollmapper.h
@@ -462,7 +470,7 @@ VirtualHeaderView: VirtualHeaderView setGeometryModel geometryModel headerWidget
 ### include/virtualitemviews/virtualitemview.h
 VirtualViewStats: logicalItems materializedItems pooledWidgets pinnedWidgets createCount bindCount recycleCount
 ScrollAnchor: index offsetInsideItem isValid
-VirtualItemView: ScrollHint VirtualItemView setBackgroundVisible backgroundVisible setBackgroundColor backgroundColor backgroundBrush setItemBackgroundColor itemBackgroundColor setFrameCornerRadius frameCornerRadius setFrameBorderWidth frameBorderWidth setFrameBorderColor frameBorderColor setFrameBorderEdges frameBorderEdges setFrameBorderVisible frameBorderVisible setAutoHeightEnabled autoHeightEnabled setAutoHeightMaximumHeight autoHeightMaximumHeight sizeHint minimumSizeHint setModel model setSelectionModel selectionModel VisualState visualState hoveredIndex setHoverBackgroundColor hoverBackgroundColor setSelectedBackgroundColor selectedBackgroundColor setVisualStateAnimationDuration visualStateAnimationDuration setVisualStateAnimationEasingCurve visualStateAnimationEasingCurve currentIndex setCurrentIndex activateIndex SelectionMode SelectionBehavior setSelectionMode selectionMode setSelectionBehavior selectionBehavior DropTarget DropIndicatorStyle setDragEnabled isDragEnabled DragStartMode setDragStartMode dragStartMode canStartDrag startDrag QModelIndex setDropIndicatorShown isDropIndicatorShown setDropIndicatorColor dropIndicatorColor setDropIndicatorWidth dropIndicatorWidth setDropIndicatorPenStyle dropIndicatorPenStyle setDefaultDropAction defaultDropAction setMoveRemovesSourceRows moveRemovesSourceRows setDragDropActions dragDropActions dropTargetAt dropIndicatorRect dropIndicatorStyle setAdapter adapter recycler setEditTriggers editTriggers edit commitEditor closeEditor editingIndex editorWidget setItemDataRole itemDataRole setOverscan overscanBefore overscanAfter RowSpacingFactory void setRowSpacing rowSpacing setGridLinePlacement gridLinePlacement setGridLineMargins gridLineMargins GridLineMarginReference setGridLineMarginReference gridLineMarginReference setTrailingRowGridLineAutoHideEnabled trailingRowGridLineAutoHideEnabled setSpacingBackgroundColor spacingBackgroundColor setRowSpacingFactory scrollTo setItemPinned isItemPinned pinWidget unpinWidget setMaxPinnedItems maxPinnedItems stats setPerformanceLoggingEnabled isPerformanceLoggingEnabled kLifecycleLogCapacity setLifecycleLoggingEnabled isLifecycleLoggingEnabled lifecycleLog clearLifecycleLog indexAt visualRect usesItemWidgets verticalOffset contentExtent maximumVerticalOffset scrollMapper WheelScrollMode setWheelScrollMode wheelScrollMode setWheelScrollPixels wheelScrollPixels setWheelScrollItems wheelScrollItems setVerticalOffset scrollByPixels ItemHeightMode setItemHeightMode itemHeightMode setUniformItemHeight uniformItemHeight setEstimatedItemHeight estimatedItemHeight setAutoMeasureItemHeight autoMeasureItemHeight visibleItemRange setFrozenRows frozenRows setFrozenBottomRows frozenBottomRows isRowFrozen itemPanes itemPaneRect visibleItemRanges setItemPaneSeparatorStyle itemPaneSeparatorStyle itemPaneSeparatorLeftExtension itemPaneSeparatorColor itemPaneSeparatorRects scrollingPaneHost materializedItemCount pinnedItemCount widgetForIndex indexForWidget materializedItems pooledWidgetCount createdWidgetCount destroyedWidgetCount isRelayoutPending flushPendingRelayout clicked doubleClicked activated itemDropped selectionModelChanged virtualizationUpdated
+VirtualItemView: ScrollHint VirtualItemView setBackgroundVisible backgroundVisible setBackgroundColor backgroundColor backgroundBrush setItemBackgroundColor itemBackgroundColor setFrameCornerRadius frameCornerRadius setFrameBorderWidth frameBorderWidth setFrameBorderColor frameBorderColor setFrameBorderEdges frameBorderEdges setFrameBorderVisible frameBorderVisible setAutoHeightEnabled autoHeightEnabled setAutoHeightMaximumHeight autoHeightMaximumHeight sizeHint minimumSizeHint setModel model setSelectionModel selectionModel VisualState visualState hoveredIndex setHoverBackgroundColor hoverBackgroundColor setSelectedBackgroundColor selectedBackgroundColor setVisualStateAnimationDuration visualStateAnimationDuration setVisualStateAnimationEasingCurve visualStateAnimationEasingCurve currentIndex setCurrentIndex activateIndex SelectionMode SelectionBehavior setSelectionMode selectionMode setSelectionBehavior selectionBehavior DropTarget DropIndicatorStyle setDragEnabled isDragEnabled DragStartMode setDragStartMode dragStartMode canStartDrag startDrag QModelIndex setDropIndicatorShown isDropIndicatorShown setDropIndicatorColor dropIndicatorColor setDropIndicatorWidth dropIndicatorWidth setDropIndicatorPenStyle dropIndicatorPenStyle setDefaultDropAction defaultDropAction setMoveRemovesSourceRows moveRemovesSourceRows setDragDropActions dragDropActions dropTargetAt dropIndicatorRect dropIndicatorStyle setAdapter adapter recycler setEditTriggers editTriggers edit commitEditor closeEditor editingIndex editorWidget setItemDataRole itemDataRole setOverscan overscanBefore overscanAfter RowSpacingFactory void setRowSpacing rowSpacing setGridLinePlacement gridLinePlacement setGridLineMargins gridLineMargins GridLineMarginReference setGridLineMarginReference gridLineMarginReference setTrailingRowGridLineAutoHideEnabled trailingRowGridLineAutoHideEnabled setSpacingBackgroundColor spacingBackgroundColor setRowSpacingFactory scrollTo setItemPinned isItemPinned pinWidget unpinWidget setMaxPinnedItems maxPinnedItems stats setPerformanceLoggingEnabled isPerformanceLoggingEnabled kLifecycleLogCapacity setLifecycleLoggingEnabled isLifecycleLoggingEnabled lifecycleLog clearLifecycleLog indexAt visualRect usesItemWidgets verticalOffset visualVerticalOffset contentExtent maximumVerticalOffset scrollEdges RefreshState IndicatorMode setIndicatorModes setIndicatorHeights setPullToRefreshEnabled pullToRefreshEnabled setPullToRefreshThreshold pullToRefreshThreshold setLoadMoreEnabled loadMoreEnabled refreshState pullProgress setRefreshIndicator setLoadMoreIndicator finishRefresh finishLoadMore failRequest retryLoadMore scrollMapper WheelScrollMode setWheelScrollMode wheelScrollMode setWheelScrollPixels wheelScrollPixels setWheelScrollItems wheelScrollItems setVerticalOffset scrollByPixels ItemHeightMode setItemHeightMode itemHeightMode setUniformItemHeight uniformItemHeight setEstimatedItemHeight estimatedItemHeight setAutoMeasureItemHeight autoMeasureItemHeight visibleItemRange setFrozenRows frozenRows setFrozenBottomRows frozenBottomRows isRowFrozen itemPanes itemPaneRect visibleItemRanges setItemPaneSeparatorStyle itemPaneSeparatorStyle itemPaneSeparatorLeftExtension itemPaneSeparatorColor itemPaneSeparatorRects scrollingPaneHost materializedItemCount pinnedItemCount widgetForIndex indexForWidget materializedItems pooledWidgetCount createdWidgetCount destroyedWidgetCount isRelayoutPending flushPendingRelayout scrollEdgeReached scrollEdgeLeft refreshStateChanged pullProgressChanged refreshRequested loadMoreRequested clicked doubleClicked activated itemDropped selectionModelChanged virtualizationUpdated
 
 ### include/virtualitemviews/virtuallistview.h
 VirtualListView: ItemHeightMode VirtualListView setModel setRootIndex rootIndex listLayout DragFeedbackMode setDragFeedbackMode dragFeedbackMode setDragReorderAnimationDuration dragReorderAnimationDuration setDragReorderAnimationEasingCurve dragReorderAnimationEasingCurve setRowGridLinesVisible rowGridLinesVisible setRowGridLineWidth rowGridLineWidth setRowGridLineColor rowGridLineColor setVisualStateBackgroundVisible visualStateBackgroundVisible setVisualStateCornerRadius visualStateCornerRadius setRowVisualStateMargins rowVisualStateMargins VisualStateBackgroundExtent setVisualStateBackgroundExtent visualStateBackgroundExtent setVisualStateBackgroundMargins visualStateBackgroundMargins setVisualStateBackgroundHeight visualStateBackgroundHeight indexAt itemPaneSeparatorColor
@@ -509,6 +517,7 @@ Each chapter owns its model/adapter/widgets/UI; copy the smallest chapter, not a
 - examples/flow_capabilities/09_images/example.cpp | 09 异步图片卡片
 - examples/flow_capabilities/10_colors/example.cpp | 10 颜色与样式表
 - examples/flow_capabilities/11_auto_height/example.cpp | 11 自适应高度
+- examples/flow_capabilities/12_kinetic_refresh/example.cpp | 12 惯性滚动与刷新分页
 
 ### examples/list_capabilities
 - examples/list_capabilities/01_basic/example.cpp | 01 基础列表
@@ -534,6 +543,7 @@ Each chapter owns its model/adapter/widgets/UI; copy the smallest chapter, not a
 - examples/list_capabilities/21_auto_height/example.cpp | 21 自适应高度
 - examples/list_capabilities/22_colors/example.cpp | 22 颜色与样式表
 - examples/list_capabilities/23_editors/example.cpp | 23 覆盖编辑器与 Popup
+- examples/list_capabilities/24_kinetic_refresh/example.cpp | 24 惯性滚动与刷新分页
 
 ### examples/masonry_capabilities
 - examples/masonry_capabilities/01_basic/example.cpp | 基础接入
@@ -550,6 +560,7 @@ Each chapter owns its model/adapter/widgets/UI; copy the smallest chapter, not a
 - examples/masonry_capabilities/12_images/example.cpp | 异步图片卡片
 - examples/masonry_capabilities/13_borders_colors/example.cpp | 圆角、边框与颜色
 - examples/masonry_capabilities/14_auto_height/example.cpp | 自适应高度
+- examples/masonry_capabilities/15_kinetic_refresh/example.cpp | 15 惯性滚动与刷新分页
 
 ### examples/table_capabilities
 - examples/table_capabilities/01_row_widgets/example.cpp | 01 行控件与 ColumnHost
@@ -585,6 +596,7 @@ Each chapter owns its model/adapter/widgets/UI; copy the smallest chapter, not a
 - examples/table_capabilities/31_auto_height/example.cpp | 31 自适应高度
 - examples/table_capabilities/32_colors/example.cpp | 32 颜色与样式表
 - examples/table_capabilities/33_editors/example.cpp | 33 覆盖编辑器与编辑触发
+- examples/table_capabilities/34_kinetic_refresh/example.cpp | 34 惯性滚动与刷新分页
 
 ### examples/tree_capabilities
 - examples/tree_capabilities/01_basic/example.cpp | 01 基础接入
@@ -616,6 +628,7 @@ Each chapter owns its model/adapter/widgets/UI; copy the smallest chapter, not a
 - examples/tree_capabilities/27_auto_height/example.cpp | 27 自适应高度
 - examples/tree_capabilities/28_colors/example.cpp | 28 颜色与样式表
 - examples/tree_capabilities/29_editors/example.cpp | 29 覆盖编辑器与 Popup
+- examples/tree_capabilities/30_kinetic_refresh/example.cpp | 30 惯性滚动与刷新分页
 
 ### examples/treetable_capabilities
 - examples/treetable_capabilities/01_basic/example.cpp | 01 基础多列树
@@ -656,6 +669,7 @@ Each chapter owns its model/adapter/widgets/UI; copy the smallest chapter, not a
 - examples/treetable_capabilities/36_auto_height/example.cpp | 36 自适应高度与滚动上限
 - examples/treetable_capabilities/37_colors/example.cpp | 37 颜色与样式表
 - examples/treetable_capabilities/38_editors/example.cpp | 38 覆盖编辑器与 Popup
+- examples/treetable_capabilities/39_kinetic_refresh/example.cpp | 39 惯性滚动与刷新分页
 
 ### examples/wrap_capabilities
 - examples/wrap_capabilities/01_basic/example.cpp | 01_basic / 基础接入
@@ -668,3 +682,4 @@ Each chapter owns its model/adapter/widgets/UI; copy the smallest chapter, not a
 - examples/wrap_capabilities/08_auto_height/example.cpp | 08 自适应高度
 - examples/wrap_capabilities/09_wrap_layout/example.cpp | 09_wrap_layout / 直接使用 WrapLayout
 - examples/wrap_capabilities/10_wrap_widget/example.cpp | 10_wrap_widget / 真实控件自适应高度
+- examples/wrap_capabilities/11_kinetic_refresh/example.cpp | 11 惯性滚动与刷新分页

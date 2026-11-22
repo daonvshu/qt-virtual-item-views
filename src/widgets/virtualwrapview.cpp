@@ -519,9 +519,9 @@ VirtualItemView::DropTarget VirtualWrapView::resolveDropTarget(const QPoint &pos
     if (!model() || !viewport()->rect().contains(position)
         || position.x() < contentMargins().left()
         || position.x() >= viewport()->width() - contentMargins().right()
-        || qint64(position.y()) + verticalOffset() < contentMargins().top()) return target;
+        || qint64(position.y()) + visualVerticalOffset() < contentMargins().top()) return target;
     const auto &g = m_wrap->geometry();
-    const int row = g.rowAt(qint64(position.y()) + verticalOffset());
+    const int row = g.rowAt(qint64(position.y()) + visualVerticalOffset());
     int insertion = int(viewItemCount());
     if (row < g.rows.size()) {
         const auto &line = g.rows[row];

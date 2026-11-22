@@ -222,6 +222,10 @@ feature('popup', 'Popup 编辑 / 坐标 / 统一取消 / 编辑覆盖范围',
     'editRequest 返回 true 表示自行处理 Popup，false 回退 createEditor。context 含 binding、view、viewport、三个坐标系的完整 rect 和 finish 回调。正常确认/关闭后调用 request.finish，仅结束对应会话，不提交模型；业务自行写数据。框架在滚动、目标失效、模型/adapter 变化、隐藏等取消条件下调用 cancelEditRequest，业务在此关闭 Popup；外部 closeEditor 同样转发。Popup 时 editingIndex 有效、editorWidget=null、commitEditor=false。跨事件保留 QPointer/QPersistentModelIndex。树编辑可用 indentationWidth+branchWidth 裁掉装饰占位并 clamp 到 rect.width。',
     'src/core/virtualitemviewediting.cpp src/widgets/virtualtreeview.cpp src/widgets/virtualtreetableview.cpp',
     'examples/*_capabilities/*editors/example.cpp', 'docs/interaction.md')
+feature('scroll-refresh', '滚动边缘 / 下拉刷新 / 触底分页',
+    'virtualitemview', 'scrollEdges scrollEdgeReached scrollEdgeLeft setPullToRefreshEnabled setLoadMoreEnabled setIndicatorModes setIndicatorHeights refreshRequested loadMoreRequested finishRefresh finishLoadMore failRequest retryLoadMore setRefreshIndicator setLoadMoreIndicator',
+    '顶部和底部可分别设置为占位或覆盖模式。下拉高度跟随手势，松手后回到停留高度。在界面线程更新模型后，已知末页调用 finishLoadMore(id, false)。未知末页调用 finishLoadMore(id)，空页使占位模式显示末尾提示。',
+    'src/core/virtualitemviewrefresh.cpp', 'examples/*_capabilities/*_kinetic_refresh/example.cpp', 'examples/README.md')
 feature('scroll', '滚动 / 定位 / 几何 / 命中 / 平滑滚动',
     'virtualitemview virtualtableview scrollmapper',
     'scrollTo setVerticalOffset scrollByPixels setWheelScrollMode setWheelScrollPixels setWheelScrollItems indexAt visualRect widgetForIndex indexForWidget setHorizontalOffset',

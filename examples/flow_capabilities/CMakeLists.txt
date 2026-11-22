@@ -1,5 +1,6 @@
 # One process; every chapter owns its model, adapter, widgets and UI.
 add_executable(flow_capabilities
+    12_kinetic_refresh/example.cpp
     main.cpp
     01_basic/example.cpp
     01_basic/basic.ui

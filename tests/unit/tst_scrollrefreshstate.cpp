@@ -1,0 +1,153 @@
+#include "../../src/core/scrollrefreshstate_p.h"
+#include "../../src/layout/flowtablelayout_p.h"
+#include <QtTest>
+
+using Machine = viv::detail::ScrollRefreshState;
+using State = Machine::State;
+
+class TestScrollRefreshState : public QObject
+{
+    Q_OBJECT
+private slots:
+    void edges()
+    {
+        const qint64 maximum = qint64(1) << 40;
+        QCOMPARE(Machine::edges(0, 0, Qt::TopEdge, Qt::BottomEdge), Qt::TopEdge | Qt::BottomEdge);
+        QCOMPARE(Machine::edges(maximum - 1, maximum, Qt::LeftEdge, Qt::RightEdge), Qt::Edges());
+        QCOMPARE(Machine::edges(maximum, maximum, Qt::LeftEdge, Qt::RightEdge), Qt::Edges(Qt::RightEdge));
+        Machine machine;
+        QVERIFY(machine.edgeChanged(Qt::BottomEdge, true));
+        QVERIFY(!machine.edgeChanged(Qt::BottomEdge, true));
+        QVERIFY(machine.edgeChanged(Qt::BottomEdge, false));
+        QVERIFY(!machine.edgeChanged(Qt::BottomEdge, false));
+    }
+
+    void releaseAndCancel()
+    {
+        Machine machine;
+        machine.pull(32);
+        QCOMPARE(machine.progress(), qreal(0.5));
+        QVERIFY(!machine.begin(State::Refreshing, 0));
+        machine.pull(100);
+        QCOMPARE(machine.state, State::Armed);
+        QCOMPARE(machine.distance, 100);
+        QCOMPARE(machine.progress(), qreal(1));
+        machine.pull(63);
+        QCOMPARE(machine.state, State::Pulling);
+        machine.cancelPull();
+        QCOMPARE(machine.state, State::Idle);
+        QCOMPARE(machine.progress(), qreal(0));
+        machine.pull(64);
+        const auto id = machine.begin(State::Refreshing, 0);
+        QVERIFY(id);
+        QVERIFY(!machine.canLoad(true, true));
+        QVERIFY(!machine.begin(State::LoadingMore, 0));
+        QVERIFY(machine.finish(id, State::Refreshing, true, true, 8));
+        QVERIFY(machine.canLoad(true, true));
+    }
+
+    void fillViewport()
+    {
+        Machine machine;
+        QVERIFY(machine.canLoad(true, true));
+        auto id = machine.begin(State::LoadingMore, 0);
+        QVERIFY(machine.finish(id, State::LoadingMore, true, true, 4));
+        QVERIFY(!machine.canLoad(true, false));
+        QVERIFY(machine.canLoad(true, true));
+        id = machine.begin(State::LoadingMore, 4);
+        QVERIFY(machine.finish(id, State::LoadingMore, true, true, 8));
+        QVERIFY(!machine.canLoad(false, false));
+        machine.edgeChanged(Qt::BottomEdge, true);
+        machine.edgeChanged(Qt::BottomEdge, false);
+        QVERIFY(machine.canLoad(true, false));
+        id = machine.begin(State::LoadingMore, 8);
+        QVERIFY(machine.finish(id, State::LoadingMore, false, true, 12));
+        QVERIFY(!machine.canLoad(true, true));
+    }
+
+    void staleFailureAndEmptyPage()
+    {
+        Machine machine;
+        const auto oldId = machine.begin(State::LoadingMore, 5);
+        machine.reset();
+        const auto id = machine.begin(State::LoadingMore, 0);
+        QVERIFY(!machine.finish(oldId, State::LoadingMore, false, false, 0));
+        QVERIFY(!machine.finish(id, State::Refreshing, true, true, 4));
+        QVERIFY(machine.finish(id, State::LoadingMore, true, true, 0));
+        QVERIFY(!machine.canLoad(true, true));
+        machine.reset();
+        const auto failed = machine.begin(State::LoadingMore, 0);
+        QVERIFY(machine.finish(failed, State::LoadingMore, true, false, 4));
+        QVERIFY(!machine.canLoad(true, true));
+    }
+
+    void fillPartialGridRow()
+    {
+        Machine machine;
+        const qint64 gridExtent = 800;
+        const qint64 maximumOffset = 160;
+        auto id = machine.begin(State::LoadingMore, 12, gridExtent);
+        QVERIFY(machine.finish(id, State::LoadingMore, true, true, 14));
+        QVERIFY(machine.canLoad(true, machine.canContinueAtBottom(true, maximumOffset, gridExtent)));
+        QVERIFY(!machine.canLoad(true, machine.canContinueAtBottom(true, maximumOffset + 80, gridExtent + 80)));
+        QVERIFY(!machine.canLoad(true, machine.canContinueAtBottom(false, maximumOffset, gridExtent)));
+
+        id = machine.begin(State::LoadingMore, 14, gridExtent);
+        QVERIFY(machine.finish(id, State::LoadingMore, true, true, 14));
+        QVERIFY(!machine.canLoad(true, machine.canContinueAtBottom(true, maximumOffset, gridExtent)));
+    }
+
+    void fillWideFlowViewportWithFixedPages()
+    {
+        viv::FlowTableLayout layout;
+        layout.setWidthRange(110, 180);
+        layout.setFixedHeight(80);
+        layout.setCrossExtent(2160);
+        constexpr qsizetype pageSize = 64;
+        constexpr qint64 viewportHeight = 1080;
+        Machine machine;
+        const auto canLoad = [&](qint64 offset) {
+            const qint64 extent = layout.contentExtent();
+            const qint64 maximum = qMax<qint64>(0, extent - viewportHeight);
+            machine.edgeChanged(Qt::BottomEdge, offset >= maximum);
+            return machine.canLoadAtOffset(offset, maximum, extent, true);
+        };
+        for (qsizetype pageNumber = 0; pageNumber < 3; ++pageNumber) {
+            QVERIFY(canLoad(0));
+            const auto id = machine.begin(State::LoadingMore, layout.itemCount(), layout.contentExtent());
+            QVERIFY(id);
+            QVERIFY(!canLoad(0));
+            layout.insertItems(layout.itemCount(), pageSize, 0);
+            QVERIFY(machine.finish(id, State::LoadingMore, true, true, layout.itemCount()));
+        }
+        QCOMPARE(layout.itemCount(), 3 * pageSize);
+        QVERIFY(layout.contentExtent() > viewportHeight);
+        QVERIFY(!canLoad(0));
+        QVERIFY(canLoad(layout.contentExtent() - viewportHeight));
+    }
+
+    void knownAndProbedEnd()
+    {
+        Machine machine;
+        auto id = machine.begin(State::LoadingMore, 8);
+        QVERIFY(machine.finish(id, State::LoadingMore, false, true, 12));
+        QVERIFY(!machine.hasMore);
+        QVERIFY(!machine.terminalFooter);
+        machine.reset();
+        id = machine.begin(State::LoadingMore, 0);
+        QVERIFY(machine.finish(id, State::LoadingMore, true, true, 8, true));
+        QVERIFY(machine.hasMore);
+        id = machine.begin(State::LoadingMore, 8);
+        QVERIFY(machine.finish(id, State::LoadingMore, true, true, 8, true));
+        QVERIFY(machine.terminalFooter);
+        QVERIFY(!machine.canLoad(true, true));
+        machine.pull(64);
+        id = machine.begin(State::Refreshing, 8);
+        QVERIFY(machine.finish(id, State::Refreshing, true, true, 4));
+        QVERIFY(machine.hasMore);
+        QVERIFY(!machine.terminalFooter);
+    }
+};
+
+QTEST_APPLESS_MAIN(TestScrollRefreshState)
+#include "tst_scrollrefreshstate.moc"

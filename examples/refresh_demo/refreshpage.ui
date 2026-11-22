@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>RefreshPage</class>
+ <widget class="QWidget" name="RefreshPage">
+  <layout class="QVBoxLayout" name="body">
+   <item><widget class="QLabel" name="instructions"><property name="text"><string>使用滚轮浏览，在顶部向下拖动刷新，滚到底部加载下一页。</string></property><property name="wordWrap"><bool>true</bool></property></widget></item>
+   <item><layout class="QHBoxLayout" name="controls">
+    <item><widget class="QComboBox" name="presentation"><item><property name="text"><string>占位提示</string></property></item><item><property name="text"><string>覆盖提示</string></property></item></widget></item>
+    <item><widget class="QCheckBox" name="kinetic"><property name="text"><string>滚轮惯性（SmoothScrollbar）</string></property><property name="checked"><bool>true</bool></property></widget></item>
+    <item><widget class="QCheckBox" name="probe"><property name="text"><string>用空页确认末尾</string></property></widget></item>
+   </layout></item>
+   <item><widget class="QLabel" name="status"><property name="text"><string>等待第一页</string></property></widget></item>
+   <item><widget class="QLabel" name="edge"><property name="text"><string>滚动边缘</string></property></widget></item>
+  </layout>
+ </widget>
+ <resources/><connections/>
+</ui>

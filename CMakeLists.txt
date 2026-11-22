@@ -112,6 +112,7 @@ set(VIRTUALITEMVIEWS_SOURCES
     src/core/itemeditoradapter.cpp
     src/core/virtualitemviewediting.cpp
     src/core/virtualitemview.cpp
+    src/core/virtualitemviewrefresh.cpp
     src/core/virtualitemviewframe.cpp
     src/layout/headergeometry.cpp
     src/index/sizeindex.cpp

@@ -264,7 +264,7 @@ protected:
         detail::PerformanceScope performance(this, "paint.pane-grid", detail::PerformanceDomain::Paint);
         QPainter painter(this);
         const auto *view = static_cast<const VirtualTableView *>(parentWidget());
-        detail::paintWithTransientItemOpacity(&painter, m_layout, view->verticalOffset(),
+        detail::paintWithTransientItemOpacity(&painter, m_layout, view->visualVerticalOffset(),
             view->viewport()->geometry().translated(-pos()), [&] {
                 for (const Line &line : m_lines) {
                     painter.save();
@@ -538,7 +538,7 @@ protected:
             }
         }
         const auto *view = static_cast<const VirtualTableView *>(parentWidget());
-        detail::paintWithTransientItemOpacity(&painter, m_layout, view->verticalOffset(),
+        detail::paintWithTransientItemOpacity(&painter, m_layout, view->visualVerticalOffset(),
             view->viewport()->geometry().translated(-pos()), [&] {
                 fillPixelLines(&painter, verticalLines, m_verticalWidth, m_verticalColor,
                                Qt::Vertical, !m_centered, false, m_centered);
@@ -1456,7 +1456,9 @@ void VirtualTableView::layoutVerticalHeaderStrips()
         // The pane rects are viewport relative, the strips live in the view: the viewport's
         // own origin is the bridge (with one pane - nothing frozen - the pane rect *is* the
         // viewport rect, so this covers both cases).
-        const QRect rect = pane->viewportRect;
+        QRect rect = pane->viewportRect;
+        if (type == ItemPane::Type::Scrollable && m_refreshVisualOffset < 0)
+            rect.adjust(0, qMin(rect.height(), -m_refreshVisualOffset), 0, 0);
         strip->setGeometry(viewportRect.x() - rowHeaderWidth, viewportRect.y() + rect.y(),
                            rowHeaderWidth, rect.height());
         const bool visible = rowHeaderWidth > 0 && rect.height() > 0;
@@ -2449,6 +2451,9 @@ void VirtualTableView::setHorizontalOffset(qint64 offset)
     syncHorizontalScrollBar();
     if (!self)
         return;
+    publishScrollPosition();
+    if (!self)
+        return;
     emit horizontalOffsetChanged(clamped);
     if (!self)
         return;
@@ -3312,11 +3317,13 @@ void VirtualTableView::raisePaneSeparatorLines()
         line->setVisible(m_paneSeparatorStyle.isVisible() && !visible.isEmpty());
         line->raise();
     }
+    raiseRefreshIndicators();
     raiseDropIndicator();
 }
 
 void VirtualTableView::syncHorizontalScrollBar()
 {
+    scheduleScrollUpdate();
     QScrollBar *bar = horizontalScrollBar();
     const int viewportWidth = viewport()->width();
     const qint64 maximum = maximumHorizontalOffset();
@@ -3474,14 +3481,15 @@ void VirtualTableView::updateRowHeaderOffset()
             strip->setRowPaneRange(0, std::numeric_limits<int>::max());
             strip->setPaneOffset(HeaderViewInterface::kFollowGeometryOffset);
         }
-        m_rowHeaders->setViewportOffset(verticalOffset());
+        m_rowHeaders->setVisualViewportOffset(visualVerticalOffset());
         return;
     }
     // Frozen rows: every band shows a different content range, and one geometry offset
     // cannot express three. Each strip therefore owns its offset (an explicit pane
     // offset wins over the geometry, see setPaneOffset()), while the
     // geometry keeps the scrolling band's mapping for custom renderers.
-    m_rowHeaders->setViewportOffset(verticalOffset() + frozenTopExtent());
+    const qint64 scrollingOffset = visualVerticalOffset() - qMin(0, m_refreshVisualOffset);
+    m_rowHeaders->setViewportOffset(scrollingOffset + frozenTopExtent());
     for (const ItemPane &pane : panes) {
         HeaderViewInterface *header = m_verticalHeader;
         if (pane.type == ItemPane::Type::FrozenTop)
@@ -3491,7 +3499,7 @@ void VirtualTableView::updateRowHeaderOffset()
         if (auto *strip = dynamic_cast<VirtualHeaderView *>(header))
             strip->setRowPaneRange(int(pane.firstRow), int(pane.lastRow));
         if (header)
-            header->setPaneOffset(rowStripOffset(pane, verticalOffset(), contentExtent()));
+            header->setPaneOffset(rowStripOffset(pane, scrollingOffset, contentExtent()));
     }
 }
 
@@ -7341,6 +7349,9 @@ void VirtualTableView::scrollContentsBy(int dx, int dy)
         if (!self)
             return;
         emit horizontalOffsetChanged(m_columns->viewportOffset());
+        if (!self)
+            return;
+        publishScrollPosition();
         if (!self)
             return;
     }

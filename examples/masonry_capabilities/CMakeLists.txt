@@ -1,5 +1,6 @@
 # One process; chapters deliberately keep their models, adapters and widgets local.
 add_executable(masonry_capabilities
+    15_kinetic_refresh/example.cpp
     main.cpp
     browser.ui
     01_basic/example.cpp

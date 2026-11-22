@@ -1,5 +1,6 @@
 # One process; chapters intentionally do not share model or adapter implementations.
 add_executable(wrap_capabilities main.cpp browser.ui
+    11_kinetic_refresh/example.cpp
     01_basic/example.cpp
     01_basic/basic.ui
     02_geometry/example.cpp

@@ -50,6 +50,7 @@ class WidgetRecycler;
 class DragMoveSelection;
 class ItemEditorSession;
 class GridLinePaintGeometry;
+class ViewRefreshController;
 
 /// Snapshot of the virtualization state.
 ///
@@ -479,8 +480,47 @@ public:
     virtual bool usesItemWidgets() const;
 
     qint64 verticalOffset() const { return m_scrollOffset; }
+    /// Offset for painting and hit testing scrolling rows during a refresh reveal.
+    qint64 visualVerticalOffset() const { return m_scrollOffset + m_refreshVisualOffset; }
     qint64 contentExtent() const;
     qint64 maximumVerticalOffset() const;
+
+    /// Logical boundaries, including both ends of an axis with zero range.
+    Qt::Edges scrollEdges() const;
+    enum class RefreshState { Idle, Pulling, Armed, Refreshing, LoadingMore };
+    Q_ENUM(RefreshState)
+    enum class IndicatorMode { Overlay, Inline };
+    Q_ENUM(IndicatorMode)
+    /// Sets the top and bottom presentation independently. Both default to Overlay.
+    void setIndicatorModes(IndicatorMode refresh, IndicatorMode loadMore);
+    /// Sets the resting and maximum reveal heights in logical pixels (36 and 112 by default).
+    void setIndicatorHeights(int restingHeight, int maximumHeight);
+    /// Enables a downward drag at the top. Disabled by default.
+    void setPullToRefreshEnabled(bool enabled);
+    bool pullToRefreshEnabled() const;
+    /// Drag distance in logical pixels. Defaults to 64 and is at least one.
+    void setPullToRefreshThreshold(int pixels);
+    int pullToRefreshThreshold() const;
+    /// Enables automatic bottom requests and bounded viewport filling. Default false.
+    void setLoadMoreEnabled(bool enabled);
+    bool loadMoreEnabled() const;
+    RefreshState refreshState() const;
+    /// Fraction of the release threshold reached, clamped to [0, 1].
+    qreal pullProgress() const;
+    /// Transfers ownership of the top overlay. Null restores the built-in indicator.
+    void setRefreshIndicator(QWidget *indicator);
+    /// Transfers ownership of the bottom overlay. Null restores the built-in indicator.
+    void setLoadMoreIndicator(QWidget *indicator);
+    /// Call after replacing the model contents. Stale request IDs are ignored.
+    void finishRefresh(quint64 requestId, bool hasMore);
+    /// Call after appending a page. An empty page pauses automatic requests.
+    void finishLoadMore(quint64 requestId, bool hasMore);
+    /// Infers the end from an empty page. Inline mode retains a terminal footer.
+    void finishLoadMore(quint64 requestId);
+    /// Ends either request and pauses automatic loading until retry or refresh.
+    void failRequest(quint64 requestId);
+    /// Allows a new page request at the bottom after a failure or empty page.
+    void retryLoadMore();
 
     ScrollMapper &scrollMapper() { return m_scrollMapper; }
     const ScrollMapper &scrollMapper() const { return m_scrollMapper; }
@@ -600,6 +640,12 @@ public:
     void flushPendingRelayout();
 
 signals:
+    void scrollEdgeReached(Qt::Edge edge);
+    void scrollEdgeLeft(Qt::Edge edge);
+    void refreshStateChanged(RefreshState state);
+    void pullProgressChanged(qreal progress);
+    void refreshRequested(quint64 requestId);
+    void loadMoreRequested(quint64 requestId);
     void clicked(const QModelIndex &index);
     void doubleClicked(const QModelIndex &index);
     void activated(const QModelIndex &index);
@@ -914,6 +960,8 @@ protected:
     void applyItemPaneGeometry(MaterializedItem &item, qsizetype row);
     /// Raises the boundary lines above the (re)materialized items.
     void raiseItemPaneSeparatorLines() const;
+    /// Keeps visible refresh indicators above the view's grid overlays.
+    void raiseRefreshIndicators() const;
     /// Visible part of a row pane separator, in separator-local coordinates.
     /// The default covers its complete view-coordinate geometry.
     virtual QRegion itemPaneSeparatorMask(const QRect &geometry) const;
@@ -947,6 +995,17 @@ protected:
 
 private:
     friend class ItemEditorSession;
+    friend class VirtualTableView;
+    friend class ViewRefreshController;
+    ViewRefreshController *m_refreshController = nullptr;
+    int m_refreshVisualOffset = 0;
+    bool handleRefreshWheel(QWheelEvent *event);
+    void initScrollRefresh();
+    void scheduleScrollUpdate();
+    void publishScrollPosition();
+    void resetRefreshModel();
+    bool handleRefreshPointer(QMouseEvent *event);
+    bool handleRefreshViewportEvent(QEvent *event);
     friend class GridLinePaintGeometry;
     /// Applies adapter-specific trigger filtering before entering editing.
     bool triggerEdit(const QModelIndex &index, EditTrigger trigger);
@@ -1093,6 +1152,7 @@ private:
     };
     void sampleVisualTransition(VisualTransition &transition) const;
     void stopVisualTransition(VisualTransition &transition);
+    void pruneInvalidVisualTransitions();
     void scheduleVisualStateRefresh(const QPersistentModelIndex &index);
     using VisualTransitionKey = QPair<QPersistentModelIndex, int>;
     mutable QHash<VisualTransitionKey, VisualTransition> m_visualTransitions;

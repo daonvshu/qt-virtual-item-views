@@ -15,6 +15,7 @@
 #include "08_auto_height/example.h"
 #include "09_wrap_layout/example.h"
 #include "10_wrap_widget/example.h"
+#include "../refresh_demo/page.h"
 
 namespace {
 struct Entry { const char *title; QWidget *(*create)(QWidget *); };
@@ -29,6 +30,7 @@ const Entry entries[] = {
     {u8"08 虚拟视图自适应高度", wrap_auto_height::createExample},
     {u8"09 直接使用 WrapLayout", wrap_wrap_layout::createExample},
     {u8"10 真实控件自适应高度", wrap_wrap_widget::createExample},
+    {u8"11 惯性滚动与刷新分页", refresh_demo::wrap},
 };
 class Browser : public QMainWindow
 {
@@ -38,7 +40,7 @@ public:
         ui->setupUi(this);
         for (const Entry &entry : entries) ui->navigation->addItem(QString::fromUtf8(entry.title));
         connect(ui->navigation, &QListWidget::currentRowChanged, this, [this](int row) {
-            if (row < 0 || row >= 10) return;
+            if (row < 0 || row >= int(pages.size())) return;
             if (!pages[row]) {
                 pages[row] = entries[row].create(ui->pages);
                 ui->pages->addWidget(pages[row]);
@@ -51,7 +53,7 @@ public:
     }
 private:
     std::unique_ptr<Ui::WrapBrowser> ui;
-    std::array<QWidget *, 10> pages{};
+    std::array<QWidget *, sizeof(entries) / sizeof(entries[0])> pages{};
 };
 }
 int main(int argc, char **argv)
@@ -59,12 +61,12 @@ int main(int argc, char **argv)
     QApplication app(argc, argv);
     QCommandLineParser parser;
     parser.addHelpOption();
-    parser.addOption({QStringLiteral("example"), QStringLiteral("Chapter 1-10"), QStringLiteral("number"), QStringLiteral("1")});
+    parser.addOption({QStringLiteral("example"), QStringLiteral("Chapter 1-11"), QStringLiteral("number"), QStringLiteral("1")});
     parser.process(app);
     bool valid = false;
     const int chapter = parser.value(QStringLiteral("example")).toInt(&valid);
-    if (!valid || chapter < 1 || chapter > 10) {
-        qCritical() << "--example must be between 1 and 10";
+    if (!valid || chapter < 1 || chapter > 11) {
+        qCritical() << "--example must be between 1 and 11";
         return 1;
     }
     Browser browser(chapter - 1);

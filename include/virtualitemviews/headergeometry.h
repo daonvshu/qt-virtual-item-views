@@ -272,6 +272,9 @@ signals:
 private:
     friend class TreeExpansionTransition;
     friend class VirtualHeaderView;
+    friend class VirtualTableView;
+    /// Sets the rendered offset, which can be negative during an inline pull.
+    void setVisualViewportOffset(qint64 offset);
     const ListLayout *m_transientRows = nullptr;
     struct Section
     {

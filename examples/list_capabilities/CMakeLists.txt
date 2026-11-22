@@ -1,5 +1,6 @@
 # One executable; every capability owns its model, adapter and widgets.
 add_executable(list_capabilities
+    24_kinetic_refresh/example.cpp
     main.cpp
     01_basic/example.cpp
     01_basic/basic.ui

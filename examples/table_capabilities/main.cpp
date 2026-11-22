@@ -42,6 +42,7 @@
 #include "31_auto_height/example.h"
 #include "32_colors/example.h"
 #include "33_editors/example.h"
+#include "../refresh_demo/page.h"
 
 namespace {
 
@@ -88,6 +89,7 @@ const ExampleEntry entries[] = {
     {31, u8"31 自适应高度", table_auto_height::createExample},
     {32, u8"32 颜色与样式表", table_colors::createExample},
     {33, u8"33 覆盖编辑器与编辑触发", table_editors::createExample},
+    {34, u8"34 惯性滚动与刷新分页", refresh_demo::table},
 };
 
 constexpr int kExampleCount = int(sizeof(entries) / sizeof(entries[0]));
@@ -140,7 +142,7 @@ int main(int argc, char **argv)
     QCommandLineParser parser;
     parser.setApplicationDescription(QStringLiteral("一个进程演示 VirtualTableView 的 %1 项能力").arg(kExampleCount));
     parser.addHelpOption();
-    parser.addOption({QStringLiteral("example"), QStringLiteral("启动时选择章节编号（1–32；29 需要 SmoothScrollbar）"),
+    parser.addOption({QStringLiteral("example"), QStringLiteral("章节编号（1–34，29 需要 SmoothScrollbar）"),
                       QStringLiteral("number"), QStringLiteral("1")});
     parser.process(app);
     bool ok = false;
@@ -153,7 +155,7 @@ int main(int argc, char **argv)
         }
     }
     if (initial < 0) {
-        qCritical() << "--example must name an available chapter (1-28, optional 29, or 30-32)";
+        qCritical() << "--example must name an available chapter (1-34, optional 29)";
         return 1;
     }
     Browser browser(initial);

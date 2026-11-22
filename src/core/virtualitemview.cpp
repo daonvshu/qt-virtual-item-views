@@ -337,6 +337,7 @@ VirtualItemView::VirtualItemView(QWidget *parent)
     viewport()->setAttribute(Qt::WA_Hover);
     viewport()->setMouseTracking(true);
     viewport()->installEventFilter(this);
+    initScrollRefresh();
 
     m_recycler = new WidgetRecycler(viewport());
     m_recycler->setFactory([this](WidgetType type, QWidget *parentWidget) {
@@ -585,6 +586,9 @@ void VirtualItemView::setModel(QAbstractItemModel *model)
     const QPointer<VirtualItemView> self(this);
     const quint64 changeSerial = ++m_modelChangeSerial;
     const QPointer<QAbstractItemModel> requestedModel(model);
+    resetRefreshModel();
+    if (!self || m_modelChangeSerial != changeSerial)
+        return;
     closeEditor();
     if (!self || m_modelChangeSerial != changeSerial)
         return;
@@ -650,6 +654,7 @@ void VirtualItemView::connectModel(QAbstractItemModel *model)
         return;
 
     connect(model, &QAbstractItemModel::dataChanged, this, &VirtualItemView::onDataChanged);
+    connect(model, &QObject::destroyed, this, &VirtualItemView::resetRefreshModel);
     connect(model, &QAbstractItemModel::rowsAboutToBeInserted,
             this, &VirtualItemView::onRowsAboutToBeInserted);
     connect(model, &QAbstractItemModel::rowsInserted, this, &VirtualItemView::onRowsInserted);
@@ -695,7 +700,10 @@ void VirtualItemView::connectModel(QAbstractItemModel *model)
         restoreItemsAfterColumnChange();
     };
     connect(model, &QAbstractItemModel::columnsInserted, this, restoreIdentity);
-    connect(model, &QAbstractItemModel::columnsRemoved, this, restoreIdentity);
+    connect(model, &QAbstractItemModel::columnsRemoved, this, [this]() {
+        pruneInvalidVisualTransitions();
+        restoreItemsAfterColumnChange();
+    });
     connect(model, &QAbstractItemModel::columnsMoved, this,
             [this](const QModelIndex &, int, int, const QModelIndex &, int) {
                 restoreItemsAfterColumnChange();
@@ -767,9 +775,9 @@ QRect VirtualItemView::gridLineContentBounds() const
     const auto *rows = dynamic_cast<const ListLayout *>(m_layout);
     const QMargins margins = rows ? rows->viewportMargins() : QMargins();
     const qint64 limit = std::numeric_limits<int>::max() / 2;
-    const int top = int(qBound<qint64>(-limit, qint64(margins.top()) - verticalOffset(), limit));
+    const int top = int(qBound<qint64>(-limit, qint64(margins.top()) - visualVerticalOffset(), limit));
     const int bottom = int(qBound<qint64>(-limit,
-        m_layout->contentExtent() - margins.bottom() - verticalOffset(), limit));
+        m_layout->contentExtent() - margins.bottom() - visualVerticalOffset(), limit));
     return QRect(margins.left(), top,
                  qMax(0, m_layout->crossExtent() - margins.left() - margins.right()),
                  qMax(0, bottom - top)).translated(viewport()->pos());
@@ -1065,7 +1073,7 @@ VirtualItemView::VisualState VirtualItemView::animatedVisualState(
     const qreal hoverTarget = hovered ? 1.0 : 0.0;
     const qreal selectedTarget = selected ? 1.0 : 0.0;
     VisualState state{hovered, selected, hoverTarget, selectedTarget};
-    if (m_visualStateAnimationDuration <= 0)
+    if (m_visualStateAnimationDuration <= 0 || !index.isValid())
         return state;
 
     const VisualTransitionKey key{QPersistentModelIndex(index), int(channel)};
@@ -1258,6 +1266,20 @@ void VirtualItemView::clearVisualTransitions()
         stopVisualTransition(it.value());
     m_visualTransitions.clear();
     m_pendingVisualRefreshes.clear();
+}
+
+void VirtualItemView::pruneInvalidVisualTransitions()
+{
+    for (auto it = m_visualTransitions.begin(); it != m_visualTransitions.end();) {
+        const QPersistentModelIndex &index = it.key().first;
+        if (index.isValid()) {
+            ++it;
+            continue;
+        }
+        stopVisualTransition(it.value());
+        m_pendingVisualRefreshes.remove(index);
+        it = m_visualTransitions.erase(it);
+    }
 }
 
 void VirtualItemView::rekeyPersistentState()
@@ -1523,6 +1545,8 @@ bool VirtualItemView::eventFilter(QObject *watched, QEvent *event)
     if (m_destroying)
         return false;
     auto *widget = qobject_cast<QWidget *>(watched);
+    if (widget == viewport() && m_refreshController && handleRefreshViewportEvent(event))
+        return true;
     if (watched == viewport() && event->type() == QEvent::Paint && m_editorSession) {
         const QPointer<VirtualItemView> self(this);
         updateEditorGeometry();
@@ -2164,8 +2188,8 @@ VisibleRange VirtualItemView::coreVisibleRange() const
     // The scrolling pane starts below the frozen band, so the visible content
     // window is shifted by its height (§31 row direction). Frozen rows are always
     // visible and are reported by visibleItemRanges(), not by this window.
-    const qint64 top = m_scrollOffset + frozenTopExtent();
-    const qint64 bottom = m_scrollOffset + viewExtent - frozenBottomExtent() - 1;
+    const qint64 top = visualVerticalOffset() + frozenTopExtent();
+    const qint64 bottom = visualVerticalOffset() + viewExtent - frozenBottomExtent() - 1;
     if (bottom < top)
         return range; // the frozen bands cover the whole viewport
 
@@ -2389,7 +2413,7 @@ qint64 VirtualItemView::itemPaneScrollOffset(ItemPane::Type type) const
     case ItemPane::Type::FrozenTop:
         return 0;
     case ItemPane::Type::Scrollable:
-        return m_scrollOffset;
+        return visualVerticalOffset();
     case ItemPane::Type::FrozenBottom:
         // "Scrolled to the very bottom" pins the last rows to the bottom edge; the
         // value is signed on purpose, so it also works when the content is shorter
@@ -2595,6 +2619,7 @@ void VirtualItemView::raiseItemPaneSeparatorLines() const
         line->setVisible(m_itemPaneSeparatorStyle.isVisible() && !mask.isEmpty());
         line->raise();
     }
+    raiseRefreshIndicators();
     raiseDropIndicator();
 }
 
@@ -2625,7 +2650,8 @@ bool VirtualItemView::isItemPaneBoundaryAfter(qsizetype row) const
 void VirtualItemView::syncRowSpacingWidgets(const QVector<VisibleRange> &ranges)
 {
     detail::PerformanceScope performance(this, "layout.row-spacing");
-    auto *layout = dynamic_cast<ListLayout *>(m_layout);
+    LayoutPolicy *const activeLayout = m_layout;
+    const auto *listLayout = dynamic_cast<const ListLayout *>(activeLayout);
     const quint64 modelSerial = m_modelChangeSerial;
     const quint64 mappingSerial = viewMappingSerial();
     const quint64 lifecycleSerial = m_itemLifecycleSerial;
@@ -2635,9 +2661,9 @@ void VirtualItemView::syncRowSpacingWidgets(const QVector<VisibleRange> &ranges)
     WidgetAdapter *const activeAdapter = m_adapter;
     const RowSpacingFactory factory = m_rowSpacingFactory;
     const RowSpacingBinder binder = m_rowSpacingBinder;
-    const auto requestIsCurrent = [this, layout, &activeModel, hadModel, activeAdapter,
+    const auto requestIsCurrent = [this, activeLayout, &activeModel, hadModel, activeAdapter,
                                    modelSerial, mappingSerial, lifecycleSerial, spacingSerial]() {
-        return m_layout == layout && m_modelChangeSerial == modelSerial
+        return m_layout == activeLayout && m_modelChangeSerial == modelSerial
             && viewMappingSerial() == mappingSerial && m_itemLifecycleSerial == lifecycleSerial
             && m_rowSpacingStateSerial == spacingSerial && m_model.data() == activeModel.data()
             && (!hadModel || activeModel) && m_adapter == activeAdapter;
@@ -2649,13 +2675,13 @@ void VirtualItemView::syncRowSpacingWidgets(const QVector<VisibleRange> &ranges)
         return true;
     };
     QHash<qsizetype, QRect> desired;
-    if (layout && viewport()->width() > 0) {
+    if (listLayout && viewport()->width() > 0) {
         for (const VisibleRange &range : ranges) {
             for (qsizetype row = range.first; row >= 0 && row <= range.last; ++row) {
-                const int spacing = layout->spacingAfter(row);
+                const int spacing = listLayout->spacingAfter(row);
                 if (spacing <= 0)
                     continue;
-                const QRect itemRect = layout->itemRect(row, itemPaneScrollOffset(itemPaneForRow(row)));
+                const QRect itemRect = listLayout->itemRect(row, itemPaneScrollOffset(itemPaneForRow(row)));
                 const QRect gap(0, itemRect.bottom() + 1 + rowSpacingVisualOffset(row),
                                 viewport()->width(), spacing);
                 if (gap.intersects(itemPaneRect(itemPaneForRow(row)).intersected(viewport()->rect())))
@@ -2969,7 +2995,9 @@ void VirtualItemView::setVerticalOffset(qint64 offset)
     m_scrollOffset = clamped;
     const int value = m_scrollMapper.toScrollBarValue(m_scrollOffset);
     m_scrollMapper.setAnchor(m_scrollOffset, value);
+    const QPointer<VirtualItemView> self(this);
     relayout();
+    if (self) publishScrollPosition();
 }
 
 void VirtualItemView::scrollByPixels(qint64 pixels)
@@ -3019,7 +3047,9 @@ void VirtualItemView::scrollTo(const QModelIndex &index, ScrollHint hint)
     }
 
     m_scrollOffset = qBound<qint64>(qint64(0), offset, maximumVerticalOffset());
+    const QPointer<VirtualItemView> self(this);
     relayout();
+    if (self) publishScrollPosition();
 }
 
 void VirtualItemView::setItemPinned(const QModelIndex &index, bool pinned)
@@ -4114,6 +4144,7 @@ void VirtualItemView::updateVerticalScrollBarRange()
     // Restore that update without feeding mapped values back into scrolling.
     if (rangeChanged)
         QCoreApplication::postEvent(this, new QEvent(QEvent::LayoutRequest));
+    scheduleScrollUpdate();
 }
 
 void VirtualItemView::scrollContentsBy(int dx, int dy)
@@ -4126,7 +4157,9 @@ void VirtualItemView::scrollContentsBy(int dx, int dy)
     const int value = verticalScrollBar()->value();
     m_scrollOffset = m_scrollMapper.toLogicalOffset(value);
     m_scrollMapper.setAnchor(m_scrollOffset, value);
+    const QPointer<VirtualItemView> self(this);
     relayout();
+    if (self) publishScrollPosition();
 }
 
 // ---------------------------------------------------------------------------
@@ -4179,12 +4212,14 @@ void VirtualItemView::mousePressEvent(QMouseEvent *event)
     m_dragStartPos = mousePosition(event);
     m_dragGlobalStartPos = viewport()->mapToGlobal(m_dragStartPos);
     m_pressedIndex = index.isValid() ? QPersistentModelIndex(index) : QPersistentModelIndex();
+    handleRefreshPointer(event);
     updateSelectionForClick(index, event->modifiers());
     event->accept();
 }
 
 void VirtualItemView::mouseReleaseEvent(QMouseEvent *event)
 {
+    if (handleRefreshPointer(event)) return;
     if (event->button() != Qt::LeftButton) {
         QAbstractScrollArea::mouseReleaseEvent(event);
         return;
@@ -4744,6 +4779,7 @@ bool VirtualItemView::isDropOnItself(const DropTarget &target, Qt::DropAction ac
 
 void VirtualItemView::mouseMoveEvent(QMouseEvent *event)
 {
+    if (handleRefreshPointer(event)) return;
     if (!m_dragEnabled || m_dragStartMode == DragStartMode::Manual
         || !(event->buttons() & Qt::LeftButton) || !m_pressedIndex.isValid()) {
         QAbstractScrollArea::mouseMoveEvent(event);
@@ -5138,6 +5174,7 @@ void VirtualItemView::stopDragAutoscroll()
 
 void VirtualItemView::wheelEvent(QWheelEvent *event)
 {
+    if (handleRefreshWheel(event)) return;
     // A fitting view must not consume the enclosing scroll area's wheel input.
     // Use the content range: forced scrollbar visibility and maximumHeight do
     // not tell whether the parent layout has left enough room for the content.
@@ -5439,6 +5476,7 @@ void VirtualItemView::onRowsAboutToBeRemoved(const QModelIndex &parent, int firs
 void VirtualItemView::onRowsRemoved(const QModelIndex &parent, int first, int last)
 {
     detail::PerformanceScope performance(this, "model.rows-removed");
+    pruneInvalidVisualTransitions();
     if (!isLayoutParent(parent) || !m_layout)
         return;
     const qsizetype count = qsizetype(last) - qsizetype(first) + 1;

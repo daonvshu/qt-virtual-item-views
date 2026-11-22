@@ -1406,10 +1406,14 @@ void HeaderGeometry::setAllSectionsHidden(bool hidden)
 
 void HeaderGeometry::setViewportOffset(qint64 offset)
 {
-    const qint64 clamped = qMax<qint64>(0, offset);
-    if (m_viewportOffset == clamped)
+    setVisualViewportOffset(qMax<qint64>(0, offset));
+}
+
+void HeaderGeometry::setVisualViewportOffset(qint64 offset)
+{
+    if (m_viewportOffset == offset)
         return;
-    m_viewportOffset = clamped;
+    m_viewportOffset = offset;
     // Only the offset changed: a header can shift without re-reading the
     // sections, and the body re-queries the geometry anyway.
     emit offsetChanged(m_viewportOffset);

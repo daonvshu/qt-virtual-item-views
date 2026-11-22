@@ -28,6 +28,10 @@
 
 ## 按交互查找
 
+### 惯性滚动与刷新分页
+
+分别运行 `list_capabilities --example 24`、`table_capabilities --example 34`、`tree_capabilities --example 30`、`treetable_capabilities --example 39`、`flow_capabilities --example 12`、`wrap_capabilities --example 11` 或 `masonry_capabilities --example 15`。链接 SmoothScrollbar 时，勾选“滚轮惯性”可用滚轮体验平滑滚动。顶部下拉可刷新，触底时追加下一页。占位模式下页脚展开至 28 个逻辑像素，覆盖模式使用透明背景。[分页和滚轮控制器接入代码](refresh_demo/page.cpp)
+
 | 需求 | 最小参考 |
 | --- | --- |
 | hover / selected 时显示操作控件；事件处理拿当前正确 index | [状态关联内容](list_capabilities/09_state_content/README.md)、[行内事件](list_capabilities/11_item_events/README.md) |

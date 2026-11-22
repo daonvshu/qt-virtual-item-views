@@ -1,5 +1,6 @@
 # One executable; every chapter owns its model, adapter and widgets.
 add_executable(table_capabilities
+    34_kinetic_refresh/example.cpp
     main.cpp
     01_row_widgets/example.cpp
     01_row_widgets/row_widgets.ui

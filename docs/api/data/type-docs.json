@@ -2,6 +2,25 @@
   "schema": 1,
   "types": [
     {
+      "header":"include/virtualitemviews/virtualitemview.h", "name":"VirtualItemView::IndicatorMode",
+      "zh":"刷新提示的呈现方式。顶部和底部可分别设置。", "en":"Presentation of an indicator. Each edge can use its own mode.",
+      "members":[
+        {"name":"Overlay","zh":"在内容上方展开提示控件。","en":"Reveal the indicator over the content."},
+        {"name":"Inline","zh":"移动滚动内容，为提示留出空间。","en":"Displace scrolling content to make room for the indicator."}
+      ]
+    },
+    {
+      "header": "include/virtualitemviews/virtualitemview.h", "name": "VirtualItemView::RefreshState",
+      "zh": "上下刷新指示器共享的交互和请求状态。", "en": "Interaction and request state shared by both indicators.",
+      "members": [
+        {"name":"Idle","zh":"正在等待操作。","en":"Waiting for input."},
+        {"name":"Pulling","zh":"已开始拖动，尚未达到松手刷新距离。","en":"Tracking a drag below the release threshold."},
+        {"name":"Armed","zh":"已达到阈值，松手将刷新。","en":"Releasing now requests a refresh."},
+        {"name":"Refreshing","zh":"刷新请求进行中。","en":"A refresh request is in flight."},
+        {"name":"LoadingMore","zh":"下一页请求进行中。","en":"A page request is in flight."}
+      ]
+    },
+    {
       "header": "include/virtualitemviews/branchindicator.h",
       "name": "BranchIndicatorState",
       "zh": "传给 branch 渲染器的单个缩进格状态。当前节点格负责展开箭头，祖先格可用于连接线；布尔值默认 false、深度默认 0。",

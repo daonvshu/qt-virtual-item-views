@@ -12182,12 +12182,12 @@
           "kind": "struct",
           "declaration": "struct VirtualViewStats",
           "comment": "Snapshot of the virtualization state.\n\nDesigned for debug overlays and long-running validation: it is the data\nbehind \"why does the widget count keep growing?\" investigations.",
-          "line": 58,
+          "line": 59,
           "entries": [
             {
               "signature": "qsizetype logicalItems = 0;",
               "comment": "Logical items offered by the model.",
-              "line": 61,
+              "line": 62,
               "access": "public",
               "symbols": [
                 "logicalItems"
@@ -12196,7 +12196,7 @@
             {
               "signature": "qsizetype materializedItems = 0;",
               "comment": "Items that currently own a QWidget.",
-              "line": 63,
+              "line": 64,
               "access": "public",
               "symbols": [
                 "materializedItems"
@@ -12205,7 +12205,7 @@
             {
               "signature": "qsizetype pooledWidgets = 0;",
               "comment": "Widgets waiting in the recycler pools.",
-              "line": 65,
+              "line": 66,
               "access": "public",
               "symbols": [
                 "pooledWidgets"
@@ -12214,7 +12214,7 @@
             {
               "signature": "qsizetype pinnedWidgets = 0;",
               "comment": "Materialized items that are pinned (focus, IME, popup, explicit pin).",
-              "line": 67,
+              "line": 68,
               "access": "public",
               "symbols": [
                 "pinnedWidgets"
@@ -12223,7 +12223,7 @@
             {
               "signature": "quint64 createCount = 0;",
               "comment": "Widgets created by the recycler since the view was constructed.",
-              "line": 70,
+              "line": 71,
               "access": "public",
               "symbols": [
                 "createCount"
@@ -12232,7 +12232,7 @@
             {
               "signature": "quint64 bindCount = 0;",
               "comment": "Completed row or cell adapter bindings (including rebindings).",
-              "line": 72,
+              "line": 73,
               "access": "public",
               "symbols": [
                 "bindCount"
@@ -12241,7 +12241,7 @@
             {
               "signature": "quint64 recycleCount = 0;",
               "comment": "Widgets handed back to the recycler.",
-              "line": 74,
+              "line": 75,
               "access": "public",
               "symbols": [
                 "recycleCount"
@@ -12302,12 +12302,12 @@
           "kind": "struct",
           "declaration": "struct ScrollAnchor",
           "comment": "Identity of the item that sits at the top of the viewport.\n\nUsed to keep the visual position stable when item sizes change above the\nviewport (async images, expand/collapse, dataChanged with a new height).",
-          "line": 81,
+          "line": 82,
           "entries": [
             {
               "signature": "QPersistentModelIndex index;",
               "comment": "",
-              "line": 83,
+              "line": 84,
               "access": "public",
               "symbols": [
                 "index"
@@ -12316,7 +12316,7 @@
             {
               "signature": "int offsetInsideItem = 0;",
               "comment": "",
-              "line": 84,
+              "line": 85,
               "access": "public",
               "symbols": [
                 "offsetInsideItem"
@@ -12325,7 +12325,7 @@
             {
               "signature": "    bool isValid() const;",
               "comment": "",
-              "line": 86,
+              "line": 87,
               "access": "public",
               "symbols": [
                 "isValid"
@@ -12360,12 +12360,12 @@
           "kind": "class",
           "declaration": "class VIRTUALITEMVIEWS_EXPORT VirtualItemView : public QAbstractScrollArea",
           "comment": "Virtualization kernel shared by the List/Table/Tree views.\n\nThe kernel owns the scroll space, the visible range computation, the\nmaterialization and recycling of item widgets, the invalidation coalescing\nand the selection/current handling. Subclasses only supply the identity\nmapping (view row <-> QModelIndex) and a LayoutPolicy.\n\nInvariants (see docs/history/architecture.md):\n- materialized widgets == visible + overscan + pinned items,\n- pooled widgets are unbound,\n- one QModelIndex owns at most one widget at any time,\n- model mutations never require a manual reload() from business code.",
-          "line": 101,
+          "line": 102,
           "entries": [
             {
               "signature": "enum ScrollHint {\n        EnsureVisible,\n        PositionAtTop,\n        PositionAtBottom,\n        PositionAtCenter,\n    };",
               "comment": "",
-              "line": 106,
+              "line": 107,
               "access": "public",
               "symbols": [
                 "ScrollHint"
@@ -12404,7 +12404,7 @@
             {
               "signature": "explicit VirtualItemView(QWidget *parent = nullptr);",
               "comment": "Uses vivItemView, vivViewport and vivHorizontalScrollBar/vivVerticalScrollBar\nas default object names. Callers may override them after construction.",
-              "line": 116,
+              "line": 117,
               "access": "public",
               "symbols": [
                 "VirtualItemView"
@@ -12417,7 +12417,7 @@
             {
               "signature": "~VirtualItemView() override;",
               "comment": "",
-              "line": 117,
+              "line": 118,
               "access": "public",
               "symbols": [
                 "VirtualItemView"
@@ -12430,7 +12430,7 @@
             {
               "signature": "void setBackgroundVisible(bool visible);",
               "comment": "Shows the overall view base and viewport QSS background (default true).\nFalse exposes the parent beneath these two layers;\nstate layers, separators and explicitly colored spacing remain independent.",
-              "line": 122,
+              "line": 123,
               "access": "public",
               "symbols": [
                 "setBackgroundVisible"
@@ -12450,7 +12450,7 @@
             {
               "signature": "    bool backgroundVisible() const;",
               "comment": "",
-              "line": 123,
+              "line": 124,
               "access": "public",
               "symbols": [
                 "backgroundVisible"
@@ -12470,7 +12470,7 @@
             {
               "signature": "void setBackgroundColor(const QColor &color);",
               "comment": "Overall view base color; invalid follows the view's QPalette::Base.\nA viewport QSS background is composited above it. Visibility controls both layers.\nAdapter widgets that paint their own backgrounds remain application-controlled.",
-              "line": 127,
+              "line": 128,
               "access": "public",
               "symbols": [
                 "setBackgroundColor"
@@ -12496,7 +12496,7 @@
             {
               "signature": "    QColor backgroundColor() const;",
               "comment": "",
-              "line": 128,
+              "line": 129,
               "access": "public",
               "symbols": [
                 "backgroundColor"
@@ -12522,7 +12522,7 @@
             {
               "signature": "QBrush backgroundBrush() const;",
               "comment": "Resolved view base brush; excludes the viewport layer. NoBrush while hidden.",
-              "line": 130,
+              "line": 131,
               "access": "public",
               "symbols": [
                 "backgroundBrush"
@@ -12538,7 +12538,7 @@
             {
               "signature": "void setItemBackgroundColor(const QColor &color);",
               "comment": "Uniform item-row base below hover/selection, independent of body visibility.\nInvalid (default) or fully transparent colors disable the fill. Headers and\nspacing keep their own backgrounds; adapter widgets must remain transparent.",
-              "line": 135,
+              "line": 136,
               "access": "public",
               "symbols": [
                 "setItemBackgroundColor"
@@ -12564,7 +12564,7 @@
             {
               "signature": "    QColor itemBackgroundColor() const;",
               "comment": "",
-              "line": 136,
+              "line": 137,
               "access": "public",
               "symbols": [
                 "itemBackgroundColor"
@@ -12590,7 +12590,7 @@
             {
               "signature": "void setFrameCornerRadius(int radius);",
               "comment": "Rounded outer frame shared by all views (logical pixels; defaults to zero).\nEnabling radius or width installs an Alpha compositing graphics effect,\nreplacing any existing effect. Headers, child widgets and scrollbars are included.",
-              "line": 141,
+              "line": 142,
               "access": "public",
               "symbols": [
                 "setFrameCornerRadius"
@@ -12618,7 +12618,7 @@
             {
               "signature": "    int frameCornerRadius() const;",
               "comment": "",
-              "line": 142,
+              "line": 143,
               "access": "public",
               "symbols": [
                 "frameCornerRadius"
@@ -12638,7 +12638,7 @@
             {
               "signature": "void setFrameBorderWidth(int width);",
               "comment": "Border space is reserved inside the view; clamped to [0, 32767].",
-              "line": 144,
+              "line": 145,
               "access": "public",
               "symbols": [
                 "setFrameBorderWidth"
@@ -12666,7 +12666,7 @@
             {
               "signature": "    int frameBorderWidth() const;",
               "comment": "",
-              "line": 145,
+              "line": 146,
               "access": "public",
               "symbols": [
                 "frameBorderWidth"
@@ -12686,7 +12686,7 @@
             {
               "signature": "void setFrameBorderColor(const QColor &color);",
               "comment": "An invalid color uses the palette's Mid color.",
-              "line": 147,
+              "line": 148,
               "access": "public",
               "symbols": [
                 "setFrameBorderColor"
@@ -12714,7 +12714,7 @@
             {
               "signature": "    QColor frameBorderColor() const;",
               "comment": "",
-              "line": 148,
+              "line": 149,
               "access": "public",
               "symbols": [
                 "frameBorderColor"
@@ -12734,7 +12734,7 @@
             {
               "signature": "void setFrameBorderEdges(Qt::Edges edges);",
               "comment": "Painted outer edges (default all four). Only visible edges reserve space;\nhidden edges retain the outer corner clipping without a border inset.",
-              "line": 151,
+              "line": 152,
               "access": "public",
               "symbols": [
                 "setFrameBorderEdges"
@@ -12762,7 +12762,7 @@
             {
               "signature": "    Qt::Edges frameBorderEdges() const;",
               "comment": "",
-              "line": 152,
+              "line": 153,
               "access": "public",
               "symbols": [
                 "frameBorderEdges"
@@ -12782,7 +12782,7 @@
             {
               "signature": "void setFrameBorderVisible(Qt::Edge edge, bool visible);",
               "comment": "Changes or queries one outer edge without affecting the other edges.",
-              "line": 154,
+              "line": 155,
               "access": "public",
               "symbols": [
                 "setFrameBorderVisible"
@@ -12802,7 +12802,7 @@
             {
               "signature": "bool frameBorderVisible(Qt::Edge edge) const;",
               "comment": "",
-              "line": 155,
+              "line": 156,
               "access": "public",
               "symbols": [
                 "frameBorderVisible"
@@ -12818,7 +12818,7 @@
             {
               "signature": "void setAutoHeightEnabled(bool enabled);",
               "comment": "Fixes the height to the vertical content, headers, frame and horizontal\nscrollbar (default false), bounded by autoHeightMaximumHeight().\nParent layout space does not reduce this height. Uses Fixed vertical size\npolicy and restores the previous policy and height constraints on disable.\nWheel input without a content scroll range is ignored for ancestor scrolling.",
-              "line": 162,
+              "line": 163,
               "access": "public",
               "symbols": [
                 "setAutoHeightEnabled"
@@ -12852,7 +12852,7 @@
             {
               "signature": "    bool autoHeightEnabled() const;",
               "comment": "",
-              "line": 163,
+              "line": 164,
               "access": "public",
               "symbols": [
                 "autoHeightEnabled"
@@ -12878,7 +12878,7 @@
             {
               "signature": "void setAutoHeightMaximumHeight(int height);",
               "comment": "Independent total-height limit for auto height; 0 (default) means unlimited.\nNegative values are treated as 0. Do not use QWidget's height constraints\nto configure this limit: they store the computed fixed height while enabled.",
-              "line": 167,
+              "line": 168,
               "access": "public",
               "symbols": [
                 "setAutoHeightMaximumHeight"
@@ -12912,7 +12912,7 @@
             {
               "signature": "    int autoHeightMaximumHeight() const;",
               "comment": "",
-              "line": 168,
+              "line": 169,
               "access": "public",
               "symbols": [
                 "autoHeightMaximumHeight"
@@ -12938,7 +12938,7 @@
             {
               "signature": "QSize sizeHint() const override;",
               "comment": "Content-based preferred height while auto height is enabled.",
-              "line": 170,
+              "line": 171,
               "access": "public",
               "symbols": [
                 "sizeHint"
@@ -12951,7 +12951,7 @@
             {
               "signature": "QSize minimumSizeHint() const override;",
               "comment": "Preserves the computed content height in any parent layout.",
-              "line": 172,
+              "line": 173,
               "access": "public",
               "symbols": [
                 "minimumSizeHint"
@@ -12964,7 +12964,7 @@
             {
               "signature": "virtual void setModel(QAbstractItemModel *model);",
               "comment": "",
-              "line": 175,
+              "line": 176,
               "access": "public",
               "symbols": [
                 "setModel"
@@ -12984,7 +12984,7 @@
             {
               "signature": "    QAbstractItemModel *model() const;",
               "comment": "",
-              "line": 176,
+              "line": 177,
               "access": "public",
               "symbols": [
                 "model"
@@ -13004,7 +13004,7 @@
             {
               "signature": "void setSelectionModel(QItemSelectionModel *selectionModel);",
               "comment": "Replaces the selection model. The model of \\a selectionModel has to be\nmodel(); a selection model of another model is rejected with a warning,\nbecause the view would otherwise hold two different models at once.",
-              "line": 182,
+              "line": 183,
               "access": "public",
               "symbols": [
                 "setSelectionModel"
@@ -13024,7 +13024,7 @@
             {
               "signature": "    QItemSelectionModel *selectionModel() const;",
               "comment": "",
-              "line": 183,
+              "line": 184,
               "access": "public",
               "symbols": [
                 "selectionModel"
@@ -13044,7 +13044,7 @@
             {
               "signature": "struct VisualState {\n        bool hovered = false;\n        bool selected = false;\n        qreal hoverProgress = 0.0;\n        qreal selectedProgress = 0.0;\n    };",
               "comment": "",
-              "line": 185,
+              "line": 186,
               "access": "public",
               "symbols": [
                 "VisualState"
@@ -13083,7 +13083,7 @@
             {
               "signature": "virtual VisualState visualState(const QModelIndex &index) const;",
               "comment": "State of an index for business-widget painting. Hover and selection may\nboth be true; the business widget decides which appearance takes priority.",
-              "line": 194,
+              "line": 195,
               "access": "public",
               "symbols": [
                 "visualState"
@@ -13099,7 +13099,7 @@
             {
               "signature": "    QModelIndex hoveredIndex() const;",
               "comment": "",
-              "line": 195,
+              "line": 196,
               "access": "public",
               "symbols": [
                 "hoveredIndex"
@@ -13112,7 +13112,7 @@
             {
               "signature": "void setHoverBackgroundColor(const QColor &color);",
               "comment": "Colors available to business widgets that paint hover/selection backgrounds.\nChanging either color notifies materialized widgets to repaint.",
-              "line": 198,
+              "line": 199,
               "access": "public",
               "symbols": [
                 "setHoverBackgroundColor"
@@ -13132,7 +13132,7 @@
             {
               "signature": "    QColor hoverBackgroundColor() const;",
               "comment": "",
-              "line": 199,
+              "line": 200,
               "access": "public",
               "symbols": [
                 "hoverBackgroundColor"
@@ -13152,7 +13152,7 @@
             {
               "signature": "void setSelectedBackgroundColor(const QColor &color);",
               "comment": "",
-              "line": 200,
+              "line": 201,
               "access": "public",
               "symbols": [
                 "setSelectedBackgroundColor"
@@ -13172,7 +13172,7 @@
             {
               "signature": "    QColor selectedBackgroundColor() const;",
               "comment": "",
-              "line": 201,
+              "line": 202,
               "access": "public",
               "symbols": [
                 "selectedBackgroundColor"
@@ -13192,7 +13192,7 @@
             {
               "signature": "void setVisualStateAnimationDuration(int milliseconds);",
               "comment": "Duration of hover/selection color transitions (default 180 ms); zero disables animation.",
-              "line": 203,
+              "line": 204,
               "access": "public",
               "symbols": [
                 "setVisualStateAnimationDuration"
@@ -13218,7 +13218,7 @@
             {
               "signature": "    int visualStateAnimationDuration() const;",
               "comment": "",
-              "line": 204,
+              "line": 205,
               "access": "public",
               "symbols": [
                 "visualStateAnimationDuration"
@@ -13244,7 +13244,7 @@
             {
               "signature": "void setVisualStateAnimationEasingCurve(const QEasingCurve &curve);",
               "comment": "Curve shared by hover/selection transitions (default OutCubic).\nChanging it resets the current transitions, like changing their duration.",
-              "line": 207,
+              "line": 208,
               "access": "public",
               "symbols": [
                 "setVisualStateAnimationEasingCurve"
@@ -13270,7 +13270,7 @@
             {
               "signature": "    QEasingCurve visualStateAnimationEasingCurve() const;",
               "comment": "",
-              "line": 208,
+              "line": 209,
               "access": "public",
               "symbols": [
                 "visualStateAnimationEasingCurve"
@@ -13296,7 +13296,7 @@
             {
               "signature": "QModelIndex currentIndex() const;",
               "comment": "",
-              "line": 210,
+              "line": 211,
               "access": "public",
               "symbols": [
                 "currentIndex"
@@ -13316,7 +13316,7 @@
             {
               "signature": "void setCurrentIndex(const QModelIndex &index);",
               "comment": "",
-              "line": 211,
+              "line": 212,
               "access": "public",
               "symbols": [
                 "setCurrentIndex"
@@ -13336,7 +13336,7 @@
             {
               "signature": "void activateIndex(const QModelIndex &index);",
               "comment": "Makes \\a index current and reports the same signals as a click\n(clicked()/activated()). §37: a screen reader \"presses\" an item, and\nbusiness code reacts through the signals it already handles.",
-              "line": 215,
+              "line": 216,
               "access": "public",
               "symbols": [
                 "activateIndex"
@@ -13349,7 +13349,7 @@
             {
               "signature": "enum class SelectionMode {\n        NoSelection,\n        SingleSelection,\n        MultiSelection,\n        ExtendedSelection,\n    };",
               "comment": "How selection gestures are interpreted (mirrors QAbstractItemView).",
-              "line": 218,
+              "line": 219,
               "access": "public",
               "symbols": [
                 "SelectionMode"
@@ -13388,7 +13388,7 @@
             {
               "signature": "enum class SelectionBehavior {\n        SelectItems,\n        SelectRows,\n    };",
               "comment": "Which part of an item gets selected: the item, or its whole row. There is\ndeliberately no SelectColumns: table header selection is configured separately\nfrom body gestures through VirtualTableView.",
-              "line": 229,
+              "line": 230,
               "access": "public",
               "symbols": [
                 "SelectionBehavior"
@@ -13415,7 +13415,7 @@
             {
               "signature": "void setSelectionMode(SelectionMode mode);",
               "comment": "",
-              "line": 235,
+              "line": 236,
               "access": "public",
               "symbols": [
                 "setSelectionMode"
@@ -13449,7 +13449,7 @@
             {
               "signature": "    SelectionMode selectionMode() const;",
               "comment": "",
-              "line": 236,
+              "line": 237,
               "access": "public",
               "symbols": [
                 "selectionMode"
@@ -13475,7 +13475,7 @@
             {
               "signature": "void setSelectionBehavior(SelectionBehavior behavior);",
               "comment": "Whole rows are selected by default. Tables use the same row/cell choice\nfor hover and selected visual states.",
-              "line": 239,
+              "line": 240,
               "access": "public",
               "symbols": [
                 "setSelectionBehavior"
@@ -13509,7 +13509,7 @@
             {
               "signature": "    SelectionBehavior selectionBehavior() const;",
               "comment": "",
-              "line": 240,
+              "line": 241,
               "access": "public",
               "symbols": [
                 "selectionBehavior"
@@ -13535,7 +13535,7 @@
             {
               "signature": "struct DropTarget\n    {\n        QModelIndex parent;\n        int row = -1;\n        int column = -1;\n        /// True when the drop lands onto \\a parent (a tree node or table cell)\n        /// instead of between rows.\n        bool ontoItem = false;\n        /// True when the drop landed in the empty area below the last visible\n        /// row: the indicator marks the end of the content, and \\a row is the\n        /// insertion index after the parent's last child.\n        bool trailing = false;\n\n        /// Cell payload rather than a whole row. Insertion beside a source row\n        /// is allowed because the model may insert cells while keeping that row.\n        bool cellDrop = false;\n\n        bool isValid() const\n        {\n            return row >= 0 || (cellDrop && ontoItem && parent.isValid()\n                                && row == -1 && column == -1);\n        }\n    };",
               "comment": "Where a drop lands: the insertion row inside \\a parent. Dropping *onto* an\nitem is expressed as (item, item.rowCount()) - the same convention\nQAbstractItemModel::dropMimeData() uses - and is flagged through\n\\a ontoItem so the view paints a frame instead of an insertion line.\nA table may instead target an existing cell: parent is that cell,\nrow and column are -1, and both ontoItem and cellDrop are true.\nOtherwise \\a column is -1 unless the view resolves a cell (tables).",
-              "line": 250,
+              "line": 251,
               "access": "public",
               "symbols": [
                 "DropTarget"
@@ -13592,7 +13592,7 @@
             {
               "signature": "enum class DropIndicatorStyle {\n        /// Line between items, with the configured width (2 logical pixels by default).\n        Line,\n        /// Frame around the item the drop lands into.\n        Frame,\n    };",
               "comment": "How the drop indicator is painted (§38). A subclass chooses by filling\nDropTarget::ontoItem; an unknown target still gets the insertion line.",
-              "line": 276,
+              "line": 277,
               "access": "public",
               "symbols": [
                 "DropIndicatorStyle"
@@ -13619,7 +13619,7 @@
             {
               "signature": "void setDragEnabled(bool enabled);",
               "comment": "Enables starting a drag from an item whose flags contain\nQt::ItemIsDragEnabled. The drag carries model->mimeData() and, while it is\nactive, the dragged item's widget is pinned so the recycler cannot take it\naway from the drag (§36/§38). The same switch makes the view a drop\ntarget: the model stays the authority (canDropMimeData()/dropMimeData())\nand the item flags decide what may be dragged or dropped onto.",
-              "line": 290,
+              "line": 291,
               "access": "public",
               "symbols": [
                 "setDragEnabled"
@@ -13647,7 +13647,7 @@
             {
               "signature": "    bool isDragEnabled() const;",
               "comment": "",
-              "line": 291,
+              "line": 292,
               "access": "public",
               "symbols": [
                 "isDragEnabled"
@@ -13667,7 +13667,7 @@
             {
               "signature": "enum class DragStartMode { Automatic, Manual };",
               "comment": "Automatic starts after the mouse crosses the drag distance; Manual leaves\ninitiation to startDrag(). Neither mode changes model/drop permissions.",
-              "line": 294,
+              "line": 295,
               "access": "public",
               "symbols": [
                 "DragStartMode"
@@ -13694,7 +13694,7 @@
             {
               "signature": "void setDragStartMode(DragStartMode mode);",
               "comment": "",
-              "line": 296,
+              "line": 297,
               "access": "public",
               "symbols": [
                 "setDragStartMode"
@@ -13722,7 +13722,7 @@
             {
               "signature": "    DragStartMode dragStartMode() const;",
               "comment": "",
-              "line": 297,
+              "line": 298,
               "access": "public",
               "symbols": [
                 "dragStartMode"
@@ -13742,7 +13742,7 @@
             {
               "signature": "bool canStartDrag(const QModelIndex &index) const;",
               "comment": "True when \\a index would start a drag right now.",
-              "line": 299,
+              "line": 300,
               "access": "public",
               "symbols": [
                 "canStartDrag"
@@ -13758,7 +13758,7 @@
             {
               "signature": "Qt::DropAction startDrag(const QModelIndex &index = QModelIndex());",
               "comment": "Starts a drag for the current selection (or \\a index). Returns the action\nthe drop target reported; Qt::IgnoreAction when nothing was dragged.\nThe preview is anchored at the matching mouse press, or the current cursor.",
-              "line": 303,
+              "line": 304,
               "access": "public",
               "symbols": [
                 "startDrag",
@@ -13781,7 +13781,7 @@
             {
               "signature": "Qt::DropAction startDrag(const QModelIndex &index, const DragOptions &options);",
               "comment": "Starts with optional preview overrides; no widget/rectangle uses the default view preview.\nAn explicit widget with an empty rectangle is captured whole; pinning and MIME use the source index.",
-              "line": 306,
+              "line": 307,
               "access": "public",
               "symbols": [
                 "startDrag"
@@ -13803,7 +13803,7 @@
             {
               "signature": "void setDropIndicatorShown(bool shown);",
               "comment": "Draws the drop indicator (a line between rows, or a frame around the item\na tree would drop into).",
-              "line": 310,
+              "line": 311,
               "access": "public",
               "symbols": [
                 "setDropIndicatorShown"
@@ -13823,7 +13823,7 @@
             {
               "signature": "    bool isDropIndicatorShown() const;",
               "comment": "",
-              "line": 311,
+              "line": 312,
               "access": "public",
               "symbols": [
                 "isDropIndicatorShown"
@@ -13843,7 +13843,7 @@
             {
               "signature": "void setDropIndicatorColor(const QColor &color);",
               "comment": "Color shared by insertion lines and target frames. An invalid color\n(the default) follows QPalette::Highlight; the getter returns that setting.",
-              "line": 314,
+              "line": 315,
               "access": "public",
               "symbols": [
                 "setDropIndicatorColor"
@@ -13863,7 +13863,7 @@
             {
               "signature": "    QColor dropIndicatorColor() const;",
               "comment": "",
-              "line": 315,
+              "line": 316,
               "access": "public",
               "symbols": [
                 "dropIndicatorColor"
@@ -13883,7 +13883,7 @@
             {
               "signature": "void setDropIndicatorWidth(int width);",
               "comment": "Stroke width in logical pixels (default 2). Negative values become zero;\nzero hides the indicator without changing drop permissions.",
-              "line": 318,
+              "line": 319,
               "access": "public",
               "symbols": [
                 "setDropIndicatorWidth"
@@ -13903,7 +13903,7 @@
             {
               "signature": "    int dropIndicatorWidth() const;",
               "comment": "",
-              "line": 319,
+              "line": 320,
               "access": "public",
               "symbols": [
                 "dropIndicatorWidth"
@@ -13923,7 +13923,7 @@
             {
               "signature": "void setDropIndicatorPenStyle(Qt::PenStyle style);",
               "comment": "Built-in pen style shared by lines and frames (default SolidLine).\nNoPen hides the indicator; unsupported/custom styles use SolidLine.",
-              "line": 322,
+              "line": 323,
               "access": "public",
               "symbols": [
                 "setDropIndicatorPenStyle"
@@ -13951,7 +13951,7 @@
             {
               "signature": "    Qt::PenStyle dropIndicatorPenStyle() const;",
               "comment": "",
-              "line": 323,
+              "line": 324,
               "access": "public",
               "symbols": [
                 "dropIndicatorPenStyle"
@@ -13971,7 +13971,7 @@
             {
               "signature": "void setDefaultDropAction(Qt::DropAction action);",
               "comment": "Action used for drags started by this view (CopyAction by default).",
-              "line": 325,
+              "line": 326,
               "access": "public",
               "symbols": [
                 "setDefaultDropAction"
@@ -13999,7 +13999,7 @@
             {
               "signature": "    Qt::DropAction defaultDropAction() const;",
               "comment": "",
-              "line": 326,
+              "line": 327,
               "access": "public",
               "symbols": [
                 "defaultDropAction"
@@ -14019,7 +14019,7 @@
             {
               "signature": "void setMoveRemovesSourceRows(bool enabled);",
               "comment": "Whether a drag that ends in `Qt::MoveAction` removes the rows this view dragged.\n\nOff by default: the library's contract is \"the model owns the semantics\" (§38), so a model\nthat implements the move itself (remove + insert, like the example's list model) already\nproduces a move. A *cross-view* move cannot be expressed that way - the source model never\nlearns that a foreign view accepted the drop - and Qt's own item views solve it in the\nview (`QAbstractItemView` removes the dragged rows after a successful move drop). Turn this\non for that Qt behaviour: the view then removes its dragged rows whenever the drag ends as\na move, skipping any row the model has already removed (so a model that moves by\nremove + insert is not touched twice). A model that implements a move while *keeping* the\nrow identities (e.g. `moveRows()`) must keep this off - it would look like an untouched,\nstill-present source row and be removed a second time.\nFor row-insertion drops between these views, selected source cells transfer\nto their inserted counterparts after source deletion. This requires sibling\nsource rows inserted in order as one block; ambiguous drops are left to the model.",
-              "line": 342,
+              "line": 343,
               "access": "public",
               "symbols": [
                 "setMoveRemovesSourceRows"
@@ -14045,7 +14045,7 @@
             {
               "signature": "    bool moveRemovesSourceRows() const;",
               "comment": "",
-              "line": 343,
+              "line": 344,
               "access": "public",
               "symbols": [
                 "moveRemovesSourceRows"
@@ -14071,7 +14071,7 @@
             {
               "signature": "void setDragDropActions(Qt::DropActions actions);",
               "comment": "Actions a drop from this view offers; by default the model's\nsupportedDragActions() (or Move|Copy).",
-              "line": 346,
+              "line": 347,
               "access": "public",
               "symbols": [
                 "setDragDropActions"
@@ -14091,7 +14091,7 @@
             {
               "signature": "Qt::DropActions dragDropActions() const;",
               "comment": "",
-              "line": 347,
+              "line": 348,
               "access": "public",
               "symbols": [
                 "dragDropActions"
@@ -14111,7 +14111,7 @@
             {
               "signature": "DropTarget dropTargetAt(const QPoint &viewportPos) const;",
               "comment": "Target a drop at \\a viewportPos would use (diagnostics/subclasses).",
-              "line": 349,
+              "line": 350,
               "access": "public",
               "symbols": [
                 "dropTargetAt"
@@ -14124,7 +14124,7 @@
             {
               "signature": "QRect dropIndicatorRect(const DropTarget &target) const;",
               "comment": "Indicator geometry after applying the configured insertion-line width.",
-              "line": 351,
+              "line": 352,
               "access": "public",
               "symbols": [
                 "dropIndicatorRect"
@@ -14137,7 +14137,7 @@
             {
               "signature": "DropIndicatorStyle dropIndicatorStyle(const DropTarget &target) const;",
               "comment": "Style used to paint the indicator of \\a target.",
-              "line": 353,
+              "line": 354,
               "access": "public",
               "symbols": [
                 "dropIndicatorStyle"
@@ -14150,7 +14150,7 @@
             {
               "signature": "virtual void setAdapter(WidgetAdapter *adapter, bool takeOwnership = false);",
               "comment": "Installs the widget adapter. **Virtual on purpose**: a subclass whose materialization\nis typed (`VirtualTableView`) has to keep its own adapter in sync with this one, and a\ncall through a `VirtualItemView *` must reach that override - otherwise the base\npointer and the subclass pointer could name two different adapters, and one adapter\nwould bind the QWidgets the other created (P1 of the fourth review).",
-              "line": 361,
+              "line": 362,
               "access": "public",
               "symbols": [
                 "setAdapter"
@@ -14176,7 +14176,7 @@
             {
               "signature": "    WidgetAdapter *adapter() const;",
               "comment": "",
-              "line": 362,
+              "line": 363,
               "access": "public",
               "symbols": [
                 "adapter"
@@ -14202,7 +14202,7 @@
             {
               "signature": "    WidgetRecycler *recycler() const;",
               "comment": "",
-              "line": 363,
+              "line": 364,
               "access": "public",
               "symbols": [
                 "recycler"
@@ -14215,7 +14215,7 @@
             {
               "signature": "    void setEditTriggers(EditTriggers triggers);",
               "comment": "Default gestures, initially DoubleClicked | EditKeyPressed (F2).\nAn adapter can override them per index; child controls use edit(index).",
-              "line": 368,
+              "line": 369,
               "access": "public",
               "symbols": [
                 "setEditTriggers"
@@ -14249,7 +14249,7 @@
             {
               "signature": "    EditTriggers editTriggers() const;",
               "comment": "",
-              "line": 369,
+              "line": 370,
               "access": "public",
               "symbols": [
                 "editTriggers"
@@ -14275,7 +14275,7 @@
             {
               "signature": "bool edit(const QModelIndex &index);",
               "comment": "Requests editing for an enabled, editable index, independently of automatic\ntriggers. Commits the previous overlay editor or cancels the previous\nadapter-owned request, then calls editRequest().\nTrue means the adapter handled the request or an overlay editor was opened.",
-              "line": 374,
+              "line": 375,
               "access": "public",
               "symbols": [
                 "edit"
@@ -14299,7 +14299,7 @@
             {
               "signature": "bool commitEditor();",
               "comment": "Commits and closes an overlay editor. False keeps a rejected editor open;\nalso returns false for adapter-owned requests, whose popup owns submission.",
-              "line": 377,
+              "line": 378,
               "access": "public",
               "symbols": [
                 "commitEditor"
@@ -14321,7 +14321,7 @@
             {
               "signature": "void closeEditor();",
               "comment": "Cancels without writing the draft, including adapter-owned requests via\ncancelEditRequest().",
-              "line": 380,
+              "line": 381,
               "access": "public",
               "symbols": [
                 "closeEditor"
@@ -14338,7 +14338,7 @@
             {
               "signature": "QModelIndex editingIndex() const;",
               "comment": "Currently edited index/widget, or an invalid index/null when not editing.\nAdapter-owned requests expose their index, but editorWidget() is null.",
-              "line": 383,
+              "line": 384,
               "access": "public",
               "symbols": [
                 "editingIndex"
@@ -14354,7 +14354,7 @@
             {
               "signature": "QWidget *editorWidget() const;",
               "comment": "",
-              "line": 384,
+              "line": 385,
               "access": "public",
               "symbols": [
                 "editorWidget"
@@ -14370,7 +14370,7 @@
             {
               "signature": "void setItemDataRole(int role);",
               "comment": "Model role containing one complete business payload for a row or tree node.\nCell widgets read this role from their row's canonical column (column 0).\nChanging it rebinds materialized items. A negative role disables payload reads.",
-              "line": 389,
+              "line": 390,
               "access": "public",
               "symbols": [
                 "setItemDataRole"
@@ -14396,7 +14396,7 @@
             {
               "signature": "    int itemDataRole() const;",
               "comment": "",
-              "line": 390,
+              "line": 391,
               "access": "public",
               "symbols": [
                 "itemDataRole"
@@ -14422,7 +14422,7 @@
             {
               "signature": "void setOverscan(int before, int after);",
               "comment": "Number of extra items materialized before/after the visible range.",
-              "line": 394,
+              "line": 395,
               "access": "public",
               "symbols": [
                 "setOverscan"
@@ -14442,7 +14442,7 @@
             {
               "signature": "    int overscanBefore() const;",
               "comment": "",
-              "line": 395,
+              "line": 396,
               "access": "public",
               "symbols": [
                 "overscanBefore"
@@ -14455,7 +14455,7 @@
             {
               "signature": "    int overscanAfter() const;",
               "comment": "",
-              "line": 396,
+              "line": 397,
               "access": "public",
               "symbols": [
                 "overscanAfter"
@@ -14468,7 +14468,7 @@
             {
               "signature": "using RowSpacingFactory = std::function<QWidget *(const QModelIndex &, QWidget *)>;",
               "comment": "",
-              "line": 398,
+              "line": 399,
               "access": "public",
               "symbols": [
                 "RowSpacingFactory"
@@ -14477,7 +14477,7 @@
             {
               "signature": "using RowSpacingBinder = std::function<void(QWidget *, const QModelIndex &)>;",
               "comment": "",
-              "line": 399,
+              "line": 400,
               "access": "public",
               "symbols": [
                 "void"
@@ -14486,7 +14486,7 @@
             {
               "signature": "virtual void setRowSpacing(int pixels);",
               "comment": "Gap below a row; the last row has no trailing gap. Zero disables it.",
-              "line": 401,
+              "line": 402,
               "access": "public",
               "symbols": [
                 "setRowSpacing"
@@ -14514,7 +14514,7 @@
             {
               "signature": "    int rowSpacing() const;",
               "comment": "",
-              "line": 402,
+              "line": 403,
               "access": "public",
               "symbols": [
                 "rowSpacing"
@@ -14534,7 +14534,7 @@
             {
               "signature": "virtual void setGridLinePlacement(GridLinePlacement placement);",
               "comment": "Grid lines use the gap center by default, or both gap edges when requested.\nWith zero spacing both modes use a single shared item boundary.",
-              "line": 405,
+              "line": 406,
               "access": "public",
               "symbols": [
                 "setGridLinePlacement"
@@ -14568,7 +14568,7 @@
             {
               "signature": "    GridLinePlacement gridLinePlacement() const;",
               "comment": "",
-              "line": 406,
+              "line": 407,
               "access": "public",
               "symbols": [
                 "gridLinePlacement"
@@ -14594,7 +14594,7 @@
             {
               "signature": "void setGridLineMargins(const QMargins &margins);",
               "comment": "Whole-line endpoint insets in logical pixels, applied after layout (default zero).\nLeft/right affect horizontal grid lines; top/bottom affect vertical grid lines.\nNegative values extend endpoints. These are not per-cell padding and do not\nchange layout, hit testing, frame borders or frozen-pane divider styles.\nBuilt-in table headers share the same whole-view endpoints as the body.",
-              "line": 412,
+              "line": 413,
               "access": "public",
               "symbols": [
                 "setGridLineMargins"
@@ -14622,7 +14622,7 @@
             {
               "signature": "    QMargins gridLineMargins() const;",
               "comment": "",
-              "line": 413,
+              "line": 414,
               "access": "public",
               "symbols": [
                 "gridLineMargins"
@@ -14650,7 +14650,7 @@
             {
               "signature": "enum class GridLineMarginReference { Viewport, Content };",
               "comment": "Viewport keeps endpoint insets on screen; Content follows full scrolling bounds.",
-              "line": 415,
+              "line": 416,
               "access": "public",
               "symbols": [
                 "GridLineMarginReference"
@@ -14677,7 +14677,7 @@
             {
               "signature": "void setGridLineMarginReference(GridLineMarginReference reference);",
               "comment": "Reference for whole-line margins (default Viewport). Content uses uncut\ncontent endpoints, so an offscreen trailing edge is not inset on screen.",
-              "line": 419,
+              "line": 420,
               "access": "public",
               "symbols": [
                 "setGridLineMarginReference"
@@ -14705,7 +14705,7 @@
             {
               "signature": "    GridLineMarginReference gridLineMarginReference() const;",
               "comment": "",
-              "line": 420,
+              "line": 421,
               "access": "public",
               "symbols": [
                 "gridLineMarginReference"
@@ -14733,7 +14733,7 @@
             {
               "signature": "void setTrailingRowGridLineAutoHideEnabled(bool enabled);",
               "comment": "Automatically hides the terminal row grid line for auto height or vertical\noverflow (default true). False keeps it whenever row grid lines are enabled.\nShared by list, tree, table, tree-table and flow views, including default row headers.",
-              "line": 424,
+              "line": 425,
               "access": "public",
               "symbols": [
                 "setTrailingRowGridLineAutoHideEnabled"
@@ -14767,7 +14767,7 @@
             {
               "signature": "    bool trailingRowGridLineAutoHideEnabled() const;",
               "comment": "",
-              "line": 425,
+              "line": 426,
               "access": "public",
               "symbols": [
                 "trailingRowGridLineAutoHideEnabled"
@@ -14793,7 +14793,7 @@
             {
               "signature": "virtual void setSpacingBackgroundColor(const QColor &color);",
               "comment": "Background of row gaps. An invalid color preserves the default palette behavior.\nThe getter returns the configured color, including an invalid default.",
-              "line": 428,
+              "line": 429,
               "access": "public",
               "symbols": [
                 "setSpacingBackgroundColor"
@@ -14814,7 +14814,7 @@
             {
               "signature": "    QColor spacingBackgroundColor() const;",
               "comment": "",
-              "line": 429,
+              "line": 430,
               "access": "public",
               "symbols": [
                 "spacingBackgroundColor"
@@ -14835,7 +14835,7 @@
             {
               "signature": "void setRowSpacingFactory(RowSpacingFactory factory, RowSpacingBinder binder = {});",
               "comment": "Optional content for visible gaps. The binder refreshes a reused widget.",
-              "line": 431,
+              "line": 432,
               "access": "public",
               "symbols": [
                 "setRowSpacingFactory"
@@ -14855,7 +14855,7 @@
             {
               "signature": "void scrollTo(const QModelIndex &index, ScrollHint hint = EnsureVisible);",
               "comment": "",
-              "line": 433,
+              "line": 434,
               "access": "public",
               "symbols": [
                 "scrollTo"
@@ -14871,7 +14871,7 @@
             {
               "signature": "void setItemPinned(const QModelIndex &index, bool pinned = true);",
               "comment": "Keeps the widget of \\a index materialized even when it leaves the\noverscan window, and materializes it right away when it is not on screen\nat all (business code can request a pin for async operations). Each pin\ncosts one widget until it is unpinned - see setMaxPinnedItems().",
-              "line": 439,
+              "line": 440,
               "access": "public",
               "symbols": [
                 "setItemPinned"
@@ -14891,7 +14891,7 @@
             {
               "signature": "bool isItemPinned(const QModelIndex &index) const;",
               "comment": "Includes the temporary pin held by an active drag; explicit pins are independent.",
-              "line": 441,
+              "line": 442,
               "access": "public",
               "symbols": [
                 "isItemPinned"
@@ -14913,7 +14913,7 @@
             {
               "signature": "void pinWidget(QWidget *widget);",
               "comment": "Pin/unpin the item that currently owns \\a widget. Equivalent to\nsetItemPinned(indexForWidget(widget), ...).",
-              "line": 444,
+              "line": 445,
               "access": "public",
               "symbols": [
                 "pinWidget"
@@ -14929,7 +14929,7 @@
             {
               "signature": "void unpinWidget(QWidget *widget);",
               "comment": "",
-              "line": 445,
+              "line": 446,
               "access": "public",
               "symbols": [
                 "unpinWidget"
@@ -14945,7 +14945,7 @@
             {
               "signature": "void setMaxPinnedItems(int max);",
               "comment": "Soft cap for pinned items; exceeding it logs a qWarning once. Pinned\nitems are never recycled automatically, so this is a debugging aid for\n\"business code pins too much\". A value <= 0 disables the check.",
-              "line": 449,
+              "line": 450,
               "access": "public",
               "symbols": [
                 "setMaxPinnedItems"
@@ -14965,7 +14965,7 @@
             {
               "signature": "    int maxPinnedItems() const;",
               "comment": "",
-              "line": 450,
+              "line": 451,
               "access": "public",
               "symbols": [
                 "maxPinnedItems"
@@ -14985,7 +14985,7 @@
             {
               "signature": "virtual VirtualViewStats stats() const;",
               "comment": "Snapshot of the virtualization state (diagnostics / debug overlay).",
-              "line": 452,
+              "line": 453,
               "access": "public",
               "symbols": [
                 "stats"
@@ -15002,7 +15002,7 @@
             {
               "signature": "void setPerformanceLoggingEnabled(bool enabled);",
               "comment": "Opt-in timing of synchronous refresh work, callbacks and framework painting.\nFilter qCDebug output with viv.performance.refresh and viv.performance.paint.\nActive work is aggregated per view/category and logged once per second.\nSummaries show hot stages; viv.performance.details enables the full timing table.\nDisabled by default; filtering out a category also skips its timing work.",
-              "line": 459,
+              "line": 460,
               "access": "public",
               "symbols": [
                 "setPerformanceLoggingEnabled"
@@ -15028,7 +15028,7 @@
             {
               "signature": "    bool isPerformanceLoggingEnabled() const;",
               "comment": "",
-              "line": 460,
+              "line": 461,
               "access": "public",
               "symbols": [
                 "isPerformanceLoggingEnabled"
@@ -15054,7 +15054,7 @@
             {
               "signature": "static constexpr qsizetype kLifecycleLogCapacity = 400;",
               "comment": "Opt-in bounded event log (create/bind/unbind/recycle/pin) used to debug\n\"why does the widget count keep growing\". Disabled by default.",
-              "line": 464,
+              "line": 465,
               "access": "public",
               "symbols": [
                 "kLifecycleLogCapacity"
@@ -15063,7 +15063,7 @@
             {
               "signature": "void setLifecycleLoggingEnabled(bool enabled);",
               "comment": "",
-              "line": 465,
+              "line": 466,
               "access": "public",
               "symbols": [
                 "setLifecycleLoggingEnabled"
@@ -15083,7 +15083,7 @@
             {
               "signature": "    bool isLifecycleLoggingEnabled() const;",
               "comment": "",
-              "line": 466,
+              "line": 467,
               "access": "public",
               "symbols": [
                 "isLifecycleLoggingEnabled"
@@ -15103,7 +15103,7 @@
             {
               "signature": "    QStringList lifecycleLog() const;",
               "comment": "",
-              "line": 467,
+              "line": 468,
               "access": "public",
               "symbols": [
                 "lifecycleLog"
@@ -15119,7 +15119,7 @@
             {
               "signature": "void clearLifecycleLog();",
               "comment": "",
-              "line": 468,
+              "line": 469,
               "access": "public",
               "symbols": [
                 "clearLifecycleLog"
@@ -15135,7 +15135,7 @@
             {
               "signature": "virtual QModelIndex indexAt(const QPoint &viewportPos) const;",
               "comment": "Index under a viewport position. Multi-column views override this to\nreport the column as well.",
-              "line": 473,
+              "line": 474,
               "access": "public",
               "symbols": [
                 "indexAt"
@@ -15151,7 +15151,7 @@
             {
               "signature": "QRect visualRect(const QModelIndex &index) const;",
               "comment": "",
-              "line": 474,
+              "line": 475,
               "access": "public",
               "symbols": [
                 "visualRect"
@@ -15167,7 +15167,7 @@
             {
               "signature": "virtual bool usesItemWidgets() const;",
               "comment": "True when the kernel materializes item widgets itself. A view that\nmaterializes its own widgets (table cell mode) returns false and uses\nmaterializeItems()/rebindItemsInRange() instead.",
-              "line": 479,
+              "line": 480,
               "access": "public",
               "symbols": [
                 "usesItemWidgets"
@@ -15180,7 +15180,7 @@
             {
               "signature": "    qint64 verticalOffset() const;",
               "comment": "",
-              "line": 481,
+              "line": 482,
               "access": "public",
               "symbols": [
                 "verticalOffset"
@@ -15198,9 +15198,22 @@
               }
             },
             {
+              "signature": "    qint64 visualVerticalOffset() const;",
+              "comment": "Offset for painting and hit testing scrolling rows during a refresh reveal.",
+              "line": 484,
+              "access": "public",
+              "symbols": [
+                "visualVerticalOffset"
+              ],
+              "documentation": {
+                "zh": "返回包含刷新位移的绘制和命中偏移。顶部拉动时可为负数。",
+                "en": "Return the offset for painting and hit testing, including refresh displacement. It can be negative during a pull."
+              }
+            },
+            {
               "signature": "qint64 contentExtent() const;",
               "comment": "",
-              "line": 482,
+              "line": 485,
               "access": "public",
               "symbols": [
                 "contentExtent"
@@ -15213,7 +15226,7 @@
             {
               "signature": "qint64 maximumVerticalOffset() const;",
               "comment": "",
-              "line": 483,
+              "line": 486,
               "access": "public",
               "symbols": [
                 "maximumVerticalOffset"
@@ -15224,9 +15237,346 @@
               }
             },
             {
+              "signature": "Qt::Edges scrollEdges() const;",
+              "comment": "Logical boundaries, including both ends of an axis with zero range.",
+              "line": 489,
+              "access": "public",
+              "symbols": [
+                "scrollEdges"
+              ],
+              "documentation": {
+                "zh": "返回当前逻辑边缘，无滚动范围时同时位于轴的两端。表格的横向边缘使用主滚动组。",
+                "en": "Return current logical boundaries. A zero range occupies both ends. Horizontal table edges follow the primary scroll group.",
+                "related": [
+                  "scroll-refresh"
+                ]
+              }
+            },
+            {
+              "signature": "enum class RefreshState { Idle, Pulling, Armed, Refreshing, LoadingMore };",
+              "comment": "",
+              "line": 490,
+              "access": "public",
+              "symbols": [
+                "RefreshState"
+              ],
+              "documentation": {
+                "zh": "上下刷新指示器共享的交互和请求状态。",
+                "en": "Interaction and request state shared by both indicators.",
+                "members": [
+                  {
+                    "name": "Idle",
+                    "declaration": "Idle",
+                    "zh": "正在等待操作。",
+                    "en": "Waiting for input."
+                  },
+                  {
+                    "name": "Pulling",
+                    "declaration": "Pulling",
+                    "zh": "已开始拖动，尚未达到松手刷新距离。",
+                    "en": "Tracking a drag below the release threshold."
+                  },
+                  {
+                    "name": "Armed",
+                    "declaration": "Armed",
+                    "zh": "已达到阈值，松手将刷新。",
+                    "en": "Releasing now requests a refresh."
+                  },
+                  {
+                    "name": "Refreshing",
+                    "declaration": "Refreshing",
+                    "zh": "刷新请求进行中。",
+                    "en": "A refresh request is in flight."
+                  },
+                  {
+                    "name": "LoadingMore",
+                    "declaration": "LoadingMore",
+                    "zh": "下一页请求进行中。",
+                    "en": "A page request is in flight."
+                  }
+                ]
+              }
+            },
+            {
+              "signature": "enum class IndicatorMode { Overlay, Inline };",
+              "comment": "",
+              "line": 492,
+              "access": "public",
+              "symbols": [
+                "IndicatorMode"
+              ],
+              "documentation": {
+                "zh": "刷新提示的呈现方式。顶部和底部可分别设置。",
+                "en": "Presentation of an indicator. Each edge can use its own mode.",
+                "members": [
+                  {
+                    "name": "Overlay",
+                    "declaration": "Overlay",
+                    "zh": "在内容上方展开提示控件。",
+                    "en": "Reveal the indicator over the content."
+                  },
+                  {
+                    "name": "Inline",
+                    "declaration": "Inline",
+                    "zh": "移动滚动内容，为提示留出空间。",
+                    "en": "Displace scrolling content to make room for the indicator."
+                  }
+                ]
+              }
+            },
+            {
+              "signature": "void setIndicatorModes(IndicatorMode refresh, IndicatorMode loadMore);",
+              "comment": "Sets the top and bottom presentation independently. Both default to Overlay.",
+              "line": 495,
+              "access": "public",
+              "symbols": [
+                "setIndicatorModes"
+              ],
+              "documentation": {
+                "zh": "分别设置顶部和底部的占位或覆盖方式。两种方式均支持动画和自定义控件。",
+                "en": "Choose inline or overlay presentation independently at each edge. Both support animation and custom widgets.",
+                "defaults": {
+                  "zh": "两端均为 Overlay。",
+                  "en": "Both edges default to Overlay."
+                }
+              }
+            },
+            {
+              "signature": "void setIndicatorHeights(int restingHeight, int maximumHeight);",
+              "comment": "Sets the resting and maximum reveal heights in logical pixels (36 and 112 by default).",
+              "line": 497,
+              "access": "public",
+              "symbols": [
+                "setIndicatorHeights"
+              ],
+              "documentation": {
+                "zh": "设置请求期间的停留高度以及拖动展开的最大高度，单位为逻辑像素。停留高度限制在 1 到最大高度之间。",
+                "en": "Set the resting and maximum reveal heights in logical pixels. The resting height is clamped between one and the maximum.",
+                "defaults": {
+                  "zh": "默认停留 36，最大 112 个逻辑像素。",
+                  "en": "36 logical pixels at rest and 112 at maximum."
+                }
+              }
+            },
+            {
+              "signature": "void setPullToRefreshEnabled(bool enabled);",
+              "comment": "Enables a downward drag at the top. Disabled by default.",
+              "line": 499,
+              "access": "public",
+              "symbols": [
+                "setPullToRefreshEnabled"
+              ],
+              "documentation": {
+                "zh": "允许在顶部用鼠标或单指向下拖动，松手刷新。",
+                "en": "Enable a downward mouse or single-finger drag at the top to request a refresh on release.",
+                "defaults": {
+                  "zh": "默认关闭。",
+                  "en": "Disabled by default."
+                }
+              }
+            },
+            {
+              "signature": "bool pullToRefreshEnabled() const;",
+              "comment": "",
+              "line": 500,
+              "access": "public",
+              "symbols": [
+                "pullToRefreshEnabled"
+              ],
+              "documentation": {
+                "zh": "查询是否启用了下拉手势。",
+                "en": "Return whether the pull gesture is enabled."
+              }
+            },
+            {
+              "signature": "void setPullToRefreshThreshold(int pixels);",
+              "comment": "Drag distance in logical pixels. Defaults to 64 and is at least one.",
+              "line": 502,
+              "access": "public",
+              "symbols": [
+                "setPullToRefreshThreshold"
+              ],
+              "documentation": {
+                "zh": "设置松手刷新所需的距离，至少为一个逻辑像素。",
+                "en": "Set the release threshold in logical pixels, clamped to at least one.",
+                "defaults": {
+                  "zh": "默认 64 个逻辑像素。",
+                  "en": "64 logical pixels by default."
+                }
+              }
+            },
+            {
+              "signature": "int pullToRefreshThreshold() const;",
+              "comment": "",
+              "line": 503,
+              "access": "public",
+              "symbols": [
+                "pullToRefreshThreshold"
+              ],
+              "documentation": {
+                "zh": "返回松手刷新的逻辑像素阈值。",
+                "en": "Return the release threshold in logical pixels."
+              }
+            },
+            {
+              "signature": "void setLoadMoreEnabled(bool enabled);",
+              "comment": "Enables automatic bottom requests and bounded viewport filling. Default false.",
+              "line": 505,
+              "access": "public",
+              "symbols": [
+                "setLoadMoreEnabled"
+              ],
+              "documentation": {
+                "zh": "允许可见视图在触底时加载下一页，短首屏自动补页。无限制自动高度只自动请求一次，直至离开底部或刷新。",
+                "en": "Enable bottom paging and short-viewport filling while visible. Unbounded auto height requests only once until leaving the bottom or refreshing.",
+                "defaults": {
+                  "zh": "默认关闭。",
+                  "en": "Disabled by default."
+                }
+              }
+            },
+            {
+              "signature": "bool loadMoreEnabled() const;",
+              "comment": "",
+              "line": 506,
+              "access": "public",
+              "symbols": [
+                "loadMoreEnabled"
+              ],
+              "documentation": {
+                "zh": "查询是否允许自动请求下一页。",
+                "en": "Return whether automatic paging is enabled."
+              }
+            },
+            {
+              "signature": "RefreshState refreshState() const;",
+              "comment": "",
+              "line": 507,
+              "access": "public",
+              "symbols": [
+                "refreshState"
+              ],
+              "documentation": {
+                "zh": "查询手势或在途请求的状态。",
+                "en": "Return the current gesture or request state."
+              }
+            },
+            {
+              "signature": "qreal pullProgress() const;",
+              "comment": "Fraction of the release threshold reached, clamped to [0, 1].",
+              "line": 509,
+              "access": "public",
+              "symbols": [
+                "pullProgress"
+              ],
+              "documentation": {
+                "zh": "返回已达到的阈值比例，范围 0 到 1。",
+                "en": "Return the fraction of the threshold reached, from zero to one."
+              }
+            },
+            {
+              "signature": "void setRefreshIndicator(QWidget *indicator);",
+              "comment": "Transfers ownership of the top overlay. Null restores the built-in indicator.",
+              "line": 511,
+              "access": "public",
+              "symbols": [
+                "setRefreshIndicator"
+              ],
+              "documentation": {
+                "zh": "视图接管顶部叠加控件，传 nullptr 恢复内置指示器。",
+                "en": "Transfer ownership of the top overlay to the view. Pass nullptr to restore the built-in indicator.",
+                "defaults": {
+                  "zh": "按需显示内置指示器。",
+                  "en": "The built-in indicator appears on demand."
+                }
+              }
+            },
+            {
+              "signature": "void setLoadMoreIndicator(QWidget *indicator);",
+              "comment": "Transfers ownership of the bottom overlay. Null restores the built-in indicator.",
+              "line": 513,
+              "access": "public",
+              "symbols": [
+                "setLoadMoreIndicator"
+              ],
+              "documentation": {
+                "zh": "视图接管底部叠加控件，传 nullptr 恢复内置指示器。",
+                "en": "Transfer ownership of the bottom overlay to the view. Pass nullptr to restore the built-in indicator.",
+                "defaults": {
+                  "zh": "按需显示内置指示器。",
+                  "en": "The built-in indicator appears on demand."
+                }
+              }
+            },
+            {
+              "signature": "void finishRefresh(quint64 requestId, bool hasMore);",
+              "comment": "Call after replacing the model contents. Stale request IDs are ignored.",
+              "line": 515,
+              "access": "public",
+              "symbols": [
+                "finishRefresh"
+              ],
+              "documentation": {
+                "zh": "刷新现有模型内容后完成匹配的请求，用 hasMore 指示能否继续分页。",
+                "en": "Finish the matching refresh after updating the existing model. Set hasMore to allow subsequent pages."
+              }
+            },
+            {
+              "signature": "void finishLoadMore(quint64 requestId, bool hasMore);",
+              "comment": "Call after appending a page. An empty page pauses automatic requests.",
+              "line": 517,
+              "access": "public",
+              "symbols": [
+                "finishLoadMore"
+              ],
+              "documentation": {
+                "zh": "追加数据后完成匹配请求。末页传 false；没有新增可展示项时自动暂停。",
+                "en": "Finish the matching request after appending items. Pass false for the last page. No increase in displayable items pauses paging."
+              }
+            },
+            {
+              "signature": "void finishLoadMore(quint64 requestId);",
+              "comment": "Infers the end from an empty page. Inline mode retains a terminal footer.",
+              "line": 519,
+              "access": "public",
+              "symbols": [
+                "finishLoadMore"
+              ],
+              "documentation": {
+                "zh": "追加数据后调用。没有新增可展示项时确认末尾，占位模式在底部保留末尾提示。",
+                "en": "Call after appending the page. A page with no new displayable items marks the end and retains a terminal footer in inline mode."
+              }
+            },
+            {
+              "signature": "void failRequest(quint64 requestId);",
+              "comment": "Ends either request and pauses automatic loading until retry or refresh.",
+              "line": 521,
+              "access": "public",
+              "symbols": [
+                "failRequest"
+              ],
+              "documentation": {
+                "zh": "结束匹配的在途请求并暂停自动分页，旧编号无效。",
+                "en": "End the matching request and pause automatic paging. Stale IDs are ignored."
+              }
+            },
+            {
+              "signature": "void retryLoadMore();",
+              "comment": "Allows a new page request at the bottom after a failure or empty page.",
+              "line": 523,
+              "access": "public",
+              "symbols": [
+                "retryLoadMore"
+              ],
+              "documentation": {
+                "zh": "失败或空页后恢复在底部请求下一页。",
+                "en": "Rearm bottom paging after a failure or empty page."
+              }
+            },
+            {
               "signature": "    ScrollMapper &scrollMapper();",
               "comment": "",
-              "line": 485,
+              "line": 525,
               "access": "public",
               "symbols": [
                 "scrollMapper"
@@ -15239,7 +15589,7 @@
             {
               "signature": "    const ScrollMapper &scrollMapper() const;",
               "comment": "",
-              "line": 486,
+              "line": 526,
               "access": "public",
               "symbols": [
                 "scrollMapper"
@@ -15252,7 +15602,7 @@
             {
               "signature": "enum class WheelScrollMode {\n        Pixels,\n        Items,\n    };",
               "comment": "Wheel scrolling granularity.\nPixels (default) scrolls a fixed number of pixels per notch, so rows are\nnever the unit of scrolling; Items keeps row-aligned wheel steps.",
-              "line": 491,
+              "line": 531,
               "access": "public",
               "symbols": [
                 "WheelScrollMode"
@@ -15279,7 +15629,7 @@
             {
               "signature": "void setWheelScrollMode(WheelScrollMode mode);",
               "comment": "",
-              "line": 497,
+              "line": 537,
               "access": "public",
               "symbols": [
                 "setWheelScrollMode"
@@ -15299,7 +15649,7 @@
             {
               "signature": "    WheelScrollMode wheelScrollMode() const;",
               "comment": "",
-              "line": 498,
+              "line": 538,
               "access": "public",
               "symbols": [
                 "wheelScrollMode"
@@ -15319,7 +15669,7 @@
             {
               "signature": "void setWheelScrollPixels(int pixels);",
               "comment": "Pixels per wheel notch in Pixels mode (default 48 = 3 lines x 16 px).",
-              "line": 500,
+              "line": 540,
               "access": "public",
               "symbols": [
                 "setWheelScrollPixels"
@@ -15339,7 +15689,7 @@
             {
               "signature": "    int wheelScrollPixels() const;",
               "comment": "",
-              "line": 501,
+              "line": 541,
               "access": "public",
               "symbols": [
                 "wheelScrollPixels"
@@ -15359,7 +15709,7 @@
             {
               "signature": "void setWheelScrollItems(int items);",
               "comment": "Switches to Items mode: one notch scrolls \\a items items.",
-              "line": 503,
+              "line": 543,
               "access": "public",
               "symbols": [
                 "setWheelScrollItems"
@@ -15379,7 +15729,7 @@
             {
               "signature": "    int wheelScrollItems() const;",
               "comment": "",
-              "line": 504,
+              "line": 544,
               "access": "public",
               "symbols": [
                 "wheelScrollItems"
@@ -15399,7 +15749,7 @@
             {
               "signature": "void setVerticalOffset(qint64 offset);",
               "comment": "Pixel-accurate programmatic scrolling (the logical axis unit is a pixel).",
-              "line": 507,
+              "line": 547,
               "access": "public",
               "symbols": [
                 "setVerticalOffset"
@@ -15419,7 +15769,7 @@
             {
               "signature": "void scrollByPixels(qint64 pixels);",
               "comment": "",
-              "line": 508,
+              "line": 548,
               "access": "public",
               "symbols": [
                 "scrollByPixels"
@@ -15435,7 +15785,7 @@
             {
               "signature": "enum class ItemHeightMode {\n        /// All items share one height (FixedSizeIndex).\n        Uniform,\n        /// Items may differ (BlockSizeIndex + optional measurement feedback).\n        Variable,\n    };",
               "comment": "How item sizes (row heights) are determined.",
-              "line": 511,
+              "line": 551,
               "access": "public",
               "symbols": [
                 "ItemHeightMode"
@@ -15462,7 +15812,7 @@
             {
               "signature": "void setItemHeightMode(ItemHeightMode mode);",
               "comment": "",
-              "line": 519,
+              "line": 559,
               "access": "public",
               "symbols": [
                 "setItemHeightMode"
@@ -15482,7 +15832,7 @@
             {
               "signature": "    ItemHeightMode itemHeightMode() const;",
               "comment": "",
-              "line": 520,
+              "line": 560,
               "access": "public",
               "symbols": [
                 "itemHeightMode"
@@ -15502,7 +15852,7 @@
             {
               "signature": "void setUniformItemHeight(int height);",
               "comment": "Fixed height of every item. Passing 0 enables \"fit to the first\nmaterialized item\" (requires setAutoMeasureItemHeight(true)).",
-              "line": 523,
+              "line": 563,
               "access": "public",
               "symbols": [
                 "setUniformItemHeight"
@@ -15528,7 +15878,7 @@
             {
               "signature": "    int uniformItemHeight() const;",
               "comment": "",
-              "line": 524,
+              "line": 564,
               "access": "public",
               "symbols": [
                 "uniformItemHeight"
@@ -15554,7 +15904,7 @@
             {
               "signature": "void setEstimatedItemHeight(int height);",
               "comment": "Height used for items that were never measured in Variable mode.",
-              "line": 526,
+              "line": 566,
               "access": "public",
               "symbols": [
                 "setEstimatedItemHeight"
@@ -15574,7 +15924,7 @@
             {
               "signature": "    int estimatedItemHeight() const;",
               "comment": "",
-              "line": 527,
+              "line": 567,
               "access": "public",
               "symbols": [
                 "estimatedItemHeight"
@@ -15594,7 +15944,7 @@
             {
               "signature": "void setAutoMeasureItemHeight(bool enabled);",
               "comment": "Enables measuring the size hint of bound widgets (Variable mode) and the\nfirst-item fitting of Uniform mode. Enabled by default, except in\nVirtualFlowTableView and VirtualMasonryView, which disable measurement and\nreject attempts to enable it; use their dedicated height APIs instead.",
-              "line": 532,
+              "line": 572,
               "access": "public",
               "symbols": [
                 "setAutoMeasureItemHeight"
@@ -15620,7 +15970,7 @@
             {
               "signature": "    bool autoMeasureItemHeight() const;",
               "comment": "",
-              "line": 533,
+              "line": 573,
               "access": "public",
               "symbols": [
                 "autoMeasureItemHeight"
@@ -15646,7 +15996,7 @@
             {
               "signature": "VisibleRange visibleItemRange() const;",
               "comment": "Visible item range without overscan.",
-              "line": 536,
+              "line": 576,
               "access": "public",
               "symbols": [
                 "visibleItemRange"
@@ -15659,7 +16009,7 @@
             {
               "signature": "void setFrozenRows(int count);",
               "comment": "Freezes the first \\a count rows at the top edge: they stay visible while the\nrows below scroll, and they add no scroll space of their own (the frozen\nheight is not part of the scroll range, exactly like frozen columns).\nSupported by list/table views; tree, flow and masonry views reject freezing.\n\nThe value is clamped to the row count, and a frozen row that cannot fit into\nthe viewport is not frozen at all: a frozen pane never shows a row that\nsticks out of it.",
-              "line": 547,
+              "line": 587,
               "access": "public",
               "symbols": [
                 "setFrozenRows"
@@ -15679,7 +16029,7 @@
             {
               "signature": "int frozenRows() const;",
               "comment": "Frozen rows at the top edge (the effective, clamped count).",
-              "line": 549,
+              "line": 589,
               "access": "public",
               "symbols": [
                 "frozenRows"
@@ -15699,7 +16049,7 @@
             {
               "signature": "void setFrozenBottomRows(int count);",
               "comment": "Freezes the last \\a count rows at the bottom edge. A row in both sets stays\non the top.",
-              "line": 552,
+              "line": 592,
               "access": "public",
               "symbols": [
                 "setFrozenBottomRows"
@@ -15719,7 +16069,7 @@
             {
               "signature": "int frozenBottomRows() const;",
               "comment": "Frozen rows at the bottom edge (the effective, clamped count).",
-              "line": 554,
+              "line": 594,
               "access": "public",
               "symbols": [
                 "frozenBottomRows"
@@ -15739,7 +16089,7 @@
             {
               "signature": "bool isRowFrozen(qsizetype row) const;",
               "comment": "",
-              "line": 555,
+              "line": 595,
               "access": "public",
               "symbols": [
                 "isRowFrozen"
@@ -15752,7 +16102,7 @@
             {
               "signature": "QVector<ItemPane> itemPanes() const;",
               "comment": "Visible panes, top to bottom: the frozen top pane (when it has rows), the\nscrolling pane and the frozen bottom pane. Without frozen rows there is\nexactly one scrolling pane covering the viewport.",
-              "line": 559,
+              "line": 599,
               "access": "public",
               "symbols": [
                 "itemPanes"
@@ -15765,7 +16115,7 @@
             {
               "signature": "QRect itemPaneRect(ItemPane::Type type) const;",
               "comment": "Pane rect in viewport coordinates (empty when the pane does not exist).",
-              "line": 561,
+              "line": 601,
               "access": "public",
               "symbols": [
                 "itemPaneRect"
@@ -15778,7 +16128,7 @@
             {
               "signature": "QVector<VisibleRange> visibleItemRanges() const;",
               "comment": "Visible rows as up to three ranges: frozen top, scrolling window, frozen\nbottom. Frozen rows are visible and their union with the window is not\ncontiguous, which is why visibleItemRange() keeps describing the scrolling\nwindow only.",
-              "line": 566,
+              "line": 606,
               "access": "public",
               "symbols": [
                 "visibleItemRanges"
@@ -15791,7 +16141,7 @@
             {
               "signature": "void setItemPaneSeparatorStyle(const PaneSeparatorStyle &style);",
               "comment": "Look of the line that separates the row panes.",
-              "line": 568,
+              "line": 608,
               "access": "public",
               "symbols": [
                 "setItemPaneSeparatorStyle"
@@ -15811,7 +16161,7 @@
             {
               "signature": "    PaneSeparatorStyle itemPaneSeparatorStyle() const;",
               "comment": "",
-              "line": 569,
+              "line": 609,
               "access": "public",
               "symbols": [
                 "itemPaneSeparatorStyle"
@@ -15831,7 +16181,7 @@
             {
               "signature": "    virtual int itemPaneSeparatorLeftExtension() const;",
               "comment": "How far the row pane boundary lines reach to the *left* of the viewport, in\npixels. A table whose row-number strip lives outside the viewport returns its\nwidth here, so the line crosses the strip exactly like the column boundary lines\ncross the header strip (see docs/history/row-freezing.md).",
-              "line": 574,
+              "line": 614,
               "access": "public",
               "symbols": [
                 "itemPaneSeparatorLeftExtension"
@@ -15844,7 +16194,7 @@
             {
               "signature": "virtual QColor itemPaneSeparatorColor() const;",
               "comment": "Colour the row pane boundary is painted with when the separator style does not\nname one. A subclass that can probe what the current style paints separators with\n(the table does, through the header renderer) overrides this, so its row boundary\nand its column boundary look identical; the default is the palette's mid colour.",
-              "line": 579,
+              "line": 619,
               "access": "public",
               "symbols": [
                 "itemPaneSeparatorColor"
@@ -15857,7 +16207,7 @@
             {
               "signature": "QVector<QRect> itemPaneSeparatorRects() const;",
               "comment": "Geometry of the row pane boundary lines, top to bottom (diagnostics/tests).",
-              "line": 581,
+              "line": 621,
               "access": "public",
               "symbols": [
                 "itemPaneSeparatorRects"
@@ -15870,7 +16220,7 @@
             {
               "signature": "    QWidget *scrollingPaneHost() const;",
               "comment": "Container the scrolling rows are clipped into (null while no row is frozen,\nin which case the row widgets keep the viewport as parent).",
-              "line": 584,
+              "line": 624,
               "access": "public",
               "symbols": [
                 "scrollingPaneHost"
@@ -15883,7 +16233,7 @@
             {
               "signature": "    qsizetype materializedItemCount() const;",
               "comment": "",
-              "line": 587,
+              "line": 627,
               "access": "public",
               "symbols": [
                 "materializedItemCount"
@@ -15899,7 +16249,7 @@
             {
               "signature": "qsizetype pinnedItemCount() const;",
               "comment": "",
-              "line": 588,
+              "line": 628,
               "access": "public",
               "symbols": [
                 "pinnedItemCount"
@@ -15912,7 +16262,7 @@
             {
               "signature": "QWidget *widgetForIndex(const QModelIndex &index) const;",
               "comment": "",
-              "line": 589,
+              "line": 629,
               "access": "public",
               "symbols": [
                 "widgetForIndex"
@@ -15928,7 +16278,7 @@
             {
               "signature": "virtual QModelIndex indexForWidget(const QWidget *widget) const;",
               "comment": "",
-              "line": 590,
+              "line": 630,
               "access": "public",
               "symbols": [
                 "indexForWidget"
@@ -15944,7 +16294,7 @@
             {
               "signature": "    const QList<MaterializedItem> &materializedItems() const;",
               "comment": "",
-              "line": 591,
+              "line": 631,
               "access": "public",
               "symbols": [
                 "materializedItems"
@@ -15957,7 +16307,7 @@
             {
               "signature": "qsizetype pooledWidgetCount() const;",
               "comment": "",
-              "line": 593,
+              "line": 633,
               "access": "public",
               "symbols": [
                 "pooledWidgetCount"
@@ -15973,7 +16323,7 @@
             {
               "signature": "qsizetype createdWidgetCount() const;",
               "comment": "",
-              "line": 594,
+              "line": 634,
               "access": "public",
               "symbols": [
                 "createdWidgetCount"
@@ -15989,7 +16339,7 @@
             {
               "signature": "qsizetype destroyedWidgetCount() const;",
               "comment": "",
-              "line": 595,
+              "line": 635,
               "access": "public",
               "symbols": [
                 "destroyedWidgetCount"
@@ -16002,7 +16352,7 @@
             {
               "signature": "    bool isRelayoutPending() const;",
               "comment": "",
-              "line": 597,
+              "line": 637,
               "access": "public",
               "symbols": [
                 "isRelayoutPending"
@@ -16015,7 +16365,7 @@
             {
               "signature": "void flushPendingRelayout();",
               "comment": "Applies a pending invalidation synchronously (used by tests and by\ncode that needs a settled geometry before measuring).",
-              "line": 600,
+              "line": 640,
               "access": "public",
               "symbols": [
                 "flushPendingRelayout"
@@ -16026,9 +16376,93 @@
               }
             },
             {
+              "signature": "void scrollEdgeReached(Qt::Edge edge);",
+              "comment": "",
+              "line": 643,
+              "access": "signals",
+              "symbols": [
+                "scrollEdgeReached"
+              ],
+              "documentation": {
+                "zh": "首次观察到或进入指定边缘时通知一次。",
+                "en": "Emitted when a boundary is first observed or entered.",
+                "related": [
+                  "scroll-refresh"
+                ]
+              }
+            },
+            {
+              "signature": "void scrollEdgeLeft(Qt::Edge edge);",
+              "comment": "",
+              "line": 644,
+              "access": "signals",
+              "symbols": [
+                "scrollEdgeLeft"
+              ],
+              "documentation": {
+                "zh": "离开指定边缘时通知一次，包括布局改变引起的离开。",
+                "en": "Emitted once when leaving a boundary, including after a layout change.",
+                "related": [
+                  "scroll-refresh"
+                ]
+              }
+            },
+            {
+              "signature": "void refreshStateChanged(RefreshState state);",
+              "comment": "",
+              "line": 645,
+              "access": "signals",
+              "symbols": [
+                "refreshStateChanged"
+              ],
+              "documentation": {
+                "zh": "交互或请求状态切换时通知，可用于更新自定义指示器。",
+                "en": "Emitted when the gesture or request state changes. Use it to update a custom indicator."
+              }
+            },
+            {
+              "signature": "void pullProgressChanged(qreal progress);",
+              "comment": "",
+              "line": 646,
+              "access": "signals",
+              "symbols": [
+                "pullProgressChanged"
+              ],
+              "documentation": {
+                "zh": "下拉进度变化时更新，达到阈值时为 1。",
+                "en": "Emitted when pull progress changes. One means the threshold was reached."
+              }
+            },
+            {
+              "signature": "void refreshRequested(quint64 requestId);",
+              "comment": "",
+              "line": 647,
+              "access": "signals",
+              "symbols": [
+                "refreshRequested"
+              ],
+              "documentation": {
+                "zh": "松手达到阈值时进入刷新状态并请求新数据，更新模型后调用 finishRefresh。",
+                "en": "Emitted in the refreshing state after a qualifying release. Update the model, then call finishRefresh."
+              }
+            },
+            {
+              "signature": "void loadMoreRequested(quint64 requestId);",
+              "comment": "",
+              "line": 648,
+              "access": "signals",
+              "symbols": [
+                "loadMoreRequested"
+              ],
+              "documentation": {
+                "zh": "进入加载状态后请求一页，追加数据后调用 finishLoadMore。",
+                "en": "Emitted after entering the loading state. Append the page, then call finishLoadMore."
+              }
+            },
+            {
               "signature": "void clicked(const QModelIndex &index);",
               "comment": "",
-              "line": 603,
+              "line": 649,
               "access": "signals",
               "symbols": [
                 "clicked"
@@ -16041,7 +16475,7 @@
             {
               "signature": "void doubleClicked(const QModelIndex &index);",
               "comment": "",
-              "line": 604,
+              "line": 650,
               "access": "signals",
               "symbols": [
                 "doubleClicked"
@@ -16054,7 +16488,7 @@
             {
               "signature": "void activated(const QModelIndex &index);",
               "comment": "",
-              "line": 605,
+              "line": 651,
               "access": "signals",
               "symbols": [
                 "activated"
@@ -16067,7 +16501,7 @@
             {
               "signature": "void itemDropped(const QModelIndex &parent, int row, int column, Qt::DropAction action);",
               "comment": "Emitted after the model accepted a drop (§38) with the target the model\nreceived; a refused drop emits nothing (the model said no).",
-              "line": 608,
+              "line": 654,
               "access": "signals",
               "symbols": [
                 "itemDropped"
@@ -16080,7 +16514,7 @@
             {
               "signature": "void selectionModelChanged(QItemSelectionModel *selectionModel);",
               "comment": "",
-              "line": 609,
+              "line": 655,
               "access": "signals",
               "symbols": [
                 "selectionModelChanged"
@@ -16093,7 +16527,7 @@
             {
               "signature": "void virtualizationUpdated();",
               "comment": "Emitted after every completed materialization pass.",
-              "line": 611,
+              "line": 657,
               "access": "signals",
               "symbols": [
                 "virtualizationUpdated"

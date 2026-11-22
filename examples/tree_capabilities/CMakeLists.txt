@@ -1,5 +1,6 @@
 # One process; every chapter owns its data, adapter and row widgets.
 add_executable(tree_capabilities
+    30_kinetic_refresh/example.cpp
     main.cpp
     01_basic/example.cpp
     01_basic/basic.ui

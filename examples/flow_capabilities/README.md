@@ -17,6 +17,7 @@
 | 09 | 异步图片卡片 | [09_images/example.cpp](09_images/example.cpp) / [说明](09_images/README.md) |
 | 10 | 颜色与样式表 | [10_colors/example.cpp](10_colors/example.cpp) / [说明](10_colors/README.md) |
 | 11 | 整体自适应高度、最大高度与父布局限制 | [11_auto_height/example.cpp](11_auto_height/example.cpp) / [说明](11_auto_height/README.md) |
+| 12 | 惯性滚动、下拉刷新与触底分页 | [12_kinetic_refresh/example.cpp](12_kinetic_refresh/example.cpp) |
 
 ## 构建与启动
 
@@ -27,6 +28,8 @@ cmake --build <BUILD_DIR> --target flow_capabilities --config Debug
 ```
 
 启动 `flow_capabilities` 或 `flow_capabilities --example 3`。可用 `--exit-after <ms>` 指定退出时间；`--accessibility-trace` 开启辅助几何诊断。第 07 章固定使用 10000 项，第 03 章可以调整项目数量。
+
+第 12 章从空模型开始，每次请求返回最多 64 项，共有 2000 项。视图自动请求第一页，首屏不足时逐页加载，直到出现纵向滚动范围或数据到达末尾。运行输出中的 `loadMoreRequested` 和 `requestId` 用于核对各页请求。
 
 ## 复制与接入
 

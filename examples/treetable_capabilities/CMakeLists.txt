@@ -1,5 +1,6 @@
 # One process; each chapter owns its model, adapter and widgets.
 add_executable(treetable_capabilities
+    39_kinetic_refresh/example.cpp
     main.cpp
     01_basic/example.cpp
     01_basic/basic.ui

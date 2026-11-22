@@ -19,6 +19,7 @@
 #include "09_images/example.h"
 #include "10_colors/example.h"
 #include "11_auto_height/example.h"
+#include "../refresh_demo/page.h"
 #include <virtualitemviews/accessibility.h>
 
 namespace {
@@ -35,6 +36,7 @@ const Entry entries[] = {
     {9, u8"09 异步图片卡片", flow_images::createExample},
     {10, u8"10 颜色与样式表", flow_colors::createExample},
     {11, u8"11 自适应高度", flow_auto_height::createExample},
+    {12, u8"12 惯性滚动与刷新分页", refresh_demo::flow},
 };
 constexpr int kCount = int(sizeof(entries) / sizeof(entries[0]));
 
@@ -85,7 +87,7 @@ int main(int argc, char **argv)
     QCommandLineParser parser;
     parser.setApplicationDescription(QStringLiteral("VirtualFlowTableView 功能示例"));
     parser.addHelpOption();
-    parser.addOption({QStringLiteral("example"), QStringLiteral("章节编号（1–11）"),
+    parser.addOption({QStringLiteral("example"), QStringLiteral("章节编号（1–12）"),
                       QStringLiteral("number"), QStringLiteral("1")});
     parser.addOption({QStringLiteral("exit-after"), QStringLiteral("指定毫秒后退出"), QStringLiteral("ms")});
     parser.addOption({QStringLiteral("accessibility-trace"), QStringLiteral("输出 Flow 辅助几何诊断日志")});
@@ -102,7 +104,7 @@ int main(int argc, char **argv)
         }
     }
     if (initial < 0) {
-        qCritical() << "--example must name an available chapter (1-11)";
+        qCritical() << "--example must name an available chapter (1-12)";
         return 1;
     }
     Browser browser(initial);

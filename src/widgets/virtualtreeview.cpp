@@ -1133,6 +1133,7 @@ void VirtualTreeView::syncRowGridLines()
         line->show();
         line->raise();
     }
+    raiseRefreshIndicators();
     performance.count("grid.line-hosts", m_rowGridLines.size());
 }
 

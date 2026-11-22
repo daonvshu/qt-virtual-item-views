@@ -1238,23 +1238,15 @@ void VirtualHeaderView::relayout()
             firstVisual = candidates.first;
             lastVisual = candidates.last;
         }
-    } else if (!m_paneFilterActive) {
-        // A whole-table header shares the geometry's viewport offset, so the
-        // geometry can answer this with a binary search over its prefix sums
-        // instead of a scan over every column.
-        const VisibleRange candidates = m_geometry->visibleVisualRange(axisExtent());
-        if (candidates.isValid()) {
-            firstVisual = candidates.first;
-            lastVisual = candidates.last;
-        }
     } else if (m_paneOffset == kFollowGeometryOffset) {
         // A pane that follows the committed geometry reads the same mapping as the body,
         // only shifted by its own rect inside the viewport (the table's scrolling pane
         // starts to the right of the frozen columns). The window is still a binary search
         // over the geometry's prefix sums - scanning every column here was the other half
         // of the O(N^2) pane-header path (P1-8 of the second review).
-        const qint64 ownOriginX = m_viewportOriginSet ? x() : 0;
-        const qint64 paneStart = m_geometry->viewportOffset() + ownOriginX - m_viewportOrigin.x();
+        const int ownOrigin = m_viewportOriginSet ? (isHorizontal() ? x() : y()) : 0;
+        const int origin = isHorizontal() ? m_viewportOrigin.x() : m_viewportOrigin.y();
+        const qint64 paneStart = m_geometry->viewportOffset() + ownOrigin - origin;
         const VisibleRange candidates = m_geometry->visibleVisualRangeFor(paneStart, axisExtent());
         if (candidates.isValid()) {
             firstVisual = candidates.first;
