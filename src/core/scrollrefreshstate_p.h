@@ -17,6 +17,8 @@ struct ScrollRefreshState
     int distance = 0;
     bool hasMore = true;
     bool paused = false;
+    /// 外部首屏或手动刷新进行中，暂停自动分页但不影响失败暂停
+    bool suspended = false;
     bool terminalFooter = false;
     bool bottomConsumed = false;
     bool pageAddedItems = false;
@@ -67,7 +69,7 @@ struct ScrollRefreshState
 
     bool canLoad(bool atBottom, bool continueAtBottom) const
     {
-        return state == State::Idle && atBottom && hasMore && !paused
+        return state == State::Idle && atBottom && hasMore && !paused && !suspended
             && (!bottomConsumed || continueAtBottom);
     }
 
@@ -102,7 +104,7 @@ struct ScrollRefreshState
         cancelPull();
         hasMore = true;
         terminalFooter = false;
-        paused = bottomConsumed = false;
+        paused = bottomConsumed = suspended = false;
         pageAddedItems = false;
     }
 };

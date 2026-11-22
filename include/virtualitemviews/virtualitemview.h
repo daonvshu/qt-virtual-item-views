@@ -522,6 +522,19 @@ public:
     /// Allows a new page request at the bottom after a failure or empty page.
     void retryLoadMore();
 
+    /// Registers whether another page exists. Repeated identical values are
+    /// ignored, so callers may report the state after every page without
+    /// clearing a failure pause or reopening a consumed bottom edge.
+    void setHasMore(bool hasMore);
+    bool hasMoreAvailable() const;
+    /// Re-evaluates pull/load-more availability after an external change.
+    /// Only queues the check; it never clears a failure pause.
+    void evaluateScrollRefresh();
+    /// Suspends automatic bottom requests while an external first page or a
+    /// manual refresh is in flight. Does not change hasMore or the failure pause.
+    void setLoadMoreSuspended(bool suspended);
+    bool loadMoreSuspended() const;
+
     ScrollMapper &scrollMapper() { return m_scrollMapper; }
     const ScrollMapper &scrollMapper() const { return m_scrollMapper; }
 

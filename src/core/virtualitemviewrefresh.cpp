@@ -1,5 +1,8 @@
 #include "scrollrefreshstate_p.h"
 
+#include <QDebug>
+#include <QtGlobal>
+
 #include <virtualitemviews/virtualtableview.h>
 #include <QApplication>
 #include <QLabel>
@@ -274,6 +277,15 @@ public:
             view->scheduleScrollUpdate();
             return;
         }
+        if (qEnvironmentVariableIsSet("VIV_REFRESH_DEBUG")) {
+            qDebug().nospace() << "[viv-refresh] evaluate offset=" << view->verticalOffset()
+                               << " max=" << view->maximumVerticalOffset()
+                               << " hasMore=" << machine.hasMore
+                               << " paused=" << machine.paused
+                               << " suspended=" << machine.suspended
+                               << " consumed=" << machine.bottomConsumed
+                               << " state=" << int(machine.state);
+        }
         const bool bounded = !view->autoHeightEnabled() || view->autoHeightMaximumHeight() > 0;
         if (machine.canLoadAtOffset(view->verticalOffset(), view->maximumVerticalOffset(),
                                     view->contentExtent(), bounded))
@@ -398,6 +410,45 @@ void VirtualItemView::retryLoadMore()
     if (machine.active || !machine.paused) return;
     machine.paused = machine.bottomConsumed = false;
     scheduleScrollUpdate();
+}
+
+void VirtualItemView::setHasMore(bool hasMore)
+{
+    auto &machine = m_refreshController->machine;
+    // 幂等：重复登记同一状态不得清掉失败暂停或重复消费底边
+    if (machine.hasMore == hasMore) return;
+    machine.hasMore = hasMore;
+    if (hasMore) {
+        // 重新开放底边与末尾提示，但失败暂停仍由显式重试解除
+        machine.bottomConsumed = false;
+        machine.terminalFooter = false;
+    }
+    m_refreshController->syncPresentation();
+    scheduleScrollUpdate();
+}
+
+bool VirtualItemView::hasMoreAvailable() const
+{
+    return m_refreshController->machine.hasMore;
+}
+
+void VirtualItemView::evaluateScrollRefresh()
+{
+    scheduleScrollUpdate();
+}
+
+void VirtualItemView::setLoadMoreSuspended(bool suspended)
+{
+    auto &machine = m_refreshController->machine;
+    if (machine.suspended == suspended) return;
+    machine.suspended = suspended;
+    // 恢复时立即重新评估一次，继续等待首屏的调用方不需要额外动作
+    if (!suspended) scheduleScrollUpdate();
+}
+
+bool VirtualItemView::loadMoreSuspended() const
+{
+    return m_refreshController->machine.suspended;
 }
 
 bool VirtualItemView::handleRefreshPointer(QMouseEvent *event)

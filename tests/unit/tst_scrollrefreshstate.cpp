@@ -126,6 +126,60 @@ private slots:
         QVERIFY(canLoad(layout.contentExtent() - viewportHeight));
     }
 
+    void staysQuietWhileFirstPageLoads()
+    {
+        // 外部首屏请求期间视口为空也不得请求
+        Machine machine;
+        machine.suspended = true;
+        QVERIFY(!machine.canLoad(true, false));
+        QVERIFY(!machine.canLoad(true, true));
+        machine.suspended = false;
+        QVERIFY(machine.canLoad(true, false));
+    }
+
+    void resumesOnceAfterFirstPage()
+    {
+        // 首屏返回后仍不满屏时只再请求一次，新增内容后停止
+        Machine machine;
+        machine.suspended = true;
+        QVERIFY(!machine.canLoad(true, false));
+        machine.suspended = false;
+        QVERIFY(machine.canLoad(true, machine.canContinueAtBottom(true, 0, 400)));
+        const auto id = machine.begin(State::LoadingMore, 0, 400);
+        QVERIFY(id);
+        QVERIFY(machine.finish(id, State::LoadingMore, true, true, 12));
+        // 内容仍然不足一屏：允许续载一次
+        QVERIFY(machine.canLoad(true, machine.canContinueAtBottom(true, 0, 400)));
+        const auto second = machine.begin(State::LoadingMore, 12, 400);
+        QVERIFY(second);
+        QVERIFY(machine.finish(second, State::LoadingMore, true, true, 24));
+        // 一页没有增加任何内容时框架自行停住
+        QVERIFY(!machine.canLoad(true, machine.canContinueAtBottom(true, 400, 900)));
+    }
+
+    void stopsWhenNoNextPage()
+    {
+        // 登记没有下一页后不再请求
+        Machine machine;
+        machine.hasMore = false;
+        QVERIFY(!machine.canLoad(true, false));
+        QVERIFY(!machine.canLoad(true, true));
+    }
+
+    void failurePauseSurvivesHasMoreReporting()
+    {
+        // 失败暂停只能由显式重试解除，重新登记 hasMore 不能顺手清掉它
+        Machine machine;
+        machine.suspended = true;
+        const auto id = machine.begin(State::LoadingMore, 0);
+        QVERIFY(machine.finish(id, State::LoadingMore, true, false, 0));
+        QVERIFY(machine.paused);
+        machine.suspended = false;
+        QVERIFY(!machine.canLoad(true, true));
+        machine.paused = false;
+        QVERIFY(machine.canLoad(true, true));
+    }
+
     void knownAndProbedEnd()
     {
         Machine machine;
