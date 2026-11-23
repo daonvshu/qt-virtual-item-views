@@ -126,11 +126,13 @@ private slots:
         QVERIFY(canLoad(layout.contentExtent() - viewportHeight));
     }
 
-    void staysQuietWhileFirstPageLoads()
+    void suspensionSurvivesModelReplacement()
     {
-        // 外部首屏请求期间视口为空也不得请求
         Machine machine;
+        const auto stale = machine.begin(State::LoadingMore, 0);
         machine.suspended = true;
+        machine.reset();
+        QVERIFY(!machine.finish(stale, State::LoadingMore, true, true, 8));
         QVERIFY(!machine.canLoad(true, false));
         QVERIFY(!machine.canLoad(true, true));
         machine.suspended = false;
@@ -139,7 +141,6 @@ private slots:
 
     void resumesOnceAfterFirstPage()
     {
-        // 首屏返回后仍不满屏时只再请求一次，新增内容后停止
         Machine machine;
         machine.suspended = true;
         QVERIFY(!machine.canLoad(true, false));
@@ -148,36 +149,59 @@ private slots:
         const auto id = machine.begin(State::LoadingMore, 0, 400);
         QVERIFY(id);
         QVERIFY(machine.finish(id, State::LoadingMore, true, true, 12));
-        // 内容仍然不足一屏：允许续载一次
         QVERIFY(machine.canLoad(true, machine.canContinueAtBottom(true, 0, 400)));
         const auto second = machine.begin(State::LoadingMore, 12, 400);
         QVERIFY(second);
         QVERIFY(machine.finish(second, State::LoadingMore, true, true, 24));
-        // 一页没有增加任何内容时框架自行停住
         QVERIFY(!machine.canLoad(true, machine.canContinueAtBottom(true, 400, 900)));
     }
 
     void stopsWhenNoNextPage()
     {
-        // 登记没有下一页后不再请求
         Machine machine;
-        machine.hasMore = false;
+        QVERIFY(machine.setHasMore(false));
         QVERIFY(!machine.canLoad(true, false));
         QVERIFY(!machine.canLoad(true, true));
     }
 
     void failurePauseSurvivesHasMoreReporting()
     {
-        // 失败暂停只能由显式重试解除，重新登记 hasMore 不能顺手清掉它
         Machine machine;
-        machine.suspended = true;
         const auto id = machine.begin(State::LoadingMore, 0);
         QVERIFY(machine.finish(id, State::LoadingMore, true, false, 0));
-        QVERIFY(machine.paused);
-        machine.suspended = false;
+        QVERIFY(!machine.setHasMore(true));
+        QVERIFY(machine.setHasMore(false));
+        QVERIFY(machine.setHasMore(true));
         QVERIFY(!machine.canLoad(true, true));
-        machine.paused = false;
+        QVERIFY(machine.retryLoadMore());
         QVERIFY(machine.canLoad(true, true));
+    }
+
+    void newCursorAfterEmptyLastPage_data()
+    {
+        QTest::addColumn<bool>("inferEnd");
+        QTest::newRow("reported-end") << false;
+        QTest::newRow("probed-end") << true;
+    }
+
+    void newCursorAfterEmptyLastPage()
+    {
+        QFETCH(bool, inferEnd);
+        Machine machine;
+        const auto id = machine.begin(State::LoadingMore, 12);
+        QVERIFY(machine.finish(id, State::LoadingMore, inferEnd, true, 12, inferEnd));
+        QVERIFY(!machine.hasMore);
+        QCOMPARE(machine.terminalFooter, inferEnd);
+        QVERIFY(!machine.canLoad(true, true));
+        QVERIFY(machine.setHasMore(true));
+        QVERIFY(!machine.terminalFooter);
+        QVERIFY(machine.canLoad(true, false));
+        const auto next = machine.begin(State::LoadingMore, 4);
+        QVERIFY(machine.finish(next, State::LoadingMore, true, true, 4));
+        QVERIFY(!machine.setHasMore(true));
+        QVERIFY(!machine.canLoad(true, true));
+        QVERIFY(machine.retryLoadMore());
+        QVERIFY(machine.canLoad(true, false));
     }
 
     void knownAndProbedEnd()
@@ -200,6 +224,49 @@ private slots:
         QVERIFY(machine.finish(id, State::Refreshing, true, true, 4));
         QVERIFY(machine.hasMore);
         QVERIFY(!machine.terminalFooter);
+    }
+
+    void externalPageSupersedesRequests()
+    {
+        Machine machine;
+        const auto append = machine.begin(State::LoadingMore, 8);
+        const auto first = machine.beginExternalPage();
+        const auto second = machine.beginExternalPage();
+        QVERIFY(!machine.isCurrent(append));
+        QVERIFY(!machine.finish(append, State::LoadingMore, true, true, 16));
+        QVERIFY(!machine.isCurrent(first));
+        QVERIFY(!machine.finishExternalPage(first, false, false));
+        QVERIFY(machine.isCurrent(second));
+        QVERIFY(!machine.canLoad(true, true));
+        QCOMPARE(machine.pauseReason(), Machine::PauseReason::ExternalPage);
+        QVERIFY(!machine.finish(second, State::LoadingMore, true, true, 8));
+        QVERIFY(machine.finishExternalPage(second, true, true));
+        QVERIFY(!machine.isCurrent(second));
+        QVERIFY(machine.canLoad(true, false));
+        const auto last = machine.beginExternalPage();
+        QVERIFY(machine.finishExternalPage(last, false, true));
+        QVERIFY(!machine.canLoad(true, true));
+    }
+
+    void externalPageFailureAndReset()
+    {
+        Machine machine;
+        const auto failed = machine.beginExternalPage();
+        QVERIFY(machine.finishExternalPage(failed, false, false));
+        QCOMPARE(machine.pauseReason(), Machine::PauseReason::ExternalPageFailed);
+        QVERIFY(!machine.retryLoadMore());
+        QVERIFY(!machine.canLoad(true, true));
+        machine.suspended = true;
+        const auto retry = machine.beginExternalPage();
+        QVERIFY(machine.finishExternalPage(retry, true, true));
+        QCOMPARE(machine.pauseReason(), Machine::PauseReason::Suspended);
+        machine.suspended = false;
+        QVERIFY(machine.canLoad(true, false));
+        const auto stale = machine.beginExternalPage();
+        machine.reset();
+        QVERIFY(!machine.isCurrent(stale));
+        QVERIFY(!machine.finishExternalPage(stale, false, true));
+        QCOMPARE(machine.pauseReason(), Machine::PauseReason::None);
     }
 };
 

@@ -8,6 +8,7 @@ namespace detail {
 struct ScrollRefreshState
 {
     using State = VirtualItemView::RefreshState;
+    using PauseReason = VirtualItemView::LoadMorePauseReason;
     State state = State::Idle;
     quint64 sequence = 0;
     quint64 active = 0;
@@ -16,8 +17,8 @@ struct ScrollRefreshState
     int threshold = 64;
     int distance = 0;
     bool hasMore = true;
-    bool paused = false;
-    /// 外部首屏或手动刷新进行中，暂停自动分页但不影响失败暂停
+    PauseReason stopReason = PauseReason::None;
+    bool externalPage = false;
     bool suspended = false;
     bool terminalFooter = false;
     bool bottomConsumed = false;
@@ -69,8 +70,55 @@ struct ScrollRefreshState
 
     bool canLoad(bool atBottom, bool continueAtBottom) const
     {
-        return state == State::Idle && atBottom && hasMore && !paused && !suspended
+        return !active && state == State::Idle && atBottom && hasMore && pauseReason() == PauseReason::None
             && (!bottomConsumed || continueAtBottom);
+    }
+
+    PauseReason pauseReason() const
+    {
+        if (suspended) return PauseReason::Suspended;
+        if (externalPage) return PauseReason::ExternalPage;
+        return stopReason;
+    }
+
+    bool isCurrent(quint64 id) const { return id && active == id; }
+
+    quint64 beginExternalPage()
+    {
+        reset();
+        externalPage = true;
+        hasMore = false;
+        active = ++sequence;
+        return active;
+    }
+
+    bool finishExternalPage(quint64 id, bool more, bool success)
+    {
+        if (!externalPage || !isCurrent(id)) return false;
+        externalPage = false;
+        active = 0;
+        hasMore = success && more;
+        stopReason = success ? PauseReason::None : PauseReason::ExternalPageFailed;
+        return true;
+    }
+
+    bool setHasMore(bool more)
+    {
+        if (hasMore == more) return false;
+        hasMore = more;
+        if (more) {
+            bottomConsumed = false;
+            terminalFooter = false;
+        }
+        return true;
+    }
+
+    bool retryLoadMore()
+    {
+        if (active || (stopReason != PauseReason::RequestFailed && stopReason != PauseReason::EmptyPage)) return false;
+        stopReason = PauseReason::None;
+        bottomConsumed = false;
+        return true;
     }
 
     bool canContinueAtBottom(bool bounded, qint64 maximumOffset, qint64 extent) const
@@ -85,12 +133,14 @@ struct ScrollRefreshState
 
     bool finish(quint64 id, State expected, bool more, bool success, qsizetype count, bool inferEnd = false)
     {
-        if (!id || id != active || state != expected) return false;
+        if (externalPage || !isCurrent(id) || state != expected) return false;
         if (success) {
             terminalFooter = inferEnd && expected == State::LoadingMore && count <= initialCount;
             hasMore = more && !terminalFooter;
         }
-        paused = !success || (expected == State::LoadingMore && count <= initialCount);
+        stopReason = PauseReason::None;
+        if (!success) stopReason = PauseReason::RequestFailed;
+        else if (hasMore && expected == State::LoadingMore && count <= initialCount) stopReason = PauseReason::EmptyPage;
         pageAddedItems = success && expected == State::LoadingMore && count > initialCount;
         if (success && expected == State::Refreshing) bottomConsumed = false;
         active = 0;
@@ -104,7 +154,8 @@ struct ScrollRefreshState
         cancelPull();
         hasMore = true;
         terminalFooter = false;
-        paused = bottomConsumed = suspended = false;
+        externalPage = bottomConsumed = false;
+        stopReason = PauseReason::None;
         pageAddedItems = false;
     }
 };

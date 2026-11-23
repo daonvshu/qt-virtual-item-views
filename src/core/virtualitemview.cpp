@@ -1547,6 +1547,9 @@ bool VirtualItemView::eventFilter(QObject *watched, QEvent *event)
     auto *widget = qobject_cast<QWidget *>(watched);
     if (widget == viewport() && m_refreshController && handleRefreshViewportEvent(event))
         return true;
+    if (event->type() == QEvent::MouseButtonRelease && widget && widget != viewport()
+        && viewport()->isAncestorOf(widget) && handleRefreshPointer(static_cast<QMouseEvent *>(event), widget))
+        return true;
     if (watched == viewport() && event->type() == QEvent::Paint && m_editorSession) {
         const QPointer<VirtualItemView> self(this);
         updateEditorGeometry();
@@ -4212,8 +4215,9 @@ void VirtualItemView::mousePressEvent(QMouseEvent *event)
     m_dragStartPos = mousePosition(event);
     m_dragGlobalStartPos = viewport()->mapToGlobal(m_dragStartPos);
     m_pressedIndex = index.isValid() ? QPersistentModelIndex(index) : QPersistentModelIndex();
-    handleRefreshPointer(event);
-    updateSelectionForClick(index, event->modifiers());
+    m_deferPressSelection = handleRefreshPointer(event);
+    if (!m_deferPressSelection)
+        updateSelectionForClick(index, event->modifiers());
     event->accept();
 }
 
@@ -4228,12 +4232,18 @@ void VirtualItemView::mouseReleaseEvent(QMouseEvent *event)
     const QModelIndex index = indexAt(mousePosition(event));
     const bool sameIndex = index.isValid() && m_pressedIndex.isValid()
         && QModelIndex(m_pressedIndex) == index;
+    const bool selectOnRelease = m_deferPressSelection;
+    m_deferPressSelection = false;
     m_pressedIndex = QPersistentModelIndex();
     event->accept();
     if (sameIndex) {
         const QPointer<VirtualItemView> self(this);
         const QPersistentModelIndex target(index);
-        emit clicked(index);
+        if (selectOnRelease) {
+            updateSelectionForClick(target, Qt::NoModifier);
+            if (!self || !target.isValid() || target.model() != model()) return;
+        }
+        emit clicked(target);
         if (self && target.isValid())
             triggerEdit(target, EditTrigger::SingleClicked);
     }

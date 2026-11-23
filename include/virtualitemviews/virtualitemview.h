@@ -489,6 +489,8 @@ public:
     Qt::Edges scrollEdges() const;
     enum class RefreshState { Idle, Pulling, Armed, Refreshing, LoadingMore };
     Q_ENUM(RefreshState)
+    enum class LoadMorePauseReason { None, Suspended, ExternalPage, ExternalPageFailed, RequestFailed, EmptyPage };
+    Q_ENUM(LoadMorePauseReason)
     enum class IndicatorMode { Overlay, Inline };
     Q_ENUM(IndicatorMode)
     /// Sets the top and bottom presentation independently. Both default to Overlay.
@@ -513,7 +515,7 @@ public:
     void setLoadMoreIndicator(QWidget *indicator);
     /// Call after replacing the model contents. Stale request IDs are ignored.
     void finishRefresh(quint64 requestId, bool hasMore);
-    /// Call after appending a page. An empty page pauses automatic requests.
+    /// Call after appending a page. An empty page with hasMore=true pauses automatic requests.
     void finishLoadMore(quint64 requestId, bool hasMore);
     /// Infers the end from an empty page. Inline mode retains a terminal footer.
     void finishLoadMore(quint64 requestId);
@@ -531,9 +533,18 @@ public:
     /// Only queues the check; it never clears a failure pause.
     void evaluateScrollRefresh();
     /// Suspends automatic bottom requests while an external first page or a
-    /// manual refresh is in flight. Does not change hasMore or the failure pause.
+    /// manual refresh is in flight. Suspension survives model replacement.
+    /// Resuming queues a check and preserves hasMore and the failure pause.
     void setLoadMoreSuspended(bool suspended);
     bool loadMoreSuspended() const;
+    /// Starts a new query on the bound model and supersedes earlier requests. Zero means no request started.
+    quint64 beginExternalPage();
+    /// Check on the GUI thread before applying an asynchronous response to the model.
+    bool isRequestCurrent(quint64 requestId) const;
+    /// After replacing the model contents, records availability and queues viewport filling.
+    void finishExternalPage(quint64 requestId, bool hasMore);
+    /// Returns the effective pause reason. Explicit suspension takes precedence.
+    LoadMorePauseReason loadMorePauseReason() const;
 
     ScrollMapper &scrollMapper() { return m_scrollMapper; }
     const ScrollMapper &scrollMapper() const { return m_scrollMapper; }
@@ -656,6 +667,8 @@ signals:
     void scrollEdgeReached(Qt::Edge edge);
     void scrollEdgeLeft(Qt::Edge edge);
     void refreshStateChanged(RefreshState state);
+    /// Emitted when the effective reason for pausing automatic pagination changes.
+    void loadMorePauseReasonChanged(LoadMorePauseReason reason);
     void pullProgressChanged(qreal progress);
     void refreshRequested(quint64 requestId);
     void loadMoreRequested(quint64 requestId);
@@ -1017,7 +1030,7 @@ private:
     void scheduleScrollUpdate();
     void publishScrollPosition();
     void resetRefreshModel();
-    bool handleRefreshPointer(QMouseEvent *event);
+    bool handleRefreshPointer(QMouseEvent *event, QWidget *childReceiver = nullptr);
     bool handleRefreshViewportEvent(QEvent *event);
     friend class GridLinePaintGeometry;
     /// Applies adapter-specific trigger filtering before entering editing.
@@ -1218,6 +1231,7 @@ private:
     ScrollAnchor m_pendingAnchor;
     bool m_anchorPending = false;
     QPersistentModelIndex m_pressedIndex;
+    bool m_deferPressSelection = false;
     /// Row where a Shift+click/Shift+arrow selection started.
     QPersistentModelIndex m_selectionAnchor;
 

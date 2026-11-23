@@ -2,6 +2,18 @@
   "schema": 1,
   "types": [
     {
+      "header":"include/virtualitemviews/virtualitemview.h", "name":"VirtualItemView::LoadMorePauseReason",
+      "zh":"自动分页的暂停原因。", "en":"Reason automatic pagination is paused.",
+      "members":[
+        {"name":"None","zh":"当前没有暂停原因。","en":"No pause is in effect."},
+        {"name":"Suspended","zh":"页面显式暂停了自动分页。","en":"The page explicitly suspended pagination."},
+        {"name":"ExternalPage","zh":"页面发起的首屏查询正在进行。","en":"An external first-page query is running."},
+        {"name":"ExternalPageFailed","zh":"外部首屏失败，可重新发起查询。","en":"The external first page failed. Start the query again to retry."},
+        {"name":"RequestFailed","zh":"视图发起的请求失败。","en":"A view-initiated request failed."},
+        {"name":"EmptyPage","zh":"已报告还有下一页，但没有新增可展示项。","en":"More pages were reported but no displayable items were added."}
+      ]
+    },
+    {
       "header":"include/virtualitemviews/virtualitemview.h", "name":"VirtualItemView::IndicatorMode",
       "zh":"刷新提示的呈现方式。顶部和底部可分别设置。", "en":"Presentation of an indicator. Each edge can use its own mode.",
       "members":[

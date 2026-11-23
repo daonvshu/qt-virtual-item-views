@@ -16,6 +16,7 @@ namespace viv {
 
 using RefreshState = VirtualItemView::RefreshState;
 using IndicatorMode = VirtualItemView::IndicatorMode;
+using PauseReason = VirtualItemView::LoadMorePauseReason;
 
 class ViewRefreshController : public QObject
 {
@@ -35,6 +36,7 @@ public:
     VirtualItemView *view;
     detail::ScrollRefreshState machine;
     RefreshState publishedState = RefreshState::Idle;
+    PauseReason publishedPause = PauseReason::None;
     qreal publishedProgress = 0;
     bool pullEnabled = false;
     bool loadEnabled = false;
@@ -43,7 +45,7 @@ public:
     bool captured = false;
     bool previousTouchAttribute = false;
     QPoint origin;
-    QPointer<QWidget> touchTarget;
+    bool viewportTouch = false;
     int restingHeight = 36;
     int maximumHeight = 112;
     bool fillingGap = false;
@@ -203,13 +205,17 @@ public:
     {
         QPointer<ViewRefreshController> self(this);
         syncPresentation();
-        if (publishedState != machine.state) {
+        if (self && publishedState != machine.state) {
             publishedState = machine.state;
             emit view->refreshStateChanged(publishedState);
         }
         if (self && publishedProgress != machine.progress()) {
             publishedProgress = machine.progress();
             emit view->pullProgressChanged(publishedProgress);
+        }
+        if (self && publishedPause != machine.pauseReason()) {
+            publishedPause = machine.pauseReason();
+            emit view->loadMorePauseReasonChanged(publishedPause);
         }
     }
 
@@ -243,6 +249,10 @@ public:
     void cancel()
     {
         const bool wasTracking = tracking;
+        if (wasTracking || viewportTouch || view->m_deferPressSelection)
+            view->m_pressedIndex = QPersistentModelIndex();
+        view->m_deferPressSelection = false;
+        viewportTouch = false;
         tracking = captured = false;
         machine.cancelPull();
         if (wasTracking)
@@ -281,7 +291,7 @@ public:
             qDebug().nospace() << "[viv-refresh] evaluate offset=" << view->verticalOffset()
                                << " max=" << view->maximumVerticalOffset()
                                << " hasMore=" << machine.hasMore
-                               << " paused=" << machine.paused
+                               << " pauseReason=" << machine.pauseReason()
                                << " suspended=" << machine.suspended
                                << " consumed=" << machine.bottomConsumed
                                << " state=" << int(machine.state);
@@ -402,27 +412,53 @@ void VirtualItemView::setLoadMoreIndicator(QWidget *indicator) { m_refreshContro
 void VirtualItemView::finishRefresh(quint64 requestId, bool hasMore) { m_refreshController->complete(requestId, RefreshState::Refreshing, hasMore, true); }
 void VirtualItemView::finishLoadMore(quint64 requestId, bool hasMore) { m_refreshController->complete(requestId, RefreshState::LoadingMore, hasMore, true); }
 void VirtualItemView::finishLoadMore(quint64 requestId) { m_refreshController->complete(requestId, RefreshState::LoadingMore, true, true, true); }
-void VirtualItemView::failRequest(quint64 requestId) { m_refreshController->complete(requestId, refreshState(), false, false); }
+void VirtualItemView::failRequest(quint64 requestId)
+{
+    if (m_refreshController->machine.finishExternalPage(requestId, false, false)) {
+        m_refreshController->notify();
+        return;
+    }
+    m_refreshController->complete(requestId, refreshState(), false, false);
+}
+
+quint64 VirtualItemView::beginExternalPage()
+{
+    if (!model()) return 0;
+    auto *controller = m_refreshController;
+    const quint64 id = controller->machine.beginExternalPage();
+    controller->fillingGap = false;
+    const QPointer<VirtualItemView> self(this);
+    controller->cancel();
+    return self && isRequestCurrent(id) ? id : 0;
+}
+
+bool VirtualItemView::isRequestCurrent(quint64 requestId) const
+{
+    return m_refreshController->machine.isCurrent(requestId);
+}
+
+void VirtualItemView::finishExternalPage(quint64 requestId, bool hasMore)
+{
+    if (!m_refreshController->machine.finishExternalPage(requestId, hasMore, true)) return;
+    scheduleScrollUpdate();
+    m_refreshController->notify();
+}
+
+VirtualItemView::LoadMorePauseReason VirtualItemView::loadMorePauseReason() const
+{
+    return m_refreshController->machine.pauseReason();
+}
 
 void VirtualItemView::retryLoadMore()
 {
-    auto &machine = m_refreshController->machine;
-    if (machine.active || !machine.paused) return;
-    machine.paused = machine.bottomConsumed = false;
+    if (!m_refreshController->machine.retryLoadMore()) return;
     scheduleScrollUpdate();
+    m_refreshController->notify();
 }
 
 void VirtualItemView::setHasMore(bool hasMore)
 {
-    auto &machine = m_refreshController->machine;
-    // 幂等：重复登记同一状态不得清掉失败暂停或重复消费底边
-    if (machine.hasMore == hasMore) return;
-    machine.hasMore = hasMore;
-    if (hasMore) {
-        // 重新开放底边与末尾提示，但失败暂停仍由显式重试解除
-        machine.bottomConsumed = false;
-        machine.terminalFooter = false;
-    }
+    if (!m_refreshController->machine.setHasMore(hasMore)) return;
     m_refreshController->syncPresentation();
     scheduleScrollUpdate();
 }
@@ -442,8 +478,8 @@ void VirtualItemView::setLoadMoreSuspended(bool suspended)
     auto &machine = m_refreshController->machine;
     if (machine.suspended == suspended) return;
     machine.suspended = suspended;
-    // 恢复时立即重新评估一次，继续等待首屏的调用方不需要额外动作
     if (!suspended) scheduleScrollUpdate();
+    m_refreshController->notify();
 }
 
 bool VirtualItemView::loadMoreSuspended() const
@@ -451,20 +487,21 @@ bool VirtualItemView::loadMoreSuspended() const
     return m_refreshController->machine.suspended;
 }
 
-bool VirtualItemView::handleRefreshPointer(QMouseEvent *event)
+bool VirtualItemView::handleRefreshPointer(QMouseEvent *event, QWidget *childReceiver)
 {
     auto *controller = m_refreshController;
-    if (!controller->pullEnabled) return false;
+    if (!controller || !controller->pullEnabled || (childReceiver && !controller->captured)) return false;
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-    const QPoint point = event->position().toPoint();
+    const QPoint localPoint = event->position().toPoint();
 #else
-    const QPoint point = event->pos();
+    const QPoint localPoint = event->pos();
 #endif
+    const QPoint point = childReceiver ? childReceiver->mapTo(viewport(), localPoint) : localPoint;
     if (event->type() == QEvent::MouseButtonPress) {
         controller->tracking = event->modifiers() == Qt::NoModifier && controller->eligible(point);
         controller->origin = point;
         controller->captured = false;
-        return false;
+        return controller->tracking;
     }
     if (!controller->tracking) return false;
     const QPoint delta = point - controller->origin;
@@ -477,6 +514,7 @@ bool VirtualItemView::handleRefreshPointer(QMouseEvent *event)
                 return false;
             }
             controller->captured = true;
+            m_deferPressSelection = false;
             m_pressedIndex = QPersistentModelIndex();
         }
         controller->machine.pull(delta.y());
@@ -500,7 +538,7 @@ bool VirtualItemView::handleRefreshWheel(QWheelEvent *event)
 {
     auto *controller = m_refreshController;
     if (!controller || !controller->loadEnabled || controller->bottom.mode != IndicatorMode::Inline
-        || !model() || !controller->machine.hasMore || controller->machine.paused || controller->tracking)
+        || !model() || !controller->machine.hasMore || controller->machine.pauseReason() != PauseReason::None || controller->tracking)
         return false;
     const auto state = refreshState();
     if (state != RefreshState::Idle && state != RefreshState::LoadingMore) return false;
@@ -526,9 +564,8 @@ bool VirtualItemView::handleRefreshViewportEvent(QEvent *event)
     case QEvent::Hide:
     case QEvent::UngrabMouse:
     case QEvent::TouchCancel:
-        if (controller->tracking) m_pressedIndex = QPersistentModelIndex();
-        controller->touchTarget.clear();
-        if (controller->tracking) controller->cancel();
+        if (controller->tracking || controller->viewportTouch || m_deferPressSelection)
+            controller->cancel();
         return false;
     case QEvent::TouchBegin:
     case QEvent::TouchUpdate:
@@ -543,11 +580,10 @@ bool VirtualItemView::handleRefreshViewportEvent(QEvent *event)
     const auto points = touch->touchPoints();
 #endif
     if (points.size() != 1) {
-        if (!controller->touchTarget) return false;
-        controller->touchTarget.clear();
-        m_pressedIndex = QPersistentModelIndex();
-        controller->cancel();
-        return true;
+        const bool owned = controller->viewportTouch;
+        if (owned || controller->tracking || m_deferPressSelection)
+            controller->cancel();
+        return owned;
     }
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
     const QPoint point = points.first().position().toPoint();
@@ -555,24 +591,19 @@ bool VirtualItemView::handleRefreshViewportEvent(QEvent *event)
     const QPoint point = points.first().pos().toPoint();
 #endif
     if (event->type() == QEvent::TouchBegin) {
-        if (!controller->eligible(point)) return false;
-        QWidget *target = viewport()->childAt(point);
-        for (auto *child = target; child && child != viewport(); child = child->parentWidget()) {
-            if (child->focusPolicy() != Qt::NoFocus || child->testAttribute(Qt::WA_AcceptTouchEvents)) return false;
-        }
-        controller->touchTarget = target ? target : viewport();
+        if (!controller->eligible(point) || viewport()->childAt(point)) return false;
+        controller->viewportTouch = true;
     }
-    QWidget *target = controller->tracking ? viewport() : controller->touchTarget.data();
-    if (!target) return false;
+    if (!controller->viewportTouch) return false;
     const bool press = event->type() == QEvent::TouchBegin;
     const bool release = event->type() == QEvent::TouchEnd;
     const QPoint global = viewport()->mapToGlobal(point);
     QMouseEvent pointer(press ? QEvent::MouseButtonPress : release ? QEvent::MouseButtonRelease : QEvent::MouseMove,
-                        target->mapFromGlobal(global), global, press || release ? Qt::LeftButton : Qt::NoButton,
+                        point, global, press || release ? Qt::LeftButton : Qt::NoButton,
                         release ? Qt::NoButton : Qt::LeftButton, touch->modifiers());
-    if (release) controller->touchTarget.clear();
+    if (release) controller->viewportTouch = false;
     event->accept();
-    QCoreApplication::sendEvent(target, &pointer);
+    QCoreApplication::sendEvent(viewport(), &pointer);
     return true;
 }
 

@@ -32,6 +32,35 @@
 
 分别运行 `list_capabilities --example 24`、`table_capabilities --example 34`、`tree_capabilities --example 30`、`treetable_capabilities --example 39`、`flow_capabilities --example 12`、`wrap_capabilities --example 11` 或 `masonry_capabilities --example 15`。链接 SmoothScrollbar 时，勾选“滚轮惯性”可用滚轮体验平滑滚动。顶部下拉可刷新，触底时追加下一页。占位模式下页脚展开至 28 个逻辑像素，覆盖模式使用透明背景。[分页和滚轮控制器接入代码](refresh_demo/page.cpp)
 
+**由视图发起分页。** 绑定模型并连接 `loadMoreRequested` 后启用分页。让异步回调随页面销毁而取消，并在 GUI 线程处理结果。
+
+```cpp
+connect(view, &viv::VirtualItemView::loadMoreRequested, this, [this](quint64 id) {
+    fetchNextPage(this, [this, id](const PageResult &page) {
+        if (!view->isRequestCurrent(id)) return;
+        if (page.failed()) { view->failRequest(id); return; }
+        model->appendItems(page.items);
+        view->finishLoadMore(id, page.hasMore);
+    });
+});
+view->setLoadMoreEnabled(true);
+```
+
+**由页面发起新查询。** 绑定模型后，在发起搜索或切换筛选条件时领取新请求号。写入模型前校验请求号，避免较慢的旧响应替换当前结果。完成首屏后，视图根据 `hasMore` 和视口空余空间决定是否请求下一页。
+
+```cpp
+const auto id = view->beginExternalPage();
+if (!id) return;
+fetchFirstPage(query, this, [this, id](const PageResult &page) {
+    if (!view->isRequestCurrent(id)) return;
+    if (page.failed()) { view->failRequest(id); return; }
+    model->replaceItems(page.items);
+    view->finishExternalPage(id, page.hasMore);
+});
+```
+
+`loadMorePauseReasonChanged` 可驱动重试按钮。`ExternalPageFailed` 时重新发起当前查询；分页失败（`RequestFailed`）或仍有下一页却没有新增项（`EmptyPage`）时调用 `retryLoadMore()`。外部首屏和显式 `setLoadMoreSuspended(true)` 各自生效，显式暂停由调用方解除。
+
 | 需求 | 最小参考 |
 | --- | --- |
 | hover / selected 时显示操作控件；事件处理拿当前正确 index | [状态关联内容](list_capabilities/09_state_content/README.md)、[行内事件](list_capabilities/11_item_events/README.md) |
