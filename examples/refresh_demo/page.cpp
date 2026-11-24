@@ -44,7 +44,7 @@ public:
     {
         using View = viv::VirtualItemView;
         ui.setupUi(this);
-        ui.body->insertWidget(2, view, 1);
+        ui.body->insertWidget(ui.body->indexOf(ui.status), view, 1);
         if (auto *tableView = qobject_cast<viv::VirtualTableView *>(view)) {
             model->setHorizontalHeaderLabels({QStringLiteral("名称"), QStringLiteral("页码")});
             tableView->setMaterializationMode(viv::VirtualTableView::MaterializationMode::CellWidgets);
@@ -83,25 +83,57 @@ public:
         updateEdges(Qt::TopEdge);
         connect(view, &View::refreshRequested, this, [this](quint64 id) { fetch(id, true); });
         connect(view, &View::loadMoreRequested, this, [this](quint64 id) { fetch(id, false); });
+        connect(ui.refresh, &QPushButton::clicked, this, [view] { view->beginRefresh(); });
+        connect(ui.cancel, &QPushButton::clicked, this, [this] {
+            this->view->cancelRequest(pendingId);
+            setPending(0);
+            ui.status->setText(QStringLiteral("已取消，可重新刷新"));
+        });
+        connect(ui.emptyPage, &QPushButton::clicked, this, &Page::loadEmptyPage);
         view->setPullToRefreshEnabled(true);
+        loadEmptyPage();
         view->setLoadMoreEnabled(true);
     }
 
 private:
-    void appendPage()
+    void setPending(quint64 id)
+    {
+        pendingId = id;
+        ui.cancel->setEnabled(id != 0);
+    }
+
+    void loadEmptyPage()
+    {
+        const quint64 id = view->beginExternalPage();
+        if (!id) return;
+        setPending(id);
+        ui.status->setText(QStringLiteral("正在加载首屏"));
+        QTimer::singleShot(800, this, [this, id] {
+            if (!view->isRequestCurrent(id)) return;
+            model->removeRows(0, model->rowCount());
+            loadedPages = 0;
+            setPending(0);
+            ui.status->setText(QStringLiteral("首屏为空，在空白处下拉或点击“刷新”加载数据"));
+            view->finishExternalPage(id, false);
+        });
+    }
+
+    void appendPage(int pageSize)
     {
         const int first = model->rowCount();
-        const int limit = first + qMin(options.pageSize, options.itemLimit - first);
+        const int limit = first + qMin(pageSize, options.itemLimit - first);
+        if (limit <= first) return;
+        const QString pageNumber = QString::number(++loadedPages);
         for (int row = first; row < limit; ++row) {
             auto *name = new QStandardItem(QStringLiteral("%1 · %2").arg(edition).arg(row + 1));
             QList<QStandardItem *> fields{name};
             if (model->columnCount() > 1)
-                fields.append(new QStandardItem(QString::number(row / options.pageSize + 1)));
+                fields.append(new QStandardItem(pageNumber));
             if (tree) {
                 for (int child = 1; child <= 3; ++child) {
                     QList<QStandardItem *> children{new QStandardItem(QStringLiteral("子项 %1.%2").arg(row + 1).arg(child))};
                     if (fields.size() > 1)
-                        children.append(new QStandardItem(QString::number(row / options.pageSize + 1)));
+                        children.append(new QStandardItem(pageNumber));
                     name->appendRow(children);
                 }
             }
@@ -118,19 +150,26 @@ private:
 
     void fetch(quint64 id, bool refresh)
     {
+        setPending(id);
+        const int pageSize = ui.smallPages->isChecked() ? 2 : options.pageSize;
         qInfo().noquote() << "[refresh_demo]" << view->metaObject()->className()
                           << (refresh ? "refreshRequested" : "loadMoreRequested")
                           << "requestId=" << id << "rows=" << model->rowCount();
-        ui.status->setText(refresh ? QStringLiteral("正在刷新") : QStringLiteral("正在加载下一页"));
-        QTimer::singleShot(500, this, [this, id, refresh] {
+        ui.status->setText(refresh ? QStringLiteral("正在刷新")
+                                   : QStringLiteral("已加载 %1 项，正在加载下一页").arg(model->rowCount()));
+        QTimer::singleShot(1200, this, [this, id, refresh, pageSize] {
+            // The simulated reply may arrive after cancellation or a newer refresh.
+            if (!view->isRequestCurrent(id)) return;
             if (refresh) {
                 model->removeRows(0, model->rowCount());
+                loadedPages = 0;
                 ++edition;
             }
             const int first = model->rowCount();
-            appendPage();
+            appendPage(pageSize);
             const int count = model->rowCount();
             const bool knownEnd = ui.probe->isChecked() ? first == count : count == options.itemLimit;
+            setPending(0);
             showLoadStatus(knownEnd);
             if (refresh) view->finishRefresh(id, !knownEnd);
             else if (ui.probe->isChecked()) view->finishLoadMore(id);
@@ -144,6 +183,8 @@ private:
     PageOptions options;
     bool tree;
     int edition = 1;
+    int loadedPages = 0;
+    quint64 pendingId = 0;
 };
 }
 

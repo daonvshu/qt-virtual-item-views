@@ -30,6 +30,14 @@
 
 ### 惯性滚动与刷新分页
 
+示例首屏返回零项。在空白处向下拖动并松手，或点击“刷新”，两种操作都会发出 `refreshRequested(id)`。请求期间可点击“取消请求”，等待模拟响应返回以观察列表是否保持原样。“重置为空首屏”可以重复体验。
+
+勾选“每次只加载 2 项”后刷新，可观察短列表逐页填满视口。切换选项从下一次请求生效，状态栏显示累计加载数量。
+
+`beginRefresh()` 取代旧的分页或外部首屏请求；刷新进行中重复调用会返回同一编号。业务取消时调用 `cancelRequest(id)`，并自行决定是否中止网络传输。异步回调应先用 `isRequestCurrent(id)` 检查，再修改模型。取消会暂停自动补页，即使视口仍然很空；重新刷新，或在仍有下一页时显式调用 `retryLoadMore()` 继续。
+
+页结果经过去重或过滤时，应传服务端的 `hasMore`。传 `true` 且可展示项没有增加时，框架以 `EmptyPage` 暂停；无布尔参数的重载则将这种情况视为末页。
+
 分别运行 `list_capabilities --example 24`、`table_capabilities --example 34`、`tree_capabilities --example 30`、`treetable_capabilities --example 39`、`flow_capabilities --example 12`、`wrap_capabilities --example 11` 或 `masonry_capabilities --example 15`。链接 SmoothScrollbar 时，勾选“滚轮惯性”可用滚轮体验平滑滚动。顶部下拉可刷新，触底时追加下一页。占位模式下页脚展开至 28 个逻辑像素，覆盖模式使用透明背景。[分页和滚轮控制器接入代码](refresh_demo/page.cpp)
 
 **由视图发起分页。** 绑定模型并连接 `loadMoreRequested` 后启用分页。让异步回调随页面销毁而取消，并在 GUI 线程处理结果。

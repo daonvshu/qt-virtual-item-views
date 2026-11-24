@@ -15298,7 +15298,7 @@
               }
             },
             {
-              "signature": "enum class LoadMorePauseReason { None, Suspended, ExternalPage, ExternalPageFailed, RequestFailed, EmptyPage };",
+              "signature": "enum class LoadMorePauseReason { None, Suspended, ExternalPage, ExternalPageFailed, RequestFailed, EmptyPage, RefreshFailed, RequestCancelled };",
               "comment": "",
               "line": 492,
               "access": "public",
@@ -15336,14 +15336,26 @@
                   {
                     "name": "RequestFailed",
                     "declaration": "RequestFailed",
-                    "zh": "视图发起的请求失败。",
-                    "en": "A view-initiated request failed."
+                    "zh": "底部分页请求失败。",
+                    "en": "The bottom page request failed."
                   },
                   {
                     "name": "EmptyPage",
                     "declaration": "EmptyPage",
                     "zh": "已报告还有下一页，但没有新增可展示项。",
                     "en": "More pages were reported but no displayable items were added."
+                  },
+                  {
+                    "name": "RefreshFailed",
+                    "declaration": "RefreshFailed",
+                    "zh": "顶部刷新失败，可再次刷新。",
+                    "en": "The refresh failed. Start a new refresh to retry."
+                  },
+                  {
+                    "name": "RequestCancelled",
+                    "declaration": "RequestCancelled",
+                    "zh": "当前请求已主动取消，自动分页暂停。",
+                    "en": "The current request was cancelled and automatic paging is paused."
                   }
                 ]
               }
@@ -15560,9 +15572,35 @@
               }
             },
             {
+              "signature": "quint64 beginRefresh();",
+              "comment": "Refreshes the bound model even when the pull gesture is disabled. Supersedes paging;\nan existing refresh is reused. Returns zero if no request could be started.",
+              "line": 518,
+              "access": "public",
+              "symbols": [
+                "beginRefresh"
+              ],
+              "documentation": {
+                "zh": "取代旧的分页或外部首屏请求，显示顶部提示并发出 refreshRequested(id)。无需开启下拉手势。刷新进行中返回同一编号，无模型时返回 0。",
+                "en": "Supersede paging or an external query, show the top indicator and emit refreshRequested(id), even with the pull gesture disabled. An active refresh is reused. Returns zero without a model."
+              }
+            },
+            {
+              "signature": "void cancelRequest(quint64 requestId);",
+              "comment": "Invalidates the matching request and pauses automatic paging until an explicit retry or refresh.",
+              "line": 520,
+              "access": "public",
+              "symbols": [
+                "cancelRequest"
+              ],
+              "documentation": {
+                "zh": "取消匹配的刷新、分页或外部首屏请求，过期编号无效。取消后暂停自动补页。业务负责中止网络传输，回调在修改模型前检查 isRequestCurrent(id)。",
+                "en": "Invalidate the matching refresh, page or external query and pause automatic paging. Stale IDs are ignored. The caller controls network cancellation and checks isRequestCurrent(id) before writing to the model."
+              }
+            },
+            {
               "signature": "void finishRefresh(quint64 requestId, bool hasMore);",
               "comment": "Call after replacing the model contents. Stale request IDs are ignored.",
-              "line": 517,
+              "line": 522,
               "access": "public",
               "symbols": [
                 "finishRefresh"
@@ -15575,7 +15613,7 @@
             {
               "signature": "void finishLoadMore(quint64 requestId, bool hasMore);",
               "comment": "Call after appending a page. An empty page with hasMore=true pauses automatic requests.",
-              "line": 519,
+              "line": 524,
               "access": "public",
               "symbols": [
                 "finishLoadMore"
@@ -15588,7 +15626,7 @@
             {
               "signature": "void finishLoadMore(quint64 requestId);",
               "comment": "Infers the end from an empty page. Inline mode retains a terminal footer.",
-              "line": 521,
+              "line": 526,
               "access": "public",
               "symbols": [
                 "finishLoadMore"
@@ -15601,7 +15639,7 @@
             {
               "signature": "void failRequest(quint64 requestId);",
               "comment": "Ends either request and pauses automatic loading until retry or refresh.",
-              "line": 523,
+              "line": 528,
               "access": "public",
               "symbols": [
                 "failRequest"
@@ -15614,20 +15652,20 @@
             {
               "signature": "void retryLoadMore();",
               "comment": "Allows a new page request at the bottom after a failure or empty page.",
-              "line": 525,
+              "line": 530,
               "access": "public",
               "symbols": [
                 "retryLoadMore"
               ],
               "documentation": {
-                "zh": "当暂停原因为 RequestFailed 或 EmptyPage 时，恢复触底分页并重新评估视口。外部首屏失败时，调用 beginExternalPage() 重新发起查询。",
-                "en": "Rearm bottom paging after RequestFailed or EmptyPage and queue a viewport check. To retry a failed external first page, start the query again with beginExternalPage()."
+                "zh": "在 RequestFailed、EmptyPage 或 RequestCancelled 后重新评估触底分页。刷新失败用 beginRefresh()，外部首屏失败用 beginExternalPage()。",
+                "en": "Rearm bottom paging after RequestFailed, EmptyPage or RequestCancelled. Use beginRefresh() after a refresh failure and beginExternalPage() after an external first-page failure."
               }
             },
             {
               "signature": "void setHasMore(bool hasMore);",
               "comment": "Registers whether another page exists. Repeated identical values are\nignored, so callers may report the state after every page without\nclearing a failure pause or reopening a consumed bottom edge.",
-              "line": 530,
+              "line": 535,
               "access": "public",
               "symbols": [
                 "setHasMore"
@@ -15644,7 +15682,7 @@
             {
               "signature": "bool hasMoreAvailable() const;",
               "comment": "",
-              "line": 531,
+              "line": 536,
               "access": "public",
               "symbols": [
                 "hasMoreAvailable"
@@ -15657,7 +15695,7 @@
             {
               "signature": "void evaluateScrollRefresh();",
               "comment": "Re-evaluates pull/load-more availability after an external change.\nOnly queues the check; it never clears a failure pause.",
-              "line": 534,
+              "line": 539,
               "access": "public",
               "symbols": [
                 "evaluateScrollRefresh"
@@ -15670,7 +15708,7 @@
             {
               "signature": "void setLoadMoreSuspended(bool suspended);",
               "comment": "Suspends automatic bottom requests while an external first page or a\nmanual refresh is in flight. Suspension survives model replacement.\nResuming queues a check and preserves hasMore and the failure pause.",
-              "line": 538,
+              "line": 543,
               "access": "public",
               "symbols": [
                 "setLoadMoreSuspended"
@@ -15687,7 +15725,7 @@
             {
               "signature": "bool loadMoreSuspended() const;",
               "comment": "",
-              "line": 539,
+              "line": 544,
               "access": "public",
               "symbols": [
                 "loadMoreSuspended"
@@ -15700,7 +15738,7 @@
             {
               "signature": "quint64 beginExternalPage();",
               "comment": "Starts a new query on the bound model and supersedes earlier requests. Zero means no request started.",
-              "line": 541,
+              "line": 546,
               "access": "public",
               "symbols": [
                 "beginExternalPage"
@@ -15713,7 +15751,7 @@
             {
               "signature": "bool isRequestCurrent(quint64 requestId) const;",
               "comment": "Check on the GUI thread before applying an asynchronous response to the model.",
-              "line": 543,
+              "line": 548,
               "access": "public",
               "symbols": [
                 "isRequestCurrent"
@@ -15726,7 +15764,7 @@
             {
               "signature": "void finishExternalPage(quint64 requestId, bool hasMore);",
               "comment": "After replacing the model contents, records availability and queues viewport filling.",
-              "line": 545,
+              "line": 550,
               "access": "public",
               "symbols": [
                 "finishExternalPage"
@@ -15739,7 +15777,7 @@
             {
               "signature": "LoadMorePauseReason loadMorePauseReason() const;",
               "comment": "Returns the effective pause reason. Explicit suspension takes precedence.",
-              "line": 547,
+              "line": 552,
               "access": "public",
               "symbols": [
                 "loadMorePauseReason"
@@ -15752,7 +15790,7 @@
             {
               "signature": "    ScrollMapper &scrollMapper();",
               "comment": "",
-              "line": 549,
+              "line": 554,
               "access": "public",
               "symbols": [
                 "scrollMapper"
@@ -15765,7 +15803,7 @@
             {
               "signature": "    const ScrollMapper &scrollMapper() const;",
               "comment": "",
-              "line": 550,
+              "line": 555,
               "access": "public",
               "symbols": [
                 "scrollMapper"
@@ -15778,7 +15816,7 @@
             {
               "signature": "enum class WheelScrollMode {\n        Pixels,\n        Items,\n    };",
               "comment": "Wheel scrolling granularity.\nPixels (default) scrolls a fixed number of pixels per notch, so rows are\nnever the unit of scrolling; Items keeps row-aligned wheel steps.",
-              "line": 555,
+              "line": 560,
               "access": "public",
               "symbols": [
                 "WheelScrollMode"
@@ -15805,7 +15843,7 @@
             {
               "signature": "void setWheelScrollMode(WheelScrollMode mode);",
               "comment": "",
-              "line": 561,
+              "line": 566,
               "access": "public",
               "symbols": [
                 "setWheelScrollMode"
@@ -15825,7 +15863,7 @@
             {
               "signature": "    WheelScrollMode wheelScrollMode() const;",
               "comment": "",
-              "line": 562,
+              "line": 567,
               "access": "public",
               "symbols": [
                 "wheelScrollMode"
@@ -15845,7 +15883,7 @@
             {
               "signature": "void setWheelScrollPixels(int pixels);",
               "comment": "Pixels per wheel notch in Pixels mode (default 48 = 3 lines x 16 px).",
-              "line": 564,
+              "line": 569,
               "access": "public",
               "symbols": [
                 "setWheelScrollPixels"
@@ -15865,7 +15903,7 @@
             {
               "signature": "    int wheelScrollPixels() const;",
               "comment": "",
-              "line": 565,
+              "line": 570,
               "access": "public",
               "symbols": [
                 "wheelScrollPixels"
@@ -15885,7 +15923,7 @@
             {
               "signature": "void setWheelScrollItems(int items);",
               "comment": "Switches to Items mode: one notch scrolls \\a items items.",
-              "line": 567,
+              "line": 572,
               "access": "public",
               "symbols": [
                 "setWheelScrollItems"
@@ -15905,7 +15943,7 @@
             {
               "signature": "    int wheelScrollItems() const;",
               "comment": "",
-              "line": 568,
+              "line": 573,
               "access": "public",
               "symbols": [
                 "wheelScrollItems"
@@ -15925,7 +15963,7 @@
             {
               "signature": "void setVerticalOffset(qint64 offset);",
               "comment": "Pixel-accurate programmatic scrolling (the logical axis unit is a pixel).",
-              "line": 571,
+              "line": 576,
               "access": "public",
               "symbols": [
                 "setVerticalOffset"
@@ -15945,7 +15983,7 @@
             {
               "signature": "void scrollByPixels(qint64 pixels);",
               "comment": "",
-              "line": 572,
+              "line": 577,
               "access": "public",
               "symbols": [
                 "scrollByPixels"
@@ -15961,7 +15999,7 @@
             {
               "signature": "enum class ItemHeightMode {\n        /// All items share one height (FixedSizeIndex).\n        Uniform,\n        /// Items may differ (BlockSizeIndex + optional measurement feedback).\n        Variable,\n    };",
               "comment": "How item sizes (row heights) are determined.",
-              "line": 575,
+              "line": 580,
               "access": "public",
               "symbols": [
                 "ItemHeightMode"
@@ -15988,7 +16026,7 @@
             {
               "signature": "void setItemHeightMode(ItemHeightMode mode);",
               "comment": "",
-              "line": 583,
+              "line": 588,
               "access": "public",
               "symbols": [
                 "setItemHeightMode"
@@ -16008,7 +16046,7 @@
             {
               "signature": "    ItemHeightMode itemHeightMode() const;",
               "comment": "",
-              "line": 584,
+              "line": 589,
               "access": "public",
               "symbols": [
                 "itemHeightMode"
@@ -16028,7 +16066,7 @@
             {
               "signature": "void setUniformItemHeight(int height);",
               "comment": "Fixed height of every item. Passing 0 enables \"fit to the first\nmaterialized item\" (requires setAutoMeasureItemHeight(true)).",
-              "line": 587,
+              "line": 592,
               "access": "public",
               "symbols": [
                 "setUniformItemHeight"
@@ -16054,7 +16092,7 @@
             {
               "signature": "    int uniformItemHeight() const;",
               "comment": "",
-              "line": 588,
+              "line": 593,
               "access": "public",
               "symbols": [
                 "uniformItemHeight"
@@ -16080,7 +16118,7 @@
             {
               "signature": "void setEstimatedItemHeight(int height);",
               "comment": "Height used for items that were never measured in Variable mode.",
-              "line": 590,
+              "line": 595,
               "access": "public",
               "symbols": [
                 "setEstimatedItemHeight"
@@ -16100,7 +16138,7 @@
             {
               "signature": "    int estimatedItemHeight() const;",
               "comment": "",
-              "line": 591,
+              "line": 596,
               "access": "public",
               "symbols": [
                 "estimatedItemHeight"
@@ -16120,7 +16158,7 @@
             {
               "signature": "void setAutoMeasureItemHeight(bool enabled);",
               "comment": "Enables measuring the size hint of bound widgets (Variable mode) and the\nfirst-item fitting of Uniform mode. Enabled by default, except in\nVirtualFlowTableView and VirtualMasonryView, which disable measurement and\nreject attempts to enable it; use their dedicated height APIs instead.",
-              "line": 596,
+              "line": 601,
               "access": "public",
               "symbols": [
                 "setAutoMeasureItemHeight"
@@ -16146,7 +16184,7 @@
             {
               "signature": "    bool autoMeasureItemHeight() const;",
               "comment": "",
-              "line": 597,
+              "line": 602,
               "access": "public",
               "symbols": [
                 "autoMeasureItemHeight"
@@ -16172,7 +16210,7 @@
             {
               "signature": "VisibleRange visibleItemRange() const;",
               "comment": "Visible item range without overscan.",
-              "line": 600,
+              "line": 605,
               "access": "public",
               "symbols": [
                 "visibleItemRange"
@@ -16185,7 +16223,7 @@
             {
               "signature": "void setFrozenRows(int count);",
               "comment": "Freezes the first \\a count rows at the top edge: they stay visible while the\nrows below scroll, and they add no scroll space of their own (the frozen\nheight is not part of the scroll range, exactly like frozen columns).\nSupported by list/table views; tree, flow and masonry views reject freezing.\n\nThe value is clamped to the row count, and a frozen row that cannot fit into\nthe viewport is not frozen at all: a frozen pane never shows a row that\nsticks out of it.",
-              "line": 611,
+              "line": 616,
               "access": "public",
               "symbols": [
                 "setFrozenRows"
@@ -16205,7 +16243,7 @@
             {
               "signature": "int frozenRows() const;",
               "comment": "Frozen rows at the top edge (the effective, clamped count).",
-              "line": 613,
+              "line": 618,
               "access": "public",
               "symbols": [
                 "frozenRows"
@@ -16225,7 +16263,7 @@
             {
               "signature": "void setFrozenBottomRows(int count);",
               "comment": "Freezes the last \\a count rows at the bottom edge. A row in both sets stays\non the top.",
-              "line": 616,
+              "line": 621,
               "access": "public",
               "symbols": [
                 "setFrozenBottomRows"
@@ -16245,7 +16283,7 @@
             {
               "signature": "int frozenBottomRows() const;",
               "comment": "Frozen rows at the bottom edge (the effective, clamped count).",
-              "line": 618,
+              "line": 623,
               "access": "public",
               "symbols": [
                 "frozenBottomRows"
@@ -16265,7 +16303,7 @@
             {
               "signature": "bool isRowFrozen(qsizetype row) const;",
               "comment": "",
-              "line": 619,
+              "line": 624,
               "access": "public",
               "symbols": [
                 "isRowFrozen"
@@ -16278,7 +16316,7 @@
             {
               "signature": "QVector<ItemPane> itemPanes() const;",
               "comment": "Visible panes, top to bottom: the frozen top pane (when it has rows), the\nscrolling pane and the frozen bottom pane. Without frozen rows there is\nexactly one scrolling pane covering the viewport.",
-              "line": 623,
+              "line": 628,
               "access": "public",
               "symbols": [
                 "itemPanes"
@@ -16291,7 +16329,7 @@
             {
               "signature": "QRect itemPaneRect(ItemPane::Type type) const;",
               "comment": "Pane rect in viewport coordinates (empty when the pane does not exist).",
-              "line": 625,
+              "line": 630,
               "access": "public",
               "symbols": [
                 "itemPaneRect"
@@ -16304,7 +16342,7 @@
             {
               "signature": "QVector<VisibleRange> visibleItemRanges() const;",
               "comment": "Visible rows as up to three ranges: frozen top, scrolling window, frozen\nbottom. Frozen rows are visible and their union with the window is not\ncontiguous, which is why visibleItemRange() keeps describing the scrolling\nwindow only.",
-              "line": 630,
+              "line": 635,
               "access": "public",
               "symbols": [
                 "visibleItemRanges"
@@ -16317,7 +16355,7 @@
             {
               "signature": "void setItemPaneSeparatorStyle(const PaneSeparatorStyle &style);",
               "comment": "Look of the line that separates the row panes.",
-              "line": 632,
+              "line": 637,
               "access": "public",
               "symbols": [
                 "setItemPaneSeparatorStyle"
@@ -16337,7 +16375,7 @@
             {
               "signature": "    PaneSeparatorStyle itemPaneSeparatorStyle() const;",
               "comment": "",
-              "line": 633,
+              "line": 638,
               "access": "public",
               "symbols": [
                 "itemPaneSeparatorStyle"
@@ -16357,7 +16395,7 @@
             {
               "signature": "    virtual int itemPaneSeparatorLeftExtension() const;",
               "comment": "How far the row pane boundary lines reach to the *left* of the viewport, in\npixels. A table whose row-number strip lives outside the viewport returns its\nwidth here, so the line crosses the strip exactly like the column boundary lines\ncross the header strip (see docs/history/row-freezing.md).",
-              "line": 638,
+              "line": 643,
               "access": "public",
               "symbols": [
                 "itemPaneSeparatorLeftExtension"
@@ -16370,7 +16408,7 @@
             {
               "signature": "virtual QColor itemPaneSeparatorColor() const;",
               "comment": "Colour the row pane boundary is painted with when the separator style does not\nname one. A subclass that can probe what the current style paints separators with\n(the table does, through the header renderer) overrides this, so its row boundary\nand its column boundary look identical; the default is the palette's mid colour.",
-              "line": 643,
+              "line": 648,
               "access": "public",
               "symbols": [
                 "itemPaneSeparatorColor"
@@ -16383,7 +16421,7 @@
             {
               "signature": "QVector<QRect> itemPaneSeparatorRects() const;",
               "comment": "Geometry of the row pane boundary lines, top to bottom (diagnostics/tests).",
-              "line": 645,
+              "line": 650,
               "access": "public",
               "symbols": [
                 "itemPaneSeparatorRects"
@@ -16396,7 +16434,7 @@
             {
               "signature": "    QWidget *scrollingPaneHost() const;",
               "comment": "Container the scrolling rows are clipped into (null while no row is frozen,\nin which case the row widgets keep the viewport as parent).",
-              "line": 648,
+              "line": 653,
               "access": "public",
               "symbols": [
                 "scrollingPaneHost"
@@ -16409,7 +16447,7 @@
             {
               "signature": "    qsizetype materializedItemCount() const;",
               "comment": "",
-              "line": 651,
+              "line": 656,
               "access": "public",
               "symbols": [
                 "materializedItemCount"
@@ -16425,7 +16463,7 @@
             {
               "signature": "qsizetype pinnedItemCount() const;",
               "comment": "",
-              "line": 652,
+              "line": 657,
               "access": "public",
               "symbols": [
                 "pinnedItemCount"
@@ -16438,7 +16476,7 @@
             {
               "signature": "QWidget *widgetForIndex(const QModelIndex &index) const;",
               "comment": "",
-              "line": 653,
+              "line": 658,
               "access": "public",
               "symbols": [
                 "widgetForIndex"
@@ -16454,7 +16492,7 @@
             {
               "signature": "virtual QModelIndex indexForWidget(const QWidget *widget) const;",
               "comment": "",
-              "line": 654,
+              "line": 659,
               "access": "public",
               "symbols": [
                 "indexForWidget"
@@ -16470,7 +16508,7 @@
             {
               "signature": "    const QList<MaterializedItem> &materializedItems() const;",
               "comment": "",
-              "line": 655,
+              "line": 660,
               "access": "public",
               "symbols": [
                 "materializedItems"
@@ -16483,7 +16521,7 @@
             {
               "signature": "qsizetype pooledWidgetCount() const;",
               "comment": "",
-              "line": 657,
+              "line": 662,
               "access": "public",
               "symbols": [
                 "pooledWidgetCount"
@@ -16499,7 +16537,7 @@
             {
               "signature": "qsizetype createdWidgetCount() const;",
               "comment": "",
-              "line": 658,
+              "line": 663,
               "access": "public",
               "symbols": [
                 "createdWidgetCount"
@@ -16515,7 +16553,7 @@
             {
               "signature": "qsizetype destroyedWidgetCount() const;",
               "comment": "",
-              "line": 659,
+              "line": 664,
               "access": "public",
               "symbols": [
                 "destroyedWidgetCount"
@@ -16528,7 +16566,7 @@
             {
               "signature": "    bool isRelayoutPending() const;",
               "comment": "",
-              "line": 661,
+              "line": 666,
               "access": "public",
               "symbols": [
                 "isRelayoutPending"
@@ -16541,7 +16579,7 @@
             {
               "signature": "void flushPendingRelayout();",
               "comment": "Applies a pending invalidation synchronously (used by tests and by\ncode that needs a settled geometry before measuring).",
-              "line": 664,
+              "line": 669,
               "access": "public",
               "symbols": [
                 "flushPendingRelayout"
@@ -16554,7 +16592,7 @@
             {
               "signature": "void scrollEdgeReached(Qt::Edge edge);",
               "comment": "",
-              "line": 667,
+              "line": 672,
               "access": "signals",
               "symbols": [
                 "scrollEdgeReached"
@@ -16570,7 +16608,7 @@
             {
               "signature": "void scrollEdgeLeft(Qt::Edge edge);",
               "comment": "",
-              "line": 668,
+              "line": 673,
               "access": "signals",
               "symbols": [
                 "scrollEdgeLeft"
@@ -16586,7 +16624,7 @@
             {
               "signature": "void refreshStateChanged(RefreshState state);",
               "comment": "",
-              "line": 669,
+              "line": 674,
               "access": "signals",
               "symbols": [
                 "refreshStateChanged"
@@ -16599,7 +16637,7 @@
             {
               "signature": "void loadMorePauseReasonChanged(LoadMorePauseReason reason);",
               "comment": "Emitted when the effective reason for pausing automatic pagination changes.",
-              "line": 671,
+              "line": 676,
               "access": "signals",
               "symbols": [
                 "loadMorePauseReasonChanged"
@@ -16612,7 +16650,7 @@
             {
               "signature": "void pullProgressChanged(qreal progress);",
               "comment": "",
-              "line": 672,
+              "line": 677,
               "access": "signals",
               "symbols": [
                 "pullProgressChanged"
@@ -16625,7 +16663,7 @@
             {
               "signature": "void refreshRequested(quint64 requestId);",
               "comment": "",
-              "line": 673,
+              "line": 678,
               "access": "signals",
               "symbols": [
                 "refreshRequested"
@@ -16638,7 +16676,7 @@
             {
               "signature": "void loadMoreRequested(quint64 requestId);",
               "comment": "",
-              "line": 674,
+              "line": 679,
               "access": "signals",
               "symbols": [
                 "loadMoreRequested"
@@ -16651,7 +16689,7 @@
             {
               "signature": "void clicked(const QModelIndex &index);",
               "comment": "",
-              "line": 675,
+              "line": 680,
               "access": "signals",
               "symbols": [
                 "clicked"
@@ -16664,7 +16702,7 @@
             {
               "signature": "void doubleClicked(const QModelIndex &index);",
               "comment": "",
-              "line": 676,
+              "line": 681,
               "access": "signals",
               "symbols": [
                 "doubleClicked"
@@ -16677,7 +16715,7 @@
             {
               "signature": "void activated(const QModelIndex &index);",
               "comment": "",
-              "line": 677,
+              "line": 682,
               "access": "signals",
               "symbols": [
                 "activated"
@@ -16690,7 +16728,7 @@
             {
               "signature": "void itemDropped(const QModelIndex &parent, int row, int column, Qt::DropAction action);",
               "comment": "Emitted after the model accepted a drop (§38) with the target the model\nreceived; a refused drop emits nothing (the model said no).",
-              "line": 680,
+              "line": 685,
               "access": "signals",
               "symbols": [
                 "itemDropped"
@@ -16703,7 +16741,7 @@
             {
               "signature": "void selectionModelChanged(QItemSelectionModel *selectionModel);",
               "comment": "",
-              "line": 681,
+              "line": 686,
               "access": "signals",
               "symbols": [
                 "selectionModelChanged"
@@ -16716,7 +16754,7 @@
             {
               "signature": "void virtualizationUpdated();",
               "comment": "Emitted after every completed materialization pass.",
-              "line": 683,
+              "line": 688,
               "access": "signals",
               "symbols": [
                 "virtualizationUpdated"

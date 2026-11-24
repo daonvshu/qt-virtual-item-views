@@ -9,6 +9,7 @@
 #include <QMouseEvent>
 #include <QSignalBlocker>
 #include <QTouchEvent>
+#include <QTextDocument>
 #include <QVariantAnimation>
 #include <QWheelEvent>
 
@@ -17,6 +18,27 @@ namespace viv {
 using RefreshState = VirtualItemView::RefreshState;
 using IndicatorMode = VirtualItemView::IndicatorMode;
 using PauseReason = VirtualItemView::LoadMorePauseReason;
+
+// Touch is translated into viewport mouse input. Only bypass passive labels and
+// layout hosts; a label inside a button must still leave the gesture to the button.
+static bool passiveTouchTarget(QWidget *viewport, const QPoint &point)
+{
+    for (QWidget *w = viewport->childAt(point); w && w != viewport; w = w->parentWidget()) {
+        if (w->focusPolicy() != Qt::NoFocus || w->testAttribute(Qt::WA_AcceptTouchEvents))
+            return false;
+        if (w->property("_vivTransparentHost").toBool())
+            continue;
+        const auto *label = qobject_cast<QLabel *>(w);
+        if (!label || label->metaObject() != &QLabel::staticMetaObject)
+            return false;
+        const auto flags = label->textInteractionFlags();
+        if ((flags & (Qt::TextSelectableByMouse | Qt::TextSelectableByKeyboard))
+            || (flags != Qt::NoTextInteraction && label->textFormat() != Qt::PlainText
+                && (label->textFormat() != Qt::AutoText || Qt::mightBeRichText(label->text()))))
+            return false;
+    }
+    return true;
+}
 
 class ViewRefreshController : public QObject
 {
@@ -88,7 +110,7 @@ public:
             && (bottom.mode == IndicatorMode::Overlay || view->verticalOffset() >= loadOffset);
         const bool terminal = loadEnabled && machine.terminalFooter && bottom.mode == IndicatorMode::Inline
             && machine.state == RefreshState::Idle && view->verticalOffset() >= view->maximumVerticalOffset();
-        reveal(top, pulling ? machine.distance : pullEnabled && machine.state == RefreshState::Refreshing ? restingHeight : 0, pulling);
+        reveal(top, pulling ? machine.distance : machine.state == RefreshState::Refreshing ? restingHeight : 0, pulling);
         reveal(bottom, loading || terminal ? restingHeight : 0);
         applyGeometry();
     }
@@ -103,13 +125,14 @@ public:
         const int paneHeight = qMax(0, scrollingPane().height());
         const int leading = top.mode == IndicatorMode::Inline ? qMin(top.height, paneHeight) : 0;
         const int trailing = bottom.mode == IndicatorMode::Inline ? qMin(bottom.height, paneHeight) : 0;
-        const qint64 overflow = view->contentExtent() - view->viewportMainExtent() + trailing;
-        const int shift = int(qBound(qint64(0), overflow, qint64(trailing))) - leading;
+        const int footerShift = machine.inlineFooterShift(trailing, view->viewportMainExtent(),
+                                                         view->contentExtent());
+        const int shift = footerShift - leading;
         bool changed = view->m_refreshVisualOffset != shift;
         view->m_refreshVisualOffset = shift;
         if (fillingGap) {
             if (view->verticalOffset() == lastFillOffset) {
-                lastFillOffset = qBound(qint64(0), fillOffset - trailing, view->maximumVerticalOffset());
+                lastFillOffset = qBound(qint64(0), fillOffset - footerShift, view->maximumVerticalOffset());
                 if (lastFillOffset != view->verticalOffset()) {
                     view->m_scrollOffset = lastFillOffset;
                     changed = true;
@@ -219,16 +242,17 @@ public:
         }
     }
 
-    void request(RefreshState kind)
+    quint64 request(RefreshState kind, bool explicitRefresh = false)
     {
-        const quint64 id = machine.begin(kind, view->viewItemCount(), view->contentExtent());
-        if (!id) return;
+        const quint64 id = machine.begin(kind, view->viewItemCount(), view->contentExtent(), explicitRefresh);
+        if (!id) return 0;
         if (kind == RefreshState::LoadingMore) loadOffset = view->verticalOffset();
         QPointer<ViewRefreshController> self(this);
         notify();
-        if (!self || machine.active != id) return;
+        if (!self || machine.active != id) return 0;
         if (kind == RefreshState::Refreshing) emit view->refreshRequested(id);
         else emit view->loadMoreRequested(id);
+        return id;
     }
 
     void complete(quint64 id, RefreshState kind, bool more, bool success, bool inferEnd = false)
@@ -246,7 +270,7 @@ public:
         notify();
     }
 
-    void cancel()
+    void clearGesture()
     {
         const bool wasTracking = tracking;
         if (wasTracking || viewportTouch || view->m_deferPressSelection)
@@ -257,6 +281,11 @@ public:
         machine.cancelPull();
         if (wasTracking)
             view->scheduleScrollUpdate();
+    }
+
+    void cancel()
+    {
+        clearGesture();
         notify();
     }
 
@@ -412,6 +441,25 @@ void VirtualItemView::setLoadMoreIndicator(QWidget *indicator) { m_refreshContro
 void VirtualItemView::finishRefresh(quint64 requestId, bool hasMore) { m_refreshController->complete(requestId, RefreshState::Refreshing, hasMore, true); }
 void VirtualItemView::finishLoadMore(quint64 requestId, bool hasMore) { m_refreshController->complete(requestId, RefreshState::LoadingMore, hasMore, true); }
 void VirtualItemView::finishLoadMore(quint64 requestId) { m_refreshController->complete(requestId, RefreshState::LoadingMore, true, true, true); }
+quint64 VirtualItemView::beginRefresh()
+{
+    if (!model() || m_destroying) return 0;
+    auto *controller = m_refreshController;
+    if (controller->machine.state == RefreshState::Refreshing)
+        return controller->machine.active;
+    controller->clearGesture();
+    controller->fillingGap = false;
+    return controller->request(RefreshState::Refreshing, true);
+}
+
+void VirtualItemView::cancelRequest(quint64 requestId)
+{
+    auto *controller = m_refreshController;
+    if (!controller->machine.cancelRequest(requestId)) return;
+    controller->fillingGap = false;
+    controller->notify();
+}
+
 void VirtualItemView::failRequest(quint64 requestId)
 {
     if (m_refreshController->machine.finishExternalPage(requestId, false, false)) {
@@ -591,7 +639,7 @@ bool VirtualItemView::handleRefreshViewportEvent(QEvent *event)
     const QPoint point = points.first().pos().toPoint();
 #endif
     if (event->type() == QEvent::TouchBegin) {
-        if (!controller->eligible(point) || viewport()->childAt(point)) return false;
+        if (!controller->eligible(point) || !passiveTouchTarget(viewport(), point)) return false;
         controller->viewportTouch = true;
     }
     if (!controller->viewportTouch) return false;

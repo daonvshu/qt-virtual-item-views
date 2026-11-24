@@ -606,10 +606,10 @@
 </ul>
 </details>
 </article>
-<article id="scroll-refresh" data-search="scrollEdges scrollEdgeReached scrollEdgeLeft setPullToRefreshEnabled setLoadMoreEnabled setIndicatorModes setIndicatorHeights refreshRequested loadMoreRequested finishRefresh finishLoadMore failRequest retryLoadMore setRefreshIndicator setLoadMoreIndicator virtualitemview">
+<article id="scroll-refresh" data-search="scrollEdges scrollEdgeReached scrollEdgeLeft setPullToRefreshEnabled setLoadMoreEnabled setIndicatorModes setIndicatorHeights beginRefresh cancelRequest refreshRequested loadMoreRequested finishRefresh finishLoadMore failRequest retryLoadMore setRefreshIndicator setLoadMoreIndicator virtualitemview">
 <h3><span data-zh="滚动边缘 / 下拉刷新 / 触底分页" data-en="Scroll edges / pull to refresh / end reached pagination">滚动边缘 / 下拉刷新 / 触底分页</span></h3>
 <p>
-<code>scrollEdges · scrollEdgeReached · scrollEdgeLeft · setPullToRefreshEnabled · setLoadMoreEnabled · setIndicatorModes · setIndicatorHeights · refreshRequested · loadMoreRequested · finishRefresh · finishLoadMore · failRequest · retryLoadMore · setRefreshIndicator · setLoadMoreIndicator</code>
+<code>scrollEdges · scrollEdgeReached · scrollEdgeLeft · setPullToRefreshEnabled · setLoadMoreEnabled · setIndicatorModes · setIndicatorHeights · beginRefresh · cancelRequest · refreshRequested · loadMoreRequested · finishRefresh · finishLoadMore · failRequest · retryLoadMore · setRefreshIndicator · setLoadMoreIndicator</code>
 </p>
 <p class="rules"><span data-zh="顶部和底部可分别设置为占位或覆盖模式。下拉高度跟随手势，松手后回到停留高度。在界面线程更新模型后，已知末页调用 finishLoadMore(id, false)。未知末页调用 finishLoadMore(id)，空页使占位模式显示末尾提示。" data-en="Choose inline or overlay independently for each edge. Pull height tracks the pointer and settles on release. After updating the model on the GUI thread, call finishLoadMore(id, false) for a known last page. Use finishLoadMore(id) to detect the end from an empty page and retain an inline terminal footer.">顶部和底部可分别设置为占位或覆盖模式。下拉高度跟随手势，松手后回到停留高度。在界面线程更新模型后，已知末页调用 finishLoadMore(id, false)。未知末页调用 finishLoadMore(id)，空页使占位模式显示末尾提示。</span></p>
 <p class="muted"><span data-zh="实现：" data-en="Implementation: ">实现：</span><a href="../../../src/core/virtualitemviewrefresh.cpp">src/core/virtualitemviewrefresh.cpp</a>
@@ -1469,288 +1469,298 @@
 <code>void setLoadMoreIndicator(QWidget *indicator);</code>
 </a>
 </li>
+<li data-search="VirtualItemView beginRefresh">
+<a href="#VirtualItemView-beginRefresh-146">
+<code>quint64 beginRefresh();</code>
+</a>
+</li>
+<li data-search="VirtualItemView cancelRequest">
+<a href="#VirtualItemView-cancelRequest-147">
+<code>void cancelRequest(quint64 requestId);</code>
+</a>
+</li>
 <li data-search="VirtualItemView finishRefresh">
-<a href="#VirtualItemView-finishRefresh-146">
+<a href="#VirtualItemView-finishRefresh-148">
 <code>void finishRefresh(quint64 requestId, bool hasMore);</code>
 </a>
 </li>
 <li data-search="VirtualItemView finishLoadMore">
-<a href="#VirtualItemView-finishLoadMore-147">
+<a href="#VirtualItemView-finishLoadMore-149">
 <code>void finishLoadMore(quint64 requestId, bool hasMore);</code>
 </a>
 </li>
 <li data-search="VirtualItemView finishLoadMore">
-<a href="#VirtualItemView-finishLoadMore-148">
+<a href="#VirtualItemView-finishLoadMore-150">
 <code>void finishLoadMore(quint64 requestId);</code>
 </a>
 </li>
 <li data-search="VirtualItemView failRequest">
-<a href="#VirtualItemView-failRequest-149">
+<a href="#VirtualItemView-failRequest-151">
 <code>void failRequest(quint64 requestId);</code>
 </a>
 </li>
 <li data-search="VirtualItemView retryLoadMore">
-<a href="#VirtualItemView-retryLoadMore-150">
+<a href="#VirtualItemView-retryLoadMore-152">
 <code>void retryLoadMore();</code>
 </a>
 </li>
 <li data-search="VirtualItemView setHasMore">
-<a href="#VirtualItemView-setHasMore-151">
+<a href="#VirtualItemView-setHasMore-153">
 <code>void setHasMore(bool hasMore);</code>
 </a>
 </li>
 <li data-search="VirtualItemView hasMoreAvailable">
-<a href="#VirtualItemView-hasMoreAvailable-152">
+<a href="#VirtualItemView-hasMoreAvailable-154">
 <code>bool hasMoreAvailable() const;</code>
 </a>
 </li>
 <li data-search="VirtualItemView evaluateScrollRefresh">
-<a href="#VirtualItemView-evaluateScrollRefresh-153">
+<a href="#VirtualItemView-evaluateScrollRefresh-155">
 <code>void evaluateScrollRefresh();</code>
 </a>
 </li>
 <li data-search="VirtualItemView setLoadMoreSuspended">
-<a href="#VirtualItemView-setLoadMoreSuspended-154">
+<a href="#VirtualItemView-setLoadMoreSuspended-156">
 <code>void setLoadMoreSuspended(bool suspended);</code>
 </a>
 </li>
 <li data-search="VirtualItemView loadMoreSuspended">
-<a href="#VirtualItemView-loadMoreSuspended-155">
+<a href="#VirtualItemView-loadMoreSuspended-157">
 <code>bool loadMoreSuspended() const;</code>
 </a>
 </li>
 <li data-search="VirtualItemView beginExternalPage">
-<a href="#VirtualItemView-beginExternalPage-156">
+<a href="#VirtualItemView-beginExternalPage-158">
 <code>quint64 beginExternalPage();</code>
 </a>
 </li>
 <li data-search="VirtualItemView isRequestCurrent">
-<a href="#VirtualItemView-isRequestCurrent-157">
+<a href="#VirtualItemView-isRequestCurrent-159">
 <code>bool isRequestCurrent(quint64 requestId) const;</code>
 </a>
 </li>
 <li data-search="VirtualItemView finishExternalPage">
-<a href="#VirtualItemView-finishExternalPage-158">
+<a href="#VirtualItemView-finishExternalPage-160">
 <code>void finishExternalPage(quint64 requestId, bool hasMore);</code>
 </a>
 </li>
 <li data-search="VirtualItemView loadMorePauseReason">
-<a href="#VirtualItemView-loadMorePauseReason-159">
+<a href="#VirtualItemView-loadMorePauseReason-161">
 <code>LoadMorePauseReason loadMorePauseReason() const;</code>
 </a>
 </li>
 <li data-search="VirtualItemView scrollMapper">
-<a href="#VirtualItemView-scrollMapper-160">
+<a href="#VirtualItemView-scrollMapper-162">
 <code>ScrollMapper &amp;scrollMapper();</code>
 </a>
 </li>
 <li data-search="VirtualItemView scrollMapper">
-<a href="#VirtualItemView-scrollMapper-161">
+<a href="#VirtualItemView-scrollMapper-163">
 <code>const ScrollMapper &amp;scrollMapper() const;</code>
 </a>
 </li>
 <li data-search="VirtualItemView setWheelScrollMode">
-<a href="#VirtualItemView-setWheelScrollMode-163">
+<a href="#VirtualItemView-setWheelScrollMode-165">
 <code>void setWheelScrollMode(WheelScrollMode mode);</code>
 </a>
 </li>
 <li data-search="VirtualItemView wheelScrollMode">
-<a href="#VirtualItemView-wheelScrollMode-164">
+<a href="#VirtualItemView-wheelScrollMode-166">
 <code>WheelScrollMode wheelScrollMode() const;</code>
 </a>
 </li>
 <li data-search="VirtualItemView setWheelScrollPixels">
-<a href="#VirtualItemView-setWheelScrollPixels-165">
+<a href="#VirtualItemView-setWheelScrollPixels-167">
 <code>void setWheelScrollPixels(int pixels);</code>
 </a>
 </li>
 <li data-search="VirtualItemView wheelScrollPixels">
-<a href="#VirtualItemView-wheelScrollPixels-166">
+<a href="#VirtualItemView-wheelScrollPixels-168">
 <code>int wheelScrollPixels() const;</code>
 </a>
 </li>
 <li data-search="VirtualItemView setWheelScrollItems">
-<a href="#VirtualItemView-setWheelScrollItems-167">
+<a href="#VirtualItemView-setWheelScrollItems-169">
 <code>void setWheelScrollItems(int items);</code>
 </a>
 </li>
 <li data-search="VirtualItemView wheelScrollItems">
-<a href="#VirtualItemView-wheelScrollItems-168">
+<a href="#VirtualItemView-wheelScrollItems-170">
 <code>int wheelScrollItems() const;</code>
 </a>
 </li>
 <li data-search="VirtualItemView setVerticalOffset">
-<a href="#VirtualItemView-setVerticalOffset-169">
+<a href="#VirtualItemView-setVerticalOffset-171">
 <code>void setVerticalOffset(qint64 offset);</code>
 </a>
 </li>
 <li data-search="VirtualItemView scrollByPixels">
-<a href="#VirtualItemView-scrollByPixels-170">
+<a href="#VirtualItemView-scrollByPixels-172">
 <code>void scrollByPixels(qint64 pixels);</code>
 </a>
 </li>
 <li data-search="VirtualItemView setItemHeightMode">
-<a href="#VirtualItemView-setItemHeightMode-172">
+<a href="#VirtualItemView-setItemHeightMode-174">
 <code>void setItemHeightMode(ItemHeightMode mode);</code>
 </a>
 </li>
 <li data-search="VirtualItemView itemHeightMode">
-<a href="#VirtualItemView-itemHeightMode-173">
+<a href="#VirtualItemView-itemHeightMode-175">
 <code>ItemHeightMode itemHeightMode() const;</code>
 </a>
 </li>
 <li data-search="VirtualItemView setUniformItemHeight">
-<a href="#VirtualItemView-setUniformItemHeight-174">
+<a href="#VirtualItemView-setUniformItemHeight-176">
 <code>void setUniformItemHeight(int height);</code>
 </a>
 </li>
 <li data-search="VirtualItemView uniformItemHeight">
-<a href="#VirtualItemView-uniformItemHeight-175">
+<a href="#VirtualItemView-uniformItemHeight-177">
 <code>int uniformItemHeight() const;</code>
 </a>
 </li>
 <li data-search="VirtualItemView setEstimatedItemHeight">
-<a href="#VirtualItemView-setEstimatedItemHeight-176">
+<a href="#VirtualItemView-setEstimatedItemHeight-178">
 <code>void setEstimatedItemHeight(int height);</code>
 </a>
 </li>
 <li data-search="VirtualItemView estimatedItemHeight">
-<a href="#VirtualItemView-estimatedItemHeight-177">
+<a href="#VirtualItemView-estimatedItemHeight-179">
 <code>int estimatedItemHeight() const;</code>
 </a>
 </li>
 <li data-search="VirtualItemView setAutoMeasureItemHeight">
-<a href="#VirtualItemView-setAutoMeasureItemHeight-178">
+<a href="#VirtualItemView-setAutoMeasureItemHeight-180">
 <code>void setAutoMeasureItemHeight(bool enabled);</code>
 </a>
 </li>
 <li data-search="VirtualItemView autoMeasureItemHeight">
-<a href="#VirtualItemView-autoMeasureItemHeight-179">
+<a href="#VirtualItemView-autoMeasureItemHeight-181">
 <code>bool autoMeasureItemHeight() const;</code>
 </a>
 </li>
 <li data-search="VirtualItemView visibleItemRange">
-<a href="#VirtualItemView-visibleItemRange-180">
+<a href="#VirtualItemView-visibleItemRange-182">
 <code>VisibleRange visibleItemRange() const;</code>
 </a>
 </li>
 <li data-search="VirtualItemView setFrozenRows">
-<a href="#VirtualItemView-setFrozenRows-181">
+<a href="#VirtualItemView-setFrozenRows-183">
 <code>void setFrozenRows(int count);</code>
 </a>
 </li>
 <li data-search="VirtualItemView frozenRows">
-<a href="#VirtualItemView-frozenRows-182">
+<a href="#VirtualItemView-frozenRows-184">
 <code>int frozenRows() const;</code>
 </a>
 </li>
 <li data-search="VirtualItemView setFrozenBottomRows">
-<a href="#VirtualItemView-setFrozenBottomRows-183">
+<a href="#VirtualItemView-setFrozenBottomRows-185">
 <code>void setFrozenBottomRows(int count);</code>
 </a>
 </li>
 <li data-search="VirtualItemView frozenBottomRows">
-<a href="#VirtualItemView-frozenBottomRows-184">
+<a href="#VirtualItemView-frozenBottomRows-186">
 <code>int frozenBottomRows() const;</code>
 </a>
 </li>
 <li data-search="VirtualItemView isRowFrozen">
-<a href="#VirtualItemView-isRowFrozen-185">
+<a href="#VirtualItemView-isRowFrozen-187">
 <code>bool isRowFrozen(qsizetype row) const;</code>
 </a>
 </li>
 <li data-search="VirtualItemView itemPanes">
-<a href="#VirtualItemView-itemPanes-186">
+<a href="#VirtualItemView-itemPanes-188">
 <code>QVector&lt;ItemPane&gt; itemPanes() const;</code>
 </a>
 </li>
 <li data-search="VirtualItemView itemPaneRect">
-<a href="#VirtualItemView-itemPaneRect-187">
+<a href="#VirtualItemView-itemPaneRect-189">
 <code>QRect itemPaneRect(ItemPane::Type type) const;</code>
 </a>
 </li>
 <li data-search="VirtualItemView visibleItemRanges">
-<a href="#VirtualItemView-visibleItemRanges-188">
+<a href="#VirtualItemView-visibleItemRanges-190">
 <code>QVector&lt;VisibleRange&gt; visibleItemRanges() const;</code>
 </a>
 </li>
 <li data-search="VirtualItemView setItemPaneSeparatorStyle">
-<a href="#VirtualItemView-setItemPaneSeparatorStyle-189">
+<a href="#VirtualItemView-setItemPaneSeparatorStyle-191">
 <code>void setItemPaneSeparatorStyle(const PaneSeparatorStyle &amp;style);</code>
 </a>
 </li>
 <li data-search="VirtualItemView itemPaneSeparatorStyle">
-<a href="#VirtualItemView-itemPaneSeparatorStyle-190">
+<a href="#VirtualItemView-itemPaneSeparatorStyle-192">
 <code>PaneSeparatorStyle itemPaneSeparatorStyle() const;</code>
 </a>
 </li>
 <li data-search="VirtualItemView itemPaneSeparatorLeftExtension">
-<a href="#VirtualItemView-itemPaneSeparatorLeftExtension-191">
+<a href="#VirtualItemView-itemPaneSeparatorLeftExtension-193">
 <code>virtual int itemPaneSeparatorLeftExtension() const;</code>
 </a>
 </li>
 <li data-search="VirtualItemView itemPaneSeparatorColor">
-<a href="#VirtualItemView-itemPaneSeparatorColor-192">
+<a href="#VirtualItemView-itemPaneSeparatorColor-194">
 <code>virtual QColor itemPaneSeparatorColor() const;</code>
 </a>
 </li>
 <li data-search="VirtualItemView itemPaneSeparatorRects">
-<a href="#VirtualItemView-itemPaneSeparatorRects-193">
+<a href="#VirtualItemView-itemPaneSeparatorRects-195">
 <code>QVector&lt;QRect&gt; itemPaneSeparatorRects() const;</code>
 </a>
 </li>
 <li data-search="VirtualItemView scrollingPaneHost">
-<a href="#VirtualItemView-scrollingPaneHost-194">
+<a href="#VirtualItemView-scrollingPaneHost-196">
 <code>QWidget *scrollingPaneHost() const;</code>
 </a>
 </li>
 <li data-search="VirtualItemView materializedItemCount">
-<a href="#VirtualItemView-materializedItemCount-195">
+<a href="#VirtualItemView-materializedItemCount-197">
 <code>qsizetype materializedItemCount() const;</code>
 </a>
 </li>
 <li data-search="VirtualItemView pinnedItemCount">
-<a href="#VirtualItemView-pinnedItemCount-196">
+<a href="#VirtualItemView-pinnedItemCount-198">
 <code>qsizetype pinnedItemCount() const;</code>
 </a>
 </li>
 <li data-search="VirtualItemView widgetForIndex">
-<a href="#VirtualItemView-widgetForIndex-197">
+<a href="#VirtualItemView-widgetForIndex-199">
 <code>QWidget *widgetForIndex(const QModelIndex &amp;index) const;</code>
 </a>
 </li>
 <li data-search="VirtualItemView indexForWidget">
-<a href="#VirtualItemView-indexForWidget-198">
+<a href="#VirtualItemView-indexForWidget-200">
 <code>virtual QModelIndex indexForWidget(const QWidget *widget) const;</code>
 </a>
 </li>
 <li data-search="VirtualItemView materializedItems">
-<a href="#VirtualItemView-materializedItems-199">
+<a href="#VirtualItemView-materializedItems-201">
 <code>const QList&lt;MaterializedItem&gt; &amp;materializedItems() const;</code>
 </a>
 </li>
 <li data-search="VirtualItemView pooledWidgetCount">
-<a href="#VirtualItemView-pooledWidgetCount-200">
+<a href="#VirtualItemView-pooledWidgetCount-202">
 <code>qsizetype pooledWidgetCount() const;</code>
 </a>
 </li>
 <li data-search="VirtualItemView createdWidgetCount">
-<a href="#VirtualItemView-createdWidgetCount-201">
+<a href="#VirtualItemView-createdWidgetCount-203">
 <code>qsizetype createdWidgetCount() const;</code>
 </a>
 </li>
 <li data-search="VirtualItemView destroyedWidgetCount">
-<a href="#VirtualItemView-destroyedWidgetCount-202">
+<a href="#VirtualItemView-destroyedWidgetCount-204">
 <code>qsizetype destroyedWidgetCount() const;</code>
 </a>
 </li>
 <li data-search="VirtualItemView isRelayoutPending">
-<a href="#VirtualItemView-isRelayoutPending-203">
+<a href="#VirtualItemView-isRelayoutPending-205">
 <code>bool isRelayoutPending() const;</code>
 </a>
 </li>
 <li data-search="VirtualItemView flushPendingRelayout">
-<a href="#VirtualItemView-flushPendingRelayout-204">
+<a href="#VirtualItemView-flushPendingRelayout-206">
 <code>void flushPendingRelayout();</code>
 </a>
 </li>
@@ -1759,67 +1769,67 @@
 <h4>VirtualItemView</h4>
 <ul>
 <li data-search="VirtualItemView scrollEdgeReached">
-<a href="#VirtualItemView-scrollEdgeReached-205">
+<a href="#VirtualItemView-scrollEdgeReached-207">
 <code>void scrollEdgeReached(Qt::Edge edge);</code>
 </a>
 </li>
 <li data-search="VirtualItemView scrollEdgeLeft">
-<a href="#VirtualItemView-scrollEdgeLeft-206">
+<a href="#VirtualItemView-scrollEdgeLeft-208">
 <code>void scrollEdgeLeft(Qt::Edge edge);</code>
 </a>
 </li>
 <li data-search="VirtualItemView refreshStateChanged">
-<a href="#VirtualItemView-refreshStateChanged-207">
+<a href="#VirtualItemView-refreshStateChanged-209">
 <code>void refreshStateChanged(RefreshState state);</code>
 </a>
 </li>
 <li data-search="VirtualItemView loadMorePauseReasonChanged">
-<a href="#VirtualItemView-loadMorePauseReasonChanged-208">
+<a href="#VirtualItemView-loadMorePauseReasonChanged-210">
 <code>void loadMorePauseReasonChanged(LoadMorePauseReason reason);</code>
 </a>
 </li>
 <li data-search="VirtualItemView pullProgressChanged">
-<a href="#VirtualItemView-pullProgressChanged-209">
+<a href="#VirtualItemView-pullProgressChanged-211">
 <code>void pullProgressChanged(qreal progress);</code>
 </a>
 </li>
 <li data-search="VirtualItemView refreshRequested">
-<a href="#VirtualItemView-refreshRequested-210">
+<a href="#VirtualItemView-refreshRequested-212">
 <code>void refreshRequested(quint64 requestId);</code>
 </a>
 </li>
 <li data-search="VirtualItemView loadMoreRequested">
-<a href="#VirtualItemView-loadMoreRequested-211">
+<a href="#VirtualItemView-loadMoreRequested-213">
 <code>void loadMoreRequested(quint64 requestId);</code>
 </a>
 </li>
 <li data-search="VirtualItemView clicked">
-<a href="#VirtualItemView-clicked-212">
+<a href="#VirtualItemView-clicked-214">
 <code>void clicked(const QModelIndex &amp;index);</code>
 </a>
 </li>
 <li data-search="VirtualItemView doubleClicked">
-<a href="#VirtualItemView-doubleClicked-213">
+<a href="#VirtualItemView-doubleClicked-215">
 <code>void doubleClicked(const QModelIndex &amp;index);</code>
 </a>
 </li>
 <li data-search="VirtualItemView activated">
-<a href="#VirtualItemView-activated-214">
+<a href="#VirtualItemView-activated-216">
 <code>void activated(const QModelIndex &amp;index);</code>
 </a>
 </li>
 <li data-search="VirtualItemView itemDropped">
-<a href="#VirtualItemView-itemDropped-215">
+<a href="#VirtualItemView-itemDropped-217">
 <code>void itemDropped(const QModelIndex &amp;parent, int row, int column, Qt::DropAction action);</code>
 </a>
 </li>
 <li data-search="VirtualItemView selectionModelChanged">
-<a href="#VirtualItemView-selectionModelChanged-216">
+<a href="#VirtualItemView-selectionModelChanged-218">
 <code>void selectionModelChanged(QItemSelectionModel *selectionModel);</code>
 </a>
 </li>
 <li data-search="VirtualItemView virtualizationUpdated">
-<a href="#VirtualItemView-virtualizationUpdated-217">
+<a href="#VirtualItemView-virtualizationUpdated-219">
 <code>void virtualizationUpdated();</code>
 </a>
 </li>
@@ -1894,12 +1904,12 @@
 </a>
 </li>
 <li data-search="VirtualItemView::WheelScrollMode">
-<a href="#VirtualItemView-WheelScrollMode-162">
+<a href="#VirtualItemView-WheelScrollMode-164">
 <code>VirtualItemView::WheelScrollMode</code>
 </a>
 </li>
 <li data-search="VirtualItemView::ItemHeightMode">
-<a href="#VirtualItemView-ItemHeightMode-171">
+<a href="#VirtualItemView-ItemHeightMode-173">
 <code>VirtualItemView::ItemHeightMode</code>
 </a>
 </li>
@@ -3937,6 +3947,8 @@ view-&gt;setTrailingRowGridLineAutoHideEnabled(true);</code>
     ExternalPageFailed,
     RequestFailed,
     EmptyPage,
+    RefreshFailed,
+    RequestCancelled,
 };</pre>
 <p class="doc" data-zh="自动分页的暂停原因。" data-en="Reason automatic pagination is paused.">自动分页的暂停原因。</p>
 <div class="table-scroll">
@@ -3976,13 +3988,25 @@ view-&gt;setTrailingRowGridLineAutoHideEnabled(true);</code>
 <td>
 <code>RequestFailed</code>
 </td>
-<td class="doc" data-zh="视图发起的请求失败。" data-en="A view-initiated request failed.">视图发起的请求失败。</td>
+<td class="doc" data-zh="底部分页请求失败。" data-en="The bottom page request failed.">底部分页请求失败。</td>
 </tr>
 <tr>
 <td>
 <code>EmptyPage</code>
 </td>
 <td class="doc" data-zh="已报告还有下一页，但没有新增可展示项。" data-en="More pages were reported but no displayable items were added.">已报告还有下一页，但没有新增可展示项。</td>
+</tr>
+<tr>
+<td>
+<code>RefreshFailed</code>
+</td>
+<td class="doc" data-zh="顶部刷新失败，可再次刷新。" data-en="The refresh failed. Start a new refresh to retry.">顶部刷新失败，可再次刷新。</td>
+</tr>
+<tr>
+<td>
+<code>RequestCancelled</code>
+</td>
+<td class="doc" data-zh="当前请求已主动取消，自动分页暂停。" data-en="The current request was cancelled and automatic paging is paused.">当前请求已主动取消，自动分页暂停。</td>
 </tr>
 </tbody>
 </table>
@@ -4127,140 +4151,156 @@ view-&gt;setTrailingRowGridLineAutoHideEnabled(true);</code>
 <p class="doc defaults" data-zh="默认值／初始状态：按需显示内置指示器。" data-en="Default / initial state: The built-in indicator appears on demand.">默认值／初始状态：按需显示内置指示器。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualItemView-finishRefresh-146" data-search="VirtualItemView finishRefresh">
+<article tabindex="-1" id="VirtualItemView-beginRefresh-146" data-search="VirtualItemView beginRefresh">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L517</span>
+<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L518</span>
+<pre>quint64 beginRefresh();</pre>
+<p class="doc" data-zh="取代旧的分页或外部首屏请求，显示顶部提示并发出 refreshRequested(id)。无需开启下拉手势。刷新进行中返回同一编号，无模型时返回 0。" data-en="Supersede paging or an external query, show the top indicator and emit refreshRequested(id), even with the pull gesture disabled. An active refresh is reused. Returns zero without a model.">取代旧的分页或外部首屏请求，显示顶部提示并发出 refreshRequested(id)。无需开启下拉手势。刷新进行中返回同一编号，无模型时返回 0。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualItemView-cancelRequest-147" data-search="VirtualItemView cancelRequest">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L520</span>
+<pre>void cancelRequest(quint64 requestId);</pre>
+<p class="doc" data-zh="取消匹配的刷新、分页或外部首屏请求，过期编号无效。取消后暂停自动补页。业务负责中止网络传输，回调在修改模型前检查 isRequestCurrent(id)。" data-en="Invalidate the matching refresh, page or external query and pause automatic paging. Stale IDs are ignored. The caller controls network cancellation and checks isRequestCurrent(id) before writing to the model.">取消匹配的刷新、分页或外部首屏请求，过期编号无效。取消后暂停自动补页。业务负责中止网络传输，回调在修改模型前检查 isRequestCurrent(id)。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualItemView-finishRefresh-148" data-search="VirtualItemView finishRefresh">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L522</span>
 <pre>void finishRefresh(quint64 requestId, bool hasMore);</pre>
 <p class="doc" data-zh="刷新现有模型内容后完成匹配的请求，用 hasMore 指示能否继续分页。" data-en="Finish the matching refresh after updating the existing model. Set hasMore to allow subsequent pages.">刷新现有模型内容后完成匹配的请求，用 hasMore 指示能否继续分页。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualItemView-finishLoadMore-147" data-search="VirtualItemView finishLoadMore">
+<article tabindex="-1" id="VirtualItemView-finishLoadMore-149" data-search="VirtualItemView finishLoadMore">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L519</span>
+<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L524</span>
 <pre>void finishLoadMore(quint64 requestId, bool hasMore);</pre>
 <p class="doc" data-zh="追加数据后完成匹配请求。末页传 false。如果传 true 且没有新增可展示项，自动分页暂停，原因是 EmptyPage。" data-en="Finish the matching request after appending items. Pass false for the last page. Passing true with no new displayable items pauses paging with the EmptyPage reason.">追加数据后完成匹配请求。末页传 false。如果传 true 且没有新增可展示项，自动分页暂停，原因是 EmptyPage。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualItemView-finishLoadMore-148" data-search="VirtualItemView finishLoadMore">
+<article tabindex="-1" id="VirtualItemView-finishLoadMore-150" data-search="VirtualItemView finishLoadMore">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L521</span>
+<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L526</span>
 <pre>void finishLoadMore(quint64 requestId);</pre>
 <p class="doc" data-zh="追加数据后调用。没有新增可展示项时确认末尾，占位模式在底部保留末尾提示。" data-en="Call after appending the page. A page with no new displayable items marks the end and retains a terminal footer in inline mode.">追加数据后调用。没有新增可展示项时确认末尾，占位模式在底部保留末尾提示。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualItemView-failRequest-149" data-search="VirtualItemView failRequest">
+<article tabindex="-1" id="VirtualItemView-failRequest-151" data-search="VirtualItemView failRequest">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L523</span>
+<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L528</span>
 <pre>void failRequest(quint64 requestId);</pre>
 <p class="doc" data-zh="结束匹配的在途请求并暂停自动分页，旧编号无效。" data-en="End the matching request and pause automatic paging. Stale IDs are ignored.">结束匹配的在途请求并暂停自动分页，旧编号无效。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualItemView-retryLoadMore-150" data-search="VirtualItemView retryLoadMore">
-<span class="badge">public</span>
-<span class="muted">
-<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L525</span>
-<pre>void retryLoadMore();</pre>
-<p class="doc" data-zh="当暂停原因为 RequestFailed 或 EmptyPage 时，恢复触底分页并重新评估视口。外部首屏失败时，调用 beginExternalPage() 重新发起查询。" data-en="Rearm bottom paging after RequestFailed or EmptyPage and queue a viewport check. To retry a failed external first page, start the query again with beginExternalPage().">当暂停原因为 RequestFailed 或 EmptyPage 时，恢复触底分页并重新评估视口。外部首屏失败时，调用 beginExternalPage() 重新发起查询。</p>
-<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
-</article>
-<article tabindex="-1" id="VirtualItemView-setHasMore-151" data-search="VirtualItemView setHasMore">
+<article tabindex="-1" id="VirtualItemView-retryLoadMore-152" data-search="VirtualItemView retryLoadMore">
 <span class="badge">public</span>
 <span class="muted">
 <a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L530</span>
+<pre>void retryLoadMore();</pre>
+<p class="doc" data-zh="在 RequestFailed、EmptyPage 或 RequestCancelled 后重新评估触底分页。刷新失败用 beginRefresh()，外部首屏失败用 beginExternalPage()。" data-en="Rearm bottom paging after RequestFailed, EmptyPage or RequestCancelled. Use beginRefresh() after a refresh failure and beginExternalPage() after an external first-page failure.">在 RequestFailed、EmptyPage 或 RequestCancelled 后重新评估触底分页。刷新失败用 beginRefresh()，外部首屏失败用 beginExternalPage()。</p>
+<a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
+</article>
+<article tabindex="-1" id="VirtualItemView-setHasMore-153" data-search="VirtualItemView setHasMore">
+<span class="badge">public</span>
+<span class="muted">
+<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L535</span>
 <pre>void setHasMore(bool hasMore);</pre>
 <p class="doc" data-zh="登记下一页可用性，保留失败暂停。" data-en="Report whether another page exists while preserving a failure pause.">登记下一页可用性，保留失败暂停。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：默认为 true。" data-en="Default / initial state: Defaults to true.">默认值／初始状态：默认为 true。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualItemView-hasMoreAvailable-152" data-search="VirtualItemView hasMoreAvailable">
+<article tabindex="-1" id="VirtualItemView-hasMoreAvailable-154" data-search="VirtualItemView hasMoreAvailable">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L531</span>
+<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L536</span>
 <pre>bool hasMoreAvailable() const;</pre>
 <p class="doc" data-zh="读取下一页可用性。" data-en="Read the reported availability of another page.">读取下一页可用性。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualItemView-evaluateScrollRefresh-153" data-search="VirtualItemView evaluateScrollRefresh">
+<article tabindex="-1" id="VirtualItemView-evaluateScrollRefresh-155" data-search="VirtualItemView evaluateScrollRefresh">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L534</span>
+<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L539</span>
 <pre>void evaluateScrollRefresh();</pre>
 <p class="doc" data-zh="将视口重新评估排入事件队列。" data-en="Queue a viewport check after an external change.">将视口重新评估排入事件队列。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualItemView-setLoadMoreSuspended-154" data-search="VirtualItemView setLoadMoreSuspended">
+<article tabindex="-1" id="VirtualItemView-setLoadMoreSuspended-156" data-search="VirtualItemView setLoadMoreSuspended">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L538</span>
+<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L543</span>
 <pre>void setLoadMoreSuspended(bool suspended);</pre>
 <p class="doc" data-zh="显式暂停自动分页，恢复时重新评估视口。" data-en="Suspend paging explicitly and queue a viewport check on resume.">显式暂停自动分页，恢复时重新评估视口。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：默认关闭。" data-en="Default / initial state: Defaults to false.">默认值／初始状态：默认关闭。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualItemView-loadMoreSuspended-155" data-search="VirtualItemView loadMoreSuspended">
+<article tabindex="-1" id="VirtualItemView-loadMoreSuspended-157" data-search="VirtualItemView loadMoreSuspended">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L539</span>
+<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L544</span>
 <pre>bool loadMoreSuspended() const;</pre>
 <p class="doc" data-zh="读取显式暂停开关。" data-en="Read the explicit suspension setting.">读取显式暂停开关。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualItemView-beginExternalPage-156" data-search="VirtualItemView beginExternalPage">
+<article tabindex="-1" id="VirtualItemView-beginExternalPage-158" data-search="VirtualItemView beginExternalPage">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L541</span>
+<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L546</span>
 <pre>quint64 beginExternalPage();</pre>
 <p class="doc" data-zh="在已绑定模型上启动新查询，取代旧请求。返回零表示未启动。" data-en="Start a query on the bound model, superseding earlier requests. Zero indicates no request started.">在已绑定模型上启动新查询，取代旧请求。返回零表示未启动。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualItemView-isRequestCurrent-157" data-search="VirtualItemView isRequestCurrent">
+<article tabindex="-1" id="VirtualItemView-isRequestCurrent-159" data-search="VirtualItemView isRequestCurrent">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L543</span>
+<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L548</span>
 <pre>bool isRequestCurrent(quint64 requestId) const;</pre>
 <p class="doc" data-zh="在 GUI 线程写模型前确认请求号仍有效。" data-en="Check the request ID on the GUI thread before applying a response.">在 GUI 线程写模型前确认请求号仍有效。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualItemView-finishExternalPage-158" data-search="VirtualItemView finishExternalPage">
+<article tabindex="-1" id="VirtualItemView-finishExternalPage-160" data-search="VirtualItemView finishExternalPage">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L545</span>
+<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L550</span>
 <pre>void finishExternalPage(quint64 requestId, bool hasMore);</pre>
 <p class="doc" data-zh="替换首屏内容后登记游标，排队检查是否需要续页。" data-en="After replacing the first page, report cursor availability and queue a paging check.">替换首屏内容后登记游标，排队检查是否需要续页。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualItemView-loadMorePauseReason-159" data-search="VirtualItemView loadMorePauseReason">
+<article tabindex="-1" id="VirtualItemView-loadMorePauseReason-161" data-search="VirtualItemView loadMorePauseReason">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L547</span>
+<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L552</span>
 <pre>LoadMorePauseReason loadMorePauseReason() const;</pre>
 <p class="doc" data-zh="读取当前暂停原因，显式暂停优先。" data-en="Read the effective paging pause reason. Explicit suspension takes precedence.">读取当前暂停原因，显式暂停优先。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualItemView-scrollMapper-160" data-search="VirtualItemView scrollMapper">
+<article tabindex="-1" id="VirtualItemView-scrollMapper-162" data-search="VirtualItemView scrollMapper">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L549</span>
+<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L554</span>
 <pre>    ScrollMapper &amp;scrollMapper();</pre>
 <p class="doc" data-zh="返回逻辑偏移与滚动条值的转换器。" data-en="Return the logical offset and scrollbar value mapper.">返回逻辑偏移与滚动条值的转换器。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualItemView-scrollMapper-161" data-search="VirtualItemView scrollMapper">
+<article tabindex="-1" id="VirtualItemView-scrollMapper-163" data-search="VirtualItemView scrollMapper">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L550</span>
+<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L555</span>
 <pre>    const ScrollMapper &amp;scrollMapper() const;</pre>
 <p class="doc" data-zh="返回逻辑偏移与滚动条值的转换器。" data-en="Return the logical offset and scrollbar value mapper.">返回逻辑偏移与滚动条值的转换器。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualItemView-WheelScrollMode-162" data-search="VirtualItemView WheelScrollMode">
+<article tabindex="-1" id="VirtualItemView-WheelScrollMode-164" data-search="VirtualItemView WheelScrollMode">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L555</span>
+<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L560</span>
 <pre>enum class WheelScrollMode {
     Pixels,
     Items,
@@ -4292,89 +4332,89 @@ view-&gt;setTrailingRowGridLineAutoHideEnabled(true);</code>
 </div>
 <a href="#type-index" class="muted"><span data-zh="返回类型列表" data-en="Back to type index">返回类型列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualItemView-setWheelScrollMode-163" data-search="VirtualItemView setWheelScrollMode">
+<article tabindex="-1" id="VirtualItemView-setWheelScrollMode-165" data-search="VirtualItemView setWheelScrollMode">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L561</span>
+<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L566</span>
 <pre>void setWheelScrollMode(WheelScrollMode mode);</pre>
 <p class="doc" data-zh="设置按项目或像素滚动模式。" data-en="Set the item-based or pixel-based wheel scrolling mode.">设置按项目或像素滚动模式。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：WheelScrollMode::Pixels" data-en="Default / initial state: WheelScrollMode::Pixels">默认值／初始状态：WheelScrollMode::Pixels</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#scroll"><span data-zh="滚动 / 定位 / 几何 / 命中 / 平滑滚动" data-en="Scrolling / positioning / geometry / hits / smooth scrolling">滚动 / 定位 / 几何 / 命中 / 平滑滚动</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualItemView-wheelScrollMode-164" data-search="VirtualItemView wheelScrollMode">
+<article tabindex="-1" id="VirtualItemView-wheelScrollMode-166" data-search="VirtualItemView wheelScrollMode">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L562</span>
+<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L567</span>
 <pre>    WheelScrollMode wheelScrollMode() const;</pre>
 <p class="doc" data-zh="返回按项目或像素滚动模式。" data-en="Return the item-based or pixel-based wheel scrolling mode.">返回按项目或像素滚动模式。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：WheelScrollMode::Pixels" data-en="Default / initial state: WheelScrollMode::Pixels">默认值／初始状态：WheelScrollMode::Pixels</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#scroll"><span data-zh="滚动 / 定位 / 几何 / 命中 / 平滑滚动" data-en="Scrolling / positioning / geometry / hits / smooth scrolling">滚动 / 定位 / 几何 / 命中 / 平滑滚动</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualItemView-setWheelScrollPixels-165" data-search="VirtualItemView setWheelScrollPixels">
+<article tabindex="-1" id="VirtualItemView-setWheelScrollPixels-167" data-search="VirtualItemView setWheelScrollPixels">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L564</span>
+<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L569</span>
 <pre>void setWheelScrollPixels(int pixels);</pre>
 <p class="doc" data-zh="设置滚轮每步逻辑像素数。" data-en="Set the logical pixels per wheel step.">设置滚轮每步逻辑像素数。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：48" data-en="Default / initial state: 48">默认值／初始状态：48</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#scroll"><span data-zh="滚动 / 定位 / 几何 / 命中 / 平滑滚动" data-en="Scrolling / positioning / geometry / hits / smooth scrolling">滚动 / 定位 / 几何 / 命中 / 平滑滚动</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualItemView-wheelScrollPixels-166" data-search="VirtualItemView wheelScrollPixels">
+<article tabindex="-1" id="VirtualItemView-wheelScrollPixels-168" data-search="VirtualItemView wheelScrollPixels">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L565</span>
+<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L570</span>
 <pre>    int wheelScrollPixels() const;</pre>
 <p class="doc" data-zh="返回滚轮每步逻辑像素数。" data-en="Return the logical pixels per wheel step.">返回滚轮每步逻辑像素数。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：48" data-en="Default / initial state: 48">默认值／初始状态：48</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#scroll"><span data-zh="滚动 / 定位 / 几何 / 命中 / 平滑滚动" data-en="Scrolling / positioning / geometry / hits / smooth scrolling">滚动 / 定位 / 几何 / 命中 / 平滑滚动</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualItemView-setWheelScrollItems-167" data-search="VirtualItemView setWheelScrollItems">
+<article tabindex="-1" id="VirtualItemView-setWheelScrollItems-169" data-search="VirtualItemView setWheelScrollItems">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L567</span>
+<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L572</span>
 <pre>void setWheelScrollItems(int items);</pre>
 <p class="doc" data-zh="设置滚轮每步项目数。" data-en="Set the items per wheel step.">设置滚轮每步项目数。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：3" data-en="Default / initial state: 3">默认值／初始状态：3</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#scroll"><span data-zh="滚动 / 定位 / 几何 / 命中 / 平滑滚动" data-en="Scrolling / positioning / geometry / hits / smooth scrolling">滚动 / 定位 / 几何 / 命中 / 平滑滚动</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualItemView-wheelScrollItems-168" data-search="VirtualItemView wheelScrollItems">
+<article tabindex="-1" id="VirtualItemView-wheelScrollItems-170" data-search="VirtualItemView wheelScrollItems">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L568</span>
+<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L573</span>
 <pre>    int wheelScrollItems() const;</pre>
 <p class="doc" data-zh="返回滚轮每步项目数。" data-en="Return the items per wheel step.">返回滚轮每步项目数。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：3" data-en="Default / initial state: 3">默认值／初始状态：3</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#scroll"><span data-zh="滚动 / 定位 / 几何 / 命中 / 平滑滚动" data-en="Scrolling / positioning / geometry / hits / smooth scrolling">滚动 / 定位 / 几何 / 命中 / 平滑滚动</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualItemView-setVerticalOffset-169" data-search="VirtualItemView setVerticalOffset">
+<article tabindex="-1" id="VirtualItemView-setVerticalOffset-171" data-search="VirtualItemView setVerticalOffset">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L571</span>
+<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L576</span>
 <pre>void setVerticalOffset(qint64 offset);</pre>
 <p class="doc" data-zh="设置垂直滚动偏移量。" data-en="Set the vertical scroll offset.">设置垂直滚动偏移量。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：0" data-en="Default / initial state: 0">默认值／初始状态：0</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#scroll"><span data-zh="滚动 / 定位 / 几何 / 命中 / 平滑滚动" data-en="Scrolling / positioning / geometry / hits / smooth scrolling">滚动 / 定位 / 几何 / 命中 / 平滑滚动</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualItemView-scrollByPixels-170" data-search="VirtualItemView scrollByPixels">
+<article tabindex="-1" id="VirtualItemView-scrollByPixels-172" data-search="VirtualItemView scrollByPixels">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L572</span>
+<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L577</span>
 <pre>void scrollByPixels(qint64 pixels);</pre>
 <p class="doc" data-zh="按逻辑像素增量滚动，并限制到当前有效滚动范围。" data-en="Scroll by a logical-pixel delta, clamped to the current valid range.">按逻辑像素增量滚动，并限制到当前有效滚动范围。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#scroll"><span data-zh="滚动 / 定位 / 几何 / 命中 / 平滑滚动" data-en="Scrolling / positioning / geometry / hits / smooth scrolling">滚动 / 定位 / 几何 / 命中 / 平滑滚动</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualItemView-ItemHeightMode-171" data-search="VirtualItemView ItemHeightMode">
+<article tabindex="-1" id="VirtualItemView-ItemHeightMode-173" data-search="VirtualItemView ItemHeightMode">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L575</span>
+<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L580</span>
 <pre>enum class ItemHeightMode {
     Uniform,
     Variable,
@@ -4406,30 +4446,30 @@ view-&gt;setTrailingRowGridLineAutoHideEnabled(true);</code>
 </div>
 <a href="#type-index" class="muted"><span data-zh="返回类型列表" data-en="Back to type index">返回类型列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualItemView-setItemHeightMode-172" data-search="VirtualItemView setItemHeightMode">
+<article tabindex="-1" id="VirtualItemView-setItemHeightMode-174" data-search="VirtualItemView setItemHeightMode">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L583</span>
+<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L588</span>
 <pre>void setItemHeightMode(ItemHeightMode mode);</pre>
 <p class="doc" data-zh="设置统一或可变高度策略。" data-en="Set the uniform or variable item height strategy.">设置统一或可变高度策略。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：ItemHeightMode::Uniform；Flow / Masonry / Wrap 使用各自布局接口，不支持此继承设置。" data-en="Default / initial state: ItemHeightMode::Uniform; Flow / Masonry / Wrap use their own layout APIs and do not support this inherited setting.">默认值／初始状态：ItemHeightMode::Uniform；Flow / Masonry / Wrap 使用各自布局接口，不支持此继承设置。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#height"><span data-zh="动态行高 / 测量 / 显式覆盖" data-en="Dynamic row heights / measurement / explicit overrides">动态行高 / 测量 / 显式覆盖</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualItemView-itemHeightMode-173" data-search="VirtualItemView itemHeightMode">
+<article tabindex="-1" id="VirtualItemView-itemHeightMode-175" data-search="VirtualItemView itemHeightMode">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L584</span>
+<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L589</span>
 <pre>    ItemHeightMode itemHeightMode() const;</pre>
 <p class="doc" data-zh="返回统一或可变高度策略。" data-en="Return the uniform or variable item height strategy.">返回统一或可变高度策略。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：ItemHeightMode::Uniform；Flow / Masonry / Wrap 使用各自布局接口，不支持此继承设置。" data-en="Default / initial state: ItemHeightMode::Uniform; Flow / Masonry / Wrap use their own layout APIs and do not support this inherited setting.">默认值／初始状态：ItemHeightMode::Uniform；Flow / Masonry / Wrap 使用各自布局接口，不支持此继承设置。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#height"><span data-zh="动态行高 / 测量 / 显式覆盖" data-en="Dynamic row heights / measurement / explicit overrides">动态行高 / 测量 / 显式覆盖</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualItemView-setUniformItemHeight-174" data-search="VirtualItemView setUniformItemHeight">
+<article tabindex="-1" id="VirtualItemView-setUniformItemHeight-176" data-search="VirtualItemView setUniformItemHeight">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L587</span>
+<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L592</span>
 <pre>void setUniformItemHeight(int height);</pre>
 <p class="doc" data-zh="设置统一高度模式行高。" data-en="Set the row height in uniform-height mode.">设置统一高度模式行高。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：32 逻辑像素。" data-en="Default / initial state: 32 logical pixels.">默认值／初始状态：32 逻辑像素。</p>
@@ -4437,10 +4477,10 @@ view-&gt;setTrailingRowGridLineAutoHideEnabled(true);</code>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#height"><span data-zh="动态行高 / 测量 / 显式覆盖" data-en="Dynamic row heights / measurement / explicit overrides">动态行高 / 测量 / 显式覆盖</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualItemView-uniformItemHeight-175" data-search="VirtualItemView uniformItemHeight">
+<article tabindex="-1" id="VirtualItemView-uniformItemHeight-177" data-search="VirtualItemView uniformItemHeight">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L588</span>
+<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L593</span>
 <pre>    int uniformItemHeight() const;</pre>
 <p class="doc" data-zh="返回统一高度模式行高。" data-en="Return the row height in uniform-height mode.">返回统一高度模式行高。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：32 逻辑像素。" data-en="Default / initial state: 32 logical pixels.">默认值／初始状态：32 逻辑像素。</p>
@@ -4448,30 +4488,30 @@ view-&gt;setTrailingRowGridLineAutoHideEnabled(true);</code>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#height"><span data-zh="动态行高 / 测量 / 显式覆盖" data-en="Dynamic row heights / measurement / explicit overrides">动态行高 / 测量 / 显式覆盖</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualItemView-setEstimatedItemHeight-176" data-search="VirtualItemView setEstimatedItemHeight">
+<article tabindex="-1" id="VirtualItemView-setEstimatedItemHeight-178" data-search="VirtualItemView setEstimatedItemHeight">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L590</span>
+<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L595</span>
 <pre>void setEstimatedItemHeight(int height);</pre>
 <p class="doc" data-zh="设置未测量项目估计高度。" data-en="Set the estimated height of unmeasured items.">设置未测量项目估计高度。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：32 逻辑像素。" data-en="Default / initial state: 32 logical pixels.">默认值／初始状态：32 逻辑像素。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#height"><span data-zh="动态行高 / 测量 / 显式覆盖" data-en="Dynamic row heights / measurement / explicit overrides">动态行高 / 测量 / 显式覆盖</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualItemView-estimatedItemHeight-177" data-search="VirtualItemView estimatedItemHeight">
+<article tabindex="-1" id="VirtualItemView-estimatedItemHeight-179" data-search="VirtualItemView estimatedItemHeight">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L591</span>
+<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L596</span>
 <pre>    int estimatedItemHeight() const;</pre>
 <p class="doc" data-zh="返回未测量项目估计高度。" data-en="Return the estimated height of unmeasured items.">返回未测量项目估计高度。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：32 逻辑像素。" data-en="Default / initial state: 32 logical pixels.">默认值／初始状态：32 逻辑像素。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#height"><span data-zh="动态行高 / 测量 / 显式覆盖" data-en="Dynamic row heights / measurement / explicit overrides">动态行高 / 测量 / 显式覆盖</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualItemView-setAutoMeasureItemHeight-178" data-search="VirtualItemView setAutoMeasureItemHeight">
+<article tabindex="-1" id="VirtualItemView-setAutoMeasureItemHeight-180" data-search="VirtualItemView setAutoMeasureItemHeight">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L596</span>
+<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L601</span>
 <pre>void setAutoMeasureItemHeight(bool enabled);</pre>
 <p class="doc" data-zh="设置物化后自动测量高度的开关。" data-en="Set the automatic measurement of materialized item heights.">设置物化后自动测量高度的开关。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：true；Flow / Masonry / Wrap 构造时关闭且不支持开启，使用各自布局接口。" data-en="Default / initial state: true; Flow / Masonry / Wrap disable this in their constructors and do not support enabling it; use their own layout APIs.">默认值／初始状态：true；Flow / Masonry / Wrap 构造时关闭且不支持开启，使用各自布局接口。</p>
@@ -4479,10 +4519,10 @@ view-&gt;setTrailingRowGridLineAutoHideEnabled(true);</code>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#height"><span data-zh="动态行高 / 测量 / 显式覆盖" data-en="Dynamic row heights / measurement / explicit overrides">动态行高 / 测量 / 显式覆盖</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualItemView-autoMeasureItemHeight-179" data-search="VirtualItemView autoMeasureItemHeight">
+<article tabindex="-1" id="VirtualItemView-autoMeasureItemHeight-181" data-search="VirtualItemView autoMeasureItemHeight">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L597</span>
+<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L602</span>
 <pre>    bool autoMeasureItemHeight() const;</pre>
 <p class="doc" data-zh="返回物化后自动测量高度的开关。" data-en="Return the automatic measurement of materialized item heights.">返回物化后自动测量高度的开关。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：true；Flow / Masonry / Wrap 构造时关闭且不支持开启，使用各自布局接口。" data-en="Default / initial state: true; Flow / Masonry / Wrap disable this in their constructors and do not support enabling it; use their own layout APIs.">默认值／初始状态：true；Flow / Masonry / Wrap 构造时关闭且不支持开启，使用各自布局接口。</p>
@@ -4490,325 +4530,325 @@ view-&gt;setTrailingRowGridLineAutoHideEnabled(true);</code>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#height"><span data-zh="动态行高 / 测量 / 显式覆盖" data-en="Dynamic row heights / measurement / explicit overrides">动态行高 / 测量 / 显式覆盖</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualItemView-visibleItemRange-180" data-search="VirtualItemView visibleItemRange">
+<article tabindex="-1" id="VirtualItemView-visibleItemRange-182" data-search="VirtualItemView visibleItemRange">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L600</span>
+<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L605</span>
 <pre>VisibleRange visibleItemRange() const;</pre>
 <p class="doc" data-zh="返回当前视口及布局计算出的可见项目范围。" data-en="Return the visible item ranges resolved by the viewport and layout.">返回当前视口及布局计算出的可见项目范围。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualItemView-setFrozenRows-181" data-search="VirtualItemView setFrozenRows">
+<article tabindex="-1" id="VirtualItemView-setFrozenRows-183" data-search="VirtualItemView setFrozenRows">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L611</span>
+<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L616</span>
 <pre>void setFrozenRows(int count);</pre>
 <p class="doc" data-zh="设置顶部冻结行数。" data-en="Set the number of top frozen rows.">设置顶部冻结行数。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：0；无冻结行，仅支持行 pane 的视图适用。Tree / TreeTable / Flow / Masonry / Wrap 不支持。" data-en="Default / initial state: 0; no frozen rows; only views supporting row panes apply. Tree / TreeTable / Flow / Masonry / Wrap do not support them.">默认值／初始状态：0；无冻结行，仅支持行 pane 的视图适用。Tree / TreeTable / Flow / Masonry / Wrap 不支持。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#frozen"><span data-zh="冻结行列 / 多 pane / 多滚动组" data-en="Frozen rows and columns / multiple panes / scroll groups">冻结行列 / 多 pane / 多滚动组</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualItemView-frozenRows-182" data-search="VirtualItemView frozenRows">
+<article tabindex="-1" id="VirtualItemView-frozenRows-184" data-search="VirtualItemView frozenRows">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L613</span>
+<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L618</span>
 <pre>int frozenRows() const;</pre>
 <p class="doc" data-zh="返回顶部冻结行数。" data-en="Return the number of top frozen rows.">返回顶部冻结行数。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：0；无冻结行，仅支持行 pane 的视图适用。Tree / TreeTable / Flow / Masonry / Wrap 不支持。" data-en="Default / initial state: 0; no frozen rows; only views supporting row panes apply. Tree / TreeTable / Flow / Masonry / Wrap do not support them.">默认值／初始状态：0；无冻结行，仅支持行 pane 的视图适用。Tree / TreeTable / Flow / Masonry / Wrap 不支持。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#frozen"><span data-zh="冻结行列 / 多 pane / 多滚动组" data-en="Frozen rows and columns / multiple panes / scroll groups">冻结行列 / 多 pane / 多滚动组</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualItemView-setFrozenBottomRows-183" data-search="VirtualItemView setFrozenBottomRows">
+<article tabindex="-1" id="VirtualItemView-setFrozenBottomRows-185" data-search="VirtualItemView setFrozenBottomRows">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L616</span>
+<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L621</span>
 <pre>void setFrozenBottomRows(int count);</pre>
 <p class="doc" data-zh="设置底部冻结行数。" data-en="Set the number of bottom frozen rows.">设置底部冻结行数。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：0；无冻结行，仅支持行 pane 的视图适用。Tree / TreeTable / Flow / Masonry / Wrap 不支持。" data-en="Default / initial state: 0; no frozen rows; only views supporting row panes apply. Tree / TreeTable / Flow / Masonry / Wrap do not support them.">默认值／初始状态：0；无冻结行，仅支持行 pane 的视图适用。Tree / TreeTable / Flow / Masonry / Wrap 不支持。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#frozen"><span data-zh="冻结行列 / 多 pane / 多滚动组" data-en="Frozen rows and columns / multiple panes / scroll groups">冻结行列 / 多 pane / 多滚动组</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualItemView-frozenBottomRows-184" data-search="VirtualItemView frozenBottomRows">
+<article tabindex="-1" id="VirtualItemView-frozenBottomRows-186" data-search="VirtualItemView frozenBottomRows">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L618</span>
+<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L623</span>
 <pre>int frozenBottomRows() const;</pre>
 <p class="doc" data-zh="返回底部冻结行数。" data-en="Return the number of bottom frozen rows.">返回底部冻结行数。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：0；无冻结行，仅支持行 pane 的视图适用。Tree / TreeTable / Flow / Masonry / Wrap 不支持。" data-en="Default / initial state: 0; no frozen rows; only views supporting row panes apply. Tree / TreeTable / Flow / Masonry / Wrap do not support them.">默认值／初始状态：0；无冻结行，仅支持行 pane 的视图适用。Tree / TreeTable / Flow / Masonry / Wrap 不支持。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#frozen"><span data-zh="冻结行列 / 多 pane / 多滚动组" data-en="Frozen rows and columns / multiple panes / scroll groups">冻结行列 / 多 pane / 多滚动组</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualItemView-isRowFrozen-185" data-search="VirtualItemView isRowFrozen">
+<article tabindex="-1" id="VirtualItemView-isRowFrozen-187" data-search="VirtualItemView isRowFrozen">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L619</span>
+<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L624</span>
 <pre>bool isRowFrozen(qsizetype row) const;</pre>
 <p class="doc" data-zh="判断当前窗格或指定行列是否固定在冻结区域。" data-en="Check whether the pane or specified row/column belongs to a frozen region.">判断当前窗格或指定行列是否固定在冻结区域。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualItemView-itemPanes-186" data-search="VirtualItemView itemPanes">
+<article tabindex="-1" id="VirtualItemView-itemPanes-188" data-search="VirtualItemView itemPanes">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L623</span>
+<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L628</span>
 <pre>QVector&lt;ItemPane&gt; itemPanes() const;</pre>
 <p class="doc" data-zh="返回当前行窗格集合。" data-en="Return the current row pane collection.">返回当前行窗格集合。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualItemView-itemPaneRect-187" data-search="VirtualItemView itemPaneRect">
+<article tabindex="-1" id="VirtualItemView-itemPaneRect-189" data-search="VirtualItemView itemPaneRect">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L625</span>
+<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L630</span>
 <pre>QRect itemPaneRect(ItemPane::Type type) const;</pre>
 <p class="doc" data-zh="查询对应项目、单元格、窗格或合并区域的矩形。视图结果为视口坐标；布局策略结果为布局坐标；屏外矩形可超出可见区域。" data-en="Query the item, cell, pane or span rectangle. View results use viewport coordinates; layout policies use layout coordinates. Offscreen rectangles may extend beyond the visible area.">查询对应项目、单元格、窗格或合并区域的矩形。视图结果为视口坐标；布局策略结果为布局坐标；屏外矩形可超出可见区域。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualItemView-visibleItemRanges-188" data-search="VirtualItemView visibleItemRanges">
+<article tabindex="-1" id="VirtualItemView-visibleItemRanges-190" data-search="VirtualItemView visibleItemRanges">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L630</span>
+<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L635</span>
 <pre>QVector&lt;VisibleRange&gt; visibleItemRanges() const;</pre>
 <p class="doc" data-zh="返回当前视口及布局计算出的可见项目范围。" data-en="Return the visible item ranges resolved by the viewport and layout.">返回当前视口及布局计算出的可见项目范围。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualItemView-setItemPaneSeparatorStyle-189" data-search="VirtualItemView setItemPaneSeparatorStyle">
+<article tabindex="-1" id="VirtualItemView-setItemPaneSeparatorStyle-191" data-search="VirtualItemView setItemPaneSeparatorStyle">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L632</span>
+<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L637</span>
 <pre>void setItemPaneSeparatorStyle(const PaneSeparatorStyle &amp;style);</pre>
 <p class="doc" data-zh="设置冻结行窗格分隔线样式。" data-en="Set the row pane separator style.">设置冻结行窗格分隔线样式。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：width = 1，color 无效（视图默认分隔色），lineStyle = Qt::SolidLine。" data-en="Default / initial state: width = 1, invalid color (view default separator color), lineStyle = Qt::SolidLine.">默认值／初始状态：width = 1，color 无效（视图默认分隔色），lineStyle = Qt::SolidLine。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#grid"><span data-zh="分割线样式 / 最后一行 / 冻结分隔线" data-en="Grid styling / terminal row / frozen separators">分割线样式 / 最后一行 / 冻结分隔线</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualItemView-itemPaneSeparatorStyle-190" data-search="VirtualItemView itemPaneSeparatorStyle">
+<article tabindex="-1" id="VirtualItemView-itemPaneSeparatorStyle-192" data-search="VirtualItemView itemPaneSeparatorStyle">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L633</span>
+<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L638</span>
 <pre>    PaneSeparatorStyle itemPaneSeparatorStyle() const;</pre>
 <p class="doc" data-zh="返回冻结行窗格分隔线样式。" data-en="Return the row pane separator style.">返回冻结行窗格分隔线样式。</p>
 <p class="doc defaults" data-zh="默认值／初始状态：width = 1，color 无效（视图默认分隔色），lineStyle = Qt::SolidLine。" data-en="Default / initial state: width = 1, invalid color (view default separator color), lineStyle = Qt::SolidLine.">默认值／初始状态：width = 1，color 无效（视图默认分隔色），lineStyle = Qt::SolidLine。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#grid"><span data-zh="分割线样式 / 最后一行 / 冻结分隔线" data-en="Grid styling / terminal row / frozen separators">分割线样式 / 最后一行 / 冻结分隔线</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualItemView-itemPaneSeparatorLeftExtension-191" data-search="VirtualItemView itemPaneSeparatorLeftExtension">
+<article tabindex="-1" id="VirtualItemView-itemPaneSeparatorLeftExtension-193" data-search="VirtualItemView itemPaneSeparatorLeftExtension">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L638</span>
+<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L643</span>
 <pre>    virtual int itemPaneSeparatorLeftExtension() const;</pre>
 <p class="doc" data-zh="返回行窗格分隔线向左延伸长度。" data-en="Return the left extension of row pane separators.">返回行窗格分隔线向左延伸长度。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualItemView-itemPaneSeparatorColor-192" data-search="VirtualItemView itemPaneSeparatorColor">
+<article tabindex="-1" id="VirtualItemView-itemPaneSeparatorColor-194" data-search="VirtualItemView itemPaneSeparatorColor">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L643</span>
+<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L648</span>
 <pre>virtual QColor itemPaneSeparatorColor() const;</pre>
 <p class="doc" data-zh="返回行窗格分隔线颜色。" data-en="Return the row pane separator color.">返回行窗格分隔线颜色。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualItemView-itemPaneSeparatorRects-193" data-search="VirtualItemView itemPaneSeparatorRects">
+<article tabindex="-1" id="VirtualItemView-itemPaneSeparatorRects-195" data-search="VirtualItemView itemPaneSeparatorRects">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L645</span>
+<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L650</span>
 <pre>QVector&lt;QRect&gt; itemPaneSeparatorRects() const;</pre>
 <p class="doc" data-zh="返回列或行窗格分隔线矩形集合。" data-en="Return the column or row pane separator rectangles.">返回列或行窗格分隔线矩形集合。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualItemView-scrollingPaneHost-194" data-search="VirtualItemView scrollingPaneHost">
+<article tabindex="-1" id="VirtualItemView-scrollingPaneHost-196" data-search="VirtualItemView scrollingPaneHost">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L648</span>
+<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L653</span>
 <pre>    QWidget *scrollingPaneHost() const;</pre>
 <p class="doc" data-zh="返回主滚动窗格的裁剪宿主，无需裁剪时可能为空。" data-en="Return the clipping host of the primary scrolling pane; may be null when clipping is unnecessary.">返回主滚动窗格的裁剪宿主，无需裁剪时可能为空。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualItemView-materializedItemCount-195" data-search="VirtualItemView materializedItemCount">
+<article tabindex="-1" id="VirtualItemView-materializedItemCount-197" data-search="VirtualItemView materializedItemCount">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L651</span>
+<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L656</span>
 <pre>    qsizetype materializedItemCount() const;</pre>
 <p class="doc" data-zh="返回当前物化的 cell、项目或 section 数量。" data-en="Return the current materialized cell, item or section count.">返回当前物化的 cell、项目或 section 数量。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#pin"><span data-zh="屏外保留 / 预加载 / 焦点 / 诊断" data-en="Offscreen retention / overscan / focus / diagnostics">屏外保留 / 预加载 / 焦点 / 诊断</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualItemView-pinnedItemCount-196" data-search="VirtualItemView pinnedItemCount">
+<article tabindex="-1" id="VirtualItemView-pinnedItemCount-198" data-search="VirtualItemView pinnedItemCount">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L652</span>
+<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L657</span>
 <pre>qsizetype pinnedItemCount() const;</pre>
 <p class="doc" data-zh="返回当前保留的屏外项目数。" data-en="Return the current pinned offscreen item count.">返回当前保留的屏外项目数。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualItemView-widgetForIndex-197" data-search="VirtualItemView widgetForIndex">
+<article tabindex="-1" id="VirtualItemView-widgetForIndex-199" data-search="VirtualItemView widgetForIndex">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L653</span>
+<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L658</span>
 <pre>QWidget *widgetForIndex(const QModelIndex &amp;index) const;</pre>
 <p class="doc" data-zh="查询当前物化控件；屏外未物化时可为空，不代表模型项或选择状态不存在。" data-en="Query the currently materialized widget. It may be null offscreen; that does not mean the model item or selection is absent.">查询当前物化控件；屏外未物化时可为空，不代表模型项或选择状态不存在。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#scroll"><span data-zh="滚动 / 定位 / 几何 / 命中 / 平滑滚动" data-en="Scrolling / positioning / geometry / hits / smooth scrolling">滚动 / 定位 / 几何 / 命中 / 平滑滚动</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualItemView-indexForWidget-198" data-search="VirtualItemView indexForWidget">
+<article tabindex="-1" id="VirtualItemView-indexForWidget-200" data-search="VirtualItemView indexForWidget">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L654</span>
+<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L659</span>
 <pre>virtual QModelIndex indexForWidget(const QWidget *widget) const;</pre>
 <p class="doc" data-zh="从物化控件反查当前绑定索引。复用后索引会变化，不应把控件地址当作永久业务标识。" data-en="Resolve a materialized widget to its current bound index. Recycling changes bindings; a widget address is not a permanent business identity.">从物化控件反查当前绑定索引。复用后索引会变化，不应把控件地址当作永久业务标识。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#scroll"><span data-zh="滚动 / 定位 / 几何 / 命中 / 平滑滚动" data-en="Scrolling / positioning / geometry / hits / smooth scrolling">滚动 / 定位 / 几何 / 命中 / 平滑滚动</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualItemView-materializedItems-199" data-search="VirtualItemView materializedItems">
+<article tabindex="-1" id="VirtualItemView-materializedItems-201" data-search="VirtualItemView materializedItems">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L655</span>
+<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L660</span>
 <pre>    const QList&lt;MaterializedItem&gt; &amp;materializedItems() const;</pre>
 <p class="doc" data-zh="返回当前物化的项目或 section 记录。" data-en="Return the currently materialized item or section records.">返回当前物化的项目或 section 记录。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualItemView-pooledWidgetCount-200" data-search="VirtualItemView pooledWidgetCount">
+<article tabindex="-1" id="VirtualItemView-pooledWidgetCount-202" data-search="VirtualItemView pooledWidgetCount">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L657</span>
+<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L662</span>
 <pre>qsizetype pooledWidgetCount() const;</pre>
 <p class="doc" data-zh="返回当前池内空闲控件数；带类型参数的重载只统计该类型。" data-en="Return the current pooled idle widget count; typed overloads count only that type.">返回当前池内空闲控件数；带类型参数的重载只统计该类型。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#pin"><span data-zh="屏外保留 / 预加载 / 焦点 / 诊断" data-en="Offscreen retention / overscan / focus / diagnostics">屏外保留 / 预加载 / 焦点 / 诊断</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualItemView-createdWidgetCount-201" data-search="VirtualItemView createdWidgetCount">
+<article tabindex="-1" id="VirtualItemView-createdWidgetCount-203" data-search="VirtualItemView createdWidgetCount">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L658</span>
+<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L663</span>
 <pre>qsizetype createdWidgetCount() const;</pre>
 <p class="doc" data-zh="返回累计创建控件数。" data-en="Return the cumulative created widget count.">返回累计创建控件数。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#pin"><span data-zh="屏外保留 / 预加载 / 焦点 / 诊断" data-en="Offscreen retention / overscan / focus / diagnostics">屏外保留 / 预加载 / 焦点 / 诊断</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualItemView-destroyedWidgetCount-202" data-search="VirtualItemView destroyedWidgetCount">
+<article tabindex="-1" id="VirtualItemView-destroyedWidgetCount-204" data-search="VirtualItemView destroyedWidgetCount">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L659</span>
+<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L664</span>
 <pre>qsizetype destroyedWidgetCount() const;</pre>
 <p class="doc" data-zh="返回累计销毁控件数。" data-en="Return the cumulative destroyed widget count.">返回累计销毁控件数。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualItemView-isRelayoutPending-203" data-search="VirtualItemView isRelayoutPending">
+<article tabindex="-1" id="VirtualItemView-isRelayoutPending-205" data-search="VirtualItemView isRelayoutPending">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L661</span>
+<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L666</span>
 <pre>    bool isRelayoutPending() const;</pre>
 <p class="doc" data-zh="判断是否存在尚未执行的布局刷新。" data-en="Check whether a relayout is pending.">判断是否存在尚未执行的布局刷新。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualItemView-flushPendingRelayout-204" data-search="VirtualItemView flushPendingRelayout">
+<article tabindex="-1" id="VirtualItemView-flushPendingRelayout-206" data-search="VirtualItemView flushPendingRelayout">
 <span class="badge">public</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L664</span>
+<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L669</span>
 <pre>void flushPendingRelayout();</pre>
 <p class="doc" data-zh="立即执行已排队的布局刷新，适合必须同步读取新几何的情况。" data-en="Flush a pending relayout immediately when fresh geometry must be read synchronously.">立即执行已排队的布局刷新，适合必须同步读取新几何的情况。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualItemView-scrollEdgeReached-205" data-search="VirtualItemView scrollEdgeReached">
+<article tabindex="-1" id="VirtualItemView-scrollEdgeReached-207" data-search="VirtualItemView scrollEdgeReached">
 <span class="badge">signals</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L667</span>
+<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L672</span>
 <pre>void scrollEdgeReached(Qt::Edge edge);</pre>
 <p class="doc" data-zh="首次观察到或进入指定边缘时通知一次。" data-en="Emitted when a boundary is first observed or entered.">首次观察到或进入指定边缘时通知一次。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#scroll-refresh"><span data-zh="滚动边缘 / 下拉刷新 / 触底分页" data-en="Scroll edges / pull to refresh / end reached pagination">滚动边缘 / 下拉刷新 / 触底分页</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualItemView-scrollEdgeLeft-206" data-search="VirtualItemView scrollEdgeLeft">
+<article tabindex="-1" id="VirtualItemView-scrollEdgeLeft-208" data-search="VirtualItemView scrollEdgeLeft">
 <span class="badge">signals</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L668</span>
+<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L673</span>
 <pre>void scrollEdgeLeft(Qt::Edge edge);</pre>
 <p class="doc" data-zh="离开指定边缘时通知一次，包括布局改变引起的离开。" data-en="Emitted once when leaving a boundary, including after a layout change.">离开指定边缘时通知一次，包括布局改变引起的离开。</p>
 <p class="muted"><span data-zh="配套能力：" data-en="Related capabilities: ">配套能力：</span><a href="#scroll-refresh"><span data-zh="滚动边缘 / 下拉刷新 / 触底分页" data-en="Scroll edges / pull to refresh / end reached pagination">滚动边缘 / 下拉刷新 / 触底分页</span></a> </p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualItemView-refreshStateChanged-207" data-search="VirtualItemView refreshStateChanged">
+<article tabindex="-1" id="VirtualItemView-refreshStateChanged-209" data-search="VirtualItemView refreshStateChanged">
 <span class="badge">signals</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L669</span>
+<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L674</span>
 <pre>void refreshStateChanged(RefreshState state);</pre>
 <p class="doc" data-zh="交互或请求状态切换时通知，可用于更新自定义指示器。" data-en="Emitted when the gesture or request state changes. Use it to update a custom indicator.">交互或请求状态切换时通知，可用于更新自定义指示器。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualItemView-loadMorePauseReasonChanged-208" data-search="VirtualItemView loadMorePauseReasonChanged">
+<article tabindex="-1" id="VirtualItemView-loadMorePauseReasonChanged-210" data-search="VirtualItemView loadMorePauseReasonChanged">
 <span class="badge">signals</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L671</span>
+<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L676</span>
 <pre>void loadMorePauseReasonChanged(LoadMorePauseReason reason);</pre>
 <p class="doc" data-zh="当前暂停原因变化时发出，可用于更新重试按钮。" data-en="Emitted when the effective pause reason changes. Use it to update retry controls.">当前暂停原因变化时发出，可用于更新重试按钮。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualItemView-pullProgressChanged-209" data-search="VirtualItemView pullProgressChanged">
+<article tabindex="-1" id="VirtualItemView-pullProgressChanged-211" data-search="VirtualItemView pullProgressChanged">
 <span class="badge">signals</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L672</span>
+<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L677</span>
 <pre>void pullProgressChanged(qreal progress);</pre>
 <p class="doc" data-zh="下拉进度变化时更新，达到阈值时为 1。" data-en="Emitted when pull progress changes. One means the threshold was reached.">下拉进度变化时更新，达到阈值时为 1。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualItemView-refreshRequested-210" data-search="VirtualItemView refreshRequested">
+<article tabindex="-1" id="VirtualItemView-refreshRequested-212" data-search="VirtualItemView refreshRequested">
 <span class="badge">signals</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L673</span>
+<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L678</span>
 <pre>void refreshRequested(quint64 requestId);</pre>
 <p class="doc" data-zh="松手达到阈值时进入刷新状态并请求新数据，更新模型后调用 finishRefresh。" data-en="Emitted in the refreshing state after a qualifying release. Update the model, then call finishRefresh.">松手达到阈值时进入刷新状态并请求新数据，更新模型后调用 finishRefresh。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualItemView-loadMoreRequested-211" data-search="VirtualItemView loadMoreRequested">
+<article tabindex="-1" id="VirtualItemView-loadMoreRequested-213" data-search="VirtualItemView loadMoreRequested">
 <span class="badge">signals</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L674</span>
+<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L679</span>
 <pre>void loadMoreRequested(quint64 requestId);</pre>
 <p class="doc" data-zh="进入加载状态后请求一页，追加数据后调用 finishLoadMore。" data-en="Emitted after entering the loading state. Append the page, then call finishLoadMore.">进入加载状态后请求一页，追加数据后调用 finishLoadMore。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualItemView-clicked-212" data-search="VirtualItemView clicked">
+<article tabindex="-1" id="VirtualItemView-clicked-214" data-search="VirtualItemView clicked">
 <span class="badge">signals</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L675</span>
+<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L680</span>
 <pre>void clicked(const QModelIndex &amp;index);</pre>
 <p class="doc" data-zh="项目单击或双击时发出，参数为命中的模型索引。" data-en="Emitted for an item click or double-click, with the hit model index.">项目单击或双击时发出，参数为命中的模型索引。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualItemView-doubleClicked-213" data-search="VirtualItemView doubleClicked">
+<article tabindex="-1" id="VirtualItemView-doubleClicked-215" data-search="VirtualItemView doubleClicked">
 <span class="badge">signals</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L676</span>
+<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L681</span>
 <pre>void doubleClicked(const QModelIndex &amp;index);</pre>
 <p class="doc" data-zh="项目单击或双击时发出，参数为命中的模型索引。" data-en="Emitted for an item click or double-click, with the hit model index.">项目单击或双击时发出，参数为命中的模型索引。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualItemView-activated-214" data-search="VirtualItemView activated">
+<article tabindex="-1" id="VirtualItemView-activated-216" data-search="VirtualItemView activated">
 <span class="badge">signals</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L677</span>
+<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L682</span>
 <pre>void activated(const QModelIndex &amp;index);</pre>
 <p class="doc" data-zh="项目被激活时发出，参数为目标模型索引。" data-en="Emitted when an item is activated, with the target model index.">项目被激活时发出，参数为目标模型索引。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualItemView-itemDropped-215" data-search="VirtualItemView itemDropped">
+<article tabindex="-1" id="VirtualItemView-itemDropped-217" data-search="VirtualItemView itemDropped">
 <span class="badge">signals</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L680</span>
+<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L685</span>
 <pre>void itemDropped(const QModelIndex &amp;parent, int row, int column, Qt::DropAction action);</pre>
 <p class="doc" data-zh="一次项目放置完成后发出，用于观察结果；不要再次重复执行模型移动。" data-en="Emitted after an item drop completes. Observe the result without duplicating the model move.">一次项目放置完成后发出，用于观察结果；不要再次重复执行模型移动。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualItemView-selectionModelChanged-216" data-search="VirtualItemView selectionModelChanged">
+<article tabindex="-1" id="VirtualItemView-selectionModelChanged-218" data-search="VirtualItemView selectionModelChanged">
 <span class="badge">signals</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L681</span>
+<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L686</span>
 <pre>void selectionModelChanged(QItemSelectionModel *selectionModel);</pre>
 <p class="doc" data-zh="选择模型更换后发出；外部信号连接应跟随新选择模型。" data-en="Emitted after the selection model changes; reconnect external selection observers as needed.">选择模型更换后发出；外部信号连接应跟随新选择模型。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>
 </article>
-<article tabindex="-1" id="VirtualItemView-virtualizationUpdated-217" data-search="VirtualItemView virtualizationUpdated">
+<article tabindex="-1" id="VirtualItemView-virtualizationUpdated-219" data-search="VirtualItemView virtualizationUpdated">
 <span class="badge">signals</span>
 <span class="muted">
-<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L683</span>
+<a href="../../../include/virtualitemviews/virtualitemview.h"><span data-zh="头文件" data-en="Header">头文件</span></a> · L688</span>
 <pre>void virtualizationUpdated();</pre>
 <p class="doc" data-zh="可见范围及物化控件更新后发出，可用于轻量诊断与业务观察。" data-en="Emitted after visible ranges and materialized widgets update, for lightweight diagnostics or observation.">可见范围及物化控件更新后发出，可用于轻量诊断与业务观察。</p>
 <a href="#function-index" class="muted"><span data-zh="返回函数列表" data-en="Back to function index">返回函数列表</span></a>

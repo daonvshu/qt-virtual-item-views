@@ -97,6 +97,31 @@ private slots:
         QVERIFY(!machine.canLoad(true, machine.canContinueAtBottom(true, maximumOffset, gridExtent)));
     }
 
+    void inlineFooterDuringAppend_data()
+    {
+        QTest::addColumn<int>("viewport");
+        QTest::addColumn<int>("openShift");
+        QTest::addColumn<int>("closingShift");
+        QTest::newRow("footer fits before append") << 600 << 0 << 0;
+        QTest::newRow("footer partly fits") << 570 << 18 << 4;
+        QTest::newRow("already scrollable") << 500 << 28 << 14;
+    }
+
+    void inlineFooterDuringAppend()
+    {
+        QFETCH(int, viewport);
+        QFETCH(int, openShift);
+        QFETCH(int, closingShift);
+        Machine machine;
+        const auto id = machine.begin(State::LoadingMore, 14, 560);
+        QCOMPARE(machine.inlineFooterShift(28, viewport, 560), openShift);
+        QCOMPARE(machine.inlineFooterShift(28, viewport, 640), openShift);
+        QVERIFY(machine.finish(id, State::LoadingMore, true, true, 16));
+        QCOMPARE(machine.inlineFooterShift(28, viewport, 640), openShift);
+        QCOMPARE(machine.inlineFooterShift(14, viewport, 640), closingShift);
+        QCOMPARE(machine.inlineFooterShift(0, viewport, 640), 0);
+    }
+
     void fillWideFlowViewportWithFixedPages()
     {
         viv::FlowTableLayout layout;
@@ -267,6 +292,47 @@ private slots:
         QVERIFY(!machine.isCurrent(stale));
         QVERIFY(!machine.finishExternalPage(stale, false, true));
         QCOMPARE(machine.pauseReason(), Machine::PauseReason::None);
+    }
+
+    void refreshSupersedesPaging()
+    {
+        Machine machine;
+        const auto load = machine.begin(State::LoadingMore, 3);
+        const auto refresh = machine.begin(State::Refreshing, 3, 0, true);
+        QVERIFY(refresh && refresh != load);
+        QVERIFY(!machine.cancelRequest(load));
+        QVERIFY(!machine.finish(load, State::LoadingMore, true, true, 6));
+        QVERIFY(machine.finish(refresh, State::Refreshing, false, false, 3));
+        QCOMPARE(machine.pauseReason(), Machine::PauseReason::RefreshFailed);
+        QVERIFY(!machine.retryLoadMore());
+
+        const auto external = machine.beginExternalPage();
+        const auto next = machine.begin(State::Refreshing, 0, 0, true);
+        QVERIFY(!machine.finishExternalPage(external, false, true));
+        QVERIFY(machine.finish(next, State::Refreshing, true, true, 4));
+        QVERIFY(machine.canLoadAtOffset(0, 0, 80, true));
+    }
+
+    void cancelledRequestsStayIdle()
+    {
+        Machine machine;
+        const auto load = machine.begin(State::LoadingMore, 0);
+        QVERIFY(machine.cancelRequest(load));
+        QVERIFY(!machine.isCurrent(load));
+        QVERIFY(!machine.cancelRequest(load));
+        QCOMPARE(machine.state, State::Idle);
+        QCOMPARE(machine.pauseReason(), Machine::PauseReason::RequestCancelled);
+        QVERIFY(!machine.canLoadAtOffset(0, 0, 0, true));
+        QVERIFY(machine.retryLoadMore());
+        QVERIFY(machine.canLoadAtOffset(0, 0, 0, true));
+        const auto external = machine.beginExternalPage();
+        QVERIFY(machine.cancelRequest(external));
+        QVERIFY(!machine.finishExternalPage(external, true, true));
+        machine.suspended = true;
+        const auto refresh = machine.begin(State::Refreshing, 0, 0, true);
+        QVERIFY(machine.cancelRequest(refresh));
+        QCOMPARE(machine.pauseReason(), Machine::PauseReason::Suspended);
+        QVERIFY(!machine.finish(refresh, State::Refreshing, true, true, 4));
     }
 };
 

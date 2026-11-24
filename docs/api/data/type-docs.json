@@ -9,8 +9,10 @@
         {"name":"Suspended","zh":"页面显式暂停了自动分页。","en":"The page explicitly suspended pagination."},
         {"name":"ExternalPage","zh":"页面发起的首屏查询正在进行。","en":"An external first-page query is running."},
         {"name":"ExternalPageFailed","zh":"外部首屏失败，可重新发起查询。","en":"The external first page failed. Start the query again to retry."},
-        {"name":"RequestFailed","zh":"视图发起的请求失败。","en":"A view-initiated request failed."},
-        {"name":"EmptyPage","zh":"已报告还有下一页，但没有新增可展示项。","en":"More pages were reported but no displayable items were added."}
+        {"name":"RequestFailed","zh":"底部分页请求失败。","en":"The bottom page request failed."},
+        {"name":"EmptyPage","zh":"已报告还有下一页，但没有新增可展示项。","en":"More pages were reported but no displayable items were added."},
+        {"name":"RefreshFailed","zh":"顶部刷新失败，可再次刷新。","en":"The refresh failed. Start a new refresh to retry."},
+        {"name":"RequestCancelled","zh":"当前请求已主动取消，自动分页暂停。","en":"The current request was cancelled and automatic paging is paused."}
       ]
     },
     {

@@ -55,9 +55,14 @@ struct ScrollRefreshState
         if (!active) state = State::Idle;
     }
 
-    quint64 begin(State request, qsizetype count, qint64 extent = 0)
+    quint64 begin(State request, qsizetype count, qint64 extent = 0, bool explicitRefresh = false)
     {
-        if (active || (request == State::Refreshing && state != State::Armed)) return 0;
+        if (request == State::Refreshing && explicitRefresh) {
+            externalPage = false;
+            stopReason = PauseReason::None;
+        } else if (active || (request == State::Refreshing && state != State::Armed)) {
+            return 0;
+        }
         distance = 0;
         state = request;
         initialCount = count;
@@ -82,6 +87,17 @@ struct ScrollRefreshState
     }
 
     bool isCurrent(quint64 id) const { return id && active == id; }
+
+    bool cancelRequest(quint64 id)
+    {
+        if (!isCurrent(id)) return false;
+        active = 0;
+        externalPage = false;
+        cancelPull();
+        stopReason = PauseReason::RequestCancelled;
+        pageAddedItems = false;
+        return true;
+    }
 
     quint64 beginExternalPage()
     {
@@ -115,7 +131,8 @@ struct ScrollRefreshState
 
     bool retryLoadMore()
     {
-        if (active || (stopReason != PauseReason::RequestFailed && stopReason != PauseReason::EmptyPage)) return false;
+        if (active || (stopReason != PauseReason::RequestFailed && stopReason != PauseReason::EmptyPage
+            && stopReason != PauseReason::RequestCancelled)) return false;
         stopReason = PauseReason::None;
         bottomConsumed = false;
         return true;
@@ -124,6 +141,15 @@ struct ScrollRefreshState
     bool canContinueAtBottom(bool bounded, qint64 maximumOffset, qint64 extent) const
     {
         return bounded && (maximumOffset == 0 || (pageAddedItems && extent == initialExtent));
+    }
+
+    int inlineFooterShift(int height, qint64 viewportExtent, qint64 contentExtent) const
+    {
+        // Appended rows must not push older rows up while the footer is still visible.
+        if (state == State::LoadingMore || pageAddedItems)
+            contentExtent = qMin(contentExtent, initialExtent);
+        const qint64 freeSpace = qMax(qint64(0), viewportExtent - contentExtent);
+        return height - int(qMin(qint64(height), freeSpace));
     }
 
     bool canLoadAtOffset(qint64 offset, qint64 maximumOffset, qint64 extent, bool bounded) const
@@ -139,7 +165,7 @@ struct ScrollRefreshState
             hasMore = more && !terminalFooter;
         }
         stopReason = PauseReason::None;
-        if (!success) stopReason = PauseReason::RequestFailed;
+        if (!success) stopReason = expected == State::Refreshing ? PauseReason::RefreshFailed : PauseReason::RequestFailed;
         else if (hasMore && expected == State::LoadingMore && count <= initialCount) stopReason = PauseReason::EmptyPage;
         pageAddedItems = success && expected == State::LoadingMore && count > initialCount;
         if (success && expected == State::Refreshing) bottomConsumed = false;

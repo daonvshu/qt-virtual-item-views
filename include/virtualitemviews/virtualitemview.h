@@ -489,7 +489,7 @@ public:
     Qt::Edges scrollEdges() const;
     enum class RefreshState { Idle, Pulling, Armed, Refreshing, LoadingMore };
     Q_ENUM(RefreshState)
-    enum class LoadMorePauseReason { None, Suspended, ExternalPage, ExternalPageFailed, RequestFailed, EmptyPage };
+    enum class LoadMorePauseReason { None, Suspended, ExternalPage, ExternalPageFailed, RequestFailed, EmptyPage, RefreshFailed, RequestCancelled };
     Q_ENUM(LoadMorePauseReason)
     enum class IndicatorMode { Overlay, Inline };
     Q_ENUM(IndicatorMode)
@@ -513,6 +513,11 @@ public:
     void setRefreshIndicator(QWidget *indicator);
     /// Transfers ownership of the bottom overlay. Null restores the built-in indicator.
     void setLoadMoreIndicator(QWidget *indicator);
+    /// Refreshes the bound model even when the pull gesture is disabled. Supersedes paging;
+    /// an existing refresh is reused. Returns zero if no request could be started.
+    quint64 beginRefresh();
+    /// Invalidates the matching request and pauses automatic paging until an explicit retry or refresh.
+    void cancelRequest(quint64 requestId);
     /// Call after replacing the model contents. Stale request IDs are ignored.
     void finishRefresh(quint64 requestId, bool hasMore);
     /// Call after appending a page. An empty page with hasMore=true pauses automatic requests.

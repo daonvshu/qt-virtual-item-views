@@ -8,6 +8,12 @@
     <item><widget class="QComboBox" name="presentation"><item><property name="text"><string>占位提示</string></property></item><item><property name="text"><string>覆盖提示</string></property></item></widget></item>
     <item><widget class="QCheckBox" name="kinetic"><property name="text"><string>滚轮惯性（SmoothScrollbar）</string></property><property name="checked"><bool>true</bool></property></widget></item>
     <item><widget class="QCheckBox" name="probe"><property name="text"><string>用空页确认末尾</string></property></widget></item>
+    <item><widget class="QCheckBox" name="smallPages"><property name="text"><string>每次只加载 2 项</string></property></widget></item>
+   </layout></item>
+   <item><layout class="QHBoxLayout" name="actions">
+    <item><widget class="QPushButton" name="refresh"><property name="text"><string>刷新</string></property></widget></item>
+    <item><widget class="QPushButton" name="cancel"><property name="text"><string>取消请求</string></property><property name="enabled"><bool>false</bool></property></widget></item>
+    <item><widget class="QPushButton" name="emptyPage"><property name="text"><string>重置为空首屏</string></property></widget></item>
    </layout></item>
    <item><widget class="QLabel" name="status"><property name="text"><string>等待第一页</string></property></widget></item>
    <item><widget class="QLabel" name="edge"><property name="text"><string>滚动边缘</string></property></widget></item>

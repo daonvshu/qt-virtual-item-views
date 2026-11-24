@@ -223,7 +223,7 @@ feature('popup', 'Popup 编辑 / 坐标 / 统一取消 / 编辑覆盖范围',
     'src/core/virtualitemviewediting.cpp src/widgets/virtualtreeview.cpp src/widgets/virtualtreetableview.cpp',
     'examples/*_capabilities/*editors/example.cpp', 'docs/interaction.md')
 feature('scroll-refresh', '滚动边缘 / 下拉刷新 / 触底分页',
-    'virtualitemview', 'scrollEdges scrollEdgeReached scrollEdgeLeft setPullToRefreshEnabled setLoadMoreEnabled setIndicatorModes setIndicatorHeights refreshRequested loadMoreRequested finishRefresh finishLoadMore failRequest retryLoadMore setRefreshIndicator setLoadMoreIndicator',
+    'virtualitemview', 'scrollEdges scrollEdgeReached scrollEdgeLeft setPullToRefreshEnabled setLoadMoreEnabled setIndicatorModes setIndicatorHeights beginRefresh cancelRequest refreshRequested loadMoreRequested finishRefresh finishLoadMore failRequest retryLoadMore setRefreshIndicator setLoadMoreIndicator',
     '顶部和底部可分别设置为占位或覆盖模式。下拉高度跟随手势，松手后回到停留高度。在界面线程更新模型后，已知末页调用 finishLoadMore(id, false)。未知末页调用 finishLoadMore(id)，空页使占位模式显示末尾提示。',
     'src/core/virtualitemviewrefresh.cpp', 'examples/*_capabilities/*_kinetic_refresh/example.cpp', 'examples/README.md')
 feature('scroll', '滚动 / 定位 / 几何 / 命中 / 平滑滚动',
