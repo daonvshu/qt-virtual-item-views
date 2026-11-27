@@ -729,7 +729,8 @@ def agent_guide(headers, features, chapters):
              '5. Reuse a public setter/adapter first. Use custom drawing/layout only for behavior not covered by the public configuration or adapter callbacks.',
              '6. Apply the documented layout and lifecycle constraints. Implementation links help clarify behavior; do not call private *_p.h helpers from application code.',
              '7. Query `docs/api/data/public-api.json` by header/type: entries provide signature, symbols, access, line and documentation (zh/en, defaults, examples, related capabilities). Struct documentation is on the type; nested structs/enums carry documentation on their entry. documentation.members explains each field/enumerator. Read only the types relevant to the requirement.',
-             '8. Offline reference: `docs/api/index.html`, with Chinese/English switching, keyword search and per-overload function links.', '',
+             '8. Offline reference: `docs/api/index.html`, with Chinese/English switching, keyword search and per-overload function links.',
+             '9. For row insertion/removal or restoring scroll position after reset/setModel, see [模型增删与原地重载](model-update-recipes.md).', '',
              '## View matrix']
     for stem, info in VIEWS.items():
         lines.append(f'- {info[0]} | base={info[2]} | header=include/virtualitemviews/{stem}.h | {info[4]}')

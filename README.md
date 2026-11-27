@@ -17,6 +17,7 @@
 | --- | --- | --- |
 | 入门与集成 | 模型、adapter、控件生命周期、构建和链接 | [快速开始](docs/getting-started.md) |
 | 模型接入 | 数据变更通知、代理模型、排序、行移动 | [模型与更新](docs/models.md) |
+| 原地更新 | 插入、删除、重载后按记录 ID 恢复滚动位置 | [增删与滚动位置](docs/model-update-recipes.md) |
 | 列表 | 行控件、数据绑定、行高、状态、选择、拖放、滚动与复用 | [VirtualListView 功能示例源码](docs/list.md) |
 | 表格 | 行控件与单元格控件两种模式、行列间距、行高与选择 | [VirtualTableView 功能示例源码](docs/table.md) |
 | 流式表格 | 随窗口宽度动态换列、均分铺满列宽、固定高度或宽高比 | [流式表格](docs/flow-table.md) |

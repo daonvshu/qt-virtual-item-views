@@ -12,6 +12,7 @@ All paths are relative to the VIV dependency source root. Start with a requireme
 6. Apply the documented layout and lifecycle constraints. Implementation links help clarify behavior; do not call private *_p.h helpers from application code.
 7. Query `docs/api/data/public-api.json` by header/type: entries provide signature, symbols, access, line and documentation (zh/en, defaults, examples, related capabilities). Struct documentation is on the type; nested structs/enums carry documentation on their entry. documentation.members explains each field/enumerator. Read only the types relevant to the requirement.
 8. Offline reference: `docs/api/index.html`, with Chinese/English switching, keyword search and per-overload function links.
+9. For row insertion/removal or restoring scroll position after reset/setModel, see [模型增删与原地重载](model-update-recipes.md).
 
 ## View matrix
 - VirtualItemView | base=QAbstractScrollArea | header=include/virtualitemviews/virtualitemview.h | 模型、选择、滚动、复用、状态动画、编辑、拖放、背景边框和自动高度的共同入口。先查这里，再查具体视图。
